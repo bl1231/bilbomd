@@ -16,7 +16,7 @@ services:
     bilbomd-redis:
         image: redis
         container_name: bilbomd-redis
-        restart: always
+        restart: no
         ports:
             - "6379:6379"
         command: redis-server --save 20 1 --loglevel warning
@@ -34,7 +34,7 @@ services:
             resources:
                 limits:
                     cpus: "12"
-        restart: always
+        restart: no
         env_file: .env
         environment:
             - MONGO_USERNAME=$MONGO_USERNAME
@@ -63,7 +63,7 @@ services:
     bilbomd-mongodb:
         image: mongo
         container_name: bilbomd-mongodb
-        restart: always
+        restart: no
         healthcheck:
             test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
             interval: 10s
@@ -93,7 +93,7 @@ services:
             resources:
                 limits:
                     cpus: "12"
-        restart: always
+        restart: no
         env_file: .env
         environment:
             - MONGO_USERNAME=$MONGO_USERNAME
