@@ -1,116 +1,119 @@
 version: "3.9"
 
 volumes:
-    mongodb:
-        external: true
-    redis-cache:
-        external: true
-    uploads:
-        external: true
+  mongodb:
+    name: mongodb
+    external: true
+  redis-cache:
+    name: redis-cache
+    external: true
+  uploads:
+    name: uploads
+    external: true
 
 networks:
-    app-network:
-        driver: bridge
+  app-network:
+    driver: bridge
 
 services:
-    bilbomd-redis:
-        image: redis
-        container_name: bilbomd-redis
-        restart: no
-        ports:
-            - "6379:6379"
-        command: redis-server --save 20 1 --loglevel warning
-        volumes:
-            - redis-cache:/data
-        networks:
-            - app-network
+  bilbomd-redis:
+    image: redis
+    container_name: bilbomd-redis
+    restart: no
+    ports:
+      - "6379:6379"
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - redis-cache:/data
+    networks:
+      - app-network
 
-    bilbomd-backend:
-        image: bl1231/bilbomd-backend
-        container_name: bilbomd-backend
-        build:
-            context: ./bilbomd-backend
-        deploy:
-            resources:
-                limits:
-                    cpus: "12"
-        restart: no
-        env_file: .env
-        environment:
-            - MONGO_USERNAME=$MONGO_USERNAME
-            - MONGO_PASSWORD=$MONGO_PASSWORD
-            - MONGO_HOSTNAME=bilbomd-mongodb
-            - MONGO_PORT=$MONGO_PORT
-            - MONGO_DB=$MONGO_DB
-            - REDIS_URL=$REDIS_URL
-            - REDIS_HOST=$REDIS_HOST
-            - REDIS_PORT=$REDIS_PORT
-            - REDIS_PASSWORD=$REDIS_PASSWORD
-            - BILBOMD_URL=$BILBOMD_URL
-        ports:
-            - "3500:3500"
-        volumes:
-            - ./bilbomd-backend:/home/node/app
-            - uploads:/bilbomd/uploads
-            - /etc/localtime:/etc/localtime:ro
-            # - node_modules:/home/node/app/node_modules
-        networks:
-            - app-network
-        depends_on:
-            - bilbomd-mongodb
-            - bilbomd-redis
+  bilbomd-backend:
+    image: bl1231/bilbomd-backend
+    container_name: bilbomd-backend
+    build:
+      context: ./bilbomd-backend
+    deploy:
+      resources:
+        limits:
+          cpus: "12"
+    restart: no
+    env_file: .env
+    environment:
+      - MONGO_USERNAME=$MONGO_USERNAME
+      - MONGO_PASSWORD=$MONGO_PASSWORD
+      - MONGO_HOSTNAME=bilbomd-mongodb
+      - MONGO_PORT=$MONGO_PORT
+      - MONGO_DB=$MONGO_DB
+      - REDIS_URL=$REDIS_URL
+      - REDIS_HOST=$REDIS_HOST
+      - REDIS_PORT=$REDIS_PORT
+      - REDIS_PASSWORD=$REDIS_PASSWORD
+      - BILBOMD_URL=$BILBOMD_URL
+    ports:
+      - "3500:3500"
+    volumes:
+      - ./bilbomd-backend:/home/node/app
+      - uploads:/bilbomd/uploads
+      - /etc/localtime:/etc/localtime:ro
+      # - node_modules:/home/node/app/node_modules
+    networks:
+      - app-network
+    depends_on:
+      - bilbomd-mongodb
+      - bilbomd-redis
 
-    bilbomd-mongodb:
-        image: mongo
-        container_name: bilbomd-mongodb
-        restart: no
-        healthcheck:
-            test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
-            interval: 10s
-            timeout: 10s
-            retries: 7
-            start_period: 20s
-        env_file: .env
-        environment:
-            - MONGO_INITDB_ROOT_USERNAME=$MONGO_USERNAME
-            - MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASSWORD
-        ports:
-            - "27018:27017"
-        volumes:
-            - mongodb:/data/mongodb
-            - /etc/localtime:/etc/localtime:ro
-        networks:
-            - app-network
+  bilbomd-mongodb:
+    image: mongo
+    container_name: bilbomd-mongodb
+    restart: no
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
+      interval: 10s
+      timeout: 10s
+      retries: 7
+      start_period: 20s
+    env_file: .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=$MONGO_USERNAME
+      - MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASSWORD
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb:/data/db
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - app-network
 
-    bilbomd-worker:
-        image: bl1231/bilbomd-worker
-        container_name: bilbomd-worker
-        build:
-            context: ./bilbomd-worker
-            args:
-                CHARMM_VER: c47b2
-        deploy:
-            resources:
-                limits:
-                    cpus: "12"
-        restart: no
-        env_file: .env
-        environment:
-            - MONGO_USERNAME=$MONGO_USERNAME
-            - MONGO_PASSWORD=$MONGO_PASSWORD
-            - MONGO_HOSTNAME=bilbomd-mongodb
-            - MONGO_PORT=$MONGO_PORT
-            - MONGO_DB=$MONGO_DB
-            - REDIS_URL=$REDIS_URL
-            - REDIS_HOST=$REDIS_HOST
-            - REDIS_PORT=$REDIS_PORT
-            - REDIS_PASSWORD=$REDIS_PASSWORD
-        networks:
-            - app-network
-        volumes:
-            - ./bilbomd-worker:/home/node/app
-            - uploads:/bilbomd/uploads
-            - /etc/localtime:/etc/localtime:ro
-        depends_on:
-            - bilbomd-mongodb
-            - bilbomd-redis
+  bilbomd-worker:
+    image: bl1231/bilbomd-worker
+    container_name: bilbomd-worker
+    build:
+      context: ./bilbomd-worker
+      args:
+        CHARMM_VER: c47b2
+    deploy:
+      resources:
+        limits:
+          cpus: "12"
+    restart: no
+    env_file: .env
+    environment:
+      - MONGO_USERNAME=$MONGO_USERNAME
+      - MONGO_PASSWORD=$MONGO_PASSWORD
+      - MONGO_HOSTNAME=bilbomd-mongodb
+      - MONGO_PORT=$MONGO_PORT
+      - MONGO_DB=$MONGO_DB
+      - REDIS_URL=$REDIS_URL
+      - REDIS_HOST=$REDIS_HOST
+      - REDIS_PORT=$REDIS_PORT
+      - REDIS_PASSWORD=$REDIS_PASSWORD
+    networks:
+      - app-network
+    volumes:
+      - ./bilbomd-worker:/home/node/app
+      - uploads:/bilbomd/uploads
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - bilbomd-mongodb
+      - bilbomd-redis
