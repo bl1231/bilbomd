@@ -16,7 +16,7 @@ here
 
 ## Deployment
 
-Deploying BilboMD web app currently requires a couple of steps.
+Deploying BilboMD web app currently requires a couple of steps. These instructions are assuming you will deploy on `hyperion`, but the code shoudl be very portable.
 
 ## 1. Build and deploy the backend Docker services.
 
@@ -73,7 +73,7 @@ or to start in a detached mode:
 docker compose up --detach
 ```
 
-Check that they are running and "healthy"
+Check that they are running and "healthy" with the `docker ps` command:
 
 ```
 (base) [15:50]classen@hyperion:~/projects/bilbomd$docker ps
@@ -84,10 +84,79 @@ bc8089076e87   bl1231/bilbomd-backend   "docker-entrypoint.s…"   26 hours ago 
 b39a1c3902d0   redis                    "docker-entrypoint.s…"   28 hours ago   Up 26 hours             0.0.0.0:6379->6379/tcp, :::6379->6379/tcp       bilbomd-redis
 ```
 
+We are now ready to get the user-facing UI up and running.
+
 ## 2. Deploy the BilboMD front end UI
 
-and if you want to develop or deploy the frontend UI get that repo too:
+Check out the frontend UI repo from GitHub:
 
 ```bash
 git clone git@github.com:bl1231/bilbomd-ui.git
+```
+
+note: There are different instructions for running this in development mode which I will write up later. This information and these instructions are geared towards the "production" instance of the app.
+
+The **BilboMD** app will be served from [https://bilbomd.bl1231.als.lbl.gov](https://bilbomd.bl1231.als.lbl.gov). This domain name points to a Clouflare service which then points back to our gateway machine at `bl1231-local.als.lbl.gov` which then [NAT](https://en.wikipedia.org/wiki/Network_address_translation)s all 80/443 traffic to our backend webserver which is running Apache httpd. Our Apache server `www.bl1231.als.lbl.gov` is configured to provide name-based virtual hosting. Essentially a single httpd process that can serve multiple websites (e.g. out main Wordpress site at `bl1231.als.lbl.gov`, out GitLab server at `git.bl1231.als.lbl.gov`, and now bilbomd at `bilbomd.bl1231.als.lbl.gov`).
+
+Although the main Apache server is running on a dedicated machine `www.bl1231.als.lbl.gov` we make extensive use of `ProxyPass` and `ProxyPassReverse` to connect to backend servers of various types.
+
+```
+<VirtualHost *:443>
+    ServerName bilbomd.bl1231.als.lbl.gov
+    ServerAdmin  sclassen@lbl.gov
+
+    # LOGGING
+    ErrorLog logs/bilbomd-error.log
+    TransferLog logs/bilbomd-access.log
+
+    # PROXY TO BACKEND SERVER
+    ProxyPass "/" "http://hyperion.bl1231.als.lbl.gov:3001/"
+    ProxyPassReverse "/" "http://hyperion.bl1231.als.lbl.gov:3001/"
+
+    # SSL SETTINGS
+    # self signed certs which should be fine for use with Cloudflare
+    # look in the git@git.bl1231.als.lbl.gov:sa/sibyls-ansible-stuff.git
+    # for the CSRs etc. in roles/openldap25/files/certs
+    SSLEngine on
+    SSLCertificateFile /etc/httpd/certs/bilbomd.crt
+    SSLCertificateKeyFile /etc/httpd/certs/bilbomd.key
+    SSLCertificateChainFile /etc/httpd/certs/BL-1231-CA.crt
+</VirtualHost>
+```
+
+So from this you can probably figure out that any requests to `bilbomd.bl1231.als.lbl.gov` will be forwarded to port `3001` on `hyperion.bl1231.als.lbl.gov`. In general we don't want to run webapps as ourselves, so I've set up a special service account `webadmin` that we can run webapps under.
+
+We will use [PM2](https://pm2.keymetrics.io/) to deploy `bilbomd-ui`, but first there are a few onetime things that need to be in place.
+
+Create a directory on `hyperion` for the deployed app to live:
+
+```bash
+mkdir /bilbomd
+chown to webadmin
+```
+
+`webadmin` requires Node Version Manager and NodeJS. Install [nvm](https://github.com/nvm-sh/nvm)
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+```
+
+Logout and back in.
+
+Then install NodeJS and PM2:
+
+```bash
+nvm install --lts
+nvm use --lts
+npm install pm2@latest -g
+npm install pm2@latest
+```
+
+Logout and back in
+
+Then as `classen` (or yourself) you can deploy with PM2:
+
+```bash
+pm2 deploy production setup
+pm2 deploy production
 ```
