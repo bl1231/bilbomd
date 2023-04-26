@@ -160,7 +160,7 @@ Then as `classen` (or yourself) you can deploy with PM2. First make sure you are
 cd bilbomd-ui
 ```
 
-### The first time only you run teh `setup` command
+### The first time only you run the `setup` command
 
 ```bash
 pm2 deploy production setup
