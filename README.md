@@ -96,7 +96,7 @@ git clone git@github.com:bl1231/bilbomd-ui.git
 
 note: There are different instructions for running this in development mode which I will write up later. This information and these instructions are geared towards the "production" instance of the app.
 
-The **BilboMD** app will be served from [https://bilbomd.bl1231.als.lbl.gov](https://bilbomd.bl1231.als.lbl.gov). This domain name points to a Clouflare service which then points back to our gateway machine at `bl1231-local.als.lbl.gov` which then [NAT](https://en.wikipedia.org/wiki/Network_address_translation)s all 80/443 traffic to our backend webserver which is running Apache httpd. Our Apache server `www.bl1231.als.lbl.gov` is configured to provide name-based virtual hosting. Essentially a single httpd process that can serve multiple websites (e.g. out main Wordpress site at `bl1231.als.lbl.gov`, out GitLab server at `git.bl1231.als.lbl.gov`, and now bilbomd at `bilbomd.bl1231.als.lbl.gov`).
+The **BilboMD** app will be served from [https://bilbomd.bl1231.als.lbl.gov](https://bilbomd.bl1231.als.lbl.gov). This domain points to Cloudflare which then points back to our gateway machine at `bl1231-local.als.lbl.gov` which then [NAT](https://en.wikipedia.org/wiki/Network_address_translation)s all 80/443 traffic to our main webserver which is running Apache httpd. Our Apache server `www.bl1231.als.lbl.gov` is configured to provide name-based virtual hosting. Essentially a single httpd process that can serve multiple websites (e.g. our main Wordpress site at `bl1231.als.lbl.gov`, out GitLab server at `git.bl1231.als.lbl.gov`, and now bilbomd at `bilbomd.bl1231.als.lbl.gov`).
 
 Although the main Apache server is running on a dedicated machine `www.bl1231.als.lbl.gov` we make extensive use of `ProxyPass` and `ProxyPassReverse` to connect to backend servers of various types.
 
@@ -154,9 +154,40 @@ npm install pm2@latest
 
 Logout and back in
 
-Then as `classen` (or yourself) you can deploy with PM2:
+Then as `classen` (or yourself) you can deploy with PM2. First make sure you are in the `bilbomd-ui` directory that you checked out from GitHub. PM2 uses the `bilbomd-ui/ecosystem.config.js` configuration file.
+
+```bash
+cd bilbomd-ui
+```
+
+### The first time only you run teh `setup` command
 
 ```bash
 pm2 deploy production setup
-pm2 deploy production
+```
+
+### To update production from GitHub
+
+```bash
+git pull
+pm2 deploy production update
+```
+
+### To revert to previous version using pm2
+
+```bash
+pm2 deploy production revert
+```
+
+### To run a specific pm2 command on the production server
+
+```bash
+pm2 deploy production exec "pm2 start BilboMD"
+```
+
+### To see status
+
+```bash
+pm2 deploy production exec "pm2 show BilboMD"
+pm2 deploy production exec "pm2 ls"
 ```
