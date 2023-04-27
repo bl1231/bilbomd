@@ -1,10 +1,10 @@
 # bilbomd
 
-This repository is a sort fo "wrapper" project. The main purpose for now is to hold the main `docker-compose.yml` file.
+This repository is a sort fo "wrapper" project. The main purpose for now is to hold the main `docker-compose.yml` file. It can also serve as a place to document how to deploy BilboMD.
 
 ## Description
 
-BilboMD is a webapp developed at the SIBYLS beamline. It uses Molecular Dynamics from CHARMM to generate a vast array of possible molecualr structures. This ensemble of possibel models is then compared with emperical SAXS data to find an ensemble of models that best explains your SAXS data.
+BilboMD is a webapp developed at the SIBYLS beamline. It uses Molecular Dynamics from [CHARMM](https://academiccharmm.org/) to generate a vast array of possible molecular structures. This ensemble of possible models is then used to calculate theoretical SAXS curves using [FoXS](https://modbase.compbio.ucsf.edu/foxs/about), compared with empirical SAXS data using [MultiFoXS](https://modbase.compbio.ucsf.edu/multifoxs/about) to find an ensemble of models that best explains your SAXS data.
 
 ## High level architecture
 
@@ -12,7 +12,25 @@ BilboMD is a webapp developed at the SIBYLS beamline. It uses Molecular Dynamics
 
 ## Technology Stack
 
-here
+One of the major goals of the redesign of BilboMD was to modernize the various technologies used by the webapp. I'll just summarize them here:
+
+### backend
+
+-   [![NodeJS][NodeJS]][NodeJS-url]
+-   [![MongoDB][MongoDB]][MongoDB-url]
+-   [![ExpressJS][ExpressJS]][ExpressJS-url]
+-   [![Docker][Docker]][Docker-url]
+-   [![Redis][Redis]][Redis-url]
+-   [BullMQ][BullMQ-url]
+
+### frontend
+
+-   [Create React App][CRA-url]
+-   [React][React-url]
+-   [Redux][Redux-url]
+-   [Material UI][MUI-url]
+-   [Yup][YUP-url]
+-   [Formik][Formik-url]
 
 ## Deployment
 
@@ -191,3 +209,26 @@ pm2 deploy production exec "pm2 start BilboMD"
 pm2 deploy production exec "pm2 show BilboMD"
 pm2 deploy production exec "pm2 ls"
 ```
+
+<!-- MARKDOWN LINKS & IMAGES -->
+<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+
+[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[React-url]: https://reactjs.org/
+[MongoDB]: https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white
+[MongoDB-url]: https://www.mongodb.com/
+[NodeJS]: https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white
+[NodeJS-url]: https://nodejs.org/
+[ExpressJS]: https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB
+[ExpressJS-url]: https://expressjs.com/
+[Redis]: https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white
+[Redis-url]: https://redis.io/
+[Docker]: https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white
+[Docker-url]: https://www.docker.com/
+[BullMQ-url]: https://docs.bullmq.io/
+[React-url]: https://react.dev/
+[CRA-url]: https://create-react-app.dev/
+[Redux-url]: https://redux.js.org/
+[MUI-url]: https://mui.com/
+[Formik-url]: https://formik.org/
+[YUP-url]: https://github.com/jquense/yup
