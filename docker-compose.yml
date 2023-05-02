@@ -19,7 +19,7 @@ services:
   bilbomd-redis:
     image: redis
     container_name: bilbomd-redis
-    restart: no
+    restart: always
     ports:
       - "6379:6379"
     command: redis-server --save 20 1 --loglevel warning
@@ -37,7 +37,7 @@ services:
       resources:
         limits:
           cpus: "12"
-    restart: no
+    restart: always
     env_file: .env
     environment:
       - MONGO_USERNAME=$MONGO_USERNAME
@@ -53,7 +53,7 @@ services:
     ports:
       - "3500:3500"
     volumes:
-      - ./bilbomd-backend:/home/node/app
+      # - ./bilbomd-backend:/home/node/app
       - uploads:/bilbomd/uploads
       - /etc/localtime:/etc/localtime:ro
       # - node_modules:/home/node/app/node_modules
@@ -66,7 +66,7 @@ services:
   bilbomd-mongodb:
     image: mongo
     container_name: bilbomd-mongodb
-    restart: no
+    restart: always
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
       interval: 10s
@@ -85,14 +85,16 @@ services:
     networks:
       - app-network
 
-  bilbomd-worker:
+  worker:
     image: bl1231/bilbomd-worker
-    container_name: bilbomd-worker
+    # no explicit container name needed when deploying replicas
+    # container_name: bilbomd-worker
     build:
       context: ./bilbomd-worker
       args:
         CHARMM_VER: c47b2
     deploy:
+      replicas: 3
       resources:
         limits:
           cpus: "12"
@@ -111,7 +113,7 @@ services:
     networks:
       - app-network
     volumes:
-      - ./bilbomd-worker:/home/node/app
+      # - ./bilbomd-worker:/home/node/app
       - uploads:/bilbomd/uploads
       - /etc/localtime:/etc/localtime:ro
     depends_on:
