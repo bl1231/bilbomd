@@ -38,7 +38,7 @@ Deploying BilboMD web app currently requires a couple of steps. These instructio
 
 ## The `.env` file
 
-The `.env` file contains all the secrets needed to deploy BilboMD. To create the access `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET` cryptographic keys just launch an interactive `node` terminal and type the following command:
+The `.env` file can be created from the `.env_example` file and contains all the secrets needed to deploy BilboMD. To create the access `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET` cryptographic keys just launch an interactive `node` terminal and type the following command:
 
 ```bash
 require('crypto').randomBytes(64).toString('hex')
