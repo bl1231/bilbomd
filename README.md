@@ -73,9 +73,11 @@ This service uses the default [MongoDB Docker image](https://hub.docker.com/_/mo
 
 ## Docker compose instructions
 
-This should be checked, but my recollection is that this should be sufficient to build and deploy the Docker stuff. There are still a lot of things I don't fully understand about Docker and Docker Compose. Here are a few usefule links teh teh Docker documentation.
+There are still a lot of things I don't fully understand about Docker and Docker Compose. Here are a few useful links to the Docker documentation.
 
 -   [Docker Compose](https://docs.docker.com/compose/reference/)
+-   [Dockerfile](https://docs.docker.com/engine/reference/builder/)
+-   [Docker CLI](https://docs.docker.com/engine/reference/commandline/cli/)
 
 ### Checkout the top level `bilbomd` repo
 
