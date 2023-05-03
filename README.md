@@ -50,26 +50,26 @@ There are a number of other environment variables specified in the `.env` file t
 
 You must have the ability to start docker containers on the machine where you want to run BilboMD backend services. The `docker-compose.yml` file specifies 4 services:
 
--   bilbomd-redis
 -   bilbomd-backend
--   bilbomd-mongodb
 -   bilbomd-worker
+-   bilbomd-mongodb
+-   bilbomd-redis
+
+### [bilbomd-backend][bilbomd-backend]
+
+This is the main NodeJS backend that I wrote to handle the non-computational-related app functions. It performs authentication, authorization, retrieves job info from the main MongoDB database, user management, cookies, etc. This docker container requires port `3500` to be exposed. See the `Dockerfile` in the `bilbomd-backend` [repo][bilbomd-backend] for details.
+
+### [bilbomd-worker][bilbomd-worker]
+
+This is the docker container where the actual BilboMD computations are performed. It is built on a `debian:bullseye base` image. It also has CHARMM (version is specified in the `.env` file) and IMP baked in. See the `Dockerfile` in the `bilbomd-worker` [repo][bilbomd-worker] for details.
 
 ### bilbomd-redis
 
 This is a straight forward Redis docker container. No Docker file required to build. Redis (Remote Dictionary Server) is required by the BullMQ queueing system to store queue item information. We are exposing port `6379` so that other docker containers in the docker app-network can communicate with it.
 
-### bilbomd-backend
-
-This is the main NodeJS backend that I wrote to handle the non-computational-related app functions. It performs authentication, authorization, retrieves job info from the main MongoDB database, user management, cookies, etc. This docker container requires port `3500` to be exposed. See the `Dockerfile` in the `bilbomd-backend` repo for details.
-
 ### bilbomd-mongodb
 
 This is the main database for the bilbomd app. It's quite simple at the moment with only 2 "tables" ; one for users and one for jobs. The details for these can be found in `bilbomd-backend/model/Job.js` and `bilbomd-backend/model/User.js`. This docker container requires port `27017` to be exposed.
-
-### bilbomd-worker
-
-This is the docker container where the actual BilboMD computations are performed. It is built on a `debian:bullseye base` image. It also has CHARMM (version is specified in the `.env` file) and IMP baked in. See the `Dockerfile` in the `bilbomd-worker` repo for details.
 
 This should be checked, but my recollection is that this should be sufficient to build and deploy the Docker stuff:
 
@@ -242,3 +242,5 @@ pm2 deploy production exec "pm2 ls"
 [MUI-url]: https://mui.com/
 [Formik-url]: https://formik.org/
 [YUP-url]: https://github.com/jquense/yup
+[bilbomd-worker]: https://github.com/bl1231/bilbomd-worker
+[bilbomd-backend]: https://github.com/bl1231/bilbomd-backend
