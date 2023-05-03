@@ -65,11 +65,11 @@ This is the docker container where the actual BilboMD computations are performed
 
 ### bilbomd-redis
 
-This is a straight forward Redis docker container. No Docker file required to build. Redis (Remote Dictionary Server) is required by the BullMQ queueing system to store queue item information. We are exposing port `6379` so that other docker containers in the docker app-network can communicate with it.
+This service uses the default [Redis Docker image](https://hub.docker.com/_/redis). `bilbomd-redis` is a straight forward Redis docker container. No Docker file is required to build it. Redis (Remote Dictionary Server) is required by the BullMQ queueing system to store queue item information. We expose port `6379` so that other docker containers in the docker app-network can communicate with it.
 
 ### bilbomd-mongodb
 
-This is the main database for the bilbomd app. It's quite simple at the moment with only 2 "tables" ; one for users and one for jobs. The details for these can be found in `bilbomd-backend/model/Job.js` and `bilbomd-backend/model/User.js`. This docker container requires port `27017` to be exposed.
+This service uses the default [MongoDB Docker image](https://hub.docker.com/_/mongo). `bilbomd-mongodb` hosts the main database for BilboMD. It's quite simple at the moment with only 2 "tables" ; one for users and one for jobs. The details for these can be found in `bilbomd-backend/model/Job.js` and `bilbomd-backend/model/User.js`. This docker container requires port `27017` to be exposed.
 
 This should be checked, but my recollection is that this should be sufficient to build and deploy the Docker stuff:
 
@@ -116,17 +116,17 @@ We are now ready to get the user-facing UI up and running.
 
 ## 2. Deploy the BilboMD front end UI
 
-Check out the frontend UI repo from GitHub:
+_note:_ There are different instructions for running `bilbomd-ui` in development mode which I will write up later. This information and these instructions are geared towards the "production" instance of `bilbomd-ui`.
 
-```bash
-git clone git@github.com:bl1231/bilbomd-ui.git
-```
+### Background
 
-note: There are different instructions for running this in development mode which I will write up later. This information and these instructions are geared towards the "production" instance of the app.
-
-The **BilboMD** app will be served from [https://bilbomd.bl1231.als.lbl.gov](https://bilbomd.bl1231.als.lbl.gov). This domain points to Cloudflare which then points back to our gateway machine at `bl1231-local.als.lbl.gov` which then [NAT](https://en.wikipedia.org/wiki/Network_address_translation)s all 80/443 traffic to our main webserver which is running Apache httpd. Our Apache server `www.bl1231.als.lbl.gov` is configured to provide name-based virtual hosting. Essentially a single httpd process that can serve multiple websites (e.g. our main Wordpress site at `bl1231.als.lbl.gov`, out GitLab server at `git.bl1231.als.lbl.gov`, and now bilbomd at `bilbomd.bl1231.als.lbl.gov`).
+**BilboMD** will be served from [https://bilbomd.bl1231.als.lbl.gov](https://bilbomd.bl1231.als.lbl.gov). This domain points to Cloudflare which then points back to the beamline gateway machine at `bl1231-local.als.lbl.gov` which then [NAT](https://en.wikipedia.org/wiki/Network_address_translation)s all 80/443 traffic to our main webserver which is running Apache httpd. Our Apache server `www.bl1231.als.lbl.gov` is configured to provide name-based virtual hosting. Essentially a single httpd process that can serve multiple websites (e.g. our main Wordpress site at `bl1231.als.lbl.gov`, out GitLab server at `git.bl1231.als.lbl.gov`, and now bilbomd at `bilbomd.bl1231.als.lbl.gov`).
 
 Although the main Apache server is running on a dedicated machine `www.bl1231.als.lbl.gov` we make extensive use of `ProxyPass` and `ProxyPassReverse` to connect to backend servers of various types.
+
+### Apache VirtualHost configuration
+
+I'm not going to go into extensive description of the Apaceh setup at 12.3.1, but here is a snippet from teh config files that pertains to **BilboMD**.
 
 ```
 <VirtualHost *:443>
@@ -152,37 +152,58 @@ Although the main Apache server is running on a dedicated machine `www.bl1231.al
 </VirtualHost>
 ```
 
-So from this you can probably figure out that any requests to `bilbomd.bl1231.als.lbl.gov` will be forwarded to port `3001` on `hyperion.bl1231.als.lbl.gov`. In general we don't want to run webapps as ourselves, so I've set up a special service account `webadmin` that we can run webapps under.
+So from this you can probably figure out that any requests to `bilbomd.bl1231.als.lbl.gov` will be forwarded to port `3001` on `hyperion.bl1231.als.lbl.gov`. In general we don't want to run webapps as the root user or as our personal linux accounts, so I've set up a special service account (`webadmin`) that we can run webapps under.
+
+### Checkout the `bilbomd-ui` code.
+
+Check out the frontend UI repo from GitHub:
+
+```bash
+git clone git@github.com:bl1231/bilbomd-ui.git
+```
+
+### Get a few onetime things prepared
 
 We will use [PM2](https://pm2.keymetrics.io/) to deploy `bilbomd-ui`, but first there are a few onetime things that need to be in place.
 
-Create a directory on `hyperion` for the deployed app to live:
+Create a directory on `hyperion` (or on whatever machine you are going to run **BilboMD** ) for the deployed app to live:
 
 ```bash
 mkdir /bilbomd
 chown to webadmin
 ```
 
-`webadmin` requires Node Version Manager and NodeJS. Install [nvm](https://github.com/nvm-sh/nvm)
+The `webadmin` user will require Node Version Manager and NodeJS.
+
+### Install [nvm](https://github.com/nvm-sh/nvm)
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 ```
 
-Logout and back in.
+Logout and back in. [NVM Documentation](https://github.com/nvm-sh/nvm#table-of-contents)
 
-Then install NodeJS and PM2:
+### Then use `nvm` to install NodeJS
 
 ```bash
 nvm install --lts
 nvm use --lts
+```
+
+You might need to logout and back in. You can also create a [`.nvmrc`](https://github.com/nvm-sh/nvm#nvmrc) file to define the version of NodeJS that you want to use in a particular directory.
+
+### Install PM2
+
+```
 npm install pm2@latest -g
 npm install pm2@latest
 ```
 
-Logout and back in
+You might need to logout and back in.
 
-Then as `classen` (or yourself) you can deploy with PM2. First make sure you are in the `bilbomd-ui` directory that you checked out from GitHub. PM2 uses the `bilbomd-ui/ecosystem.config.js` configuration file.
+### PM2 Stuff
+
+Then as `classen` (or yourself) you can deploy with **PM2**. First make sure you are in the `bilbomd-ui` directory that you checked out from GitHub. **PM2** uses the `bilbomd-ui/ecosystem.config.js` configuration file.
 
 ```bash
 cd bilbomd-ui
