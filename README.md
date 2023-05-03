@@ -44,6 +44,8 @@ The `.env` file contains all the secrets needed to deploy BilboMD. To create the
 require('crypto').randomBytes(64).toString('hex')
 ```
 
+There are a number of other environment variables specified in the `.env` file that are needed by the various docker services/containers outlined below. They should be fairly self explanitory.
+
 ## 1. Build and deploy the backend Docker services.
 
 You must have the ability to start docker containers on the machine where you want to run BilboMD backend services. The `docker-compose.yml` file specifies 4 services:
