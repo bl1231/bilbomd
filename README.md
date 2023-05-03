@@ -1,6 +1,6 @@
 # bilbomd
 
-This repository is a sort fo "wrapper" project. The main purpose for now is to hold the main `docker-compose.yml` file. It can also serve as a place to document how to deploy BilboMD.
+This repository is a sort fo "wrapper" project. The main purpose is to hold the main `docker-compose.yml` file. It will also serve as a place to document how to deploy BilboMD.
 
 ## Description
 
@@ -32,9 +32,17 @@ One of the major goals of the redesign of BilboMD was to modernize the various t
 -   [Yup][YUP-url]
 -   [Formik][Formik-url]
 
-## Deployment
+# Deployment
 
 Deploying BilboMD web app currently requires a couple of steps. These instructions are assuming you will deploy on `hyperion`, but the code shoudl be very portable.
+
+## The `.env` file
+
+The `.env` file contains all the secrets needed to deploy BilboMD. To create the access `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET` cryptographic keys just launch an interactive `node` terminal and type the following command:
+
+```bash
+require('crypto').randomBytes(64).toString('hex')
+```
 
 ## 1. Build and deploy the backend Docker services.
 
