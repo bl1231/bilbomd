@@ -71,40 +71,77 @@ This service uses the default [Redis Docker image](https://hub.docker.com/_/redi
 
 This service uses the default [MongoDB Docker image](https://hub.docker.com/_/mongo). `bilbomd-mongodb` hosts the main database for BilboMD. It's quite simple at the moment with only 2 "tables" ; one for users and one for jobs. The details for these can be found in `bilbomd-backend/model/Job.js` and `bilbomd-backend/model/User.js`. This docker container requires port `27017` to be exposed.
 
-This should be checked, but my recollection is that this should be sufficient to build and deploy the Docker stuff:
+## Docker compose instructions
 
-checkout the top level bilbomd repo:
+This should be checked, but my recollection is that this should be sufficient to build and deploy the Docker stuff. There are still a lot of things I don't fully understand about Docker and Docker Compose. Here are a few usefule links teh teh Docker documentation.
+
+-   [Docker Compose](https://docs.docker.com/compose/reference/)
+
+### Checkout the top level `bilbomd` repo
 
 ```bash
 cd directory/where/you/want/to/work
 git clone git@github.com:bl1231/bilbomd.git
-cd bilbomd
 ```
 
-check out the other repos:
+### Check out the other repos:
 
 ```bash
+cd bilbomd
 git clone git@github.com:bl1231/bilbomd-backend.git
 git clone git@github.com:bl1231/bilbomd-worker.git
 ```
 
-Build and deploy the Docker services. You should be in the top level `bilbomd` directory where the `docker-compose.yml` file resides:
+### The `docker-compose.yml` file
+
+The `docker-compose.yml` file has many options which in general can be read about [here](https://docs.docker.com/compose/compose-file/03-compose-file/). The Compose file is a YAML file defining services, networks, volumes, configs and secrets. Here are the relevent links to the documentation.
+
+-   [services](https://docs.docker.com/compose/compose-file/05-services/)
+-   [networks](https://docs.docker.com/compose/compose-file/06-networks/)
+-   [volumes](https://docs.docker.com/compose/compose-file/07-volumes/)
+-   [configs](https://docs.docker.com/compose/compose-file/08-configs/)
+-   [secrets](https://docs.docker.com/compose/compose-file/09-secrets/)
+
+### Build the **BilboMD** Docker services
+
+You should be in the top level `bilbomd` directory where the `docker-compose.yml` file resides.
 
 ```bash
 docker compose build
+```
+
+or to build services without using any cached images
+
+```bash
+docker compose build --no-cache
+```
+
+### Start the **BilboMD** Docker services
+
+```bash
 docker compose up
 ```
 
-or to start in a detached mode:
+The `docker compose up` command starts the services in an interactive way. I think it will also "create" the necessary images specified in the `docker-compose.yml` file if they don't already exist. Once the images have been created you can `ctrl-c` to terminate all services and then start them in detached mode. This can be done in 2 ways
 
 ```bash
 docker compose up --detach
 ```
 
-Check that they are running and "healthy" with the `docker ps` command:
+or
 
+```bash
+docker compose start
 ```
-(base) [15:50]classen@hyperion:~/projects/bilbomd$docker ps
+
+If there are changes to the code and you want to update the production services you gotta do some stuff. The exact order of operations to update the running **BilboMD** services is a bit of a mystery to me at the moment. Watch this space for updates.
+
+### Check that BilboMD services are running and "healthy"
+
+You can do this with the `docker ps` command. For example:
+
+```bash
+classen@hyperion:~/projects/bilbomd$docker ps
 CONTAINER ID   IMAGE                    COMMAND                  CREATED        STATUS                  PORTS                                           NAMES
 a375b532034c   bl1231/bilbomd-worker    "docker-entrypoint.s…"   26 hours ago   Up 26 hours                                                             bilbomd-worker
 bc8089076e87   bl1231/bilbomd-backend   "docker-entrypoint.s…"   26 hours ago   Up 26 hours             0.0.0.0:3500->3500/tcp, :::3500->3500/tcp       bilbomd-backend
@@ -126,7 +163,7 @@ Although the main Apache server is running on a dedicated machine `www.bl1231.al
 
 ### Apache VirtualHost configuration
 
-I'm not going to go into extensive description of the Apaceh setup at 12.3.1, but here is a snippet from teh config files that pertains to **BilboMD**.
+I'm not going to go into extensive description of the Apache setup at 12.3.1, but here is a snippet from the config files that pertains to **BilboMD**.
 
 ```
 <VirtualHost *:443>
@@ -209,7 +246,9 @@ Then as `classen` (or yourself) you can deploy with **PM2**. First make sure you
 cd bilbomd-ui
 ```
 
-### The first time only you run the `setup` command
+### The first time
+
+The first time you deploy `bilbomd-ui` you will need to run the `setup` command:
 
 ```bash
 pm2 deploy production setup
