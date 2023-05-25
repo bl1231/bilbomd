@@ -36,7 +36,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "12"
+          cpus: '12'
     restart: always
     env_file: .env
     environment:
@@ -53,10 +53,8 @@ services:
     ports:
       - "3500:3500"
     volumes:
-      # - ./bilbomd-backend:/home/node/app
       - uploads:/bilbomd/uploads
       - /etc/localtime:/etc/localtime:ro
-      # - node_modules:/home/node/app/node_modules
     networks:
       - app-network
     depends_on:
@@ -87,7 +85,7 @@ services:
 
   worker:
     image: bl1231/bilbomd-worker
-    # no explicit container name needed when deploying replicas
+    # An explicit container_name is not needed when deploying replicas
     # container_name: bilbomd-worker
     build:
       context: ./bilbomd-worker
@@ -97,7 +95,7 @@ services:
       replicas: 3
       resources:
         limits:
-          cpus: "12"
+          cpus: '12'
     restart: no
     env_file: .env
     environment:
@@ -113,7 +111,6 @@ services:
     networks:
       - app-network
     volumes:
-      # - ./bilbomd-worker:/home/node/app
       - uploads:/bilbomd/uploads
       - /etc/localtime:/etc/localtime:ro
     depends_on:
