@@ -55,6 +55,7 @@ services:
     volumes:
       - uploads:/bilbomd/uploads
       - /etc/localtime:/etc/localtime:ro
+    user: "1000:1000"
     networks:
       - app-network
     depends_on:
@@ -113,6 +114,7 @@ services:
     volumes:
       - uploads:/bilbomd/uploads
       - /etc/localtime:/etc/localtime:ro
+    user: "1000:1000"
     depends_on:
       - bilbomd-mongodb
       - bilbomd-redis
