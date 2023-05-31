@@ -1,0 +1,30 @@
+version: "3.9"
+
+volumes:
+  mongodb-dev:
+    name: mongodb-dev
+    external: true
+  redis-cache-dev:
+    name: redis-cache-dev
+    external: true
+  uploads-dev:
+    name: uploads-dev
+    external: true
+
+services:
+  mongodb:
+    volumes:
+      - mongodb-dev:/data/db
+
+  redis:
+    volumes:
+      - redis-cache-dev:/data
+
+  backend:
+    volumes:
+      - uploads-dev:/bilbomd/uploads
+      - ./logs/dev:/logs
+
+  worker:
+    volumes:
+      - uploads-dev:/bilbomd/uploads

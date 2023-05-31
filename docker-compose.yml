@@ -16,55 +16,8 @@ networks:
     driver: bridge
 
 services:
-  bilbomd-redis:
-    image: redis
-    container_name: bilbomd-redis
-    restart: always
-    ports:
-      - "6379:6379"
-    command: redis-server --save 20 1 --loglevel warning
-    volumes:
-      - redis-cache:/data
-    networks:
-      - app-network
-
-  bilbomd-backend:
-    image: bl1231/bilbomd-backend
-    container_name: bilbomd-backend
-    build:
-      context: ./bilbomd-backend
-    deploy:
-      resources:
-        limits:
-          cpus: '12'
-    restart: always
-    env_file: .env
-    environment:
-      - MONGO_USERNAME=$MONGO_USERNAME
-      - MONGO_PASSWORD=$MONGO_PASSWORD
-      - MONGO_HOSTNAME=bilbomd-mongodb
-      - MONGO_PORT=$MONGO_PORT
-      - MONGO_DB=$MONGO_DB
-      - REDIS_URL=$REDIS_URL
-      - REDIS_HOST=$REDIS_HOST
-      - REDIS_PORT=$REDIS_PORT
-      - REDIS_PASSWORD=$REDIS_PASSWORD
-      - BILBOMD_URL=$BILBOMD_URL
-    ports:
-      - "3500:3500"
-    volumes:
-      - uploads:/bilbomd/uploads
-      - /etc/localtime:/etc/localtime:ro
-    user: "1000:1000"
-    networks:
-      - app-network
-    depends_on:
-      - bilbomd-mongodb
-      - bilbomd-redis
-
-  bilbomd-mongodb:
+  mongodb:
     image: mongo
-    container_name: bilbomd-mongodb
     restart: always
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
@@ -72,22 +25,71 @@ services:
       timeout: 10s
       retries: 7
       start_period: 20s
-    env_file: .env
+    env_file:
+      - .${BILBOMD_ENV:?err}.env
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=$MONGO_USERNAME
-      - MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASSWORD
+      MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
+      MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - "27017:27017"
+      - "${MONGO_EXTERNAL_PORT:?err}:27017"
     volumes:
       - mongodb:/data/db
       - /etc/localtime:/etc/localtime:ro
     networks:
       - app-network
 
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - "${REDIS_EXTERNAL_PORT:?err}:6379"
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - redis-cache:/data
+    networks:
+      - app-network
+
+  backend:
+    image: bl1231/bilbomd-backend:0.0.2
+    build:
+      context: ./bilbomd-backend
+    deploy:
+      resources:
+        limits:
+          cpus: '12'
+    restart: always
+    env_file:
+      - .${BILBOMD_ENV:?err}.env
+    environment:
+      ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
+      REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
+      MONGO_USERNAME: $MONGO_USERNAME
+      MONGO_PASSWORD: $MONGO_PASSWORD
+      MONGO_HOSTNAME: $MONGO_HOSTNAME
+      MONGO_PORT: $MONGO_PORT
+      MONGO_DB: $MONGO_DB
+      MONGO_AUTH_SRC: $MONGO_AUTH_SRC
+      REDIS_HOST: $REDIS_HOST
+      REDIS_PORT: $REDIS_PORT
+      REDIS_PASSWORD: $REDIS_PASSWORD
+      BILBOMD_URL: $BILBOMD_URL
+      BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
+      BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
+    ports:
+      - "${BILBOMD_BACKEND_PORT:?err}:3500"
+    volumes:
+      - uploads:/bilbomd/uploads
+      - /etc/localtime:/etc/localtime:ro
+      - ./logs/prod:/logs
+    user: "1000:1000"
+    networks:
+      - app-network
+    depends_on:
+      - mongodb
+      - redis
+
   worker:
-    image: bl1231/bilbomd-worker
-    # An explicit container_name is not needed when deploying replicas
-    # container_name: bilbomd-worker
+    image: bl1231/bilbomd-worker:0.0.2
     build:
       context: ./bilbomd-worker
       args:
@@ -98,17 +100,23 @@ services:
         limits:
           cpus: '12'
     restart: no
-    env_file: .env
+    env_file:
+      - .${BILBOMD_ENV:?err}.env
     environment:
-      - MONGO_USERNAME=$MONGO_USERNAME
-      - MONGO_PASSWORD=$MONGO_PASSWORD
-      - MONGO_HOSTNAME=bilbomd-mongodb
-      - MONGO_PORT=$MONGO_PORT
-      - MONGO_DB=$MONGO_DB
-      - REDIS_URL=$REDIS_URL
-      - REDIS_HOST=$REDIS_HOST
-      - REDIS_PORT=$REDIS_PORT
-      - REDIS_PASSWORD=$REDIS_PASSWORD
+      ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
+      REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
+      MONGO_USERNAME: $MONGO_USERNAME
+      MONGO_PASSWORD: $MONGO_PASSWORD
+      MONGO_HOSTNAME: $MONGO_HOSTNAME
+      MONGO_PORT: $MONGO_PORT
+      MONGO_DB: $MONGO_DB
+      MONGO_AUTH_SRC: $MONGO_AUTH_SRC
+      REDIS_HOST: $REDIS_HOST
+      REDIS_PORT: $REDIS_PORT
+      REDIS_PASSWORD: $REDIS_PASSWORD
+      BILBOMD_URL: $BILBOMD_URL
+      BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
+      BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
     networks:
       - app-network
     volumes:
@@ -116,5 +124,15 @@ services:
       - /etc/localtime:/etc/localtime:ro
     user: "1000:1000"
     depends_on:
-      - bilbomd-mongodb
-      - bilbomd-redis
+      - mongodb
+      - redis
+
+# secrets:
+#   access_token_secret:
+#     file: ./secrets/${BILBOMD_ENV:?err}/access_token_secret
+#   refresh_token_secret:
+#     file: ./secrets/${BILBOMD_ENV:?err}/refresh_token_secret
+#   mongo_password:
+#     file: ./secrets/${BILBOMD_ENV:?err}/mongo_password
+#   redis_password:
+#     file: ./secrets/${BILBOMD_ENV:?err}/redis_password
