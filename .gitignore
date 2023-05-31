@@ -111,4 +111,4 @@ dist
 bilbomd-backend
 bilbomd-ui
 bilbomd-worker
-vite-test
+secrets
