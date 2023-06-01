@@ -21,10 +21,26 @@ services:
       - redis-cache-dev:/data
 
   backend:
+    image: bl1231/bilbomd-backend:0.0.3-dev2
+    build:
+      args:
+        USER_ID: 5005
+        GROUP_ID: 1231
     volumes:
       - uploads-dev:/bilbomd/uploads
-      - ./logs/dev:/logs
+      - ./bilbomd-backend:/app
+      # - ./logs/dev:/logs
+    user: "5005:1231"
+    command: [ "npm", "run", "dev" ]
 
   worker:
+    image: bl1231/bilbomd-worker:0.0.3-dev2
+    build:
+      args:
+        USER_ID: 5005
+        GROUP_ID: 1231
+    deploy:
+      replicas: 1
     volumes:
       - uploads-dev:/bilbomd/uploads
+    user: "5005:1231"

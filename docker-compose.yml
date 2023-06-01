@@ -53,6 +53,10 @@ services:
     image: bl1231/bilbomd-backend:0.0.2
     build:
       context: ./bilbomd-backend
+      args:
+        DEVELOPMENT: false
+        USER_ID: 1000
+        GROUP_ID: 1000
     deploy:
       resources:
         limits:
@@ -80,7 +84,7 @@ services:
     volumes:
       - uploads:/bilbomd/uploads
       - /etc/localtime:/etc/localtime:ro
-      - ./logs/prod:/logs
+      # - ./logs/prod:/logs
     user: "1000:1000"
     networks:
       - app-network
@@ -94,6 +98,8 @@ services:
       context: ./bilbomd-worker
       args:
         CHARMM_VER: c47b2
+        USER_ID: 1000
+        GROUP_ID: 1000
     deploy:
       replicas: 3
       resources:
