@@ -55,8 +55,8 @@ services:
       context: ./bilbomd-backend
       args:
         DEVELOPMENT: false
-        USER_ID: 1000
-        GROUP_ID: 1000
+        USER_ID: 1001
+        GROUP_ID: 1001
     deploy:
       resources:
         limits:
@@ -85,7 +85,7 @@ services:
       - uploads:/bilbomd/uploads
       - /etc/localtime:/etc/localtime:ro
       # - ./logs/prod:/logs
-    user: "1000:1000"
+    user: "1001:1001"
     networks:
       - app-network
     depends_on:
@@ -98,8 +98,8 @@ services:
       context: ./bilbomd-worker
       args:
         CHARMM_VER: c47b2
-        USER_ID: 1000
-        GROUP_ID: 1000
+        USER_ID: 1001
+        GROUP_ID: 1001
     deploy:
       replicas: 3
       resources:
@@ -128,7 +128,7 @@ services:
     volumes:
       - uploads:/bilbomd/uploads
       - /etc/localtime:/etc/localtime:ro
-    user: "1000:1000"
+    user: "1001:1001"
     depends_on:
       - mongodb
       - redis
