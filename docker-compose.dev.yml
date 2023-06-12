@@ -19,9 +19,11 @@ services:
   redis:
     volumes:
       - redis-cache-dev:/data
+    ports:
+      - "${REDIS_EXTERNAL_PORT:?err}:${REDIS_PORT:?err}"
 
   backend:
-    image: bl1231/bilbomd-backend:0.0.3-dev2
+    image: bl1231/bilbomd-backend:0.0.4-dev
     build:
       args:
         USER_ID: 5005
@@ -34,7 +36,7 @@ services:
     command: [ "npm", "run", "dev" ]
 
   worker:
-    image: bl1231/bilbomd-worker:0.0.3-dev2
+    image: bl1231/bilbomd-worker:0.0.4-dev
     build:
       args:
         USER_ID: 5005
