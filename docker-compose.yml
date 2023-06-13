@@ -39,7 +39,7 @@ services:
       - app-network
 
   redis:
-    image: redis
+    image: redis:latest
     restart: always
     ports:
       - "${REDIS_EXTERNAL_PORT:?err}:6379"
