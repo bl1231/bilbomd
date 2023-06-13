@@ -17,7 +17,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo
+    image: mongo:latest
     restart: always
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
