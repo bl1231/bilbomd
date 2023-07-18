@@ -297,11 +297,11 @@ npm version 0.0.7
 This will perform 2 actions:
 
 1. creates a git tag "v0.0.7"
-2. increment the "version" field in the `package.json`` file
+2. increment the "version" field in the `package.json` file
 
-Then we manually increment the "tag" in `docker-compose.yml`` so that the next time we run "build" we get a docker image that is tagged the same as the git tag. There might be a more elegant way to do this, but for now this is the way.
+Then we manually increment the "tag" in `docker-compose.yml` so that the next time we run "build" we get a docker image that is tagged the same as the git tag. There might be a more elegant way to do this, but for now this is the way.
 
-for example in the `docker-compose.yml`` file:
+for example in the `docker-compose.yml` file:
 
 ```
 worker:
