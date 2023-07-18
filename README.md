@@ -282,6 +282,38 @@ pm2 deploy production exec "pm2 show BilboMD"
 pm2 deploy production exec "pm2 ls"
 ```
 
+## Versioning
+
+We use npm to increment the version in package.json
+
+https://docs.npmjs.com/cli/v9/configuring-npm/package-json#version
+
+For example:
+
+```bash
+npm version 0.0.7
+```
+
+This will perform 2 actions:
+
+1. creates a git tag "v0.0.7"
+2. increment the "version" field in the `package.json`` file
+
+Then we manually increment the "tag" in `docker-compose.yml`` so that the next time we run "build" we get a docker image that is tagged the same as the git tag. There might be a more elegant way to do this, but for now this is the way.
+
+for example in the `docker-compose.yml`` file:
+
+```
+worker:
+   image: bl1231/bilbomd-worker:0.0.7
+```
+
+Then when we run docker compose it will essentially build an image based on whatever branch is currently checked out, tag it, and then - if you run "up -d", it will be deployed. So it seems important to make sure that you have the correct git tag checked out before running any docker commands.
+
+or at least be aware that when updating the production docker images you should have all projects checked out at "main"
+
+The docker development environment mounts the entire app directory in the docker container so that we can do interactive nodemon development
+
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
@@ -306,3 +338,4 @@ pm2 deploy production exec "pm2 ls"
 [YUP-url]: https://github.com/jquense/yup
 [bilbomd-worker]: https://github.com/bl1231/bilbomd-worker
 [bilbomd-backend]: https://github.com/bl1231/bilbomd-backend
+[npmjs-package-json-version]: https://docs.npmjs.com/cli/v9/configuring-npm/package-json#version
