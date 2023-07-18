@@ -23,7 +23,7 @@ services:
       - "${REDIS_EXTERNAL_PORT:?err}:${REDIS_PORT:?err}"
 
   backend:
-    image: bl1231/bilbomd-backend:0.0.5-dev
+    image: bl1231/bilbomd-backend:0.0.7-dev
     build:
       args:
         USER_ID: 5005
@@ -36,13 +36,16 @@ services:
     command: [ "npm", "run", "dev" ]
 
   worker:
-    image: bl1231/bilbomd-worker:0.0.5-dev
+    image: bl1231/bilbomd-worker:0.0.7-dev
     build:
       args:
         USER_ID: 5005
         GROUP_ID: 1231
     deploy:
       replicas: 1
+      resources:
+        limits:
+          cpus: '10'
     volumes:
       - uploads-dev:/bilbomd/uploads
     user: "5005:1231"

@@ -50,7 +50,7 @@ services:
       - app-network
 
   backend:
-    image: bl1231/bilbomd-backend:0.0.4
+    image: bl1231/bilbomd-backend:0.0.6
     build:
       context: ./bilbomd-backend
       args:
@@ -93,7 +93,7 @@ services:
       - redis
 
   worker:
-    image: bl1231/bilbomd-worker:0.0.5
+    image: bl1231/bilbomd-worker:0.0.6
     build:
       context: ./bilbomd-worker
       args:
@@ -101,7 +101,7 @@ services:
         USER_ID: 1001
         GROUP_ID: 1001
     deploy:
-      replicas: 3
+      replicas: 2
       resources:
         limits:
           cpus: '12'
