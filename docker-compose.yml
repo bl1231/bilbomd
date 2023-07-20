@@ -93,7 +93,7 @@ services:
       - redis
 
   worker:
-    image: bl1231/bilbomd-worker:0.0.7
+    image: bl1231/bilbomd-worker:0.0.8
     build:
       context: ./bilbomd-worker
       args:
