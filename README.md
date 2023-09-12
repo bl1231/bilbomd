@@ -240,7 +240,7 @@ npm install pm2@latest
 
 You might need to logout and back in.
 
-### PM2 Stuff
+### Various PM2 commands for deploying and maintaining `bilbomd-ui`
 
 Then as `classen` (or yourself) you can deploy with **PM2**. First make sure you are in the `bilbomd-ui` directory that you checked out from GitHub. **PM2** uses the `bilbomd-ui/ecosystem.config.js` configuration file.
 
@@ -253,33 +253,33 @@ cd bilbomd-ui
 The first time you deploy `bilbomd-ui` you will need to run the `setup` command:
 
 ```bash
-pm2 deploy production setup
+pm2 deploy ecosystem.config.cjs production setup
 ```
 
 ### To update production from GitHub
 
 ```bash
 git pull
-pm2 deploy production update
+pm2 deploy ecosystem.config.cjs production update
 ```
 
 ### To revert to previous version using pm2
 
 ```bash
-pm2 deploy production revert
+pm2 deploy ecosystem.config.cjs production revert
 ```
 
 ### To run a specific pm2 command on the production server
 
 ```bash
-pm2 deploy production exec "pm2 start BilboMD"
+pm2 deploy ecosystem.config.cjs production exec "pm2 start BilboMD"
 ```
 
 ### To see status
 
 ```bash
-pm2 deploy production exec "pm2 show BilboMD"
-pm2 deploy production exec "pm2 ls"
+pm2 deploy ecosystem.config.cjs production exec "pm2 show BilboMD"
+pm2 deploy ecosystem.config.cjs production exec "pm2 ls"
 ```
 
 ## Versioning
