@@ -23,7 +23,7 @@ services:
       - "${REDIS_EXTERNAL_PORT:?err}:${REDIS_PORT:?err}"
 
   backend:
-    image: bl1231/bilbomd-backend:0.0.9-dev1
+    image: bl1231/bilbomd-backend:0.0.12-dev1
     build:
       args:
         USER_ID: 5005
@@ -42,7 +42,7 @@ services:
         USER_ID: 5005
         GROUP_ID: 1231
     deploy:
-      replicas: 1
+      replicas: 2
       resources:
         limits:
           cpus: '10'
