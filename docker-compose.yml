@@ -50,7 +50,7 @@ services:
       - app-network
 
   backend:
-    image: bl1231/bilbomd-backend:0.0.9
+    image: bl1231/bilbomd-backend:0.0.12
     build:
       context: ./bilbomd-backend
       args:
