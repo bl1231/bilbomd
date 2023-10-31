@@ -50,7 +50,7 @@ services:
       - app-network
 
   backend:
-    image: bl1231/bilbomd-backend:0.0.14
+    image: bl1231/bilbomd-backend:1.3.1
     build:
       context: ./bilbomd-backend
       args:
@@ -93,7 +93,7 @@ services:
       - redis
 
   worker:
-    image: bl1231/bilbomd-worker:0.0.11
+    image: bl1231/bilbomd-worker:1.2.2
     build:
       context: ./bilbomd-worker
       args:
