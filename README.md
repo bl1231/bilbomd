@@ -1,5 +1,11 @@
 # bilbomd-scoper
 
+## Description
+
+This project will support the Scoper pipeline.
+
+## BunJS stuff
+
 To install dependencies:
 
 ```bash
