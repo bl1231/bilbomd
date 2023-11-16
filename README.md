@@ -104,39 +104,65 @@ The `docker-compose.yml` file has many options which in general can be read abou
 -   [configs](https://docs.docker.com/compose/compose-file/08-configs/)
 -   [secrets](https://docs.docker.com/compose/compose-file/09-secrets/)
 
-### Build the **BilboMD** Docker services
+### Docker Compose Commands for Production and Development
 
-You should be in the top level `bilbomd` directory where the `docker-compose.yml` file resides.
+#### Production Commands:
 
-```bash
-docker compose build
-```
+1. **Building the Production Instance**:
 
-or to build services without using any cached images
+    ```bash
+    docker compose --env-file .production.env -f docker-compose.yml -p bilbomd-prod build
+    ```
 
-```bash
-docker compose build --no-cache
-```
+    - `--env-file .production.env`: Specifies the environment file for Docker Compose.
+    - `-f docker-compose.yml`: Designates the Docker Compose file to use.
+    - `-p bilbomd-prod`: Sets the project name to differentiate Docker objects.
+    - `build`: Instructs Docker Compose to build the images.
 
-### Start the **BilboMD** Docker services
+2. **Starting the Production Instance**:
 
-```bash
-docker compose up
-```
+    ```bash
+    docker compose --env-file .production.env -f docker-compose.yml -p bilbomd-prod up -d
+    ```
 
-The `docker compose up` command starts the services in an interactive way. I think it will also "create" the necessary images specified in the `docker-compose.yml` file if they don't already exist. Once the images have been created you can `ctrl-c` to terminate all services and then start them in detached mode. This can be done in 2 ways
+    - The parameters are consistent with the build command.
+    - `up -d`: Brings up the containers in detached mode.
 
-```bash
-docker compose up --detach
-```
+#### Development Commands:
 
-or
+1. **Building the Development Instance**:
 
-```bash
-docker compose start
-```
+    ```bash
+    docker compose --env-file .development.env -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev build
+    ```
 
-If there are changes to the code and you want to update the production services you gotta do some stuff. The exact order of operations to update the running **BilboMD** services is a bit of a mystery to me at the moment. Watch this space for updates.
+    - `--env-file .development.env`: Uses the development environment file.
+    - `-f docker-compose.yml -f docker-compose.dev.yml`: Combines the base and development-specific Docker Compose files.
+    - `-p bilbomd-dev`: Assigns a unique project name for the development environment.
+    - `build`: Command to build the images.
+
+2. **Starting the Development Instance**:
+
+    ```bash
+    docker compose --env-file .development.env -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev up -d
+    ```
+
+    - The parameters mirror the development build command.
+    - `up -d`: Starts the containers in the background.
+
+---
+
+#### Additional Notes:
+
+-   **Project Names (`-p`)**: Different project names (`bilbomd-prod` for production and `bilbomd-dev` for development) ensure that containers, networks, and volumes are separate and there's no overlap between environments.
+
+-   **Environment Files**: Using distinct `.env` files for each environment (`production.env` and `development.env`) allows for specific, tailored configurations without risk of cross-environment contamination.
+
+-   **Compose File Overrides**: The use of `docker-compose.dev.yml` in development allows for extending or overriding configurations in a manner specific to the development environment.
+
+These commands are structured to manage separate development and production environments effectively in Docker Compose, ensuring a clear distinction and reliable deployment process.
+
+---
 
 ### Check that BilboMD services are running and "healthy"
 
@@ -151,7 +177,7 @@ bc8089076e87   bl1231/bilbomd-backend   "docker-entrypoint.s…"   26 hours ago 
 b39a1c3902d0   redis                    "docker-entrypoint.s…"   28 hours ago   Up 26 hours             0.0.0.0:6379->6379/tcp, :::6379->6379/tcp       bilbomd-redis
 ```
 
-We are now ready to get the user-facing UI up and running.
+---
 
 ## 2. Deploy the BilboMD front end UI
 
