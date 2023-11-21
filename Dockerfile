@@ -37,10 +37,6 @@ COPY --from=build-stage-1 /usr/local/src/KGS/scripts/kgs_prepare.py /usr/local/b
 COPY --from=build-stage-1 /usr/local/src/RNAView/bin/rnaview /usr/local/bin/
 COPY --from=build-stage-1 /usr/local/src/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
 
-# Clone IonNet
-WORKDIR /home/bun/IonNet
-RUN git clone https://github.com/dina-lab3D/IonNet .
-
 # Download and install Miniconda
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.10.0-1-Linux-x86_64.sh -O /tmp/miniconda.sh && \
     bash /tmp/miniconda.sh -b -p /opt/miniconda && \
@@ -65,23 +61,12 @@ RUN pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 RUN pip install torch-spline-conv  -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 RUN conda install -y torchmetrics
 
-# Extract these 2 deps
-WORKDIR /home/bun/IonNet/scripts/scoper_scripts
-RUN tar -xf RNAVIEW.tar
-RUN tar -xf KGSrna.tar
-
-# Until I figure out how better to do this
-RUN mkdir /content
-
-# Set the RNAView env variable
-ENV RNAVIEW=/usr/local/RNAView
-
-# Create a new user 'myuser'
+# Get BunJS setup for the eventual WebApp
+# Create a new user 'bun'
 RUN useradd -ms /bin/bash bun
 
-#
+# Not sure this is needed, but chown everything
 RUN chown -R bun:bun /home/bun
-RUN chown -R bun:bun /content
 
 # Set the user for subsequent instructions
 USER bun
@@ -103,13 +88,29 @@ WORKDIR /home/bun/app
 COPY --chown=bun:bun package.json bun.lockb* ./
 
 # Install any dependencies
-RUN /home/bun/.bun/bin/bun install
+# RUN /home/bun/.bun/bin/bun install
+RUN bun install
 
+# Clone IonNet into test-data
+WORKDIR /home/bun/app/test-data/IonNet
+RUN git clone https://github.com/dina-lab3D/IonNet .
+# Extract these 2 deps
+WORKDIR /home/bun/app/test-data/IonNet/scripts/scoper_scripts
+RUN tar -xf RNAVIEW.tar
+RUN tar -xf KGSrna.tar
+
+# Change back to the app directory
+WORKDIR /home/bun/app
 # Copy the rest of your app's source code
 COPY --chown=bun:bun . .
 
+# Set the RNAView env variable
+ENV RNAVIEW=/usr/local/RNAView
+
 # Your app binds to port 3005
 EXPOSE 3005
+
+
 
 # Run the Bun app
 CMD ["bun", "run", "--hot","scoper.ts"]
