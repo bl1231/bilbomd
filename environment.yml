@@ -1,0 +1,16 @@
+name: base
+channels:
+  - defaults
+  - conda-forge
+
+dependencies:
+  - numpy
+  - scipy
+  - matplotlib
+  - h5py
+  - pandas
+  - biopython
+  - seaborn
+  - imp
+  - pip:
+      - wandb
