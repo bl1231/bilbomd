@@ -55,7 +55,11 @@ pip install torchmetrics==0.7.2
 Trying to figure out how to invoke this monstrosity.
 
 ```
-python IonNet/mgclassifierv2.py -bd /content scoper -fp ./SL2new.pdb -ahs IonNet/scripts/scoper_scripts/addHydrogensColab.pl -sp ./SL2_150mMmod.dat -it saxs -mp IonNet/models/trained_models/wandering-tree-178.pt -cp IonNet/models/trained_models/wandering-tree-178_config.npy -fs foxs -mfcs multi_foxs_combination -kk 1000 -tk 3 -mfs multi_foxs -mfr True
+python IonNet/mgclassifierv2.py -bd /home/bun/app/test-data scoper -fp /home/bun/app/test-data/MHtest2.pdb -ahs IonNet/scripts/scoper_scripts/addHydrogensColab.pl -sp /home/bun/app/test-data/MHtest2.dat -it saxs -mp IonNet/models/trained_models/wandering-tree-178.pt -cp IonNet/models/trained_models/wandering-tree-178_config.npy -fs foxs -mfcs multi_foxs_combination -kk 1000 -tk 3 -mfs multi_foxs -mfr True
+```
+
+```
+python mgclassifierv2.py -bd /home/bun/app/test-data scoper -fp /home/bun/app/test-data/MHtest2.pdb -ahs scripts/scoper_scripts/addHydrogensColab.pl -sp /home/bun/app/test-data/MHtest2.dat -it saxs -mp models/trained_models/wandering-tree-178.pt -cp models/trained_models/wandering-tree-178_config.npy -fs foxs -mfcs multi_foxs_combination -kk 1000 -tk 3 -mfs multi_foxs -mfr True
 ```
 
 Test KGSrna
@@ -73,7 +77,7 @@ scripts/scoper_scripts/Software/Linux64/KGSrna/KGSrna --initial {}.HB --hbondMet
 ```
 
 ```
-/home/bun/IonNet/scripts/scoper_scripts/Software/Linux64/KGSrna/KGSrna --initial MHtest2.pdb.HB --hbondMethod rnaview --hbondFile MHtest2.pdb.HB.out -s 100 -r 20 -c 0.4 --workingDirectory KGSrna_test_1/ > KGSrna.out
+scripts/scoper_scripts/Software/Linux64/KGSrna/KGSrna --initial /home/bun/app/test-data/MHtest2.pdb.HB --hbondMethod rnaview --hbondFile /home/bun/app/test-data/MHtest2.pdb.HB.out -s 1000 -r 20 -c 0.4 --workingDirectory /home/bun/app/test-data/KGSRNA/MHtest2.pdb/
 
 ```
 
