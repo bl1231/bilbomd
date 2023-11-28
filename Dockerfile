@@ -51,15 +51,17 @@ COPY environment.yml /tmp/environment.yml
 # Update existing base environment from environment.yml
 RUN conda env update -f /tmp/environment.yml
 
-RUN conda install -y pytorch-cuda=12.1 -c pytorch -c nvidia
-RUN conda install -y pytorch=2.1.1 -c pytorch -c nvidia
+# RUN conda install -y pytorch-cuda=11.6 -c pytorch -c nvidia
+# RUN conda install -y pytorch=1.13.1 -c pytorch
+RUN conda install -y pytorch pytorch-cuda -c pytorch -c nvidia
+# RUN conda install -y pyg=2.2.0 -c pyg
 RUN conda install -y pyg -c pyg
 
-RUN pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
-RUN pip install torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
-RUN pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
-RUN pip install torch-spline-conv  -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
-RUN conda install -y torchmetrics
+# RUN pip install torch-scatter -f https://data.pyg.org/whl/torch-1.13.1+cu117.html
+# RUN pip install torch-sparse -f https://data.pyg.org/whl/torch-1.13.1+cu117.html
+# RUN pip install torch-cluster -f https://data.pyg.org/whl/torch-1.13.1+cu117.html
+# RUN pip install torch-spline-conv  -f https://data.pyg.org/whl/torch-1.13.1+cu117.html
+RUN conda install -y torchmetrics=0.7.2 -c conda-forge
 
 # Get BunJS setup for the eventual WebApp
 # Create a new user 'bun'
