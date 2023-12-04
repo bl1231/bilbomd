@@ -112,4 +112,5 @@ dist
 bilbomd-backend
 bilbomd-ui
 bilbomd-worker
+bilbomd-scoper
 secrets
