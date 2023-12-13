@@ -11,33 +11,12 @@ Just keeping track of teh Python packages I'm installing in order to test the Io
 on `hyperion`
 
 ```bash
-conda create --name py310-ionnet python=3.10
-conda activate py310-ionnet
-
-conda install numpy
-conda install matplotlib
-
-conda search torch_geometric
-conda install pytorch
-conda install scipy
-conda install torch_geometric
-conda install pyg -c pyg
-pip install wandb
-conda install pandas
-conda install biopython
-conda install seaborn
-conda install h5py
-conda install torchmetrics
-
-```
-
-```bash
 (py310-ionnet) [17:18]classen@hyperion:~/projects/IonNet$python mgclassifierv2.py
 usage: mgclassifierv2.py [-h] -bd BASE_DIR [-kfp KFOLD_PATH] {preprocess,split-samples,train,test,inference,scoper,kfold} ...
 mgclassifierv2.py: error: the following arguments are required: -bd/--base-dir, action
 ```
 
-These are teh `pip install` commands present in Ben's notebook:
+These are the `pip install` commands present in Ben's notebook:
 
 ```bash
 pip install torch==1.13.1+cu116 -f https://download.pytorch.org/whl/torch_stable.html
@@ -58,11 +37,21 @@ Trying to figure out how to invoke this monstrosity.
 python IonNet/mgclassifierv2.py -bd /home/bun/app/test-data scoper -fp /home/bun/app/test-data/MHtest2.pdb -ahs IonNet/scripts/scoper_scripts/addHydrogensColab.pl -sp /home/bun/app/test-data/MHtest2.dat -it saxs -mp IonNet/models/trained_models/wandering-tree-178.pt -cp IonNet/models/trained_models/wandering-tree-178_config.npy -fs foxs -mfcs multi_foxs_combination -kk 1000 -tk 3 -mfs multi_foxs -mfr True
 ```
 
+cd into `IonNet` then run this:
+
+Michal's test files:
+
 ```
-python mgclassifierv2.py -bd /home/bun/app/test-data scoper -fp /home/bun/app/test-data/MHtest2.pdb -ahs scripts/scoper_scripts/addHydrogensColab.pl -sp /home/bun/app/test-data/MHtest2.dat -it saxs -mp models/trained_models/wandering-tree-178.pt -cp models/trained_models/wandering-tree-178_config.npy -fs foxs -mfcs multi_foxs_combination -kk 1000 -tk 3 -mfs multi_foxs -mfr True
+python /home/bun/IonNet/mgclassifierv2.py -bd /home/bun/app/test-data scoper -fp /home/bun/app/test-data/MHtest2.pdb -ahs /home/bun/IonNet/scripts/scoper_scripts/addHydrogensColab.pl -sp /home/bun/app/test-data/MHtest2.dat -it sax -mp /home/bun/IonNet/models/trained_models/wandering-tree-178.pt -cp /home/bun/IonNet/models/trained_models/wandering-tree-178_config.npy -fs foxs -mfcs multi_foxs_combination -kk 1000 -tk 1 -mfs multi_foxs -mfr True
 ```
 
-Test KGSrna
+Edan's test files:
+
+```
+python mgclassifierv2.py -bd /home/bun/app/test-data scoper -fp /home/bun/app/test-data/EdanSL2.pdb -ahs scripts/scoper_scripts/addHydrogensColab.pl -sp /home/bun/app/test-data/EdanSL2.dat -it sax -mp models/trained_models/wandering-tree-178.pt -cp models/trained_models/wandering-tree-178_config.npy -fs /opt/miniconda/bin/foxs -mfcs /home/bun/app/test-data/IonNet/scripts/scoper_scripts/multi_foxs_combination -kk 100 -tk 1 -mfs /opt/miniconda/bin/multi_foxs -mfr True
+```
+
+## Test KGSrna
 
 in scoper_pipeline.py takes 4 positional args
 
@@ -76,9 +65,19 @@ scripts/scoper_scripts/Software/Linux64/KGSrna/KGSrna --initial {}.HB --hbondMet
 
 ```
 
-```
-scripts/scoper_scripts/Software/Linux64/KGSrna/KGSrna --initial /home/bun/app/test-data/MHtest2.pdb.HB --hbondMethod rnaview --hbondFile /home/bun/app/test-data/MHtest2.pdb.HB.out -s 1000 -r 20 -c 0.4 --workingDirectory /home/bun/app/test-data/KGSRNA/MHtest2.pdb/
+This is core dumping. Apparently KGSrna will only run on Intel and core dumps on AMD.
 
+```bash
+scripts/scoper_scripts/Software/Linux64/KGSrna/KGSrna --initial /home/bun/app/test-data/MHtest2.pdb.HB --hbondMethod rnaview --hbondFile /home/bun/app/test-data/MHtest2.pdb.HB.out -s 50 -r 20 -c 0.4 --workingDirectory /home/bun/app/test-data/KGSRNA/MHtest2.pdb.2/
+
+```
+
+scripts/scoper_scripts/Software/Linux64/KGSrna/KGSrna --initial /home/bun/app/test-data/EdanSL2.pdb.HB --hbondMethod rnaview --hbondFile /home/bun/app/test-data/EdanSL2.pdb.HB.out -s 50 -r 20 -c 0.4 --workingDirectory /home/bun/app/test-data/KGSRNA/EdanSL2.pdb
+
+Try kgs_explore using PDB output from `kgs_prepare.py` script.
+
+```bash
+kgs_explore  --initial /home/bun/app/test-data/MHtest2.pdb.kgs.pdb -s 100 -r 20 -c 0.4 --workingDirectory /home/bun/app/test-data/KGSRNA/MHtest2.pdb/
 ```
 
 ## Docker stuff
@@ -91,11 +90,15 @@ docker build --target build-stage-1 -t bilbomd-scoper-stage-1 .
 
 ### Run Docker container with pwd mounted into container
 
+docker run -d -p 3005:3005 -v .:/home/bun/app --name bilbomd-scoper bilbomd-scoper
 docker run -d -p 3005:3005 --gpus all -v .:/home/bun/app --name bilbomd-scoper bilbomd-scoper
+docker run -d -p 3005:3005 --gpus all -v .:/home/bun/app -v /home/classen/projects/IonNet:/home/bun/app/test-data/IonNet --name bilbomd-scoper bilbomd-scoper
+docker run -d -p 3005:3005 -v .:/home/bun/app -v /home/classen/projects/IonNet:/home/bun/app/IonNet --name bilbomd-scoper bilbomd-scoper
 
 ### Run Docker container with internal app dir
 
 docker run -d -p 3005:3005 --gpus all --name bilbomd-scoper bilbomd-scoper
+docker run -d -p 3005:3005 --name bilbomd-scoper bilbomd-scoper
 
 docker run -it bilbomd-scoper-stage-1 bash
 
