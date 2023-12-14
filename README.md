@@ -93,7 +93,7 @@ docker build --target build-stage-1 -t bilbomd-scoper-stage-1 .
 docker run -d -p 3005:3005 -v .:/home/bun/app --name bilbomd-scoper bilbomd-scoper
 docker run -d -p 3005:3005 --gpus all -v .:/home/bun/app --name bilbomd-scoper bilbomd-scoper
 docker run -d -p 3005:3005 --gpus all -v .:/home/bun/app -v /home/classen/projects/IonNet:/home/bun/app/test-data/IonNet --name bilbomd-scoper bilbomd-scoper
-docker run -d -p 3005:3005 -v .:/home/bun/app -v /home/classen/projects/IonNet:/home/bun/app/IonNet --name bilbomd-scoper bilbomd-scoper
+docker run -d -p 3005:3005 -v .:/home/bun/app -v /home/classen/projects/IonNet:/home/bun/IonNet --name bilbomd-scoper bilbomd-scoper
 
 ### Run Docker container with internal app dir
 

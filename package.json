@@ -2,7 +2,7 @@
   "name": "bilbomd-scoper",
   "module": "index.ts",
   "devDependencies": {
-    "bun-types": "^1.0.12"
+    "bun-types": "^1.0.17"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -12,5 +12,8 @@
     "start": "node build/index.js",
     "dev": "tsc-watch --onSuccess \"node build/index.js\""
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "bullmq": "^4.15.3"
+  }
 }
