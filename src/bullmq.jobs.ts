@@ -22,6 +22,11 @@ export interface BilboMDAutoJob extends Job {
   data: { title: string; uuid: string; jobid: string }
   id: string
 }
+export interface BilboMDScoperJob extends Job {
+  type: 'BilboMDScoper'
+  data: { title: string; uuid: string; jobid: string }
+  id: string
+}
 
 export type WorkerJob =
   | HelloWorldJob
@@ -29,3 +34,4 @@ export type WorkerJob =
   | MayFailOrNotJob
   | BilboMDJob
   | BilboMDAutoJob
+  | BilboMDScoperJob

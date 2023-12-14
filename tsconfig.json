@@ -1,22 +1,21 @@
 {
   "compilerOptions": {
-    "baseUrl": "./src",
+    "baseUrl": "src",
     "lib": ["ESNext"],
     "module": "esnext",
     "target": "esnext",
-    "moduleResolution": "bundler",
-    // "moduleDetection": "force",
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    // "composite": true,
+    "rootDir": "src",
+    "outDir": "build",
+    "moduleResolution": "node",
+    "noEmit": false,
     "strict": true,
     "downlevelIteration": true,
     "skipLibCheck": true,
-    "jsx": "react-jsx",
-    // "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": true,
-    "types": ["bun-types"]
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": [".", "src"]
+  "include": ["src"],
+  "ts-node": {
+    "esm": true
+  }
 }

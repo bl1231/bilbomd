@@ -1,19 +1,41 @@
 {
   "name": "bilbomd-scoper",
-  "module": "index.ts",
-  "devDependencies": {
-    "bun-types": "^1.0.17"
-  },
+  "version": "0.0.1",
+  "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
+  "keywords": [],
+  "author": "Scott Classen",
+  "type": "module",
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "build": "tsc",
-    "start": "node build/index.js",
-    "dev": "tsc-watch --onSuccess \"node build/index.js\""
+    "clean": "rimraf build/*",
+    "build": "npm-run-all clean lint tsc",
+    "start": "npm run build && node build/scoper.js",
+    "dev": "tsc-watch --noClear --onSuccess \"node build/scoper.js\"",
+    "lint": "eslint . --ext .ts",
+    "tsc": "tsc"
   },
-  "type": "module",
   "dependencies": {
-    "bullmq": "^4.15.3"
+    "bullmq": "^4.15.3",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "handlebars": "^4.7.8",
+    "mongoose": "^8.0.3",
+    "nodemailer": "^6.9.7",
+    "nodemailer-express-handlebars": "^6.1.0",
+    "nodemon": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "@types/nodemailer": "^6.4.14",
+    "@types/nodemailer-express-handlebars": "^4.0.5",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "eslint": "^8.55.0",
+    "npm-run-all": "^4.1.5",
+    "ts-node": "^10.9.2",
+    "tsc-watch": "^6.0.4",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
   }
 }

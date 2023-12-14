@@ -1,16 +1,19 @@
-// index.ts
-import { serve } from 'bun'
+import * as dotenv from 'dotenv'
+import { connectDB } from './db.js'
 import { Job, Worker, WorkerOptions } from 'bullmq'
-import { WorkerJob } from './bullmq.jobs.ts'
+import { WorkerJob } from './bullmq.jobs.js'
+import { processBilboMDScoperJob } from './process.bilbomdscoper.js'
 
-const PORT = 3006
+dotenv.config()
+
+connectDB()
 
 const workerHandler = async (job: Job<WorkerJob>) => {
   switch (job.data.type) {
     case 'BilboMDScoper': {
-      console.log('Start BilboMD Scoper job:', job.name)
-      // await processBilboMDJob(job)
-      console.log('Finish job:', job.name)
+      console.log('Start BilboMDScoper job:', job.name)
+      await processBilboMDScoperJob(job)
+      console.log('Finished BilboMDScoper job:', job.name)
       return
     }
   }
@@ -28,22 +31,4 @@ const workerOptions: WorkerOptions = {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const worker = new Worker('bilbomd', workerHandler, workerOptions)
 
-console.log('Worker started!')
-// console.log(Bun.version)
-
-serve({
-  port: PORT,
-  fetch: async (req: Request) => {
-    // Log the request URL
-    console.log('URL:', req.url)
-    const result = await spawnTest()
-    return new Response(result)
-  }
-})
-
-const spawnTest = async () => {
-  const proc = Bun.spawn(['python', 'scripts/test.py'])
-  const text = await new Response(proc.stdout).text()
-  console.log(text)
-  return text
-}
+console.log('Scoper worker started!')
