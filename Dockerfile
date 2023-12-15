@@ -40,19 +40,20 @@ COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/bin/rnaview /usr/lo
 COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
 
 # -----------------------------------------------------------------------------
-# Build stage 3 - install NodeJS v20
+# Build stage 3 - install NodeJS v18
 FROM bilbomd-scoper-install-deps AS bilbomd-scoper-nodejs
 RUN apt-get update
 RUN apt-get install -y gpg curl
 RUN mkdir -p /etc/apt/keyrings
 RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_18.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
 RUN apt-get update
 RUN apt-get install -y nodejs
 
 # -----------------------------------------------------------------------------
 # Build stage 4
 FROM bilbomd-scoper-nodejs AS bilbomd-scoper
+
 # Update Conda
 RUN conda update -n base -c defaults conda
 
