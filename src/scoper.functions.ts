@@ -34,18 +34,8 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
       logStream.end()
       errorStream.end()
       if (code === 0) {
-        try {
-          // Parse the stdout data as JSON
-          //const analysisResults = JSON.parse(autoRg_json)
-          // Update rg_min and rg_max in DBjob
-          // DBjob.rg_min = analysisResults.rg_min
-          // DBjob.rg_max = analysisResults.rg_max
-          // DBjob.save().then(() => {
-          //   resolve()
-          // })
-        } catch (parseError) {
-          reject(parseError)
-        }
+        console.log('exit code zero ----- here')
+        resolve()
       } else {
         reject(`runScoper on close reject`)
       }
