@@ -1,5 +1,5 @@
 import { Job as BullMQJob } from 'bullmq'
-import { BilboMDScoperJob, IBilboMDScoperJob } from './model/Job.js'
+import { BilboMdScoperJob, IBilboMDScoperJob } from './model/Job.js'
 import { User } from './model/User.js'
 import { sendJobCompleteEmail } from './mailer.js'
 import { runScoper } from './scoper.functions.js'
@@ -33,7 +33,7 @@ const cleanupJob = async (MQjob: BullMQJob, DBJob: IBilboMDScoperJob) => {
 const processBilboMDScoperJobTest = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)
 
-  const foundJob = await BilboMDScoperJob.findOne({ _id: MQjob.data.jobid })
+  const foundJob = await BilboMdScoperJob.findOne({ _id: MQjob.data.jobid })
     .populate({
       path: 'user',
       select: 'email'
@@ -62,7 +62,7 @@ const processBilboMDScoperJobTest = async (MQjob: BullMQJob) => {
 const processBilboMDScoperJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)
 
-  const foundJob = await BilboMDScoperJob.findOne({ _id: MQjob.data.jobid })
+  const foundJob = await BilboMdScoperJob.findOne({ _id: MQjob.data.jobid })
     .populate({
       path: 'user',
       select: 'email'
@@ -78,9 +78,9 @@ const processBilboMDScoperJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(10)
 
   // CHARMM minimization
-  await MQjob.log('start minimization')
+  await MQjob.log('start scoper')
   await runScoper(MQjob, foundJob)
-  await MQjob.log('end minimization')
+  await MQjob.log('end scoper')
   await MQjob.updateProgress(25)
 
   // Cleanup & send email
