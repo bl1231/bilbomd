@@ -2,16 +2,7 @@ import { Job as BullMQJob } from 'bullmq'
 import { BilboMDScoperJob, IBilboMDScoperJob } from './model/Job.js'
 import { User } from './model/User.js'
 import { sendJobCompleteEmail } from './mailer.js'
-// import {
-//   runMinimize,
-//   runHeat,
-//   runMolecularDynamics,
-//   runFoxs,
-//   runMultiFoxs,
-//   gatherResults,
-//   runPaeToConst,
-//   runAutoRg
-// } from './bilbomd.functions'
+import { runScoper } from './scoper.functions.js'
 
 const bilbomdUrl: string = process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
 
@@ -85,6 +76,12 @@ const processBilboMDScoperJob = async (MQjob: BullMQJob) => {
   // Initialize
   await initializeJob(MQjob, foundJob)
   await MQjob.updateProgress(10)
+
+  // CHARMM minimization
+  await MQjob.log('start minimization')
+  await runScoper(MQjob, foundJob)
+  await MQjob.log('end minimization')
+  await MQjob.updateProgress(25)
 
   // Cleanup & send email
   await cleanupJob(MQjob, foundJob)
