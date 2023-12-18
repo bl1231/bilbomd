@@ -1,22 +1,17 @@
 import * as dotenv from 'dotenv'
 import { connectDB } from './db.js'
 import { Job, Worker, WorkerOptions } from 'bullmq'
-import { WorkerJob } from './bullmq.jobs.js'
+import { BilboMDScoperJobData } from './bullmq.jobs.js'
 import { processBilboMDScoperJob } from './process.bilbomdscoper.js'
 
 dotenv.config()
 
 connectDB()
 
-const workerHandler = async (job: Job<WorkerJob>) => {
-  switch (job.data.type) {
-    case 'BilboMDScoper': {
-      console.log('Start BilboMDScoper job:', job.name)
-      await processBilboMDScoperJob(job)
-      console.log('Finished BilboMDScoper job:', job.name)
-      return
-    }
-  }
+const workerHandler = async (job: Job<BilboMDScoperJobData>) => {
+  console.log('Start BilboMDScoper job:', job.name, job.data.uuid)
+  await processBilboMDScoperJob(job)
+  console.log('Finished BilboMDScoper Job:', job.name)
 }
 
 const workerOptions: WorkerOptions = {
@@ -29,6 +24,6 @@ const workerOptions: WorkerOptions = {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const worker = new Worker('bilbomd', workerHandler, workerOptions)
+const worker = new Worker('bilbomd-scoper', workerHandler, workerOptions)
 
 console.log('Scoper worker started!')

@@ -9,11 +9,11 @@ const SCOPER_SCRIPT = process.env.SCOPER_SCRIPT ?? '/home/bun/app/scripts/run_sc
 
 const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
   const outputDir = path.join(DATA_VOL, DBjob.uuid)
-  const logFile = path.join(outputDir, 'scoper.log')
-  const errorFile = path.join(outputDir, 'scoper_error.log')
+  const logFile = path.join(outputDir, 'run_scoper.log')
+  const errorFile = path.join(outputDir, 'run_scoper_error.log')
   const logStream = fs.createWriteStream(logFile)
   const errorStream = fs.createWriteStream(errorFile)
-  const args = [SCOPER_SCRIPT, DBjob.pdb_file, DBjob.data_file]
+  const args = [SCOPER_SCRIPT, DBjob.pdb_file, DBjob.data_file, outputDir]
   return new Promise<void>((resolve, reject) => {
     const scoper = spawn('python', args, { cwd: outputDir })
 
@@ -34,7 +34,7 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
       logStream.end()
       errorStream.end()
       if (code === 0) {
-        console.log('exit code zero ----- here')
+        console.log('exit code zero ----- here ')
         resolve()
       } else {
         reject(`runScoper on close reject`)
