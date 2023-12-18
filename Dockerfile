@@ -106,6 +106,8 @@ RUN npm ci
 # Clone IonNet
 WORKDIR /home/bun/IonNet
 RUN git clone -b docker-test https://github.com/bl1231/IonNet.git .
+WORKDIR /home/bun/IonNet/scripts/scoper_scripts
+RUN tar xvf KGSrna.tar
 
 # Change back to the app directory
 WORKDIR /home/bun/app
