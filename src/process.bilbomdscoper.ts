@@ -2,7 +2,7 @@ import { Job as BullMQJob } from 'bullmq'
 import { BilboMdScoperJob, IBilboMDScoperJob } from './model/Job.js'
 import { User } from './model/User.js'
 import { sendJobCompleteEmail } from './mailer.js'
-import { runScoper } from './scoper.functions.js'
+import { runScoper, prepareScoperResults } from './scoper.functions.js'
 
 const bilbomdUrl: string = process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
 
@@ -77,11 +77,15 @@ const processBilboMDScoperJob = async (MQjob: BullMQJob) => {
   await initializeJob(MQjob, foundJob)
   await MQjob.updateProgress(10)
 
-  // CHARMM minimization
+  // Run the Scoper IonNet pipeline
   await MQjob.log('start scoper')
   await runScoper(MQjob, foundJob)
   await MQjob.log('end scoper')
-  await MQjob.updateProgress(25)
+  await MQjob.updateProgress(80)
+
+  // Combine the RNA and Mg PDB files
+  await prepareScoperResults(foundJob)
+  await MQjob.updateProgress(90)
 
   // Cleanup & send email
   await cleanupJob(MQjob, foundJob)
