@@ -84,7 +84,9 @@ const processBilboMDScoperJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(80)
 
   // Combine the RNA and Mg PDB files
-  await prepareScoperResults(foundJob)
+  await MQjob.log('start gather results')
+  await prepareScoperResults(MQjob, foundJob)
+  await MQjob.log('end gather results')
   await MQjob.updateProgress(90)
 
   // Cleanup & send email

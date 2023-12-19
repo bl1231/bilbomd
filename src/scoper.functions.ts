@@ -55,7 +55,8 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
       // This code is for determining teh "newpdb_##" directory.
       const processExitLogic = async () => {
         if (code === 0) {
-          console.log('Scoper process exited successfully. Processing log file...')
+          console.log('scoper process exited successfully. Processing log file...')
+          MQjob.log('scoper process successfully.')
           try {
             const dirName = await findTopKDirFromLog(logFile)
             if (dirName) {
@@ -100,7 +101,10 @@ const findTopKDirFromLog = async (logFilePath: string): Promise<string | null> =
   return null
 }
 
-const prepareScoperResults = async (DBjob: IBilboMDScoperJob): Promise<void> => {
+const prepareScoperResults = async (
+  MQjob: BullMQJob,
+  DBjob: IBilboMDScoperJob
+): Promise<void> => {
   try {
     const outputDir = path.join(DATA_VOL, DBjob.uuid)
     const newpdbDir = await readDirNameFromFile(path.join(outputDir, 'top_k_dirname.txt'))
@@ -111,8 +115,9 @@ const prepareScoperResults = async (DBjob: IBilboMDScoperJob): Promise<void> => 
         const match = newpdbDir.match(/newpdb_(\d+)/)
         let pdbNumber = null
         if (match) {
-          pdbNumber = parseInt(match[1], 10) // Convert the captured string to an integer
+          pdbNumber = parseInt(match[1], 10)
         }
+        MQjob.log(`best KGSrna model is #${pdbNumber}`)
         const rnaFile = path.join(topKDir, `newpdb_${pdbNumber}_rna_.pdb`)
         const probeFile = path.join(topKDir, `new_probe_newpdb_${pdbNumber}_probes.pdb`)
 
@@ -125,9 +130,13 @@ const prepareScoperResults = async (DBjob: IBilboMDScoperJob): Promise<void> => 
           const probeContent = await fs.readFile(probeFile, 'utf-8')
 
           const combinedContent = rnaContent + '\n' + probeContent
-          const outputFile = path.join(topKDir, `scoper_combined_newpdb_${pdbNumber}.pdb`)
+          const outputFile = path.join(
+            outputDir,
+            `scoper_combined_newpdb_${pdbNumber}.pdb`
+          )
 
           await fs.writeFile(outputFile, combinedContent)
+          MQjob.log(`combined RNA and Mg files: scoper_combined_newpdb_${pdbNumber}.pdb`)
         }
       }
     }
