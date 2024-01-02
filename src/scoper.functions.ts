@@ -3,6 +3,10 @@ import path from 'path'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
 import { IBilboMDScoperJob } from './model/Job.js'
+import { promisify } from 'util'
+import { exec } from 'node:child_process'
+
+const execPromise = promisify(exec)
 
 const DATA_VOL = process.env.DATA_VOL ?? '/bilbomd/uploads'
 const IONNET_DIR = process.env.IONNET_DIR ?? '/home/bun/IonNet'
@@ -56,7 +60,7 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
       const processExitLogic = async () => {
         if (code === 0) {
           console.log('scoper process exited successfully. Processing log file...')
-          MQjob.log('scoper process successfully.')
+          MQjob.log('scoper process successfully')
           try {
             const dirName = await findTopKDirFromLog(logFile)
             if (dirName) {
@@ -107,6 +111,12 @@ const prepareScoperResults = async (
 ): Promise<void> => {
   try {
     const outputDir = path.join(DATA_VOL, DBjob.uuid)
+    const resultsDir = path.join(outputDir, 'results')
+
+    // Create new empty results directory
+    await makeDir(resultsDir)
+    MQjob.log('Create results directory')
+
     const newpdbDir = await readDirNameFromFile(path.join(outputDir, 'top_k_dirname.txt'))
     if (newpdbDir) {
       const topKDir = path.join(outputDir, newpdbDir)
@@ -135,9 +145,26 @@ const prepareScoperResults = async (
             `scoper_combined_newpdb_${pdbNumber}.pdb`
           )
 
+          // Write the final combined PDB file.
           await fs.writeFile(outputFile, combinedContent)
-          MQjob.log(`combined RNA and Mg files: scoper_combined_newpdb_${pdbNumber}.pdb`)
+          MQjob.log(`combine RNA and Mg: scoper_combined_newpdb_${pdbNumber}.pdb`)
+
+          // Copy the final combined PDB file.
+          await execPromise(`cp ${outputFile} .`, { cwd: resultsDir })
+          MQjob.log(`Gather ${outputFile}`)
+
+          // Copy the original uploaded pdb and dat files
+          const filesToCopy = [DBjob.pdb_file, DBjob.data_file]
+          for (const file of filesToCopy) {
+            await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: resultsDir })
+            MQjob.log(`Gather ${file}`)
+          }
+
+          // Copy other useful files?
         }
+        // tar it up
+        await execPromise(`tar czvf results.tar.gz results`, { cwd: outputDir })
+        MQjob.log('created results.tar.gz file')
       }
     }
   } catch (error) {
@@ -171,6 +198,11 @@ const directoryExists = async (dirPath: string): Promise<boolean> => {
   } catch {
     return false
   }
+}
+
+const makeDir = async (directory: string) => {
+  await fs.ensureDir(directory)
+  console.log('Create Dir: ', directory)
 }
 
 const modifyProbeFile = async (probeFile: string): Promise<void> => {
