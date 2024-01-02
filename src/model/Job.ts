@@ -96,7 +96,7 @@ const bilboMdScoperJobSchema = new Schema<IBilboMDScoperJob>({
 const Job = model('Job', jobSchema)
 const BilboMdJob = Job.discriminator('BilboMd', bilboMdJobSchema)
 const BilboMdAutoJob = Job.discriminator('BilboMdAuto', bilboMdAutoJobSchema)
-const BilboMdScoperJob = Job.discriminator('BilboMdScoperJob', bilboMdScoperJobSchema)
+const BilboMdScoperJob = Job.discriminator('BilboMdScoper', bilboMdScoperJobSchema)
 
 export {
   Job,
