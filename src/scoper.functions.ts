@@ -31,7 +31,7 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
   '-cp', path.join(IONNET_DIR, 'models/trained_models/wandering-tree-178_config.npy'),
   '-fs', 'foxs',
   '-mfcs', 'multi_foxs_combination',
-  '-kk', '100',
+  '-kk', '1000',
   '-tk', '1',
   '-mfs', 'multi_foxs',
   '-mfr', 'True'
