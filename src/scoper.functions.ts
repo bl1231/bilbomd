@@ -13,8 +13,8 @@ const IONNET_DIR = process.env.IONNET_DIR ?? '/home/bun/IonNet'
 
 const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
   const outputDir = path.join(DATA_VOL, DBjob.uuid)
-  const logFile = path.join(outputDir, 'run_scoper.log')
-  const errorFile = path.join(outputDir, 'run_scoper_error.log')
+  const logFile = path.join(outputDir, 'scoper.log')
+  const errorFile = path.join(outputDir, 'scoper_error.log')
   const logStream = fs.createWriteStream(logFile)
   const errorStream = fs.createWriteStream(errorFile)
   // const args = [SCOPER_SCRIPT, DBjob.pdb_file, DBjob.data_file, outputDir]
@@ -113,63 +113,83 @@ const prepareScoperResults = async (
     const outputDir = path.join(DATA_VOL, DBjob.uuid)
     const resultsDir = path.join(outputDir, 'results')
 
-    // Create new empty results directory
     await makeDir(resultsDir)
     MQjob.log('create results directory')
 
     const newpdbDir = await readDirNameFromFile(path.join(outputDir, 'top_k_dirname.txt'))
-    if (newpdbDir) {
-      const topKDir = path.join(outputDir, newpdbDir)
-      const exists = await directoryExists(topKDir)
-      if (exists) {
-        const match = newpdbDir.match(/newpdb_(\d+)/)
-        let pdbNumber = null
-        if (match) {
-          pdbNumber = parseInt(match[1], 10)
-        }
-        MQjob.log(`best KGSrna model is #${pdbNumber}`)
-        const rnaFile = path.join(topKDir, `newpdb_${pdbNumber}_rna_.pdb`)
-        const probeFile = path.join(topKDir, `new_probe_newpdb_${pdbNumber}_probes.pdb`)
-
-        const rnaExists = await fileExists(rnaFile)
-        const probeExists = await fileExists(probeFile)
-
-        if (rnaExists && probeExists) {
-          const rnaContent = await fs.readFile(rnaFile, 'utf-8')
-          await modifyProbeFile(probeFile)
-          const probeContent = await fs.readFile(probeFile, 'utf-8')
-
-          const combinedContent = rnaContent + '\n' + probeContent
-          const outputFile = path.join(
-            outputDir,
-            `scoper_combined_newpdb_${pdbNumber}.pdb`
-          )
-
-          // Write the final combined PDB file.
-          await fs.writeFile(outputFile, combinedContent)
-          MQjob.log(`combine RNA and Mg: scoper_combined_newpdb_${pdbNumber}.pdb`)
-
-          // Copy the final combined PDB file.
-          await execPromise(`cp ${outputFile} .`, { cwd: resultsDir })
-          MQjob.log(`gather scoper_combined_newpdb_${pdbNumber}.pdb`)
-
-          // Copy the original uploaded pdb and dat files
-          const filesToCopy = [DBjob.pdb_file, DBjob.data_file]
-          for (const file of filesToCopy) {
-            await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: resultsDir })
-            MQjob.log(`gather ${file}`)
-          }
-
-          // Copy other useful files?
-        }
-        // tar it up
-        await execPromise(`tar czvf results.tar.gz results`, { cwd: outputDir })
-        MQjob.log('created results.tar.gz file')
-      }
+    if (!newpdbDir) {
+      MQjob.log('error Top K directory name not found')
+      throw new Error('Top K directory name not found')
     }
+
+    const topKDir = path.join(outputDir, newpdbDir)
+    const exists = await directoryExists(topKDir)
+    if (!exists) {
+      MQjob.log('error Top K directory not found')
+      throw new Error('Top K directory not found')
+    }
+
+    const match = newpdbDir.match(/newpdb_(\d+)/)
+    const pdbNumber = match ? parseInt(match[1], 10) : null
+    if (!pdbNumber) {
+      MQjob.log('error Could not determine PDB number')
+      throw new Error('Could not determine PDB number')
+    }
+
+    MQjob.log(`best KGSrna model is #${pdbNumber}`)
+
+    const rnaFile = path.join(topKDir, `newpdb_${pdbNumber}_rna_.pdb`)
+    const probeFile = path.join(topKDir, `new_probe_newpdb_${pdbNumber}_probes.pdb`)
+
+    const rnaExists = await fileExists(rnaFile)
+    const probeExists = await fileExists(probeFile)
+
+    if (!rnaExists || !probeExists) {
+      throw new Error('RNA and/or Mg files not found')
+    }
+
+    const rnaContent = await fs.readFile(rnaFile, 'utf-8')
+    await cleanProbeFile(probeFile)
+    const probeContent = await fs.readFile(probeFile, 'utf-8')
+
+    const combinedContent = rnaContent + '\n' + probeContent
+    const outputFile = path.join(outputDir, `scoper_combined_newpdb_${pdbNumber}.pdb`)
+
+    // Write the final combined PDB file.
+    await fs.writeFile(outputFile, combinedContent)
+    MQjob.log(`combine RNA and Mg: scoper_combined_newpdb_${pdbNumber}.pdb`)
+    await prepareResultsArchiveFile(DBjob, MQjob, outputDir, pdbNumber, resultsDir)
+    MQjob.log('created results.tar.gz file')
   } catch (error) {
     console.error('Error gathering Scoper results:', error)
   }
+}
+
+const prepareResultsArchiveFile = async (
+  DBjob: IBilboMDScoperJob,
+  MQjob: BullMQJob,
+  outputDir: string,
+  pdbNumber: number,
+  resultsDir: string
+): Promise<void> => {
+  const outputFile = path.join(outputDir, `scoper_combined_newpdb_${pdbNumber}.pdb`)
+  // Copy the final combined PDB file.
+  await execPromise(`cp ${outputFile} .`, { cwd: resultsDir })
+  MQjob.log(`gather scoper_combined_newpdb_${pdbNumber}.pdb`)
+
+  // Copy the original uploaded pdb and dat files
+  const coordFilesToCopy = [DBjob.pdb_file, DBjob.data_file]
+  for (const file of coordFilesToCopy) {
+    await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: resultsDir })
+    MQjob.log(`gather ${file}`)
+  }
+  // Copy the log file(s)
+  const logFilesToCopy = ['scoper.log']
+  for (const file of logFilesToCopy) {
+    await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: resultsDir })
+    MQjob.log(`gather ${file}`)
+  }
+  await execPromise(`tar czvf results.tar.gz results`, { cwd: outputDir })
 }
 
 const readDirNameFromFile = async (filePath: string): Promise<string | null> => {
@@ -205,7 +225,7 @@ const makeDir = async (directory: string) => {
   console.log('Create Dir: ', directory)
 }
 
-const modifyProbeFile = async (probeFile: string): Promise<void> => {
+const cleanProbeFile = async (probeFile: string): Promise<void> => {
   try {
     let content = await fs.readFile(probeFile, 'utf-8')
 
