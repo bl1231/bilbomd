@@ -84,45 +84,50 @@ kgs_explore  --initial /home/bun/app/test-data/MHtest2.pdb.kgs.pdb -s 100 -r 20 
 
 ### build Docker container
 
+```bash
 docker build -t bilbomd-scoper .
+```
 
+Or maybe just build up to a specific stage:
+
+```bash
 docker build --target build-stage-1 -t bilbomd-scoper-stage-1 .
+```
 
 ### Run Docker container with pwd mounted into container
 
+These are a few iterations of `docker run` commands I have usde during development.
+
+```bash
 docker run -d -p 3005:3005 -v .:/home/bun/app --name bilbomd-scoper bilbomd-scoper
 docker run -d -p 3005:3005 --gpus all -v .:/home/bun/app --name bilbomd-scoper bilbomd-scoper
 docker run -d -p 3005:3005 --gpus all -v .:/home/bun/app -v /home/classen/projects/IonNet:/home/bun/app/test-data/IonNet --name bilbomd-scoper bilbomd-scoper
 docker run -d -p 3005:3005 -v .:/home/bun/app -v /home/classen/projects/IonNet:/home/bun/IonNet --name bilbomd-scoper bilbomd-scoper
+```
 
-### Run Docker container with internal app dir
+As it turns out the `KGSrna` binary distributed with `IonNet` only runs on Intel processors, and attempting to run on `epyc.bl1231.als.lbl.gov` (with an AMD epyc processor) resulted on core dumping.
 
+### Run daemonized Docker container with internal app directory
+
+```bash
 docker run -d -p 3005:3005 --gpus all --name bilbomd-scoper bilbomd-scoper
 docker run -d -p 3005:3005 --name bilbomd-scoper bilbomd-scoper
-
-docker run -it bilbomd-scoper-stage-1 bash
+```
 
 ### Launch an interactive Docker container terminal
 
+```bash
 docker exec -it bilbomd-scoper bash
+```
 
 ### Stop and Remove Docker container
 
+```bash
 docker stop bilbomd-scoper
 docker rm bilbomd-scoper
-
-## BunJS stuff
-
-To install dependencies:
-
-```bash
-bun install
 ```
 
-To run:
+## Version History
 
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.0.12. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+- 0.0.1
+  - Initial working version of Scoper/IonNet pipeline
