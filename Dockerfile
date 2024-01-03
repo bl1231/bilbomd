@@ -54,6 +54,9 @@ RUN apt-get install -y nodejs
 # Build stage 4
 FROM bilbomd-scoper-nodejs AS bilbomd-scoper
 
+ARG USER_ID=1001
+ARG GROUP_ID=1001
+
 # Update Conda
 RUN conda update -n base -c defaults conda
 
@@ -71,10 +74,10 @@ RUN conda install -y imp=2.19.0
 # Create a new user 'bun'
 #RUN useradd -ms /bin/bash bun
 # Create a group with GID
-RUN groupadd -g 1231 bun
+RUN groupadd -g $GROUP_ID bun
 
 # Create the 'bun' user with specified UID and GID
-RUN useradd -ms /bin/bash -u 5005 -g 1231 bun
+RUN useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID bun
 
 # Not sure this is needed, but chown everything
 RUN chown -R bun:bun /home/bun
