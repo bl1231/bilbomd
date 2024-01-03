@@ -115,7 +115,7 @@ const prepareScoperResults = async (
 
     // Create new empty results directory
     await makeDir(resultsDir)
-    MQjob.log('Create results directory')
+    MQjob.log('create results directory')
 
     const newpdbDir = await readDirNameFromFile(path.join(outputDir, 'top_k_dirname.txt'))
     if (newpdbDir) {
@@ -151,13 +151,13 @@ const prepareScoperResults = async (
 
           // Copy the final combined PDB file.
           await execPromise(`cp ${outputFile} .`, { cwd: resultsDir })
-          MQjob.log(`Gather ${outputFile}`)
+          MQjob.log(`gather scoper_combined_newpdb_${pdbNumber}.pdb`)
 
           // Copy the original uploaded pdb and dat files
           const filesToCopy = [DBjob.pdb_file, DBjob.data_file]
           for (const file of filesToCopy) {
             await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: resultsDir })
-            MQjob.log(`Gather ${file}`)
+            MQjob.log(`gather ${file}`)
           }
 
           // Copy other useful files?
@@ -175,7 +175,7 @@ const prepareScoperResults = async (
 const readDirNameFromFile = async (filePath: string): Promise<string | null> => {
   try {
     const content = await fs.readFile(filePath, 'utf-8')
-    return content.trim() // Trimming to remove any potential newline character at the end
+    return content.trim()
   } catch (error) {
     console.error('Error reading file:', error)
     return null
