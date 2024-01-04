@@ -229,13 +229,13 @@ const cleanProbeFile = async (probeFile: string): Promise<void> => {
   try {
     let content = await fs.readFile(probeFile, 'utf-8')
 
-    // Replace "PB" with "MG" and "ATOM" with "HETATM"
-    content = content.replace(/PB/g, 'MG')
-    content = content.replace(/ATOM/g, 'HETATM')
+    content = content.replace(/ PB {2}UNK/g, 'MG    MG')
+    content = content.replace(/ATOM {2}/g, 'HETATM')
 
     await fs.writeFile(probeFile, content)
   } catch (error) {
     console.error('Error modifying probe file:', error)
   }
 }
+
 export { runScoper, prepareScoperResults }
