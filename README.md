@@ -125,5 +125,7 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 0.0.3
+  - Fix the Mg and HETATM spacing in final PDB file
 - 0.0.1
   - Initial working version of Scoper/IonNet pipeline
