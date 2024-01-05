@@ -125,6 +125,9 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 0.0.4
+  - add the `-u` flag for Python spawn of `mgclassifierv2.py`.
+    This should allow the `scoper.log` file to present better incremental information.
 - 0.0.3
   - Fix the Mg and HETATM spacing in final PDB file
 - 0.0.1
