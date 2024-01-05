@@ -38,7 +38,7 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
 ]
 
   return new Promise<void>((resolve, reject) => {
-    const scoper = spawn('python', args, { cwd: outputDir })
+    const scoper = spawn('python', ['-u', ...args], { cwd: outputDir })
 
     scoper.stdout?.on('data', (data) => {
       logStream.write(data.toString())
