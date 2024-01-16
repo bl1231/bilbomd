@@ -10,6 +10,7 @@ const execPromise = promisify(exec)
 
 const DATA_VOL = process.env.DATA_VOL ?? '/bilbomd/uploads'
 const IONNET_DIR = process.env.IONNET_DIR ?? '/home/bun/IonNet'
+const SCOPER_KGS_CONFORMERS = process.env.SCOPER_KGS_CONFORMERS ?? '111'
 
 const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
   const outputDir = path.join(DATA_VOL, DBjob.uuid)
@@ -20,22 +21,35 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
   // const args = [SCOPER_SCRIPT, DBjob.pdb_file, DBjob.data_file, outputDir]
   // prettier-ignore
   const args = [
-  path.join(IONNET_DIR, 'mgclassifierv2.py'),
-  '-bd', outputDir,
-  'scoper',
-  '-fp', path.join(outputDir, DBjob.pdb_file),
-  '-ahs', path.join(IONNET_DIR, 'scripts', 'scoper_scripts', 'addHydrogensColab.pl'),
-  '-sp', path.join(outputDir,DBjob.data_file),
-  '-it', 'sax',
-  '-mp', path.join(IONNET_DIR, 'models/trained_models/wandering-tree-178.pt'),
-  '-cp', path.join(IONNET_DIR, 'models/trained_models/wandering-tree-178_config.npy'),
-  '-fs', 'foxs',
-  '-mfcs', 'multi_foxs_combination',
-  '-kk', '100',
-  '-tk', '1',
-  '-mfs', 'multi_foxs',
-  '-mfr', 'True'
-]
+    path.join(IONNET_DIR, 'mgclassifierv2.py'),
+    '-bd',
+    outputDir,
+    'scoper',
+    '-fp',
+    path.join(outputDir, DBjob.pdb_file),
+    '-ahs',
+    path.join(IONNET_DIR, 'scripts', 'scoper_scripts', 'addHydrogensColab.pl'),
+    '-sp',
+    path.join(outputDir, DBjob.data_file),
+    '-it',
+    'sax',
+    '-mp',
+    path.join(IONNET_DIR, 'models/trained_models/wandering-tree-178.pt'),
+    '-cp',
+    path.join(IONNET_DIR, 'models/trained_models/wandering-tree-178_config.npy'),
+    '-fs',
+    'foxs',
+    '-mfcs',
+    'multi_foxs_combination',
+    '-kk',
+    SCOPER_KGS_CONFORMERS,
+    '-tk',
+    '1',
+    '-mfs',
+    'multi_foxs',
+    '-mfr',
+    'True'
+  ]
 
   return new Promise<void>((resolve, reject) => {
     const scoper = spawn('python', ['-u', ...args], { cwd: outputDir })
