@@ -31,7 +31,7 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
   '-cp', path.join(IONNET_DIR, 'models/trained_models/wandering-tree-178_config.npy'),
   '-fs', 'foxs',
   '-mfcs', 'multi_foxs_combination',
-  '-kk', '1000',
+  '-kk', '100',
   '-tk', '1',
   '-mfs', 'multi_foxs',
   '-mfr', 'True'
@@ -158,21 +158,80 @@ const prepareScoperResults = async (
     // Write the final combined PDB file.
     await fs.writeFile(outputFile, combinedContent)
     MQjob.log(`combine RNA and Mg: scoper_combined_newpdb_${pdbNumber}.pdb`)
-    await prepareResultsArchiveFile(DBjob, MQjob, outputDir, pdbNumber, resultsDir)
+    // FoXS analysis here
+    await runFoXS(MQjob, DBjob, pdbNumber)
+    MQjob.log('running FoXS analysis of Scoper PDB file')
+    // gather results and tar.gz
+    await prepareResultsArchiveFile(DBjob, MQjob, pdbNumber, resultsDir)
     MQjob.log('created results.tar.gz file')
   } catch (error) {
     console.error('Error gathering Scoper results:', error)
   }
 }
 
+const runFoXS = async (
+  MQjob: BullMQJob,
+  DBjob: IBilboMDScoperJob,
+  pdbNumber: number
+): Promise<void> => {
+  const outputDir = path.join(DATA_VOL, DBjob.uuid)
+  const foxsAnalysisDir = path.join(DATA_VOL, DBjob.uuid, 'foxs_analysis')
+  await makeDir(foxsAnalysisDir)
+  const logFile = path.join(foxsAnalysisDir, 'foxs.log')
+  const errorFile = path.join(foxsAnalysisDir, 'foxs_error.log')
+  const logStream = fs.createWriteStream(logFile)
+  const errorStream = fs.createWriteStream(errorFile)
+  const inputPDB = DBjob.pdb_file
+  const scoperPDB = `scoper_combined_newpdb_${pdbNumber}.pdb`
+  const inputDAT = DBjob.data_file
+
+  const filesToCopy = [inputPDB, inputDAT, scoperPDB]
+  for (const file of filesToCopy) {
+    await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: foxsAnalysisDir })
+    // MQjob.log(`gather ${file}`)
+  }
+
+  const foxsArgs = ['-p', inputPDB, scoperPDB, inputDAT]
+
+  return new Promise<void>((resolve, reject) => {
+    const foxs = spawn('foxs', foxsArgs, { cwd: foxsAnalysisDir })
+    foxs.stdout?.on('data', (data) => {
+      logStream.write(data.toString())
+    })
+
+    foxs.stderr?.on('data', (data) => {
+      errorStream.write(data.toString())
+    })
+
+    foxs.on('error', (error) => {
+      errorStream.end()
+      reject(error)
+    })
+
+    foxs.on('exit', (code) => {
+      logStream.end()
+      errorStream.end()
+
+      if (code === 0) {
+        console.log('foxs analysis exited successfully')
+        MQjob.log('foxs analysis successful')
+        resolve()
+      } else {
+        reject(`runFoXS on close reject`)
+      }
+    })
+  })
+}
+
 const prepareResultsArchiveFile = async (
   DBjob: IBilboMDScoperJob,
   MQjob: BullMQJob,
-  outputDir: string,
   pdbNumber: number,
   resultsDir: string
 ): Promise<void> => {
+  const outputDir = path.join(DATA_VOL, DBjob.uuid)
   const outputFile = path.join(outputDir, `scoper_combined_newpdb_${pdbNumber}.pdb`)
+  const foxsAnalysisDir = path.join(DATA_VOL, DBjob.uuid, 'foxs_analysis')
   // Copy the final combined PDB file.
   await execPromise(`cp ${outputFile} .`, { cwd: resultsDir })
   MQjob.log(`gather scoper_combined_newpdb_${pdbNumber}.pdb`)
@@ -187,6 +246,17 @@ const prepareResultsArchiveFile = async (
   const logFilesToCopy = ['scoper.log']
   for (const file of logFilesToCopy) {
     await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: resultsDir })
+    MQjob.log(`gather ${file}`)
+  }
+  // Copy the FoXS dat files
+  const datFileBase = DBjob.data_file.split('.')[0]
+  const pdbFileBase = DBjob.pdb_file.split('.')[0]
+  const foxsFilesToCopy = [
+    `scoper_combined_newpdb_${pdbNumber}_${datFileBase}.dat`,
+    `${pdbFileBase}_${datFileBase}.dat`
+  ]
+  for (const file of foxsFilesToCopy) {
+    await execPromise(`cp ${path.join(foxsAnalysisDir, file)} .`, { cwd: resultsDir })
     MQjob.log(`gather ${file}`)
   }
   await execPromise(`tar czvf results.tar.gz results`, { cwd: outputDir })
