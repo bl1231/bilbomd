@@ -125,8 +125,11 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.0.0
+  - Add ability to run `FoXS` on results
+  - Might as well make this verion 1.0.0 since it seems to work on our test RNAs
 - 0.0.4
-  - add the `-u` flag for Python spawn of `mgclassifierv2.py`.
+  - Add the `-u` flag for Python spawn of `mgclassifierv2.py`.
     This should allow the `scoper.log` file to present better incremental information.
 - 0.0.3
   - Fix the Mg and HETATM spacing in final PDB file
