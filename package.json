@@ -26,7 +26,7 @@
     "mongoose": "^8.0.3",
     "nodemailer": "^6.9.7",
     "nodemailer-express-handlebars": "^6.1.0",
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.3"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
