@@ -18,7 +18,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "bullmq": "^5.1.3",
+    "bullmq": "^5.1.4",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "fs-extra": "^11.2.0",
