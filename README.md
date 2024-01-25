@@ -125,6 +125,8 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.0.2
+  - Update dependencies
 - 1.0.1
   - add runtime params (`--min_c1=0.99 --max_c1=1.05 --min_c2=-0.5 --max_c2=2.0`) to `FoXS`
 - 1.0.0
