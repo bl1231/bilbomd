@@ -125,6 +125,8 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.0.3
+  - Add a README file to each `results.tar.gz` file.
 - 1.0.2
   - Update dependencies
 - 1.0.1
