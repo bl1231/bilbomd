@@ -172,10 +172,16 @@ const prepareScoperResults = async (
     // Write the final combined PDB file.
     await fs.writeFile(outputFile, combinedContent)
     MQjob.log(`combine RNA and Mg: scoper_combined_newpdb_${pdbNumber}.pdb`)
+
     // FoXS analysis here
     await runFoXS(MQjob, DBjob, pdbNumber)
     MQjob.log('running FoXS analysis of Scoper PDB file')
-    // gather results and tar.gz
+
+    // Prepare a custom README file to be included with results
+    await createReadmeFile(DBjob, pdbNumber, resultsDir)
+    MQjob.log('Custom README file created')
+
+    // Gather results and tar.gz
     await prepareResultsArchiveFile(DBjob, MQjob, pdbNumber, resultsDir)
     MQjob.log('created results.tar.gz file')
   } catch (error) {
@@ -244,6 +250,66 @@ const runFoXS = async (
       }
     })
   })
+}
+
+const createReadmeFile = async (
+  DBjob: IBilboMDScoperJob,
+  pdbNumber: number,
+  resultsDir: string
+) => {
+  const datFileBase = DBjob.data_file.split('.')[0]
+  const pdbFileBase = DBjob.pdb_file.split('.')[0]
+
+  const readmeContent = `
+# Scoper Job Results
+
+This directory contains the results for the Scoper job titled: "${DBjob.title}".
+
+- Job ID: ${DBjob._id}
+- UUID: ${DBjob.uuid}
+- Submitted: ${DBjob.time_submitted}
+- Completed: ${new Date().toString()}
+
+## Contents
+
+- Original PDB: ${DBjob.pdb_file}
+- Original experimental SAXS data file: ${DBjob.data_file}
+- Scoper log file: scoper.log
+- Scoper combined RNA and Mg structure: scoper_combined_newpdb_${pdbNumber}.pdb
+- SAXS-fit (FoXS) for original RNA model: scoper_combined_newpdb_${pdbNumber}_${datFileBase}.dat
+- SAXS-fit (FoXS) for SCOPER RNA model: ${pdbFileBase}_${datFileBase}.dat
+
+## Analysis
+
+The analysis was performed using Scoper with the best KGSrna model being #${pdbNumber}.
+
+The SAXS-fit file header contains:
+
+# SAXS profile: number of points = 897, q_min = 0.0195109993219376, q_max = 0.47340801358223, delta_q = 0.00050658148912979
+# offset = 0.00000000000000, scaling c = 2.54103876971280e-06, Chi^2 = 1.94736383321382
+#  q       exp_intensity   model_intensity error
+0.01951100 25.86433029     26.16198123     1.75902545
+0.02001800 25.68120575     26.08003273     1.90469468
+0.02052400 26.61764336     25.99478342     2.41470337
+...
+..
+.
+
+Where Chi^2 is a goodness of fit. The program RAW can read the fit: 
+https://bioxtas-raw.readthedocs.io/en/latest/index.html
+
+If you use SCOPER in your research, please cite the paper:
+
+Predicting RNA structure and dynamics with deep learning and solution scattering
+Edan Patt, Scott Classen, Michal Hammel, Dina Schneidman,  NAR 2024
+
+Thank you for using SCOPER.
+
+`
+
+  const readmePath = path.join(resultsDir, 'README.md')
+  await fs.writeFile(readmePath, readmeContent)
+  console.log('README file created successfully.')
 }
 
 const prepareResultsArchiveFile = async (
