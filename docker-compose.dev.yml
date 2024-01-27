@@ -7,9 +7,9 @@ volumes:
   redis-cache-dev:
     name: redis-cache-dev
     external: true
-  uploads-dev:
-    name: uploads-dev
-    external: true
+  # uploads-dev:
+  #   name: uploads-dev
+  #   external: true
 
 services:
   mongodb:
@@ -23,20 +23,19 @@ services:
       - "${REDIS_EXTERNAL_PORT:?err}:${REDIS_PORT:?err}"
 
   backend:
-    image: bl1231/bilbomd-backend:1.3.6-dev
+    image: bl1231/bilbomd-backend:1.5.3-dev
     build:
       args:
         USER_ID: 5005
         GROUP_ID: 1231
     volumes:
-      - uploads-dev:/bilbomd/uploads
+      - ./uploads-dev:/bilbomd/uploads
       - ./bilbomd-backend:/app
-      # - ./logs/dev:/logs
     user: "5005:1231"
     command: [ "npm", "run", "dev" ]
 
   worker:
-    image: bl1231/bilbomd-worker:1.2.5-dev
+    image: bl1231/bilbomd-worker:1.2.8-dev
     build:
       args:
         USER_ID: 5005
@@ -47,13 +46,13 @@ services:
         limits:
           cpus: '10'
     volumes:
-      - uploads-dev:/bilbomd/uploads
+      - ./uploads-dev:/bilbomd/uploads
       - ./bilbomd-worker:/app
     user: "5005:1231"
     command: [ "npm", "run", "dev" ]
 
   scoper:
-    image: bl1231/bilbomd-scoper:0.0.1
+    image: bl1231/bilbomd-scoper:1.0.3-dev
     build:
       args:
         USER_ID: 5005
@@ -64,13 +63,15 @@ services:
         limits:
           cpus: '10'
     volumes:
-      - uploads-dev:/bilbomd/uploads
+      - ./uploads-dev:/bilbomd/uploads
       - ./bilbomd-scoper:/home/bun/app
       - ../IonNet:/home/bun/IonNet
     user: "5005:1231"
     command: [ "npm", "run", "dev" ]
 
   ui:
-    image: bl1231/bilbomd-ui:1.2.5-dev
+    image: bl1231/bilbomd-ui:1.6.1-dev
     build:
       context: ./bilbomd-ui
+    volumes:
+      - ./uploads-dev:/bilbomd/uploads:ro
