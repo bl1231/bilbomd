@@ -42,11 +42,12 @@ COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/BASEPARS /usr/local
 # -----------------------------------------------------------------------------
 # Build stage 3 - install NodeJS v18
 FROM bilbomd-scoper-install-deps AS bilbomd-scoper-nodejs
+ARG NODE_MAJOR=20
 RUN apt-get update
 RUN apt-get install -y gpg curl
 RUN mkdir -p /etc/apt/keyrings
 RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_18.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
 RUN apt-get update
 RUN apt-get install -y nodejs
 
