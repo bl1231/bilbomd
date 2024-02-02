@@ -23,7 +23,7 @@ services:
       - "${REDIS_EXTERNAL_PORT:?err}:${REDIS_PORT:?err}"
 
   backend:
-    image: bl1231/bilbomd-backend:1.5.3-dev
+    image: bl1231/bilbomd-backend:1.5.4-dev
     build:
       args:
         USER_ID: 5005
@@ -35,7 +35,7 @@ services:
     command: [ "npm", "run", "dev" ]
 
   worker:
-    image: bl1231/bilbomd-worker:1.2.8-dev
+    image: bl1231/bilbomd-worker:1.2.9-dev
     build:
       args:
         USER_ID: 5005
@@ -70,7 +70,7 @@ services:
     command: [ "npm", "run", "dev" ]
 
   ui:
-    image: bl1231/bilbomd-ui:1.6.1-dev
+    image: bl1231/bilbomd-ui:1.6.2-dev
     build:
       context: ./bilbomd-ui
     volumes:
