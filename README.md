@@ -125,6 +125,8 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.0.5
+  - Update dependencies.
 - 1.0.4
   - Update dependencies.
   - Refactor the `Dockefile`
