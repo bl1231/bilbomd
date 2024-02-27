@@ -40,7 +40,7 @@ COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/bin/rnaview /usr/lo
 COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
 
 # -----------------------------------------------------------------------------
-# Build stage 3 - install NodeJS v18
+# Build stage 3 - install NodeJS
 FROM bilbomd-scoper-install-deps AS bilbomd-scoper-nodejs
 ARG NODE_MAJOR=20
 RUN apt-get update
