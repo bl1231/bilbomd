@@ -178,7 +178,7 @@ services:
       - redis
 
   ui:
-    image: bl1231/bilbomd-ui:1.7.2
+    image: bl1231/bilbomd-ui:1.7.3
     build:
       context: ./bilbomd-ui
     ports:
