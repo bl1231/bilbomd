@@ -9,7 +9,7 @@ import { exec } from 'node:child_process'
 const execPromise = promisify(exec)
 
 const DATA_VOL = process.env.DATA_VOL ?? '/bilbomd/uploads'
-const IONNET_DIR = process.env.IONNET_DIR ?? '/home/bun/IonNet'
+const IONNET_DIR = process.env.IONNET_DIR ?? '/home/scoper/IonNet'
 const SCOPER_KGS_CONFORMERS = process.env.SCOPER_KGS_CONFORMERS ?? '111'
 
 const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
