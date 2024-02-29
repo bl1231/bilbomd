@@ -7,9 +7,9 @@ volumes:
   redis-cache-dev:
     name: redis-cache-dev
     external: true
-  # uploads-dev:
-  #   name: uploads-dev
-  #   external: true
+  uploads-dev:
+    name: uploads-dev
+    external: true
 
 services:
   mongodb:
