@@ -32,7 +32,7 @@ One of the major goals of the redesign of BilboMD was to modernize the various t
 - [Yup][YUP-url]
 - [Formik][Formik-url]
 
-# Deployment
+## Deployment
 
 Deploying BilboMD web app currently requires a couple of steps. These instructions are assuming you will deploy on `hyperion`, but the code should be very portable.
 
