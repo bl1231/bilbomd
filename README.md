@@ -16,21 +16,21 @@ One of the major goals of the redesign of BilboMD was to modernize the various t
 
 ### backend
 
--   [![NodeJS][NodeJS]][NodeJS-url]
--   [![MongoDB][MongoDB]][MongoDB-url]
--   [![ExpressJS][ExpressJS]][ExpressJS-url]
--   [![Docker][Docker]][Docker-url]
--   [![Redis][Redis]][Redis-url]
--   [BullMQ][BullMQ-url]
+- [![NodeJS][NodeJS]][NodeJS-url]
+- [![MongoDB][MongoDB]][MongoDB-url]
+- [![ExpressJS][ExpressJS]][ExpressJS-url]
+- [![Docker][Docker]][Docker-url]
+- [![Redis][Redis]][Redis-url]
+- [BullMQ][BullMQ-url]
 
 ### frontend
 
--   [Create React App][CRA-url]
--   [React][React-url]
--   [Redux][Redux-url]
--   [Material UI][MUI-url]
--   [Yup][YUP-url]
--   [Formik][Formik-url]
+- [Create React App][CRA-url]
+- [React][React-url]
+- [Redux][Redux-url]
+- [Material UI][MUI-url]
+- [Yup][YUP-url]
+- [Formik][Formik-url]
 
 # Deployment
 
@@ -46,14 +46,14 @@ require('crypto').randomBytes(64).toString('hex')
 
 There are a number of other environment variables specified in the `.env` file that are needed by the various docker services/containers outlined below. They should be fairly self explanitory.
 
-## 1. Build and deploy the backend Docker services.
+## 1. Build and deploy the backend Docker services
 
 You must have the ability to start docker containers on the machine where you want to run BilboMD backend services. The `docker-compose.yml` file specifies 4 services:
 
--   bilbomd-backend
--   bilbomd-worker
--   bilbomd-mongodb
--   bilbomd-redis
+- bilbomd-backend
+- bilbomd-worker
+- bilbomd-mongodb
+- bilbomd-redis
 
 ### [bilbomd-backend][bilbomd-backend]
 
@@ -75,9 +75,9 @@ This service uses the default [MongoDB Docker image](https://hub.docker.com/_/mo
 
 There are still a lot of things I don't fully understand about Docker and Docker Compose. Here are a few useful links to the Docker documentation.
 
--   [Docker Compose](https://docs.docker.com/compose/reference/)
--   [Dockerfile](https://docs.docker.com/engine/reference/builder/)
--   [Docker CLI](https://docs.docker.com/engine/reference/commandline/cli/)
+- [Docker Compose](https://docs.docker.com/compose/reference/)
+- [Dockerfile](https://docs.docker.com/engine/reference/builder/)
+- [Docker CLI](https://docs.docker.com/engine/reference/commandline/cli/)
 
 ### Checkout the top level `bilbomd` repo
 
@@ -86,7 +86,7 @@ cd directory/where/you/want/to/work
 git clone git@github.com:bl1231/bilbomd.git
 ```
 
-### Check out the other repos:
+### Check out the other repos
 
 ```bash
 cd bilbomd
@@ -98,67 +98,67 @@ git clone git@github.com:bl1231/bilbomd-worker.git
 
 The `docker-compose.yml` file has many options which in general can be read about [here](https://docs.docker.com/compose/compose-file/03-compose-file/). The Compose file is a YAML file defining services, networks, volumes, configs and secrets. Here are the relevent links to the documentation.
 
--   [services](https://docs.docker.com/compose/compose-file/05-services/)
--   [networks](https://docs.docker.com/compose/compose-file/06-networks/)
--   [volumes](https://docs.docker.com/compose/compose-file/07-volumes/)
--   [configs](https://docs.docker.com/compose/compose-file/08-configs/)
--   [secrets](https://docs.docker.com/compose/compose-file/09-secrets/)
+- [services](https://docs.docker.com/compose/compose-file/05-services/)
+- [networks](https://docs.docker.com/compose/compose-file/06-networks/)
+- [volumes](https://docs.docker.com/compose/compose-file/07-volumes/)
+- [configs](https://docs.docker.com/compose/compose-file/08-configs/)
+- [secrets](https://docs.docker.com/compose/compose-file/09-secrets/)
 
 ### Docker Compose Commands for Production and Development
 
-#### Production Commands:
+#### Production Commands
 
 1. **Building the Production Instance**:
 
-    ```bash
-    docker compose --env-file .production.env -f docker-compose.yml -p bilbomd-prod build
-    ```
+   ```bash
+   docker compose --env-file .production.env -f docker-compose.yml -p bilbomd-prod build
+   ```
 
-    - `--env-file .production.env`: Specifies the environment file for Docker Compose.
-    - `-f docker-compose.yml`: Designates the Docker Compose file to use.
-    - `-p bilbomd-prod`: Sets the project name to differentiate Docker objects.
-    - `build`: Instructs Docker Compose to build the images.
+   - `--env-file .production.env`: Specifies the environment file for Docker Compose.
+   - `-f docker-compose.yml`: Designates the Docker Compose file to use.
+   - `-p bilbomd-prod`: Sets the project name to differentiate Docker objects.
+   - `build`: Instructs Docker Compose to build the images.
 
 2. **Starting the Production Instance**:
 
-    ```bash
-    docker compose --env-file .production.env -f docker-compose.yml -p bilbomd-prod up -d
-    ```
+   ```bash
+   docker compose --env-file .production.env -f docker-compose.yml -p bilbomd-prod up -d
+   ```
 
-    - The parameters are consistent with the build command.
-    - `up -d`: Brings up the containers in detached mode.
+   - The parameters are consistent with the build command.
+   - `up -d`: Brings up the containers in detached mode.
 
-#### Development Commands:
+#### Development Commands
 
 1. **Building the Development Instance**:
 
-    ```bash
-    docker compose --env-file .development.env -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev build
-    ```
+   ```bash
+   docker compose --env-file .development.env -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev build
+   ```
 
-    - `--env-file .development.env`: Uses the development environment file.
-    - `-f docker-compose.yml -f docker-compose.dev.yml`: Combines the base and development-specific Docker Compose files.
-    - `-p bilbomd-dev`: Assigns a unique project name for the development environment.
-    - `build`: Command to build the images.
+   - `--env-file .development.env`: Uses the development environment file.
+   - `-f docker-compose.yml -f docker-compose.dev.yml`: Combines the base and development-specific Docker Compose files.
+   - `-p bilbomd-dev`: Assigns a unique project name for the development environment.
+   - `build`: Command to build the images.
 
 2. **Starting the Development Instance**:
 
-    ```bash
-    docker compose --env-file .development.env -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev up -d
-    ```
+   ```bash
+   docker compose --env-file .development.env -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev up -d
+   ```
 
-    - The parameters mirror the development build command.
-    - `up -d`: Starts the containers in the background.
+   - The parameters mirror the development build command.
+   - `up -d`: Starts the containers in the background.
 
 ---
 
-#### Additional Notes:
+#### Additional Notes
 
--   **Project Names (`-p`)**: Different project names (`bilbomd-prod` for production and `bilbomd-dev` for development) ensure that containers, networks, and volumes are separate and there's no overlap between environments.
+- **Project Names (`-p`)**: Different project names (`bilbomd-prod` for production and `bilbomd-dev` for development) ensure that containers, networks, and volumes are separate and there's no overlap between environments.
 
--   **Environment Files**: Using distinct `.env` files for each environment (`production.env` and `development.env`) allows for specific, tailored configurations without risk of cross-environment contamination.
+- **Environment Files**: Using distinct `.env` files for each environment (`production.env` and `development.env`) allows for specific, tailored configurations without risk of cross-environment contamination.
 
--   **Compose File Overrides**: The use of `docker-compose.dev.yml` in development allows for extending or overriding configurations in a manner specific to the development environment.
+- **Compose File Overrides**: The use of `docker-compose.dev.yml` in development allows for extending or overriding configurations in a manner specific to the development environment.
 
 These commands are structured to manage separate development and production environments effectively in Docker Compose, ensuring a clear distinction and reliable deployment process.
 
@@ -193,7 +193,7 @@ Although the main Apache server is running on a dedicated machine `www.bl1231.al
 
 I'm not going to go into extensive description of the Apache setup at 12.3.1, but here is a snippet from the config files that pertains to **BilboMD**.
 
-```
+```bash
 <VirtualHost *:443>
     ServerName bilbomd.bl1231.als.lbl.gov
     ServerAdmin  sclassen@lbl.gov
@@ -219,7 +219,7 @@ I'm not going to go into extensive description of the Apache setup at 12.3.1, bu
 
 So from this you can probably figure out that any requests to `bilbomd.bl1231.als.lbl.gov` will be forwarded to port `3001` on `hyperion.bl1231.als.lbl.gov`. In general we don't want to run webapps as the root user or as our personal linux accounts, so I've set up a special service account (`webadmin`) that we can run webapps under.
 
-### Checkout the `bilbomd-ui` code.
+### Checkout the `bilbomd-ui` code
 
 Check out the frontend UI repo from GitHub:
 
@@ -259,7 +259,7 @@ You might need to logout and back in. You can also create a [`.nvmrc`](https://g
 
 ### Install PM2
 
-```
+```bash
 npm install pm2@latest -g
 npm install pm2@latest
 ```
@@ -312,7 +312,7 @@ pm2 deploy ecosystem.config.cjs production exec "pm2 ls"
 
 We use npm to increment the version in package.json
 
-https://docs.npmjs.com/cli/v9/configuring-npm/package-json#version
+<https://docs.npmjs.com/cli/v9/configuring-npm/package-json#version>
 
 For example:
 
@@ -329,7 +329,7 @@ Then we manually increment the "tag" in `docker-compose.yml` so that the next ti
 
 for example in the `docker-compose.yml` file:
 
-```
+```bash
 worker:
    image: bl1231/bilbomd-worker:0.0.7
 ```
@@ -343,7 +343,6 @@ The docker development environment mounts the entire app directory in the docker
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
-[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [React-url]: https://reactjs.org/
 [MongoDB]: https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white
 [MongoDB-url]: https://www.mongodb.com/
@@ -356,7 +355,6 @@ The docker development environment mounts the entire app directory in the docker
 [Docker]: https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white
 [Docker-url]: https://www.docker.com/
 [BullMQ-url]: https://docs.bullmq.io/
-[React-url]: https://react.dev/
 [CRA-url]: https://create-react-app.dev/
 [Redux-url]: https://redux.js.org/
 [MUI-url]: https://mui.com/
@@ -364,4 +362,3 @@ The docker development environment mounts the entire app directory in the docker
 [YUP-url]: https://github.com/jquense/yup
 [bilbomd-worker]: https://github.com/bl1231/bilbomd-worker
 [bilbomd-backend]: https://github.com/bl1231/bilbomd-backend
-[npmjs-package-json-version]: https://docs.npmjs.com/cli/v9/configuring-npm/package-json#version
