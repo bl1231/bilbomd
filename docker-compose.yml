@@ -183,5 +183,3 @@ services:
       context: ./bilbomd-ui
     ports:
       - "${BILBOMD_UI_PORT:?err}:80"
-    volumes:
-      - uploads:/bilbomd/uploads:ro
