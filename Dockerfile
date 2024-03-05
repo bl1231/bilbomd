@@ -18,12 +18,12 @@ RUN git clone https://github.com/rlabduke/reduce.git reduce && \
 # Clone and build 'KGS'
 # We are not yet using this version of KGS
 # but we really need to figure it out.
-RUN git clone https://github.com/ExcitedStates/KGS.git KGS && \
-    sed -i 's/option(ForceGSL "ForceGSL" OFF)/option(ForceGSL "ForceGSL" ON)/' KGS/src/CMakeLists.txt && \
-    mkdir KGS/build && \
-    cd KGS/build && \
-    cmake -DCMAKE_BUILD_TYPE=Release ../src && \
-    make -j
+# RUN git clone https://github.com/ExcitedStates/KGS.git KGS && \
+#     sed -i 's/option(ForceGSL "ForceGSL" OFF)/option(ForceGSL "ForceGSL" ON)/' KGS/src/CMakeLists.txt && \
+#     mkdir KGS/build && \
+#     cd KGS/build && \
+#     cmake -DCMAKE_BUILD_TYPE=Release ../src && \
+#     make -j
 
 # Clone and build 'RNAview'
 RUN git clone https://github.com/rcsb/RNAView.git RNAView && \
@@ -40,8 +40,8 @@ RUN apt-get update && apt-get install -y wget curl unzip git libgsl-dev
 COPY --from=bilbomd-scoper-build-deps /usr/local/bin/reduce /usr/local/bin/
 COPY --from=bilbomd-scoper-build-deps /usr/local/reduce_wwPDB_het_dict.txt /usr/local/
 # Copy kgs_explore
-COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/build/kgs_explore /usr/local/bin/
-COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/scripts/kgs_prepare.py /usr/local/bin/
+# COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/build/kgs_explore /usr/local/bin/
+# COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/scripts/kgs_prepare.py /usr/local/bin/
 # Copy RNAView binary
 COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/bin/rnaview /usr/local/bin/
 COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
