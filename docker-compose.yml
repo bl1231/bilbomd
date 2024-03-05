@@ -26,15 +26,15 @@ services:
       retries: 7
       start_period: 20s
     env_file:
-      - .${BILBOMD_ENV:?err}.env
+      - .env
     environment:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - "${MONGO_EXTERNAL_PORT:?err}:27017"
+      - "27017"
     volumes:
       - mongodb:/data/db
-      - /etc/localtime:/etc/localtime:ro
+      # - /etc/localtime:/etc/localtime:ro
     networks:
       - app-network
 
@@ -64,7 +64,7 @@ services:
           cpus: '12'
     restart: always
     env_file:
-      - .${BILBOMD_ENV:?err}.env
+      - .env
     environment:
       ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
       REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
@@ -84,9 +84,9 @@ services:
       - "${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       - uploads:/bilbomd/uploads
-      - /etc/localtime:/etc/localtime:ro
+      # - /etc/localtime:/etc/localtime:ro
       # - ./logs/prod:/logs
-    user: "1001:1001"
+    user: "${UID:-1001}:${GID:-1001}"
     networks:
       - app-network
     depends_on:
@@ -109,7 +109,7 @@ services:
           cpus: '12'
     restart: no
     env_file:
-      - .${BILBOMD_ENV:?err}.env
+      - .env
     environment:
       ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
       REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
@@ -129,57 +129,65 @@ services:
       - app-network
     volumes:
       - uploads:/bilbomd/uploads
-      - /etc/localtime:/etc/localtime:ro
-    user: "1001:1001"
+      # - /etc/localtime:/etc/localtime:ro
+    user: "${UID:-1001}:${GID:-1001}"
     depends_on:
       - mongodb
       - redis
 
-  scoper:
-    image: bl1231/bilbomd-scoper:1.0.5
-    build:
-      context: ./bilbomd-scoper
-      args:
-        USER_ID: 1001
-        GROUP_ID: 1001
-        NODE_MAJOR: 20
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: '12'
-    restart: no
-    env_file:
-      - .${BILBOMD_ENV:?err}.env
-    environment:
-      ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
-      REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
-      MONGO_USERNAME: $MONGO_USERNAME
-      MONGO_PASSWORD: $MONGO_PASSWORD
-      MONGO_HOSTNAME: $MONGO_HOSTNAME
-      MONGO_PORT: $MONGO_PORT
-      MONGO_DB: $MONGO_DB
-      MONGO_AUTH_SRC: $MONGO_AUTH_SRC
-      REDIS_HOST: $REDIS_HOST
-      REDIS_PORT: $REDIS_PORT
-      REDIS_PASSWORD: $REDIS_PASSWORD
-      BILBOMD_URL: $BILBOMD_URL
-      BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
-      BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
-      SCOPER_KGS_CONFORMERS: $SCOPER_KGS_CONFORMERS
-    networks:
-      - app-network
-    volumes:
-      - uploads:/bilbomd/uploads
-      - /etc/localtime:/etc/localtime:ro
-    user: "1001:1001"
-    depends_on:
-      - mongodb
-      - redis
+  # scoper:
+  #   image: bl1231/bilbomd-scoper:1.0.5
+  #   build:
+  #     context: ./bilbomd-scoper
+  #     args:
+  #       USER_ID: 1001
+  #       GROUP_ID: 1001
+  #       NODE_MAJOR: 20
+  #   deploy:
+  #     replicas: 1
+  #     resources:
+  #       limits:
+  #         cpus: '12'
+  #   restart: no
+  #   env_file:
+  #     - .${BILBOMD_ENV:?err}.env
+  #   environment:
+  #     ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
+  #     REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
+  #     MONGO_USERNAME: $MONGO_USERNAME
+  #     MONGO_PASSWORD: $MONGO_PASSWORD
+  #     MONGO_HOSTNAME: $MONGO_HOSTNAME
+  #     MONGO_PORT: $MONGO_PORT
+  #     MONGO_DB: $MONGO_DB
+  #     MONGO_AUTH_SRC: $MONGO_AUTH_SRC
+  #     REDIS_HOST: $REDIS_HOST
+  #     REDIS_PORT: $REDIS_PORT
+  #     REDIS_PASSWORD: $REDIS_PASSWORD
+  #     BILBOMD_URL: $BILBOMD_URL
+  #     BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
+  #     BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
+  #     SCOPER_KGS_CONFORMERS: $SCOPER_KGS_CONFORMERS
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - uploads:/bilbomd/uploads
+  #     - /etc/localtime:/etc/localtime:ro
+  #   user: "${UID:-1001}:${GID:-1001}"
+  #   depends_on:
+  #     - mongodb
+  #     - redis
 
   ui:
     image: bl1231/bilbomd-ui:1.7.3
     build:
       context: ./bilbomd-ui
+    environment:
+      BACKEND_SERVICE_URL: backend
     ports:
       - "${BILBOMD_UI_PORT:?err}:80"
+    networks:
+      - app-network
+    depends_on:
+      - backend
+      - mongodb
+      - redis
