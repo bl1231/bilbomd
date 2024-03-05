@@ -115,3 +115,6 @@ bilbomd-worker
 bilbomd-scoper
 secrets
 uploads-dev
+*.csr
+*.key
+*.pem
