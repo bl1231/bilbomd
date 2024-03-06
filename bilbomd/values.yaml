@@ -1,0 +1,23 @@
+namespace: bilbomd
+
+mongo:
+  name: mongo
+  image:
+    repository: mongo
+    tag: "7.0.6"
+    pullPolicy: IfNotPresent
+  config:
+    MONGO_INITDB_ROOT_USERNAME: "bilbomd-backend-user"
+
+redis:
+  name: redis
+  image:
+    repository: redis
+    tag: "7.2.4"
+    pullPolicy: IfNotPresent
+
+backend:
+  name: backend
+
+ui:
+  name: ui
