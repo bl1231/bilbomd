@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    field.cattle.io/description: BilboMD Backend app
+    field.cattle.io/description: BilboMD Backend App
   labels:
     workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.backend.name }}
   name: {{ .Values.backend.name }}
