@@ -3,6 +3,7 @@ data:
   BILBOMD_BACKEND_HOST: localhost
   BILBOMD_BACKEND_PORT: "3501"
   BILBOMD_URL: https://bilbomd-nersc.bl1231.als.lbl.gov
+  BILBOMD_FQDN: bilbomd-nersc.bl1231.als.lbl.gov
   MONGO_AUTH_SRC: admin
   MONGO_DB: bilbomd
   MONGO_HOSTNAME: mongo
@@ -11,6 +12,8 @@ data:
   REDIS_HOST: redis
   REDIS_PORT: "6379"
   NODE_ENV: production
+  SEND_EMAIL_NOTIFICATIONS: 'true'
+  SEND_EMAIL_USER: bilbomd@lbl.gov
 kind: ConfigMap
 metadata:
   name: backend-config
