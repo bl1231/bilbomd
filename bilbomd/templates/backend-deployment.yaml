@@ -2,10 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    field.cattle.io/description: MongoDB server for BilboMD
+    field.cattle.io/description: BilboMD Backend app
   labels:
-    workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.mongo.name }}
-  name: {{ .Values.mongo.name }}
+    workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.backend.name }}
+  name: {{ .Values.backend.name }}
   namespace: {{ .Values.namespace }}
 spec:
   progressDeadlineSeconds: 600
@@ -13,7 +13,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.mongo.name }}
+      workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.backend.name }}
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -22,23 +22,23 @@ spec:
   template:
     metadata:
       labels:
-        workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.mongo.name }}
+        workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.backend.name }}
     spec:
       affinity: {}
       containers:
       - envFrom:
         - configMapRef:
-            name: mongo-config
+            name: {{ .Values.backend.name }}-config
             optional: false
         - secretRef:
-            name: mongo-secrets
+            name: {{ .Values.backend.name }}-secrets
             optional: false
-        image: "{{ .Values.mongo.image.repository }}:{{ .Values.mongo.image.tag }}"
-        imagePullPolicy: {{ .Values.mongo.image.pullPolicy }}
+        image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
         name: container-0
         ports:
-        - containerPort: 27017
-          name: 27017tcp
+        - containerPort: 3500
+          name: 3500tcp
           protocol: TCP
         resources: {}
         securityContext:
@@ -46,8 +46,8 @@ spec:
           capabilities:
             add:
             - CHOWN
-            - FOWNER
             - DAC_OVERRIDE
+            - FOWNER
             - NET_BIND_SERVICE
             - SETGID
             - SETUID
@@ -60,14 +60,17 @@ spec:
         terminationMessagePolicy: File
         tty: true
         volumeMounts:
-        - mountPath: /data/db
-          name: vol-mongodb-data
+        - mountPath: /bilbomd/uploads
+          name: vol-bilbomd-uploads
       dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: registry-nersc
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: vol-mongodb-data
+      - name: vol-bilbomd-uploads
         persistentVolumeClaim:
-          claimName: mongodb-volume
+          claimName: bilbomd-uploads
+

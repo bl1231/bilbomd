@@ -18,6 +18,14 @@ redis:
 
 backend:
   name: backend
+  image:
+    repository: registry.nersc.gov/m4521/sclassen/bilbomd-backend
+    tag: "latest"
+    pullPolicy: Always
 
 ui:
   name: ui
+  image:
+    repository: registry.nersc.gov/m4521/sclassen/bilbomd-ui
+    tag: "latest"
+    pullPolicy: Always
