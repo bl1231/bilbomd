@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    field.cattle.io/targetWorkloadIds: '["bilbomd/redis"]'
+  name: redis
+  namespace: bilbomd
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: 6379tcp
+    port: 6379
+    protocol: TCP
+    targetPort: 6379
+  selector:
+    workload.user.cattle.io/workloadselector: apps.deployment-bilbomd-redis
+  sessionAffinity: None
+  type: ClusterIP
