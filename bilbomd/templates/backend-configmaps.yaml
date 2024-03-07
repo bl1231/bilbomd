@@ -10,6 +10,7 @@ data:
   MONGO_USERNAME: bilbomd-backend-user
   REDIS_HOST: redis
   REDIS_PORT: "6379"
+  NODE_ENV: production
 kind: ConfigMap
 metadata:
   name: backend-config
