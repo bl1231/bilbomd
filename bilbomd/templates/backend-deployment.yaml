@@ -33,6 +33,9 @@ spec:
         - secretRef:
             name: {{ .Values.backend.name }}-secrets
             optional: false
+        - secretRef:
+            name: sfapi-priv-key
+            optional: false
         image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
         imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
         name: container-0
@@ -62,6 +65,8 @@ spec:
         volumeMounts:
         - mountPath: /bilbomd/uploads
           name: vol-bilbomd-uploads
+        - mountPath: /secrets
+          name: vol-sfapi-priv-key
       dnsPolicy: ClusterFirst
       imagePullSecrets:
       - name: registry-nersc
@@ -73,4 +78,8 @@ spec:
       - name: vol-bilbomd-uploads
         persistentVolumeClaim:
           claimName: bilbomd-uploads
+      - name: vol-sfapi-priv-key
+        secret:
+          defaultMode: 420
+          secretName: sfapi-priv-key
 
