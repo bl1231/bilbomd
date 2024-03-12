@@ -28,9 +28,12 @@ services:
       args:
         USER_ID: ${UID:-1001}
         GROUP_ID: ${GID:-1001}
+    ports:
+      - "127.0.0.1:3501:3500"
     volumes:
       - ./uploads-dev:/bilbomd/uploads
       - ./bilbomd-backend:/app
+      - ./secrets:/secrets
     user: "${UID:-1001}:${GID:-1001}"
     command: [ "npm", "run", "dev" ]
 

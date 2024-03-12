@@ -34,7 +34,6 @@ services:
       - "27017"
     volumes:
       - mongodb:/data/db
-      # - /etc/localtime:/etc/localtime:ro
     networks:
       - app-network
 
@@ -86,8 +85,11 @@ services:
       BILBOMD_URL: $BILBOMD_URL
       BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
       BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
-    ports:
-      - "${BILBOMD_BACKEND_PORT:?err}:3500"
+      SFAPI_CLIENT_ID: $SFAPI_CLIENT_ID
+      SFAPI_CLIENT_SECRET: $SFAPI_CLIENT_SECRET
+      USE_NERSC: $USE_NERSC
+    # ports:
+    #   - "${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       - uploads:/bilbomd/uploads
       # - /etc/localtime:/etc/localtime:ro
@@ -187,8 +189,12 @@ services:
     image: bl1231/bilbomd-ui:1.7.3
     build:
       context: ./bilbomd-ui
+    env_file:
+      - .env
     environment:
       BACKEND_SERVICE_URL: backend
+      USE_NERSC: $USE_NERSC
+      NERSC_PROJECT: $NERSC_PROJECT
     ports:
       - "${BILBOMD_UI_PORT:?err}:80"
     networks:
