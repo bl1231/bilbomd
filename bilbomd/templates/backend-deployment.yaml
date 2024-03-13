@@ -58,21 +58,25 @@ spec:
             - ALL
           privileged: false
           readOnlyRootFilesystem: false
+          runAsUser: 62704
         stdin: true
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         tty: true
         volumeMounts:
-        - mountPath: /bilbomd/uploads
+        - mountPath: /bilbomd/uploads-spin
           name: vol-bilbomd-uploads
         - mountPath: /secrets
           name: vol-sfapi-priv-key
+        - mountPath: /bilbomd/uploads
+          name: vol-uploads
       dnsPolicy: ClusterFirst
       imagePullSecrets:
       - name: registry-nersc
       restartPolicy: Always
       schedulerName: default-scheduler
-      securityContext: {}
+      securityContext:
+        fsGroup: 104818
       terminationGracePeriodSeconds: 30
       volumes:
       - name: vol-bilbomd-uploads
@@ -82,4 +86,7 @@ spec:
         secret:
           defaultMode: 420
           secretName: sfapi-priv-key
-
+      - hostPath:
+          path: /global/cfs/cdirs/m4521/bilbomd-uploads
+          type: Directory
+        name: vol-uploads
