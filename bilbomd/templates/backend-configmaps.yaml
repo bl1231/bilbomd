@@ -14,6 +14,7 @@ data:
   NODE_ENV: production
   SEND_EMAIL_NOTIFICATIONS: 'true'
   SEND_EMAIL_USER: bilbomd@lbl.gov
+  DATA_VOL: /bilbomd/uploads
 kind: ConfigMap
 metadata:
   name: backend-config
