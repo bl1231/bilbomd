@@ -48,12 +48,7 @@ spec:
           allowPrivilegeEscalation: false
           capabilities:
             add:
-            - CHOWN
-            - DAC_OVERRIDE
-            - FOWNER
             - NET_BIND_SERVICE
-            - SETGID
-            - SETUID
             drop:
             - ALL
           privileged: false
@@ -64,8 +59,6 @@ spec:
         terminationMessagePolicy: File
         tty: true
         volumeMounts:
-        - mountPath: /bilbomd/uploads-spin
-          name: vol-bilbomd-uploads
         - mountPath: /secrets
           name: vol-sfapi-priv-key
         - mountPath: /bilbomd/uploads
@@ -76,12 +69,9 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext:
-        fsGroup: 104818
+        fsGroup: 103887
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: vol-bilbomd-uploads
-        persistentVolumeClaim:
-          claimName: bilbomd-uploads
       - name: vol-sfapi-priv-key
         secret:
           defaultMode: 420
