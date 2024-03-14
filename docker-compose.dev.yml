@@ -15,6 +15,8 @@ services:
   mongodb:
     volumes:
       - mongodb-dev:/data/db
+    ports:
+      - "127.0.0.1:28017:27017"
 
   redis:
     volumes:
@@ -77,4 +79,4 @@ services:
     build:
       context: ./bilbomd-ui
     environment:
-      BACKEND_SERVICE_URL: bilbomd-backend-1
+      BACKEND_SERVICE_URL: backend
