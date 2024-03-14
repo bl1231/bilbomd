@@ -56,23 +56,24 @@ services:
     user: "${UID:-1001}:${GID:-1001}"
     command: [ "npm", "run", "dev" ]
 
-  # scoper:
-  #   image: bl1231/bilbomd-scoper:latest
-  #   build:
-  #     args:
-  #       USER_ID: ${UID}
-  #       GROUP_ID: ${GID}
-  #   deploy:
-  #     replicas: 1
-  #     resources:
-  #       limits:
-  #         cpus: '10'
-  #   volumes:
-  #     - ./uploads-dev:/bilbomd/uploads
-  #     - ./bilbomd-scoper:/home/bun/app
-  #     - ../IonNet:/home/bun/IonNet
-  #   user: "${UID:-1001}:${GID:-1001}"
-  #   command: [ "npm", "run", "dev" ]
+  scoper:
+    image: bl1231/bilbomd-scoper:latest
+    build:
+      context: ./bilbomd-scoper
+      args:
+        USER_ID: ${UID}
+        GROUP_ID: ${GID}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '10'
+    volumes:
+      - ./uploads-dev:/bilbomd/uploads
+      - ./bilbomd-scoper:/home/bun/app
+      - ../IonNet:/home/bun/IonNet
+    user: "${UID:-1001}:${GID:-1001}"
+    command: [ "npm", "run", "dev" ]
 
   ui:
     image: bl1231/bilbomd-ui:latest
