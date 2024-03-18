@@ -1,5 +1,9 @@
 # Helm notes
 
+Some notes on Kubernetes and Helm during my efforts to get BilboMD deployed to NERSC SPIN system (aka Rancher2)
+
+## Build docker images on Apple M3
+
 tag and push `bilbomd-backend`, `bilbomd-ui`
 
 From Apple M3 (`arm64`) need to build for `amd64` in order to run on SPIN
@@ -18,6 +22,8 @@ docker tag bl1231/bilbomd-backend:latest registry.nersc.gov/m4521/sclassen/bilbo
 docker push registry.nersc.gov/m4521/sclassen/bilbomd-backend:latest
 ```
 
+## Build docker images on Perlmutter login nodes
+
 The pushing from home can take along time....Let's try building on perlmutter.
 
 not having much luck. `npm install` is running out op file handles.
@@ -27,3 +33,15 @@ not having much luck. `npm install` is running out op file handles.
 ```bash
 helm install bilbomd-nersc-v1 ./bilbomd
 ```
+
+## Upgrade BilboMD via Helm chart
+
+```bash
+helm upgrade bilbomd-nersc-v1 ./bilbomd
+```
+
+## Exposing an ingress so that we can access teh MongoDB database
+
+For this we need to create a load balancer. NERSC has some [documentation](https://docs.nersc.gov/services/spin/connecting/#non-http-services-load-balancers) that explains how this is done.
+
+I think the load balancer takes the place of the Cluster IP service?
