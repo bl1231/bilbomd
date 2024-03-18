@@ -114,6 +114,7 @@ bilbomd-ui
 bilbomd-worker
 bilbomd-scoper
 secrets
+helm-secrets
 uploads-dev
 *.csr
 *.key
