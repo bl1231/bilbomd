@@ -107,7 +107,12 @@ RUN npm install
 
 # Clone IonNet
 WORKDIR /home/scoper/IonNet
-RUN git clone -b docker-test https://github.com/bl1231/IonNet.git .
+# RUN git clone -b docker-test https://github.com/bl1231/IonNet.git .
+COPY ionnet-src/IonNet-docker-test.zip .
+RUN unzip IonNet-docker-test.zip && \
+    rm IonNet-docker-test.zip && \ 
+    mv IonNet-docker-test/* . && \
+    rm -rf IonNet-docker-test
 WORKDIR /home/scoper/IonNet/scripts/scoper_scripts
 RUN tar xvf KGSrna.tar
 
