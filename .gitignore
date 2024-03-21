@@ -119,3 +119,4 @@ uploads-dev
 *.csr
 *.key
 *.pem
+*.zip
