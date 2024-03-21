@@ -17,7 +17,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:7.0.5
+    image: mongo:7.0.7
     restart: always
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
@@ -189,6 +189,8 @@ services:
     image: bl1231/bilbomd-ui:1.7.3
     build:
       context: ./bilbomd-ui
+      args:
+        USE_NERSC: $USE_NERSC
     env_file:
       - .env
     environment:
