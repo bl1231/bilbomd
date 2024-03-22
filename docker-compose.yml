@@ -31,7 +31,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - "27017"
+      - "${MONGO_EXTERNAL_PORT:?err}:27017"
     volumes:
       - mongodb:/data/db
     networks:
@@ -55,7 +55,7 @@ services:
       - app-network
 
   backend:
-    image: bl1231/bilbomd-backend:1.7.0
+    image: bl1231/bilbomd-backend:1.8.0
     build:
       context: ./bilbomd-backend
       args:
@@ -88,11 +88,11 @@ services:
       SFAPI_CLIENT_ID: $SFAPI_CLIENT_ID
       SFAPI_CLIENT_SECRET: $SFAPI_CLIENT_SECRET
       USE_NERSC: $USE_NERSC
-    # ports:
-    #   - "${BILBOMD_BACKEND_PORT:?err}:3500"
+      SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
+    ports:
+      - "${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       - uploads:/bilbomd/uploads
-      # - /etc/localtime:/etc/localtime:ro
       # - ./logs/prod:/logs
     user: "1001:1001"
     networks:
@@ -102,7 +102,7 @@ services:
       - redis
 
   worker:
-    image: bl1231/bilbomd-worker:1.4.0
+    image: bl1231/bilbomd-worker:1.5.0
     build:
       context: ./bilbomd-worker
       args:
@@ -133,11 +133,11 @@ services:
       BILBOMD_URL: $BILBOMD_URL
       BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
       BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
+      SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
     networks:
       - app-network
     volumes:
       - uploads:/bilbomd/uploads
-      # - /etc/localtime:/etc/localtime:ro
     user: "1001:1001"
     depends_on:
       - mongodb
@@ -179,14 +179,13 @@ services:
       - app-network
     volumes:
       - uploads:/bilbomd/uploads
-      # - /etc/localtime:/etc/localtime:ro
     user: "1001:1001"
     depends_on:
       - mongodb
       - redis
 
   ui:
-    image: bl1231/bilbomd-ui:1.7.3
+    image: bl1231/bilbomd-ui:1.8.0
     build:
       context: ./bilbomd-ui
       args:

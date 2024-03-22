@@ -16,13 +16,13 @@ services:
     volumes:
       - mongodb-dev:/data/db
     ports:
-      - "127.0.0.1:28017:27017"
+      - "127.0.0.1:29017:27017"
 
   redis:
     volumes:
       - redis-cache-dev:/data
     ports:
-      - "${REDIS_EXTERNAL_PORT:?err}:${REDIS_PORT:?err}"
+      - "127.0.0.1:8379:6379"
 
   backend:
     image: bl1231/bilbomd-backend:latest
@@ -81,3 +81,4 @@ services:
       context: ./bilbomd-ui
     environment:
       BACKEND_SERVICE_URL: backend
+      VITE_USE_NERSC: $USE_NERSC
