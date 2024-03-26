@@ -15,14 +15,10 @@ services:
   mongodb:
     volumes:
       - mongodb-dev:/data/db
-    ports:
-      - "127.0.0.1:29017:27017"
 
   redis:
     volumes:
       - redis-cache-dev:/data
-    ports:
-      - "127.0.0.1:8379:6379"
 
   backend:
     image: bl1231/bilbomd-backend:latest
@@ -32,8 +28,6 @@ services:
         GROUP_ID: ${GID:-1001}
     environment:
       NODE_ENV: development
-    ports:
-      - "127.0.0.1:3501:3500"
     volumes:
       - ./uploads-dev:/bilbomd/uploads
       - ./bilbomd-backend:/app
