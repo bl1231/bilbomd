@@ -31,7 +31,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - "${MONGO_EXTERNAL_PORT:?err}:27017"
+      - "127.0.0.1:${MONGO_EXTERNAL_PORT:?err}:27017"
     volumes:
       - mongodb:/data/db
     networks:
@@ -47,7 +47,7 @@ services:
       retries: 5
       start_period: 10s
     ports:
-      - "${REDIS_EXTERNAL_PORT:?err}:6379"
+      - "127.0.0.1:${REDIS_EXTERNAL_PORT:?err}:6379"
     command: redis-server --save 20 1 --loglevel warning
     volumes:
       - redis-cache:/data
@@ -91,7 +91,7 @@ services:
       USE_NERSC: $USE_NERSC
       SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
     ports:
-      - "${BILBOMD_BACKEND_PORT:?err}:3500"
+      - "127.0.0.1:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       - uploads:/bilbomd/uploads
       # - ./logs/prod:/logs
@@ -198,7 +198,7 @@ services:
       USE_NERSC: $USE_NERSC
       NERSC_PROJECT: $NERSC_PROJECT
     ports:
-      - "${BILBOMD_UI_PORT:?err}:80"
+      - "127.0.0.1:${BILBOMD_UI_PORT:?err}:80"
     networks:
       - app-network
     depends_on:
