@@ -31,7 +31,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - "127.0.0.1:${MONGO_EXTERNAL_PORT:?err}:27017"
+      - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
     volumes:
       - mongodb:/data/db
     networks:
@@ -47,7 +47,7 @@ services:
       retries: 5
       start_period: 10s
     ports:
-      - "127.0.0.1:${REDIS_EXTERNAL_PORT:?err}:6379"
+      - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
     command: redis-server --save 20 1 --loglevel warning
     volumes:
       - redis-cache:/data
@@ -84,19 +84,14 @@ services:
       REDIS_PORT: $REDIS_PORT
       REDIS_PASSWORD: $REDIS_PASSWORD
       BILBOMD_URL: $BILBOMD_URL
-      BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
-      BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
       SFAPI_CLIENT_ID: $SFAPI_CLIENT_ID
       SFAPI_CLIENT_SECRET: $SFAPI_CLIENT_SECRET
       USE_NERSC: $USE_NERSC
       SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
-    # ports:
-    #   - "127.0.0.1:${BILBOMD_BACKEND_PORT:?err}:3500"
     ports:
-      - "${BILBOMD_BACKEND_PORT:?err}:3500"
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       - uploads:/bilbomd/uploads
-      # - ./logs/prod:/logs
     user: "1001:1001"
     networks:
       - app-network
@@ -134,8 +129,6 @@ services:
       REDIS_PORT: $REDIS_PORT
       REDIS_PASSWORD: $REDIS_PASSWORD
       BILBOMD_URL: $BILBOMD_URL
-      BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
-      BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
       SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
     networks:
       - app-network
@@ -175,8 +168,8 @@ services:
       REDIS_PORT: $REDIS_PORT
       REDIS_PASSWORD: $REDIS_PASSWORD
       BILBOMD_URL: $BILBOMD_URL
-      BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
-      BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
+      # BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
+      # BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
       SCOPER_KGS_CONFORMERS: $SCOPER_KGS_CONFORMERS
     networks:
       - app-network
@@ -200,7 +193,7 @@ services:
       USE_NERSC: $USE_NERSC
       NERSC_PROJECT: $NERSC_PROJECT
     ports:
-      - "${BILBOMD_UI_PORT:?err}:80"
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
     networks:
       - app-network
     depends_on:
