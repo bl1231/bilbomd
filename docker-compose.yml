@@ -55,7 +55,7 @@ services:
       - app-network
 
   backend:
-    image: bl1231/bilbomd-backend:1.8.1
+    image: bl1231/bilbomd-backend:1.8.2
     build:
       context: ./bilbomd-backend
       args:
@@ -90,8 +90,10 @@ services:
       SFAPI_CLIENT_SECRET: $SFAPI_CLIENT_SECRET
       USE_NERSC: $USE_NERSC
       SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
+    # ports:
+    #   - "127.0.0.1:${BILBOMD_BACKEND_PORT:?err}:3500"
     ports:
-      - "127.0.0.1:${BILBOMD_BACKEND_PORT:?err}:3500"
+      - "${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       - uploads:/bilbomd/uploads
       # - ./logs/prod:/logs
@@ -103,7 +105,7 @@ services:
       - redis
 
   worker:
-    image: bl1231/bilbomd-worker:1.5.1
+    image: bl1231/bilbomd-worker:1.5.2
     build:
       context: ./bilbomd-worker
       args:
@@ -186,7 +188,7 @@ services:
       - redis
 
   ui:
-    image: bl1231/bilbomd-ui:1.8.1
+    image: bl1231/bilbomd-ui:1.8.2
     build:
       context: ./bilbomd-ui
       args:
@@ -198,7 +200,7 @@ services:
       USE_NERSC: $USE_NERSC
       NERSC_PROJECT: $NERSC_PROJECT
     ports:
-      - "127.0.0.1:${BILBOMD_UI_PORT:?err}:80"
+      - "${BILBOMD_UI_PORT:?err}:80"
     networks:
       - app-network
     depends_on:
