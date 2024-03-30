@@ -168,8 +168,6 @@ services:
       REDIS_PORT: $REDIS_PORT
       REDIS_PASSWORD: $REDIS_PASSWORD
       BILBOMD_URL: $BILBOMD_URL
-      # BILBOMD_BACKEND_HOST: $BILBOMD_BACKEND_HOST
-      # BILBOMD_BACKEND_PORT: $BILBOMD_BACKEND_PORT
       SCOPER_KGS_CONFORMERS: $SCOPER_KGS_CONFORMERS
     networks:
       - app-network
@@ -185,7 +183,7 @@ services:
     build:
       context: ./bilbomd-ui
       args:
-        USE_NERSC: $USE_NERSC
+        GIT_HASH: $GIT_HASH
     env_file:
       - .env
     environment:
