@@ -1,10 +1,10 @@
 # bilbomd
 
-This repository is a sort fo "wrapper" project. The main purpose is to hold the main `docker-compose.yml` file. It will also serve as a place to document how to deploy BilboMD.
+This repository is a sort fo "wrapper" project. The main purpose is to hold the `docker-compose.yml` file. It will also serve as a place to document how to deploy BilboMD. Eventually I would like to explore converting the entire thing to a monorepo.
 
 ## Description
 
-BilboMD is a webapp developed at the SIBYLS beamline. It uses Molecular Dynamics from [CHARMM](https://academiccharmm.org/) to generate a vast array of possible molecular structures. This ensemble of possible models is then used to calculate theoretical SAXS curves using [FoXS](https://modbase.compbio.ucsf.edu/foxs/about), compared with empirical SAXS data using [MultiFoXS](https://modbase.compbio.ucsf.edu/multifoxs/about) to find an ensemble of models that best explains your SAXS data.
+BilboMD is a webapp developed at the SIBYLS beamline. It uses Molecular Dynamics from [CHARMM](https://academiccharmm.org/) to generate aa array of possible molecular models. This ensemble of possible models is then used to calculate theoretical SAXS curves using [FoXS](https://modbase.compbio.ucsf.edu/foxs/about), compared with empirical SAXS data using [MultiFoXS](https://modbase.compbio.ucsf.edu/multifoxs/about) to find an ensemble of models that best explains your SAXS data.
 
 ## High level architecture
 
@@ -25,7 +25,7 @@ One of the major goals of the redesign of BilboMD was to modernize the various t
 
 ### frontend
 
-- [Create React App][CRA-url]
+- [Vite][Vite-url]
 - [React][React-url]
 - [Redux][Redux-url]
 - [Material UI][MUI-url]
@@ -48,20 +48,30 @@ There are a number of other environment variables specified in the `.env` file t
 
 ## 1. Build and deploy the backend Docker services
 
-You must have the ability to start docker containers on the machine where you want to run BilboMD backend services. The `docker-compose.yml` file specifies 4 services:
+You must have the ability to start docker containers on the machine where you want to run BilboMD. The `docker-compose.yml` file specifies 6 services:
 
+- bilbomd-ui
 - bilbomd-backend
 - bilbomd-worker
+- bilbomd-scoper
 - bilbomd-mongodb
 - bilbomd-redis
 
+### [bilbomd-ui][bilbomd-ui]
+
+This is the ReactJS SPA frontend app. All API traffic to `bilbomd-backend` is proxied through the nginx server that serves `bilbomd-ui`.
+
 ### [bilbomd-backend][bilbomd-backend]
 
-This is the main NodeJS backend that I wrote to handle the non-computational-related app functions. It performs authentication, authorization, retrieves job info from the main MongoDB database, user management, cookies, etc. This docker container requires port `3500` to be exposed. See the `Dockerfile` in the `bilbomd-backend` [repo][bilbomd-backend] for details.
+This is the main NodeJS backend that handles the non-computational-related app functions. It performs authentication, authorization, retrieves job info from the main MongoDB database, user management, cookies, etc. This docker container requires port `3500` to be exposed. See the `Dockerfile` in the `bilbomd-backend` [repo][bilbomd-backend] for details.
 
 ### [bilbomd-worker][bilbomd-worker]
 
 This is the docker container where the actual BilboMD computations are performed. It is built on a `debian:bullseye base` image. It also has CHARMM (version is specified in the `.env` file) and IMP baked in. See the `Dockerfile` in the `bilbomd-worker` [repo][bilbomd-worker] for details.
+
+### [bilbomd-scoper][bilbomd-scoper]
+
+This service provides the Scoper pipeline for predeciting Mg++ ion positions in RNA with best fitting to experimental SAXS data.
 
 ### bilbomd-redis
 
@@ -90,8 +100,10 @@ git clone git@github.com:bl1231/bilbomd.git
 
 ```bash
 cd bilbomd
+git clone git@github.com:bl1231/bilbomd-ui.git
 git clone git@github.com:bl1231/bilbomd-backend.git
 git clone git@github.com:bl1231/bilbomd-worker.git
+git clone git@github.com:bl1231/bilbomd-scoper.git
 ```
 
 ### The `docker-compose.yml` file
@@ -106,15 +118,16 @@ The `docker-compose.yml` file has many options which in general can be read abou
 
 ### Docker Compose Commands for Production and Development
 
+The production instructions are primarily desinged for deployin on hyperion at the SIBYLS beamline.
+
 #### Production Commands
 
 1. **Building the Production Instance**:
 
    ```bash
-   docker compose --env-file .production.env -f docker-compose.yml -p bilbomd-prod build
+   docker compose -f docker-compose.yml -p bilbomd-prod build
    ```
 
-   - `--env-file .production.env`: Specifies the environment file for Docker Compose.
    - `-f docker-compose.yml`: Designates the Docker Compose file to use.
    - `-p bilbomd-prod`: Sets the project name to differentiate Docker objects.
    - `build`: Instructs Docker Compose to build the images.
@@ -122,21 +135,26 @@ The `docker-compose.yml` file has many options which in general can be read abou
 2. **Starting the Production Instance**:
 
    ```bash
-   docker compose --env-file .production.env -f docker-compose.yml -p bilbomd-prod up -d
+   export GIT_HASH=$(cat bilbomd-ui/git-hash.txt)
+   docker compose -f docker-compose.yml -p bilbomd-prod up -d
    ```
 
+   - The first command setting `GIT_HASH` env variable is so teh git has can be displayed in the footer of the frontend app.
    - The parameters are consistent with the build command.
    - `up -d`: Brings up the containers in detached mode.
 
 #### Development Commands
 
+These commands can be run on your laptop or some other development machine.
+
 1. **Building the Development Instance**:
 
    ```bash
-   docker compose --env-file .development.env -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev build
+   export GIT_HASH=$(cat bilbomd-ui/git-hash.txt)
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev build
    ```
 
-   - `--env-file .development.env`: Uses the development environment file.
+   - The first command setting `GIT_HASH` env variable is so teh git has can be displayed in the footer of the frontend app.
    - `-f docker-compose.yml -f docker-compose.dev.yml`: Combines the base and development-specific Docker Compose files.
    - `-p bilbomd-dev`: Assigns a unique project name for the development environment.
    - `build`: Command to build the images.
@@ -144,7 +162,7 @@ The `docker-compose.yml` file has many options which in general can be read abou
 2. **Starting the Development Instance**:
 
    ```bash
-   docker compose --env-file .development.env -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev up -d
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev up -d
    ```
 
    - The parameters mirror the development build command.
@@ -155,8 +173,6 @@ The `docker-compose.yml` file has many options which in general can be read abou
 #### Additional Notes
 
 - **Project Names (`-p`)**: Different project names (`bilbomd-prod` for production and `bilbomd-dev` for development) ensure that containers, networks, and volumes are separate and there's no overlap between environments.
-
-- **Environment Files**: Using distinct `.env` files for each environment (`production.env` and `development.env`) allows for specific, tailored configurations without risk of cross-environment contamination.
 
 - **Compose File Overrides**: The use of `docker-compose.dev.yml` in development allows for extending or overriding configurations in a manner specific to the development environment.
 
@@ -169,12 +185,14 @@ These commands are structured to manage separate development and production envi
 You can do this with the `docker ps` command. For example:
 
 ```bash
-classen@hyperion:~/projects/bilbomd$docker ps
-CONTAINER ID   IMAGE                    COMMAND                  CREATED        STATUS                  PORTS                                           NAMES
-a375b532034c   bl1231/bilbomd-worker    "docker-entrypoint.s…"   26 hours ago   Up 26 hours                                                             bilbomd-worker
-bc8089076e87   bl1231/bilbomd-backend   "docker-entrypoint.s…"   26 hours ago   Up 26 hours             0.0.0.0:3500->3500/tcp, :::3500->3500/tcp       bilbomd-backend
-201af62299f2   mongo                    "docker-entrypoint.s…"   26 hours ago   Up 26 hours (healthy)   0.0.0.0:27018->27017/tcp, :::27018->27017/tcp   bilbomd-mongodb
-b39a1c3902d0   redis                    "docker-entrypoint.s…"   28 hours ago   Up 26 hours             0.0.0.0:6379->6379/tcp, :::6379->6379/tcp       bilbomd-redis
+CONTAINER ID   IMAGE                          COMMAND                  CREATED        STATUS                  PORTS                      NAMES
+3723ec63329a   bl1231/bilbomd-ui:1.8.2        "/docker-entrypoint.…"   6 hours ago    Up 6 hours              0.0.0.0:3001->80/tcp       bilbomd-prod-ui-1
+b46d96d48861   bl1231/bilbomd-worker:1.5.2    "npm start"              11 hours ago   Up 11 hours                                        bilbomd-prod-worker-1
+2170e019b8da   bl1231/bilbomd-backend:1.8.2   "docker-entrypoint.s…"   11 hours ago   Up 11 hours             0.0.0.0:3501->3500/tcp     bilbomd-prod-backend-1
+643781e4caa4   bl1231/bilbomd-worker:1.5.2    "npm start"              11 hours ago   Up 11 hours                                        bilbomd-prod-worker-2
+bb14f20dd1cd   bl1231/bilbomd-scoper:1.0.4    "npm start"              29 hours ago   Up 29 hours                                        bilbomd-prod-scoper-1
+ccb9de30921f   mongo:7.0.7                    "docker-entrypoint.s…"   29 hours ago   Up 29 hours (healthy)   0.0.0.0:28017->27017/tcp   bilbomd-prod-mongodb-1
+27eaae2fb95a   redis:7.2.4                    "docker-entrypoint.s…"   29 hours ago   Up 29 hours (healthy)   0.0.0.0:7379->6379/tcp     bilbomd-prod-redis-1
 ```
 
 ---
@@ -229,21 +247,10 @@ git clone git@github.com:bl1231/bilbomd-ui.git
 
 ### Get a few onetime things prepared
 
-We will use [PM2](https://pm2.keymetrics.io/) to deploy `bilbomd-ui`, but first there are a few onetime things that need to be in place.
-
-Create a directory on `hyperion` (or on whatever machine you are going to run **BilboMD** ) for the deployed app to live:
-
-```bash
-mkdir /bilbomd
-chown to webadmin
-```
-
-The `webadmin` user will require Node Version Manager and NodeJS.
-
 ### Install [nvm](https://github.com/nvm-sh/nvm)
 
 ```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 ```
 
 Logout and back in. [NVM Documentation](https://github.com/nvm-sh/nvm#table-of-contents)
@@ -256,57 +263,6 @@ nvm use --lts
 ```
 
 You might need to logout and back in. You can also create a [`.nvmrc`](https://github.com/nvm-sh/nvm#nvmrc) file to define the version of NodeJS that you want to use in a particular directory.
-
-### Install PM2
-
-```bash
-npm install pm2@latest -g
-npm install pm2@latest
-```
-
-You might need to logout and back in.
-
-### Various PM2 commands for deploying and maintaining `bilbomd-ui`
-
-Then as `classen` (or yourself) you can deploy with **PM2**. First make sure you are in the `bilbomd-ui` directory that you checked out from GitHub. **PM2** uses the `bilbomd-ui/ecosystem.config.js` configuration file.
-
-```bash
-cd bilbomd-ui
-```
-
-### The first time
-
-The first time you deploy `bilbomd-ui` you will need to run the `setup` command:
-
-```bash
-pm2 deploy ecosystem.config.cjs production setup
-```
-
-### To update production from GitHub
-
-```bash
-git pull
-pm2 deploy ecosystem.config.cjs production update
-```
-
-### To revert to previous version using pm2
-
-```bash
-pm2 deploy ecosystem.config.cjs production revert
-```
-
-### To run a specific pm2 command on the production server
-
-```bash
-pm2 deploy ecosystem.config.cjs production exec "pm2 start BilboMD"
-```
-
-### To see status
-
-```bash
-pm2 deploy ecosystem.config.cjs production exec "pm2 show BilboMD"
-pm2 deploy ecosystem.config.cjs production exec "pm2 ls"
-```
 
 ## Versioning
 
@@ -355,10 +311,12 @@ The docker development environment mounts the entire app directory in the docker
 [Docker]: https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white
 [Docker-url]: https://www.docker.com/
 [BullMQ-url]: https://docs.bullmq.io/
-[CRA-url]: https://create-react-app.dev/
+[Vite-url]: https://vitejs.dev/
 [Redux-url]: https://redux.js.org/
 [MUI-url]: https://mui.com/
 [Formik-url]: https://formik.org/
 [YUP-url]: https://github.com/jquense/yup
 [bilbomd-worker]: https://github.com/bl1231/bilbomd-worker
 [bilbomd-backend]: https://github.com/bl1231/bilbomd-backend
+[bilbomd-scoper]: https://github.com/bl1231/bilbomd-scoper
+[bilbomd-ui]: https://github.com/bl1231/bilbomd-ui
