@@ -154,7 +154,7 @@ These commands can be run on your laptop or some other development machine.
    docker compose -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev build
    ```
 
-   - The first command setting `GIT_HASH` env variable is so teh git has can be displayed in the footer of the frontend app.
+   - The first command setting `GIT_HASH` env variable is so the git hash can be displayed in the footer of the frontend app.
    - `-f docker-compose.yml -f docker-compose.dev.yml`: Combines the base and development-specific Docker Compose files.
    - `-p bilbomd-dev`: Assigns a unique project name for the development environment.
    - `build`: Command to build the images.
