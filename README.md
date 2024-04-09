@@ -59,11 +59,11 @@ You must have the ability to start docker containers on the machine where you wa
 
 ### [bilbomd-ui][bilbomd-ui]
 
-This is the ReactJS SPA frontend app. All API traffic to `bilbomd-backend` is proxied through the nginx server that serves `bilbomd-ui`.
+This is the ReactJS SPA ([Single Page Application](https://en.wikipedia.org/wiki/Single-page_application)) frontend app. All API traffic to `bilbomd-backend` is proxied through the nginx server that serves `bilbomd-ui`.
 
 ### [bilbomd-backend][bilbomd-backend]
 
-This is the main NodeJS backend that handles the non-computational-related app functions. It performs authentication, authorization, retrieves job info from the main MongoDB database, user management, cookies, etc. This docker container requires port `3500` to be exposed. See the `Dockerfile` in the `bilbomd-backend` [repo][bilbomd-backend] for details.
+This is the main NodeJS backend that handles the non-computational-related app functions. It performs authentication, authorization, retrieves job info from the main MongoDB database, user management, cookies, etc. We expose port `3500` so that other docker containers in the docker app-network can communicate with it. See the `Dockerfile` in the `bilbomd-backend` [repo][bilbomd-backend] for details.
 
 ### [bilbomd-worker][bilbomd-worker]
 
@@ -118,28 +118,29 @@ The `docker-compose.yml` file has many options which in general can be read abou
 
 ### Docker Compose Commands for Production and Development
 
-The production instructions are primarily desinged for deployin on hyperion at the SIBYLS beamline.
+The production instructions are primarily desinged for deploying on `hyperion` at the SIBYLS beamline. There are separate instructions for deploying to SPIN at NERSC.
 
 #### Production Commands
 
 1. **Building the Production Instance**:
 
    ```bash
+   export GIT_HASH=$(cat bilbomd-ui/git-hash.txt)
    docker compose -f docker-compose.yml -p bilbomd-prod build
    ```
 
-   - `-f docker-compose.yml`: Designates the Docker Compose file to use.
+   - The first command setting `GIT_HASH` env variable is so the git has can be displayed in the footer of the frontend app.
+   - `-f docker-compose.yml`: Designates the Docker Compose configuration file to use.
    - `-p bilbomd-prod`: Sets the project name to differentiate Docker objects.
-   - `build`: Instructs Docker Compose to build the images.
+   - `build`: Instructs Docker Compose to build all images for defined services.
 
 2. **Starting the Production Instance**:
 
    ```bash
-   export GIT_HASH=$(cat bilbomd-ui/git-hash.txt)
    docker compose -f docker-compose.yml -p bilbomd-prod up -d
    ```
 
-   - The first command setting `GIT_HASH` env variable is so teh git has can be displayed in the footer of the frontend app.
+   - The first command setting `GIT_HASH` env variable is so the git has can be displayed in the footer of the frontend app.
    - The parameters are consistent with the build command.
    - `up -d`: Brings up the containers in detached mode.
 
