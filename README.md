@@ -146,7 +146,11 @@ The production instructions are primarily desinged for deploying on `hyperion` a
 
 #### Development Commands
 
-These commands can be run on your laptop or some other development machine.
+These commands can be run on your laptop or some other development machine. Until I figure out a better way to include the git hash in the footer please run this command in `bilbomd-ui`:
+
+```bash
+echo "$(git rev-parse --short HEAD)" > git-hash.txt
+```
 
 1. **Building the Development Instance**:
 
