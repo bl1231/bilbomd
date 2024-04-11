@@ -54,11 +54,11 @@ services:
 
   scoper:
     image: bl1231/bilbomd-scoper:latest
-    build:
-      context: ./bilbomd-scoper
-      args:
-        USER_ID: ${UID}
-        GROUP_ID: ${GID}
+    # build:
+    #   context: ./bilbomd-scoper
+    #   args:
+    #     USER_ID: ${UID}
+    #     GROUP_ID: ${GID}
     deploy:
       replicas: 1
       resources:

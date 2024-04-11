@@ -126,18 +126,18 @@ The production instructions are primarily desinged for deploying on `hyperion` a
 
    ```bash
    export GIT_HASH=$(cat bilbomd-ui/git-hash.txt)
-   docker compose -f docker-compose.yml -p bilbomd-prod build
+   docker compose -f docker-compose.yml -p bilbomd build
    ```
 
    - The first command setting `GIT_HASH` env variable is so the git has can be displayed in the footer of the frontend app.
    - `-f docker-compose.yml`: Designates the Docker Compose configuration file to use.
-   - `-p bilbomd-prod`: Sets the project name to differentiate Docker objects.
+   - `-p bilbomd`: Sets the project name to differentiate Docker objects.
    - `build`: Instructs Docker Compose to build all images for defined services.
 
 2. **Starting the Production Instance**:
 
    ```bash
-   docker compose -f docker-compose.yml -p bilbomd-prod up -d
+   docker compose -f docker-compose.yml -p bilbomd up -d
    ```
 
    - The first command setting `GIT_HASH` env variable is so the git has can be displayed in the footer of the frontend app.
@@ -156,18 +156,18 @@ echo "$(git rev-parse --short HEAD)" > git-hash.txt
 
    ```bash
    export GIT_HASH=$(cat bilbomd-ui/git-hash.txt)
-   docker compose -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev build
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd build
    ```
 
    - The first command setting `GIT_HASH` env variable is so the git hash can be displayed in the footer of the frontend app.
    - `-f docker-compose.yml -f docker-compose.dev.yml`: Combines the base and development-specific Docker Compose files.
-   - `-p bilbomd-dev`: Assigns a unique project name for the development environment.
+   - `-p bilbomd`: Assigns a unique project name for the development environment.
    - `build`: Command to build the images.
 
 2. **Starting the Development Instance**:
 
    ```bash
-   docker compose -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd-dev up -d
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml -p bilbomd up -d
    ```
 
    - The parameters mirror the development build command.
