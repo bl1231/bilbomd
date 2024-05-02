@@ -8,18 +8,33 @@ tag and push `bilbomd-backend`, `bilbomd-ui`
 
 From Apple M3 (`arm64`) need to build for `amd64` in order to run on SPIN
 
+Login to `https://registry.nersc.gov/`
+
+```bash
+docker login registry.nersc.gov
+```
+
+Build 3 images:
+
 ```bash
 export DOCKER_DEFAULT_PLATFORM=linux/amd64
-docker build -t bl1231/bilbomd-ui .
-docker tag bl1231/bilbomd-ui:latest registry.nersc.gov/m4659/sclassen/bilbomd-ui:latest
+docker build -t bilbomd/bilbomd-ui .
+docker tag bilbomd/bilbomd-ui:latest registry.nersc.gov/m4659/sclassen/bilbomd-ui:latest
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-ui:latest
 ```
 
 ```bash
-export DOCKER_DEFAULT_PLATFORM=linux/amd64
-docker build -t bl1231/bilbomd-backend: .
-docker tag bl1231/bilbomd-backend:latest registry.nersc.gov/m4659/sclassen/bilbomd-backend:latest
-docker push registry.nersc.gov/m4659/sclassen/bilbomd-backend:latest
+cd bilbomd-backend
+docker build -t bilbomd/bilbomd-spin-backend: -f bilbomd-spin-backend.dockerfile
+docker tag bilbomd/bilbomd-spin-backend:latest registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
+docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
+```
+
+```bash
+cd bilbomd-worker
+docker build -t bilbomd/bilbomd-spin-worker -f bilbomd-spin-worker.dockerfile
+docker tag bilbomd/bilbomd-spin-worker:latest registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker:latest
+docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker:latest
 ```
 
 ## Build docker images on Perlmutter login nodes
@@ -28,7 +43,7 @@ The pushing from home can take along time....Let's try building on perlmutter.
 
 not having much luck. `npm install` is running out op file handles.
 
-Can try this in orer to get podman-hpc into a happy state again
+Can try this in order to get podman-hpc into a happy state again
 
 ```bash
 podman unshare
