@@ -15,7 +15,8 @@ data:
   SEND_EMAIL_NOTIFICATIONS: 'true'
   SEND_EMAIL_USER: bilbomd@lbl.gov
   DATA_VOL: /bilbomd/uploads
+  USE_NERSC: 'true'
 kind: ConfigMap
 metadata:
-  name: backend-config
+  name: bilbomd-config
   namespace: bilbomd

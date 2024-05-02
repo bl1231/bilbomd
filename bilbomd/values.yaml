@@ -33,6 +33,6 @@ ui:
 worker:
   name: worker
   image:
-    repository: registry.nersc.gov/m4659/sclassen/bilbomd-worker
+    repository: registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker
     tag: "latest"
     pullPolicy: Always
