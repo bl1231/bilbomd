@@ -1,5 +1,8 @@
 namespace: bilbomd
 
+docker_registry: registry.nersc.gov
+nersc_repo: m4659
+
 mongo:
   name: mongo
   image:
@@ -19,20 +22,20 @@ redis:
 backend:
   name: backend
   image:
-    repository: registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend
+    repository: sclassen/bilbomd-spin-backend
     tag: "latest"
     pullPolicy: Always
 
 ui:
   name: ui
   image:
-    repository: registry.nersc.gov/m4659/sclassen/bilbomd-ui
+    repository: sclassen/bilbomd-ui
     tag: "latest"
     pullPolicy: Always
 
 worker:
   name: worker
   image:
-    repository: registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker
+    repository: sclassen/bilbomd-spin-worker
     tag: "latest"
     pullPolicy: Always

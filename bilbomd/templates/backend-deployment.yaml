@@ -5,8 +5,8 @@ metadata:
     field.cattle.io/description: BilboMD Backend App
   labels:
     workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.backend.name }}
-  name: {{ .Values.backend.name }}
-  namespace: {{ .Values.namespace }}
+  name: "{{ .Values.backend.name }}"
+  namespace: "{{ .Values.namespace }}"
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
@@ -36,8 +36,8 @@ spec:
         - secretRef:
             name: sfapi-priv-key
             optional: false
-        image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
-        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        image: "{{ .Values.docker_registry }}/{{ .Values.nersc_repo }}/{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+        imagePullPolicy: "{{ .Values.backend.image.pullPolicy }}"
         name: container-0
         ports:
         - containerPort: 3500

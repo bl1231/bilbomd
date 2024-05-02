@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    field.cattle.io/description: MongoDB server for BilboMD
+    field.cattle.io/description: MongoDB Server for BilboMD
   labels:
     workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.mongo.name }}
-  name: {{ .Values.mongo.name }}
-  namespace: {{ .Values.namespace }}
+  name: "{{ .Values.mongo.name }}"
+  namespace: "{{ .Values.namespace }}"
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
@@ -26,48 +26,48 @@ spec:
     spec:
       affinity: {}
       containers:
-      - envFrom:
-        - configMapRef:
-            name: mongo-config
-            optional: false
-        - secretRef:
-            name: mongo-secrets
-            optional: false
-        image: "{{ .Values.mongo.image.repository }}:{{ .Values.mongo.image.tag }}"
-        imagePullPolicy: {{ .Values.mongo.image.pullPolicy }}
-        name: container-0
-        ports:
-        - containerPort: 27017
-          name: 27017tcp
-          protocol: TCP
-        resources: {}
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            add:
-            - CHOWN
-            - FOWNER
-            - DAC_OVERRIDE
-            - NET_BIND_SERVICE
-            - SETGID
-            - SETUID
-            drop:
-            - ALL
-          privileged: false
-          readOnlyRootFilesystem: false
-        stdin: true
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        tty: true
-        volumeMounts:
-        - mountPath: /data/db
-          name: vol-mongodb-data
+        - envFrom:
+            - configMapRef:
+                name: mongo-config
+                optional: false
+            - secretRef:
+                name: mongo-secrets
+                optional: false
+          image: "{{ .Values.docker_registry }}/{{ .Values.nersc_repo }}/{{ .Values.mongo.image.repository }}:{{ .Values.mongo.image.tag }}"
+          imagePullPolicy: "{{ .Values.mongo.image.pullPolicy }}"
+          name: container-0
+          ports:
+            - containerPort: 27017
+              name: 27017tcp
+              protocol: TCP
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - CHOWN
+                - FOWNER
+                - DAC_OVERRIDE
+                - NET_BIND_SERVICE
+                - SETGID
+                - SETUID
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: false
+          stdin: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          tty: true
+          volumeMounts:
+            - mountPath: /data/db
+              name: vol-mongodb-data
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: vol-mongodb-data
-        persistentVolumeClaim:
-          claimName: mongodb-volume
+        - name: vol-mongodb-data
+          persistentVolumeClaim:
+            claimName: mongodb-volume

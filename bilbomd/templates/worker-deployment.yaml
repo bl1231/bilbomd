@@ -5,8 +5,8 @@ metadata:
     field.cattle.io/description: BilboMD Worker App
   labels:
     workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.worker.name }}
-  name: {{ .Values.worker.name }}
-  namespace: {{ .Values.namespace }}
+  name: "{{ .Values.worker.name }}"
+  namespace: "{{ .Values.namespace }}"
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
@@ -36,8 +36,8 @@ spec:
         - secretRef:
             name: {{ .Values.namespace }}-secrets
             optional: false
-        image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
-        imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+        image: "{{ .Values.docker_registry }}/{{ .Values.nersc_repo }}/{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
+        imagePullPolicy: "{{ .Values.worker.image.pullPolicy }}"
         name: container-0
         resources: {}
         securityContext:
