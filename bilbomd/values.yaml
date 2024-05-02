@@ -19,7 +19,7 @@ redis:
 backend:
   name: backend
   image:
-    repository: registry.nersc.gov/m4659/sclassen/bilbomd-backend
+    repository: registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend
     tag: "latest"
     pullPolicy: Always
 
