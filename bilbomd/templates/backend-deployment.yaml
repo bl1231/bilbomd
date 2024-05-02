@@ -69,7 +69,7 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext:
-        fsGroup: 103887
+        fsGroup: 104818
       terminationGracePeriodSeconds: 30
       volumes:
       - name: vol-sfapi-priv-key
@@ -77,6 +77,6 @@ spec:
           defaultMode: 420
           secretName: sfapi-priv-key
       - hostPath:
-          path: /global/cfs/cdirs/m4521/bilbomd-uploads
+          path: /global/cfs/cdirs/m4659/bilbomd-uploads
           type: Directory
         name: vol-uploads

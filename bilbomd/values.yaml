@@ -29,3 +29,10 @@ ui:
     repository: registry.nersc.gov/m4659/sclassen/bilbomd-ui
     tag: "latest"
     pullPolicy: Always
+
+worker:
+  name: worker
+  image:
+    repository: registry.nersc.gov/m4659/sclassen/bilbomd-worker
+    tag: "latest"
+    pullPolicy: Always

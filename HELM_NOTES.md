@@ -43,10 +43,28 @@ podman-hpc system migrate
 
 ## KubeConfig
 
+download the `development.yaml` config from Rancher.
+put it in ~/.kube/
+set $KUBECONFIG environment variable
+
+set default namespace
+
+kubectl config set-context --current --namespace=bilbomd
+
 ## Install BilboMD via Helm chart
 
 ```bash
 helm install bilbomd-nersc-v1 ./bilbomd
+```
+
+This installs everyhting except teh secrets
+
+install secrets:
+
+```bash
+k apply -f helm-secrets/backend-secrets.yaml
+k apply -f helm-secrets/mongo-secrets.yaml
+k apply -f helm-secrets/ui-tls-secrets.yaml
 ```
 
 ## Upgrade BilboMD via Helm chart
