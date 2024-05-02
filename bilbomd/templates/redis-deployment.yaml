@@ -33,7 +33,7 @@ spec:
             - "1"
             - --loglevel
             - warning
-          image: "{{ .Values.docker_registry }}/{{ .Values.nersc_repo }}/{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
           imagePullPolicy: "{{ .Values.redis.image.pullPolicy }}"
           name: container-0
           ports:

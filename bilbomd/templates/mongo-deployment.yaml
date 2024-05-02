@@ -33,7 +33,7 @@ spec:
             - secretRef:
                 name: mongo-secrets
                 optional: false
-          image: "{{ .Values.docker_registry }}/{{ .Values.nersc_repo }}/{{ .Values.mongo.image.repository }}:{{ .Values.mongo.image.tag }}"
+          image: "{{ .Values.mongo.image.repository }}:{{ .Values.mongo.image.tag }}"
           imagePullPolicy: "{{ .Values.mongo.image.pullPolicy }}"
           name: container-0
           ports:
