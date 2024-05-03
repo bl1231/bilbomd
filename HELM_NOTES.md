@@ -2,22 +2,26 @@
 
 Some notes on Kubernetes and Helm during my efforts to get BilboMD deployed to NERSC SPIN system (aka Rancher2)
 
-## Build docker images on Apple M3
+## Build docker images
 
-tag and push `bilbomd-backend`, `bilbomd-ui`
+tag and push `bilbomd-backend`, `bilbomd-worker`, and `bilbomd-ui`
 
-From Apple M3 (`arm64`) need to build for `amd64` in order to run on SPIN
+If building on Apple with M3 Silicon (`arm64`) you will need to build for `amd64` in order to run on SPIN.
 
-Login to `https://registry.nersc.gov/`
+```bash
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
+```
+
+In order to push to NERSC's Docker service, login to `https://registry.nersc.gov/`
 
 ```bash
 docker login registry.nersc.gov
 ```
 
-Build 3 images:
+## Build 3 images
 
 ```bash
-export DOCKER_DEFAULT_PLATFORM=linux/amd64
+cd bilbomd-ui
 docker build -t bilbomd/bilbomd-ui .
 docker tag bilbomd/bilbomd-ui:latest registry.nersc.gov/m4659/sclassen/bilbomd-ui:latest
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-ui:latest
@@ -37,11 +41,7 @@ docker tag bilbomd/bilbomd-spin-worker:latest registry.nersc.gov/m4659/sclassen/
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker:latest
 ```
 
-## Build docker images on Perlmutter login nodes
-
-The pushing from home can take along time....Let's try building on perlmutter.
-
-not having much luck. `npm install` is running out op file handles.
+## Troubleshooting Build docker images on Perlmutter login nodes
 
 Can try this in order to get podman-hpc into a happy state again
 
@@ -54,6 +54,7 @@ rm -rf ~/.config/containers
 rm -rf /run/user/62704/overlay*
 podman-hpc system reset
 podman-hpc system migrate
+exit
 ```
 
 ## KubeConfig
@@ -72,7 +73,7 @@ kubectl config set-context --current --namespace=bilbomd
 helm install bilbomd-nersc-v1 ./bilbomd
 ```
 
-This installs everyhting except teh secrets
+This installs everyhting except the secrets
 
 install secrets:
 
