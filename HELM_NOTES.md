@@ -20,6 +20,8 @@ docker login registry.nersc.gov
 
 ## Build 3 images
 
+I have made `docker` an alias for `podman-hpc` on perlmutter.
+
 ```bash
 cd bilbomd-ui
 docker build -t bilbomd/bilbomd-ui .
@@ -29,7 +31,7 @@ docker push registry.nersc.gov/m4659/sclassen/bilbomd-ui:latest
 
 ```bash
 cd bilbomd-backend
-docker build --build-arg USER_ID=$UID -t bilbomd/bilbomd-spin-backend: -f bilbomd-spin-backend.dockerfile
+docker build --build-arg USER_ID=$UID -t bilbomd/bilbomd-spin-backend -f bilbomd-spin-backend.dockerfile
 docker tag bilbomd/bilbomd-spin-backend:latest registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 ```
