@@ -2,11 +2,11 @@
 
 Some notes on Kubernetes and Helm during my efforts to get BilboMD deployed to NERSC SPIN system (aka Rancher2)
 
-## Build docker images
+## Background and Setup Instructions for Building Docker Images
 
-tag and push `bilbomd-backend`, `bilbomd-worker`, and `bilbomd-ui`
+Because I've separated some of the original functionality of `bilbomd-worker` so there is one build for SPIN and another build for Perlmutter I have decided to give explicit names for images destined for SPIN and Perlmutter. You will need to build, tag, and push `bilbomd-spin-backend`, `bilbomd-spin-worker`, `bilbomd-perlmutter-worker`, and `bilbomd-ui`
 
-If building on Apple with M3 Silicon (`arm64`) you will need to build for `amd64` in order to run on SPIN.
+If building on Apple with M3 Silicon (`arm64`) you will need to build for `amd64` in order to run on SPIN. There are ways to build images for multiple hardware platforms, but I have not explored this option yet.
 
 ```bash
 export DOCKER_DEFAULT_PLATFORM=linux/amd64
@@ -18,9 +18,11 @@ In order to push to NERSC's Docker service, login to `https://registry.nersc.gov
 docker login registry.nersc.gov
 ```
 
-## Build 3 images
+## Build Instructions
 
 I have made `docker` an alias for `podman-hpc` on perlmutter.
+
+### `bilbomd-ui`
 
 ```bash
 cd bilbomd-ui
@@ -29,18 +31,31 @@ docker tag bilbomd/bilbomd-ui:latest registry.nersc.gov/m4659/sclassen/bilbomd-u
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-ui:latest
 ```
 
+### `bilbomd-spin-backend`
+
 ```bash
-cd bilbomd-backend
-docker build --build-arg USER_ID=$UID -t bilbomd/bilbomd-spin-backend -f bilbomd-spin-backend.dockerfile
+cd bilbomd-spin-backend
+docker build --build-arg USER_ID=$UID -t bilbomd/bilbomd-spin-backend -f bilbomd-spin-backend.dockerfile .
 docker tag bilbomd/bilbomd-spin-backend:latest registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 ```
 
+### `bilbomd-spin-worker`
+
 ```bash
 cd bilbomd-worker
-docker build -t bilbomd/bilbomd-spin-worker -f bilbomd-spin-worker.dockerfile
+docker build -t bilbomd/bilbomd-spin-worker -f bilbomd-spin-worker.dockerfile .
 docker tag bilbomd/bilbomd-spin-worker:latest registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker:latest
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker:latest
+```
+
+### `bilbomd-perlmutter-worker`
+
+```bash
+cd bilbomd-worker
+docker build --build-arg USER_ID=$UID -t bilbomd/bilbomd-perlmutter-worker -f bilbomd-perlmutter-worker.dockerfile .
+docker tag bilbomd/bilbomd-perlmutter-worker:latest registry.nersc.gov/m4659/sclassen/bilbomd-perlmutter-worker:latest
+docker push registry.nersc.gov/m4659/sclassen/bilbomd-perlmutter-worker:latest
 ```
 
 ## Troubleshooting Build docker images on Perlmutter login nodes
