@@ -1,5 +1,3 @@
-version: "3.9"
-
 volumes:
   mongodb-dev:
     name: mongodb-dev
