@@ -109,6 +109,7 @@ services:
         NODE_MAJOR: 20
         USER_ID: 1001
         GROUP_ID: 1001
+        NPM_TOKEN: ${NPM_TOKEN}
     deploy:
       replicas: 2
       resources:
