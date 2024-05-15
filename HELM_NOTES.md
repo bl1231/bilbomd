@@ -34,8 +34,8 @@ docker push registry.nersc.gov/m4659/sclassen/bilbomd-ui:latest
 ### `bilbomd-spin-backend`
 
 ```bash
-cd bilbomd-spin-backend
-docker build --build-arg USER_ID=$UID -t bilbomd/bilbomd-spin-backend -f bilbomd-spin-backend.dockerfile .
+cd bilbomd-backend
+docker build --build-arg NPM_TOKEN=$NPM_TOKEN --build-arg USER_ID=$UID -t bilbomd/bilbomd-spin-backend -f bilbomd-spin-backend.dockerfile .
 docker tag bilbomd/bilbomd-spin-backend:latest registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 ```
@@ -44,7 +44,7 @@ docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 
 ```bash
 cd bilbomd-worker
-docker build -t bilbomd/bilbomd-spin-worker -f bilbomd-spin-worker.dockerfile .
+docker build --build-arg NPM_TOKEN=$NPM_TOKEN -t bilbomd/bilbomd-spin-worker -f bilbomd-spin-worker.dockerfile .
 docker tag bilbomd/bilbomd-spin-worker:latest registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker:latest
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker:latest
 ```
