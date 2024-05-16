@@ -4,7 +4,7 @@ Some notes on Kubernetes and Helm during my efforts to get BilboMD deployed to N
 
 ## Background and Setup Instructions for Building Docker Images
 
-Because I've separated some of the original functionality of `bilbomd-worker` so there is one build for SPIN and another build for Perlmutter I have decided to give explicit names for images destined for SPIN and Perlmutter. You will need to build, tag, and push `bilbomd-spin-backend`, `bilbomd-spin-worker`, `bilbomd-perlmutter-worker`, and `bilbomd-ui`
+I have separated some of the original functionality of `bilbomd-worker` so there is one build for SPIN and another build for Perlmutter I have decided to give explicit names for images destined for SPIN and Perlmutter. You will need to build, tag, and push `bilbomd-spin-backend`, `bilbomd-spin-worker`, `bilbomd-perlmutter-worker`, and `bilbomd-ui`
 
 If building on Apple with M3 Silicon (`arm64`) you will need to build for `amd64` in order to run on SPIN. There are ways to build images for multiple hardware platforms, but I have not explored this option yet.
 
@@ -21,6 +21,12 @@ docker login registry.nersc.gov
 ## Build Instructions
 
 I have made `docker` an alias for `podman-hpc` on perlmutter.
+
+I have created a separte package ([@bl1231/bilbomd-mongodb-schemas](https://github.com/bl1231/bilbomd-mongodb-schema/pkgs/npm/bilbomd-mongodb-schema)) to hold the MongoDB schema and Typeface interfaces for bilbomd apps. It is published to [GitHub packages](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry) and as of the writing of these notes requires a token in order to install it... even though it is public (? seems odd.). Anyways ya gotta set your token before building.
+
+```bash
+export NPM_TOKEN=<your-token-here>
+```
 
 ### `bilbomd-ui`
 
