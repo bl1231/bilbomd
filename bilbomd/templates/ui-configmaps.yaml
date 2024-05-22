@@ -1,0 +1,8 @@
+apiVersion: v1
+data:
+  USE_NERSC: "true"
+  NERSC_PROJECT: "m4659"
+kind: ConfigMap
+metadata:
+  name: bilbomd-ui-config
+  namespace: bilbomd
