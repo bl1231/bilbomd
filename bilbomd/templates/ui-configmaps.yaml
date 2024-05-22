@@ -1,6 +1,6 @@
 apiVersion: v1
 data:
-  USE_NERSC: "true"
+  VITE_USE_NERSC: "true"
   NERSC_PROJECT: "m4659"
 kind: ConfigMap
 metadata:
