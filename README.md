@@ -4,7 +4,7 @@ This repository is a sort fo "wrapper" project. The main purpose is to hold the 
 
 ## Description
 
-BilboMD is a webapp developed at the SIBYLS beamline. It uses Molecular Dynamics from [CHARMM](https://academiccharmm.org/) to generate aa array of possible molecular models. This ensemble of possible models is then used to calculate theoretical SAXS curves using [FoXS](https://modbase.compbio.ucsf.edu/foxs/about), compared with empirical SAXS data using [MultiFoXS](https://modbase.compbio.ucsf.edu/multifoxs/about) to find an ensemble of models that best explains your SAXS data.
+BilboMD is a webapp developed at the SIBYLS beamline. It uses Molecular Dynamics from [CHARMM](https://academiccharmm.org/) to generate an array of possible molecular models. This ensemble of possible models is then used to calculate theoretical SAXS curves using [FoXS](https://modbase.compbio.ucsf.edu/foxs/about), and then compared with empirical SAXS data using [MultiFoXS](https://modbase.compbio.ucsf.edu/multifoxs/about) to find an ensemble of models that best explains your SAXS data.
 
 ## High level architecture
 
@@ -190,14 +190,14 @@ These commands are structured to manage separate development and production envi
 You can do this with the `docker ps` command. For example:
 
 ```bash
-CONTAINER ID   IMAGE                          COMMAND                  CREATED        STATUS                  PORTS                      NAMES
-3723ec63329a   bl1231/bilbomd-ui:1.8.2        "/docker-entrypoint.…"   6 hours ago    Up 6 hours              0.0.0.0:3001->80/tcp       bilbomd-prod-ui-1
-b46d96d48861   bl1231/bilbomd-worker:1.5.2    "npm start"              11 hours ago   Up 11 hours                                        bilbomd-prod-worker-1
-2170e019b8da   bl1231/bilbomd-backend:1.8.2   "docker-entrypoint.s…"   11 hours ago   Up 11 hours             0.0.0.0:3501->3500/tcp     bilbomd-prod-backend-1
-643781e4caa4   bl1231/bilbomd-worker:1.5.2    "npm start"              11 hours ago   Up 11 hours                                        bilbomd-prod-worker-2
-bb14f20dd1cd   bl1231/bilbomd-scoper:1.0.4    "npm start"              29 hours ago   Up 29 hours                                        bilbomd-prod-scoper-1
-ccb9de30921f   mongo:7.0.7                    "docker-entrypoint.s…"   29 hours ago   Up 29 hours (healthy)   0.0.0.0:28017->27017/tcp   bilbomd-prod-mongodb-1
-27eaae2fb95a   redis:7.2.4                    "docker-entrypoint.s…"   29 hours ago   Up 29 hours (healthy)   0.0.0.0:7379->6379/tcp     bilbomd-prod-redis-1
+CONTAINER ID   IMAGE                          COMMAND                  CREATED       STATUS                PORTS                      NAMES
+d3b4a68ff6ee   bl1231/bilbomd-ui:1.9.0        "/docker-entrypoint.…"   10 days ago   Up 3 days             0.0.0.0:3001->80/tcp       bilbomd-ui-1
+f2a3d4599faa   bl1231/bilbomd-worker:1.6.0    "npm start"              10 days ago   Up 3 days                                        bilbomd-worker-2
+c3441eb70633   bl1231/bilbomd-backend:1.9.0   "docker-entrypoint.s…"   10 days ago   Up 21 hours           0.0.0.0:3501->3500/tcp     bilbomd-backend-1
+6a0b4f2781fe   bl1231/bilbomd-worker:1.6.0    "npm start"              10 days ago   Up 3 days                                        bilbomd-worker-1
+1fc6e446496b   bl1231/bilbomd-scoper:1.0.4    "npm start"              10 days ago   Up 3 days                                        bilbomd-scoper-1
+8e339d7de6ca   mongo:7.0.8                    "docker-entrypoint.s…"   10 days ago   Up 3 days (healthy)   0.0.0.0:28017->27017/tcp   bilbomd-mongodb-1
+163f273c76dd   redis:7.2.4                    "docker-entrypoint.s…"   10 days ago   Up 3 days (healthy)   0.0.0.0:7379->6379/tcp     bilbomd-redis-1
 ```
 
 ---
@@ -219,7 +219,7 @@ I'm not going to go into extensive description of the Apache setup at 12.3.1, bu
 ```bash
 <VirtualHost *:443>
     ServerName bilbomd.bl1231.als.lbl.gov
-    ServerAdmin  sclassen@lbl.gov
+    ServerAdmin  me@example.com
 
     # LOGGING
     ErrorLog logs/bilbomd-error.log
@@ -230,9 +230,6 @@ I'm not going to go into extensive description of the Apache setup at 12.3.1, bu
     ProxyPassReverse "/" "http://hyperion.bl1231.als.lbl.gov:3001/"
 
     # SSL SETTINGS
-    # self signed certs which should be fine for use with Cloudflare
-    # look in the git@git.bl1231.als.lbl.gov:sa/sibyls-ansible-stuff.git
-    # for the CSRs etc. in roles/openldap25/files/certs
     SSLEngine on
     SSLCertificateFile /etc/httpd/certs/bilbomd.crt
     SSLCertificateKeyFile /etc/httpd/certs/bilbomd.key
@@ -240,7 +237,7 @@ I'm not going to go into extensive description of the Apache setup at 12.3.1, bu
 </VirtualHost>
 ```
 
-So from this you can probably figure out that any requests to `bilbomd.bl1231.als.lbl.gov` will be forwarded to port `3001` on `hyperion.bl1231.als.lbl.gov`. In general we don't want to run webapps as the root user or as our personal linux accounts, so I've set up a special service account (`webadmin`) that we can run webapps under.
+So from this you can probably figure out that any requests to `bilbomd.bl1231.als.lbl.gov` will be forwarded to port `3001` on `hyperion.bl1231.als.lbl.gov`.
 
 ### Checkout the `bilbomd-ui` code
 
