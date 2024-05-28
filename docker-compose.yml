@@ -36,7 +36,7 @@ services:
       - app-network
 
   redis:
-    image: redis:7.2.4
+    image: redis:7.2.5
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -53,7 +53,7 @@ services:
       - app-network
 
   backend:
-    image: bl1231/bilbomd-backend:1.9.0
+    image: bl1231/bilbomd-backend:1.9.2
     build:
       context: ./bilbomd-backend
       dockerfile: bilbomd-backend.dockerfile
@@ -100,7 +100,7 @@ services:
       - redis
 
   worker:
-    image: bl1231/bilbomd-worker:1.6.0
+    image: bl1231/bilbomd-worker:1.6.2
     build:
       context: ./bilbomd-worker
       dockerfile: bilbomd-worker.dockerfile
@@ -181,7 +181,7 @@ services:
       - redis
 
   ui:
-    image: bl1231/bilbomd-ui:1.9.0
+    image: bl1231/bilbomd-ui:1.9.2
     build:
       context: ./bilbomd-ui
       args:
