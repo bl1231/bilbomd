@@ -63,6 +63,8 @@ spec:
           name: vol-sfapi-priv-key
         - mountPath: /bilbomd/uploads
           name: vol-uploads
+        - mountPath: /bilbomd/logs
+          name: vol-logs
       dnsPolicy: ClusterFirst
       imagePullSecrets:
       - name: registry-nersc
@@ -80,3 +82,7 @@ spec:
           path: /global/cfs/cdirs/m4659/bilbomd-uploads
           type: Directory
         name: vol-uploads
+      - hostPath:
+          path: /global/cfs/cdirs/m4659/bilbomd-logs
+          type: Directory
+        name: vol-logs
