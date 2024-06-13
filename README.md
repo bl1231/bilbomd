@@ -71,7 +71,7 @@ This is the docker container where the actual BilboMD computations are performed
 
 ### [bilbomd-scoper][bilbomd-scoper]
 
-This service provides the Scoper pipeline for predeciting Mg++ ion positions in RNA with best fitting to experimental SAXS data.
+This service provides the Scoper pipeline for prediciting Mg++ ion positions in RNA with best fitting to experimental SAXS data. Currently Scoper will only run on Intel machines so cannot be deployed to NERSC Perlmutter.
 
 ### bilbomd-redis
 
@@ -83,7 +83,7 @@ This service uses the default [MongoDB Docker image](https://hub.docker.com/_/mo
 
 ## Docker compose instructions
 
-There are still a lot of things I don't fully understand about Docker and Docker Compose. Here are a few useful links to the Docker documentation.
+Here are a few useful links to Docker Compose & Docker documentation.
 
 - [Docker Compose](https://docs.docker.com/compose/reference/)
 - [Dockerfile](https://docs.docker.com/engine/reference/builder/)
