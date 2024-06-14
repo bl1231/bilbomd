@@ -7,7 +7,7 @@ metadata:
   namespace: bilbomd
 spec:
   rules:
-  - host: ingress.bilbomd.development.svc.spin.nersc.org
+  - host: {{ .Values.ingress.host }}
     http:
       paths:
       - backend:
@@ -17,7 +17,7 @@ spec:
               number: 80
         path: /
         pathType: Prefix
-  - host: bilbomd-nersc.bl1231.als.lbl.gov
+  - host: {{ .Values.ingress.fqdn }}
     http:
       paths:
       - backend:
@@ -29,6 +29,6 @@ spec:
         pathType: Prefix
   tls:
   - hosts:
-    - bilbomd-nersc.bl1231.als.lbl.gov
-    secretName: ui-tls
+    - {{ .Values.ingress.fqdn }}
+    secretName: {{ .Values.ingress.secret }}
 

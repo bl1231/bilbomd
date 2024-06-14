@@ -30,6 +30,7 @@ services:
       - ./uploads-dev:/bilbomd/uploads
       - ./bilbomd-backend:/app
       - ./secrets:/secrets
+      - ./logs/backend:/bilbomd/logs
     user: "${UID:-1001}:${GID:-1001}"
     command: [ "npm", "run", "dev" ]
 
@@ -48,6 +49,7 @@ services:
       - ./uploads-dev:/bilbomd/uploads
       - ./bilbomd-worker:/app
       - ./secrets:/secrets
+      - ./logs/worker:/bilbomd/logs
     user: "${UID:-1001}:${GID:-1001}"
     command: [ "npm", "run", "dev" ]
 

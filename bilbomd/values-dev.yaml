@@ -1,0 +1,8 @@
+ingress:
+  host: "ingress.bilbomd.development.svc.spin.nersc.org"
+  fqdn: "bilbomd-nersc-dev.bl1231.als.lbl.gov"
+  secret: "ui-tls-dev"
+
+logs:
+  backend: "bilbomd-logs-backend-dev"
+  worker: "bilbomd-logs-worker-dev"

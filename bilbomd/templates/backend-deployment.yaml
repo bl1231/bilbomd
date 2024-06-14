@@ -79,10 +79,10 @@ spec:
           defaultMode: 420
           secretName: sfapi-priv-key
       - hostPath:
-          path: /global/cfs/cdirs/m4659/bilbomd-uploads
+          path: /global/cfs/cdirs/{{ .Values.nersc_repo }}/bilbomd-uploads
           type: Directory
         name: vol-uploads
       - hostPath:
-          path: /global/cfs/cdirs/m4659/bilbomd-logs
+          path: /global/cfs/cdirs/{{ .Values.nersc_repo }}/{{ .Values.logs.backend }}
           type: Directory
         name: vol-logs
