@@ -19,20 +19,6 @@ redis:
     tag: "7.2.5"
     pullPolicy: IfNotPresent
 
-backend:
-  name: backend
-  image:
-    repository: sclassen/bilbomd-spin-backend
-    tag: "latest"
-    pullPolicy: Always
-
-ui:
-  name: ui
-  image:
-    repository: sclassen/bilbomd-ui
-    tag: "latest"
-    pullPolicy: Always
-
 worker:
   name: worker
   image:

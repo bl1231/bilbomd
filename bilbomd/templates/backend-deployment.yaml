@@ -36,7 +36,7 @@ spec:
         - secretRef:
             name: sfapi-priv-key
             optional: false
-        image: "{{ .Values.docker_registry }}/{{ .Values.nersc_repo }}/{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+        image: "{{ .Values.backend.image.registry }}/{{ .Values.backend.image.owner }}/{{ with .Values.backend.image.user }}{{ . }}/{{ end }}{{ with .Values.backend.image.repository }}{{ . }}/{{ end }}{{ .Values.backend.image.build }}:{{ .Values.backend.image.tag }}"
         imagePullPolicy: "{{ .Values.backend.image.pullPolicy }}"
         name: container-0
         ports:
@@ -67,7 +67,7 @@ spec:
           name: vol-logs
       dnsPolicy: ClusterFirst
       imagePullSecrets:
-      - name: registry-nersc
+      - name: {{ .Values.backend.image.secret }}
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext:

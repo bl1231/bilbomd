@@ -6,3 +6,27 @@ ingress:
 logs:
   backend: "bilbomd-logs-backend-dev"
   worker: "bilbomd-logs-worker-dev"
+
+ui:
+  name: ui
+  image:
+    registry: ghcr.io
+    owner: bl1231
+    user: null
+    repository: bilbomd-ui
+    build: null
+    tag: "latest"
+    pullPolicy: Always
+    secret: ghcr
+
+backend:
+  name: backend
+  image:
+    registry: ghcr.io
+    owner: bl1231
+    user: null
+    repository: bilbomd-backend
+    build: bilbomd-spin-backend
+    tag: "latest"
+    pullPolicy: Always
+    secret: ghcr

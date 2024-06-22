@@ -6,3 +6,27 @@ ingress:
 logs:
   backend: "bilbomd-logs-backend"
   worker: "bilbomd-logs-worker"
+
+ui:
+  name: ui
+  image:
+    registry: registry.nersc.gov
+    owner: m4659
+    user: sclassen
+    repository: null
+    build: bilbomd-ui
+    tag: "latest"
+    pullPolicy: Always
+    secret: registry-nersc
+
+backend:
+  name: backend
+  image:
+    registry: registry.nersc.gov
+    owner: m4659
+    user: sclassen
+    repository: null
+    build: bilbomd-spin-backend
+    tag: "latest"
+    pullPolicy: Always
+    secret: registry-nersc
