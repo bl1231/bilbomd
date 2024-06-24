@@ -1,7 +1,8 @@
+import { logger } from './helpers/loggers'
 import { Job as BullMQJob } from 'bullmq'
-import { BilboMdScoperJob, IBilboMDScoperJob } from './model/Job.js'
-import { User } from './model/User.js'
-import { sendJobCompleteEmail } from './mailer.js'
+import { IBilboMDScoperJob, BilboMdScoperJob } from '@bl1231/bilbomd-mongodb-schema'
+import { User } from '@bl1231/bilbomd-mongodb-schema'
+import { sendJobCompleteEmail } from './helpers/mailer.js'
 import { runScoper, prepareScoperResults } from './scoper.functions.js'
 
 const bilbomdUrl: string = process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
@@ -26,7 +27,7 @@ const cleanupJob = async (MQjob: BullMQJob, DBJob: IBilboMDScoperJob) => {
   DBJob.time_completed = new Date()
   await DBJob.save()
   sendJobCompleteEmail(DBJob.user.email, bilbomdUrl, DBJob.id, DBJob.title, false)
-  console.log(`email notification sent to ${DBJob.user.email}`)
+  logger.info(`email notification sent to ${DBJob.user.email}`)
   await MQjob.log(`email notification sent to ${DBJob.user.email}`)
 }
 

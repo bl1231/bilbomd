@@ -1,8 +1,10 @@
+import { logger } from './helpers/loggers'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
-import { IBilboMDScoperJob } from './model/Job.js'
+// import { IBilboMDScoperJob } from './model/Job.js'
+import { IBilboMDScoperJob } from '@bl1231/bilbomd-mongodb-schema'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 
@@ -52,6 +54,7 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
   ]
 
   return new Promise<void>((resolve, reject) => {
+    // logger.info(`Running scoper with args: ${['-u', ...args].join(' ')}`)
     const scoper = spawn('python', ['-u', ...args], { cwd: outputDir })
 
     scoper.stdout?.on('data', (data) => {
@@ -73,16 +76,16 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
       // This code is for determining teh "newpdb_##" directory.
       const processExitLogic = async () => {
         if (code === 0) {
-          console.log('scoper process exited successfully. Processing log file...')
+          logger.info('scoper process exited successfully. Processing log file...')
           MQjob.log('scoper process successfully')
           try {
             const dirName = await findTopKDirFromLog(logFile)
             if (dirName) {
-              console.log('Found directory:', dirName)
+              logger.info('Found directory:', dirName)
               const dirNameFilePath = path.join(outputDir, 'top_k_dirname.txt')
               await fs.writeFile(dirNameFilePath, dirName)
             } else {
-              console.log('Directory not found in log file')
+              logger.info('Directory not found in log file')
             }
             resolve()
           } catch (error) {
