@@ -65,10 +65,9 @@ RUN apt-get update && \
 
 # -----------------------------------------------------------------------------
 # Build stage 4
-FROM bilbomd-scoper-nodejs AS bilbomd-scoper
-
-ARG USER_ID=1001
-ARG GROUP_ID=1001
+FROM bilbomd-scoper-nodejs AS bilbomd-scoper-111
+ARG USER_ID
+ARG GROUP_ID
 
 # Update Conda
 RUN conda update -n base -c defaults conda
@@ -77,24 +76,24 @@ RUN conda update -n base -c defaults conda
 COPY environment.yml /tmp/environment.yml
 
 # Update existing base environment from environment.yml
-RUN conda env update -f /tmp/environment.yml
-RUN conda install -y pyg -c pyg
-RUN conda install -y torchmetrics=0.7.2 -c conda-forge
-RUN conda install -y tabulate
-RUN conda install -y imp=2.20.1
-RUN pip install wandb
+RUN conda env update -f /tmp/environment.yml && \
+    conda install -y pyg -c pyg && \
+    conda install -y torchmetrics=0.7.2 -c conda-forge && \
+    conda install -y tabulate && \
+    conda install -y imp=2.20.1 && \
+    pip install wandb
 
-# Create a group with GID
-RUN groupadd -g $GROUP_ID scoper
+RUN groupadd -g $GROUP_ID scoper && \
+    useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
+    mkdir -p /home/scoper/app && \
+    chown -R scoper:scoper /home/scoper
 
-# Create the 'scoper' user with specified UID and GID
-RUN useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper
+RUN npm install -g npm@10.8.1
 
-# Not sure this is needed, but chown everything
-RUN chown -R scoper:scoper /home/scoper
-
-# Set the user for subsequent instructions
-USER scoper:scoper
+# -----------------------------------------------------------------------------
+# Build stage 4.1111
+FROM bilbomd-scoper-111 AS bilbomd-scoper
+ARG NPM_TOKEN
 
 # Change back to the app directory
 WORKDIR /home/scoper/app
@@ -102,26 +101,26 @@ WORKDIR /home/scoper/app
 # Copy package.json and package-lock.json
 COPY --chown=scoper:scoper package*.json ./
 
-# Install any NPM dependencies
-RUN npm install
+# Switch to scoper user
+USER scoper:scoper
 
-# Clone IonNet
-WORKDIR /home/scoper/IonNet
-# RUN git clone -b docker-test https://github.com/bl1231/IonNet.git .
-COPY ionnet-src/IonNet-docker-test.zip .
-RUN unzip IonNet-docker-test.zip && \
-    rm IonNet-docker-test.zip && \ 
-    mv IonNet-docker-test/* . && \
-    rm -rf IonNet-docker-test
-WORKDIR /home/scoper/IonNet/scripts/scoper_scripts
-RUN tar xvf KGSrna.tar
+# Update NPM and install dependencies
+RUN echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" > /home/scoper/.npmrc && \
+    npm install && \
+    unset NPM_TOKEN
 
-# Change back to the app directory
-WORKDIR /home/scoper/app
-# Copy the rest of your app's source code
+# Clone IonNet repository
+WORKDIR /home/scoper
+RUN git clone -b docker-test --single-branch https://github.com/bl1231/IonNet.git && \
+    cd IonNet/scripts/scoper_scripts && \
+    tar xvf KGSrna.tar && \
+    cd /home/scoper/app
+
+# Copy application source code
 COPY --chown=scoper:scoper . .
 
-# Set the RNAView env variable
+# Set environment variable
 ENV RNAVIEW=/usr/local/RNAView
 
+# Set the default command
 CMD ["npm", "start"]
