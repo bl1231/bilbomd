@@ -148,12 +148,13 @@ services:
 
   scoper:
     image: bl1231/bilbomd-scoper:1.0.4
-    # build:
-    #   context: ./bilbomd-scoper
-    #   args:
-    #     USER_ID: 1001
-    #     GROUP_ID: 1001
-    #     NODE_MAJOR: 20
+    build:
+      context: ./bilbomd-scoper
+      args:
+        USER_ID: 1001
+        GROUP_ID: 1001
+        NODE_MAJOR: 20
+        NPM_TOKEN: $NPM_TOKEN
     deploy:
       replicas: 1
       resources:
@@ -180,6 +181,7 @@ services:
       - app-network
     volumes:
       - uploads:/bilbomd/uploads
+      - logs:/bilbomd/logs
     user: "1001:1001"
     depends_on:
       - mongodb
