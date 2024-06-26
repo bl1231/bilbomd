@@ -4,6 +4,7 @@ import { IBilboMDScoperJob, BilboMdScoperJob } from '@bl1231/bilbomd-mongodb-sch
 import { User } from '@bl1231/bilbomd-mongodb-schema'
 import { sendJobCompleteEmail } from './helpers/mailer.js'
 import { runScoper, prepareScoperResults } from './scoper.functions.js'
+import { config } from './config/config'
 
 const bilbomdUrl: string = process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
 
@@ -26,9 +27,15 @@ const cleanupJob = async (MQjob: BullMQJob, DBJob: IBilboMDScoperJob) => {
   DBJob.status = 'Completed'
   DBJob.time_completed = new Date()
   await DBJob.save()
-  sendJobCompleteEmail(DBJob.user.email, bilbomdUrl, DBJob.id, DBJob.title, false)
-  logger.info(`email notification sent to ${DBJob.user.email}`)
-  await MQjob.log(`email notification sent to ${DBJob.user.email}`)
+
+  // Send job completion email and log the notification
+  if (config.sendEmailNotifications) {
+    sendJobCompleteEmail(DBJob.user.email, bilbomdUrl, DBJob.id, DBJob.title, false)
+    logger.info(`email notification sent to ${DBJob.user.email}`)
+    await MQjob.log(`email notification sent to ${DBJob.user.email}`)
+  } else {
+    logger.info(`email notifications are disabled`)
+  }
 }
 
 const processBilboMDScoperJobTest = async (MQjob: BullMQJob) => {

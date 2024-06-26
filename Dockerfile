@@ -6,7 +6,11 @@ ENV TZ=America/Los_Angeles
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential git cmake libgsl-dev && \
+    apt-get install -y --no-install-recommends build-essential \
+        git \
+        cmake \
+        unzip \
+        libgsl-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Clone and build 'reduce'
@@ -26,7 +30,12 @@ RUN git clone https://github.com/rlabduke/reduce.git reduce && \
 #     make -j
 
 # Clone and build 'RNAview'
-RUN git clone https://github.com/rcsb/RNAView.git RNAView && \
+WORKDIR /usr/local
+# RUN curl -L -o rnaview.zip https://github.com/rcsb/RNAView/archive/refs/heads/master.zip
+COPY rnaview/rnaview.zip .
+# RUN git clone https://github.com/rcsb/RNAView.git RNAView && \
+RUN unzip rnaview.zip && \
+    mv RNAView-master RNAView && \
     cd RNAView && \
     make
 
@@ -43,8 +52,8 @@ COPY --from=bilbomd-scoper-build-deps /usr/local/reduce_wwPDB_het_dict.txt /usr/
 # COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/build/kgs_explore /usr/local/bin/
 # COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/scripts/kgs_prepare.py /usr/local/bin/
 # Copy RNAView binary
-COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/bin/rnaview /usr/local/bin/
-COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
+COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/bin/rnaview /usr/local/bin/
+COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
 
 
 # -----------------------------------------------------------------------------
@@ -95,6 +104,14 @@ RUN npm install -g npm@10.8.1
 FROM bilbomd-scoper-111 AS bilbomd-scoper
 ARG NPM_TOKEN
 
+# Copy IonNet source code
+WORKDIR /home/scoper
+COPY ionnet/docker-test.zip .
+RUN unzip docker-test.zip && \
+    mv IonNet-docker-test IonNet && \
+    cd IonNet/scripts/scoper_scripts && \
+    tar xvf KGSrna.tar
+
 # Change back to the app directory
 WORKDIR /home/scoper/app
 
@@ -108,13 +125,6 @@ USER scoper:scoper
 RUN echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" > /home/scoper/.npmrc && \
     npm install && \
     unset NPM_TOKEN
-
-# Clone IonNet repository
-WORKDIR /home/scoper
-RUN git clone -b docker-test --single-branch https://github.com/bl1231/IonNet.git && \
-    cd IonNet/scripts/scoper_scripts && \
-    tar xvf KGSrna.tar && \
-    cd /home/scoper/app
 
 # Copy application source code
 COPY --chown=scoper:scoper . .

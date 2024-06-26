@@ -2,15 +2,14 @@ import nodemailer from 'nodemailer'
 import hbs from 'nodemailer-express-handlebars'
 import path from 'path'
 import { logger } from './loggers'
-// import { fileURLToPath } from 'url'
 
-// const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const user = process.env.SENDMAIL_USER
-// const viewPath = path.resolve(__dirname, './templates/mailer/')
+const user = process.env.SEND_EMAIL_USER
+const name = process.env.BILBOMD_FQDN
+// const viewPath = path.resolve(__dirname, '../templates/mailer/')
 const viewPath = path.resolve('./src/templates/mailer/')
 
 const transporter = nodemailer.createTransport({
-  name: 'bl1231-local.als.lbl.gov',
+  name: name,
   host: 'smtp-relay.gmail.com',
   port: 25,
   secure: false

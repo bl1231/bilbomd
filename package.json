@@ -12,7 +12,7 @@
     "build": "npm-run-all clean copy-assets lint tsc",
     "copy-assets": "copyfiles --all --up 1 --exclude \"./**/*.{ts,tsx}\" \"./src/**/*\" ./build",
     "start": "npm run build && node build/scoper.js",
-    "dev": "nodemon --watch src --ext ts,ejs --exec npm run start",
+    "dev": "nodemon --watch src --ext ts,ejs --verbose --exec npm run start",
     "lint": "eslint . --ext .ts",
     "tsc": "tsc"
   },

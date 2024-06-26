@@ -176,4 +176,5 @@ dist
 
 test-data/*/
 build/
-ionnet-src/
+ionnet/
+*.zip

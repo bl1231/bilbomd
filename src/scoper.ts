@@ -12,9 +12,9 @@ connectDB()
 // let bilboMdScoperWorker: Worker
 
 const workerHandler = async (job: Job<BilboMDScoperJobData>) => {
-  logger.info(`Start BilboMDScoper job: ${job.name}  ${job.data.uuid}`)
+  logger.info(`Start BilboMDScoper job Title: ${job.name} UUID: ${job.data.uuid}`)
   await processBilboMDScoperJob(job)
-  logger.info(`Finished BilboMDScoper Job: ${job.name}`)
+  logger.info(`Finish BilboMDScoper job Title: ${job.name} UUID: ${job.data.uuid}`)
 }
 
 const workerOptions: WorkerOptions = {
@@ -22,7 +22,7 @@ const workerOptions: WorkerOptions = {
     host: 'redis',
     port: 6379
   },
-  concurrency: 2,
+  concurrency: 1,
   lockDuration: 90000
 }
 
@@ -30,3 +30,6 @@ const workerOptions: WorkerOptions = {
 const bilboMdScoperWorker = new Worker('bilbomd-scoper', workerHandler, workerOptions)
 
 logger.info('Scoper worker started!')
+logger.info(`Concurrency: ${workerOptions.concurrency}`)
+logger.info(`SEND_EMAIL_USER: ${process.env.SEND_EMAIL_USER}`)
+logger.info(`SEND_EMAIL_NOTIFICATIONS: ${process.env.SEND_EMAIL_NOTIFICATIONS}`)

@@ -3,7 +3,6 @@ import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
-// import { IBilboMDScoperJob } from './model/Job.js'
 import { IBilboMDScoperJob } from '@bl1231/bilbomd-mongodb-schema'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
@@ -76,12 +75,12 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
       // This code is for determining teh "newpdb_##" directory.
       const processExitLogic = async () => {
         if (code === 0) {
-          logger.info('scoper process exited successfully. Processing log file...')
+          logger.info('Scoper process exited successfully. Processing log file...')
           MQjob.log('scoper process successfully')
           try {
             const dirName = await findTopKDirFromLog(logFile)
             if (dirName) {
-              logger.info('Found directory:', dirName)
+              logger.info(`Found directory: ${dirName}`)
               const dirNameFilePath = path.join(outputDir, 'top_k_dirname.txt')
               await fs.writeFile(dirNameFilePath, dirName)
             } else {
@@ -89,7 +88,7 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
             }
             resolve()
           } catch (error) {
-            console.error('Error processing log file:', error)
+            logger.error(`Error processing log file: ${error}`)
             reject(error)
           }
         } else {
@@ -245,7 +244,7 @@ const runFoXS = async (
       errorStream.end()
 
       if (code === 0) {
-        console.log('foxs analysis exited successfully')
+        logger.info('FoXS analysis exited successfully')
         MQjob.log('foxs analysis successful')
         resolve()
       } else {
@@ -312,7 +311,7 @@ Thank you for using SCOPER.
 
   const readmePath = path.join(resultsDir, 'README.md')
   await fs.writeFile(readmePath, readmeContent)
-  console.log('README file created successfully.')
+  logger.info('README file created successfully.')
 }
 
 const prepareResultsArchiveFile = async (
@@ -384,7 +383,7 @@ const directoryExists = async (dirPath: string): Promise<boolean> => {
 
 const makeDir = async (directory: string) => {
   await fs.ensureDir(directory)
-  console.log('Create Dir: ', directory)
+  logger.info(`Create Dir: ${directory}`)
 }
 
 const cleanProbeFile = async (probeFile: string): Promise<void> => {
