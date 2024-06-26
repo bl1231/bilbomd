@@ -104,6 +104,9 @@ RUN npm install -g npm@10.8.1
 FROM bilbomd-scoper-111 AS bilbomd-scoper
 ARG NPM_TOKEN
 
+# Switch to scoper user
+USER scoper:scoper
+
 # Copy IonNet source code
 WORKDIR /home/scoper
 COPY ionnet/docker-test.zip .
@@ -117,9 +120,6 @@ WORKDIR /home/scoper/app
 
 # Copy package.json and package-lock.json
 COPY --chown=scoper:scoper package*.json ./
-
-# Switch to scoper user
-USER scoper:scoper
 
 # Update NPM and install dependencies
 RUN echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" > /home/scoper/.npmrc && \
