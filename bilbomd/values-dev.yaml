@@ -30,3 +30,15 @@ backend:
     tag: "latest"
     pullPolicy: Always
     secret: ghcr
+
+worker:
+  name: worker
+  image:
+    registry: ghcr.io
+    owner: bl1231
+    user: null
+    repository: bilbomd-worker
+    build: bilbomd-spin-worker
+    tag: "latest"
+    pullPolicy: Always
+    secret: ghcr

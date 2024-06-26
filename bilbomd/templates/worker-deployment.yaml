@@ -36,7 +36,7 @@ spec:
         - secretRef:
             name: {{ .Values.namespace }}-secrets
             optional: false
-        image: "{{ .Values.docker_registry }}/{{ .Values.nersc_repo }}/{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
+        image: "{{ .Values.worker.image.registry }}/{{ .Values.worker.image.owner }}/{{ with .Values.worker.image.user }}{{ . }}/{{ end }}{{ with .Values.worker.image.repository }}{{ . }}/{{ end }}{{ .Values.worker.image.build }}:{{ .Values.worker.image.tag }}"
         imagePullPolicy: "{{ .Values.worker.image.pullPolicy }}"
         name: container-0
         resources: {}
@@ -61,7 +61,7 @@ spec:
           name: vol-logs
       dnsPolicy: ClusterFirst
       imagePullSecrets:
-      - name: registry-nersc
+      - name: {{ .Values.worker.image.secret }}
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext:

@@ -30,3 +30,15 @@ backend:
     tag: "latest"
     pullPolicy: Always
     secret: registry-nersc
+
+worker:
+  name: worker
+  image:
+    registry: registry.nersc.gov
+    owner: m4659
+    user: sclassen
+    repository: null
+    build: bilbomd-spin-worker
+    tag: "latest"
+    pullPolicy: Always
+    secret: registry-nersc

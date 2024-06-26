@@ -18,10 +18,3 @@ redis:
     repository: redis
     tag: "7.2.5"
     pullPolicy: IfNotPresent
-
-worker:
-  name: worker
-  image:
-    repository: sclassen/bilbomd-spin-worker
-    tag: "latest"
-    pullPolicy: Always

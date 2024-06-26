@@ -80,42 +80,128 @@ podman-hpc system migrate
 exit
 ```
 
-## KubeConfig
+## Kubernetes Stuff
 
-download the `development.yaml` config from Rancher.
-put it in ~/.kube/
-set $KUBECONFIG environment variable
+Before you can use the `kubectl` or `helm` commands you need to download the `development.yaml` config for both the development and production servers from Rancher. Then combine them into a single config file like this:
 
-set default namespace
+`kubeconfig.yaml`
 
-kubectl config set-context --current --namespace=bilbomd
+```yaml
+apiVersion: v1
+clusters:
+  - cluster:
+      server: https://rancher2.spin.nersc.gov/k8s/clusters/XXXXXXX
+    name: development
+  - cluster:
+      server: https://rancher2.spin.nersc.gov/k8s/clusters/XXXXXXX
+    name: production
+contexts:
+  - context:
+      cluster: development
+      namespace: bilbomd
+      user: development
+    name: development
+  - context:
+      cluster: production
+      namespace: bilbomd
+      user: production
+    name: production
+current-context: production
+kind: Config
+preferences: {}
+users:
+  - name: development
+    user:
+      token: kubeconfig-u-XXXXXXX
+  - name: production
+    user:
+      token: kubeconfig-u-XXXXXXX
+```
+
+Put it in your `~/.kube/` directory and configure your shell `KUBECONFIG` environment variable to point to the `kubeconfig.yaml` file.
 
 ## Install BilboMD via Helm chart
 
+If nothing is installed or running on SPIN you need to "install" the app first. The secrets should be installed first followed by the rest of teh kubernetes manifest files.
+
+### Install secrets
+
+Installing teh secrets should be done before running the `helm install` commands since the installation process will require pulling docker images from `registry.nersc.gov` or `ghcr.io` which requires access to the necessary secrets. The `helm-secrets` directory is **not** checked into GitHub.
+
+The secrets needed include:
+
+- `backend-secrets` - Contains various ENV setting needed by backend apps.
+- `mongo-secrets` - Contains the root password for the MongoDB database.
+- `ui-tls` - SSL/TLS certificate for the web frontend ui.
+- `ghcr` - A GitHub Personal Access Token needed to pull docker images from `ghcr.io`.
+- `registry-nersc` - This secret is provided automatically by SPIN, and is required to pull images from `registry.nersc.gov`.
+- `sfapi-priv-key` - This contains the private key from our 30-day Superfacility API red client.
+
+If you have local copies of the secrets as yaml files they can be "applied" to the `bilbomd` namespace thusly:
+
 ```bash
-helm install bilbomd-nersc-v1 ./bilbomd
+kubectl apply -f helm-secrets/backend-secrets.yaml
+kubectl apply -f helm-secrets/mongo-secrets.yaml
+kubectl apply -f helm-secrets/ui-tls-secrets.yaml
 ```
 
-This installs everyhting except the secrets
-
-install secrets:
+### Development
 
 ```bash
-k apply -f helm-secrets/backend-secrets.yaml
-k apply -f helm-secrets/mongo-secrets.yaml
-k apply -f helm-secrets/ui-tls-secrets.yaml
+helm install bilbomd-nersc-dev ./bilbomd -f ./bilbomd/values-dev.yaml
+```
+
+### Production
+
+```bash
+helm install bilbomd-nersc-prod ./bilbomd -f ./bilbomd/values-prod.yaml
 ```
 
 ## Upgrade BilboMD via Helm chart
 
+I have combined the kube config yaml files from both the development and production servers into a single yaml file. In order to switch kubectl commands between the development and production servers you must first select the "context" to use.
+
 ```bash
-helm upgrade bilbomd-nersc-v1 ./bilbomd
+kubectl config use-context production
+```
+
+or
+
+```bash
+kubectl config use-context development
+```
+
+And check that the desired context is the active one:
+
+```sh
+❯ kubectl config get-contexts
+CURRENT   NAME          CLUSTER       AUTHINFO      NAMESPACE
+          development   development   development   bilbomd
+*         production    production    production    bilbomd
+```
+
+### Development
+
+```bash
+helm upgrade bilbomd-nersc-dev ./bilbomd -f ./bilbomd/values-dev.yaml
+```
+
+### Production
+
+```bash
+helm upgrade bilbomd-nersc-prod ./bilbomd -f ./bilbomd/values-prod.yaml
 ```
 
 ## Uninstall BilboMD via Helm chart
 
 ```bash
-helm uninstall bilbomd-nersc-v1
+helm uninstall bilbomd-nersc-dev
+```
+
+or
+
+```bash
+helm uninstall bilbomd-nersc-dev
 ```
 
 ## Exposing an ingress so that we can access the MongoDB database
