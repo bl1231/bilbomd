@@ -86,7 +86,7 @@ COPY environment.yml /tmp/environment.yml
 
 # Update existing base environment from environment.yml
 RUN conda env update -f /tmp/environment.yml && \
-    conda install -y pyg -c pyg && \
+    conda install -y pyg=2.4.0 -c pyg && \
     conda install -y torchmetrics=0.7.2 -c conda-forge && \
     conda install -y tabulate && \
     conda install -y imp=2.19.0 && \
