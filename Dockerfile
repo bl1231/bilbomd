@@ -89,7 +89,7 @@ RUN conda env update -f /tmp/environment.yml && \
     conda install -y pyg -c pyg && \
     conda install -y torchmetrics=0.7.2 -c conda-forge && \
     conda install -y tabulate && \
-    conda install -y imp=2.20.1 && \
+    conda install -y imp=2.19.0 && \
     pip install wandb
 
 RUN groupadd -g $GROUP_ID scoper && \
