@@ -61,7 +61,8 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
     })
 
     scoper.stderr?.on('data', (data) => {
-      errorStream.write(data.toString())
+      const errorString = data.toString()
+      errorStream.write(errorString)
     })
 
     scoper.on('error', (error) => {
@@ -72,7 +73,7 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
     scoper.on('exit', (code) => {
       logStream.end()
       errorStream.end()
-      // This code is for determining teh "newpdb_##" directory.
+      // This code is for determining the "newpdb_##" directory.
       const processExitLogic = async () => {
         if (code === 0) {
           logger.info('Scoper process exited successfully. Processing log file...')
@@ -95,7 +96,13 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
           reject(`runScoper on close reject`)
         }
       }
-      processExitLogic()
+      if (code !== 0) {
+        const error = new Error(`mgclassifierv2.py script exited with code ${code}`)
+        logger.error(`mgclassifierv2.py script did not complete successfully: ${code}`)
+        reject(error)
+      } else {
+        processExitLogic().then(resolve).catch(reject)
+      }
     })
   })
 }

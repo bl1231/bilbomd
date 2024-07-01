@@ -87,9 +87,17 @@ const processBilboMDScoperJob = async (MQjob: BullMQJob) => {
 
   // Run the Scoper IonNet pipeline
   await MQjob.log('start scoper')
-  await runScoper(MQjob, foundJob)
-  await MQjob.log('end scoper')
-  await MQjob.updateProgress(80)
+  try {
+    await runScoper(MQjob, foundJob)
+    await MQjob.log('end scoper')
+    await MQjob.updateProgress(80)
+  } catch (error) {
+    logger.error(`Error running scoper: ${error}`)
+    await MQjob.log(`scoper error: ${error}`)
+    foundJob.status = 'Error'
+    foundJob.time_completed = new Date()
+    await foundJob.save()
+  }
 
   // Combine the RNA and Mg PDB files
   await MQjob.log('start gather results')
