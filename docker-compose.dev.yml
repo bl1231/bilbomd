@@ -54,7 +54,7 @@ services:
     command: [ "npm", "run", "dev" ]
 
   scoper:
-    image: bl1231/bilbomd-scoper:0.0.1
+    image: bl1231/bilbomd-scoper:latest
     build:
       context: ./bilbomd-scoper
       args:
@@ -69,7 +69,7 @@ services:
       - ./uploads-dev:/bilbomd/uploads
       - ./bilbomd-scoper:/home/scoper/app
       - ./logs/scoper:/bilbomd/logs
-      # - ../IonNet:/home/scoper/IonNet
+      - ../IonNet:/home/scoper/IonNet
     user: "${UID:-1001}:${GID:-1001}"
     command: [ "npm", "run", "dev" ]
 
