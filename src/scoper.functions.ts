@@ -1,9 +1,11 @@
 import { logger } from './helpers/loggers'
+import { config } from './config/config'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
-import { IBilboMDScoperJob } from '@bl1231/bilbomd-mongodb-schema'
+import { IJob, IBilboMDScoperJob, IUser } from '@bl1231/bilbomd-mongodb-schema'
+import { sendJobCompleteEmail } from './helpers/mailer'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 
@@ -12,14 +14,68 @@ const execPromise = promisify(exec)
 const DATA_VOL = process.env.DATA_VOL ?? '/bilbomd/uploads'
 const IONNET_DIR = process.env.IONNET_DIR ?? '/home/scoper/IonNet'
 const SCOPER_KGS_CONFORMERS = process.env.SCOPER_KGS_CONFORMERS ?? '111'
+const BILBOMD_URL = process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
+
+const handleError = async (
+  error: Error | unknown,
+  MQjob: BullMQJob,
+  DBjob: IJob,
+) => {
+  const errorMsg = (error instanceof Error ? error.message : String(error))
+
+  // Updates primay status in MongoDB
+  await updateJobStatus(DBjob, 'Error')
+  // Update the specific step status
+  // if (step) {
+  //   const status: IStepStatus = {
+  //     status: 'Error',
+  //     message: `Error in step ${step}: ${errorMsg}`
+  //   }
+  //   await updateStepStatus(DBjob, step, status)
+  // } else {
+  //   logger.error(`Step not provided or invalid when handling error: ${errorMsg}`)
+  // }
+
+  MQjob.log(`error ${errorMsg}`)
+
+  logger.error(`handleError errorMsg: ${errorMsg}`)
+
+  MQjob.log(error instanceof Error ? error.message : String(error))
+
+  // Send job completion email and log the notification
+  logger.info(`Failed Attempts --> ${MQjob.attemptsMade}`)
+
+  const recipientEmail = (DBjob.user as IUser).email
+  if (MQjob.attemptsMade >= 3) {
+    if (config.sendEmailNotifications) {
+      sendJobCompleteEmail(recipientEmail, BILBOMD_URL, DBjob.id, DBjob.title, true)
+      logger.warn(`email notification sent to ${recipientEmail}`)
+      await MQjob.log(`email notification sent to ${recipientEmail}`)
+    }
+  }
+  throw new Error('BilboMD failed')
+}
+
+const updateJobStatus = async (job: IJob, status: string): Promise<void> => {
+  job.status = status
+  await job.save()
+}
 
 const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
+  try {
+    await spawnScoper(MQjob, DBjob)
+  } catch (error) {
+    await handleError(error, MQjob, DBjob)
+  }
+}
+
+const spawnScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
   const outputDir = path.join(DATA_VOL, DBjob.uuid)
   const logFile = path.join(outputDir, 'scoper.log')
   const errorFile = path.join(outputDir, 'scoper_error.log')
   const logStream = fs.createWriteStream(logFile)
   const errorStream = fs.createWriteStream(errorFile)
-  // const args = [SCOPER_SCRIPT, DBjob.pdb_file, DBjob.data_file, outputDir]
+
   // prettier-ignore
   const args = [
     path.join(IONNET_DIR, 'mgclassifierv2.py'),
@@ -53,7 +109,7 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
   ]
 
   return new Promise<void>((resolve, reject) => {
-    // logger.info(`Running scoper with args: ${['-u', ...args].join(' ')}`)
+    logger.info(`Running Scoper with args: ${['-u', ...args].join(' ')}`)
     const scoper = spawn('python', ['-u', ...args], { cwd: outputDir })
 
     scoper.stdout?.on('data', (data) => {
@@ -61,50 +117,55 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
     })
 
     scoper.stderr?.on('data', (data) => {
-      const errorString = data.toString()
-      errorStream.write(errorString)
+      errorStream.write(data.toString())
     })
 
     scoper.on('error', (error) => {
-      errorStream.end()
-      reject(error)
-    })
-
-    scoper.on('exit', (code) => {
       logStream.end()
       errorStream.end()
-      // This code is for determining the "newpdb_##" directory.
-      const processExitLogic = async () => {
-        if (code === 0) {
-          logger.info('Scoper process exited successfully. Processing log file...')
-          MQjob.log('scoper process successfully')
-          try {
-            const dirName = await findTopKDirFromLog(logFile)
-            if (dirName) {
-              logger.info(`Found directory: ${dirName}`)
-              const dirNameFilePath = path.join(outputDir, 'top_k_dirname.txt')
-              await fs.writeFile(dirNameFilePath, dirName)
-            } else {
-              logger.info('Directory not found in log file')
-            }
-            resolve()
-          } catch (error) {
-            logger.error(`Error processing log file: ${error}`)
-            reject(error)
-          }
+      reject(new Error(`Scoper - encountered an error: ${error.message}`))
+    })
+
+    scoper.on('exit', async (code: number) => {
+      logStream.end()
+      errorStream.end()
+      try {
+        await processExitLogic(code, outputDir, logFile, MQjob);
+        resolve();
+      } catch (error: unknown) {  // Explicitly declare error as unknown
+        if (error instanceof Error) {
+          logger.error(`Scoper - did not complete successfully: ${error.message}`);
+          reject(error);
         } else {
-          reject(`runScoper on close reject`)
+          // Handle the case where the error might not be an Error instance
+          logger.error(`Scoper - An unexpected error type was thrown`);
+          reject(new Error('Scoper - An unexpected error occurred'));
         }
-      }
-      if (code !== 0) {
-        const error = new Error(`mgclassifierv2.py script exited with code ${code}`)
-        logger.error(`mgclassifierv2.py script did not complete successfully: ${code}`)
-        reject(error)
-      } else {
-        processExitLogic().then(resolve).catch(reject)
       }
     })
   })
+}
+
+const processExitLogic = async (code: number, outputDir: string, logFile: string, MQjob: BullMQJob): Promise<void> => {
+  if (code === 0) {
+    logger.info('Scoper -  exited successfully. Processing log file...')
+    MQjob.log('Scoper -  successfully')
+    try {
+      const dirName = await findTopKDirFromLog(logFile)
+      if (dirName) {
+        logger.info(`Scoper - Found directory: ${dirName}`)
+        const dirNameFilePath = path.join(outputDir, 'top_k_dirname.txt')
+        await fs.writeFile(dirNameFilePath, dirName)
+      } else {
+        logger.info('Scoper - Directory not found in log file')
+      }
+    } catch (error) {
+      logger.error(`Scoper - Error processing log file: ${error}`)
+      throw error; // Changed to throw to allow the caller to handle rejections.
+    }
+  } else {
+    throw new Error(`Scoper - mgclassifierv2.py script exited with code ${code}`);
+  }
 }
 
 const findTopKDirFromLog = async (logFilePath: string): Promise<string | null> => {
