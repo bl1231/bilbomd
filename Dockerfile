@@ -7,10 +7,10 @@ ENV TZ=America/Los_Angeles
 # Install dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential \
-        git \
-        cmake \
-        unzip \
-        libgsl-dev && \
+    git \
+    cmake \
+    unzip \
+    libgsl-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Clone and build 'reduce'
@@ -102,7 +102,7 @@ RUN npm install -g npm@10.8.1
 # -----------------------------------------------------------------------------
 # Build stage 4.1111
 FROM bilbomd-scoper-pyg AS bilbomd-scoper
-ARG NPM_TOKEN
+ARG GITHUB_TOKEN
 
 # Switch to scoper user
 USER scoper:scoper
@@ -122,9 +122,9 @@ WORKDIR /home/scoper/app
 COPY --chown=scoper:scoper package*.json ./
 
 # Update NPM and install dependencies
-RUN echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" > /home/scoper/.npmrc && \
+RUN echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > /home/scoper/.npmrc && \
     npm install && \
-    unset NPM_TOKEN
+    unset GITHUB_TOKEN
 
 # Copy application source code
 COPY --chown=scoper:scoper . .
