@@ -4,7 +4,6 @@
   "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
   "keywords": [],
   "author": "Scott Classen",
-  "type": "module",
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
@@ -13,33 +12,41 @@
     "build": "npm-run-all clean copy-assets lint tsc",
     "copy-assets": "copyfiles --all --up 1 --exclude \"./**/*.{ts,tsx}\" \"./src/**/*\" ./build",
     "start": "npm run build && node build/scoper.js",
-    "dev": "tsc-watch --noClear --onSuccess \"node build/scoper.js\"",
+    "dev": "nodemon --watch src --ext ts,ejs --verbose --exec npm run start",
     "lint": "eslint . --ext .ts",
     "tsc": "tsc"
   },
   "dependencies": {
-    "bullmq": "^5.7.4",
+    "@bl1231/bilbomd-mongodb-schema": "^1.0.22",
+    "bullmq": "^5.8.3",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "fs-extra": "^11.2.0",
     "handlebars": "^4.7.8",
-    "mongoose": "^8.3.2",
-    "nodemailer": "^6.9.13",
+    "moment-timezone": "^0.5.45",
+    "mongoose": "^8.4.4",
+    "nodemailer": "^6.9.14",
     "nodemailer-express-handlebars": "^6.1.2",
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.4",
+    "winston": "^3.13.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^20.12.7",
-    "@types/nodemailer": "^6.4.14",
+    "@types/node": "^20.14.9",
+    "@types/nodemailer": "^6.4.15",
     "@types/nodemailer-express-handlebars": "^4.0.5",
-    "@typescript-eslint/eslint-plugin": "^7.7.0",
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
     "copyfiles": "^2.4.1",
     "eslint": "^8.57.0",
     "npm-run-all": "^4.1.5",
+    "rimraf": "^5.0.7",
     "ts-node": "^10.9.2",
-    "tsc-watch": "^6.2.0",
-    "tslib": "^2.6.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.5.3"
+  },
+  "_moduleAliases": {
+    "@services": "build/services",
+    "@models": "build/models",
+    "@helpers": "build/helpers"
   }
 }

@@ -6,7 +6,11 @@ ENV TZ=America/Los_Angeles
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential git cmake libgsl-dev && \
+    apt-get install -y --no-install-recommends build-essential \
+    git \
+    cmake \
+    unzip \
+    libgsl-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Clone and build 'reduce'
@@ -26,7 +30,12 @@ RUN git clone https://github.com/rlabduke/reduce.git reduce && \
 #     make -j
 
 # Clone and build 'RNAview'
-RUN git clone https://github.com/rcsb/RNAView.git RNAView && \
+WORKDIR /usr/local
+# RUN curl -L -o rnaview.zip https://github.com/rcsb/RNAView/archive/refs/heads/master.zip
+COPY rnaview/rnaview.zip .
+# RUN git clone https://github.com/rcsb/RNAView.git RNAView && \
+RUN unzip rnaview.zip && \
+    mv RNAView-master RNAView && \
     cd RNAView && \
     make
 
@@ -43,8 +52,8 @@ COPY --from=bilbomd-scoper-build-deps /usr/local/reduce_wwPDB_het_dict.txt /usr/
 # COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/build/kgs_explore /usr/local/bin/
 # COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/scripts/kgs_prepare.py /usr/local/bin/
 # Copy RNAView binary
-COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/bin/rnaview /usr/local/bin/
-COPY --from=bilbomd-scoper-build-deps /usr/local/src/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
+COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/bin/rnaview /usr/local/bin/
+COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
 
 
 # -----------------------------------------------------------------------------
@@ -54,7 +63,7 @@ ARG NODE_MAJOR=20
 
 # Install necessary packages, configure NodeSource repository, and install Node.js
 RUN apt-get update && \
-    apt-get install -y gpg curl && \
+    apt-get install -y gpg curl libjpeg-dev libpng-dev && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
@@ -65,10 +74,9 @@ RUN apt-get update && \
 
 # -----------------------------------------------------------------------------
 # Build stage 4
-FROM bilbomd-scoper-nodejs AS bilbomd-scoper
-
-ARG USER_ID=1001
-ARG GROUP_ID=1001
+FROM bilbomd-scoper-nodejs AS bilbomd-scoper-pyg
+ARG USER_ID
+ARG GROUP_ID
 
 # Update Conda
 RUN conda update -n base -c defaults conda
@@ -77,24 +85,35 @@ RUN conda update -n base -c defaults conda
 COPY environment.yml /tmp/environment.yml
 
 # Update existing base environment from environment.yml
-RUN conda env update -f /tmp/environment.yml
-RUN conda install -y pyg -c pyg
-RUN conda install -y torchmetrics=0.7.2 -c conda-forge
-RUN conda install -y tabulate
-RUN conda install -y imp=2.20.1
-RUN pip install wandb
+RUN conda env update -f /tmp/environment.yml && \
+    conda install -y pyg=2.4.0 -c pyg && \
+    conda install -y torchmetrics=0.7.2 -c conda-forge && \
+    conda install -y tabulate && \
+    conda install -y imp=2.19.0 && \
+    pip install wandb
 
-# Create a group with GID
-RUN groupadd -g $GROUP_ID scoper
+RUN groupadd -g $GROUP_ID scoper && \
+    useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
+    mkdir -p /home/scoper/app && \
+    chown -R scoper:scoper /home/scoper
 
-# Create the 'scoper' user with specified UID and GID
-RUN useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper
+RUN npm install -g npm@10.8.1
 
-# Not sure this is needed, but chown everything
-RUN chown -R scoper:scoper /home/scoper
+# -----------------------------------------------------------------------------
+# Build stage 4.1111
+FROM bilbomd-scoper-pyg AS bilbomd-scoper
+ARG GITHUB_TOKEN
 
-# Set the user for subsequent instructions
+# Switch to scoper user
 USER scoper:scoper
+
+# Copy IonNet source code
+WORKDIR /home/scoper
+COPY ionnet/docker-test.zip .
+RUN unzip docker-test.zip && \
+    mv IonNet-docker-test IonNet && \
+    cd IonNet/scripts/scoper_scripts && \
+    tar xvf KGSrna.tar
 
 # Change back to the app directory
 WORKDIR /home/scoper/app
@@ -102,26 +121,16 @@ WORKDIR /home/scoper/app
 # Copy package.json and package-lock.json
 COPY --chown=scoper:scoper package*.json ./
 
-# Install any NPM dependencies
-RUN npm install
+# Update NPM and install dependencies
+RUN echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > /home/scoper/.npmrc && \
+    npm install && \
+    unset GITHUB_TOKEN
 
-# Clone IonNet
-WORKDIR /home/scoper/IonNet
-# RUN git clone -b docker-test https://github.com/bl1231/IonNet.git .
-COPY ionnet-src/IonNet-docker-test.zip .
-RUN unzip IonNet-docker-test.zip && \
-    rm IonNet-docker-test.zip && \ 
-    mv IonNet-docker-test/* . && \
-    rm -rf IonNet-docker-test
-WORKDIR /home/scoper/IonNet/scripts/scoper_scripts
-RUN tar xvf KGSrna.tar
-
-# Change back to the app directory
-WORKDIR /home/scoper/app
-# Copy the rest of your app's source code
+# Copy application source code
 COPY --chown=scoper:scoper . .
 
-# Set the RNAView env variable
+# Set environment variable
 ENV RNAVIEW=/usr/local/RNAView
 
+# Set the default command
 CMD ["npm", "start"]
