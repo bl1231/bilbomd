@@ -25,7 +25,7 @@ I have made `docker` an alias for `podman-hpc` on perlmutter.
 I have created a separte package ([@bl1231/bilbomd-mongodb-schemas](https://github.com/bl1231/bilbomd-mongodb-schema/pkgs/npm/bilbomd-mongodb-schema)) to hold the MongoDB schema and Typeface interfaces for bilbomd apps. It is published to [GitHub packages](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry) and as of the writing of these notes requires a token in order to install it... even though it is public (? seems odd.). Anyways ya gotta set your token before building.
 
 ```bash
-export NPM_TOKEN=<your-token-here>
+export GITHUB_TOKEN=<your-token-here>
 ```
 
 ### `bilbomd-ui`
@@ -41,7 +41,7 @@ docker push registry.nersc.gov/m4659/sclassen/bilbomd-ui:latest
 
 ```bash
 cd bilbomd-backend
-docker build --build-arg NPM_TOKEN=$NPM_TOKEN --build-arg USER_ID=$UID -t bilbomd/bilbomd-spin-backend -f bilbomd-spin-backend.dockerfile .
+docker build --build-arg GITHUB_TOKEN=$GITHUB_TOKEN --build-arg USER_ID=$UID -t bilbomd/bilbomd-spin-backend -f bilbomd-spin-backend.dockerfile .
 docker tag bilbomd/bilbomd-spin-backend:latest registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 ```
@@ -50,7 +50,7 @@ docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-backend:latest
 
 ```bash
 cd bilbomd-worker
-docker build --build-arg NPM_TOKEN=$NPM_TOKEN -t bilbomd/bilbomd-spin-worker -f bilbomd-spin-worker.dockerfile .
+docker build --build-arg GITHUB_TOKEN=$GITHUB_TOKEN -t bilbomd/bilbomd-spin-worker -f bilbomd-spin-worker.dockerfile .
 docker tag bilbomd/bilbomd-spin-worker:latest registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker:latest
 docker push registry.nersc.gov/m4659/sclassen/bilbomd-spin-worker:latest
 ```
