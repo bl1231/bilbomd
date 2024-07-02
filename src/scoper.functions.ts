@@ -23,7 +23,7 @@ const handleError = async (
 ) => {
   const errorMsg = (error instanceof Error ? error.message : String(error))
 
-  // Updates primay status in MongoDB
+  // Updates primary status in MongoDB
   await updateJobStatus(DBjob, 'Error')
   // Update the specific step status
   // if (step) {
@@ -46,7 +46,7 @@ const handleError = async (
   logger.info(`Failed Attempts --> ${MQjob.attemptsMade}`)
 
   const recipientEmail = (DBjob.user as IUser).email
-  if (MQjob.attemptsMade >= 3) {
+  if (MQjob.attemptsMade >= config.bullmqAttempts - 1) {
     if (config.sendEmailNotifications) {
       sendJobCompleteEmail(recipientEmail, BILBOMD_URL, DBjob.id, DBjob.title, true)
       logger.warn(`email notification sent to ${recipientEmail}`)
