@@ -125,6 +125,17 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.0.6
+  - Peg `pyg` at version 2.4.0
+  - Bump `nodejs` from 20.12.2 to 20.15.0
+  - Use `bilbomd-mongodb-schema` library
+  - Downgrade `IMP` from 2.20.1 to 2.19.0 for now
+  - Added logging module & replaced some `console.log()` statements
+  - Removed reference to `/home/bun`
+  - Improve `Dockerfile`
+  - Add a `config.ts` file
+  - Started to reorganize the directory structure similar to `bilbomd-worker`
+  - Copied `tsconfig.ts` from `bilbomd-worker`
 - 1.0.5
   - Update dependencies.
 - 1.0.4
