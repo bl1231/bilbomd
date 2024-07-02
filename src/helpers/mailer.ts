@@ -22,7 +22,7 @@ const sendJobCompleteEmail = (
   title: string,
   isError: boolean
 ) => {
-  logger.error(`Sending job complete email, error state is: ${isError}`)
+  logger.info(`Sending job complete email, error state is: ${isError}`)
 
   let emailLayout
 
