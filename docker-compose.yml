@@ -69,7 +69,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '12'
+          cpus: "12"
     restart: always
     env_file:
       - .env
@@ -118,7 +118,7 @@ services:
       replicas: 2
       resources:
         limits:
-          cpus: '12'
+          cpus: "12"
     restart: no
     env_file:
       - .env
@@ -147,7 +147,7 @@ services:
       - redis
 
   scoper:
-    image: bl1231/bilbomd-scoper:1.0.4
+    image: bl1231/bilbomd-scoper:1.0.6
     build:
       context: ./bilbomd-scoper
       args:
@@ -159,7 +159,7 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: '12'
+          cpus: "12"
     restart: no
     env_file:
       - .env
