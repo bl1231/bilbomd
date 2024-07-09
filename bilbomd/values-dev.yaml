@@ -3,6 +3,9 @@ ingress:
   fqdn: "bilbomd-nersc-dev.bl1231.als.lbl.gov"
   secret: "ui-tls-dev"
 
+bilbomd:
+  url: "https://bilbomd-nersc-dev.bl1231.als.lbl.gov"
+
 logs:
   backend: "bilbomd-logs-backend-dev"
   worker: "bilbomd-logs-worker-dev"

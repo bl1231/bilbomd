@@ -14,7 +14,6 @@ spec:
   ipFamilyPolicy: SingleStack
   ports:
   - name: 5432tcp
-    nodePort: 30294
     port: 5432
     protocol: TCP
     targetPort: 3500

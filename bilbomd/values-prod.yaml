@@ -3,6 +3,9 @@ ingress:
   fqdn: "bilbomd-nersc.bl1231.als.lbl.gov"
   secret: "ui-tls"
 
+bilbomd:
+  url: "https://bilbomd-nersc.bl1231.als.lbl.gov"
+
 logs:
   backend: "bilbomd-logs-backend"
   worker: "bilbomd-logs-worker"
@@ -10,35 +13,35 @@ logs:
 ui:
   name: ui
   image:
-    registry: registry.nersc.gov
-    owner: m4659
-    user: sclassen
-    repository: null
-    build: bilbomd-ui
+    registry: ghcr.io
+    owner: bl1231
+    user: null
+    repository: bilbomd-ui
+    build: null
     tag: "latest"
     pullPolicy: Always
-    secret: registry-nersc
+    secret: ghcr
 
 backend:
   name: backend
   image:
-    registry: registry.nersc.gov
-    owner: m4659
-    user: sclassen
-    repository: null
+    registry: ghcr.io
+    owner: bl1231
+    user: null
+    repository: bilbomd-backend
     build: bilbomd-spin-backend
     tag: "latest"
     pullPolicy: Always
-    secret: registry-nersc
+    secret: ghcr
 
 worker:
   name: worker
   image:
-    registry: registry.nersc.gov
-    owner: m4659
-    user: sclassen
-    repository: null
+    registry: ghcr.io
+    owner: bl1231
+    user: null
+    repository: bilbomd-worker
     build: bilbomd-spin-worker
     tag: "latest"
     pullPolicy: Always
-    secret: registry-nersc
+    secret: ghcr
