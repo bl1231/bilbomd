@@ -7,8 +7,9 @@ mongo:
   name: mongo
   image:
     repository: mongo
-    tag: "7.0.9"
+    tag: "7.0.12"
     pullPolicy: IfNotPresent
+    secret: registry-nersc
   config:
     MONGO_INITDB_ROOT_USERNAME: "bilbomd-backend-user"
 
@@ -18,3 +19,4 @@ redis:
     repository: redis
     tag: "7.2.5"
     pullPolicy: IfNotPresent
+    secret: registry-nersc

@@ -63,6 +63,8 @@ spec:
             - mountPath: /data/db
               name: vol-mongodb-data
       dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: {{ .Values.mongo.image.secret }}
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}

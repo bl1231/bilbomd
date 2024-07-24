@@ -7,8 +7,10 @@ bilbomd:
   url: "https://bilbomd-nersc.bl1231.als.lbl.gov"
 
 logs:
-  backend: "bilbomd-logs-backend"
-  worker: "bilbomd-logs-worker"
+  backend: "bilbomd/prod/logs/backend"
+  worker: "bilbomd/prod/logs/worker"
+
+uploads: "bilbomd/prod/uploads"
 
 ui:
   name: ui
