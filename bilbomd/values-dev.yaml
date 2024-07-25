@@ -13,6 +13,8 @@ logs:
   backend: "bilbomd/dev/logs/backend"
   worker: "bilbomd/dev/logs/worker"
 
+scripts: "bilbomd/dev/scripts"
+
 uploads: "bilbomd/dev/uploads"
 
 ui:

@@ -3,6 +3,8 @@ namespace: bilbomd
 docker_registry: registry.nersc.gov
 nersc_repo: m4659
 
+cfs_dir: /global/cfs/cdirs
+
 mongo:
   name: mongo
   image:
