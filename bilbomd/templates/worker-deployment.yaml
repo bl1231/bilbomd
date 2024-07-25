@@ -24,9 +24,11 @@ spec:
       labels:
         workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.worker.name }}
     spec:
-      affinity: {}
       containers:
-      - envFrom:
+      - env:
+        - name: NODE_ENV
+          value: {{ .Values.env.NODE_ENV }}
+        envFrom:
         - configMapRef:
             name: {{ .Values.namespace }}-config
             optional: false

@@ -6,6 +6,9 @@ ingress:
 bilbomd:
   url: "https://bilbomd-nersc-dev.bl1231.als.lbl.gov"
 
+env:
+  NODE_ENV: "development"
+
 logs:
   backend: "bilbomd/dev/logs/backend"
   worker: "bilbomd/dev/logs/worker"

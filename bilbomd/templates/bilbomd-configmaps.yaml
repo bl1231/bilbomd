@@ -2,8 +2,8 @@ apiVersion: v1
 data:
   BILBOMD_BACKEND_HOST: localhost
   BILBOMD_BACKEND_PORT: "3501"
-  BILBOMD_URL: {{ .Values.bilbomd.url }}
-  BILBOMD_FQDN: {{ .Values.ingress.fqdn }}
+  BILBOMD_URL: "{{ .Values.bilbomd.url }}"
+  BILBOMD_FQDN: "{{ .Values.ingress.fqdn }}"
   MONGO_AUTH_SRC: admin
   MONGO_DB: bilbomd
   MONGO_HOSTNAME: mongo
@@ -11,11 +11,10 @@ data:
   MONGO_USERNAME: bilbomd-backend-user
   REDIS_HOST: redis
   REDIS_PORT: "6379"
-  NODE_ENV: production
-  SEND_EMAIL_NOTIFICATIONS: 'true'
+  SEND_EMAIL_NOTIFICATIONS: "true"
   SEND_EMAIL_USER: bilbomd@lbl.gov
   DATA_VOL: /bilbomd/uploads
-  USE_NERSC: 'true'
+  USE_NERSC: "true"
 kind: ConfigMap
 metadata:
   name: bilbomd-config
