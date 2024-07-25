@@ -14,6 +14,7 @@ data:
   SEND_EMAIL_NOTIFICATIONS: "true"
   SEND_EMAIL_USER: bilbomd@lbl.gov
   DATA_VOL: /bilbomd/uploads
+  NODE_ENV: "{{ .Values.env.NODE_ENV }}"
   USE_NERSC: "true"
   SFAPI_URL: https://api.nersc.gov/api/v1.2
   SCRIPT_DIR: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}"
