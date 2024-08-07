@@ -56,9 +56,6 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         tty: true
-        volumeMounts:
-        - mountPath: /var/log/nginx
-          name: vol-logs
       dnsPolicy: ClusterFirst
       imagePullSecrets:
         - name:  {{ .Values.ui.image.secret }}
@@ -66,8 +63,3 @@ spec:
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
-      volumes:
-      - hostPath:
-          path: /global/cfs/cdirs/{{ .Values.nersc_repo }}/{{ .Values.logs.ui }}
-          type: Directory
-        name: vol-logs
