@@ -12,6 +12,7 @@ env:
 logs:
   backend: "bilbomd/dev/logs/backend"
   worker: "bilbomd/dev/logs/worker"
+  ui: "bilbomd/dev/logs/ui"
 
 scripts: "bilbomd/dev/scripts"
 

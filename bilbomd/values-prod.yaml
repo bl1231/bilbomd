@@ -12,6 +12,7 @@ env:
 logs:
   backend: "bilbomd/prod/logs/backend"
   worker: "bilbomd/prod/logs/worker"
+  ui: "bilbomd/prod/logs/ui"
 
 uploads: "bilbomd/prod/uploads"
 
