@@ -17,6 +17,7 @@ data:
   NODE_ENV: "{{ .Values.env.NODE_ENV }}"
   USE_NERSC: "true"
   SFAPI_URL: https://api.nersc.gov/api/v1.2
+  SFAPI_TOKEN_EXPIRES: "{{ .Values.sfapi.token_expires }}"
   SCRIPT_DIR: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}"
 kind: ConfigMap
 metadata:

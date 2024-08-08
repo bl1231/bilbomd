@@ -162,22 +162,22 @@ helm install bilbomd-nersc-prod ./bilbomd -f ./bilbomd/values-prod.yaml
 I have combined the kube config yaml files from both the development and production servers into a single yaml file. In order to switch kubectl commands between the development and production servers you must first select the "context" to use.
 
 ```bash
-kubectl config use-context production
+kubectl config use-context bilbomd-prod
 ```
 
 or
 
 ```bash
-kubectl config use-context development
+kubectl config use-context bilbomd-dev
 ```
 
 And check that the desired context is the active one:
 
 ```sh
 ❯ kubectl config get-contexts
-CURRENT   NAME          CLUSTER       AUTHINFO      NAMESPACE
-          development   development   development   bilbomd
-*         production    production    production    bilbomd
+CURRENT   NAME           CLUSTER       AUTHINFO      NAMESPACE
+          bilbomd-dev    development   development   bilbomd
+*         bilbomd-prod   production    production    bilbomd
 ```
 
 ### Development
