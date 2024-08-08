@@ -56,7 +56,7 @@ services:
       - app-network
 
   backend:
-    image: bl1231/bilbomd-backend:1.9.3
+    image: bl1231/bilbomd-backend:1.9.4
     build:
       context: ./bilbomd-backend
       dockerfile: bilbomd-backend.dockerfile
@@ -190,7 +190,7 @@ services:
       - redis
 
   ui:
-    image: bl1231/bilbomd-ui:1.9.3
+    image: bl1231/bilbomd-ui:1.9.4
     build:
       context: ./bilbomd-ui
       args:
