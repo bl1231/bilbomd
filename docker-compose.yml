@@ -190,7 +190,7 @@ services:
       - redis
 
   ui:
-    image: bl1231/bilbomd-ui:1.9.4
+    image: bl1231/bilbomd-ui:1.9.5
     build:
       context: ./bilbomd-ui
       args:
