@@ -18,6 +18,14 @@ scripts: "bilbomd/dev/scripts"
 
 uploads: "bilbomd/dev/uploads"
 
+redis:
+  name: redis
+  image:
+    repository: redis
+    tag: 7.4.0
+    pullPolicy: IfNotPresent
+    secret: registry-nersc
+
 ui:
   name: ui
   image:
@@ -29,6 +37,7 @@ ui:
     tag: "latest"
     pullPolicy: Always
     secret: ghcr
+  mode: "development"
 
 backend:
   name: backend

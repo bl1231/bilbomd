@@ -3,6 +3,7 @@ data:
   VITE_USE_NERSC: "true"
   VITE_NERSC_PROJECT: "m4659"
   VITE_SFAPI_TOKEN_EXPIRES: "2024-08-15 23:30"
+  VITE_MODE: "{{ .Values.ui.mode }}"
 kind: ConfigMap
 metadata:
   name: bilbomd-ui-config
