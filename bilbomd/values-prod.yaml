@@ -51,6 +51,6 @@ worker:
     user: null
     repository: bilbomd-worker
     build: bilbomd-spin-worker
-    tag: v1.6.4
+    tag: v1.6.5
     pullPolicy: Always
     secret: ghcr
