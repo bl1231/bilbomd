@@ -14,6 +14,8 @@ logs:
   worker: "bilbomd/dev/logs/worker"
   ui: "bilbomd/dev/logs/ui"
 
+backups: "bilbomd/dev/backups"
+
 scripts: "bilbomd/dev/scripts"
 
 uploads: "bilbomd/dev/uploads"
@@ -34,7 +36,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: "latest"
+    tag: latest
     pullPolicy: Always
     secret: ghcr
   mode: "development"
@@ -47,7 +49,7 @@ backend:
     user: null
     repository: bilbomd-backend
     build: bilbomd-spin-backend
-    tag: "latest"
+    tag: latest
     pullPolicy: Always
     secret: ghcr
 
@@ -59,6 +61,6 @@ worker:
     user: null
     repository: bilbomd-worker
     build: bilbomd-spin-worker
-    tag: "latest"
+    tag: latest
     pullPolicy: Always
     secret: ghcr

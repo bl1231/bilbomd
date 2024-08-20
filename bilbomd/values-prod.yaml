@@ -14,6 +14,8 @@ logs:
   worker: "bilbomd/prod/logs/worker"
   ui: "bilbomd/prod/logs/ui"
 
+backups: "bilbomd/prod/backups"
+
 uploads: "bilbomd/prod/uploads"
 
 scripts: "bilbomd/prod/scripts"
