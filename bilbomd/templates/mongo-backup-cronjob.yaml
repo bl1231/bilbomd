@@ -19,10 +19,10 @@ items:
               affinity: {}
               containers:
                 - args:
-                    - --uri=mongodb://$(MONGO_USERNAME):$(MONGO_PASSWORD)@$(MONGO_HOSTNAME):27017/$(MONGO_DB)?authSource=$(MONGO_AUTH_SRC)
-                    - --archive=/backups/bilbomd-mongodb2.gz
+                    - "mongodump --uri=mongodb://$(MONGO_USERNAME):$(MONGO_PASSWORD)@$(MONGO_HOSTNAME):27017/$(MONGO_DB)?authSource=$(MONGO_AUTH_SRC) --archive=/backups/bilbomd-mongodb-$(date +'%Y-%m-%d-%H%M%S').gz"
                   command:
-                    - mongodump
+                    - sh
+                    - -c
                   envFrom:
                     - secretRef:
                         name: {{ .Values.namespace }}-secrets
