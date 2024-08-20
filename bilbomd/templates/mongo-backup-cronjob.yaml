@@ -60,7 +60,7 @@ items:
               terminationGracePeriodSeconds: 30
               volumes:
                 - hostPath:
-                    path: /global/cfs/cdirs/{{ .Values.nersc_repo }}/{{ .Values.backups }}
+                    path: {{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.backups }}
                     type: Directory
                   name: vol-backups
       schedule: 0 2 * * *

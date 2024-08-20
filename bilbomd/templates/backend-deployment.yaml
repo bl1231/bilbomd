@@ -79,10 +79,10 @@ spec:
           defaultMode: 420
           secretName: sfapi-priv-key
       - hostPath:
-          path: /global/cfs/cdirs/{{ .Values.nersc_repo }}/{{ .Values.uploads }}
+          path: {{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.uploads }}
           type: Directory
         name: vol-uploads
       - hostPath:
-          path: /global/cfs/cdirs/{{ .Values.nersc_repo }}/{{ .Values.logs.backend }}
+          path: {{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.logs.backend }}
           type: Directory
         name: vol-logs
