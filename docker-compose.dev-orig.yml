@@ -1,0 +1,82 @@
+volumes:
+  mongodb-dev:
+    name: mongodb-dev
+    external: true
+  redis-cache-dev:
+    name: redis-cache-dev
+    external: true
+  uploads-dev:
+    name: uploads-dev
+    external: true
+
+services:
+  mongodb:
+    volumes:
+      - mongodb-dev:/data/db
+
+  redis:
+    volumes:
+      - redis-cache-dev:/data
+
+  backend:
+    image: bl1231/bilbomd-backend:latest
+    build:
+      args:
+        USER_ID: ${UID:-1001}
+        GROUP_ID: ${GID:-1001}
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./uploads-dev:/bilbomd/uploads
+      - ./bilbomd-backend:/app
+      - ./secrets:/secrets
+      - ./logs/backend:/bilbomd/logs
+    user: "${UID:-1001}:${GID:-1001}"
+    command: [ "npm", "run", "dev" ]
+
+  worker:
+    image: bl1231/bilbomd-worker:latest
+    build:
+      args:
+        USER_ID: ${UID:-1001}
+        GROUP_ID: ${GID:-1001}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '10'
+    volumes:
+      - ./uploads-dev:/bilbomd/uploads
+      - ./bilbomd-worker:/app
+      - ./secrets:/secrets
+      - ./logs/worker:/bilbomd/logs
+    user: "${UID:-1001}:${GID:-1001}"
+    command: [ "npm", "run", "dev" ]
+
+  scoper:
+    image: bl1231/bilbomd-scoper:latest
+    build:
+      context: ./bilbomd-scoper
+      args:
+        USER_ID: ${UID}
+        GROUP_ID: ${GID}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '10'
+    volumes:
+      - ./uploads-dev:/bilbomd/uploads
+      - ./bilbomd-scoper:/home/scoper/app
+      - ./logs/scoper:/bilbomd/logs
+      - ../IonNet:/home/scoper/IonNet
+    user: "${UID:-1001}:${GID:-1001}"
+    command: [ "npm", "run", "dev" ]
+
+  ui:
+    image: bl1231/bilbomd-ui:latest
+    build:
+      context: ./bilbomd-ui
+    environment:
+      BACKEND_SERVICE_URL: backend
+      VITE_USE_NERSC: $USE_NERSC
