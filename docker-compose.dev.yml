@@ -19,6 +19,7 @@ networks:
 services:
   mongodb:
     image: mongo:7.0.9
+    pull_policy: always
     restart: always
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
@@ -28,9 +29,6 @@ services:
       start_period: 20s
     env_file:
       - path: .env.dev
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
-      MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
       - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
     volumes:
@@ -40,6 +38,7 @@ services:
 
   redis:
     image: redis:7.4.0
+    pull_policy: always
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -59,6 +58,7 @@ services:
 
   backend:
     image: ghcr.io/bl1231/bilbomd-backend/bilbomd-spin-backend:latest
+    pull_policy: always
     deploy:
       resources:
         limits:
@@ -66,65 +66,39 @@ services:
     restart: always
     env_file:
       - path: .env.dev
-    environment:
-      NODE_ENV: development
-      ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
-      REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
-      MONGO_USERNAME: $MONGO_USERNAME
-      MONGO_PASSWORD: $MONGO_PASSWORD
-      MONGO_HOSTNAME: $MONGO_HOSTNAME
-      MONGO_PORT: $MONGO_PORT
-      MONGO_DB: $MONGO_DB
-      MONGO_AUTH_SRC: $MONGO_AUTH_SRC
-      REDIS_HOST: $REDIS_HOST
-      REDIS_PORT: $REDIS_PORT
-      REDIS_PASSWORD: $REDIS_PASSWORD
-      BILBOMD_URL: $BILBOMD_URL
-      SFAPI_CLIENT_ID: $SFAPI_CLIENT_ID
-      SFAPI_CLIENT_SECRET: $SFAPI_CLIENT_SECRET
-      USE_NERSC: $USE_NERSC
-      SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
-      BULLMQ_ATTEMPTS: $BULLMQ_ATTEMPTS
     ports:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
-      - uploads:/bilbomd/uploads
-      - logs:/bilbomd/logs
+      - ./bilbomd-backend:/app
+      - ./uploads-dev:/bilbomd/uploads
+      - ./logs-dev:/bilbomd/logs
     networks:
       - app-network-dev
+    user: "${UID:-1001}:${GID:-1001}"
+    command: [ "npm", "run", "dev" ]
     depends_on:
       - mongodb
       - redis
 
   worker:
     image: ghcr.io/bl1231/bilbomd-worker/bilbomd-spin-worker:latest
+    pull_policy: always
     deploy:
-      replicas: 2
+      replicas: 1
       resources:
         limits:
           cpus: "12"
     restart: no
     env_file:
       - .env.dev
-    environment:
-      ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
-      REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
-      MONGO_USERNAME: $MONGO_USERNAME
-      MONGO_PASSWORD: $MONGO_PASSWORD
-      MONGO_HOSTNAME: $MONGO_HOSTNAME
-      MONGO_PORT: $MONGO_PORT
-      MONGO_DB: $MONGO_DB
-      MONGO_AUTH_SRC: $MONGO_AUTH_SRC
-      REDIS_HOST: $REDIS_HOST
-      REDIS_PORT: $REDIS_PORT
-      REDIS_PASSWORD: $REDIS_PASSWORD
-      BILBOMD_URL: $BILBOMD_URL
-      SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
     networks:
       - app-network-dev
     volumes:
-      - uploads:/bilbomd/uploads
-      - logs:/bilbomd/logs
+      - ./bilbomd-worker:/app
+      - ./uploads-dev:/bilbomd/uploads
+      - ./logs-dev:/bilbomd/logs
+    user: "${UID:-1001}:${GID:-1001}"
+    # command: [ "npm", "run", "dev" ]
     depends_on:
       - mongodb
       - redis
@@ -171,13 +145,26 @@ services:
   #     - mongodb
   #     - redis
 
+  # ui:
+  #   image: ghcr.io/bl1231/bilbomd-ui:latest
+  #   pull_policy: always
+  #   env_file:
+  #     - .env.dev
+  #   ports:
+  #     - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
+  #   networks:
+  #     - app-network-dev
+  #   depends_on:
+  #     - backend
+  #     - mongodb
+  #     - redis
+
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:latest
-    env_file:
-      - .env.dev
+    image: bl1231/bilbomd-ui:latest
+    build:
+      context: ./bilbomd-ui
     environment:
-      USE_NERSC: false
-      NERSC_PROJECT: $NERSC_PROJECT
+      BACKEND_SERVICE_URL: backend
     ports:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
     networks:
