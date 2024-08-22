@@ -171,23 +171,18 @@ services:
   #     - mongodb
   #     - redis
 
-  # ui:
-  #   image: bl1231/bilbomd-ui:1.9.5
-  #   build:
-  #     context: ./bilbomd-ui
-  #     args:
-  #       GIT_HASH: $GIT_HASH
-  #   env_file:
-  #     - .env.dev
-  #   environment:
-  #     BACKEND_SERVICE_URL: backend
-  #     USE_NERSC: $USE_NERSC
-  #     NERSC_PROJECT: $NERSC_PROJECT
-  #   ports:
-  #     - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
-  #   networks:
-  #     - app-network
-  #   depends_on:
-  #     - backend
-  #     - mongodb
-  #     - redis
+  ui:
+    image: ghcr.io/bl1231/bilbomd-ui:latest
+    env_file:
+      - .env.dev
+    environment:
+      USE_NERSC: false
+      NERSC_PROJECT: $NERSC_PROJECT
+    ports:
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
+    networks:
+      - app-network-dev
+    depends_on:
+      - backend
+      - mongodb
+      - redis
