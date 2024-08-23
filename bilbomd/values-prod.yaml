@@ -41,7 +41,7 @@ backend:
     user: null
     repository: bilbomd-backend
     build: bilbomd-spin-backend
-    tag: v1.9.5
+    tag: v1.9.6
     pullPolicy: Always
     secret: ghcr
 
