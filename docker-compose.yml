@@ -27,7 +27,7 @@ services:
       retries: 7
       start_period: 20s
     env_file:
-      - .env
+      - .env.prod
     environment:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
@@ -72,26 +72,7 @@ services:
           cpus: "12"
     restart: always
     env_file:
-      - .env
-    environment:
-      NODE_ENV: production
-      ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
-      REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
-      MONGO_USERNAME: $MONGO_USERNAME
-      MONGO_PASSWORD: $MONGO_PASSWORD
-      MONGO_HOSTNAME: $MONGO_HOSTNAME
-      MONGO_PORT: $MONGO_PORT
-      MONGO_DB: $MONGO_DB
-      MONGO_AUTH_SRC: $MONGO_AUTH_SRC
-      REDIS_HOST: $REDIS_HOST
-      REDIS_PORT: $REDIS_PORT
-      REDIS_PASSWORD: $REDIS_PASSWORD
-      BILBOMD_URL: $BILBOMD_URL
-      SFAPI_CLIENT_ID: $SFAPI_CLIENT_ID
-      SFAPI_CLIENT_SECRET: $SFAPI_CLIENT_SECRET
-      USE_NERSC: $USE_NERSC
-      SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
-      BULLMQ_ATTEMPTS: $BULLMQ_ATTEMPTS
+      - .env.prod
     ports:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
@@ -122,21 +103,7 @@ services:
           cpus: "12"
     restart: no
     env_file:
-      - .env
-    environment:
-      ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
-      REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
-      MONGO_USERNAME: $MONGO_USERNAME
-      MONGO_PASSWORD: $MONGO_PASSWORD
-      MONGO_HOSTNAME: $MONGO_HOSTNAME
-      MONGO_PORT: $MONGO_PORT
-      MONGO_DB: $MONGO_DB
-      MONGO_AUTH_SRC: $MONGO_AUTH_SRC
-      REDIS_HOST: $REDIS_HOST
-      REDIS_PORT: $REDIS_PORT
-      REDIS_PASSWORD: $REDIS_PASSWORD
-      BILBOMD_URL: $BILBOMD_URL
-      SEND_EMAIL_NOTIFICATIONS: $SEND_EMAIL_NOTIFICATIONS
+      - .env.prod
     networks:
       - app-network
     volumes:
@@ -163,22 +130,7 @@ services:
           cpus: "12"
     restart: no
     env_file:
-      - .env
-    environment:
-      ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
-      REFRESH_TOKEN_SECRET: $REFRESH_TOKEN_SECRET
-      MONGO_USERNAME: $MONGO_USERNAME
-      MONGO_PASSWORD: $MONGO_PASSWORD
-      MONGO_HOSTNAME: $MONGO_HOSTNAME
-      MONGO_PORT: $MONGO_PORT
-      MONGO_DB: $MONGO_DB
-      MONGO_AUTH_SRC: $MONGO_AUTH_SRC
-      REDIS_HOST: $REDIS_HOST
-      REDIS_PORT: $REDIS_PORT
-      REDIS_PASSWORD: $REDIS_PASSWORD
-      BILBOMD_URL: $BILBOMD_URL
-      SCOPER_KGS_CONFORMERS: $SCOPER_KGS_CONFORMERS
-      BULLMQ_ATTEMPTS: $BULLMQ_ATTEMPTS
+      - .env.prod
     networks:
       - app-network
     volumes:
@@ -196,11 +148,7 @@ services:
       args:
         GIT_HASH: $GIT_HASH
     env_file:
-      - .env
-    environment:
-      BACKEND_SERVICE_URL: backend
-      USE_NERSC: $USE_NERSC
-      NERSC_PROJECT: $NERSC_PROJECT
+      - .env.prod
     ports:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
     networks:
