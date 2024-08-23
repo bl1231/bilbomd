@@ -69,13 +69,13 @@ services:
     ports:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
-      - ./bilbomd-backend:/app
-      - ./uploads-dev:/bilbomd/uploads
-      - ./logs-dev:/bilbomd/logs
+      # - ./bilbomd-backend:/app
+      - uploads:/bilbomd/uploads
+      - logs:/bilbomd/logs
     networks:
       - app-network-dev
-    user: "${UID:-1001}:${GID:-1001}"
-    command: [ "npm", "run", "dev" ]
+    # user: "${UID:-1001}:${GID:-1001}"
+    # command: [ "npm", "run", "dev" ]
     depends_on:
       - mongodb
       - redis
@@ -94,10 +94,10 @@ services:
     networks:
       - app-network-dev
     volumes:
-      - ./bilbomd-worker:/app
-      - ./uploads-dev:/bilbomd/uploads
-      - ./logs-dev:/bilbomd/logs
-    user: "${UID:-1001}:${GID:-1001}"
+      # - ./bilbomd-worker:/app
+      - uploads:/bilbomd/uploads
+      - logs:/bilbomd/logs
+    # user: "${UID:-1001}:${GID:-1001}"
     # command: [ "npm", "run", "dev" ]
     depends_on:
       - mongodb
@@ -145,26 +145,11 @@ services:
   #     - mongodb
   #     - redis
 
-  # ui:
-  #   image: ghcr.io/bl1231/bilbomd-ui:latest
-  #   pull_policy: always
-  #   env_file:
-  #     - .env.dev
-  #   ports:
-  #     - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
-  #   networks:
-  #     - app-network-dev
-  #   depends_on:
-  #     - backend
-  #     - mongodb
-  #     - redis
-
   ui:
-    image: bl1231/bilbomd-ui:latest
-    build:
-      context: ./bilbomd-ui
-    environment:
-      BACKEND_SERVICE_URL: backend
+    image: ghcr.io/bl1231/bilbomd-ui:latest
+    pull_policy: always
+    env_file:
+      - .env.dev
     ports:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
     networks:
@@ -173,3 +158,18 @@ services:
       - backend
       - mongodb
       - redis
+
+  # ui:
+  #   image: bl1231/bilbomd-ui:latest
+  #   build:
+  #     context: ./bilbomd-ui
+  #   environment:
+  #     BACKEND_SERVICE_URL: backend
+  #   ports:
+  #     - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
+  #   networks:
+  #     - app-network-dev
+  #   depends_on:
+  #     - backend
+  #     - mongodb
+  #     - redis
