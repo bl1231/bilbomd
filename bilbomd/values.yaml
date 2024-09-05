@@ -6,7 +6,7 @@ nersc_repo: m4659
 cfs_dir: /global/cfs/cdirs
 
 sfapi:
-  token_expires: "2024-09-05 23:30"
+  token_expires: "2024-10-07 16:41"
 
 mongo:
   name: mongo
@@ -17,11 +17,3 @@ mongo:
     secret: registry-nersc
   config:
     MONGO_INITDB_ROOT_USERNAME: "bilbomd-backend-user"
-
-redis:
-  name: redis
-  image:
-    repository: redis
-    tag: 7.2.5
-    pullPolicy: IfNotPresent
-    secret: registry-nersc

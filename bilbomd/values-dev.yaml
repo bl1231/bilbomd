@@ -8,6 +8,7 @@ bilbomd:
 
 env:
   NODE_ENV: "development"
+  BILBOMD_ENV: "development"
 
 logs:
   backend: "bilbomd/dev/logs/backend"
@@ -25,7 +26,7 @@ redis:
   image:
     repository: redis
     tag: 7.4.0
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
     secret: registry-nersc
 
 ui:
@@ -39,7 +40,6 @@ ui:
     tag: latest
     pullPolicy: Always
     secret: ghcr
-  mode: "development"
 
 backend:
   name: backend
@@ -48,7 +48,7 @@ backend:
     owner: bl1231
     user: null
     repository: bilbomd-backend
-    build: bilbomd-spin-backend
+    build: bilbomd-backend
     tag: latest
     pullPolicy: Always
     secret: ghcr
@@ -60,7 +60,7 @@ worker:
     owner: bl1231
     user: null
     repository: bilbomd-worker
-    build: bilbomd-spin-worker
+    build: bilbomd-worker
     tag: latest
     pullPolicy: Always
     secret: ghcr

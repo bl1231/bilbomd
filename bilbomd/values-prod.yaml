@@ -8,6 +8,7 @@ bilbomd:
 
 env:
   NODE_ENV: "production"
+  BILBOMD_ENV: "production"
 
 logs:
   backend: "bilbomd/prod/logs/backend"
@@ -20,6 +21,14 @@ uploads: "bilbomd/prod/uploads"
 
 scripts: "bilbomd/prod/scripts"
 
+redis:
+  name: redis
+  image:
+    repository: redis
+    tag: 7.4.0
+    pullPolicy: Always
+    secret: registry-nersc
+
 ui:
   name: ui
   image:
@@ -28,7 +37,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: v1.9.6
+    tag: v1.10.0
     pullPolicy: Always
     secret: ghcr
   mode: "production"
@@ -40,8 +49,8 @@ backend:
     owner: bl1231
     user: null
     repository: bilbomd-backend
-    build: bilbomd-spin-backend
-    tag: v1.9.6
+    build: bilbomd-backend
+    tag: v1.10.0
     pullPolicy: Always
     secret: ghcr
 
@@ -52,7 +61,7 @@ worker:
     owner: bl1231
     user: null
     repository: bilbomd-worker
-    build: bilbomd-spin-worker
-    tag: v1.6.5
+    build: bilbomd-worker
+    tag: 1.7.0
     pullPolicy: Always
     secret: ghcr
