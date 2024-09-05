@@ -118,6 +118,7 @@ bilbomd-mongodb-schema
 secrets
 helm-secrets
 uploads-dev
+logs-dev
 *.csr
 *.key
 *.pem
