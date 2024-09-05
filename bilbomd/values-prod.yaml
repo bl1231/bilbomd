@@ -37,7 +37,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: v1.10.0
+    tag: 1.10.3
     pullPolicy: Always
     secret: ghcr
   mode: "production"
@@ -50,7 +50,7 @@ backend:
     user: null
     repository: bilbomd-backend
     build: bilbomd-backend
-    tag: v1.10.0
+    tag: 1.10.2
     pullPolicy: Always
     secret: ghcr
 
