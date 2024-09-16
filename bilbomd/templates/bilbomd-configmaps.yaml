@@ -21,6 +21,10 @@ data:
   SFAPI_URL: https://api.nersc.gov/api/v1.2
   SFAPI_TOKEN_EXPIRES: "{{ .Values.sfapi.token_expires }}"
   SCRIPT_DIR: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}"
+  UPLOAD_DIR: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.uploads }}"
+  WORK_DIR: "{{ .Values.pscratch }}/{{ .Values.working_dir }}"
+  PREPARE_SLURM_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-bilbomd-slurm-file.sh"
+  CP2CFS_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/copy-back-to-cfs.sh"
 kind: ConfigMap
 metadata:
   name: bilbomd-config

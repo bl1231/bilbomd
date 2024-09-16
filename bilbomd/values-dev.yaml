@@ -21,6 +21,8 @@ scripts: "bilbomd/dev/scripts"
 
 uploads: "bilbomd/dev/uploads"
 
+working_dir: "bilbomd/dev/"
+
 redis:
   name: redis
   image:

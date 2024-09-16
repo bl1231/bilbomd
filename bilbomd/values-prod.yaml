@@ -17,9 +17,11 @@ logs:
 
 backups: "bilbomd/prod/backups"
 
+scripts: "bilbomd/prod/scripts"
+
 uploads: "bilbomd/prod/uploads"
 
-scripts: "bilbomd/prod/scripts"
+working_dir: "bilbomd/prod/"
 
 redis:
   name: redis
