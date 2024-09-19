@@ -1,3 +1,15 @@
+# -----------------------------------------------------------------------------
+# Use this Docker compose file for development deployment on Hyperion
+# You may need to create the following volumes before running this file:
+#
+#  docker volume create mongodb-dev
+#  docker volume create redis-cache-dev
+#  docker volume create uploads-dev
+#  docker volume create logs-dev
+#
+# You will also need to copy .env.example to .env.dev and maybe adjust some
+# of the values in the .env.dev file.
+# -----------------------------------------------------------------------------
 volumes:
   mongodb:
     name: mongodb-dev
@@ -41,7 +53,7 @@ services:
     pull_policy: always
     restart: always
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -158,7 +170,6 @@ services:
       - backend
       - mongodb
       - redis
-
   # ui:
   #   image: bl1231/bilbomd-ui:latest
   #   build:

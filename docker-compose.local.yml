@@ -1,0 +1,170 @@
+# --------------------------------------------------------------------------------------------------
+# Use this Docker compose file for local development on your machine.
+# You may need to create the following volumes before running this file:
+#
+#  docker volume create mongodb-local
+#  docker volume create redis-cache-local
+#  docker volume create uploads-local
+#  docker volume create logs-local
+#
+# You will also need to copy .env.example to .env.local and maybe adjust some
+# of the values in the .env.local file.
+#
+# Instructions to build and start services:
+#
+#  docker compose --env-file .env.local -f docker-compose.local.yml -p bilbomd-local build
+#  docker compose --env-file .env.local -f docker-compose.local.yml -p bilbomd-local up -d
+#
+# Instructions to stop and remove services:
+#
+#  docker compose --env-file .env.local -f docker-compose.local.yml -p bilbomd-local down
+# --------------------------------------------------------------------------------------------------
+volumes:
+  mongodb:
+    name: mongodb-local
+    external: true
+  redis-cache:
+    name: redis-cache-local
+    external: true
+  uploads:
+    name: uploads-local
+    external: true
+  logs:
+    name: logs-local
+    external: true
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  mongodb:
+    image: mongo:7.0.12
+    pull_policy: missing
+    restart: always
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
+      interval: 10s
+      timeout: 10s
+      retries: 7
+      start_period: 20s
+    env_file:
+      - path: .env.local
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
+      MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
+    ports:
+      - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
+    volumes:
+      - mongodb:/data/db
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7.4.0
+    pull_policy: missing
+    restart: always
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    env_file:
+      - path: .env.local
+    ports:
+      - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - redis-cache:/data
+    networks:
+      - app-network
+
+  # ------------------------------------------------------------------------------------------------
+  # In order to build the images for the backend and worker services, you will
+  # need to make sure $GITHUB_TOKEN is set in your environment.
+  #
+  backend:
+    image: bl1231/bilbomd-backend:latest
+    build:
+      context: ./bilbomd-backend
+      dockerfile: bilbomd-backend.dockerfile
+      args:
+        USER_ID: ${UID:-1001}
+        GROUP_ID: ${GID:-1001}
+        GITHUB_TOKEN: $GITHUB_TOKEN
+    environment:
+      NODE_ENV: development
+    env_file:
+      - path: .env.local
+    ports:
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
+    volumes:
+      # These are bind mounts that are used for local development
+      - ./bilbomd-backend:/app # comment out to use beackend code in Docker image
+      - ./uploads-dev:/bilbomd/uploads
+      - ./secrets:/secrets
+      - ./logs/backend:/bilbomd/logs
+      # Alternatively you can use these Docker volumes
+      # - uploads:/bilbomd/uploads
+      # - logs:/bilbomd/logs
+    networks:
+      - app-network
+    user: "${UID:-1001}:${GID:-1001}"
+    command: [ "npm", "run", "dev" ]
+    depends_on:
+      - mongodb
+      - redis
+
+  worker:
+    image: bl1231/bilbomd-worker:latest
+    build:
+      context: ./bilbomd-worker
+      dockerfile: bilbomd-worker.dockerfile
+      args:
+        USER_ID: ${UID:-1001}
+        GROUP_ID: ${GID:-1001}
+        GITHUB_TOKEN: $GITHUB_TOKEN
+    environment:
+      NODE_ENV: development
+    env_file:
+      - .env.local
+    networks:
+      - app-network
+    volumes:
+      # These are bind mounts that are used for local development
+      - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
+      - ./uploads-dev:/bilbomd/uploads
+      - ./secrets:/secrets
+      - ./logs/worker:/bilbomd/logs
+      # Alternatively you can use these Docker volumes
+      # - uploads:/bilbomd/uploads
+      # - logs:/bilbomd/logs
+    user: "${UID:-1001}:${GID:-1001}"
+    command: [ "npm", "run", "dev" ]
+    depends_on:
+      - mongodb
+      - redis
+
+  # ------------------------------------------------------------------------------------------------
+  # This will build the bilbomd-ui front end application. However, you are more likely to want
+  # to develop the frontend code in VSCode by running "npm run dev" in the bilbomd-ui directory.
+  #
+  # You can access the Docker container instance by connecting to:
+  # http://localhost:${BILBOMD_UI_PORT}
+  #
+  ui:
+    image: bl1231/bilbomd-ui:latest
+    build:
+      context: ./bilbomd-ui
+      dockerfile: bilbomd-ui.dockerfile
+    env_file:
+      - .env.local
+    ports:
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
+    networks:
+      - app-network
+    depends_on:
+      - backend
+      - mongodb
+      - redis

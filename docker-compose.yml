@@ -1,3 +1,15 @@
+# -----------------------------------------------------------------------------
+# Use this Docker compose file for production deployment to Hyperion.
+# You may need to create the following volumes before running this file:
+#
+#  docker volume create mongodb
+#  docker volume create redis-cache
+#  docker volume create uploads
+#  docker volume create logs
+#
+# You will also need to copy .env.example to .env.prod and maybe adjust some
+# of the values in the .env.prod file.
+# -----------------------------------------------------------------------------
 volumes:
   mongodb:
     name: mongodb
@@ -42,7 +54,7 @@ services:
     image: redis:7.4.0
     restart: always
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
