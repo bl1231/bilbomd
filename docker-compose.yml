@@ -56,7 +56,7 @@ services:
       - app-network
 
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.10.1
+    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.11.0
     pull_policy: always
     deploy:
       resources:
@@ -77,7 +77,7 @@ services:
       - redis
 
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker/bilbomd-worker:1.7.0
+    image: ghcr.io/bl1231/bilbomd-worker/bilbomd-worker:1.8.1
     pull_policy: always
     deploy:
       replicas: 2
@@ -125,7 +125,7 @@ services:
       - redis
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.10.2
+    image: ghcr.io/bl1231/bilbomd-ui:1.11.2
     pull_policy: always
     env_file:
       - .env.prod
