@@ -158,6 +158,8 @@ services:
     build:
       context: ./bilbomd-ui
       dockerfile: bilbomd-ui.dockerfile
+      args:
+        GITHUB_TOKEN: $GITHUB_TOKEN
     env_file:
       - .env.local
     ports:
