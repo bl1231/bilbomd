@@ -39,7 +39,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:7.0.12
+    image: mongo:7.0.14
     pull_policy: missing
     restart: always
     healthcheck:
@@ -82,13 +82,13 @@ services:
 
   # ------------------------------------------------------------------------------------------------
   # In order to build the images for the backend and worker services, you will
-  # need to make sure $GITHUB_TOKEN is set in your environment.
+  # need to make sure $GITHUB_TOKEN is defined in your environment.
   #
   backend:
     image: bl1231/bilbomd-backend:latest
     build:
       context: ./bilbomd-backend
-      dockerfile: bilbomd-backend.dockerfile
+      dockerfile: bilbomd-backend-micromamba.dockerfile # testing micromamba
       args:
         USER_ID: ${UID:-1001}
         GROUP_ID: ${GID:-1001}
@@ -117,7 +117,8 @@ services:
       - redis
 
   worker:
-    image: bl1231/bilbomd-worker:latest
+    image: bl1231/bilbomd-worker:sans
+    platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS
     build:
       context: ./bilbomd-worker
       dockerfile: bilbomd-worker.dockerfile
