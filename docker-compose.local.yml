@@ -101,13 +101,13 @@ services:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       # These are bind mounts that are used for local development
-      - ./bilbomd-backend:/app # comment out to use beackend code in Docker image
-      - ./uploads-dev:/bilbomd/uploads
-      - ./secrets:/secrets
-      - ./logs/backend:/bilbomd/logs
+      # - ./bilbomd-backend:/app # comment out to use beackend code in Docker image
+      # - ./uploads-dev:/bilbomd/uploads
+      # - ./secrets:/secrets
+      # - ./logs/backend:/bilbomd/logs
       # Alternatively you can use these Docker volumes
-      # - uploads:/bilbomd/uploads
-      # - logs:/bilbomd/logs
+      - uploads:/bilbomd/uploads
+      - logs:/bilbomd/logs
     networks:
       - app-network
     user: "${UID:-1001}:${GID:-1001}"
@@ -117,8 +117,8 @@ services:
       - redis
 
   worker:
-    image: bl1231/bilbomd-worker:sans
-    platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS
+    image: bl1231/bilbomd-worker:latest
+    # platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
     build:
       context: ./bilbomd-worker
       dockerfile: bilbomd-worker.dockerfile
@@ -134,13 +134,13 @@ services:
       - app-network
     volumes:
       # These are bind mounts that are used for local development
-      - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
-      - ./uploads-dev:/bilbomd/uploads
-      - ./secrets:/secrets
-      - ./logs/worker:/bilbomd/logs
+      # - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
+      # - ./uploads-dev:/bilbomd/uploads
+      # - ./secrets:/secrets
+      # - ./logs/worker:/bilbomd/logs
       # Alternatively you can use these Docker volumes
-      # - uploads:/bilbomd/uploads
-      # - logs:/bilbomd/logs
+      - uploads:/bilbomd/uploads
+      - logs:/bilbomd/logs
     user: "${UID:-1001}:${GID:-1001}"
     command: [ "npm", "run", "dev" ]
     depends_on:
