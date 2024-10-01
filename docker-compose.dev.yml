@@ -30,7 +30,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:7.0.12
+    image: mongo:7.0.14
     pull_policy: always
     restart: always
     healthcheck:
@@ -69,7 +69,7 @@ services:
       - app-network-dev
 
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:latest
+    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.12.0
     pull_policy: always
     deploy:
       resources:
@@ -93,7 +93,7 @@ services:
       - redis
 
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker/bilbomd-worker:latest
+    image: ghcr.io/bl1231/bilbomd-worker/bilbomd-worker:1.9.0
     pull_policy: always
     deploy:
       replicas: 1
@@ -158,7 +158,7 @@ services:
   #     - redis
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:latest
+    image: ghcr.io/bl1231/bilbomd-ui:1.12.0
     pull_policy: always
     env_file:
       - .env.dev
