@@ -115,13 +115,19 @@ services:
     depends_on:
       - mongodb
       - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3500/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   worker:
     image: bl1231/bilbomd-worker:latest
     # platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
     build:
       context: ./bilbomd-worker
-      dockerfile: bilbomd-worker.dockerfile
+      dockerfile: bilbomd-worker-micromamba.dockerfile # testing micromamba
       args:
         USER_ID: ${UID:-1001}
         GROUP_ID: ${GID:-1001}
@@ -146,6 +152,12 @@ services:
     depends_on:
       - mongodb
       - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # ------------------------------------------------------------------------------------------------
   # This will build the bilbomd-ui front end application. However, you are more likely to want
@@ -171,3 +183,9 @@ services:
       - backend
       - mongodb
       - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/version-info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
