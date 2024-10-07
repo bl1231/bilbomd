@@ -8,13 +8,13 @@ cfs_dir: /global/cfs/cdirs
 pscratch: /pscratch/sd/s/sclassen
 
 sfapi:
-  token_expires: "2024-10-07 16:41"
+  token_expires: "2024-11-09 16:24"
 
 mongo:
   name: mongo
   image:
     repository: mongo
-    tag: 7.0.12
+    tag: 7.0.14
     pullPolicy: IfNotPresent
     secret: registry-nersc
   config:
