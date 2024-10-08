@@ -10,12 +10,12 @@
 # You will also need to copy .env.example to .env.local and maybe adjust some
 # of the values in the .env.local file.
 #
-# Instructions to build and start services:
+# To build and start services:
 #
 #  docker compose --env-file .env.local -f docker-compose.local.yml -p bilbomd-local build
 #  docker compose --env-file .env.local -f docker-compose.local.yml -p bilbomd-local up -d
 #
-# Instructions to stop and remove services:
+# To stop and remove services:
 #
 #  docker compose --env-file .env.local -f docker-compose.local.yml -p bilbomd-local down
 # --------------------------------------------------------------------------------------------------
@@ -88,7 +88,8 @@ services:
     image: bl1231/bilbomd-backend:latest
     build:
       context: ./bilbomd-backend
-      dockerfile: bilbomd-backend-micromamba.dockerfile # testing micromamba
+      # dockerfile: bilbomd-backend-micromamba.dockerfile # testing micromamba
+      dockerfile: bilbomd-backend.dockerfile # uses miniconda3
       args:
         USER_ID: ${UID:-1001}
         GROUP_ID: ${GID:-1001}
@@ -101,7 +102,7 @@ services:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       # These are bind mounts that are used for local development
-      # - ./bilbomd-backend:/app # comment out to use beackend code in Docker image
+      # - ./bilbomd-backend:/app # comment out to use backend code in Docker image
       # - ./uploads-dev:/bilbomd/uploads
       # - ./secrets:/secrets
       # - ./logs/backend:/bilbomd/logs
@@ -126,10 +127,11 @@ services:
   #
   worker:
     image: bl1231/bilbomd-worker:latest
-    # platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
+    # platform: linux/amd64 # Needed for image to run Pepsi-SANS on M3 Mac
     build:
       context: ./bilbomd-worker
-      dockerfile: bilbomd-worker-micromamba.dockerfile # testing micromamba
+      # dockerfile: bilbomd-worker-micromamba.dockerfile # testing micromamba
+      dockerfile: bilbomd-worker.dockerfile # Uses miniconda3
       args:
         USER_ID: ${UID:-1001}
         GROUP_ID: ${GID:-1001}
@@ -142,7 +144,7 @@ services:
       - app-network
     volumes:
       # These are bind mounts that are used for local development
-      - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
+      # - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
       # - ./uploads-dev:/bilbomd/uploads
       # - ./secrets:/secrets
       # - ./logs/worker:/bilbomd/logs
