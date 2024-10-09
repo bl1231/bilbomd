@@ -68,8 +68,10 @@ services:
     networks:
       - app-network-dev
 
+  # ------------------------------------------------------------------------------------------------
+  #
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:latest
+    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.12.5
     pull_policy: always
     deploy:
       resources:
@@ -81,23 +83,29 @@ services:
     ports:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
+      # These are bind mounts that are used for local development
       # - ./bilbomd-backend:/app
+      # - ./uploads-dev:/bilbomd/uploads
+      # - ./logs/backend:/bilbomd/logs
+      # Alternatively you can use these Docker volumes
       - uploads:/bilbomd/uploads
       - logs:/bilbomd/logs
     networks:
       - app-network-dev
     # user: "${UID:-1001}:${GID:-1001}"
-    # command: [ "npm", "run", "dev" ]
+    # command: ["npm", "run", "dev"]
     depends_on:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3500/healthcheck" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:3500/healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
 
+  # ------------------------------------------------------------------------------------------------
+  #
   worker:
     image: ghcr.io/bl1231/bilbomd-worker/bilbomd-worker:1.9.1
     pull_policy: always
@@ -112,7 +120,12 @@ services:
     networks:
       - app-network-dev
     volumes:
-      # - ./bilbomd-worker:/app
+      # These are bind mounts that are used for local development
+      # - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
+      # - ./uploads-dev:/bilbomd/uploads
+      # - ./secrets:/secrets
+      # - ./logs/worker:/bilbomd/logs
+      # Alternatively you can use these Docker volumes
       - uploads:/bilbomd/uploads
       - logs:/bilbomd/logs
     # user: "${UID:-1001}:${GID:-1001}"
@@ -121,7 +134,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/config"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -170,7 +183,7 @@ services:
   #     - redis
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.12.2
+    image: ghcr.io/bl1231/bilbomd-ui:1.12.3
     pull_policy: always
     env_file:
       - .env.dev
@@ -183,7 +196,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost/version-info" ]
+      test: ["CMD", "curl", "--fail", "http://localhost/version-info"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -68,7 +68,7 @@ services:
       - app-network
 
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.12.3
+    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.12.5
     pull_policy: always
     deploy:
       resources:
@@ -88,7 +88,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3500/healthcheck" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:3500/healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -110,12 +110,11 @@ services:
     volumes:
       - uploads:/bilbomd/uploads
       - logs:/bilbomd/logs
-    # user: "1001:1001"
     depends_on:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/config"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -143,13 +142,12 @@ services:
     volumes:
       - uploads:/bilbomd/uploads
       - logs:/bilbomd/logs
-    # user: "1001:1001"
     depends_on:
       - mongodb
       - redis
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.12.2
+    image: ghcr.io/bl1231/bilbomd-ui:1.12.3
     pull_policy: always
     env_file:
       - .env.prod
@@ -162,7 +160,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost/version-info" ]
+      test: ["CMD", "curl", "--fail", "http://localhost/version-info"]
       interval: 30s
       timeout: 10s
       retries: 3
