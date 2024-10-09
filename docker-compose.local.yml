@@ -39,7 +39,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:7.0.14
+    image: mongo:latest
     pull_policy: missing
     restart: always
     healthcheck:
@@ -102,7 +102,7 @@ services:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       # These are bind mounts that are used for local development
-      # - ./bilbomd-backend:/app # comment out to use backend code in Docker image
+      - ./bilbomd-backend:/app # comment out to use backend code in Docker image
       # - ./uploads-dev:/bilbomd/uploads
       # - ./secrets:/secrets
       # - ./logs/backend:/bilbomd/logs

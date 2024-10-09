@@ -39,7 +39,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: 1.12.0
+    tag: 1.12.3
     pullPolicy: Always
     secret: ghcr
 
@@ -51,7 +51,7 @@ backend:
     user: null
     repository: bilbomd-backend
     build: bilbomd-backend
-    tag: 1.12.0
+    tag: 1.12.5
     pullPolicy: Always
     secret: ghcr
 
@@ -63,6 +63,6 @@ worker:
     user: null
     repository: bilbomd-worker
     build: bilbomd-worker
-    tag: 1.9.0
+    tag: 1.9.1
     pullPolicy: Always
     secret: ghcr
