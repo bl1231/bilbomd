@@ -1,4 +1,8 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bilbomd-config
+  namespace: bilbomd
 data:
   BILBOMD_BACKEND_HOST: localhost
   BILBOMD_BACKEND_PORT: "3501"
@@ -25,7 +29,4 @@ data:
   WORK_DIR: "{{ .Values.pscratch }}/{{ .Values.working_dir }}"
   PREPARE_SLURM_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-bilbomd-slurm-file.sh"
   CP2CFS_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/copy-back-to-cfs.sh"
-kind: ConfigMap
-metadata:
-  name: bilbomd-config
-  namespace: bilbomd
+  ENABLE_BILBOMD_SANS: "false"

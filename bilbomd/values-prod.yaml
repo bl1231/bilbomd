@@ -39,7 +39,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: 1.13.0
+    tag: 1.13.1
     pullPolicy: Always
     secret: ghcr
   mode: "production"
