@@ -71,7 +71,7 @@ services:
   # ------------------------------------------------------------------------------------------------
   #
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.12.5
+    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.12.6
     pull_policy: always
     deploy:
       resources:
@@ -183,7 +183,7 @@ services:
   #     - redis
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.12.3
+    image: ghcr.io/bl1231/bilbomd-ui:1.13.1
     pull_policy: always
     env_file:
       - .env.dev

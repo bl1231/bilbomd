@@ -147,7 +147,7 @@ services:
       - redis
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.13.0
+    image: ghcr.io/bl1231/bilbomd-ui:1.13.1
     pull_policy: always
     env_file:
       - .env.prod
