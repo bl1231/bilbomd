@@ -103,12 +103,12 @@ services:
     volumes:
       # These are bind mounts that are used for local development
       - ./bilbomd-backend:/app # comment out to use backend code in Docker image
-      # - ./uploads-dev:/bilbomd/uploads
+      - ./uploads-dev:/bilbomd/uploads
       # - ./secrets:/secrets
-      # - ./logs/backend:/bilbomd/logs
+      - ./logs/backend:/bilbomd/logs
       # Alternatively you can use these Docker volumes
-      - uploads:/bilbomd/uploads
-      - logs:/bilbomd/logs
+      # - uploads:/bilbomd/uploads
+      # - logs:/bilbomd/logs
     networks:
       - app-network
     user: "${UID:-1001}:${GID:-1001}"
@@ -127,7 +127,7 @@ services:
   #
   worker:
     image: bl1231/bilbomd-worker:latest
-    # platform: linux/amd64 # Needed for image to run Pepsi-SANS on M3 Mac
+    platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
     build:
       context: ./bilbomd-worker
       # dockerfile: bilbomd-worker-micromamba.dockerfile # testing micromamba
@@ -145,12 +145,12 @@ services:
     volumes:
       # These are bind mounts that are used for local development
       # - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
-      # - ./uploads-dev:/bilbomd/uploads
+      - ./uploads-dev:/bilbomd/uploads
       # - ./secrets:/secrets
-      # - ./logs/worker:/bilbomd/logs
+      - ./logs/worker:/bilbomd/logs
       # Alternatively you can use these Docker volumes
-      - uploads:/bilbomd/uploads
-      - logs:/bilbomd/logs
+      # - uploads:/bilbomd/uploads
+      # - logs:/bilbomd/logs
     user: "${UID:-1001}:${GID:-1001}"
     command: [ "npm", "run", "dev" ]
     depends_on:

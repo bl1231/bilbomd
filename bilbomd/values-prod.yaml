@@ -52,7 +52,7 @@ backend:
     user: null
     repository: bilbomd-backend
     build: bilbomd-backend
-    tag: 1.12.6
+    tag: 1.12.7
     pullPolicy: Always
     secret: ghcr
 
