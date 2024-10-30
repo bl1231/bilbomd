@@ -71,7 +71,7 @@ services:
   # ------------------------------------------------------------------------------------------------
   #
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.12.6
+    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:latest
     pull_policy: always
     deploy:
       resources:
@@ -107,7 +107,7 @@ services:
   # ------------------------------------------------------------------------------------------------
   #
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker/bilbomd-worker:1.9.1
+    image: ghcr.io/bl1231/bilbomd-worker/bilbomd-worker:latest
     pull_policy: always
     deploy:
       replicas: 1
@@ -124,7 +124,7 @@ services:
       # - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
       # - ./uploads-dev:/bilbomd/uploads
       # - ./secrets:/secrets
-      # - ./logs/worker:/bilbomd/logs
+      - ./logs/worker:/bilbomd/logs
       # Alternatively you can use these Docker volumes
       - uploads:/bilbomd/uploads
       - logs:/bilbomd/logs
@@ -183,7 +183,7 @@ services:
   #     - redis
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.13.1
+    image: ghcr.io/bl1231/bilbomd-ui:latest
     pull_policy: always
     env_file:
       - .env.dev
