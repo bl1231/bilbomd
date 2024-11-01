@@ -124,7 +124,7 @@ services:
       # - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
       # - ./uploads-dev:/bilbomd/uploads
       # - ./secrets:/secrets
-      - ./logs/worker:/bilbomd/logs
+      # - ./logs/worker:/bilbomd/logs
       # Alternatively you can use these Docker volumes
       - uploads:/bilbomd/uploads
       - logs:/bilbomd/logs
