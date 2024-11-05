@@ -38,7 +38,7 @@ spec:
         - secretRef:
             name: {{ .Values.namespace }}-secrets
             optional: false
-        image: "{{ .Values.worker.image.registry }}/{{ .Values.worker.image.owner }}/{{ with .Values.worker.image.user }}{{ . }}/{{ end }}{{ with .Values.worker.image.repository }}{{ . }}/{{ end }}{{ .Values.worker.image.build }}:{{ .Values.worker.image.tag }}"
+        image: "{{ .Values.worker.image.registry }}/{{ .Values.worker.image.owner }}/{{ with .Values.worker.image.user }}{{ . }}/{{ end }}{{ with .Values.worker.image.repository }}{{ . }}{{ end }}:{{ .Values.worker.image.tag }}"
         imagePullPolicy: "{{ .Values.worker.image.pullPolicy }}"
         name: container-0
         resources: {}

@@ -8,7 +8,7 @@ cfs_dir: /global/cfs/cdirs
 pscratch: /pscratch/sd/s/sclassen
 
 sfapi:
-  token_expires: "2024-11-09 16:24"
+  token_expires: "2024-12-07 10:45"
 
 mongo:
   name: mongo
