@@ -105,8 +105,14 @@ const spawnScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<
     '-mfs',
     'multi_foxs',
     '-mfr',
-    'True'
+    'True',
   ]
+  // Conditionally add the fix-multifox-c1c2 flag
+  if (DBjob.fixc1c2) {
+    args.push('--fix-multifox-c1c2');
+  } else {
+    args.push('--no-fix-multifox-c1c2');
+  }
 
   return new Promise<void>((resolve, reject) => {
     logger.info(`Running Scoper with args: ${['-u', ...args].join(' ')}`)
