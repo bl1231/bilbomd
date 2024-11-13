@@ -31,8 +31,8 @@ RUN git clone https://github.com/rlabduke/reduce.git reduce && \
 
 # Clone and build 'RNAview'
 WORKDIR /usr/local
-# RUN curl -L -o rnaview.zip https://github.com/rcsb/RNAView/archive/refs/heads/master.zip
-COPY rnaview/rnaview.zip .
+RUN curl -L -o rnaview.zip https://github.com/rcsb/RNAView/archive/refs/heads/master.zip
+# COPY rnaview/rnaview.zip .
 # RUN git clone https://github.com/rcsb/RNAView.git RNAView && \
 RUN unzip rnaview.zip && \
     mv RNAView-master RNAView && \
@@ -109,7 +109,8 @@ USER scoper:scoper
 
 # Copy IonNet source code
 WORKDIR /home/scoper
-COPY ionnet/docker-test.zip .
+# COPY ionnet/docker-test.zip .
+RUN curl -L -o docker-test.zip https://github.com/bl1231/IonNet/archive/refs/heads/docker-test.zip
 RUN unzip docker-test.zip && \
     mv IonNet-docker-test IonNet && \
     cd IonNet/scripts/scoper_scripts && \
