@@ -20,16 +20,6 @@ RUN git clone https://github.com/rlabduke/reduce.git reduce && \
     cd reduce && \
     make && make install
 
-# Clone and build 'KGS'
-# We are not yet using this version of KGS
-# but we really need to figure it out.
-# RUN git clone https://github.com/ExcitedStates/KGS.git KGS && \
-#     sed -i 's/option(ForceGSL "ForceGSL" OFF)/option(ForceGSL "ForceGSL" ON)/' KGS/src/CMakeLists.txt && \
-#     mkdir KGS/build && \
-#     cd KGS/build && \
-#     cmake -DCMAKE_BUILD_TYPE=Release ../src && \
-#     make -j
-
 # Clone and build 'RNAview'
 WORKDIR /usr/local
 RUN curl -L -o rnaview.zip https://github.com/rcsb/RNAView/archive/refs/heads/master.zip
@@ -58,20 +48,14 @@ COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/BASEPARS /usr/local/RNA
 
 
 # -----------------------------------------------------------------------------
-# Build stage 3 - install NodeJS
+# Build stage 3 - install NodeJS v20
 FROM bilbomd-scoper-install-deps AS bilbomd-scoper-nodejs
-ARG NODE_MAJOR=20
-
-# Install necessary packages, configure NodeSource repository, and install Node.js
 RUN apt-get update && \
-    apt-get install -y gpg curl libjpeg-dev libpng-dev && \
-    mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update && \
+    apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
 
 # -----------------------------------------------------------------------------
 # Build stage 4
@@ -79,8 +63,8 @@ FROM bilbomd-scoper-nodejs AS bilbomd-scoper-pyg
 ARG USER_ID
 ARG GROUP_ID
 
-# Update Conda
-# RUN conda update -n base -c defaults conda
+# Update Conda as per ChatGPT suggestion
+RUN conda install -n base -c defaults conda=24.9.2
 
 # Copy the environment.yml file into the image
 COPY environment.yml /tmp/environment.yml
@@ -97,8 +81,6 @@ RUN groupadd -g $GROUP_ID scoper && \
     useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
     mkdir -p /home/scoper/app && \
     chown -R scoper:scoper /home/scoper
-
-# RUN npm install -g npm@10.8.1
 
 # -----------------------------------------------------------------------------
 # Build stage 4.1111

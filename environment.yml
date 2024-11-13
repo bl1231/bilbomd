@@ -1,7 +1,7 @@
 name: base
 channels:
-  - defaults
   - conda-forge
+  - defaults
 
 dependencies:
   - numpy
