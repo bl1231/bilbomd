@@ -287,16 +287,19 @@ const runFoXS = async (
     // MQjob.log(`gather ${file}`)
   }
 
-  const foxsArgs = [
-    '-p',
-    '--min_c1=0.99',
-    '--max_c1=1.05',
-    '--min_c2=-0.5',
-    '--max_c2=2.0',
-    inputPDB,
-    scoperPDB,
-    inputDAT
-  ]
+  // Conditionally set foxsArgs based on DBjob.fixc1c2
+  const foxsArgs = DBjob.fixc1c2
+    ? [
+        '-p',
+        '--min_c1=1.00',
+        '--max_c1=1.00',
+        '--min_c2=1.00',
+        '--max_c2=1.00',
+        inputPDB,
+        scoperPDB,
+        inputDAT,
+      ]
+    : ['-p', inputPDB, scoperPDB, inputDAT]
 
   return new Promise<void>((resolve, reject) => {
     const foxs = spawn('foxs', foxsArgs, { cwd: foxsAnalysisDir })
