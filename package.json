@@ -1,6 +1,6 @@
 {
   "name": "bilbomd-scoper",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
   "keywords": [],
   "author": "Scott Classen",
