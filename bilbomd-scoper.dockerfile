@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # Build stage 1 - build external dependencies of Scoper
-FROM pytorch/pytorch:latest as bilbomd-scoper-build-deps
+FROM pytorch/pytorch:latest AS bilbomd-scoper-build-deps
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Los_Angeles
 
@@ -10,6 +10,7 @@ RUN apt-get update && \
     git \
     cmake \
     unzip \
+    curl \
     libgsl-dev && \
     rm -rf /var/lib/apt/lists/*
 
