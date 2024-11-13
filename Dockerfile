@@ -119,12 +119,18 @@ RUN unzip docker-test.zip && \
 WORKDIR /home/scoper/app
 
 # Copy package.json and package-lock.json
-COPY --chown=scoper:scoper package*.json ./
+COPY --chown=scoper:scoper package*.json .
 
 # Update NPM and install dependencies
-RUN echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > /home/scoper/.npmrc && \
-    npm install && \
-    unset GITHUB_TOKEN
+RUN echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > /home/scoper/.npmrc
+
+RUN npm ci --no-audit
+
+# Remove .npmrc file for security
+RUN rm /home/scoper/.npmrc
+
+# Clean up the environment variable for security
+RUN unset GITHUB_TOKEN
 
 # Copy application source code
 COPY --chown=scoper:scoper . .
