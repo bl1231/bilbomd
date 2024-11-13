@@ -125,6 +125,9 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.1.2 (11/13/2024)
+  - Allow user to fix c1/c2 values used in the `multifoxs_combination` step
+  - Update progress in top level Mongo Job entry
 - 1.0.6
   - Peg `pyg` at version 2.4.0
   - Bump `nodejs` from 20.12.2 to 20.15.0
