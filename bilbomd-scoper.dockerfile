@@ -43,7 +43,7 @@ RUN unzip rnaview.zip && \
 
 # -----------------------------------------------------------------------------
 # Build stage 2 - install the build artifacts into a clean image
-FROM pytorch/pytorch:latest as bilbomd-scoper-install-deps
+FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
 # Update and install necessary packages
 RUN apt-get update && apt-get install -y wget curl unzip git libgsl-dev
 # Copy reduce
@@ -80,7 +80,7 @@ ARG USER_ID
 ARG GROUP_ID
 
 # Update Conda
-RUN conda update -n base -c defaults conda
+# RUN conda update -n base -c defaults conda
 
 # Copy the environment.yml file into the image
 COPY environment.yml /tmp/environment.yml
@@ -98,7 +98,7 @@ RUN groupadd -g $GROUP_ID scoper && \
     mkdir -p /home/scoper/app && \
     chown -R scoper:scoper /home/scoper
 
-RUN npm install -g npm@10.8.1
+# RUN npm install -g npm@10.8.1
 
 # -----------------------------------------------------------------------------
 # Build stage 4.1111
