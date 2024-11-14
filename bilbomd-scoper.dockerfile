@@ -18,7 +18,8 @@ RUN apt-get update && \
 WORKDIR /usr/local/src
 RUN git clone https://github.com/rlabduke/reduce.git reduce && \
     cd reduce && \
-    make && make install
+    make && make install && \
+    rm -rf /usr/local/src/reduce
 
 # Clone and build 'RNAview'
 WORKDIR /usr/local
@@ -28,7 +29,8 @@ RUN curl -L -o rnaview.zip https://github.com/rcsb/RNAView/archive/refs/heads/ma
 RUN unzip rnaview.zip && \
     mv RNAView-master RNAView && \
     cd RNAView && \
-    make
+    make && \
+    rm /usr/local/rnaview.zip
 
 
 # -----------------------------------------------------------------------------
@@ -41,9 +43,6 @@ RUN apt-get update && \
 # Copy reduce
 COPY --from=bilbomd-scoper-build-deps /usr/local/bin/reduce /usr/local/bin/
 COPY --from=bilbomd-scoper-build-deps /usr/local/reduce_wwPDB_het_dict.txt /usr/local/
-# Copy kgs_explore
-# COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/build/kgs_explore /usr/local/bin/
-# COPY --from=bilbomd-scoper-build-deps /usr/local/src/KGS/scripts/kgs_prepare.py /usr/local/bin/
 # Copy RNAView binary
 COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/bin/rnaview /usr/local/bin/
 COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
@@ -67,6 +66,7 @@ ARG GROUP_ID
 
 # Update Conda as per ChatGPT suggestion
 RUN conda install -n base -c defaults conda=24.9.2
+RUN conda config --add channels conda-forge
 
 # Copy the environment.yml file into the image
 COPY environment.yml /tmp/environment.yml
@@ -100,7 +100,8 @@ RUN curl -L -o docker-test.zip https://github.com/bl1231/IonNet/archive/refs/hea
 RUN unzip docker-test.zip && \
     mv IonNet-docker-test IonNet && \
     cd IonNet/scripts/scoper_scripts && \
-    tar xvf KGSrna.tar
+    tar xvf KGSrna.tar && \
+    rm KGSrna.tar
 
 # Change back to the app directory
 WORKDIR /home/scoper/app
