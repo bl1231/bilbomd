@@ -1,6 +1,8 @@
 # -----------------------------------------------------------------------------
 # Build stage 1 - build external dependencies of Scoper
-FROM pytorch/pytorch:latest AS bilbomd-scoper-build-deps
+# FROM pytorch/pytorch:latest AS bilbomd-scoper-build-deps
+# FROM nvidia/cuda:11.8.0-base-ubuntu22.04 AS bilbomd-scoper-build-deps
+FROM python:3.10-slim AS bilbomd-scoper-build-deps
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Los_Angeles
 
@@ -35,14 +37,32 @@ RUN unzip rnaview.zip && \
 
 # -----------------------------------------------------------------------------
 # Build stage 2 - install the build artifacts into a clean image
-FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
+# FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
+FROM python:3.10-slim AS bilbomd-scoper-install-deps
+# FROM nvidia/cuda:11.8.0-base-ubuntu22.04 AS bilbomd-scoper-install-deps
+
 # Update and install necessary packages
 RUN apt-get update && \
     apt-get install -y wget curl unzip git libgsl-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Install Miniforge (lightweight Conda) for Conda or Mamba
+RUN curl -L -o /tmp/miniforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh && \
+    bash /tmp/miniforge.sh -b -p /opt/conda && \
+    rm /tmp/miniforge.sh && \
+    /opt/conda/bin/conda clean --all --yes
+
+# Add Conda/Mamba to PATH
+ENV PATH=/opt/conda/bin:$PATH
+
+# Install Mamba for faster dependency resolution (optional)
+RUN conda install -n base -c conda-forge mamba && \
+    conda clean --all --yes
+
 # Copy reduce
 COPY --from=bilbomd-scoper-build-deps /usr/local/bin/reduce /usr/local/bin/
 COPY --from=bilbomd-scoper-build-deps /usr/local/reduce_wwPDB_het_dict.txt /usr/local/
+
 # Copy RNAView binary
 COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/bin/rnaview /usr/local/bin/
 COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
@@ -64,9 +84,18 @@ FROM bilbomd-scoper-nodejs AS bilbomd-scoper-pyg
 ARG USER_ID
 ARG GROUP_ID
 
+# Add Conda/Mamba to PATH
+ENV PATH=/opt/conda/bin:$PATH
+
+# Install PyTorch if not building from pytorch/pytorch:latest
+RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
+
 # Update Conda as per ChatGPT suggestion
 RUN conda install -n base -c defaults conda=24.9.2
+RUN conda config --add channels pyg
+RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
+RUN conda config --add channels default
 
 # Copy the environment.yml file into the image
 COPY environment.yml /tmp/environment.yml
