@@ -125,6 +125,9 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.2.0 (11/14/2024)
+  - GitHub actions now builds docker image automatically
+  - Docker image built on python:3.10-slim to reduce size
 - 1.1.2 (11/13/2024)
   - Allow user to fix c1/c2 values used in the `multifoxs_combination` step
   - Update progress in top level Mongo Job entry
