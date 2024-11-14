@@ -12,7 +12,7 @@ RUN apt-get update && \
     unzip \
     curl \
     libgsl-dev && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Clone and build 'reduce'
 WORKDIR /usr/local/src
@@ -35,7 +35,9 @@ RUN unzip rnaview.zip && \
 # Build stage 2 - install the build artifacts into a clean image
 FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
 # Update and install necessary packages
-RUN apt-get update && apt-get install -y wget curl unzip git libgsl-dev
+RUN apt-get update && \
+    apt-get install -y wget curl unzip git libgsl-dev && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 # Copy reduce
 COPY --from=bilbomd-scoper-build-deps /usr/local/bin/reduce /usr/local/bin/
 COPY --from=bilbomd-scoper-build-deps /usr/local/reduce_wwPDB_het_dict.txt /usr/local/
@@ -55,7 +57,7 @@ RUN apt-get update && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # -----------------------------------------------------------------------------
 # Build stage 4
@@ -75,7 +77,8 @@ RUN conda env update -f /tmp/environment.yml && \
     conda install -y torchmetrics=0.7.2 -c conda-forge && \
     conda install -y tabulate && \
     conda install -y imp=2.19.0 && \
-    pip install wandb
+    pip install wandb && \
+    conda clean --all --yes
 
 RUN groupadd -g $GROUP_ID scoper && \
     useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
