@@ -164,6 +164,38 @@ services:
       start_period: 10s
 
   # ------------------------------------------------------------------------------------------------
+  #
+  scoper:
+    image: bl1231/bilbomd-scoper:test
+    build:
+      context: ./bilbomd-scoper
+      args:
+        USER_ID: ${UID:-1001}
+        GROUP_ID: ${GID:-1001}
+        NODE_MAJOR: 20
+        GITHUB_TOKEN: $GITHUB_TOKEN
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "12"
+    restart: no
+    env_file:
+      - .env.local
+    networks:
+      - app-network
+    volumes:
+      - ./bilbomd-scoper:/home/scoper/app
+      - ./uploads-dev:/bilbomd/uploads
+      - ./logs/scoper:/bilbomd/logs
+    user: "${UID:-1001}:${GID:-1001}"
+    command: [ "npm", "run", "dev" ]
+    depends_on:
+      - mongodb
+      - redis
+      - backend
+
+  # ------------------------------------------------------------------------------------------------
   # This will build the bilbomd-ui front end application. However, you are more likely to want
   # to develop the frontend code in VSCode by running "npm run dev" in the bilbomd-ui directory.
   #
