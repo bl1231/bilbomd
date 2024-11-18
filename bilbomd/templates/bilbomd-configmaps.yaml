@@ -30,3 +30,8 @@ data:
   PREPARE_SLURM_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-bilbomd-slurm-file.sh"
   CP2CFS_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/copy-back-to-cfs.sh"
   ENABLE_BILBOMD_SANS: "false"
+  CHARMM_TOPOLOGY: /app/scripts/bilbomd_top_par_files.str
+  CHARMM_TEMPLATES: /app/build/templates/bilbomd
+  CHARMM: /usr/local/bin/charmm
+  FOXS: /usr/bin/foxs
+  MULTIFOXS: /usr/bin/multi_foxs

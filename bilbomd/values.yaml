@@ -14,7 +14,7 @@ mongo:
   name: mongo
   image:
     repository: mongo
-    tag: 7.0.14
+    tag: 7.0.15
     pullPolicy: IfNotPresent
     secret: registry-nersc
   config:
