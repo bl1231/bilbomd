@@ -30,7 +30,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:7.0.14
+    image: mongo:7.0.15
     restart: always
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
@@ -51,7 +51,7 @@ services:
       - app-network
 
   redis:
-    image: redis:7.4.0
+    image: redis:7.4.1
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -68,7 +68,7 @@ services:
       - app-network
 
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend/bilbomd-backend:1.12.6
+    image: ghcr.io/bl1231/bilbomd-backend:1.13.2
     pull_policy: always
     deploy:
       resources:
@@ -95,7 +95,7 @@ services:
       start_period: 10s
 
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker/bilbomd-worker:1.9.1
+    image: ghcr.io/bl1231/bilbomd-worker:1.11.2
     pull_policy: always
     deploy:
       replicas: 2
@@ -121,14 +121,15 @@ services:
       start_period: 10s
 
   scoper:
-    image: bl1231/bilbomd-scoper:1.0.6
-    build:
-      context: ./bilbomd-scoper
-      args:
-        USER_ID: 62704
-        GROUP_ID: 1001
-        NODE_MAJOR: 20
-        GITHUB_TOKEN: $GITHUB_TOKEN
+    image: ghcr.io/bl1231/bilbomd-scoper:1.2.0
+    pull_policy: always
+    # build:
+    #   context: ./bilbomd-scoper
+    #   args:
+    #     USER_ID: 62704
+    #     GROUP_ID: 1001
+    #     NODE_MAJOR: 20
+    #     GITHUB_TOKEN: $GITHUB_TOKEN
     deploy:
       replicas: 1
       resources:
@@ -147,7 +148,7 @@ services:
       - redis
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.13.1
+    image: ghcr.io/bl1231/bilbomd-ui:1.13.9
     pull_policy: always
     env_file:
       - .env.prod
