@@ -39,7 +39,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:latest
+    image: mongo:7.0.14
     pull_policy: missing
     restart: always
     healthcheck:
@@ -88,7 +88,6 @@ services:
     image: bl1231/bilbomd-backend:latest
     build:
       context: ./bilbomd-backend
-      # dockerfile: bilbomd-backend-micromamba.dockerfile # testing micromamba
       dockerfile: bilbomd-backend.dockerfile # uses miniconda3
       args:
         USER_ID: ${UID:-1001}
@@ -127,10 +126,9 @@ services:
   #
   worker:
     image: bl1231/bilbomd-worker:latest
-    platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
+    # platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
     build:
       context: ./bilbomd-worker
-      # dockerfile: bilbomd-worker-micromamba.dockerfile # testing micromamba
       dockerfile: bilbomd-worker.dockerfile # Uses miniconda3
       args:
         USER_ID: ${UID:-1001}
@@ -144,7 +142,7 @@ services:
       - app-network
     volumes:
       # These are bind mounts that are used for local development
-      # - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
+      - ./bilbomd-worker:/app # comment out to use beackend code in Docker image
       - ./uploads-dev:/bilbomd/uploads
       # - ./secrets:/secrets
       - ./logs/worker:/bilbomd/logs
@@ -165,35 +163,35 @@ services:
 
   # ------------------------------------------------------------------------------------------------
   #
-  scoper:
-    image: bl1231/bilbomd-scoper:test
-    build:
-      context: ./bilbomd-scoper
-      args:
-        USER_ID: ${UID:-1001}
-        GROUP_ID: ${GID:-1001}
-        NODE_MAJOR: 20
-        GITHUB_TOKEN: $GITHUB_TOKEN
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: "12"
-    restart: no
-    env_file:
-      - .env.local
-    networks:
-      - app-network
-    volumes:
-      - ./bilbomd-scoper:/home/scoper/app
-      - ./uploads-dev:/bilbomd/uploads
-      - ./logs/scoper:/bilbomd/logs
-    user: "${UID:-1001}:${GID:-1001}"
-    command: [ "npm", "run", "dev" ]
-    depends_on:
-      - mongodb
-      - redis
-      - backend
+  # scoper:
+  #   image: bl1231/bilbomd-scoper:test
+  #   build:
+  #     context: ./bilbomd-scoper
+  #     args:
+  #       USER_ID: ${UID:-1001}
+  #       GROUP_ID: ${GID:-1001}
+  #       NODE_MAJOR: 20
+  #       GITHUB_TOKEN: $GITHUB_TOKEN
+  #   deploy:
+  #     replicas: 1
+  #     resources:
+  #       limits:
+  #         cpus: "12"
+  #   restart: no
+  #   env_file:
+  #     - .env.local
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./bilbomd-scoper:/home/scoper/app
+  #     - ./uploads-dev:/bilbomd/uploads
+  #     - ./logs/scoper:/bilbomd/logs
+  #   user: "${UID:-1001}:${GID:-1001}"
+  #   command: [ "npm", "run", "dev" ]
+  #   depends_on:
+  #     - mongodb
+  #     - redis
+  #     - backend
 
   # ------------------------------------------------------------------------------------------------
   # This will build the bilbomd-ui front end application. However, you are more likely to want
