@@ -1,9 +1,9 @@
 import * as dotenv from 'dotenv'
-import { logger } from './helpers/loggers'
-import { connectDB } from './helpers/db'
+import { logger } from './helpers/loggers.js'
+import { connectDB } from './helpers/db.js'
 import { Job, Worker, WorkerOptions } from 'bullmq'
-import { BilboMDScoperJobData } from './bullmq.jobs'
-import { processBilboMDScoperJob } from './process.bilbomdscoper'
+import { BilboMDScoperJobData } from './bullmq.jobs.js'
+import { processBilboMDScoperJob } from './process.bilbomdscoper.js'
 
 dotenv.config()
 
