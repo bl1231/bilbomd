@@ -125,6 +125,11 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.2.1 (12/05/2024)
+  - Bump NodeJS to v22
+  - Update to many npm packages
+  - Migrate to new eslint v9
+  - Migrate from CommonJS to ES
 - 1.2.0 (11/14/2024)
   - GitHub actions now builds docker image automatically
   - Docker image built on python:3.10-slim to reduce size
