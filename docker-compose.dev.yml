@@ -143,7 +143,7 @@ services:
   # ---------------------------------------------------------------------------
   #
   scoper:
-    image: ghcr.io/bl1231/bilbomd-scoper:1.2.0
+    image: ghcr.io/bl1231/bilbomd-scoper:1.2.1
     pull_policy: always
     # build:
     #   context: ./bilbomd-scoper
@@ -174,7 +174,7 @@ services:
   # ---------------------------------------------------------------------------
   #
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.15.2
+    image: ghcr.io/bl1231/bilbomd-ui:1.15.3
     pull_policy: always
     env_file:
       - .env.dev
