@@ -69,11 +69,11 @@ COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/BASEPARS /usr/local/RNA
 
 
 # -----------------------------------------------------------------------------
-# Build stage 3 - install NodeJS v20
+# Build stage 3 - install NodeJS v22
 FROM bilbomd-scoper-install-deps AS bilbomd-scoper-nodejs
 RUN apt-get update && \
     apt-get install -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -141,7 +141,7 @@ COPY --chown=scoper:scoper package*.json .
 # Update NPM and install dependencies
 RUN echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > /home/scoper/.npmrc
 
-RUN npm ci --no-audit
+RUN npm ci
 
 # Remove .npmrc file for security
 RUN rm /home/scoper/.npmrc
