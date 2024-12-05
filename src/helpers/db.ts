@@ -1,4 +1,4 @@
-import { logger } from './loggers'
+import { logger } from './loggers.js'
 import mongoose from 'mongoose'
 
 const {

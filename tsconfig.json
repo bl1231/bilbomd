@@ -3,18 +3,19 @@
     /* Language and Environment */
     "target": "ESNext" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
     /* Modules */
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "baseUrl": "./src" /* Specify the base directory to resolve non-relative module names. */,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "baseUrl": "./src",
+    "rootDir": "src",
     "paths": {
       "*": ["*"],
       "services/*": ["services/*"]
     },
-    "allowJs": false /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */,
+    "allowJs": true /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */,
     "checkJs": false /* Enable error reporting in type-checked JavaScript files. */,
     "outDir": "build" /* Specify an output folder for all emitted files. */,
     "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
-    "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
+    "forceConsistentCasingInFileNames": true,
     /* Type Checking */
     "strict": true /* Enable all strict type-checking options. */,
     /* Completeness */

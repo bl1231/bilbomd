@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer'
 import hbs from 'nodemailer-express-handlebars'
 import path from 'path'
-import { logger } from './loggers'
+import { logger } from './loggers.js'
 
 const user = process.env.SEND_EMAIL_USER
 const name = process.env.BILBOMD_FQDN

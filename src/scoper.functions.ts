@@ -1,11 +1,11 @@
-import { logger } from './helpers/loggers'
-import { config } from './config/config'
+import { logger } from './helpers/loggers.js'
+import { config } from './config/config.js'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
 import { IJob, IBilboMDScoperJob, IUser } from '@bl1231/bilbomd-mongodb-schema'
-import { sendJobCompleteEmail } from './helpers/mailer'
+import { sendJobCompleteEmail } from './helpers/mailer.js'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 
@@ -16,12 +16,10 @@ const IONNET_DIR = process.env.IONNET_DIR ?? '/home/scoper/IonNet'
 const SCOPER_KGS_CONFORMERS = process.env.SCOPER_KGS_CONFORMERS ?? '111'
 const BILBOMD_URL = process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
 
-const handleError = async (
-  error: Error | unknown,
-  MQjob: BullMQJob,
-  DBjob: IJob,
-) => {
-  const errorMsg = (error instanceof Error ? error.message : String(error))
+type JobStatusEnum = 'Submitted' | 'Pending' | 'Running' | 'Completed' | 'Error'
+
+const handleError = async (error: Error | unknown, MQjob: BullMQJob, DBjob: IJob) => {
+  const errorMsg = error instanceof Error ? error.message : String(error)
 
   // Updates primary status in MongoDB
   await updateJobStatus(DBjob, 'Error')
@@ -56,7 +54,7 @@ const handleError = async (
   throw new Error('BilboMD failed')
 }
 
-const updateJobStatus = async (job: IJob, status: string): Promise<void> => {
+const updateJobStatus = async (job: IJob, status: JobStatusEnum): Promise<void> => {
   job.status = status
   await job.save()
 }
@@ -109,9 +107,9 @@ const spawnScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<
   ]
   // Conditionally add the fix-multifox-c1c2 flag
   if (DBjob.fixc1c2) {
-    args.push('--fix-multifox-c1c2');
+    args.push('--fix-multifox-c1c2')
   } else {
-    args.push('--no-fix-multifox-c1c2');
+    args.push('--no-fix-multifox-c1c2')
   }
 
   return new Promise<void>((resolve, reject) => {
@@ -136,23 +134,29 @@ const spawnScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<
       logStream.end()
       errorStream.end()
       try {
-        await processExitLogic(code, outputDir, logFile, MQjob);
-        resolve();
-      } catch (error: unknown) {  // Explicitly declare error as unknown
+        await processExitLogic(code, outputDir, logFile, MQjob)
+        resolve()
+      } catch (error: unknown) {
+        // Explicitly declare error as unknown
         if (error instanceof Error) {
-          logger.error(`Scoper - did not complete successfully: ${error.message}`);
-          reject(error);
+          logger.error(`Scoper - did not complete successfully: ${error.message}`)
+          reject(error)
         } else {
           // Handle the case where the error might not be an Error instance
-          logger.error(`Scoper - An unexpected error type was thrown`);
-          reject(new Error('Scoper - An unexpected error occurred'));
+          logger.error(`Scoper - An unexpected error type was thrown`)
+          reject(new Error('Scoper - An unexpected error occurred'))
         }
       }
     })
   })
 }
 
-const processExitLogic = async (code: number, outputDir: string, logFile: string, MQjob: BullMQJob): Promise<void> => {
+const processExitLogic = async (
+  code: number,
+  outputDir: string,
+  logFile: string,
+  MQjob: BullMQJob
+): Promise<void> => {
   if (code === 0) {
     logger.info('Scoper -  exited successfully. Processing log file...')
     MQjob.log('Scoper -  successfully')
@@ -167,10 +171,10 @@ const processExitLogic = async (code: number, outputDir: string, logFile: string
       }
     } catch (error) {
       logger.error(`Scoper - Error processing log file: ${error}`)
-      throw error; // Changed to throw to allow the caller to handle rejections.
+      throw error // Changed to throw to allow the caller to handle rejections.
     }
   } else {
-    throw new Error(`Scoper - mgclassifierv2.py script exited with code ${code}`);
+    throw new Error(`Scoper - mgclassifierv2.py script exited with code ${code}`)
   }
 }
 
@@ -297,7 +301,7 @@ const runFoXS = async (
         '--max_c2=1.00',
         inputPDB,
         scoperPDB,
-        inputDAT,
+        inputDAT
       ]
     : ['-p', inputPDB, scoperPDB, inputDAT]
 

@@ -1,10 +1,10 @@
-import { logger } from './helpers/loggers'
+import { logger } from './helpers/loggers.js'
 import { Job as BullMQJob } from 'bullmq'
 import { IBilboMDScoperJob, BilboMdScoperJob } from '@bl1231/bilbomd-mongodb-schema'
 import { User } from '@bl1231/bilbomd-mongodb-schema'
 import { sendJobCompleteEmail } from './helpers/mailer.js'
 import { runScoper, prepareScoperResults } from './scoper.functions.js'
-import { config } from './config/config'
+import { config } from './config/config.js'
 
 const bilbomdUrl: string = process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
 
@@ -96,7 +96,6 @@ const processBilboMDScoperJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(80)
   foundJob.progress = 80
   await foundJob.save()
-
 
   // Combine the RNA and Mg PDB files
   await MQjob.log('start gather results')
