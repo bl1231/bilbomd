@@ -3,8 +3,22 @@
   "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
   "version": "1.2.0",
   "main": "scoper.js",
-  "author": "Scott Classen",
   "type": "module",
+  "author": {
+    "name": "Scott Classen",
+    "email": "sclassen@lbl.gov"
+  },
+  "contributors": [
+    {
+      "name": "Edan Patt"
+    },
+    {
+      "name": "Michal Hammel"
+    },
+    {
+      "name": "Dina Schneidman"
+    }
+  ],
   "scripts": {
     "clean": "rimraf build/*",
     "build": "npm-run-all clean copy-assets lint tsc",
