@@ -29,6 +29,7 @@ networks:
     driver: bridge
 
 services:
+  # ---------------------------------------------------------------------------
   mongodb:
     image: mongo:7.0.15
     pull_policy: always
@@ -48,6 +49,7 @@ services:
     networks:
       - app-network-dev
 
+  # ---------------------------------------------------------------------------
   redis:
     image: redis:7.4.1
     pull_policy: always
@@ -69,9 +71,8 @@ services:
       - app-network-dev
 
   # ---------------------------------------------------------------------------
-  #
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:1.16.0
+    image: ghcr.io/bl1231/bilbomd-backend:1.16.1
     pull_policy: always
     deploy:
       resources:
@@ -105,9 +106,8 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
-  #
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:1.12.4
+    image: ghcr.io/bl1231/bilbomd-worker:1.12.5
     pull_policy: always
     deploy:
       replicas: 1
@@ -141,7 +141,6 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
-  #
   scoper:
     image: ghcr.io/bl1231/bilbomd-scoper:1.2.1
     pull_policy: always
@@ -172,9 +171,8 @@ services:
       - backend
 
   # ---------------------------------------------------------------------------
-  #
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.17.0
+    image: ghcr.io/bl1231/bilbomd-ui:1.17.4
     pull_policy: always
     env_file:
       - .env.dev
