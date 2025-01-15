@@ -20,6 +20,7 @@ data:
   DATA_VOL: /bilbomd/uploads
   NODE_ENV: "{{ .Values.env.NODE_ENV }}"
   BILBOMD_ENV: "{{ .Values.env.BILBOMD_ENV }}"
+  BILBOMD_DEPLOY_SITE: nersc
   USE_NERSC: "true"
   NERSC_PROJECT: "m4659"
   SFAPI_URL: https://api.nersc.gov/api/v1.2
