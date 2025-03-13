@@ -23,6 +23,16 @@ uploads: "bilbomd/prod/uploads"
 
 working_dir: "bilbomd/prod/"
 
+mongo:
+  name: mongo
+  image:
+    repository: mongo
+    tag: 7.0.15
+    pullPolicy: IfNotPresent
+    secret: registry-nersc
+  config:
+    MONGO_INITDB_ROOT_USERNAME: "bilbomd-backend-user"
+
 redis:
   name: redis
   image:

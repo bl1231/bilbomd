@@ -10,12 +10,3 @@ pscratch: /pscratch/sd/s/sclassen
 sfapi:
   token_expires: "2025-04-01 13:03"
 
-mongo:
-  name: mongo
-  image:
-    repository: mongo
-    tag: 7.0.15
-    pullPolicy: IfNotPresent
-    secret: registry-nersc
-  config:
-    MONGO_INITDB_ROOT_USERNAME: "bilbomd-backend-user"
