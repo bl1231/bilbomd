@@ -134,6 +134,13 @@ The production instructions are primarily desinged for deploying on `hyperion` a
    - `-p bilbomd`: Sets the project name to differentiate Docker objects.
    - `build`: Instructs Docker Compose to build all images for defined services.
 
+We are now building all Docker images automatically using GitHub actions so there really is no reason to build locally. Instead you may need to manually pull the images... I'm not entirely sure this is necessary, but just trying to bring the service up with `up -d` did not automatically pull the needed images.
+
+   ```bash
+   docker compose -f docker-compose.yml -p bilbomd pull
+   ```
+
+
 2. **Starting the Production Instance**:
 
    ```bash

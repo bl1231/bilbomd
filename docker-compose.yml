@@ -2,26 +2,26 @@
 # Use this Docker compose file for production deployment to Hyperion.
 # You may need to create the following volumes before running this file:
 #
-#  docker volume create mongodb
-#  docker volume create redis-cache
-#  docker volume create uploads
-#  docker volume create logs
+#  docker volume create bilbomd-mongodb
+#  docker volume create bilbomd-redis-cache
+#  docker volume create bilbomd-uploads
+#  docker volume create bilbomd-logs
 #
 # You will also need to copy .env.example to .env.prod and maybe adjust some
 # of the values in the .env.prod file.
 # -----------------------------------------------------------------------------
 volumes:
   mongodb:
-    name: mongodb
+    name: bilbomd-mongodb
     external: true
   redis-cache:
-    name: redis-cache
+    name: bilbomd-redis-cache
     external: true
   uploads:
-    name: uploads
+    name: bilbomd-uploads
     external: true
   logs:
-    name: logs
+    name: bilbomd-logs
     external: true
 
 networks:
@@ -48,6 +48,7 @@ services:
       - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
     volumes:
       - mongodb:/data/db
+      - /backups/databases/bilbomd:/backups
     networks:
       - app-network
 
@@ -61,6 +62,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    env_file:
+      - .env.prod
     ports:
       - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
     command: redis-server --save 20 1 --loglevel warning
@@ -71,7 +74,7 @@ services:
 
   # ---------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:1.16.1
+    image: ghcr.io/bl1231/bilbomd-backend:1.16.3
     pull_policy: always
     deploy:
       resources:
@@ -154,7 +157,7 @@ services:
 
   # ---------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.17.4
+    image: ghcr.io/bl1231/bilbomd-ui:1.17.7
     pull_policy: always
     env_file:
       - .env.prod
