@@ -148,13 +148,13 @@ kubectl apply -f helm-secrets/ui-tls-secrets.yaml
 ### Development
 
 ```bash
-helm install bilbomd-nersc-dev ./bilbomd -f ./bilbomd/values-dev.yaml
+helm install bilbomd-nersc-dev ./helm -f ./helm/values-dev.yaml
 ```
 
 ### Production
 
 ```bash
-helm install bilbomd-nersc-prod ./bilbomd -f ./bilbomd/values-prod.yaml
+helm install bilbomd-nersc-prod ./helm -f ./helm/values-prod.yaml
 ```
 
 ## Upgrade BilboMD via Helm chart
@@ -183,13 +183,13 @@ CURRENT   NAME           CLUSTER       AUTHINFO      NAMESPACE
 ### Development
 
 ```bash
-helm upgrade bilbomd-nersc-dev ./bilbomd -f ./bilbomd/values-dev.yaml
+helm upgrade bilbomd-nersc-dev ./helm -f ./helm/values-dev.yaml
 ```
 
 ### Production
 
 ```bash
-helm upgrade bilbomd-nersc-prod ./bilbomd -f ./bilbomd/values-prod.yaml
+helm upgrade bilbomd-nersc-prod ./helm -f ./helm/values-prod.yaml
 ```
 
 ## Uninstall BilboMD via Helm chart
