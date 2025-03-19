@@ -126,7 +126,7 @@ services:
   #
   worker:
     image: bl1231/bilbomd-worker:latest
-    # platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
+    platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
     build:
       context: ./bilbomd-worker
       dockerfile: bilbomd-worker.dockerfile # Uses miniconda3
