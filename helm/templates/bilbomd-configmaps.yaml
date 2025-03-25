@@ -32,6 +32,7 @@ data:
   CP2CFS_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/copy-back-to-cfs.sh"
   ENABLE_BILBOMD_SANS: "false"
   ENABLE_BILBOMD_MULTI: "false"
+  ENABLE_HOME_PAGE_ALERT: "false"
   CHARMM_TOPOLOGY: /app/scripts/bilbomd_top_par_files.str
   CHARMM_TEMPLATES: /app/build/templates/bilbomd
   CHARMM: /usr/local/bin/charmm
