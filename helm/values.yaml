@@ -8,5 +8,5 @@ cfs_dir: /global/cfs/cdirs
 pscratch: /pscratch/sd/s/sclassen
 
 sfapi:
-  token_expires: "2025-04-01 13:03"
+  token_expires: "2025-04-28 15:27"
 
