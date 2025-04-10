@@ -123,3 +123,4 @@ logs-dev
 *.key
 *.pem
 *.zip
+.qodo
