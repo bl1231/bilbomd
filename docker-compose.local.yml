@@ -65,7 +65,7 @@ services:
     pull_policy: missing
     restart: always
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -111,12 +111,12 @@ services:
     networks:
       - app-network
     user: "${UID:-1001}:${GID:-1001}"
-    command: [ "npm", "run", "dev" ]
+    command: ["npm", "run", "dev"]
     depends_on:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3500/healthcheck" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:3500/healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -126,7 +126,7 @@ services:
   #
   worker:
     image: bl1231/bilbomd-worker:latest
-    platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
+    # platform: linux/amd64 # This is needed for so that the image can be run Pepsi-SANS on M3 Mac
     build:
       context: ./bilbomd-worker
       dockerfile: bilbomd-worker.dockerfile # Uses miniconda3
@@ -150,12 +150,12 @@ services:
       # - uploads:/bilbomd/uploads
       # - logs:/bilbomd/logs
     user: "${UID:-1001}:${GID:-1001}"
-    command: [ "npm", "run", "dev" ]
+    command: ["npm", "run", "dev"]
     depends_on:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/config"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -218,7 +218,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost/version-info" ]
+      test: ["CMD", "curl", "--fail", "http://localhost/version-info"]
       interval: 30s
       timeout: 10s
       retries: 3
