@@ -52,7 +52,6 @@ ui:
     tag: 1.18.3
     pullPolicy: Always
     secret: ghcr
-  mode: "production"
 
 backend:
   name: backend
