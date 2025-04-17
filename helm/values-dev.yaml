@@ -49,7 +49,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: 1.18.0
+    tag: 1.18.3
     pullPolicy: Always
     secret: ghcr
 
