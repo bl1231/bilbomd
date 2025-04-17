@@ -125,6 +125,8 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.2.2 (4/17/2025)
+  - Fix bug with processing filenames having multiple `.`s
 - 1.2.1 (12/05/2024)
   - Bump NodeJS to v22
   - Update to many npm packages
