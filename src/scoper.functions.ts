@@ -446,7 +446,9 @@ const prepareResultsArchiveFile = async (
   }
 
   try {
-    await execPromise(`tar czvf results.tar.gz results`, { cwd: outputDir })
+    const uuidPrefix = DBjob.uuid.split('-')[0]
+    const archiveName = `results-${uuidPrefix}.tar.gz`
+    await execPromise(`tar czvf ${archiveName} results`, { cwd: outputDir })
   } catch (err) {
     MQjob.log(`tar failed: ${err}`)
     logger.error(`Failed to create results.tar.gz: ${err}`)
