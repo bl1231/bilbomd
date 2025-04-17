@@ -451,8 +451,7 @@ const prepareResultsArchiveFile = async (
     await execPromise(`tar czvf ${archiveName} results`, { cwd: outputDir })
   } catch (err) {
     MQjob.log(`tar failed: ${err}`)
-    logger.error(`Failed to create results.tar.gz: ${err}`)
-  }
+    logger.error(`Failed to create ${archiveName}: ${err}`)
 }
 
 const readDirNameFromFile = async (filePath: string): Promise<string | null> => {
