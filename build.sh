@@ -1,13 +1,48 @@
 #!/bin/bash
 
-ARCH=$(uname -m)
+set -e
 
-# Default to linux/amd64 for Mac M1/M2/M3
+# Detect architecture and set platform
+ARCH=$(uname -m)
 if [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; then
-  export DOCKER_PLATFORM=linux/amd64
+  PLATFORM="linux/amd64"
 else
-  export DOCKER_PLATFORM=linux/${ARCH}
+  PLATFORM="linux/${ARCH}"
 fi
 
-# Now run Docker Compose
-docker compose --env-file .env.local -f docker-compose.local.yml -p bilbomd build
+# Determine which environment to use
+ENV=""
+COMPOSE_FILE=""
+PROJECT_NAME=""
+
+case "$1" in
+  local)
+    ENV=".env.local"
+    COMPOSE_FILE="docker-compose.local.yml"
+    PROJECT_NAME="bilbomd-local"
+    ;;
+  dev)
+    ENV=".env.dev"
+    COMPOSE_FILE="docker-compose.dev.yml"
+    PROJECT_NAME="bilbomd-dev"
+    ;;
+  *)
+    echo "❌ Usage: $0 [local|dev]"
+    exit 1
+    ;;
+esac
+
+# Update or append DOCKER_PLATFORM in the selected .env file
+if grep -q '^DOCKER_PLATFORM=' "$ENV"; then
+  sed -i.bak "s|^DOCKER_PLATFORM=.*|DOCKER_PLATFORM=${PLATFORM}|" "$ENV"
+else
+  echo "DOCKER_PLATFORM=${PLATFORM}" >> "$ENV"
+fi
+
+echo "📦 Building with $ENV ($PLATFORM)..."
+
+docker compose \
+  --env-file "$ENV" \
+  -f "$COMPOSE_FILE" \
+  -p "$PROJECT_NAME" \
+  build
