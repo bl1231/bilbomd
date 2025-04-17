@@ -30,6 +30,9 @@ const cleanupJob = async (MQjob: BullMQJob, DBJob: IBilboMDScoperJob) => {
 
   // Send job completion email and log the notification
   if (config.sendEmailNotifications) {
+    if (typeof DBJob.user !== 'object' || !('email' in DBJob.user)) {
+        throw new Error(`User details are not populated for job: ${DBJob.id}`);
+    }
     sendJobCompleteEmail(DBJob.user.email, bilbomdUrl, DBJob.id, DBJob.title, false)
     logger.info(`email notification sent to ${DBJob.user.email}`)
     await MQjob.log(`email notification sent to ${DBJob.user.email}`)
