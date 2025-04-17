@@ -404,34 +404,55 @@ const prepareResultsArchiveFile = async (
   const outputDir = path.join(DATA_VOL, DBjob.uuid)
   const outputFile = path.join(outputDir, `scoper_combined_newpdb_${pdbNumber}.pdb`)
   const foxsAnalysisDir = path.join(DATA_VOL, DBjob.uuid, 'foxs_analysis')
-  // Copy the final combined PDB file.
-  await execPromise(`cp ${outputFile} .`, { cwd: resultsDir })
-  MQjob.log(`gather scoper_combined_newpdb_${pdbNumber}.pdb`)
+  // Copy the final combined PDB file using fs.copyFile with safety checks.
+  const safeCopy = async (src: string, destDir: string, label: string) => {
+    try {
+      const dest = path.join(destDir, path.basename(src))
+      if (await fileExists(src)) {
+        await fs.copyFile(src, dest)
+        MQjob.log(`gather ${label}`)
+      } else {
+        MQjob.log(`missing ${label}, skipping`)
+        logger.warn(`Missing file: ${label}`)
+      }
+    } catch (err) {
+      MQjob.log(`failed to copy ${label}: ${err}`)
+      logger.error(`Could not copy ${label}: ${err}`)
+    }
+  }
+  await safeCopy(outputFile, resultsDir, `scoper_combined_newpdb_${pdbNumber}.pdb`)
 
   // Copy the original uploaded pdb and dat files
-  const coordFilesToCopy = [DBjob.pdb_file, DBjob.data_file]
-  for (const file of coordFilesToCopy) {
-    await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: resultsDir })
-    MQjob.log(`gather ${file}`)
+  const origFilesToCopy = [DBjob.pdb_file, DBjob.data_file]
+  for (const file of origFilesToCopy) {
+    await safeCopy(path.join(outputDir, file), resultsDir, file)
   }
   // Copy the log file(s)
   const logFilesToCopy = ['scoper.log']
   for (const file of logFilesToCopy) {
-    await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: resultsDir })
-    MQjob.log(`gather ${file}`)
+    await safeCopy(path.join(outputDir, file), resultsDir, file)
   }
   // Copy the FoXS dat files
-  const datFileBase = DBjob.data_file.split('.')[0]
-  const pdbFileBase = DBjob.pdb_file.split('.')[0]
+  const datFileBase = path.basename(DBjob.data_file, path.extname(DBjob.data_file))
+  const pdbFileBase = path.basename(DBjob.pdb_file, path.extname(DBjob.pdb_file))
+  logger.info(`DEBUG datFileBase: ${datFileBase}, pdbFileBase: ${pdbFileBase}`)
   const foxsFilesToCopy = [
     `scoper_combined_newpdb_${pdbNumber}_${datFileBase}.dat`,
     `${pdbFileBase}_${datFileBase}.dat`
   ]
+
   for (const file of foxsFilesToCopy) {
-    await execPromise(`cp ${path.join(foxsAnalysisDir, file)} .`, { cwd: resultsDir })
-    MQjob.log(`gather ${file}`)
+    await safeCopy(path.join(foxsAnalysisDir, file), resultsDir, file)
   }
-  await execPromise(`tar czvf results.tar.gz results`, { cwd: outputDir })
+
+  try {
+    const uuidPrefix = DBjob.uuid.split('-')[0]
+    const archiveName = `results-${uuidPrefix}.tar.gz`
+    await execPromise(`tar czvf ${archiveName} results`, { cwd: outputDir })
+  } catch (err) {
+    MQjob.log(`tar failed: ${err}`)
+    logger.error(`Failed to create results *.tar.gz file: ${err}`)
+  }
 }
 
 const readDirNameFromFile = async (filePath: string): Promise<string | null> => {
