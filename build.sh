@@ -5,7 +5,7 @@ set -e
 # Detect architecture and set platform
 ARCH=$(uname -m)
 if [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; then
-  PLATFORM="linux/amd64"
+  PLATFORM="linux/arm64"
 else
   PLATFORM="linux/${ARCH}"
 fi
