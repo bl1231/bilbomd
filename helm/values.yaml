@@ -1,12 +1,8 @@
 namespace: bilbomd
-
 docker_registry: registry.nersc.gov
 nersc_repo: m4659
-
 cfs_dir: /global/cfs/cdirs
-
 pscratch: /pscratch/sd/s/sclassen
-
 sfapi:
-  token_expires: "2025-04-28 15:27"
+  token_expires: "2025-05-27 15:10"
 
