@@ -39,7 +39,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:7.0.17
+    image: mongo:7.0.19
     pull_policy: missing
     restart: always
     healthcheck:
