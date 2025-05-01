@@ -81,7 +81,7 @@ kgs_explore  --initial /home/bun/app/test-data/MHtest2.pdb.kgs.pdb -s 100 -r 20 
 ### build Docker container
 
 ```bash
-docker build -t bilbomd-scoper .
+docker build -t bl1231/bilbomd-scoper -f bilbomd-scoper.dockerfile .
 ```
 
 Or maybe just build up to a specific stage:
