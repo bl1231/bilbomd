@@ -119,6 +119,7 @@ secrets
 helm-secrets
 uploads-dev
 logs-dev
+backend-dev-tmp
 *.csr
 *.key
 *.pem
