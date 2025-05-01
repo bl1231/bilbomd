@@ -2,7 +2,8 @@
 # Build stage 1 - build external dependencies of Scoper
 # FROM pytorch/pytorch:latest AS bilbomd-scoper-build-deps
 # FROM nvidia/cuda:11.8.0-base-ubuntu22.04 AS bilbomd-scoper-build-deps
-FROM python:3.10-slim AS bilbomd-scoper-build-deps
+# FROM python:3.10-slim AS bilbomd-scoper-build-deps
+FROM python:3.13-slim AS bilbomd-scoper-build-deps
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Los_Angeles
 
@@ -38,7 +39,8 @@ RUN unzip rnaview.zip && \
 # -----------------------------------------------------------------------------
 # Build stage 2 - install the build artifacts into a clean image
 # FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
-FROM python:3.10-slim AS bilbomd-scoper-install-deps
+# FROM python:3.10-slim AS bilbomd-scoper-install-deps
+FROM python:3.13-slim AS bilbomd-scoper-install-deps
 # FROM nvidia/cuda:11.8.0-base-ubuntu22.04 AS bilbomd-scoper-install-deps
 
 # Update and install necessary packages
