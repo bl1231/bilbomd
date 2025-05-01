@@ -8,7 +8,7 @@ This project supports the Scoper/IonNet pipeline. Scoper is a novel pipeline tha
 
 ### build Docker container
 
-This command mimics what happens during the GitHub Actions when teh image is built for production deployment.
+This command mimics what happens during the GitHub Actions when the image is built for production deployment.
 
 ```bash
 docker build -t bl1231/bilbomd-scoper -f bilbomd-scoper.dockerfile --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg GITHUB_TOKEN="${GITHUB_TOKEN}" .
