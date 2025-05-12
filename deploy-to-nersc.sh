@@ -24,9 +24,9 @@ echo "📛 Current namespace: $(kubectl config view --minify --output 'jsonpath=
 echo "--------------------------------"
 
 echo -e "\033[1;34m📜 Helm History for $RELEASE:\033[0m"
-/usr/local/bin/helm history "$RELEASE"
+helm history "$RELEASE"
 
-/usr/local/bin/helm upgrade --install "$RELEASE" "$CHART_PATH" \
+helm upgrade --install "$RELEASE" "$CHART_PATH" \
   -f "$CHART_PATH/values.yaml" \
   -f "$CHART_PATH/$VALUES_FILE" \
   --wait
