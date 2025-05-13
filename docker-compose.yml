@@ -113,7 +113,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:1.14.1
+    image: ghcr.io/bl1231/bilbomd-worker:1.14.2
     pull_policy: always
     deploy:
       replicas: 2
@@ -162,7 +162,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.20.2
+    image: ghcr.io/bl1231/bilbomd-ui:1.20.3
     pull_policy: always
     env_file:
       - .env.prod
