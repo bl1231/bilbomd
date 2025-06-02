@@ -55,6 +55,8 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.3.2 (6/2/2025)
+  - Update dependencies
 - 1.3.0 (5/1/2025)
   - Migrate from base Docker image `python:3.10-slim` to `python:3.13-slim`
 - 1.2.2 (4/17/2025)

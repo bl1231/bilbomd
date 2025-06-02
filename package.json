@@ -29,7 +29,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@bl1231/bilbomd-mongodb-schema": "^1.7.0",
+    "@bl1231/bilbomd-mongodb-schema": "^1.7.1",
     "bullmq": "^5.53.1",
     "dotenv": "^16.5.0",
     "fs-extra": "^11.3.0",
