@@ -135,6 +135,8 @@ services:
         GROUP_ID: ${GID:-1001}
         GITHUB_TOKEN: $GITHUB_TOKEN
         CHARMM_VER: ${CHARMM_VER}
+    deploy:
+      replicas: 2
     environment:
       NODE_ENV: development
     env_file:
