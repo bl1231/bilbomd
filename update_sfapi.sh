@@ -5,12 +5,12 @@ set -euo pipefail
 # Determine base64 command based on OS
 if [[ "$(uname)" == "Darwin" ]]; then
     # macOS (BSD base64)
-    CLIENT_ID_B64=$(base64 < red-client/clientid.txt | tr -d '\n')
-    PRIV_KEY_B64=$(base64 < red-client/priv_key.pem | tr -d '\n')
+    CLIENT_ID_B64=$(base64 < helm-secrets/red-client/clientid.txt | tr -d '\n')
+    PRIV_KEY_B64=$(base64 < helm-secrets/red-client/priv_key.pem | tr -d '\n')
 else
     # Linux (GNU base64)
-    CLIENT_ID_B64=$(base64 -b 0 red-client/clientid.txt)
-    PRIV_KEY_B64=$(base64 -b 0 red-client/priv_key.pem)
+    CLIENT_ID_B64=$(base64 -b 0 helm-secrets/red-client/clientid.txt)
+    PRIV_KEY_B64=$(base64 -b 0 helm-secrets/red-client/priv_key.pem)
 fi
 
 # Define contexts
@@ -42,7 +42,7 @@ for CONTEXT in "${CONTEXTS[@]}"; do
     fi
 
     echo "🚀 Running helm upgrade for $CONTEXT..."
-    helm upgrade "$NAME" ../helm -f "../helm/$VALUES_FILE"
+    helm upgrade "$NAME" ./helm -f "./helm/$VALUES_FILE"
 
     echo "🔁 Restarting key deployments..."
     for DEPLOYMENT in backend ui worker; do
