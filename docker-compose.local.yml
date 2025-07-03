@@ -125,7 +125,7 @@ services:
   # ------------------------------------------------------------------------------------------------
   #
   worker:
-    image: bl1231/bilbomd-worker:latest
+    image: bl1231/bilbomd-worker:1.14.9
     platform: ${DOCKER_PLATFORM:-linux/amd64} # Fallback to linux/amd64
     build:
       context: ./bilbomd-worker

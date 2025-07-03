@@ -38,3 +38,6 @@ data:
   CHARMM: /usr/local/bin/charmm
   FOXS: /usr/bin/foxs
   MULTIFOXS: /usr/bin/multi_foxs
+  ORCID_ISSUER: "{{ .Values.auth.orcid_issuer }}"
+  ORCID_CLIENT_ID: "{{ .Values.auth.orcid_client_id }}"
+  ORCID_REDIRECT_URI: "{{ .Values.auth.orcid_redirect_uri }}"

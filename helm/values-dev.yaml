@@ -10,6 +10,11 @@ env:
   NODE_ENV: "development"
   BILBOMD_ENV: "development"
 
+auth:
+  orcid_issuer: "https://sandbox.orcid.org"
+  orcid_client_id: "APP-X9112LN3N2ZS1ATI"
+  orcid_redirect_uri: "https://bilbomd-nersc-dev.bl1231.als.lbl.gov/api/v1/auth/orcid/callback"
+
 logs:
   backend: "bilbomd/dev/logs/backend"
   worker: "bilbomd/dev/logs/worker"
@@ -49,7 +54,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: 1.20.5
+    tag: latest
     pullPolicy: Always
     secret: ghcr
 
@@ -61,7 +66,7 @@ backend:
     user: null
     repository: bilbomd-backend
     build: null
-    tag: 1.20.4
+    tag: latest
     pullPolicy: Always
     secret: ghcr
 
