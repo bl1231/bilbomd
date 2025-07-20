@@ -4,5 +4,4 @@ nersc_repo: m4659
 cfs_dir: /global/cfs/cdirs
 pscratch: /pscratch/sd/s/sclassen
 sfapi:
-  token_expires: "2025-07-20 09:01"
-
+  token_expires: "2025-08-22 12:10"
