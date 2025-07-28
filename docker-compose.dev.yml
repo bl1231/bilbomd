@@ -181,7 +181,7 @@ services:
 
   # ---------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:1.21.0
+    image: ghcr.io/bl1231/bilbomd-ui:1.21.1
     pull_policy: always
     env_file:
       - .env.dev
