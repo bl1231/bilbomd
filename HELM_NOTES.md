@@ -122,15 +122,15 @@ Put it in your `~/.kube/` directory and configure your shell `KUBECONFIG` enviro
 
 ## Install BilboMD via Helm chart
 
-If nothing is installed or running on SPIN you need to "install" the app first. The secrets should be installed first followed by the rest of teh kubernetes manifest files.
+If nothing is installed or running on SPIN you need to "install" the app first. The secrets should be installed first followed by the rest of the kubernetes manifest files.
 
 ### Install secrets
 
-Installing teh secrets should be done before running the `helm install` commands since the installation process will require pulling docker images from `registry.nersc.gov` or `ghcr.io` which requires access to the necessary secrets. The `helm-secrets` directory is **not** checked into GitHub.
+Installing secrets should be done before running the `helm install` commands since the installation process will require pulling docker images from `registry.nersc.gov` or `ghcr.io` which requires access to the necessary secrets. The `helm-secrets` directory is **not** checked into GitHub.
 
 The secrets needed include:
 
-- `backend-secrets` - Contains various ENV setting needed by backend apps.
+- `bilbomd-secrets` - Contains various ENV setting needed by backend apps.
 - `mongo-secrets` - Contains the root password for the MongoDB database.
 - `ui-tls` - SSL/TLS certificate for the web frontend ui.
 - `ghcr` - A GitHub Personal Access Token needed to pull docker images from `ghcr.io`.
@@ -140,9 +140,11 @@ The secrets needed include:
 If you have local copies of the secrets as yaml files they can be "applied" to the `bilbomd` namespace thusly:
 
 ```bash
-kubectl apply -f helm-secrets/backend-secrets.yaml
+kubectl apply -f helm-secrets/bilbomd-secrets.yaml
+kubectl apply -f helm-secrets/sfapi-priv-key.yaml
 kubectl apply -f helm-secrets/mongo-secrets.yaml
 kubectl apply -f helm-secrets/ui-tls-secrets.yaml
+kubectl apply -f helm-secrets/ghcr.yaml
 ```
 
 ### Development
