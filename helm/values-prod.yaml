@@ -54,7 +54,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: 1.21.0
+    tag: 1.21.1
     pullPolicy: Always
     secret: ghcr
 
