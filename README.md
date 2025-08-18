@@ -55,6 +55,9 @@ docker rm bilbomd-scoper
 
 ## Version History
 
+- 1.3.3 (8/18/2025)
+  - Update NodeJS to v22.18.0
+  - Update dependencies
 - 1.3.2 (6/2/2025)
   - Update dependencies
 - 1.3.0 (5/1/2025)
