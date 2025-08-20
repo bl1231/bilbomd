@@ -32,6 +32,11 @@ export const NerscStatus = {
   SUSPENDED: 'SUSPENDED'
 } as const
 
+export const MDEngine = {
+  CHARMM: 'CHARMM',
+  OpenMM: 'OpenMM'
+} as const
+
 interface IStepStatus {
   status: StepStatusEnum
   message: string
@@ -129,6 +134,7 @@ interface IBilboMDPDBJob extends IJob {
   crd_file?: string
   pdb_file: string
   const_inp_file: string
+  md_engine?: MDEngineEnum
   conformational_sampling: number
   rg: number
   rg_min: number
@@ -141,6 +147,7 @@ interface IBilboMDCRDJob extends IJob {
   crd_file: string
   pdb_file?: string
   const_inp_file: string
+  md_engine?: MDEngineEnum
   conformational_sampling: number
   rg: number
   rg_min: number
@@ -154,6 +161,7 @@ interface IBilboMDAutoJob extends IJob {
   crd_file?: string
   pae_file: string
   const_inp_file?: string
+  md_engine?: MDEngineEnum
   conformational_sampling: number
   rg?: number
   rg_min?: number
@@ -169,6 +177,7 @@ interface IBilboMDAlphaFoldJob extends IJob {
   crd_file?: string
   pae_file?: string
   const_inp_file?: string
+  md_engine?: MDEngineEnum
   conformational_sampling: number
   rg?: number
   rg_min?: number
@@ -198,6 +207,7 @@ interface IBilboMDScoperJob extends IJob {
 export type JobStatusEnum = (typeof JobStatus)[keyof typeof JobStatus]
 export type NerscStatusEnum = (typeof NerscStatus)[keyof typeof NerscStatus]
 export type StepStatusEnum = (typeof StepStatus)[keyof typeof StepStatus]
+export type MDEngineEnum = (typeof MDEngine)[keyof typeof MDEngine]
 
 export {
   IStepStatus,

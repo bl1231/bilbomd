@@ -16,6 +16,9 @@ import {
 // Enum for step statuses
 const stepStatusEnum = ['Waiting', 'Running', 'Success', 'Error']
 
+// Enum for simulation engines (MD/minimize/heat implementation)
+const mdEngineEnum = ['CHARMM', 'OpenMM'] as const
+
 // Schema for step status
 const stepStatusSchema = new Schema({
   status: { type: String, enum: stepStatusEnum, default: 'Waiting' },
@@ -138,6 +141,7 @@ const bilboMdPDBJobSchema = new Schema<IBilboMDPDBJob>({
   psf_file: { type: String, required: false },
   crd_file: { type: String, required: false },
   const_inp_file: { type: String, required: true },
+  md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
   conformational_sampling: {
     type: Number,
     enum: [1, 2, 3, 4],
@@ -153,6 +157,7 @@ const bilboMdCRDJobSchema = new Schema<IBilboMDCRDJob>({
   psf_file: { type: String, required: true },
   crd_file: { type: String, required: true },
   const_inp_file: { type: String, required: true },
+  md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
   conformational_sampling: {
     type: Number,
     enum: [1, 2, 3, 4],
@@ -169,6 +174,7 @@ const bilboMdAutoJobSchema = new Schema<IBilboMDAutoJob>({
   crd_file: { type: String, required: false },
   pae_file: { type: String, required: true },
   const_inp_file: { type: String, required: false },
+  md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
   conformational_sampling: {
     type: Number,
     enum: [1, 2, 3, 4],
@@ -187,6 +193,7 @@ const bilboMdAlphaFoldJobSchema = new Schema<IBilboMDAlphaFoldJob>({
   crd_file: { type: String, required: false },
   pae_file: { type: String, required: false },
   const_inp_file: { type: String, required: false },
+  md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
   conformational_sampling: {
     type: Number,
     enum: [1, 2, 3, 4],

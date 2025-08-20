@@ -39,6 +39,8 @@ git push --follow-tags
 
 ## Version History
 
+- 1.9.0 (8/20/2025)
+  - Add `md_engine` to Job schema to support `OpenMM` or `CHARMM` as options for MD steps
 - 1.8.0 (6/2/2025)
   - Add OAuthIdentity to the User schema
 - 1.7.1 (6/2/2025)
