@@ -125,18 +125,19 @@ services:
   # ------------------------------------------------------------------------------------------------
   #
   worker:
-    image: bl1231/bilbomd-worker:1.14.9
+    image: bl1231/bilbomd-worker:latest
     platform: ${DOCKER_PLATFORM:-linux/amd64} # Fallback to linux/amd64
     build:
       context: ./bilbomd-worker
-      dockerfile: bilbomd-worker.dockerfile # Uses miniconda3
+      dockerfile: bilbomd-worker.dockerfile
+      # target: node-build-deps
       args:
         USER_ID: ${UID:-1001}
         GROUP_ID: ${GID:-1001}
         GITHUB_TOKEN: $GITHUB_TOKEN
         CHARMM_VER: ${CHARMM_VER}
     deploy:
-      replicas: 2
+      replicas: 1
     environment:
       NODE_ENV: development
     env_file:
