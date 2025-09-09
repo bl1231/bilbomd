@@ -116,6 +116,7 @@ interface IJob extends Document {
   uuid: string
   status: JobStatusEnum
   data_file: string
+  md_engine?: MDEngineEnum
   time_submitted: Date
   time_started?: Date
   time_completed?: Date

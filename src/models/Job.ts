@@ -91,6 +91,7 @@ const jobSchema = new Schema(
     },
     uuid: { type: String, required: true },
     data_file: { type: String, required: true },
+    md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
     status: {
       type: String,
       enum: [

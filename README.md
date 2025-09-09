@@ -39,6 +39,8 @@ git push --follow-tags
 
 ## Version History
 
+- 1.9.1 (9/9/2025)
+  - Add `md_engine` to IJob
 - 1.9.0 (8/20/2025)
   - Add `md_engine` to Job schema to support `OpenMM` or `CHARMM` as options for MD steps
 - 1.8.0 (6/2/2025)
