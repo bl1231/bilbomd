@@ -1,0 +1,44 @@
+[
+  {
+    "name": "bilbomd",
+    "jobCounts": {
+      "active": 0,
+      "completed": 117,
+      "delayed": 0,
+      "failed": 8,
+      "paused": 0,
+      "prioritized": 0,
+      "waiting": 0,
+      "waiting-children": 0
+    },
+    "isPaused": false
+  },
+  {
+    "name": "scoper",
+    "jobCounts": {
+      "active": 0,
+      "completed": 0,
+      "delayed": 0,
+      "failed": 0,
+      "paused": 0,
+      "prioritized": 0,
+      "waiting": 1,
+      "waiting-children": 0
+    },
+    "isPaused": false
+  },
+  {
+    "name": "multimd",
+    "jobCounts": {
+      "active": 0,
+      "completed": 12,
+      "delayed": 0,
+      "failed": 0,
+      "paused": 0,
+      "prioritized": 0,
+      "waiting": 0,
+      "waiting-children": 0
+    },
+    "isPaused": false
+  }
+]
