@@ -1,0 +1,8 @@
+define fixed1 sele ( resid 40:137 .and. segid PROP ) end
+define fixed4 sele ( resid 150:203 .and. segid PROP ) end
+define fixed2 sele ( segid DNAA ) end
+define fixed3 sele ( segid DNAB ) end
+
+cons fix sele fixed1 .or. fixed2 .or. fixed3 .or. fixed4 end
+ 
+return 

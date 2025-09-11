@@ -1,0 +1,43 @@
+{"files": {
+    "experiment":"/Users/9cq/Documents/Projects/Bilbo-MD_SANS/For_Sharique/smoothed_ETF_OXI_3mgL.dat",
+    "scatter_dir":"/Users/9cq/Documents/Projects/Bilbo-MD_SANS/For_Sharique/fit",
+    "structurefile":"structure.csv"
+},
+"max_ensemble_size":4,
+"GA_input1":{
+    "number_iterations":5,
+    "number_generations":5,
+    "ensemble_size":2,
+    "ensemble_split":0.85,
+    "crossover_probability":0.5,
+    "mutation_probability":0.15,
+    "fitting_algorithm":"Differential Evolution",
+    "cutoff_weight":1e-6,
+    "fitness_function":"inverse_absolute",
+    "parallel":"True"
+},
+"GA_input2":{
+    "number_iterations":5,
+    "number_generations":5,
+    "ensemble_size":3,
+    "ensemble_split":0.85,
+    "crossover_probability":0.5,
+    "mutation_probability":0.15,
+    "fitting_algorithm":"Differential Evolution",
+    "cutoff_weight":1e-6,
+    "fitness_function":"inverse_absolute",
+    "parallel":"True"
+},
+"GA_input3":{
+    "number_iterations":5,
+    "number_generations":5,
+    "ensemble_size":4,
+    "ensemble_split":0.85,
+    "crossover_probability":0.5,
+    "mutation_probability":0.15,
+    "fitting_algorithm":"Differential Evolution",
+    "cutoff_weight":1e-6,
+    "fitness_function":"inverse_absolute",
+    "parallel":"True"
+}
+}   

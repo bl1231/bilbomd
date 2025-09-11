@@ -1,0 +1,11 @@
+# Ignore all Perl files:
+*.pl
+
+# Ignore CHARM topology files
+*.str
+
+*.handlebars
+
+**/.git
+**/node_modules
+**/scripts

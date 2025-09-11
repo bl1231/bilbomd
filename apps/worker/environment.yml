@@ -1,0 +1,28 @@
+name: base
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pillow
+  - six
+  - wheel
+  - numpy
+  - scipy
+  - matplotlib
+  - python-igraph
+  - numba
+  - h5py
+  - cython
+  - numexpr
+  - reportlab
+  - dbus-python
+  - fabio
+  - pyfai
+  - hdf5plugin
+  - mmcif_pdbx
+  - svglib
+  - pyopencl
+  - pandas
+  - dask
+  - swig
+  - doxygen

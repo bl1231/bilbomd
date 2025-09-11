@@ -1,0 +1,31 @@
+{
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",  // Use Black for formatting
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.rulers": [79, 88]
+  },
+  "[markdown]": {
+    "editor.formatOnSave": false
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true
+  },
+  "editor.formatOnPaste": true,
+  "editor.formatOnSave": true,
+  "python.analysis.typeCheckingMode": "basic",  // Type checking mode with Pylance
+  "python.analysis.autoImportCompletions": true,  // Auto-import suggestions
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "warning",
+    "reportUndefinedVariable": "error"
+  }
+}

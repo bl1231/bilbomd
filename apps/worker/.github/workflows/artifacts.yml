@@ -1,0 +1,19 @@
+name: Upload Artifacts
+on:
+  push:
+    branches:
+      - artifacts
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload tar.gz files
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-files
+          path: |
+            charmm/c48b2.tar.gz

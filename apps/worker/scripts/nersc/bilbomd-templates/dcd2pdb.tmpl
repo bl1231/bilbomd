@@ -1,0 +1,45 @@
+* STEP: dcd2pdp
+* PURPOSE: BilboMD Convert cor trajectory to pdb format
+* AUTHOR: Michal Hammel
+* AUTHOR: Scott Classen
+*
+
+bomlev 0
+
+! Read Topology-Files
+STREAM {{charmm_topo_dir}}
+
+open read unit 12 card name {{in_psf_file}}
+read psf card unit 12
+close unit 12
+
+set nframe = 0
+open unit 50 read unform name {{in_dcd}}
+trajectory query unit 50
+calc nframe = @nframe + ?nfile ! NFILE is the number of frames in traj file.
+calc begin = ?start ! START is Step number for the first frame
+calc step = ?skip ! SKIP is Frequency at which frames were saved
+! NSTEP is Total number of steps from the simulation
+calc stop = ?start + ?nstep - ?skip
+
+traj iread 50 nrea 1 begin @begin stop @stop skip @step
+
+set tr @begin
+LABEL ILP
+traj read
+write coor pdb name foxs/{{run}}/{{inp_basename}}_@tr.pdb official
+define heavy sele type CA end
+coor rgyr
+COOR MAXD SELE heavy END SELE heavy END
+open write unit 1 card name {{foxs_rg}} append
+write title unit 1
+*{{inp_basename}}_@tr ?rgyr ?maxd
+*
+close unit 1
+
+incr tr by @step
+if tr .le. @stop goto ILP
+open write unit 34 file name {{inp_basename}}.end
+close unit 34
+
+stop
