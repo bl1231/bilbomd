@@ -1,5 +1,5 @@
 {
-  "name": "bilbomd-backend",
+  "name": "@bilbomd/backend",
   "description": "backend server for BilboMD webapp",
   "version": "1.22.0",
   "main": "server.js",
@@ -20,7 +20,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@bl1231/bilbomd-mongodb-schema": "^1.9.1",
+    "@bilbomd/mongodb-schema": "workspace:*",
     "@bull-board/api": "^6.12.7",
     "@bull-board/express": "^6.12.7",
     "@types/swagger-ui-express": "^4.1.8",

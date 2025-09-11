@@ -1,5 +1,5 @@
 {
-  "name": "@bl1231/bilbomd-mongodb-schema",
+  "name": "@bilbomd/mongodb-schema",
   "version": "1.9.1",
   "description": "BilboMD Mongoose Schema",
   "main": "dist/index.js",

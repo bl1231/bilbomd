@@ -1,5 +1,5 @@
 {
-  "name": "bilbomd-worker",
+  "name": "@bilbomd/worker",
   "version": "1.16.0",
   "description": "A worker app to process BilboMD jobs from BullMQ queue",
   "main": "worker.js",
@@ -21,7 +21,7 @@
   "author": "Scott Classen",
   "license": "ISC",
   "dependencies": {
-    "@bl1231/bilbomd-mongodb-schema": "^1.9.1",
+    "@bilbomd/mongodb-schema": "workspace:*",
     "axios": "^1.11.0",
     "axios-retry": "^4.5.0",
     "bullmq": "^5.58.5",

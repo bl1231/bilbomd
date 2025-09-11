@@ -1,5 +1,5 @@
 {
-  "name": "bilbomd-ui",
+  "name": "@bilbomd/ui",
   "version": "1.21.5",
   "description": "Frontend Single Page Web Application for BilboMD",
   "private": true,
@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@ant-design/colors": "^8.0.0",
-    "@bl1231/bilbomd-mongodb-schema": "^1.9.1",
+    "@bilbomd/mongodb-schema": "workspace:*",
     "@emotion/core": "^11.0.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
