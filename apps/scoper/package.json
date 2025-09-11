@@ -1,0 +1,63 @@
+{
+  "name": "bilbomd-scoper",
+  "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
+  "version": "1.3.4",
+  "main": "scoper.js",
+  "type": "module",
+  "author": {
+    "name": "Scott Classen",
+    "email": "sclassen@lbl.gov"
+  },
+  "contributors": [
+    {
+      "name": "Edan Patt"
+    },
+    {
+      "name": "Michal Hammel"
+    },
+    {
+      "name": "Dina Schneidman"
+    }
+  ],
+  "scripts": {
+    "clean": "rimraf build/*",
+    "build": "npm-run-all clean copy-assets lint tsc",
+    "copy-assets": "copyfiles --all --up 1 --exclude \"./**/*.{ts,tsx}\" \"./src/**/*\" ./build",
+    "start": "npm run build && node build/scoper.js",
+    "dev": "nodemon --watch src --ext ts,ejs --verbose --exec npm run start",
+    "lint": "eslint",
+    "tsc": "tsc"
+  },
+  "dependencies": {
+    "@bl1231/bilbomd-mongodb-schema": "^1.9.1",
+    "bullmq": "^5.58.5",
+    "dotenv": "^17.2.2",
+    "fs-extra": "^11.3.1",
+    "handlebars": "^4.7.8",
+    "moment-timezone": "^0.6.0",
+    "mongoose": "^8.18.1",
+    "nodemailer": "^7.0.6",
+    "nodemailer-express-handlebars": "^7.0.0",
+    "nodemon": "^3.1.10",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.3.1",
+    "@types/nodemailer": "^7.0.1",
+    "@types/nodemailer-express-handlebars": "^4.0.5",
+    "copyfiles": "^2.4.1",
+    "eslint": "^9.35.0",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.43.0"
+  },
+  "_moduleAliases": {
+    "@services": "build/services",
+    "@models": "build/models",
+    "@helpers": "build/helpers"
+  }
+}

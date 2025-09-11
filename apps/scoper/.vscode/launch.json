@@ -1,0 +1,29 @@
+{
+    "configurations": [
+    {
+    "name": "Python: Debug mgclassifierv2",
+    "type": "python",
+    "request": "launch",
+    "program": "${workspaceFolder}/test-data/IonNet/mgclassifierv2.py",
+    "args": [
+        "-bd", "/home/bun/app/test-data",
+        "scoper",
+        "-fp", "/home/bun/app/test-data/MHtest2.pdb",
+        "-ahs", "/home/bun/app/test-data/IonNet/scripts/scoper_scripts/addHydrogensColab.pl",
+        "-sp", "/home/bun/app/test-data/MHtest2.dat",
+        "-it", "sax",
+        "-mp", "/home/bun/app/test-data/IonNet/models/trained_models/wandering-tree-178.pt",
+        "-cp", "/home/bun/app/test-data/IonNet/models/trained_models/wandering-tree-178_config.npy",
+        "-fs", "foxs",
+        "-mfcs", "multi_foxs_combination",
+        "-kk", "33",
+        "-tk", "3",
+        "-mfs", "multi_foxs",
+        "-mfr", "True"
+    ],
+    "console": "integratedTerminal",
+    "cwd": "${workspaceFolder}/test-data/IonNet"
+}
+
+    ]
+}
