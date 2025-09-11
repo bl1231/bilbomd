@@ -1,5 +1,14 @@
 {
-  "dependencies": {
-    "formidable": "^3.5.1"
+  "name": "bilbomd",
+  "private": true,
+  "packageManager": "pnpm@9",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
   }
 }
