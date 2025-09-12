@@ -3,6 +3,8 @@ name: CI / Backend Image
 on:
   push:
     branches: [main]
+    tags:
+      - "v*"
     paths:
       - "apps/backend/**"
       - "packages/mongodb-schema/**"
@@ -57,7 +59,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Read backend version
@@ -71,6 +73,20 @@ jobs:
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
           echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Resolve PR number for this branch (if any)
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const branch = context.ref.replace('refs/heads/', '');
+            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
+            if (prs.data.length) {
+              core.setOutput('number', String(prs.data[0].number));
+            } else {
+              core.setOutput('number', '');
+            }
 
       - name: Docker metadata (tags/labels)
         id: meta
@@ -86,6 +102,9 @@ jobs:
             # PR tags (mutable and immutable)
             type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            # PR tags for branch pushes when a matching PR exists
+            type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
+            type=raw,value=pr-${{ steps.pr.outputs.number }}-${{ env.SHORT_SHA }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
             # branch tags for non-main pushes (mutable and immutable)
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
