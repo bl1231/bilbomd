@@ -30,7 +30,6 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "coverage": "vitest --coverage",
-    "prepare": "husky",
     "related": "vitest related"
   },
   "lint-staged": {

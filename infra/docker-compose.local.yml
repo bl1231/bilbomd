@@ -207,8 +207,8 @@ services:
   ui:
     image: bl1231/bilbomd-ui:latest
     build:
-      context: ../apps/ui
-      dockerfile: bilbomd-ui.dockerfile
+      context: ..
+      dockerfile: apps/ui/bilbomd-ui.dockerfile
       args:
         GITHUB_TOKEN: $GITHUB_TOKEN
     env_file:

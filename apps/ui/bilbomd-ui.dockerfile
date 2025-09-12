@@ -1,57 +1,53 @@
+
 # -----------------------------------------------------------------------------
-# Build stage
-FROM node:22-alpine AS build-stage
-ARG GITHUB_TOKEN
-ARG BILBOMD_UI_VERSION
-ARG BILBOMD_UI_GIT_HASH
+# Stage 1: deps (prefetch pnpm store for monorepo)
+FROM node:22-alpine AS deps
+WORKDIR /repo
+RUN corepack enable
 
-# RUN npm install -g npm@10.9.0
+# Copy only files needed to resolve workspace dependencies (better cache)
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY apps/ui/package.json apps/ui/package.json
 
-WORKDIR /app
+# Prefetch dependencies into pnpm store (no linking yet)
+RUN pnpm fetch
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+# -----------------------------------------------------------------------------
+# Stage 2: build (install, build UI, then prune)
+FROM node:22-alpine AS build
+WORKDIR /repo
+RUN corepack enable
 
-# Create .npmrc file using the build argument
-RUN echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > /root/.npmrc
+# Reuse the fetched pnpm store from deps stage for fast, deterministic installs
+COPY --from=deps /root/.local/share/pnpm/store /root/.local/share/pnpm/store
 
-# Install dependencies
-RUN npm ci
-
-# Remove .npmrc file for security
-RUN rm /root/.npmrc
-
-# Optionally, clean up the environment variable for security
-RUN unset GITHUB_TOKEN
-
-# Copy your project files
+# Copy the full repo (monorepo context)
 COPY . .
 
-# Set environment variables for the build process
-ENV BILBOMD_UI_VERSION=${BILBOMD_UI_VERSION}
-ENV BILBOMD_UI_GIT_HASH=${BILBOMD_UI_GIT_HASH}
+# Install using the fetched store and frozen lockfile
+RUN pnpm install --frozen-lockfile
 
-# Build our app
-RUN npm run build
+# Build the UI app
+RUN pnpm -C apps/ui run build
 
-# Copy over the version.json created in GitHub Actions
-# COPY version.json /app/build/version.json
+# Produce a minimal, deployable output for just the UI (node_modules pruned to prod)
+RUN pnpm deploy --filter @bilbomd/ui --prod /out
 
 # Generate version.json during the build
-# this json is served up from /version-info
-RUN echo "{ \"version\": \"${BILBOMD_UI_VERSION}\", \"gitHash\": \"${BILBOMD_UI_GIT_HASH}\" }" > /app/build/version.json
-
+ARG BILBOMD_UI_VERSION
+ARG BILBOMD_UI_GIT_HASH
+# RUN echo "{ \"version\": \"${BILBOMD_UI_VERSION}\", \"gitHash\": \"${BILBOMD_UI_GIT_HASH}\" }" > /out/build/version.json
 
 # -----------------------------------------------------------------------------
-# Serve stage
-FROM docker.io/nginx:alpine
+# Stage 3: serve (nginx)
+FROM nginx:alpine
 RUN apk add --no-cache bash
 
-# Copy the built app to nginx serving directory
-COPY --from=build-stage /app/build /usr/share/nginx/html
+# Copy the Vite build output (dist/build) to nginx serving directory
+COPY --from=build /repo/apps/ui/build /usr/share/nginx/html
 
 # Optionally, customize nginx configuration
-COPY nginx.default.conf /etc/nginx/conf.d/default.conf
+COPY apps/ui/nginx.default.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
