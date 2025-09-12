@@ -116,7 +116,9 @@ jobs:
           file: apps/backend/bilbomd-backend.dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           build-args: |
             USER_ID=${{ vars.USER_ID || '1001' }}
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
