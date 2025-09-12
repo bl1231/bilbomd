@@ -18,5 +18,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
+    "parserOptions": {
+    "sourceType": "module",
+    "project": "./tsconfig.app.json",
+    "tsconfigRootDir": ".",
+  },
   "include": ["vite.config.ts"]
 }

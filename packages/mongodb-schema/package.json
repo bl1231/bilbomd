@@ -39,6 +39,14 @@
     "./frontend": {
       "types": "./dist/frontend.d.ts",
       "import": "./dist/frontend.js"
+    },
+    "./types": {
+      "types": "./dist/frontend.d.ts",
+      "import": "./dist/frontend.js"
+    },
+    "./constants/jobConstants": {
+      "import": "./dist/constants/jobConstants.js",
+      "types": "./dist/constants/jobConstants.d.ts"
     }
   }
 }

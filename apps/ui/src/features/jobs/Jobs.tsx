@@ -47,8 +47,8 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import {
   INerscInfo,
   IJob,
-  jobTypeDisplayNames
 } from '@bilbomd/mongodb-schema/frontend'
+import { jobTypeDisplayNames } from '@bilbomd/mongodb-schema/constants/jobConstants'
 import Item from 'themes/components/Item'
 import { useNavigate } from 'react-router'
 import { JobActionsMenu } from './JobActionsMenu'
