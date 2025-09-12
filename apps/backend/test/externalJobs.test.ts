@@ -19,7 +19,7 @@ import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest'
 import request from 'supertest'
 import app from './appMock.js'
 import path from 'path'
-import { User } from '@bl1231/bilbomd-mongodb-schema'
+import { User } from '@bilbomd/mongodb-schema'
 import crypto from 'crypto'
 
 const expectSuccessfulJobResponse = (res: request.Response, expectedMessage: string) => {

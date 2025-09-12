@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { User } from '@bl1231/bilbomd-mongodb-schema'
+import { User } from '@bilbomd/mongodb-schema'
 
 const deleteAPIToken = async (req: Request, res: Response): Promise<void> => {
   const { username, id } = req.params

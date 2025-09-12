@@ -1,7 +1,7 @@
 import { Chip, Divider, Typography } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import FeedbackChart from './FeedbackChart'
-import { IFeedbackData } from '@bl1231/bilbomd-mongodb-schema'
+import { IFeedbackData } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 
 interface FeedbackProps {

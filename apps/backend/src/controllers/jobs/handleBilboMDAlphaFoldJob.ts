@@ -4,10 +4,10 @@ import {
   BilboMdAlphaFoldJob,
   IBilboMDAlphaFoldJob,
   IAlphaFoldEntity
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import { alphafoldJobSchema } from '../../validation/index.js'
 import { ValidationError } from 'yup'
-import { IUser } from '@bl1231/bilbomd-mongodb-schema'
+import { IUser } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { writeJobParams, spawnAutoRgCalculator } from './index.js'
 import { queueJob } from '../../queues/bilbomd.js'

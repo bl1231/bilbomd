@@ -48,7 +48,7 @@ import {
   INerscInfo,
   IJob,
   jobTypeDisplayNames
-} from '@bl1231/bilbomd-mongodb-schema/frontend'
+} from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import { useNavigate } from 'react-router'
 import { JobActionsMenu } from './JobActionsMenu'

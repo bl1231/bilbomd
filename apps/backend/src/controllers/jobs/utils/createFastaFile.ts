@@ -1,7 +1,7 @@
 import path from 'path'
 import fs from 'fs-extra'
 import { logger } from '../../../middleware/loggers.js'
-import { IAlphaFoldEntity } from '@bl1231/bilbomd-mongodb-schema'
+import { IAlphaFoldEntity } from '@bilbomd/mongodb-schema'
 
 const createFastaFile = async (
   entities: IAlphaFoldEntity[],

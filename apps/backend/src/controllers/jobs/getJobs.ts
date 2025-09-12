@@ -10,7 +10,7 @@ import {
   MultiJob,
   IMultiJob,
   IUser
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { BilboMDSteps } from '../../types/bilbomd.js'
 import { BilboMDJob, BilboMDBullMQ } from '../../types/bilbomd.js'

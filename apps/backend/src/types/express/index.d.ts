@@ -1,4 +1,4 @@
-import type { IUser } from '@bl1231/bilbomd-mongodb-schema'
+import type { IUser } from '@bilbomd/mongodb-schema'
 
 export {}
 

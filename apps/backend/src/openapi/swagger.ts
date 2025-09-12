@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import m2s from 'mongoose-to-swagger'
 import swaggerSpecJson from './swaggerOptions.js'
-import { User, BilboMdJob } from '@bl1231/bilbomd-mongodb-schema'
+import { User, BilboMdJob } from '@bilbomd/mongodb-schema'
 import { logger } from '../middleware/loggers.js'
 import fs from 'fs-extra'
 import path from 'path'

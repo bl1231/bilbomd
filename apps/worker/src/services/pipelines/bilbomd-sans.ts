@@ -1,5 +1,5 @@
 import { Job as BullMQJob } from 'bullmq'
-import { BilboMdSANSJob } from '@bl1231/bilbomd-mongodb-schema'
+import { BilboMdSANSJob } from '@bilbomd/mongodb-schema'
 import {
   runPdb2Crd,
   runMinimize,

@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest'
 import request from 'supertest'
 import app from './appMock.js'
-import { User, Job } from '@bl1231/bilbomd-mongodb-schema'
+import { User, Job } from '@bilbomd/mongodb-schema'
 import crypto from 'crypto'
 
 let server: any

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { User, IAPIToken } from '@bl1231/bilbomd-mongodb-schema'
+import { User, IAPIToken } from '@bilbomd/mongodb-schema'
 
 const listAPITokens = async (req: Request, res: Response): Promise<void> => {
   const { username } = req.params

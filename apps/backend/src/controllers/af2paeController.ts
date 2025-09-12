@@ -4,7 +4,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { Request, Response } from 'express'
 import { v4 as uuid } from 'uuid'
-import { User } from '@bl1231/bilbomd-mongodb-schema'
+import { User } from '@bilbomd/mongodb-schema'
 import { pdb2crdQueue, queueJob } from '../queues/pdb2crd.js'
 
 const uploadFolder: string = process.env.DATA_VOL ?? '/bilbomd/uploads'

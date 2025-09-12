@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import axios from 'axios'
-import { User } from '@bl1231/bilbomd-mongodb-schema'
+import { User } from '@bilbomd/mongodb-schema'
 import { issueTokensAndSetCookie } from './authTokens.js'
 import { logger } from '../../middleware/loggers.js'
 

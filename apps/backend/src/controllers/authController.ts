@@ -1,6 +1,6 @@
 import { logger } from '../middleware/loggers.js'
 import jwt from 'jsonwebtoken'
-import { User, IUser } from '@bl1231/bilbomd-mongodb-schema'
+import { User, IUser } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { issueTokensAndSetCookie } from './auth/authTokens.js'
 

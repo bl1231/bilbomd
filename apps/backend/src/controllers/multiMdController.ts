@@ -4,7 +4,7 @@ import multer from 'multer'
 import fs from 'fs-extra'
 import path from 'path'
 import { v4 as uuid, validate as uuidValidate, version as uuidVersion } from 'uuid'
-import { User, IUser, MultiJob } from '@bl1231/bilbomd-mongodb-schema'
+import { User, IUser, MultiJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { queueJob } from '../queues/multimd.js'
 

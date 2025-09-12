@@ -1,5 +1,5 @@
 import { Job as BullMQJob } from 'bullmq'
-import { Job, IJob, IStepStatus } from '@bl1231/bilbomd-mongodb-schema'
+import { Job, IJob, IStepStatus } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import fs from 'fs-extra'
 import path from 'path'

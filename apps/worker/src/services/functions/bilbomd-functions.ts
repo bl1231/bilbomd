@@ -11,7 +11,7 @@ import {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IStepStatus
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import path from 'path'
 import { updateStepStatus } from './mongo-utils.js'
 import { CharmmDCD2PDBParams } from '../../types/index.js'

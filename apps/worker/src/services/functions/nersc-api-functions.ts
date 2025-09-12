@@ -9,7 +9,7 @@ import {
   IJob,
   IStepStatus,
   StepStatusEnum
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import { ensureValidToken } from './nersc-api-token-functions.js'
 import { TaskStatusResponse, JobStatusResponse } from '../../types/nersc.js'
 import { updateStepStatus } from './mongo-utils.js'

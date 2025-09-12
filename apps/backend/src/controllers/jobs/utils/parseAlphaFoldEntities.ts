@@ -1,4 +1,4 @@
-import { IAlphaFoldEntity } from '@bl1231/bilbomd-mongodb-schema'
+import { IAlphaFoldEntity } from '@bilbomd/mongodb-schema'
 
 interface IAlphaFoldBody {
   entities_json?: string

@@ -9,7 +9,7 @@ import {
   IBilboMDSANSJob,
   User,
   IUser
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { sanitizeConstInpFile, writeJobParams } from './jobs/index.js'
 import { queueJob } from '../queues/bilbomd.js'

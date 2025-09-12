@@ -1,10 +1,10 @@
 import { spawn, ChildProcess } from 'node:child_process'
-import { IJob } from '@bl1231/bilbomd-mongodb-schema'
+import { IJob } from '@bilbomd/mongodb-schema'
 import fs from 'fs-extra'
 import path from 'node:path'
 import { logger } from '../../helpers/loggers.js'
 import { createInterface } from 'readline'
-import { IStepStatus } from '@bl1231/bilbomd-mongodb-schema'
+import { IStepStatus } from '@bilbomd/mongodb-schema'
 import { updateStepStatus } from './mongo-utils.js'
 import { config } from '../../config/config.js'
 

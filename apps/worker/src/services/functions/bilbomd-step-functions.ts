@@ -7,7 +7,7 @@ import os from 'os'
 import readline from 'node:readline'
 import path from 'path'
 import { Job as BullMQJob } from 'bullmq'
-import { IBilboMDSteps, IStepStatus, IUser } from '@bl1231/bilbomd-mongodb-schema'
+import { IBilboMDSteps, IStepStatus, IUser } from '@bilbomd/mongodb-schema'
 import {
   IJob,
   IBilboMDPDBJob,
@@ -15,7 +15,7 @@ import {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDSANSJob
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { exec } from 'node:child_process'
 import {

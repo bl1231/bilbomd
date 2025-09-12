@@ -1,5 +1,5 @@
 import { Job as BullMQJob } from 'bullmq'
-import { Job } from '@bl1231/bilbomd-mongodb-schema'
+import { Job } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 // import { initializeNerscJob } from '../functions/job-utils.js'
 import {

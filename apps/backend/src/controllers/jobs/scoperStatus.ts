@@ -1,7 +1,7 @@
 import readline from 'readline'
 import path from 'path'
 import fs from 'fs-extra'
-import { IBilboMDScoperJob } from '@bl1231/bilbomd-mongodb-schema'
+import { IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
 import { BilboMDScoperSteps } from '../../types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')

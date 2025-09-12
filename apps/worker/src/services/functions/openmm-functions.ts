@@ -1,7 +1,7 @@
 import { config } from '../../config/config.js'
 import path from 'path'
 import { Job as BullMQJob } from 'bullmq'
-import { IBilboMDPDBJob, IStepStatus } from '@bl1231/bilbomd-mongodb-schema'
+import { IBilboMDPDBJob, IStepStatus } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import { updateStepStatus } from './mongo-utils.js'
 import fs from 'fs-extra'

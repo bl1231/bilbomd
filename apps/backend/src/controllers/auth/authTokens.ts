@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { Response } from 'express'
-import { IUser } from '@bl1231/bilbomd-mongodb-schema'
+import { IUser } from '@bilbomd/mongodb-schema'
 // import { logger } from '../../middleware/loggers.js'
 
 const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET ?? ''

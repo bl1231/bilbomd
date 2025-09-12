@@ -1,5 +1,5 @@
-import { User } from '@bl1231/bilbomd-mongodb-schema'
-import { Job } from '@bl1231/bilbomd-mongodb-schema'
+import { User } from '@bilbomd/mongodb-schema'
+import { Job } from '@bilbomd/mongodb-schema'
 import { logger } from '../middleware/loggers.js'
 import { Request, Response } from 'express'
 import {

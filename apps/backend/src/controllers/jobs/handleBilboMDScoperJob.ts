@@ -4,7 +4,7 @@ import {
   IUser,
   BilboMdScoperJob,
   IBilboMDScoperJob
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 
 const handleBilboMDScoperJob = async (

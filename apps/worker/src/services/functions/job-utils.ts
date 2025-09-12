@@ -1,4 +1,4 @@
-import { User, IUser, IJob, IStepStatus } from '@bl1231/bilbomd-mongodb-schema'
+import { User, IUser, IJob, IStepStatus } from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
 import { logger } from '../../helpers/loggers.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'

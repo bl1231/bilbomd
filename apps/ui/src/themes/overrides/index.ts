@@ -1,5 +1,5 @@
 // third-party
-import { merge } from 'lodash'
+import { deepmerge } from '@mui/utils'
 
 // project import
 import Alert from './Alert'
@@ -30,7 +30,7 @@ import Typography from './Typography'
 import { Theme } from '@mui/material/styles'
 
 export default function ComponentsOverrides(theme: Theme) {
-  return merge(
+  const overrides = [
     Alert(),
     AppBar(theme),
     Accordion(theme),
@@ -55,5 +55,7 @@ export default function ComponentsOverrides(theme: Theme) {
     TableCell(theme),
     Tabs(),
     Typography()
-  )
+  ]
+
+  return overrides.reduce((acc, obj) => deepmerge(acc, obj), {})
 }

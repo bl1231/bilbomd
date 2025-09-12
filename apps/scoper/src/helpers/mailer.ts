@@ -37,7 +37,7 @@ const sendJobCompleteEmail = (
     hbs({
       viewEngine: {
         extname: '.handlebars',
-        defaultLayout: false,
+        defaultLayout: '',
         layoutsDir: viewPath
       },
       viewPath,

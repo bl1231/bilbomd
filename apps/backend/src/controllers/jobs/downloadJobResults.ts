@@ -2,7 +2,7 @@ import { logger } from '../../middleware/loggers.js'
 import fs from 'fs-extra'
 import path from 'path'
 import mongoose from 'mongoose'
-import { Job, MultiJob, JobStatus } from '@bl1231/bilbomd-mongodb-schema'
+import { Job, MultiJob, JobStatus } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')

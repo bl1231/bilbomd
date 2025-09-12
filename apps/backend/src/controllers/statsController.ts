@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { logger } from '../middleware/loggers.js'
-import { User, Job } from '@bl1231/bilbomd-mongodb-schema'
+import { User, Job } from '@bilbomd/mongodb-schema'
 
 const getStats = async (req: Request, res: Response): Promise<void> => {
   try {

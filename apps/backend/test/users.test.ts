@@ -12,7 +12,7 @@ import mongoose from 'mongoose'
 import jwt from 'jsonwebtoken'
 import { v4 as uuid } from 'uuid'
 import app from './appMock'
-import { User, IUser, Job } from '@bl1231/bilbomd-mongodb-schema'
+import { User, IUser, Job } from '@bilbomd/mongodb-schema'
 
 const accessTokenSecret: string = process.env.ACCESS_TOKEN_SECRET ?? ''
 

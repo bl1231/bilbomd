@@ -7,7 +7,7 @@ import {
   NerscStatusEnum,
   JobStatus,
   INerscInfo
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import { logger } from '../helpers/loggers.js'
 import { config } from '../config/config.js'
 import axios from 'axios'

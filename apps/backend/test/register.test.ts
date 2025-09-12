@@ -2,7 +2,7 @@ import request from 'supertest'
 import mongoose from 'mongoose'
 import app from './appMock'
 import { describe, test, expect, beforeAll, afterAll } from 'vitest'
-import { User } from '@bl1231/bilbomd-mongodb-schema'
+import { User } from '@bilbomd/mongodb-schema'
 // import { closeQueue } from '../src/queues/bilbomd'
 
 let server: any

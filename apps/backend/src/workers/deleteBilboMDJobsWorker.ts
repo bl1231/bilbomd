@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq'
-import { Job as MongoJob, MultiJob } from '@bl1231/bilbomd-mongodb-schema'
+import { Job as MongoJob, MultiJob } from '@bilbomd/mongodb-schema'
 import path from 'path'
 import fs from 'fs-extra'
 import { logger } from '../middleware/loggers.js'

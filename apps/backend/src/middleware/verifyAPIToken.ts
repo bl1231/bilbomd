@@ -1,6 +1,6 @@
 import { logger } from '../middleware/loggers.js'
 import { Request, Response, NextFunction } from 'express'
-import { User } from '@bl1231/bilbomd-mongodb-schema'
+import { User } from '@bilbomd/mongodb-schema'
 import crypto from 'crypto'
 
 // Hashing utility (consistent with your storage approach)

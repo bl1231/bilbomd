@@ -9,7 +9,7 @@ import {
   StepStatus,
   BilboMdCRDJob,
   BilboMdPDBJob
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
 import { writeJobParams, sanitizeConstInpFile, getFileStats } from './utils/jobUtils.js'

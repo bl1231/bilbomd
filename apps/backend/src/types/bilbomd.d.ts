@@ -1,5 +1,5 @@
 import { Job as BullMQJob } from 'bullmq'
-import { Job as MongoDBJob } from '@bl1231/bilbomd-mongodb-schema'
+import { Job as MongoDBJob } from '@bilbomd/mongodb-schema'
 
 export type BilboMDSteps = {
   pae?: string

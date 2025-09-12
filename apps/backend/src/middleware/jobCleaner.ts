@@ -3,7 +3,7 @@ import { RootFilterQuery } from 'mongoose'
 import { connectDB } from '../config/dbConn.js'
 import path from 'path'
 import fs from 'fs-extra'
-import { Job, IJob } from '@bl1231/bilbomd-mongodb-schema'
+import { Job, IJob } from '@bilbomd/mongodb-schema'
 import { logger } from './loggers.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')

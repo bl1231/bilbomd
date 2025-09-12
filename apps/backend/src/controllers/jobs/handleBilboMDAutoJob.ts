@@ -13,7 +13,7 @@ import {
   IBilboMDAutoJob,
   JobStatus,
   StepStatus
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
 import { AutoRgResults } from '../../types/bilbomd.js'

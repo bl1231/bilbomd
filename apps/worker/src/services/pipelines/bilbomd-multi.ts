@@ -1,5 +1,5 @@
 import { Job as BullMQJob } from 'bullmq'
-import { MultiJob } from '@bl1231/bilbomd-mongodb-schema'
+import { MultiJob } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import {
   prepareMultiMDdatFileList,

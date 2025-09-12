@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import mongoose from 'mongoose'
-import { Job } from '@bl1231/bilbomd-mongodb-schema'
+import { Job } from '@bilbomd/mongodb-schema'
 import { logger } from '../../middleware/loggers.js'
 
 export const getApiJobStatus = async (req: Request, res: Response) => {
