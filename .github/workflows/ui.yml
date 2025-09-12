@@ -1,0 +1,32 @@
+name: CI / ui
+
+on:
+  push:
+    branches:
+      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
+    paths:
+      - "apps/ui/**"
+      - "packages/mongodb-schema/**"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "apps/ui/bilbomd-ui.dockerfile"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/ui/**"
+      - "packages/mongodb-schema/**"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "apps/ui/bilbomd-ui.dockerfile"
+  workflow_dispatch: {}
+
+jobs:
+  ui:
+    uses: ./.github/workflows/_build-and-push.yml
+    with:
+      app_id: ui
+      dockerfile: apps/ui/bilbomd-ui.dockerfile
+      package_json: apps/ui/package.json
+      image: ghcr.io/${{ github.repository_owner }}/bilbomd-ui
