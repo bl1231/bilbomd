@@ -106,7 +106,7 @@ ARG GROUP_ID
 # Create runtime dirs and user
 RUN mkdir -p /app/node_modules /bilbomd/uploads /bilbomd/logs \
     && groupadd -g ${GROUP_ID:-1234} bilbomd \
-    && useradd -u ${USER_ID:-1000} -g ${GROUP_ID:-1234} -m -d /home/bilbo -s /bin/bash bilbo \
+    && useradd -u ${USER_ID:-1001} -g ${GROUP_ID:-1234} -m -d /home/bilbo -s /bin/bash bilbo \
     && chown -R bilbo:bilbomd /app /bilbomd/uploads /bilbomd/logs /home/bilbo
 
 WORKDIR /app
