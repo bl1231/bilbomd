@@ -26,8 +26,7 @@ COPY . .
 
 # Install using the fetched store and frozen lockfile
 RUN pnpm install --frozen-lockfile
-
-# Build the UI app
+RUN pnpm -C packages/mongodb-schema run build
 RUN pnpm -C apps/ui run build
 
 # Produce a minimal, deployable output for just the UI (node_modules pruned to prod)
