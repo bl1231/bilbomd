@@ -176,12 +176,14 @@ USER scoper:scoper
 
 # Optional: fetch IonNet assets (as in previous image) under the scoper user
 WORKDIR /home/scoper
-RUN curl -L -o docker-test.zip https://github.com/bl1231/IonNet/archive/refs/heads/docker-test.zip \
-    && unzip docker-test.zip \
-    && mv IonNet-docker-test IonNet \
-    && cd IonNet/scripts/scoper_scripts \
-    && tar xvf KGSrna.tar \
-    && rm KGSrna.tar docker-test.zip
+RUN set -eux; \
+    cd /home/scoper; \
+    curl -fsSL -o /tmp/ionnet.zip https://github.com/bl1231/IonNet/archive/refs/heads/docker-test.zip; \
+    unzip -q /tmp/ionnet.zip -d /home/scoper; \
+    rm -f /tmp/ionnet.zip; \
+    mv /home/scoper/IonNet-docker-test /home/scoper/IonNet; \
+    tar -xvf /home/scoper/IonNet/scripts/scoper_scripts/KGSrna.tar -C /home/scoper/IonNet/scripts/scoper_scripts; \
+    rm -f /home/scoper/IonNet/scripts/scoper_scripts/KGSrna.tar
 
 # Application payload
 WORKDIR /home/scoper/app
