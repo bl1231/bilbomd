@@ -55,27 +55,42 @@ jobs:
         run: |
           echo "VERSION=$(jq -r .version apps/backend/package.json)" >> $GITHUB_ENV
 
+      - name: Compute branch + short sha
+        run: |
+          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
       - name: Docker metadata (tags/labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-backend
           tags: |
-            type=raw,value=${{ env.VERSION }}
-            type=raw,value=${{ github.sha }}
+            # main-only tags
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            # always add full sha
+            type=raw,value=${{ github.sha }}
+            # PR tags (mutable and immutable)
+            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            # branch tags for non-main pushes (mutable and immutable)
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
 
       - name: Build (PR) or Build & Push (main)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/backend/bilbomd-backend.dockerfile
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          push: ${{ github.ref == 'refs/heads/main' || github.event_name != 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            USER_ID=${{ vars.USER_ID }}
-            GROUP_ID=${{ vars.GROUP_ID }}
+            USER_ID=${{ vars.USER_ID || '1001' }}
+            GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             BILBOMD_BACKEND_GIT_HASH=${{ github.sha }}
             BILBOMD_BACKEND_VERSION=${{ env.VERSION }}
           cache-from: type=gha
