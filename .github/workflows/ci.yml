@@ -74,6 +74,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
+            USER_ID=${{ vars.USER_ID }}
+            GROUP_ID=${{ vars.GROUP_ID }}
             BILBOMD_BACKEND_GIT_HASH=${{ github.sha }}
             BILBOMD_BACKEND_VERSION=${{ env.VERSION }}
           cache-from: type=gha
