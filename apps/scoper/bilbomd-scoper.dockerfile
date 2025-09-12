@@ -100,7 +100,7 @@ RUN conda config --add channels conda-forge
 RUN conda config --add channels default
 
 # Copy the environment.yml file into the image
-COPY environment.yml /tmp/environment.yml
+COPY apps/scoper/environment.yml /tmp/environment.yml
 
 # Update existing base environment from environment.yml
 RUN conda env update -f /tmp/environment.yml && \
@@ -117,45 +117,78 @@ RUN groupadd -g $GROUP_ID scoper && \
     chown -R scoper:scoper /home/scoper
 
 # -----------------------------------------------------------------------------
-# Build stage 4.1111
+# Build stage 5a - deps: prefetch pnpm store for monorepo
+FROM bilbomd-scoper-nodejs AS deps
+WORKDIR /repo
+
+# Enable pnpm via Corepack and pin the same version used in the repo
+RUN corepack enable \
+    && corepack prepare pnpm@10.15.1 --activate \
+    && pnpm config set inject-workspace-packages=true
+
+# Copy only manifests for better caching
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
+COPY apps/scoper/package.json apps/scoper/package.json
+
+# Prefetch dependencies into pnpm store
+RUN pnpm fetch
+
+# -----------------------------------------------------------------------------
+# Build stage 5b - build: install, build schema + scoper, and deploy to /out
+FROM bilbomd-scoper-nodejs AS build
+WORKDIR /repo
+
+RUN corepack enable \
+    && corepack prepare pnpm@10.15.1 --activate \
+    && pnpm config set inject-workspace-packages=true
+
+ENV HUSKY=0
+
+# Reuse fetched pnpm store
+COPY --from=deps /root/.local/share/pnpm/store /root/.local/share/pnpm/store
+
+# Copy full repo
+COPY . .
+
+# Install deterministically and build
+RUN pnpm install --frozen-lockfile
+RUN pnpm -C packages/mongodb-schema run build
+RUN pnpm -C apps/scoper run build
+
+# Produce a minimal, pruned output for just scoper
+RUN pnpm deploy --filter @bilbomd/scoper --prod /out
+
+# -----------------------------------------------------------------------------
+# Build stage 5c - runtime: include conda/binaries and the pruned Node app
 FROM bilbomd-scoper-pyg AS bilbomd-scoper
-ARG GITHUB_TOKEN
+ARG USER_ID
+ARG GROUP_ID
+
+# Create runtime user/group (fallbacks if not provided)
+RUN groupadd -g ${GROUP_ID:-1234} scoper || true \
+    && useradd -ms /bin/bash -u ${USER_ID:-1001} -g ${GROUP_ID:-1234} scoper || true \
+    && mkdir -p /home/scoper/app \
+    && chown -R scoper:scoper /home/scoper
 
 # Switch to scoper user
 USER scoper:scoper
 
-# Copy IonNet source code
+# Optional: fetch IonNet assets (as in previous image) under the scoper user
 WORKDIR /home/scoper
-# COPY ionnet/docker-test.zip .
-RUN curl -L -o docker-test.zip https://github.com/bl1231/IonNet/archive/refs/heads/docker-test.zip
-RUN unzip docker-test.zip && \
-    mv IonNet-docker-test IonNet && \
-    cd IonNet/scripts/scoper_scripts && \
-    tar xvf KGSrna.tar && \
-    rm KGSrna.tar
+RUN curl -L -o docker-test.zip https://github.com/bl1231/IonNet/archive/refs/heads/docker-test.zip \
+    && unzip docker-test.zip \
+    && mv IonNet-docker-test IonNet \
+    && cd IonNet/scripts/scoper_scripts \
+    && tar xvf KGSrna.tar \
+    && rm KGSrna.tar docker-test.zip
 
-# Change back to the app directory
+# Application payload
 WORKDIR /home/scoper/app
+COPY --from=build /out/ .
 
-# Copy package.json and package-lock.json
-COPY --chown=scoper:scoper package*.json .
-
-# Update NPM and install dependencies
-RUN echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > /home/scoper/.npmrc
-
-RUN npm ci
-
-# Remove .npmrc file for security
-RUN rm /home/scoper/.npmrc
-
-# Clean up the environment variable for security
-RUN unset GITHUB_TOKEN
-
-# Copy application source code
-COPY --chown=scoper:scoper . .
-
-# Set environment variable
+# Environment variables
 ENV RNAVIEW=/usr/local/RNAView
 
-# Set the default command
-CMD ["npm", "start"]
+# Expose and start (adjust if your start script differs)
+CMD [ "node", "build/scoper.js" ]
