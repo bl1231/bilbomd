@@ -17,7 +17,7 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
 ENV PATH="/miniforge3/bin/:${PATH}"
 
 # Copy in the environment.yml file
-COPY environment.yml /tmp/environment.yml
+COPY apps/backend/environment.yml /tmp/environment.yml
 
 # Update existing conda base env from environment.yml
 RUN conda env update -f /tmp/environment.yml && \
@@ -46,49 +46,81 @@ RUN python setup.py build_ext --inplace && \
     pip install .
 
 # --------------------------------------------------------------------------------------
-# Build stage 3 - Install backend app
+# Build stage 3a - deps: prefetch pnpm store for monorepo
+FROM bilbomd-backend-step2 AS deps
+WORKDIR /repo
+
+# Enable pnpm via Corepack and pin the same version you use locally
+RUN corepack enable \
+    && corepack prepare pnpm@10.15.1 --activate \
+    && pnpm config set inject-workspace-packages=true
+
+# Only copy what's needed to resolve workspaces (good cache behavior)
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
+COPY apps/backend/package.json apps/backend/package.json
+
+# Prefetch dependencies into pnpm store (no linking yet)
+RUN pnpm fetch
+
+# --------------------------------------------------------------------------------------
+# Build stage 3b - build: install, build schema + backend, and create minimal output
+FROM bilbomd-backend-step2 AS build
+WORKDIR /repo
+
+RUN corepack enable \
+    && corepack prepare pnpm@10.15.1 --activate \
+    && pnpm config set inject-workspace-packages=true
+
+ENV HUSKY=0
+
+# Reuse the fetched pnpm store
+COPY --from=deps /root/.local/share/pnpm/store /root/.local/share/pnpm/store
+
+# Copy the full repo (monorepo context)
+COPY . .
+
+# Optional: GitHub Packages auth (only if you actually need it at build time)
+# ARG GITHUB_TOKEN
+# RUN if [ -n "${GITHUB_TOKEN}" ]; then echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > /root/.npmrc; fi
+
+# Install deterministically from lockfile and build
+RUN pnpm install --frozen-lockfile
+RUN pnpm -C packages/mongodb-schema run build
+RUN pnpm -C apps/backend run build
+
+# Produce a minimal deployable bundle for just the backend
+RUN pnpm deploy --filter @bilbomd/backend --prod /out
+
+# Clean up token
+RUN rm -f /root/.npmrc || true
+
+# --------------------------------------------------------------------------------------
+# Build stage 3c - runtime: keep your base with Miniforge/BioXTAS, add app only
 FROM bilbomd-backend-step2 AS bilbomd-backend
+
+# IDs can be passed from compose as build args
 ARG USER_ID
 ARG GROUP_ID
-ARG GITHUB_TOKEN
-ARG BILBOMD_BACKEND_GIT_HASH
-ARG BILBOMD_BACKEND_VERSION
-RUN mkdir -p /app/node_modules /bilbomd/uploads /bilbomd/logs
+
+# Create runtime dirs and user
+RUN mkdir -p /app/node_modules /bilbomd/uploads /bilbomd/logs \
+    && groupadd -g ${GROUP_ID:-1234} bilbomd \
+    && useradd -u ${USER_ID:-1000} -g ${GROUP_ID:-1234} -m -d /home/bilbo -s /bin/bash bilbo \
+    && chown -R bilbo:bilbomd /app /bilbomd/uploads /bilbomd/logs /home/bilbo
+
 WORKDIR /app
 
-# Create a user and group with the provided IDs
-RUN groupadd -g $GROUP_ID bilbomd && \
-    useradd -u $USER_ID -g $GROUP_ID -m -d /home/bilbo -s /bin/bash bilbo
+# Copy minimal app bundle from build stage
+COPY --chown=bilbo:bilbomd --from=build /out/ .
 
-# Change ownership of directories to the user and group
-RUN chown -R bilbo:bilbomd /app /bilbomd/uploads /bilbomd/logs /home/bilbo
-
-# Switch to the non-root user
-USER bilbo:bilbomd
-
-# Copy package.json and package-lock.json
-COPY --chown=bilbo:bilbomd package*.json .
-
-# Create .npmrc file using the build argument
-RUN echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" > /home/bilbo/.npmrc
-
-# Install dependencies
-RUN npm ci
-
-# Remove .npmrc file for security
-RUN rm /home/bilbo/.npmrc
-
-# Clean up the environment variable for security
-RUN unset GITHUB_TOKEN
-
-# Copy entire backend app
-COPY --chown=bilbo:bilbomd . .
-
-# Use the ARG to set the environment variable
+# Optional metadata/env from build args
+ARG BILBOMD_BACKEND_GIT_HASH
+ARG BILBOMD_BACKEND_VERSION
 ENV BILBOMD_BACKEND_GIT_HASH=${BILBOMD_BACKEND_GIT_HASH}
 ENV BILBOMD_BACKEND_VERSION=${BILBOMD_BACKEND_VERSION}
 ENV NODE_DEBUG=openid-client
 
+USER bilbo:bilbomd
 EXPOSE 3500
-
-CMD [ "npm", "start" ]
+CMD [ "node", "dist/server.js" ]

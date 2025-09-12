@@ -16,8 +16,7 @@
     "start": "npm run build && node dist/server.js",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
-    "server": "nodemon .",
-    "prepare": "husky"
+    "server": "nodemon ."
   },
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
