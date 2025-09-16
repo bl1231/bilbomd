@@ -2,7 +2,13 @@
   "name": "@bilbomd/worker",
   "version": "1.16.0",
   "description": "A worker app to process BilboMD jobs from BullMQ queue",
-  "main": "worker.js",
+  "main": "dist/worker.js",
+  "files": [
+    "dist",
+    "public",
+    "views",
+    "scripts"
+  ],
   "type": "module",
   "scripts": {
     "clean": "rimraf dist/*",

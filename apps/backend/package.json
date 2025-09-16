@@ -6,7 +6,8 @@
   "files": [
     "dist",
     "public",
-    "views"
+    "views",
+    "scripts"
   ],
   "private": true,
   "type": "module",
