@@ -52,7 +52,7 @@ WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the same version you use locally
 RUN corepack enable \
-    && corepack prepare pnpm@10.15.1 --activate \
+    && corepack prepare pnpm@10.16.1 --activate \
     && pnpm config set inject-workspace-packages=true
 
 # Only copy what's needed to resolve workspaces (good cache behavior)
