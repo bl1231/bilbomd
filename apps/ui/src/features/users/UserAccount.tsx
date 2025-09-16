@@ -100,7 +100,7 @@ const UserAccount: React.FC = () => {
 
   const logout = useLogout()
   const handleAutomaticLogout = () => {
-    logout()
+    void logout()
   }
 
   const handleUpdateEmail = async (values: { newEmail: string }) => {

@@ -69,7 +69,7 @@ const SingleJobPage = () => {
     // console.log('Deleting job with ID:', id)
     try {
       await deleteJob({ id })
-      navigate('/dashboard/jobs')
+      void navigate('/dashboard/jobs')
     } catch (err) {
       console.error('Failed to delete the job:', err)
     }
@@ -418,7 +418,7 @@ const SingleJobPage = () => {
               <Button
                 variant='contained'
                 onClick={() => {
-                  handleDownload(job.mongo.id)
+                  void handleDownload(job.mongo.id)
                 }}
                 sx={{ mr: 2 }}
               >

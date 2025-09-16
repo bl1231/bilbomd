@@ -47,7 +47,7 @@ const JobError = ({ job }: JobProps) => {
 
   useEffect(() => {
     if (stepWithError) {
-      getErrorLog(job.mongo.id, stepWithError)
+      void getErrorLog(job.mongo.id, stepWithError)
     }
   }, [stepWithError, job.mongo.id, getErrorLog])
 

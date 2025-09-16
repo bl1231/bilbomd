@@ -5,8 +5,7 @@ import {
   formatDistanceToNow,
   isBefore,
   subDays,
-  subWeeks,
-  format
+  subWeeks
 } from 'date-fns'
 import { formatDateSafe, parseDateSafe } from 'utils/dates'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'

@@ -53,7 +53,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
       job.mongo.__t === 'BilboMdAuto' ||
       job.mongo.__t === 'BilboMdSANS'
     ) {
-      triggerGetFile({
+      void triggerGetFile({
         id: job.mongo.id,
         filename: job.mongo.const_inp_file || '' // Ensure filename is a string
       })
@@ -64,7 +64,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
 
   const handleCopyToClipboard = () => {
     if (fileContents) {
-      navigator.clipboard.writeText(fileContents)
+      void navigator.clipboard.writeText(fileContents)
       enqueueSnackbar('File contents copied to clipboard!', {
         variant: 'default'
       })

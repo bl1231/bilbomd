@@ -32,7 +32,7 @@ const MagickLinkAuth = () => {
           setPersist(true)
         }
         timeoutId = setTimeout(() => {
-          navigate('../dashboard/jobs')
+          void navigate('../dashboard/jobs')
         }, 3000)
       } catch (err) {
         if (isAxiosError(err) && err.response) {
@@ -43,7 +43,7 @@ const MagickLinkAuth = () => {
       }
     }
 
-    authenticateOTP()
+    void authenticateOTP()
     return () => clearTimeout(timeoutId)
   }, [login, otp, persist, setPersist, navigate, dispatch])
 

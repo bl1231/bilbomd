@@ -27,7 +27,7 @@ const PersistLogin = () => {
       }
     }
     if (persist && !token) {
-      verifyRefreshToken()
+      void verifyRefreshToken()
     }
   }, [persist, refresh, token])
 

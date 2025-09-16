@@ -391,7 +391,7 @@ const Alphafold2PAEJiffy = () => {
                         fileType='AlphaFold2 PDB *.pdb'
                         fileExt='.pdb'
                         onFileChange={(file: FileWithDeets) => {
-                          setFieldValue('pdb_file', file)
+                          void setFieldValue('pdb_file', file)
                           setOriginalFiles({
                             ...originalFiles,
                             pdb_file: file
@@ -411,7 +411,7 @@ const Alphafold2PAEJiffy = () => {
                         fileType='AlphaFold2 PAE *.json'
                         fileExt='.json'
                         onFileChange={(file: FileWithDeets) => {
-                          setFieldValue('pae_file', file)
+                          void setFieldValue('pae_file', file)
                           setOriginalFiles({
                             ...originalFiles,
                             pae_file: file

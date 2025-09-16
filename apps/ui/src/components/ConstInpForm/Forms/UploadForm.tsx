@@ -248,8 +248,8 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
       JSON.stringify(chains) !== JSON.stringify(charmmChains) ||
       JSON.stringify(rigid_bodies) !== JSON.stringify(demRigidBodies)
     ) {
-      setFieldValue('pdb_file.chains', charmmChains)
-      setFieldValue('pdb_file.rigid_bodies', demRigidBodies)
+      void setFieldValue('pdb_file.chains', charmmChains)
+      void setFieldValue('pdb_file.rigid_bodies', demRigidBodies)
     }
   }, [values.pdb_file.src, chains, rigid_bodies, setFieldError, setFieldValue])
 
@@ -257,16 +257,16 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0]
       if (file) {
-        setFieldValue('pdb_file.file', file)
-        setFieldValue('pdb_file.name', file.name)
+        void setFieldValue('pdb_file.file', file)
+        void setFieldValue('pdb_file.name', file.name)
         const reader = new FileReader()
         reader.onload = () => {
           // Ensure reader.result is a string before setting the value
           if (typeof reader.result === 'string') {
-            setFieldValue('pdb_file.src', reader.result)
+            void setFieldValue('pdb_file.src', reader.result)
           }
-          setFieldValue('pdb_file.name', file.name)
-          setFieldValue('pdb_file.file', file)
+          void setFieldValue('pdb_file.name', file.name)
+          void setFieldValue('pdb_file.file', file)
         }
         reader.onerror = (error) => {
           console.error('File reading error:', error)

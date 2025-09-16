@@ -41,7 +41,7 @@ const Home = ({ title = 'BilboMD' }) => {
         console.error('verifyRefreshToken error:', error)
       }
     }
-    if (!token && persist) verifyRefreshToken()
+    if (!token && persist) void verifyRefreshToken()
   }, [token, persist, refresh])
 
   let content
@@ -49,7 +49,7 @@ const Home = ({ title = 'BilboMD' }) => {
   if (isLoading || configIsLoading) {
     content = <CircularProgress />
   } else if (isSuccess && trueSuccess) {
-    navigate('welcome')
+    void navigate('welcome')
   } else if (token && isUninitialized) {
     content = <CircularProgress />
   } else {

@@ -125,7 +125,7 @@ const APITokenManager = () => {
       }).unwrap()
       setNewToken(res.token)
       enqueueSnackbar(`${label} Token created.`, { variant: 'default' })
-      refetch()
+      void refetch()
     } catch (err) {
       console.error('Failed to create token:', err)
       enqueueSnackbar('Failed to create token.', { variant: 'error' })
@@ -136,7 +136,7 @@ const APITokenManager = () => {
     try {
       await deleteToken({ username, id }).unwrap()
       enqueueSnackbar('Token deleted.', { variant: 'default' })
-      refetch()
+      void refetch()
     } catch (err) {
       console.error('Failed to delete token:', err)
       enqueueSnackbar('Failed to delete token.', { variant: 'error' })
@@ -218,7 +218,7 @@ const APITokenManager = () => {
             label={newToken}
             icon={<ContentCopyIcon />}
             onClick={() => {
-              navigator.clipboard.writeText(newToken)
+              void navigator.clipboard.writeText(newToken)
               enqueueSnackbar('Token copied to clipboard!', {
                 variant: 'default'
               })

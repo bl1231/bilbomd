@@ -7,7 +7,7 @@ const useLogout = () => {
 
   const logout = async () => {
     await sendLogout({})
-    navigate("/")
+    void navigate("/")
   }
 
   return logout

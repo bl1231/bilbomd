@@ -46,7 +46,7 @@ const VerifyEmail = () => {
     if (!isMountedRef.current) {
       // Only execute the effect on initial mount
       isMountedRef.current = true
-      verify()
+      void verify()
     }
   }, [code])
 

@@ -150,7 +150,7 @@ const NewJobForm = () => {
       }
       // Delay validation to ensure form state has been updated
       setTimeout(() => {
-        validateForm()
+        void validateForm()
       }, 0)
     }
 
@@ -482,22 +482,22 @@ const NewJobForm = () => {
                               try {
                                 const { rg, rg_min, rg_max } =
                                   await calculateAutoRg(formData).unwrap()
-                                setFieldValue('rg', rg)
-                                setFieldValue('rg_min', rg_min)
-                                setFieldValue('rg_max', rg_max)
+                                void setFieldValue('rg', rg)
+                                void setFieldValue('rg_min', rg_min)
+                                void setFieldValue('rg_max', rg_max)
                               } catch (error) {
                                 setAutoRgError(
                                   `Failed to calculate Rg from *.dat file. Please check the file format and try again. ${error}`
                                 )
-                                setFieldValue('rg_min', '')
-                                setFieldValue('rg_max', '')
+                                void setFieldValue('rg_min', '')
+                                void setFieldValue('rg_max', '')
                               }
                             } else {
                               setAutoRgError(
                                 `Invalid *.dat file format. Please check the file format and try again.`
                               )
-                              setFieldValue('rg_min', '')
-                              setFieldValue('rg_max', '')
+                              void setFieldValue('rg_min', '')
+                              void setFieldValue('rg_max', '')
                             }
                           }}
                         />

@@ -19,7 +19,7 @@ const CopyableChip: React.FC<CopyableChipProps> = ({ label, value, url }) => {
 
   const handleCopy = () => {
     if (value) {
-      navigator.clipboard.writeText(value)
+      void navigator.clipboard.writeText(value)
       enqueueSnackbar(`${label} copied to clipboard!`, { variant: 'default' })
     }
   }
@@ -27,7 +27,7 @@ const CopyableChip: React.FC<CopyableChipProps> = ({ label, value, url }) => {
   const handleLaunch = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (url) {
-      navigate(url)
+      void navigate(url)
     }
   }
 

@@ -629,17 +629,17 @@ const ResubmitJobForm = () => {
                                 try {
                                   const { rg, rg_min, rg_max } =
                                     await calculateAutoRg(formData).unwrap()
-                                  setFieldValue('rg', rg)
-                                  setFieldValue('rg_min', rg_min)
-                                  setFieldValue('rg_max', rg_max)
+                                  void setFieldValue('rg', rg)
+                                  void setFieldValue('rg_min', rg_min)
+                                  void setFieldValue('rg_max', rg_max)
                                 } catch (error) {
                                   console.error('Error:', error)
-                                  setFieldValue('rg_min', '')
-                                  setFieldValue('rg_max', '')
+                                  void setFieldValue('rg_min', '')
+                                  void setFieldValue('rg_max', '')
                                 }
                               } else {
-                                setFieldValue('rg_min', '')
-                                setFieldValue('rg_max', '')
+                                void setFieldValue('rg_min', '')
+                                void setFieldValue('rg_max', '')
                               }
                             }}
                           />

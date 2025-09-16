@@ -10,7 +10,7 @@ const CopyToClipboardButton = ({ text }: CopyToClipboardButtonProps) => {
   const { enqueueSnackbar } = useSnackbar()
 
   const handleClick = () => {
-    navigator.clipboard.writeText(text)
+    void navigator.clipboard.writeText(text)
     enqueueSnackbar('Copied to clipboard', { variant: 'success' })
   }
 

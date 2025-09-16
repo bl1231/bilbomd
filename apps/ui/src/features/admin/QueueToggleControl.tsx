@@ -18,9 +18,9 @@ const QueueToggleControl = ({
 
   const handleToggle = () => {
     if (isPaused) {
-      resumeQueue(queueName)
+      void resumeQueue(queueName)
     } else {
-      pauseQueue(queueName)
+      void pauseQueue(queueName)
     }
   }
 

@@ -260,7 +260,7 @@ const NewMultiMDJobForm: React.FC = () => {
                                                     ...values.bilbomd_uuids,
                                                     job.mongo.uuid
                                                   ]
-                                            setFieldValue(
+                                            void setFieldValue(
                                               'bilbomd_uuids',
                                               updatedSelectedJobUUIDs
                                             )

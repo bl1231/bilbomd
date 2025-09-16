@@ -117,7 +117,7 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
   useEffect(() => {
     if (updateResult.isSuccess || deleteResult.isSuccess) {
       console.log('about to navigate back to /users')
-      navigate('../users')
+      void navigate('../users')
     }
   }, [updateResult.isSuccess, deleteResult.isSuccess, navigate])
 

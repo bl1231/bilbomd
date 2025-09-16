@@ -285,22 +285,22 @@ const NewSANSJob = () => {
                             try {
                               const { rg, rg_min, rg_max } =
                                 await calculateAutoRg(formData).unwrap()
-                              setFieldValue('rg', rg)
-                              setFieldValue('rg_min', rg_min)
-                              setFieldValue('rg_max', rg_max)
+                              void setFieldValue('rg', rg)
+                              void setFieldValue('rg_min', rg_min)
+                              void setFieldValue('rg_max', rg_max)
                             } catch (error) {
                               setAutoRgError(
                                 `Failed to calculate Rg from *.dat file. Please check the file format and try again. ${error}`
                               )
-                              setFieldValue('rg_min', '')
-                              setFieldValue('rg_max', '')
+                              void setFieldValue('rg_min', '')
+                              void setFieldValue('rg_max', '')
                             }
                           } else {
                             setAutoRgError(
                               `Invalid *.dat file format. Please check the file format and try again.`
                             )
-                            setFieldValue('rg_min', '')
-                            setFieldValue('rg_max', '')
+                            void setFieldValue('rg_min', '')
+                            void setFieldValue('rg_max', '')
                           }
                         }}
                       />
@@ -408,7 +408,7 @@ const NewSANSJob = () => {
                             name='d2o_fraction'
                             value={values.d2o_fraction}
                             onChange={(_event, value) => {
-                              setFieldValue('d2o_fraction', value)
+                              void setFieldValue('d2o_fraction', value)
                             }}
                             min={0}
                             max={100}

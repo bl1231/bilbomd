@@ -247,7 +247,7 @@ const MagickLink = () => {
                                 sx={{ my: 1 }}
                                 onClick={() => {
                                   setVerifyEmail(values.email)
-                                  resendVerificationCode(values.email)
+                                  void resendVerificationCode(values.email)
                                 }}
                               >
                                 Resend Verification Code

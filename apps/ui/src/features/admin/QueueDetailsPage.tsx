@@ -68,12 +68,12 @@ const QueueDetailsPage = () => {
 
   const handleMoveToFailed = (jobId: string) => {
     if (!queueName) return
-    failQueueJob({ queueName, jobId })
+    void failQueueJob({ queueName, jobId })
   }
 
   const handleRetry = (jobId: string) => {
     if (!queueName) return
-    retryQueueJob({ queueName, jobId })
+    void retryQueueJob({ queueName, jobId })
   }
 
   const openDeleteDialog = (id: string) => {

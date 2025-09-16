@@ -274,7 +274,7 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
       }
     }
 
-    init()
+    void init()
 
     return () => {
       window.molstar?.dispose()
