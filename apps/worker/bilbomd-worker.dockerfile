@@ -63,5 +63,4 @@ COPY --chown=bilbo:bilbomd --from=build /out/ .
 ENV NODE_ENV=production
 USER bilbo:bilbomd
 EXPOSE 3000
-# Start directly with node to avoid needing dev-time npm scripts
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/worker.js"]
