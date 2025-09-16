@@ -2,7 +2,12 @@
   "name": "@bilbomd/backend",
   "description": "backend server for BilboMD webapp",
   "version": "1.22.0",
-  "main": "server.js",
+  "main": "dist/server.js",
+  "files": [
+    "dist",
+    "public",
+    "views"
+  ],
   "private": true,
   "type": "module",
   "scripts": {
