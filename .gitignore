@@ -125,3 +125,4 @@ backend-dev-tmp
 *.pem
 *.zip
 .qodo
+.turbo
