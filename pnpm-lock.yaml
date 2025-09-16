@@ -217,9 +217,6 @@ importers:
       nodemon:
         specifier: ^3.1.10
         version: 3.1.10
-      npm-run-all:
-        specifier: ^4.1.5
-        version: 4.1.5
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
@@ -296,9 +293,6 @@ importers:
       eslint:
         specifier: ^9.35.0
         version: 9.35.0(jiti@2.5.1)
-      npm-run-all:
-        specifier: ^4.1.5
-        version: 4.1.5
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
@@ -622,9 +616,6 @@ importers:
       nodemon:
         specifier: ^3.1.10
         version: 3.1.10
-      npm-run-all:
-        specifier: ^4.1.5
-        version: 4.1.5
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
@@ -10281,7 +10272,7 @@ snapshots:
 
   axios@1.12.2:
     dependencies:
-      follow-redirects: 1.15.11(debug@4.4.1)
+      follow-redirects: 1.15.11(debug@4.4.3)
       form-data: 4.0.4
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
