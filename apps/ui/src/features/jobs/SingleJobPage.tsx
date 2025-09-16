@@ -41,7 +41,7 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useGetJobByIdQuery, useDeleteJobMutation } from 'slices/jobsApiSlice'
 import BilboMdFeedback from 'features/analysis/BilboMdFeedback'
 import { BilboMDJob, BilboMDMultiJob } from 'types/interfaces'
-import { JobStatusEnum } from '@bl1231/bilbomd-mongodb-schema/frontend'
+import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 
 const jobTypeToRoute: Record<string, string> = {

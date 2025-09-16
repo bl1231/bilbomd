@@ -1,6 +1,6 @@
 import { createEntityAdapter } from '@reduxjs/toolkit'
 import { apiSlice } from 'app/api/apiSlice'
-import { IUser } from '@bl1231/bilbomd-mongodb-schema'
+import { IUser } from '@bilbomd/mongodb-schema'
 
 type NormalizedUser = IUser & { id: string }
 

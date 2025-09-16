@@ -46,9 +46,8 @@ import HeaderBox from 'components/HeaderBox'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import {
   INerscInfo,
-  IJob,
+  IJob
 } from '@bilbomd/mongodb-schema/frontend'
-import { jobTypeDisplayNames } from '@bilbomd/mongodb-schema/constants/jobConstants'
 import Item from 'themes/components/Item'
 import { useNavigate } from 'react-router'
 import { JobActionsMenu } from './JobActionsMenu'
@@ -221,7 +220,7 @@ const Jobs = () => {
   const handleResubmit = (id: string, jobType: string) => {
     const routeSegment = jobTypeToRoute[jobType]
     if (!routeSegment) return
-    navigate(`/dashboard/jobs/${routeSegment}/resubmit/${id}`)
+    void navigate(`/dashboard/jobs/${routeSegment}/resubmit/${id}`)
   }
 
   let jobTypes: string[] = []
@@ -265,9 +264,7 @@ const Jobs = () => {
         >
           {jobTypes.map((type) => (
             <MenuItem key={type} value={type}>
-              {type === 'All'
-                ? 'All'
-                : (jobTypeDisplayNames[type as IJob['__t']] ?? type)}
+              {type}
             </MenuItem>
           ))}
         </Select>

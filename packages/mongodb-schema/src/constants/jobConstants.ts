@@ -1,6 +1,6 @@
 import { IJob } from '../interfaces/jobInterface'
 
-const jobTypeDisplayNames: Record<IJob['__t'], string> = {
+export const jobTypeDisplayNames: Record<IJob['__t'], string> = {
   BilboMd: 'BilboMD (Generic)',
   BilboMdPDB: 'BilboMD (PDB)',
   BilboMdCRD: 'BilboMD (CRD)',
@@ -10,4 +10,4 @@ const jobTypeDisplayNames: Record<IJob['__t'], string> = {
   BilboMdSANS: 'BilboMD (SANS)'
 }
 
-export { jobTypeDisplayNames }
+// export { jobTypeDisplayNames }

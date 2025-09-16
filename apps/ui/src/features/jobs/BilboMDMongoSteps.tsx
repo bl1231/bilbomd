@@ -9,7 +9,7 @@ import {
 import Grid from '@mui/material/Grid'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import HeaderBox from 'components/HeaderBox'
-import { IBilboMDSteps } from '@bl1231/bilbomd-mongodb-schema'
+import { IBilboMDSteps } from '@bilbomd/mongodb-schema'
 
 interface BilboMDMongoStepsProps {
   steps: IBilboMDSteps

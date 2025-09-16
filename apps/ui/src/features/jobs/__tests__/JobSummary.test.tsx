@@ -7,7 +7,7 @@ import {
   IBilboMDCRDJob,
   IUser,
   JobStatusEnum
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 
 function createMockCRDJob(
   overrides: Partial<MongoWithIdString<IBilboMDCRDJob>> = {}

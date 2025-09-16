@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import BilboMdFeedback from '../BilboMdFeedback'
-import { IFeedbackData } from '@bl1231/bilbomd-mongodb-schema'
+import { IFeedbackData } from '@bilbomd/mongodb-schema'
 
 const mockFeedback: IFeedbackData = {
   best_model: 'Model A',

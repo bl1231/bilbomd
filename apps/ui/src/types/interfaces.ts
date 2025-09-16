@@ -6,7 +6,7 @@ import {
   IBilboMDAlphaFoldJob,
   IMultiJob,
   IBilboMDScoperJob
-} from '@bl1231/bilbomd-mongodb-schema'
+} from '@bilbomd/mongodb-schema'
 
 export interface Chain {
   id: string

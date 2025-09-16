@@ -38,7 +38,7 @@ import { Box } from '@mui/system'
 import Paper from '@mui/material/Paper'
 import Chip from '@mui/material/Chip'
 import HeaderBox from 'components/HeaderBox'
-import { IUser } from '@bl1231/bilbomd-mongodb-schema'
+import { IUser } from '@bilbomd/mongodb-schema'
 
 interface EditUserFormProps {
   user: IUser
