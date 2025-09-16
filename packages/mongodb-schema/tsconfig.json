@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
-    "target": "ESNext", // Compiles to ES2019, suitable for recent Node.js versions
-    "module": "ESNext", // Use commonjs module system, as used by Node.js
-    "moduleResolution": "Node", // Use Node.js module resolution mechanisms
+    // "target": "ESNext", // Compiles to ES2019, suitable for recent Node.js versions
+    "module": "NodeNext", // Use commonjs module system, as used by Node.js
+    "moduleResolution": "NodeNext", // Use Node.js module resolution mechanisms
     "outDir": "./dist", // Output directory for compiled files
     "declaration": true, // create *.d.ts files
+    "emitDeclarationOnly": false,
     "rootDir": "./src", // Root directory of your source files
     "strict": true, // Enable all strict type-checking options
     "esModuleInterop": true, // Allows default imports from modules with no default export

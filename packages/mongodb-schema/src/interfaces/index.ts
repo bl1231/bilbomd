@@ -1,3 +1,3 @@
-export * from './jobInterface'
-export * from './userInterface'
-export * from './multijobInterface'
+export * from './jobInterface.js'
+export * from './userInterface.js'
+export * from './multijobInterface.js'
