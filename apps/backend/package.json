@@ -20,7 +20,8 @@
     "dev": "concurrently \"npm run watch-ts\" \"nodemon dist/server.js\"",
     "watch-ts": "tsc -w",
     "start": "npm run build && node dist/server.js",
-    "test": "vitest",
+    "test": "vitest --run --coverage",
+    "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "server": "nodemon ."
   },

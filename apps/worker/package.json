@@ -20,7 +20,8 @@
     "dev:start": "npm-run-all build start",
     "dev": "nodemon --watch src --ext ts,ejs --exec npm run start",
     "start": "node dist/worker.js",
-    "test": "vitest",
+    "test": "vitest --run --coverage",
+    "test:watch": "vitest",
     "test:ui": "vitest --ui"
   },
   "keywords": [],

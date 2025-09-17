@@ -28,7 +28,8 @@
     "build": "npm-run-all clean lint vite-build",
     "preview": "vite preview",
     "optimize": "vite optimize",
-    "test": "vitest",
+    "test:watch": "vitest",
+    "test": "vitest --run --coverage",
     "test:ui": "vitest --ui",
     "coverage": "vitest --coverage",
     "related": "vitest related"
