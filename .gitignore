@@ -82,6 +82,7 @@ typings/
 # Nuxt.js build / generate output
 .nuxt
 dist
+build
 
 # Gatsby files
 .cache/
@@ -105,12 +106,6 @@ dist
 .tern-port
 
 # The BilboMD components that have their own GitHub repositories
-bilbomd-backend
-bilbomd-ui
-bilbomd-worker
-bilbomd-scoper
-bilbomd-colabfold
-bilbomd-mongodb-schema
 secrets
 helm-secrets
 uploads-dev

@@ -27,10 +27,7 @@
   "dependencies": {
     "mongoose": "^8.18.1"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.10",
-    "typescript": "^5.9.2"
-  },
+  "devDependencies": {},
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
