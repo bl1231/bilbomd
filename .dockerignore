@@ -1,0 +1,34 @@
+# Ignore everything by default
+**
+
+# Re-include only what the backend build needs
+!pnpm-workspace.yaml
+!pnpm-lock.yaml
+!package.json
+
+# Unignore dirs so we can include subpaths
+!apps
+!packages
+
+# Include backend app code
+!apps/backend/**
+# Include the schema package used by backend
+!packages/mongodb-schema/**
+
+# If you have shared config packages that backend needs, include them too:
+!packages/tsconfig/**
+!packages/eslint-config/**
+
+# Keep these ignored even if matched above
+.git/
+node_modules/
+**/node_modules/
+dist/
+build/
+coverage/
+.tmp/
+.temp/
+.DS_Store
+infra/
+**/*.zip
+**/*.tgz

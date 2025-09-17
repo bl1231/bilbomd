@@ -1,0 +1,67 @@
+{
+  // Use workspace TypeScript
+  "typescript.tsdk": "node_modules/typescript/lib",
+
+  // Make ESLint aware of each workspace (so tsconfigRootDir resolves correctly)
+  "eslint.workingDirectories": [
+    { "directory": "apps/ui", "changeProcessCWD": true },
+    { "directory": "apps/backend", "changeProcessCWD": true },
+    { "directory": "apps/worker", "changeProcessCWD": true },
+    { "directory": "apps/scoper", "changeProcessCWD": true },
+    { "directory": "packages/mongodb-schema", "changeProcessCWD": true }
+  ],
+
+  // General editor hygiene
+  "editor.showUnused": true,
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+
+  // Default formatters per language
+  "[typescript]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.rulers": [79, 88]
+  },
+
+  // Prettier global options (kept from backend)
+  "prettier.semi": false,
+
+  // Python testing (enable pytest, but avoid app-specific args here)
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "python.analysis.inlayHints.pytestParameters": true,
+
+  // Exclusions for performance
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    ".pnpm-store": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true
+  }
+}

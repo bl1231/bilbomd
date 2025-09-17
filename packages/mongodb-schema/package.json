@@ -1,0 +1,46 @@
+{
+  "name": "@bilbomd/mongodb-schema",
+  "version": "1.9.1",
+  "description": "BilboMD Mongoose Schema",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "watch": "nodemon --watch src --ext ts,json --exec 'npm run build'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bl1231/bilbomd.git",
+    "directory": "packages/mongodb-schema"
+  },
+  "author": "Scott Classen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bl1231/bilbomd/issues"
+  },
+  "homepage": "https://github.com/bl1231/bilbomd/tree/main/packages/mongodb-schema#readme",
+  "sideEffects": false,
+  "dependencies": {
+    "mongoose": "^8.18.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "typescript": "^5.9.2"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./frontend": {
+      "types": "./dist/frontend.d.ts",
+      "import": "./dist/frontend.js",
+      "default": "./dist/frontend.js"
+    }
+  }
+}

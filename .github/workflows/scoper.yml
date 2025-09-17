@@ -1,0 +1,30 @@
+name: CI / scoper
+
+on:
+  push:
+    branches:
+      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
+    paths:
+      - "apps/scoper/**"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "apps/scoper/bilbomd-scoper.dockerfile"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/scoper/**"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "apps/scoper/bilbomd-scoper.dockerfile"
+  workflow_dispatch: {}
+
+jobs:
+  scoper:
+    uses: ./.github/workflows/_build-and-push.yml
+    with:
+      app_id: scoper
+      dockerfile: apps/scoper/bilbomd-scoper.dockerfile
+      package_json: apps/scoper/package.json
+      image: ghcr.io/${{ github.repository_owner }}/bilbomd-scoper

@@ -1,0 +1,54 @@
+* STEP: Molecular Dynamics
+* PURPOSE: BilboMD md by 1500K with the rigid bodies in blocks
+* AUTHOR: Michal Hammel
+* AUTHOR: Scott Classen
+*
+
+bomlev -2
+
+! Read Topology-Files
+STREAM {{charmm_topo_dir}}
+
+open read unit 12 card name {{in_psf_file}}
+read psf card unit 12
+close unit 12
+
+open read unit 12 card name heat_output.crd
+read coor card unit 12
+close unit 12
+
+DEFINE ACTIVE sele type CA end
+NBACtive SELE ACTIVE end
+
+NBONDS bygr noelec cdie e14fac 0.000 eps 0.0 vdw vswitch CUTNB 8.0 -
+inbfrq 100 wmin 1.0
+open read unit 30 card name heat_output.rst
+
+STREAM {{constinp}}
+RGYRestrain Force 20 Reference {{rg}} select ALL end
+
+
+set ii 1
+label loop
+open write unit 34 file name {{inp_basename}}_run@ii.start
+close unit 34
+
+open write unit 31 card name {{inp_basename}}_run@ii.rst
+open write unit 32 file name {{inp_basename}}_run@ii.dcd
+
+dyna verlet restart nstep 100000 timestep {{timestep}} -
+iprfrq 1000 ihtfrq 0 ieqfrq 100 -
+iuncrd 32 iunwri 31 iunrea 30 -
+nprint 1000 nsavc 500 -
+firstt 1500.0 finalt 1500.0 tstruc 1500.0 -
+iasors 0 iasvel 1 iscvel 0 ichecw 1 TWINDH 100.0 TWINDL 500.0 -
+echeck 1.0E+30
+
+close unit 31
+close unit 32
+open read unit 30 card name {{inp_basename}}_run@ii.rst
+open write unit 35 file name {{inp_basename}}_run@ii.end
+close unit 35
+incr ii by 1
+if ii lt {{conf_sample}}.5 goto loop
+stop

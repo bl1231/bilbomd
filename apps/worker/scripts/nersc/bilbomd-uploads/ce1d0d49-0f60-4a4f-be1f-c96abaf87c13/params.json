@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "pdb2crd": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b43",
+      "id": "6643aa8af9e6ccc5f8ec9b43"
+    },
+    "pae": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b44",
+      "id": "6643aa8af9e6ccc5f8ec9b44"
+    },
+    "autorg": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b45",
+      "id": "6643aa8af9e6ccc5f8ec9b45"
+    },
+    "minimize": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b46",
+      "id": "6643aa8af9e6ccc5f8ec9b46"
+    },
+    "heat": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b47",
+      "id": "6643aa8af9e6ccc5f8ec9b47"
+    },
+    "md": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b48",
+      "id": "6643aa8af9e6ccc5f8ec9b48"
+    },
+    "foxs": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b49",
+      "id": "6643aa8af9e6ccc5f8ec9b49"
+    },
+    "multifoxs": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b4a",
+      "id": "6643aa8af9e6ccc5f8ec9b4a"
+    },
+    "results": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b4b",
+      "id": "6643aa8af9e6ccc5f8ec9b4b"
+    },
+    "email": {
+      "status": "Waiting",
+      "_id": "6643aa8af9e6ccc5f8ec9b4c",
+      "id": "6643aa8af9e6ccc5f8ec9b4c"
+    },
+    "numEnsembles": 0
+  },
+  "_id": "6643aa8af9e6ccc5f8ec9b42",
+  "title": "steps-test-10",
+  "uuid": "ce1d0d49-0f60-4a4f-be1f-c96abaf87c13",
+  "data_file": "pro_dna_saxs.dat",
+  "status": "Submitted",
+  "time_submitted": "2024-05-14T18:16:42.615Z",
+  "user": {
+    "username": "doodguy",
+    "email": "sclassen@lbl.gov"
+  },
+  "__t": "BilboMdPDB",
+  "pdb_file": "pro_dna_complex.pdb",
+  "const_inp_file": "const.inp",
+  "conformational_sampling": 1,
+  "rg_min": 22,
+  "rg_max": 41,
+  "createdAt": "2024-05-14T18:16:42.619Z",
+  "updatedAt": "2024-05-14T18:16:42.619Z",
+  "id": "6643aa8af9e6ccc5f8ec9b42"
+}

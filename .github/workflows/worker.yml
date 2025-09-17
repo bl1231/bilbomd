@@ -1,0 +1,30 @@
+name: CI / worker
+
+on:
+  push:
+    branches:
+      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
+    paths:
+      - "apps/worker/**"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "apps/worker/bilbomd-worker.dockerfile"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/worker/**"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "apps/worker/bilbomd-worker.dockerfile"
+  workflow_dispatch: {}
+
+jobs:
+  worker:
+    uses: ./.github/workflows/_build-and-push.yml
+    with:
+      app_id: worker
+      dockerfile: apps/worker/bilbomd-worker.dockerfile
+      package_json: apps/worker/package.json
+      image: ghcr.io/${{ github.repository_owner }}/bilbomd-worker

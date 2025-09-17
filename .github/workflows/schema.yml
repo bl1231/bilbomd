@@ -1,0 +1,51 @@
+name: CI / schema-trigger
+
+on:
+  push:
+    branches:
+      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
+    paths:
+      - "packages/mongodb-schema/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/mongodb-schema/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: read
+
+jobs:
+  backend:
+    uses: ./.github/workflows/_build-and-push.yml
+    with:
+      app_id: backend
+      dockerfile: apps/backend/bilbomd-backend.dockerfile
+      package_json: apps/backend/package.json
+      image: ghcr.io/${{ github.repository_owner }}/bilbomd-backend
+
+  worker:
+    uses: ./.github/workflows/_build-and-push.yml
+    with:
+      app_id: worker
+      dockerfile: apps/worker/bilbomd-worker.dockerfile
+      package_json: apps/worker/package.json
+      image: ghcr.io/${{ github.repository_owner }}/bilbomd-worker
+
+  ui:
+    uses: ./.github/workflows/_build-and-push.yml
+    with:
+      app_id: ui
+      dockerfile: apps/ui/bilbomd-ui.dockerfile
+      package_json: apps/ui/package.json
+      image: ghcr.io/${{ github.repository_owner }}/bilbomd-ui
+
+  scoper:
+    uses: ./.github/workflows/_build-and-push.yml
+    with:
+      app_id: scoper
+      dockerfile: apps/scoper/bilbomd-scoper.dockerfile
+      package_json: apps/scoper/package.json
+      image: ghcr.io/${{ github.repository_owner }}/bilbomd-scoper

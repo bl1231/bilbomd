@@ -1,0 +1,24 @@
+{
+status: 'OK',
+file: 'Starting pdb2crd_charmm_prop.inp\n' +
+  'Starting pdb2crd_charmm_dnad.inp\n' +
+  'Individual chains converted to CRD files.\n' +
+  'Melding pdb2crd_charmm_meld.inp\n' +
+  'All Individual CRD files melded into bilbomd_pdb2crd.crd\n' +
+  'Running CHARMM Minimize...\n' +
+  'CHARMM Minimize complete\n' +
+  'Running Initial FoXS Analysis...\n' +
+  'Initial FoXS Analysis complete\n' +
+  'Running CHARMM Heat...\n' +
+  'CHARMM Heating complete\n' +
+  'Running CHARMM Molecular Dynamics...\n' +
+  'Starting dynamics_rg22.inp\n' +
+  'Starting dynamics_rg26.inp\n' +
+  'Starting dynamics_rg30.inp\n' +
+  'Starting dynamics_rg34.inp\n' +
+  'Starting dynamics_rg38.inp\n' +
+  'CHARMM Molecular Dynamics complete\n' +
+  'Running CHARMM Extract PDB from DCD Trajectories...\n',
+  is_binary: false,
+  error: null
+}

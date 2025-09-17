@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+Dockerfile
+docker
+.dockerignore
+.git
+README.md
+.gitignore
+.vscode
+.prettierrc
+.prettierignore
+.nvmrc
+logs
+.eslintrc.yml
+bilbomd-test-data
+imp-2.18.0.tar.gz

@@ -1,0 +1,30 @@
+name: CI / backend
+
+on:
+  push:
+    branches:
+      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
+    paths:
+      - "apps/backend/**"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "apps/backend/bilbomd-backend.dockerfile"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/backend/**"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "apps/backend/bilbomd-backend.dockerfile"
+  workflow_dispatch: {}
+
+jobs:
+  backend:
+    uses: ./.github/workflows/_build-and-push.yml
+    with:
+      app_id: backend
+      dockerfile: apps/backend/bilbomd-backend.dockerfile
+      package_json: apps/backend/package.json
+      image: ghcr.io/${{ github.repository_owner }}/bilbomd-backend

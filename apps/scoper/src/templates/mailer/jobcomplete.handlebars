@@ -1,0 +1,69 @@
+<html lang='en'>
+    <head>
+        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8' />
+        <meta name='viewport' content='width=device-width' />
+        <style type='text/css'>
+
+            body { -webkit-text-size-adjust: none !important; text-size-adjust:
+            none !important; box-sizing: border-box !important;
+            background-color: #1E2A38 !important; padding: 16px !important;
+            margin: 0 !important; padding: 30px 5% 30px 5% !important;
+            font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif
+            !important; font-size: 14px !important; color: #F1F1F1 !important;
+            text-align: center !important; line-height: 1.33 !important; } .logo
+            { border-radius: 100% !important; width: 80px !important; height:
+            80px !important; } .wrapper { max-width: 450px !important; margin: 0
+            auto 0 auto !important; } p { margin: 14px 0 0 0 !important; }
+            p.left-align { text-align: left; } p a:link, p a:visited, p
+            a:active, p a:hover { color: #FFF; text-decoration: underline; }
+            .button { box-sizing: border-box !important; line-height: 16px
+            !important; font-size: 16px !important; display: block !important;
+            padding: 13px 15px 13px 15px !important; width: 200px !important;
+            margin: 0 auto !important; text-align: center !important;
+            border-radius: 2px !important; box-shadow: 0px 2px 5px
+            rgba(0,0,0,0.25) !important; background-color: #F0F0F0;
+            text-decoration: none !important; color: #000 !important; }
+            .alt-link { margin-top: 10px; word-wrap: break-word !important;
+            color: #999 !important; font-size: 12px !important; } .footer {
+            margin: 28px 0 0 0 !important; border-top: 1px dotted #999
+            !important; color: #999999 !important; font-size: 12px !important; }
+            .footer-link { color: #BBB !important; white-space: nowrap
+            !important; }
+
+        </style>
+    </head>
+    <body>
+        <div class='wrapper'>
+
+            <svg class='logo' viewBox='0 0 460 460'></svg>
+
+            <p>Hi there! Your BilboMD job {{title}} is complete. Push the
+                button to see your results!</p>
+            <p><a class='button' href='{{url}}/dashboard/jobs/{{jobid}}'>See BilboMD Results</a></p>
+
+            <p>You can also copy paste the link into your browser:</p>
+
+            <p><a
+                    class='alt-link'
+                    href='{{url}}/dashboard/jobs/{{jobid}}'
+                >{{url}}/dashboard/jobs/{{jobid}}</a></p>
+
+
+            <div class='footer'>
+                <p>You are receiving this email because you have an account with
+                    BilboMD and a job you submitted has completed.
+                    <a
+                        class='footer-link'
+                        href='https://bilbomd.als.lbl.gov/settings/safety'
+                    >Unsubscribe</a>
+                    by deleting your account.</p>
+
+                <p>&copy; SIBYLS Beamline &#x2022 United States &#x2022
+                    <a
+                        class='footer-link'
+                        href='https://bl1231.als.lbl.gov'
+                    >sibyls.als.lbl.gov</a></p>
+            </div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,116 @@
+[
+    {
+      "id": 67117,
+      "description": "Computational Biosciences Group",
+      "repo_name": "m3513",
+      "hours_given": 143.4575,
+      "hours_used": 0,
+      "project_hours_given": 956.3827777777777,
+      "project_hours_used": 214.41861111111112,
+      "cpu_hours_given": 143.4575,
+      "cpu_hours_used": 0,
+      "cpu_project_hours_given": 956.3827777777777,
+      "cpu_project_hours_used": 214.41861111111112,
+      "gpu_hours_given": 500,
+      "gpu_hours_used": 0,
+      "gpu_project_hours_given": 500,
+      "gpu_project_hours_used": 271.5261111111111,
+      "projdir_usage": [
+        {
+          "name": "m3513",
+          "bytes_given": 48378511622144,
+          "bytes_used": 13280315654144,
+          "bytes_given_human": "44.00 TB",
+          "bytes_used_human": "12.08 TB",
+          "files_given": 20000000,
+          "files_used": 6019205
+        }
+      ],
+      "project_projdir_usage": {
+        "name": "m3513",
+        "bytes_given": 32985348833280,
+        "bytes_used": 13280315654144,
+        "bytes_given_human": "30.00 TB",
+        "bytes_used_human": "12.08 TB",
+        "files_given": 20000000,
+        "files_used": 6019205
+      },
+      "hpss_usage": null
+    },
+    {
+      "id": 68676,
+      "description": "A Plug and Play DOE Approach for Emerging Threats: Taskforce 5",
+      "repo_name": "m4521",
+      "hours_given": 199.70027777777779,
+      "hours_used": 0,
+      "project_hours_given": 1997.0019444444445,
+      "project_hours_used": 39.035833333333336,
+      "cpu_hours_given": 199.70027777777779,
+      "cpu_hours_used": 0,
+      "cpu_project_hours_given": 1997.0019444444445,
+      "cpu_project_hours_used": 39.035833333333336,
+      "gpu_hours_given": 331.0422222222222,
+      "gpu_hours_used": 0,
+      "gpu_project_hours_given": 3310.423333333333,
+      "gpu_project_hours_used": 477.13416666666666,
+      "projdir_usage": [
+        {
+          "name": "m4521",
+          "bytes_given": 21990232555520,
+          "bytes_used": 81920,
+          "bytes_given_human": "20.00 TB",
+          "bytes_used_human": "80.00 KB",
+          "files_given": 10000000,
+          "files_used": 96
+        }
+      ],
+      "project_projdir_usage": {
+        "name": "m4521",
+        "bytes_given": 21990232555520,
+        "bytes_used": 81920,
+        "bytes_given_human": "20.00 TB",
+        "bytes_used_human": "80.00 KB",
+        "files_given": 10000000,
+        "files_used": 96
+      },
+      "hpss_usage": null
+    },
+    {
+      "id": 68963,
+      "description": "BilboMD",
+      "repo_name": "m4659",
+      "hours_given": 1000,
+      "hours_used": 33.63666666666666,
+      "project_hours_given": 1000,
+      "project_hours_used": 33.63666666666666,
+      "cpu_hours_given": 1000,
+      "cpu_hours_used": 33.63666666666666,
+      "cpu_project_hours_given": 1000,
+      "cpu_project_hours_used": 33.63666666666666,
+      "gpu_hours_given": 5000,
+      "gpu_hours_used": 71.04083333333334,
+      "gpu_project_hours_given": 5000,
+      "gpu_project_hours_used": 71.04083333333334,
+      "projdir_usage": [
+        {
+          "name": "m4659",
+          "bytes_given": 21990232555520,
+          "bytes_used": 64909393920,
+          "bytes_given_human": "20.00 TB",
+          "bytes_used_human": "60.45 GB",
+          "files_given": 10000000,
+          "files_used": 215320
+        }
+      ],
+      "project_projdir_usage": {
+        "name": "m4659",
+        "bytes_given": 21990232555520,
+        "bytes_used": 64909393920,
+        "bytes_given_human": "20.00 TB",
+        "bytes_used_human": "60.45 GB",
+        "files_given": 10000000,
+        "files_used": 215320
+      },
+      "hpss_usage": null
+    }
+  ]
