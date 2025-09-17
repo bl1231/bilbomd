@@ -68,7 +68,8 @@ jobs:
           images: ${{ inputs.image }}
           tags: |
             # main-only
-            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' }}
+            # Only tag semver on the Changesets bump commit to avoid race with pre-bump build
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && github.actor == 'github-actions[bot]' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             # always
             type=raw,value=${{ github.sha }}
