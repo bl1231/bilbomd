@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: 10.15.1 }
+        with: { version: 10.16.1 }
       - run: pnpm install
       - name: Create or update Version Packages PR
         uses: changesets/action@v1
