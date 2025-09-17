@@ -1,0 +1,8 @@
+{
+  "name": "@bilbomd/eslint-config",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.mjs"
+  }
+}
