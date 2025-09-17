@@ -33,7 +33,7 @@ export default defineConfig([
 
   // Project-aware TS settings (limit scope to src to reduce noise)
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
         project: ['./tsconfig.app.json', './tsconfig.node.json'],
