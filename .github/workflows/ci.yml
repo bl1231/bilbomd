@@ -1,0 +1,346 @@
+name: BilboMD CI
+
+on:
+  push:
+    branches:
+      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: read
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      ui: ${{ steps.filter.outputs.ui }}
+      worker: ${{ steps.filter.outputs.worker }}
+      scoper: ${{ steps.filter.outputs.scoper }}
+      schema: ${{ steps.filter.outputs.schema }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Paths filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            backend:
+              - 'apps/backend/**'
+              - 'packages/mongodb-schema/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'apps/backend/bilbomd-backend.dockerfile'
+            ui:
+              - 'apps/ui/**'
+              - 'packages/mongodb-schema/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'apps/ui/bilbomd-ui.dockerfile'
+            worker:
+              - 'apps/worker/**'
+              - 'packages/mongodb-schema/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'apps/worker/bilbomd-worker.dockerfile'
+            scoper:
+              - 'apps/scoper/**'
+              - 'packages/mongodb-schema/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'apps/scoper/bilbomd-scoper.dockerfile'
+            schema:
+              - 'packages/mongodb-schema/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+
+  backend:
+    name: Build & Push backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: backend-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read version from package.json
+        run: echo "VERSION=$(jq -r .version 'apps/backend/package.json')" >> $GITHUB_ENV
+
+      - name: Compute branch + short sha
+        run: |
+          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Resolve PR number for this branch (if any)
+        id: pr
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const branch = context.ref.replace('refs/heads/', '');
+            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
+            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
+
+      - name: Docker metadata (tags/labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/bilbomd-backend
+          tags: |
+            # main-only semver (only on the Changesets bump commit)
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && github.actor == 'github-actions[bot]' }}
+            # main latest
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            # always include the SHA tag
+            type=raw,value=${{ github.sha }}
+            # PR tags (event)
+            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            # PR tags (branch push with open PR)
+            type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
+            type=raw,value=pr-${{ steps.pr.outputs.number }}-${{ env.SHORT_SHA }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
+            # branch tags (non-main)
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/bilbomd-backend.dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          build-args: |
+            USER_ID=${{ vars.USER_ID || '1001' }}
+            GROUP_ID=${{ vars.GROUP_ID || '1234' }}
+            BACKEND_GIT_HASH=${{ github.sha }}
+            BACKEND_VERSION=${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  ui:
+    name: Build & Push ui
+    needs: changes
+    if: needs.changes.outputs.ui == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ui-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read version
+        run: echo "VERSION=$(jq -r .version 'apps/ui/package.json')" >> $GITHUB_ENV
+
+      - name: Compute branch + short sha
+        run: |
+          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/bilbomd-ui
+          tags: |
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && github.actor == 'github-actions[bot]' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ github.sha }}
+            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/ui/bilbomd-ui.dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          build-args: |
+            USER_ID=${{ vars.USER_ID || '1001' }}
+            GROUP_ID=${{ vars.GROUP_ID || '1234' }}
+            UI_GIT_HASH=${{ github.sha }}
+            UI_VERSION=${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  worker:
+    name: Build & Push worker
+    needs: changes
+    if: needs.changes.outputs.worker == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: worker-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read version
+        run: echo "VERSION=$(jq -r .version 'apps/worker/package.json')" >> $GITHUB_ENV
+
+      - name: Compute branch + short sha
+        run: |
+          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/bilbomd-worker
+          tags: |
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && github.actor == 'github-actions[bot]' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ github.sha }}
+            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/worker/bilbomd-worker.dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          build-args: |
+            USER_ID=${{ vars.USER_ID || '1001' }}
+            GROUP_ID=${{ vars.GROUP_ID || '1234' }}
+            WORKER_GIT_HASH=${{ github.sha }}
+            WORKER_VERSION=${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  scoper:
+    name: Build & Push scoper
+    needs: changes
+    if: needs.changes.outputs.scoper == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: scoper-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read version
+        run: echo "VERSION=$(jq -r .version 'apps/scoper/package.json')" >> $GITHUB_ENV
+
+      - name: Compute branch + short sha
+        run: |
+          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/bilbomd-scoper
+          tags: |
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && github.actor == 'github-actions[bot]' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ github.sha }}
+            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
+            type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/scoper/bilbomd-scoper.dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          build-args: |
+            USER_ID=${{ vars.USER_ID || '1001' }}
+            GROUP_ID=${{ vars.GROUP_ID || '1234' }}
+            SCOPER_GIT_HASH=${{ github.sha }}
+            SCOPER_VERSION=${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  schema:
+    name: Build schema (package only)
+    needs: changes
+    if: needs.changes.outputs.schema == 'true' && needs.changes.outputs.backend != 'true' && needs.changes.outputs.ui != 'true' && needs.changes.outputs.worker != 'true' && needs.changes.outputs.scoper != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # optional: run pnpm install and a typecheck/build just to validate schema compiles
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build schema
+        run: pnpm -C packages/mongodb-schema run build
