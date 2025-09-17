@@ -104,10 +104,6 @@ dist
 # TernJS port file
 .tern-port
 
-# VSCode settings
-.vscode
-*.code-workspace
-
 # The BilboMD components that have their own GitHub repositories
 bilbomd-backend
 bilbomd-ui
