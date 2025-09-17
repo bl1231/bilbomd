@@ -60,6 +60,8 @@ Then you should be able to start a local development instance of `bilbomd-ui` wi
 
 ## Version History
 
+- 1.22.0 (9/17/2025)
+  - trigger GHA
 - 1.21.5 (9/10/2025)
   - Display `md_engine` if it exists in MongoDB Job entry
 - 1.21.4 (9/9/2025)
