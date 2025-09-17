@@ -39,7 +39,8 @@ export default [
   // Vitest
   {
     plugins: { vitest },
-    rules: {},
-    settings: {},
+    rules: {
+      "vitest/no-focused-tests": "error",
+    },
   },
 ];
