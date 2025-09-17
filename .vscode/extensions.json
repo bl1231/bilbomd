@@ -1,0 +1,27 @@
+{
+  "recommendations": [
+    // Core linting & formatting
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // TypeScript / React ecosystem
+    "ms-vscode.vscode-typescript-next", 
+    "bradlc.vscode-tailwindcss",
+
+    // Python ecosystem
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "ms-python.vscode-pylance",
+
+    // Testing
+    "vitest.explorer",
+
+    // Docker & Kubernetes
+    "ms-azuretools.vscode-containers",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+
+    // GitHub
+    "github.vscode-github-actions"
+  ],
+  "unwantedRecommendations": []
+}
