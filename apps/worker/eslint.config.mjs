@@ -23,7 +23,7 @@ export default defineConfig([
 
   // Type-aware rules for this package
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ['**/*.ts'],
     languageOptions: {
       parserOptions: {
         project: ['./tsconfig.json'],
