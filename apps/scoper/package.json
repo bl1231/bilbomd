@@ -42,19 +42,7 @@
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
-  "devDependencies": {
-    "@eslint/js": "^9.35.0",
-    "@types/fs-extra": "^11.0.4",
-    "@types/node": "^24.5.1",
-    "@types/nodemailer": "^7.0.1",
-    "@types/nodemailer-express-handlebars": "^4.0.5",
-    "copyfiles": "^2.4.1",
-    "eslint": "^9.35.0",
-    "rimraf": "^6.0.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.2",
-    "typescript-eslint": "^8.44.0"
-  },
+  "devDependencies": {},
   "_moduleAliases": {
     "@services": "build/services",
     "@models": "build/models",
