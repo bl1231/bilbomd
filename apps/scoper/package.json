@@ -2,7 +2,11 @@
   "name": "@bilbomd/scoper",
   "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
   "version": "1.3.4",
-  "main": "scoper.js",
+  "main": "build/scoper.js",
+  "files": [
+    "build",
+    "scripts"
+  ],
   "type": "module",
   "author": {
     "name": "Scott Classen",
