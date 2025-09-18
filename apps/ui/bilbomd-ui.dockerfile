@@ -1,4 +1,3 @@
-
 # -----------------------------------------------------------------------------
 # Stage 1: deps (prefetch pnpm store for monorepo)
 FROM node:22-alpine AS deps
@@ -33,9 +32,9 @@ RUN pnpm -C apps/ui run build
 RUN pnpm deploy --filter @bilbomd/ui --prod /out
 
 # Generate version.json during the build
-ARG BILBOMD_UI_VERSION
-ARG BILBOMD_UI_GIT_HASH
-# RUN echo "{ \"version\": \"${BILBOMD_UI_VERSION}\", \"gitHash\": \"${BILBOMD_UI_GIT_HASH}\" }" > /out/build/version.json
+ARG UI_VERSION
+ARG UI_GIT_HASH
+RUN echo "{ \"version\": \"${UI_VERSION}\", \"gitHash\": \"${UI_GIT_HASH}\" }" > /repo/apps/ui/build/version.json
 
 # -----------------------------------------------------------------------------
 # Stage 3: serve (nginx)
@@ -45,7 +44,7 @@ RUN apk add --no-cache bash
 # Copy the Vite build output (dist/build) to nginx serving directory
 COPY --from=build /repo/apps/ui/build /usr/share/nginx/html
 
-# Optionally, customize nginx configuration
+# Copy nginx configuration
 COPY apps/ui/nginx.default.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
