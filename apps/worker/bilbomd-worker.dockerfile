@@ -60,6 +60,9 @@ RUN groupadd -g ${GROUP_ID} bilbomd \
 # Copy the minimal app bundle from the build stage
 COPY --chown=bilbo:bilbomd --from=build /out/ .
 
+# Copy centralized shared scripts (e.g., autorg.py)
+COPY --chown=bilbo:bilbomd tools/python/ /app/scripts/
+
 ENV NODE_ENV=production
 USER bilbo:bilbomd
 EXPOSE 3000

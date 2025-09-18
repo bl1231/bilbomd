@@ -35,19 +35,8 @@ RUN conda install --yes --name base -c conda-forge numpy scipy matplotlib \
     conda clean -afy
 
 # -----------------------------------------------------------------------------
-# Install BioXTAS RAW
-FROM install-conda AS install-bioxtas-raw
-WORKDIR /tmp
-RUN wget https://github.com/jbhopkins/bioxtasraw/archive/refs/heads/master.zip -O bioxtasraw-master.zip && \
-    unzip bioxtasraw-master.zip && rm bioxtasraw-master.zip
-WORKDIR /tmp/bioxtasraw-master
-RUN python setup.py build_ext --inplace && \
-    pip install . && \
-    rm -rf /tmp/bioxtasraw-master
-
-# -----------------------------------------------------------------------------
 # Install IMP (FoXS & multi_foXS)
-FROM install-bioxtas-raw AS install-imp
+FROM install-conda AS install-imp
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common && \
     add-apt-repository ppa:salilab/ppa && \
@@ -73,24 +62,8 @@ RUN wget https://bl1231.als.lbl.gov/pickup/pepsisans/Pepsi-SANS-Linux.zip -O Pep
 COPY scripts/sans /usr/local/sans
 
 # -----------------------------------------------------------------------------
-# Install ATSAS
-FROM install-sans-tools AS install-atsas
-RUN apt-get update && \
-    apt-get install -y shared-mime-info libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 \
-    libxcb-keysyms1 libxcb-shape0 libc6 libgcc-s1 libstdc++6 libxml2 libtiff5 liblzma5 libgfortran5 libicu70 libharfbuzz0b && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-WORKDIR /tmp
-RUN wget https://bl1231.als.lbl.gov/pickup/atsas/ATSAS-4.0.1-1-Linux-Ubuntu-22.run -O ATSAS-4.0.1-1-Linux-Ubuntu-22.run && \
-    wget https://bl1231.als.lbl.gov/pickup/atsas/atsas.lic -O atsas.lic
-# Uncomment below to install ATSAS if needed
-RUN mkdir /root/.local && chmod +x ATSAS-4.0.1-1-Linux-Ubuntu-22.run && \
-    ./ATSAS-4.0.1-1-Linux-Ubuntu-22.run --accept-licenses --auto-answer \
-    AutomaticRuntimeDependencyResolution=Yes --root /usr/local/ATSAS-4.0.1 --file-query KeyFilePath=/tmp/atsas.lic \
-    --confirm-command install && rm ATSAS-4.0.1-1-Linux-Ubuntu-22.run
-
-# -----------------------------------------------------------------------------
 # Build OpenMM from source and install
-FROM install-atsas AS openmm-build
+FROM install-sans-tools AS openmm-build
 ARG OPENMM_BRANCH=master
 ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_BRANCH}
 RUN apt-get update && \
@@ -162,11 +135,6 @@ COPY --from=build_charmm /usr/local/src/charmm/bin/charmm /usr/local/bin/charmm
 COPY --from=install-sans-tools /usr/local/bin/Pepsi-SANS /usr/local/bin/Pepsi-SANS
 COPY --from=install-sans-tools /usr/local/sans /usr/local/sans
 COPY --from=openmm-build ${OPENMM_PREFIX} ${OPENMM_PREFIX}
-# COPY --from=install-atsas /usr/local/ATSAS-4.0.1/Licenses /usr/local/ATSAS-4.0.1/Licenses
-COPY --from=install-atsas /usr/local/ATSAS-4.0.1/atsas.lic /usr/local/ATSAS-4.0.1/atsas.lic
-COPY --from=install-atsas /usr/local/ATSAS-4.0.1/bin /usr/local/ATSAS-4.0.1/bin
-COPY --from=install-atsas /usr/local/ATSAS-4.0.1/lib /usr/local/ATSAS-4.0.1/lib
-COPY --from=install-atsas /usr/local/ATSAS-4.0.1/share /usr/local/ATSAS-4.0.1/share
 COPY --from=pack-openmm-env /tmp/openmm-env.tar.gz /tmp/openmm-env.tar.gz
 COPY --from=pack-openmm-env /tmp/base-env.tar.gz   /tmp/base-env.tar.gz
 RUN mkdir -p /opt/envs/openmm /opt/envs/base && \
@@ -190,9 +158,6 @@ ENV OPENMM_INCLUDE_DIR="${OPENMM_PREFIX}/include"
 ENV OPENMM_LIBRARY="${OPENMM_PREFIX}/lib"
 ENV OPENMM_LIBRARIES="${OPENMM_PREFIX}/lib"
 ENV OPENMM_PLUGIN_DIR="${OPENMM_PREFIX}/lib/plugins"
-
-ENV ATSAS="/usr/local/ATSAS-4.0.1"
-ENV PATH="${ATSAS}/bin:${PATH}"
 
 # ---- Smoke test OpenMM installation ----
 COPY scripts/smoke_test.sh /usr/local/bin/smoke_test.sh

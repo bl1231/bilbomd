@@ -25,29 +25,8 @@ RUN conda env update -f /tmp/environment.yml && \
     conda clean -afy
 
 # --------------------------------------------------------------------------------------
-# Build stage 2 - Install BioXTAS
-FROM bilbomd-backend-step1 AS bilbomd-backend-step2
-
-# install deps
-RUN apt-get update && \
-    apt-get install -y curl zip build-essential libarchive13 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install BioXTAS from source
-WORKDIR /tmp
-#COPY bioxtas/bioxtasraw-master.zip .
-RUN wget -q https://github.com/jbhopkins/bioxtasraw/archive/refs/heads/master.zip -O bioxtasraw-master.zip && \
-    unzip bioxtasraw-master.zip && \
-    rm bioxtasraw-master.zip
-
-WORKDIR /tmp/bioxtasraw-master
-RUN python setup.py build_ext --inplace && \
-    pip install .
-
-# --------------------------------------------------------------------------------------
 # Build stage 3a - deps: prefetch pnpm store for monorepo
-FROM bilbomd-backend-step2 AS deps
+FROM bilbomd-backend-step1 AS deps
 WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the same version you use locally
@@ -65,7 +44,7 @@ RUN pnpm fetch
 
 # --------------------------------------------------------------------------------------
 # Build stage 3b - build: install, build schema + backend, and create minimal output
-FROM bilbomd-backend-step2 AS build
+FROM bilbomd-backend-step1 AS build
 WORKDIR /repo
 
 RUN corepack enable \
@@ -96,8 +75,8 @@ RUN pnpm deploy --filter @bilbomd/backend --prod /out
 RUN rm -f /root/.npmrc || true
 
 # --------------------------------------------------------------------------------------
-# Build stage 3c - runtime: keep your base with Miniforge/BioXTAS, add app only
-FROM bilbomd-backend-step2 AS bilbomd-backend
+# Build stage 3c - runtime: keep your base with Miniforge, add app and shared tools
+FROM bilbomd-backend-step1 AS bilbomd-backend
 
 # IDs can be passed from compose as build args
 ARG USER_ID
@@ -113,6 +92,8 @@ WORKDIR /app
 
 # Copy minimal app bundle from build stage
 COPY --chown=bilbo:bilbomd --from=build /out/ .
+
+COPY --chown=bilbo:bilbomd ./tools/python/ /app/scripts/
 
 # Optional metadata/env from build args
 ARG BILBOMD_BACKEND_GIT_HASH

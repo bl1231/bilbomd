@@ -18,6 +18,7 @@
 # If you have shared config packages that backend needs, include them too:
 !packages/tsconfig/**
 !packages/eslint-config/**
+!tools/python/**
 
 # Keep these ignored even if matched above
 .git/
