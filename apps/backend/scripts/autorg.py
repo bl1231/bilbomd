@@ -6,16 +6,177 @@ import argparse
 import json
 import os
 import sys
+import numpy as np
 
-# import warnings
 
-import bioxtasraw.RAWAPI as raw
+def _load_profile(file_path):
+    """
+    Minimal loader for 2- or 3-column SAXS data files.
+    Expects columns: q  I(q)  [sigma] (sigma ignored).
+    Returns sorted arrays (q, I) with I>0 and finite values only.
+    """
+    data = np.loadtxt(file_path, comments=("#", ";"))
+    if data.ndim == 1:
+        data = data.reshape(-1, data.shape[-1])
+    if data.shape[1] < 2:
+        raise ValueError("Input file must have at least two columns: q and I(q)")
+
+    q = data[:, 0]
+    intensity = data[:, 1]
+    sigma = data[:, 2] if data.shape[1] >= 3 else None
+
+    mask = np.isfinite(q) & np.isfinite(intensity) & (intensity > 0) & (q >= 0)
+    if sigma is not None:
+        mask = mask & np.isfinite(sigma) & (sigma > 0)
+
+    if not np.any(mask):
+        raise ValueError("No valid q/I(q) points after filtering.")
+
+    q = q[mask]
+    intensity = intensity[mask]
+    if sigma is not None:
+        sigma = sigma[mask]
+
+    order = np.argsort(q)
+    q = q[order]
+    intensity = intensity[order]
+    if sigma is not None:
+        sigma = sigma[order]
+
+    return q, intensity, sigma
+
+
+def _auto_guinier(
+    q, intensity, sigma=None, min_points=10, max_qrg=1.3, min_qrg=0.3, r2_floor=0.90
+):
+    """
+    Auto-Guinier with sliding start/end, optional sigma-weighting.
+
+    Returns RAW-like tuple:
+        (rg, izero, rg_err, izero_err, qmin, qmax, qrg_min, qrg_max, idx_min, idx_max, r_sqr)
+    Error estimates are left as 0.0 placeholders for now.
+    """
+    q = np.asarray(q, dtype=float)
+    intensity = np.asarray(intensity, dtype=float)
+    w = None
+    if sigma is not None:
+        sigma = np.asarray(sigma, dtype=float)
+        w = 1.0 / (sigma**2)
+
+    n = q.size
+    if n < min_points:
+        raise ValueError(f"Not enough points for Guinier fit (need >= {min_points}).")
+
+    x_all = q**2
+    y_all = np.log(intensity)
+
+    def _linfit(x, y, w=None):
+        if w is None:
+            m, b = np.polyfit(x, y, 1)
+            yhat = m * x + b
+        else:
+            # Weighted linear regression via normal equations
+            W = np.diag(w)
+            A = np.vstack([x, np.ones_like(x)]).T
+            # Solve (A^T W A) beta = A^T W y
+            ATA = A.T @ W @ A
+            ATy = A.T @ W @ y
+            beta = np.linalg.lstsq(ATA, ATy, rcond=None)[0]
+            m, b = beta[0], beta[1]
+            yhat = m * x + b
+        # Weighted/Unweighted R^2
+        if w is None:
+            ss_res = float(np.sum((y - yhat) ** 2))
+            ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+        else:
+            ss_res = float(np.sum(w * (y - yhat) ** 2))
+            ybar = float(np.sum(w * y) / np.sum(w))
+            ss_tot = float(np.sum(w * (y - ybar) ** 2))
+        r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+        return float(m), float(b), float(r2)
+
+    best = None  # (rg, I0, 0, 0, qmin, qmax, qrg_min, qrg_max, i0, i1, r2)
+
+    # Explore windows [i:j] with >= min_points
+    for i in range(0, n - min_points + 1):
+        for j in range(i + min_points - 1, n):
+            x = x_all[i : j + 1]
+            y = y_all[i : j + 1]
+            ww = None if w is None else w[i : j + 1]
+
+            try:
+                m, b, r2 = _linfit(x, y, ww)
+            except Exception:
+                continue
+
+            if m >= 0:  # must be negative slope
+                continue
+
+            rg = float(np.sqrt(-3.0 * m))
+            qrg_min = float(q[i] * rg)
+            qrg_max = float(q[j] * rg)
+
+            # Guinier window constraints
+            if not (min_qrg <= qrg_min <= max_qrg):
+                continue
+            if not (min_qrg <= qrg_max <= max_qrg):
+                continue
+            if r2 < r2_floor:
+                continue
+
+            candidate = (
+                rg,
+                float(np.exp(b)),
+                0.0,
+                0.0,
+                float(q[i]),
+                float(q[j]),
+                qrg_min,
+                qrg_max,
+                i,
+                j,
+                r2,
+            )
+
+            if best is None:
+                best = candidate
+            else:
+                # Prefer higher R^2; break ties by larger window, then lower qmin
+                if candidate[-1] > best[-1]:
+                    best = candidate
+                elif np.isclose(candidate[-1], best[-1]):
+                    curr_len = best[9] - best[8]
+                    cand_len = candidate[9] - candidate[8]
+                    if cand_len > curr_len or (
+                        cand_len == curr_len and candidate[4] < best[4]
+                    ):
+                        best = candidate
+
+    if best is None:
+        # Fall back to the first feasible window without lower-bound constraint
+        i, j = 0, min_points - 1
+        m, b, r2 = _linfit(
+            x_all[i : j + 1], y_all[i : j + 1], None if w is None else w[i : j + 1]
+        )
+        rg = float(np.sqrt(max(0.0, -3.0 * m)))
+        best = (
+            rg,
+            float(np.exp(b)),
+            0.0,
+            0.0,
+            float(q[i]),
+            float(q[j]),
+            float(q[i] * rg),
+            float(q[j] * rg),
+            i,
+            j,
+            r2,
+        )
+
+    return best
+
 
 os.environ["MPLCONFIGDIR"] = "/tmp/"
-
-
-# Redirect all warnings to stderr
-# warnings.filterwarnings("ignore", category=UserWarning, module="scipy")
 
 
 def parse_args():
@@ -41,9 +202,8 @@ def calculate_rg(file_path, output_file):
     SCALE_TRANSITION_WIDTH = 40  # Angstrom
 
     try:
-        profiles = raw.load_profiles(file_path)
-        gi_profile = profiles[0]
-        guinier_results = raw.auto_guinier(gi_profile)
+        q, intensity, sigma = _load_profile(file_path)
+        guinier_results = _auto_guinier(q, intensity, sigma)
         (
             rg,
             izero,
