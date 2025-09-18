@@ -17,13 +17,13 @@ PROJECT_NAME=""
 
 case "$1" in
   local)
-    ENV="./infra/.env.local"
-    COMPOSE_FILE="./infra/docker-compose.local.yml"
+    ENV=".env.local"
+    COMPOSE_FILE="./docker-compose.local.yml"
     PROJECT_NAME="bilbomd-local"
     ;;
   dev)
-    ENV="./infra/.env.dev"
-    COMPOSE_FILE="./infra/docker-compose.dev.yml"
+    ENV=".env.dev"
+    COMPOSE_FILE="./docker-compose.dev.yml"
     PROJECT_NAME="bilbomd-dev"
     ;;
   *)
