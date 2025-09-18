@@ -1,180 +1,59 @@
-# bilbomd
+# BilboMD
 
-bilbomd Monorepo — Changesets HOWTO
+An advances Small Angle X-Ray Scattering (SAXS) modelling pipeline.
 
-This doc explains how we version and release individual packages/apps in the monorepo using Changesets. It covers daily workflow, commands, CI interactions, and troubleshooting.
+## Description
 
-## Why Changesets?
+BilboMD is a webapp developed at the [SIBYLS beamline](https://sibyls.als.lbl.gov). It uses Molecular Dynamics from [CHARMM](https://academiccharmm.org/) or [OpenMM](https://openmm.org/) to generate an array of possible molecular models. The ensemble of models is used to calculate theoretical SAXS curves using [FoXS](https://modbase.compbio.ucsf.edu/foxs/about), and compared with experimental SAXS data using [MultiFoXS](https://modbase.compbio.ucsf.edu/multifoxs/about) to find an ensemble of models that best explains your SAXS data.
 
-- Per-package versioning (backend, worker, ui, scoper, mongodb-schema bump independently).
-- Changelogs are generated per package.
-- Git tags like `@bilbomd/backend@1.23.0` are created automatically.
-- Plays nicely with our existing Docker build workflows (semver image tags only from main).
+## High level architecture
 
-## One-time setup (already done)
+![BilboMD Design](docs/bilbomd-architecture.drawio.png)
 
-- Initialized: `.changeset/` with `config.json`.
-- Two workflows:
-  - Changesets – Release PR (creates/updates “Version Packages” PR if changesets exist).
-  - Changesets – Apply Versions (applies version bumps & pushes tags on main).
+## Pipelines
 
-## Daily workflow
+There are several different SAXS modeling pipelines available.
 
-### 1) Make code changes
+### BilboMD Classic w/PDB inputs
 
-Work in a feature branch as usual.
+This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided PDB file and experimental SAXS data.
 
-### 2) Add a changeset
+![Classic PDB](apps/ui/public/images/bilbomd-classic-pdb-schematic.png)
 
-From repo root:
+### BilboMD Classic w/CRD inputs
 
-```bash
-pnpm dlx @changesets/cli changeset
-```
+This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided CRD and PSF file and experimental SAXS data. The CRD and PSF files can be generated using [CHARMM GUI](https://www.charmm-gui.org/).
 
-- Select the packages you changed (space to toggle).
-- Choose patch / minor / major.
-- Write a short, user-focused summary.
-- Tip: If several packages changed, one changeset can cover them all; or create multiple changesets for finer control.
+![Classic CRD](apps/ui/public/images/bilbomd-classic-crd-schematic.png)
 
-This creates a file like `.changeset/friendly-parrots-sing.md`.
+### BilboMD Auto
 
-### 3) Commit & open PR
+This pipeline is designed to take Alphafold models and a Per residue Alignment Error (PAE) matrix in combination with your experimental SAXS data.
 
-```bash
-git add .
-git commit -m "feat(ui): add X [changeset]"
-git push
-```
+![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic.png)
 
-Create a PR. CI will run as usual; PR images are tagged like `pr-<num>`.
+### BilboMD AF
 
-### 4) Merge the PR
+This pipeline is designed to run Alphafold2 on your provided protein sequence and then run the Auto pipeline above.
 
-- On merge to main, per-app workflows build & push main images (e.g., `:latest`, `:<sha>`).
-- Then Changesets – Apply Versions runs:
-  - bumps affected package versions,
-  - updates changelogs,
-  - pushes git tags (`@bilbomd/<pkg>@<version>`),
-  - pushes the version-bump commit to main.
+![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic.png)
 
-### 5) Version build (semver images)
+## Deployment
 
-- Because the package `package.json` changed on main, the per-app workflows may run again (based on path filters) and push semver Docker tags:
-  - `ghcr.io/bl1231/bilbomd-backend:<package.json version>`
-- `latest` still only on main.
+There are 2 instances of BilboMD available. Each deployment has a different selection of pipelines available. This is primarily because of access to high performance NVIDIA GPUs at NERSC which are unavailable at the SIBYLS beamline on Hyperion.
 
-## How versions are chosen
+1. Hyperion [https://bilbomd.bl1231.als.lbl.gov](https://bilbomd.bl1231.als.lbl.gov)
 
-When you add a changeset, you choose:
+    - Classic w/PDB
+    - Classic w/CRD
+    - Auto
+    - Multi
+    - SANS
+    - Scoper
 
-- **patch:** bug fixes, internal changes,
-- **minor:** backwards-compatible features,
-- **major:** breaking changes.
+2. NERSC [https://bilbomd-nersc.bl1231.als.lbl.gov](https://bilbomd-nersc.bl1231.als.lbl.gov)
 
-You can create multiple changesets across different PRs; Changesets will accumulate them until applied on main.
-
-## Useful commands
-
-Create a changeset
-
-```bash
-pnpm dlx @changesets/cli changeset
-```
-
-See what would be released (locally)
-
-```bash
-pnpm dlx @changesets/cli status
-```
-
-Apply versions locally (usually CI does this)
-
-```bash
-pnpm changeset version
-```
-
-Roll back an accidental changeset file
-
-Just delete the file under `.changeset/` and commit.
-
-## Docker image tags (how CI maps to versions)
-
-Our reusable `_build-and-push.yml` emits:
-
-- On main:
-  - `:<version>` (from `apps/<app>/package.json`)
-  - `:latest`
-  - `:<git-sha>`
-- On PRs:
-  - `:pr-<num>`, `:pr-<num>-<short-sha>`
-- On branches (non-main):
-  - `:branch-<branch>-latest`, `:branch-<branch>-<short-sha>`
-
-Only main produces semver tags. This keeps dev/test separate from releases.
-
-## Writing good changeset messages
-
-A changeset file looks like:
-
-```md
----
-"@bilbomd/backend": minor
-"@bilbomd/ui": patch
----
-
-Backend: Add /v2 search with filters.
-UI: Fix loading spinner when refetching jobs.
-```
-
-Guidelines:
-
-- Keep one-line summaries per package in the body.
-- Use user-facing language (what changed, why it matters).
-- For majors, note the breaking change & migration.
-
-## FAQs & tips
-
-**Q:** I forgot to add a changeset.  
-**A:** Add it in a follow-up PR. Versions only bump when changesets are applied on main.
-
-**Q:** I only changed docs/tests—do I need a changeset?  
-**A:** No, unless you want to cut a new version anyway.
-
-**Q:** I changed internal packages (e.g., mongodb-schema) used by apps.  
-**A:** Add a changeset for the internal package and any apps that need a bump (Changesets can also auto-bump dependents using `updateInternalDependencies: "patch"`—already enabled).
-
-**Q:** Our app built twice after merging—why?  
-**A:** Expected:  
-1. Build from your merge commit.  
-2. Build from the version bump commit (so we get the semver image tag).
-
-**Q:** Can I do one-off manual bumps like before?  
-**A:** Yes:
-
-```bash
-pnpm -F @bilbomd/backend version patch --tag-version-prefix=backend-v
-git push && git push --tags
-```
-
-…but prefer changesets to keep changelogs consistent.
-
-## Troubleshooting
-
-- Version PR isn’t opening: Ensure there is at least one changeset file under `.changeset/`. You can also run the “Changesets – Release PR” workflow manually.
-- Apply Versions didn’t push tags: Check that the workflow ran on main and had contents: write permission. Also confirm no merge conflicts blocked the version commit.
-- Docker didn’t publish `:<version>`: Verify the per-app workflow triggered on the version bump commit (path filters should include the app’s `package.json`). Also confirm the metadata step has the version tag enabled only on `refs/heads/main`.
-
-## TL;DR
-
-1. Code changes → 
-
-```bash
-pnpm dlx @changesets/cli changeset
-```
-
-→ PR.
-
-2. Merge → CI builds → Changesets bumps versions & tags.
-
-3. Per-app CI tags and pushes semver Docker images from main.
+    - Classic w/PDB
+    - Classic w/CRD
+    - Auto
+    - AF
