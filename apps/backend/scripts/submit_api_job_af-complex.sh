@@ -14,7 +14,7 @@ source "$SCRIPT_DIR/.env"
 set +a
 
 DAT_FILE="$SCRIPT_DIR/../test/data/af-complex/rad51cxrcc3mod.dat"
-SEQ_FILE="$SCRIPT_DIR/../test/data/af-dimer/entities.json"
+SEQ_FILE="$SCRIPT_DIR/../test/data/af-complex/entities.json"
 
 TITLE_DATE=$(date +%m%d)
 TITLE_SUFFIX=$(date +%s | tail -c 5)
