@@ -7,43 +7,7 @@ import json
 import os
 import sys
 import numpy as np
-
-
-def _load_profile(file_path):
-    """
-    Minimal loader for 2- or 3-column SAXS data files.
-    Expects columns: q  I(q)  [sigma] (sigma ignored).
-    Returns sorted arrays (q, I) with I>0 and finite values only.
-    """
-    data = np.loadtxt(file_path, comments=("#", ";"))
-    if data.ndim == 1:
-        data = data.reshape(-1, data.shape[-1])
-    if data.shape[1] < 2:
-        raise ValueError("Input file must have at least two columns: q and I(q)")
-
-    q = data[:, 0]
-    intensity = data[:, 1]
-    sigma = data[:, 2] if data.shape[1] >= 3 else None
-
-    mask = np.isfinite(q) & np.isfinite(intensity) & (intensity > 0) & (q >= 0)
-    if sigma is not None:
-        mask = mask & np.isfinite(sigma) & (sigma > 0)
-
-    if not np.any(mask):
-        raise ValueError("No valid q/I(q) points after filtering.")
-
-    q = q[mask]
-    intensity = intensity[mask]
-    if sigma is not None:
-        sigma = sigma[mask]
-
-    order = np.argsort(q)
-    q = q[order]
-    intensity = intensity[order]
-    if sigma is not None:
-        sigma = sigma[order]
-
-    return q, intensity, sigma
+from saxs_utils import load_profile
 
 
 def _auto_guinier(
@@ -202,7 +166,7 @@ def calculate_rg(file_path, output_file):
     SCALE_TRANSITION_WIDTH = 40  # Angstrom
 
     try:
-        q, intensity, sigma = _load_profile(file_path)
+        q, intensity, sigma = load_profile(file_path)
         guinier_results = _auto_guinier(q, intensity, sigma)
         (
             rg,
