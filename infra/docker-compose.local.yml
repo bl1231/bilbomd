@@ -54,7 +54,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
+      - '${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017'
     volumes:
       - mongodb:/data/db
     networks:
@@ -65,7 +65,7 @@ services:
     pull_policy: missing
     restart: always
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -73,7 +73,7 @@ services:
     env_file:
       - path: .env.local
     ports:
-      - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
+      - '${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379'
     command: redis-server --save 20 1 --loglevel warning
     volumes:
       - redis-cache:/data
@@ -98,7 +98,7 @@ services:
     env_file:
       - path: .env.local
     ports:
-      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
+      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500'
     volumes:
       # These are bind mounts that are used for local development
       - ../apps/backend:/app # comment out to use backend code in Docker image
@@ -110,13 +110,13 @@ services:
       # - logs:/bilbomd/logs
     networks:
       - app-network
-    user: "${UID:-1001}:${GID:-1001}"
-    command: ["npm", "run", "dev"]
+    user: '${UID:-1001}:${GID:-1001}'
+    command: ['npm', 'run', 'dev']
     depends_on:
       - mongodb
       - redis
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:3500/healthcheck"]
+      test: ['CMD', 'curl', '--fail', 'http://localhost:3500/healthcheck']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -153,13 +153,13 @@ services:
       # Alternatively you can use these Docker volumes
       # - uploads:/bilbomd/uploads
       # - logs:/bilbomd/logs
-    user: "${UID:-1001}:${GID:-1001}"
-    command: ["npm", "run", "dev"]
+    user: '${UID:-1001}:${GID:-1001}'
+    command: ['npm', 'run', 'dev']
     depends_on:
       - mongodb
       - redis
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:3000/config"]
+      test: ['CMD', 'curl', '--fail', 'http://localhost:3000/config']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -211,10 +211,12 @@ services:
       dockerfile: apps/ui/bilbomd-ui.dockerfile
       args:
         GITHUB_TOKEN: $GITHUB_TOKEN
+        UI_VERSION: $UI_VERSION
+        UI_GIT_HASH: $UI_GIT_HASH
     env_file:
       - .env.local
     ports:
-      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
+      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80'
     networks:
       - app-network
     depends_on:
@@ -222,7 +224,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost/version-info"]
+      test: ['CMD', 'curl', '--fail', 'http://localhost/version-info']
       interval: 30s
       timeout: 10s
       retries: 3

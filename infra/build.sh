@@ -32,6 +32,13 @@ case "$1" in
     ;;
 esac
 
+# Set UI version and git hash
+UI_VERSION=$(node -p "require('../apps/ui/package.json').version" 2>/dev/null || echo "0.0.0-local")
+UI_GIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+echo "UI Version: $UI_VERSION, Git Hash: $UI_GIT_HASH"
+export UI_VERSION
+export UI_GIT_HASH
+
 # Update or append DOCKER_PLATFORM in the selected .env file
 if grep -q '^DOCKER_PLATFORM=' "$ENV"; then
   sed -i.bak "s|^DOCKER_PLATFORM=.*|DOCKER_PLATFORM=${PLATFORM}|" "$ENV"
@@ -39,10 +46,10 @@ else
   echo "DOCKER_PLATFORM=${PLATFORM}" >> "$ENV"
 fi
 
-echo "📦 Building with $ENV ($PLATFORM)..."
+echo "Building with $ENV ($PLATFORM)..."
 
 docker compose \
   --env-file "$ENV" \
   -f "$COMPOSE_FILE" \
   -p "$PROJECT_NAME" \
-  build
+  build ui
