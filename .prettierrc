@@ -1,9 +1,9 @@
 {
-    "list-marker-space": {
-        "ul_multi": 3,
-        "ul_single": 3
-    },
-    "ul-indent": {
-        "indent": 4
-    }
+  "semi": false,
+  "singleQuote": true,
+  "trailingComma": "none",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "arrowParens": "always",
+  "singleAttributePerLine": true
 }

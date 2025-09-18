@@ -1,0 +1,29 @@
+# builds & caches
+dist/
+build/
+coverage/
+node_modules/
+.turbo/
+
+# app-specific generated
+apps/backend/openapi/
+apps/ui/dist/
+apps/worker/dist/
+apps/scoper/build/
+
+# lockfiles (optional)
+pnpm-lock.yaml
+
+# Ignore all Perl files:
+*.pl
+
+# Ignore CHARM topology files
+*.str
+
+**/.git
+**/node_modules
+**/scripts
+**/logs
+**/build
+
+*.handlebars

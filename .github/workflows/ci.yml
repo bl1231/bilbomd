@@ -2,14 +2,13 @@ name: BilboMD CI
 
 on:
   push:
-    branches:
-      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
+    branches: [main, 'feature/**', 'fix/**', 'hotfix/**', 'release/**', 'monorepo/**']
     paths-ignore:
-      - "**/*.md"
+      - '**/*.md'
   pull_request:
     branches: [main]
     paths-ignore:
-      - "**/*.md"
+      - '**/*.md'
   workflow_dispatch: {}
 
 permissions:
@@ -339,7 +338,7 @@ jobs:
       # optional: run pnpm install and a typecheck/build just to validate schema compiles
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.15.1
+          version: 10.16.1
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Build schema
