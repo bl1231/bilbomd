@@ -3,7 +3,7 @@ Decision tree to evaluate the FoXS fit of the BilboMD results and give a
 prediction of what went wrong with the experiment
 Ex: not enough flexibility, wrong oligomerization, etc.
 
-Inputs BilboMD results folder into command line 
+Inputs BilboMD results folder into command line
 """
 
 __author__ = "Joshua Del Mundo"
@@ -18,10 +18,31 @@ import os.path
 import shutil
 import json
 import argparse
+import tempfile
+from pathlib import Path
 from typing import List
+import numpy as np
 
 from pdb_utils import calculate_molecular_weight
-import bioxtasraw.RAWAPI as raw
+
+try:
+    from mw_bayes import EstimationConfig, estimate_mw
+except Exception:
+    # Try common repo locations relative to this file
+    _this = Path(__file__).resolve()
+    _repo_root = _this.parents[3]  # <repo>/ (scripts -> worker -> apps -> <repo>)
+    _candidates = [
+        _this.parent / "mw_bayes.py",  # same dir as this script
+        _repo_root / "tools" / "python" / "mw_bayes.py",  # <repo>/tools/python/
+        _repo_root / "apps" / "backend" / "scripts" / "mw_bayes.py",
+    ]
+    for _p in _candidates:
+        if _p.exists():
+            import sys
+
+            sys.path.insert(0, str(_p.parent))
+            break
+    from mw_bayes import EstimationConfig, estimate_mw
 
 
 # Global constants
@@ -41,89 +62,135 @@ def print_debug(arg):
 
 def load_file(path):
     """
-    Loads profiles using raw.load_profiles()
-
-    If the file does not have a header which labels the q, experiment, model,
-    and error columns, raw.load_profiles() does not interpret it properly.
-
-    If no header, it will add the following header to the first line of the
-    multi_state_model file if it doesn't already have it:
-
-    q       exp_intensity   model_intensity error
-
-    TBA: compatibility for FoXS files which use the format:
-
-    q       exp_intensity   error model_intensity
+    Loads profiles from a file using NumPy, returning two plain dict-profiles (RAW-free).
     """
-
     header_multifoxs = "#  q       exp_intensity   model_intensity error"
     temp_dir = "temp"
     temp_file_path = os.path.join(temp_dir, os.path.basename(path))
 
     try:
+        # Ensure a header exists so we can parse columns reliably
         with open(path, encoding="utf-8") as file:
             file_content = file.read()
-            if header_multifoxs in file_content:
-                return raw.load_profiles(path)
+            has_header = header_multifoxs in file_content
 
-        # If header is not present, add it and load the profiles
-        os.makedirs(temp_dir, exist_ok=True)
-        shutil.copy(path, temp_file_path)
+        if not has_header:
+            os.makedirs(temp_dir, exist_ok=True)
+            shutil.copy(path, temp_file_path)
+            with open(temp_file_path, "r+", encoding="utf-8") as new_file:
+                new_file_data = new_file.read()
+                new_file.seek(0, 0)
+                new_file.write(header_multifoxs + "\n" + new_file_data)
+            parse_path = temp_file_path
+        else:
+            parse_path = path
 
-        with open(temp_file_path, "r+", encoding="utf-8") as new_file:
-            new_file_data = new_file.read()
-            new_file.seek(0, 0)
-            new_file.write(header_multifoxs + "\n" + new_file_data)
+        # Parse: q  exp_intensity  model_intensity  error
+        data = np.loadtxt(parse_path, comments=("#", ";"))
+        if data.ndim == 1:
+            data = data.reshape(-1, data.shape[-1])
+        if data.shape[1] < 4:
+            raise ValueError(
+                "Expected 4 columns: q, exp_intensity, model_intensity, error"
+            )
+        q = data[:, 0]
+        Iexp = data[:, 1]
+        Imod = data[:, 2]
+        Err = data[:, 3]
 
-        return raw.load_profiles(temp_file_path)
+        # Filter invalids; require positive error and intensity
+        mask = (
+            np.isfinite(q)
+            & np.isfinite(Iexp)
+            & np.isfinite(Imod)
+            & np.isfinite(Err)
+            & (Err > 0)
+            & (q >= 0)
+        )
+        if not np.any(mask):
+            raise ValueError("No valid points after filtering.")
+        q = q[mask]
+        Iexp = Iexp[mask]
+        Imod = Imod[mask]
+        Err = Err[mask]
+        order = np.argsort(q)
+        q = q[order]
+        Iexp = Iexp[order]
+        Imod = Imod[order]
+        Err = Err[order]
+
+        # Return two plain dict profiles; model reuses experimental errors for chi-square
+        eprof = {"q": q, "I": Iexp, "err": Err}
+        mprof = {"q": q, "I": Imod, "err": Err}
+        return eprof, mprof
     finally:
-        # Clean up the temporary directory
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
 
 
-def mw_bayes(profile):
+def mw_bayes(eprof):
     """
-    Returns the Bayesian MW of a RAW SASM
+    RAW-free MW estimate using local my_bayes module (no subprocess).
+    Expects eprof as a dict with keys {"q","I","err"}.
 
-    Needs to run raw.auto_guinier() first to fill guinier_dict with the correct
-      guinier results for MW calc
+    We call my_bayes.estimate_mw() in a temp-file mode but within Python:
+    we save a temporary q/I/err file and pass its path to estimate_mw so
+    the logic stays in-module (not via shell), honoring calibration env vars.
     """
-    raw.auto_guinier(profile)
-    mw = raw.mw_bayes(profile)[0]
-    return mw
+    # Prepare a minimal config from env vars
+    calib = os.getenv("BILBOMD_MW_CALIB_JSON")
+    conc = os.getenv("BILBOMD_SAMPLE_CONC_G_PER_CM3")
+    alpha = os.getenv("BILBOMD_MW_ALPHA", "0.048")
+    beta = os.getenv("BILBOMD_MW_BETA", "1.0")
+
+    # Build EstimationConfig consistent with my_bayes
+    use_i0 = bool(calib and conc)
+    cfg = EstimationConfig(
+        use_i0=use_i0,
+        use_vc=True,
+        use_vp=bool(calib),
+        qmax=None,
+        conc=float(conc) if conc else None,
+        alpha=float(alpha),
+        beta=float(beta),
+    )
+
+    # Write a temporary 3-column file and call estimate_mw(sample_path=...)
+    with tempfile.TemporaryDirectory() as td:
+        tmp_dat = Path(td) / "exp_qIerr.dat"
+        arr = np.column_stack([eprof["q"], eprof["I"], eprof["err"]])
+        np.savetxt(tmp_dat, arr)
+        # estimate_mw writes JSON to disk; we can ignore writing by passing a temp path
+        tmp_json = Path(td) / "mw.json"
+        res = estimate_mw(str(tmp_dat), str(tmp_json), cfg, calibration_json=calib)
+        mw_kDa = res.get("mw_kDa")
+        if mw_kDa is None:
+            raise RuntimeError("my_bayes.estimate_mw() did not return mw_kDa")
+        return float(mw_kDa)
 
 
 def extract_q_region(prof, q_lower_bound, q_upper_bound):
     """
-    Trims a RAW SASM to q_lower_bound < q < q_upper_bound
+    Returns a region of the profile as a dict, for q_lower_bound < q < q_upper_bound.
     """
-    region = copy.deepcopy(prof)
-    region.setQrange(
-        [
-            region.closest(region.getQ(), q_lower_bound),
-            region.closest(region.getQ(), q_upper_bound),
-        ]
-    )
-    return region
+    region = (prof["q"] >= q_lower_bound) & (prof["q"] <= q_upper_bound)
+    return {"q": prof["q"][region], "I": prof["I"][region], "err": prof["err"][region]}
 
 
 def calculate_chi_square(prof1, prof2):
     """
-    Returns the chi-square between two RAW SASM
+    Returns the chi-square between two dict profiles.
     """
-    chi_square = (1 / len(prof1.getQ())) * sum(
-        pow(((prof1.getI() - prof2.getI()) / prof1.getErr()), 2)
-    )
-    return chi_square
+    n = prof1["q"].size
+    return (1.0 / n) * float(np.sum(((prof1["I"] - prof2["I"]) / prof1["err"]) ** 2))
 
 
 def calculate_residual(prof1, prof2):
     """
-    Returns the mean of the residual of all data points between two RAW SASM profiles.
+    Returns the mean of the residual of all data points between two dict profiles.
     """
-    residuals = (prof1.getI() - prof2.getI()) / prof1.getErr()
-    return sum(residuals) / len(residuals)
+    residuals = (prof1["I"] - prof2["I"]) / prof1["err"]
+    return float(np.mean(residuals))
 
 
 def best_chi_square_i(cs_models, multi_state_models):
@@ -717,8 +784,8 @@ def main():
     # Extract profiles and run evaluation
     eprof, mprof = profs[0], profs[1]
 
-    q_min = eprof.getQ()[0]
-    q_max = eprof.getQ()[-1]
+    q_min = float(eprof["q"][0])
+    q_max = float(eprof["q"][-1])
     q_ranges = [q_min, 0.1, 0.2, q_max]
 
     # Evaluate fit and gather results
