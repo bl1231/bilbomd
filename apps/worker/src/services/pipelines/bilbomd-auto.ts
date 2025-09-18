@@ -20,9 +20,7 @@ import { runSingleFoXS } from '../functions/foxs-analysis.js'
 const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)
 
-  const foundJob = await BilboMdAutoJob.findOne({ _id: MQjob.data.jobid })
-    .populate('user')
-    .exec()
+  const foundJob = await BilboMdAutoJob.findOne({ _id: MQjob.data.jobid }).populate('user').exec()
   if (!foundJob) {
     throw new Error(`No job found for: ${MQjob.data.jobid}`)
   }
@@ -44,7 +42,7 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   foundJob.progress = 15
   await foundJob.save()
 
-  // Use BioXTAS to calculate Rg_min and Rg_max
+  // Calculate Rg_min and Rg_max
   await MQjob.log('start autorg')
   await runAutoRg(foundJob)
   await MQjob.log('end autorg')

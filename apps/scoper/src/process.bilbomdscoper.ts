@@ -31,7 +31,7 @@ const cleanupJob = async (MQjob: BullMQJob, DBJob: IBilboMDScoperJob) => {
   // Send job completion email and log the notification
   if (config.sendEmailNotifications) {
     if (typeof DBJob.user !== 'object' || !('email' in DBJob.user)) {
-        throw new Error(`User details are not populated for job: ${DBJob.id}`);
+      throw new Error(`User details are not populated for job: ${DBJob.id}`)
     }
     sendJobCompleteEmail(DBJob.user.email, bilbomdUrl, DBJob.id, DBJob.title, false)
     logger.info(`email notification sent to ${DBJob.user.email}`)
@@ -61,7 +61,7 @@ const processBilboMDScoperJobTest = async (MQjob: BullMQJob) => {
   // Use PAE to construct const.inp file
   // await runPaeToConst(foundJob)
 
-  // Use BioXTAS to calculate Rg_min and Rg_max
+  // Calculate Rg_min and Rg_max
   // await runAutoRg(foundJob)
 
   // More steps that require foundJob or updatedJob
