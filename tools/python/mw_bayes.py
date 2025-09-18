@@ -20,7 +20,7 @@ import json
 import argparse
 import numpy as np
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, Tuple
 from saxs_utils import load_profile
 
 
@@ -206,14 +206,14 @@ def estimate_mw(
         for s in standards:
             spath = s["data_path"]
             mw_kDa = float(s["MW_kDa"])
-            q_s, intensity_s, sig_s = load_profile(spath)
-            g_s = guinier_fit(q_s, intensity_s, sig_s)
+            q_s, I_s, sig_s = load_profile(spath)
+            g_s = guinier_fit(q_s, I_s, sig_s)
             I0_s = g_s["I0"]
             feats_s = {}
             if cfg.use_vc:
-                feats_s["Vc"] = correlation_volume(q_s, intensity_s, I0_s, cfg.qmax)
+                feats_s["Vc"] = correlation_volume(q_s, I_s, I0_s, cfg.qmax)
             if cfg.use_vp:
-                feats_s["Vp"] = porod_volume(q_s, intensity_s, I0_s, cfg.qmax)
+                feats_s["Vp"] = porod_volume(q_s, I_s, I0_s, cfg.qmax)
             if cfg.use_i0:
                 conc_s = (
                     float(s.get("conc_g_per_cm3"))
@@ -309,12 +309,21 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Use I(0)/c feature (requires concentration).",
     )
-    p.add_argument(
+    # Mutually exclusive flags to control Vc with a clear default
+    vc_group = p.add_mutually_exclusive_group()
+    vc_group.add_argument(
         "--use-vc",
+        dest="use_vc",
         action="store_true",
-        help="Use correlation volume feature (default true).",
+        help="Use correlation volume feature (default)",
     )
-    p.add_argument("--no-use-vc", action="store_true", help="Disable Vc feature.")
+    vc_group.add_argument(
+        "--no-use-vc",
+        dest="use_vc",
+        action="store_false",
+        help="Disable correlation volume feature",
+    )
+    p.set_defaults(use_vc=True)
     p.add_argument("--use-vp", action="store_true", help="Use Porod volume feature.")
     p.add_argument(
         "--qmax", type=float, help="Optional qmax cutoff for Vc/Vp integrals."
@@ -333,7 +342,7 @@ def main():
     args = parse_args()
     cfg = EstimationConfig(
         use_i0=bool(args.use_i0),
-        use_vc=not bool(args.no_use_vc),
+        use_vc=bool(args.use_vc),
         use_vp=bool(args.use_vp),
         qmax=args.qmax,
         conc=args.conc,

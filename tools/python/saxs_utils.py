@@ -13,7 +13,8 @@ def load_profile(path: str) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray
     """
     data = np.loadtxt(path, comments=("#", ";"))
     if data.ndim == 1:
-        data = data.reshape(-1, data.shape[-1])
+        # Ensure a single-row 2D array if only one row was read
+        data = data[np.newaxis, :]
     if data.shape[1] < 2:
         raise ValueError("Input must have at least two columns: q and I(q)")
 
