@@ -52,7 +52,7 @@ def _weighted_linfit(
 
 def guinier_fit(
     q: np.ndarray,
-    I: np.ndarray,
+    intensity: np.ndarray,
     sigma: Optional[np.ndarray] = None,
     min_points: int = 10,
     min_qrg: float = 0.3,
@@ -60,7 +60,7 @@ def guinier_fit(
     r2_floor: float = 0.95,
 ) -> Dict[str, float]:
     x_all = q**2
-    y_all = np.log(I)
+    y_all = np.log(intensity)
     w_all = None if sigma is None else 1.0 / (sigma**2)
     n = q.size
     best = None  # (rg, I0, qmin, qmax, i, j, r2)
@@ -105,15 +105,15 @@ def guinier_fit(
 
 
 def correlation_volume(
-    q: np.ndarray, I: np.ndarray, I0: float, qmax: Optional[float] = None
+    q: np.ndarray, intensity: np.ndarray, I0: float, qmax: Optional[float] = None
 ) -> float:
     """Compute correlation volume Vc ~ I(0) / ∫ q I(q) dq (scale-robust feature).
     Units depend on input; used comparatively or via calibration.
     """
     if qmax is not None:
         m = q <= qmax
-        q, I = q[m], I[m]
-    integrand = q * I
+        q, intensity = q[m], intensity[m]
+    integrand = q * intensity
     area = np.trapz(integrand, q)
     if area <= 0:
         raise ValueError("Non-positive integral in Vc calculation.")
@@ -121,15 +121,15 @@ def correlation_volume(
 
 
 def porod_volume(
-    q: np.ndarray, I: np.ndarray, I0: float, qmax: Optional[float] = None
+    q: np.ndarray, intensity: np.ndarray, I0: float, qmax: Optional[float] = None
 ) -> float:
     """Approximate Porod volume Vp via Porod invariant: Vp ~ 2*pi^2 * I(0) / Q,
     where Q = ∫ q^2 I(q) dq (finite-range approximation). Shape- and range-dependent.
     """
     if qmax is not None:
         m = q <= qmax
-        q, I = q[m], I[m]
-    Q = np.trapz((q**2) * I, q)
+        q, intensity = q[m], intensity[m]
+    Q = np.trapz((q**2) * intensity, q)
     if Q <= 0:
         raise ValueError("Non-positive Porod integral.")
     Vp = (2.0 * np.pi**2) * I0 / Q
@@ -174,15 +174,15 @@ def estimate_mw(
     cfg: EstimationConfig,
     calibration_json: Optional[str] = None,
 ) -> Dict[str, Any]:
-    q, I, sigma = load_profile(sample_path)
-    g = guinier_fit(q, I, sigma)
+    q, intensity, sigma = load_profile(sample_path)
+    g = guinier_fit(q, intensity, sigma)
     I0, Rg = g["I0"], g["Rg"]
 
     feats: Dict[str, float] = {"Rg": Rg, "I0": I0}
     if cfg.use_vc:
-        feats["Vc"] = correlation_volume(q, I, I0, cfg.qmax)
+        feats["Vc"] = correlation_volume(q, intensity, I0, cfg.qmax)
     if cfg.use_vp:
-        feats["Vp"] = porod_volume(q, I, I0, cfg.qmax)
+        feats["Vp"] = porod_volume(q, intensity, I0, cfg.qmax)
     if cfg.use_i0:
         if cfg.conc is None:
             raise ValueError("--use-i0 requires --conc (g/cm^3)")
@@ -206,14 +206,14 @@ def estimate_mw(
         for s in standards:
             spath = s["data_path"]
             mw_kDa = float(s["MW_kDa"])
-            q_s, I_s, sig_s = load_profile(spath)
-            g_s = guinier_fit(q_s, I_s, sig_s)
+            q_s, intensity_s, sig_s = load_profile(spath)
+            g_s = guinier_fit(q_s, intensity_s, sig_s)
             I0_s = g_s["I0"]
             feats_s = {}
             if cfg.use_vc:
-                feats_s["Vc"] = correlation_volume(q_s, I_s, I0_s, cfg.qmax)
+                feats_s["Vc"] = correlation_volume(q_s, intensity_s, I0_s, cfg.qmax)
             if cfg.use_vp:
-                feats_s["Vp"] = porod_volume(q_s, I_s, I0_s, cfg.qmax)
+                feats_s["Vp"] = porod_volume(q_s, intensity_s, I0_s, cfg.qmax)
             if cfg.use_i0:
                 conc_s = (
                     float(s.get("conc_g_per_cm3"))
