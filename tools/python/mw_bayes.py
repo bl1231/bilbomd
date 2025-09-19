@@ -197,7 +197,10 @@ def correlation_volume(
         m = q <= qmax
         q, intensity = q[m], intensity[m]
     integrand = q * intensity
-    area = np.trapz(integrand, q)
+    if hasattr(np, "trapezoid"):
+        area = np.trapezoid(integrand, q)
+    else:
+        area = np.trapz(integrand, q)
     if area <= 0:
         raise ValueError("Non-positive integral in Vc calculation.")
     return float(I0 / area)
@@ -212,7 +215,10 @@ def porod_volume(
     if qmax is not None:
         m = q <= qmax
         q, intensity = q[m], intensity[m]
-    Q = np.trapz((q**2) * intensity, q)
+    if hasattr(np, "trapezoid"):
+        Q = np.trapezoid((q**2) * intensity, q)
+    else:
+        Q = np.trapz((q**2) * intensity, q)
     if Q <= 0:
         raise ValueError("Non-positive Porod integral.")
     Vp = (2.0 * np.pi**2) * I0 / Q
