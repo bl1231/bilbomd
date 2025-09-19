@@ -338,7 +338,7 @@ jobs:
       # optional: run pnpm install and a typecheck/build just to validate schema compiles
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.16.1
+          version: 10.17.0
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Build schema
