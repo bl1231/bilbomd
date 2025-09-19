@@ -13,13 +13,13 @@ from pathlib import Path
 
 # Prefer shared fast Guinier fitter from guinier.py (sibling module)
 try:
-    from guinier import guinier_scan  # type: ignore
+    from guinier import guinier_scan
 except Exception:
     # If run from another working directory, ensure this script's folder is on sys.path
     _SCRIPT_DIR = Path(__file__).resolve().parent
     if str(_SCRIPT_DIR) not in sys.path:
         sys.path.insert(0, str(_SCRIPT_DIR))
-    from guinier import guinier_scan  # type: ignore
+    from guinier import guinier_scan
 
 
 def _auto_guinier(
