@@ -66,7 +66,7 @@ RUN chown -R $USER_ID:0 /app
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS bilbomd-perlmutter-worker
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends software-properties-common && \
+    apt-get install -y --no-install-recommends software-properties-common parallel && \
     add-apt-repository ppa:salilab/ppa && \
     apt-get update && \
     apt-get install -y --no-install-recommends imp && \
