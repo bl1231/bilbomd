@@ -1,20 +1,42 @@
 name: Changesets – Release PR
+
 on:
   push:
     branches: [main]
   workflow_dispatch: {}
+
 permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: changesets-release-pr-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release-pr:
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 10.16.1 }
-      - run: pnpm install
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.0
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
       - name: Create or update Version Packages PR
         uses: changesets/action@v1
         with:
