@@ -52,4 +52,4 @@ docker compose \
   --env-file "$ENV" \
   -f "$COMPOSE_FILE" \
   -p "$PROJECT_NAME" \
-  build ui
+  build

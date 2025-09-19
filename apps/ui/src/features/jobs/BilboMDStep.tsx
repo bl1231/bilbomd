@@ -17,7 +17,7 @@ const BilboMDStep = ({ stepName, stepStatus }: BilboMDStepProps) => {
     } else if (stepName === 'pae') {
       return 'In this step the PAE matrix from Alphafold is used to define rigid bodies and rigid domains of your molecule.'
     } else if (stepName === 'autorg') {
-      return 'In this step we use BioXTAS to determine the Radius of gyration for your SAXS data.'
+      return 'In this step we determine the Radius of gyration for your SAXS data.'
     } else if (stepName === 'minimize') {
       return 'In this step we use CHARMM minimize the relax the model geometry.'
     } else if (stepName === 'heat') {
@@ -43,33 +43,36 @@ const BilboMDStep = ({ stepName, stepStatus }: BilboMDStepProps) => {
           key={stepName}
           sx={{ m: 0.5, display: 'flex', alignItems: 'center' }}
         >
-          <Tooltip title={tooltipMessage} arrow>
+          <Tooltip
+            title={tooltipMessage}
+            arrow
+          >
             {stepStatus === 'no' ? (
               <Chip
                 icon={<RadioButtonUncheckedIcon />}
-                size='small'
+                size="small"
                 label={stepName}
               />
             ) : stepStatus === 'start' ? (
               <Chip
                 icon={<DirectionsRunRoundedIcon style={{ color: 'black' }} />}
-                size='small'
+                size="small"
                 label={stepName}
                 style={{ backgroundColor: '#fff566', color: 'black' }}
               />
             ) : stepStatus === 'end' ? (
               <Chip
                 icon={<CheckCircleIcon />}
-                size='small'
+                size="small"
                 label={stepName}
-                color='success'
+                color="success"
               />
             ) : stepStatus === 'error' ? (
               <Chip
                 icon={<ErrorIcon />}
-                size='small'
+                size="small"
                 label={stepName}
-                color='error'
+                color="error"
               />
             ) : (
               <div>nonono</div>

@@ -6,16 +6,63 @@ import argparse
 import json
 import os
 import sys
+import numpy as np
+from saxs_utils import load_profile
 
-# import warnings
+from pathlib import Path
 
-import bioxtasraw.RAWAPI as raw
+# Prefer shared fast Guinier fitter from guinier.py (sibling module)
+try:
+    from guinier import guinier_scan
+except (ImportError, ModuleNotFoundError):
+    # If run from another working directory, ensure this script's folder is on sys.path
+    _SCRIPT_DIR = Path(__file__).resolve().parent
+    if str(_SCRIPT_DIR) not in sys.path:
+        sys.path.insert(0, str(_SCRIPT_DIR))
+    from guinier import guinier_scan
+
+
+def _auto_guinier(
+    q, intensity, sigma=None, min_points=10, max_qrg=1.3, min_qrg=0.3, r2_floor=0.90
+):
+    """
+    Adapter over the shared fast Guinier scan (guinier_scan) to keep the
+    original RAW-like return tuple expected by the rest of this script.
+    """
+    r = guinier_scan(
+        q,
+        intensity,
+        sigma,
+        min_points=min_points,
+        qrg_min=min_qrg,
+        qrg_max=max_qrg,
+        r2_floor=r2_floor,
+    )
+    return (
+        float(r["Rg"]),  # rg
+        float(r["I0"]),  # izero
+        0.0,  # rg_err placeholder
+        0.0,  # izero_err placeholder
+        float(r["qmin"]),  # qmin
+        float(r["qmax"]),  # qmax
+        float(r.get("qrg_min", r["qmin"] * r["Rg"])),  # qrg_min
+        float(r.get("qrg_max", r["qmax"] * r["Rg"])),  # qrg_max
+        int(r["i"]),  # idx_min
+        int(r["j"]),  # idx_max
+        float(r["r2"]),  # r_sqr
+    )
+
+
+if os.getenv("AUTORG_PROFILE", "0") == "1":
+    import cProfile
+    import pstats
+    import io
+
+    _pr = cProfile.Profile()
+    _pr.enable()
+
 
 os.environ["MPLCONFIGDIR"] = "/tmp/"
-
-
-# Redirect all warnings to stderr
-# warnings.filterwarnings("ignore", category=UserWarning, module="scipy")
 
 
 def parse_args():
@@ -41,9 +88,8 @@ def calculate_rg(file_path, output_file):
     SCALE_TRANSITION_WIDTH = 40  # Angstrom
 
     try:
-        profiles = raw.load_profiles(file_path)
-        gi_profile = profiles[0]
-        guinier_results = raw.auto_guinier(gi_profile)
+        q, intensity, sigma = load_profile(file_path)
+        guinier_results = _auto_guinier(q, intensity, sigma)
         (
             rg,
             izero,
@@ -93,3 +139,9 @@ def calculate_rg(file_path, output_file):
 if __name__ == "__main__":
     args = parse_args()
     calculate_rg(args.file_path, args.output_file)
+    if os.getenv("AUTORG_PROFILE", "0") == "1":
+        _pr.disable()
+        s = io.StringIO()
+        ps = pstats.Stats(_pr, stream=s).sort_stats("cumtime")
+        ps.print_stats(30)
+        sys.stderr.write("\n[autorg profile]\n" + s.getvalue() + "\n")

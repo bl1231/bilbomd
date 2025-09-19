@@ -12,24 +12,18 @@ interface BilboMDStepProps {
   stepMessage: string
 }
 
-const BilboMDNerscStep = ({
-  stepName,
-  stepStatus,
-  stepMessage
-}: BilboMDStepProps) => {
+const BilboMDNerscStep = ({ stepName, stepStatus, stepMessage }: BilboMDStepProps) => {
   const getStepDetails = (stepName: string) => {
     switch (stepName) {
       case 'nersc_prepare_slurm_batch':
         return {
           friendlyName: 'NERSC Prepare Slurm Batch File',
-          tooltipMessage:
-            'In this step we prepare the Slurm batch file for NERSC.'
+          tooltipMessage: 'In this step we prepare the Slurm batch file for NERSC.'
         }
       case 'nersc_submit_slurm_batch':
         return {
           friendlyName: 'NERSC Submit Slurm Batch File',
-          tooltipMessage:
-            'In this step we submit the Slurm batch file to NERSC.'
+          tooltipMessage: 'In this step we submit the Slurm batch file to NERSC.'
         }
       case 'nersc_job_status':
         return {
@@ -44,8 +38,7 @@ const BilboMDNerscStep = ({
       case 'alphafold':
         return {
           friendlyName: 'AlphaFold2',
-          tooltipMessage:
-            'In this step we use ColabFold to run AlphaFold on your molecule.'
+          tooltipMessage: 'In this step we use ColabFold to run AlphaFold on your molecule.'
         }
       case 'pae':
         return {
@@ -56,8 +49,7 @@ const BilboMDNerscStep = ({
       case 'autorg':
         return {
           friendlyName: 'AutoRg',
-          tooltipMessage:
-            'In this step we use BioXTAS to determine the Radius of gyration for your SAXS data.'
+          tooltipMessage: 'In this step we determine the Radius of gyration for your SAXS data.'
         }
       case 'pdb2crd':
         return {
@@ -67,8 +59,7 @@ const BilboMDNerscStep = ({
       case 'minimize':
         return {
           friendlyName: 'CHARMM Minimize',
-          tooltipMessage:
-            'In this step we use CHARMM minimize the relax the model geometry.'
+          tooltipMessage: 'In this step we use CHARMM minimize the relax the model geometry.'
         }
       case 'initfoxs':
         return {
@@ -78,8 +69,7 @@ const BilboMDNerscStep = ({
       case 'heat':
         return {
           friendlyName: 'CHARMM Heating',
-          tooltipMessage:
-            'In this step we use CHARMM to heat and then cool your model.'
+          tooltipMessage: 'In this step we use CHARMM to heat and then cool your model.'
         }
       case 'md':
         return {
@@ -95,8 +85,7 @@ const BilboMDNerscStep = ({
       case 'pdb_remediate':
         return {
           friendlyName: 'Remediate PDB Files',
-          tooltipMessage:
-            'In this step we attempt to copy SEGID back to CHAINID'
+          tooltipMessage: 'In this step we attempt to copy SEGID back to CHAINID'
         }
       case 'foxs':
         return {
@@ -158,9 +147,15 @@ const BilboMDNerscStep = ({
   // console.log(stepName, stepStatus, stepMessage)
   // console.log(friendlyName, tooltipMessage)
   return (
-    <Grid key={stepName} sx={{ m: 0.5, display: 'flex', alignItems: 'center' }}>
+    <Grid
+      key={stepName}
+      sx={{ m: 0.5, display: 'flex', alignItems: 'center' }}
+    >
       <Grid>
-        <Tooltip title={tooltipMessage} arrow>
+        <Tooltip
+          title={tooltipMessage}
+          arrow
+        >
           <Chip
             icon={
               stepStatus === 'Waiting' ? (
@@ -173,25 +168,22 @@ const BilboMDNerscStep = ({
                 <ErrorIcon />
               ) : undefined
             }
-            size='small'
+            size="small"
             label={friendlyName}
             color={
-              stepStatus === 'Success'
-                ? 'success'
-                : stepStatus === 'Error'
-                  ? 'error'
-                  : undefined
+              stepStatus === 'Success' ? 'success' : stepStatus === 'Error' ? 'error' : undefined
             }
             style={
-              stepStatus === 'Running'
-                ? { backgroundColor: '#fff566', color: 'black' }
-                : undefined
+              stepStatus === 'Running' ? { backgroundColor: '#fff566', color: 'black' } : undefined
             }
           />
         </Tooltip>
       </Grid>
       <Grid>
-        <Typography variant='body2' sx={{ ml: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{ ml: 1 }}
+        >
           {stepMessage || 'Waiting'}
         </Typography>
       </Grid>

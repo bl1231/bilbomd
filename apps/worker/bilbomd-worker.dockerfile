@@ -40,7 +40,7 @@ RUN pnpm deploy --filter @bilbomd/worker --prod /out
 ########################################
 # Stage 3: runtime (your existing base image)
 ########################################
-FROM ghcr.io/bl1231/bilbomd-worker-base:latest AS runtime
+FROM ghcr.io/bl1231/bilbomd-worker-base:0.0.2 AS runtime
 WORKDIR /app
 
 # Install Node.js (if your base image doesn't already have it)
@@ -59,6 +59,9 @@ RUN groupadd -g ${GROUP_ID} bilbomd \
 
 # Copy the minimal app bundle from the build stage
 COPY --chown=bilbo:bilbomd --from=build /out/ .
+
+# Copy centralized shared scripts (e.g., autorg.py)
+COPY --chown=bilbo:bilbomd tools/python/ /app/scripts/
 
 ENV NODE_ENV=production
 USER bilbo:bilbomd

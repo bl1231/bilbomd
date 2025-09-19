@@ -199,10 +199,7 @@ const findTopKDirFromLog = async (logFilePath: string): Promise<string | null> =
   return null
 }
 
-const prepareScoperResults = async (
-  MQjob: BullMQJob,
-  DBjob: IBilboMDScoperJob
-): Promise<void> => {
+const prepareScoperResults = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
   try {
     const outputDir = path.join(DATA_VOL, DBjob.uuid)
     const resultsDir = path.join(outputDir, 'results')
@@ -379,7 +376,6 @@ The SAXS-fit file header contains:
 .
 
 Where Chi^2 is a goodness of fit. The program RAW can read the fit: 
-https://bioxtas-raw.readthedocs.io/en/latest/index.html
 
 If you use SCOPER in your research, please cite the paper:
 

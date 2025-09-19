@@ -27,7 +27,7 @@ Work in a feature branch as usual.
 From repo root:
 
 ```bash
-pnpm dlx @changesets/cli changeset
+pnpm changeset
 ```
 
 - Select the packages you changed (space to toggle).
