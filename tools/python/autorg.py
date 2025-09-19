@@ -9,147 +9,55 @@ import sys
 import numpy as np
 from saxs_utils import load_profile
 
+from pathlib import Path
+
+# Prefer shared fast Guinier fitter from guinier.py (sibling module)
+try:
+    from guinier import guinier_scan  # type: ignore
+except Exception:
+    # If run from another working directory, ensure this script's folder is on sys.path
+    _SCRIPT_DIR = Path(__file__).resolve().parent
+    if str(_SCRIPT_DIR) not in sys.path:
+        sys.path.insert(0, str(_SCRIPT_DIR))
+    from guinier import guinier_scan  # type: ignore
+
 
 def _auto_guinier(
     q, intensity, sigma=None, min_points=10, max_qrg=1.3, min_qrg=0.3, r2_floor=0.90
 ):
     """
-    Faster Auto-Guinier using cumulative sums (O(1) per window).
-
-    Scans all windows [i:j] with j>=i+min_points-1, computes weighted or
-    unweighted linear regression of ln I vs q^2 via prefix sums. This avoids
-    per-window lstsq/allocations and drastically reduces overhead.
-
-    Returns RAW-like tuple:
-        (rg, izero, rg_err, izero_err, qmin, qmax, qrg_min, qrg_max, idx_min, idx_max, r_sqr)
-    Error estimates are left as 0.0 placeholders.
+    Adapter over the shared fast Guinier scan (guinier_scan) to keep the
+    original RAW-like return tuple expected by the rest of this script.
     """
-    q = np.asarray(q, dtype=float)
-    intensity = np.asarray(intensity, dtype=float)
-    n = q.size
-    if n < min_points:
-        raise ValueError(f"Not enough points for Guinier fit (need >= {min_points}).")
-
-    x = q * q                 # q^2
-    y = np.log(intensity)             # ln I
-
-    if sigma is not None:
-        w = 1.0 / (np.asarray(sigma, dtype=float) ** 2)
-    else:
-        w = np.ones_like(y)
-
-    # Prefix sums for O(1) window stats
-    # We need: sum w, sum w*x, sum w*y, sum w*x^2, sum w*x*y, sum w*y^2
-    W   = np.concatenate(([0.0], np.cumsum(w)))
-    WX  = np.concatenate(([0.0], np.cumsum(w * x)))
-    WY  = np.concatenate(([0.0], np.cumsum(w * y)))
-    WXX = np.concatenate(([0.0], np.cumsum(w * x * x)))
-    WXY = np.concatenate(([0.0], np.cumsum(w * x * y)))
-    WYY = np.concatenate(([0.0], np.cumsum(w * y * y)))
-
-    def window_sums(i, j):
-        # inclusive indices i..j
-        return (
-            W[j+1]  - W[i],
-            WX[j+1] - WX[i],
-            WY[j+1] - WY[i],
-            WXX[j+1]- WXX[i],
-            WXY[j+1]- WXY[i],
-            WYY[j+1]- WYY[i],
-        )
-
-    best = None  # (rg, I0, 0, 0, qmin, qmax, qrg_min, qrg_max, i, j, r2)
-
-    for i in range(0, n - min_points + 1):
-        for j in range(i + min_points - 1, n):
-            wsum, wx, wy, wxx, wxy, wyy = window_sums(i, j)
-            # Guard against degenerate windows
-            denom = (wsum * wxx - wx * wx)
-            if denom <= 0.0:
-                continue
-
-            # Weighted linear regression y = m x + b
-            m = (wsum * wxy - wx * wy) / denom
-            b = (wy - m * wx) / wsum
-            if m >= 0.0:
-                continue  # Guinier slope must be negative
-
-            # Goodness-of-fit (weighted R^2)
-            # SSE = sum w (y - (m x + b))^2 = sum w y^2 - 2m sum w xy - 2b sum w y + m^2 sum w x^2 + 2 m b sum w x + b^2 sum w
-            sse = (
-                wyy - 2.0 * m * wxy - 2.0 * b * wy + m * m * wxx + 2.0 * m * b * wx + b * b * wsum
-            )
-            ybar = wy / wsum
-            sst = (wyy - wsum * ybar * ybar)
-            if sst <= 0.0:
-                continue
-            r2 = 1.0 - (sse / sst)
-            if r2 < r2_floor:
-                continue
-
-            rg = float(np.sqrt(-3.0 * m))
-            qrg_min = float(q[i] * rg)
-            qrg_max = float(q[j] * rg)
-            if not (min_qrg <= qrg_min <= max_qrg and min_qrg <= qrg_max <= max_qrg):
-                continue
-
-            candidate = (
-                rg,
-                float(np.exp(b)),
-                0.0,
-                0.0,
-                float(q[i]),
-                float(q[j]),
-                qrg_min,
-                qrg_max,
-                i,
-                j,
-                float(r2),
-            )
-            if best is None:
-                best = candidate
-            else:
-                if candidate[-1] > best[-1]:
-                    best = candidate
-                elif np.isclose(candidate[-1], best[-1]):
-                    curr_len = best[9] - best[8]
-                    cand_len = candidate[9] - candidate[8]
-                    if cand_len > curr_len or (cand_len == curr_len and candidate[4] < best[4]):
-                        best = candidate
-
-    if best is None:
-        # Fallback: use the first feasible window of size min_points
-        i, j = 0, min_points - 1
-        wsum, wx, wy, wxx, wxy, wyy = window_sums(i, j)
-        denom = (wsum * wxx - wx * wx)
-        if denom <= 0.0:
-            # degenerate; return a minimal default
-            return (0.0, 0.0, 0.0, 0.0, float(q[0]), float(q[min_points-1]), 0.0, 0.0, 0, min_points-1, 0.0)
-        m = (wsum * wxy - wx * wy) / denom
-        b = (wy - m * wx) / wsum
-        rg = float(np.sqrt(max(0.0, -3.0 * m)))
-        r2 = 0.0
-        best = (
-            rg,
-            float(np.exp(b)),
-            0.0,
-            0.0,
-            float(q[i]),
-            float(q[j]),
-            float(q[i] * rg),
-            float(q[j] * rg),
-            i,
-            j,
-            r2,
-        )
-
-    return best
+    r = guinier_scan(
+        q,
+        intensity,
+        sigma,
+        min_points=min_points,
+        qrg_min=min_qrg,
+        qrg_max=max_qrg,
+        r2_floor=r2_floor,
+    )
+    return (
+        float(r["Rg"]),  # rg
+        float(r["I0"]),  # izero
+        0.0,  # rg_err placeholder
+        0.0,  # izero_err placeholder
+        float(r["qmin"]),  # qmin
+        float(r["qmax"]),  # qmax
+        float(r.get("qrg_min", r["qmin"] * r["Rg"])),  # qrg_min
+        float(r.get("qrg_max", r["qmax"] * r["Rg"])),  # qrg_max
+        int(r["i"]),  # idx_min
+        int(r["j"]),  # idx_max
+        float(r["r2"]),  # r_sqr
+    )
 
 
 if os.getenv("AUTORG_PROFILE", "0") == "1":
     import cProfile
     import pstats
     import io
+
     _pr = cProfile.Profile()
     _pr.enable()
 
