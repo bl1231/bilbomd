@@ -14,7 +14,7 @@ from pathlib import Path
 # Prefer shared fast Guinier fitter from guinier.py (sibling module)
 try:
     from guinier import guinier_scan
-except Exception:
+except (ImportError, ModuleNotFoundError):
     # If run from another working directory, ensure this script's folder is on sys.path
     _SCRIPT_DIR = Path(__file__).resolve().parent
     if str(_SCRIPT_DIR) not in sys.path:

@@ -1,7 +1,20 @@
 # tools/python/guinier.py
 from __future__ import annotations
 from typing import Dict
+from typing import NamedTuple
 import numpy as np
+
+
+class GuinierCandidate(NamedTuple):
+    Rg: float
+    I0: float
+    qmin: float
+    qmax: float
+    i: int
+    j: int
+    r2: float
+    qrg_min: float
+    qrg_max: float
 
 
 def guinier_scan(
@@ -82,23 +95,23 @@ def guinier_scan(
             if not (qrg_min <= qrg_lo <= qrg_max and qrg_min <= qrg_hi <= qrg_max):
                 continue
 
-            cand = (
-                rg,
-                float(np.exp(b)),
-                float(q[i]),
-                float(q[j]),
-                i,
-                j,
-                float(r2),
-                qrg_lo,
-                qrg_hi,
+            cand = GuinierCandidate(
+                Rg=rg,
+                I0=float(np.exp(b)),
+                qmin=float(q[i]),
+                qmax=float(q[j]),
+                i=i,
+                j=j,
+                r2=float(r2),
+                qrg_min=qrg_lo,
+                qrg_max=qrg_hi,
             )
             if (
                 best is None
-                or cand[6] > best[6]
+                or cand.r2 > best.r2
                 or (
-                    np.isclose(cand[6], best[6])
-                    and ((cand[5] - cand[4]) > (best[5] - best[4]) or cand[2] < best[2])
+                    np.isclose(cand.r2, best.r2)
+                    and ((cand.j - cand.i) > (best.j - best.i) or cand.qmin < best.qmin)
                 )
             ):
                 best = cand
@@ -135,13 +148,13 @@ def guinier_scan(
         }
 
     return {
-        "Rg": best[0],
-        "I0": best[1],
-        "qmin": best[2],
-        "qmax": best[3],
-        "i": best[4],
-        "j": best[5],
-        "r2": best[6],
-        "qrg_min": best[7],
-        "qrg_max": best[8],
+        "Rg": best.Rg,
+        "I0": best.I0,
+        "qmin": best.qmin,
+        "qmax": best.qmax,
+        "i": best.i,
+        "j": best.j,
+        "r2": best.r2,
+        "qrg_min": best.qrg_min,
+        "qrg_max": best.qrg_max,
     }
