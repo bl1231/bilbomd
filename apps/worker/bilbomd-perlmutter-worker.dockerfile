@@ -67,7 +67,10 @@ RUN apt-get update && \
 FROM bilbomd-worker-step2 AS bilbomd-perlmutter-worker-intermediate
 ARG USER_ID
 WORKDIR /app
-COPY scripts/ scripts/
+# App-specific worker scripts
+COPY apps/worker/scripts/ /app/scripts/
+# Shared helper scripts moved to monorepo tools/python
+COPY tools/python/ /app/scripts/
 RUN chown -R $USER_ID:0 /app
 
 # Build stage 8 - Final runtime image
