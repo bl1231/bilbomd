@@ -31,29 +31,8 @@ RUN conda env update -f /tmp/environment.yml && \
     conda clean -afy
 
 # -----------------------------------------------------------------------------
-# Build stage 3 - OpenMM
-FROM build-conda AS build-openmm
-ARG OPENMM_VER=8.1.2
-
-# COPY ./openmm/${OPENMM_VER}.tar.gz /usr/local/src
-# Download the OpenMM source code using wget
-RUN wget https://github.com/openmm/openmm/archive/refs/tags/${OPENMM_VER}.tar.gz -O /usr/local/src/${OPENMM_VER}.tar.gz
-
-RUN tar -zxvf /usr/local/src/${OPENMM_VER}.tar.gz -C /usr/local/src && \
-    rm /usr/local/src/${OPENMM_VER}.tar.gz
-WORKDIR /usr/local/src/openmm-${OPENMM_VER}/build
-RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/openmm
-
-RUN make -j$(nproc) && make install
-
-# Set environment variables needed for CHARMM build
-ENV CUDATK=/usr/local/cuda
-ENV OPENMM_PLUGIN_DIR=/usr/local/openmm/lib/plugins
-ENV LD_LIBRARY_PATH=/usr/local/openmm/lib:$OPENMM_PLUGIN_DIR:$LD_LIBRARY_PATH
-
-# -----------------------------------------------------------------------------
 # Build stage 4 - CHARMM
-FROM build-openmm AS build-charmm
+FROM build-conda AS build-charmm
 ARG CHARMM_VER=c48b2
 
 # Probably not needed for OpenMM, but installed anyways for testing purposes.
@@ -74,26 +53,8 @@ RUN make -j$(nproc) -C build/cmake install
 RUN cp /usr/local/src/charmm/bin/charmm /usr/local/bin/
 
 # -----------------------------------------------------------------------------
-# Build stage 5 - BioXTAS RAW
-FROM build-charmm AS bilbomd-worker-step1
-
-# Copy the BioXTAS GitHiub master zip file
-WORKDIR /tmp
-# COPY bioxtas/bioxtasraw-master.zip .
-
-# Download the BioXTAS RAW master zip file using wget
-RUN wget https://github.com/jbhopkins/bioxtasraw/archive/refs/heads/master.zip -O bioxtasraw-master.zip
-RUN unzip bioxtasraw-master.zip && rm bioxtasraw-master.zip
-
-# Install BioXTAS RAW into local Python environment
-WORKDIR /tmp/bioxtasraw-master
-RUN python setup.py build_ext --inplace && \
-    pip install . && \
-    rm -rf /tmp/bioxtasraw-master
-
-# -----------------------------------------------------------------------------
-# Build stage 6 - IMP
-FROM bilbomd-worker-step1 AS bilbomd-worker-step2
+# Build stage 5 - IMP
+FROM build-charmm AS bilbomd-worker-step2
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common && \
     add-apt-repository ppa:salilab/ppa && \
@@ -102,7 +63,6 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
-
 # Build stage 7 - worker app (intermediate)
 FROM bilbomd-worker-step2 AS bilbomd-perlmutter-worker-intermediate
 ARG USER_ID
@@ -113,19 +73,22 @@ RUN chown -R $USER_ID:0 /app
 # Build stage 8 - Final runtime image
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS bilbomd-perlmutter-worker
 
-COPY --from=bilbomd-worker-step2 /usr/local/openmm /usr/local/openmm
-COPY --from=bilbomd-worker-step2 /usr/local/openmm/lib /usr/local/openmm/lib
-COPY --from=bilbomd-worker-step2 /usr/local/openmm/lib/plugins /usr/local/openmm/lib/plugins
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends software-properties-common && \
+    add-apt-repository ppa:salilab/ppa && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends imp && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 COPY --from=bilbomd-worker-step2 /miniforge3 /miniforge3
 COPY --from=bilbomd-perlmutter-worker-intermediate /app /app
-COPY --from=bilbomd-worker-step2 /usr/bin/ /usr/bin/
-COPY --from=bilbomd-worker-step2 /usr/local/bin/ /usr/local/bin/
-COPY --from=bilbomd-worker-step2 /usr/lib/ /usr/lib/
-COPY --from=bilbomd-worker-step2 /usr/local/lib/ /usr/local/lib/
+
+# Copy only the CHARMM binary and its required libs
+COPY --from=bilbomd-worker-step2 /usr/local/bin/charmm /usr/local/bin/charmm
 COPY --from=bilbomd-worker-step2 /usr/local/src/charmm/lib /usr/local/src/charmm/lib
+
 # Set environment variables
-ENV PATH="/miniforge3/bin/:${PATH}"
-ENV OPENMM_PLUGIN_DIR=/usr/local/openmm/lib/plugins
-ENV LD_LIBRARY_PATH=/usr/local/openmm/lib:/usr/local/openmm/lib/plugins:/usr/lib:/usr/local/lib:$LD_LIBRARY_PATH
+ENV PATH="/miniforge3/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/lib:/usr/local/src/charmm/lib:${LD_LIBRARY_PATH}"
 
 WORKDIR /app
