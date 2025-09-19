@@ -25,13 +25,13 @@ def _auto_guinier(
     Error estimates are left as 0.0 placeholders.
     """
     q = np.asarray(q, dtype=float)
-    I = np.asarray(intensity, dtype=float)
+    intensity = np.asarray(intensity, dtype=float)
     n = q.size
     if n < min_points:
         raise ValueError(f"Not enough points for Guinier fit (need >= {min_points}).")
 
     x = q * q                 # q^2
-    y = np.log(I)             # ln I
+    y = np.log(intensity)             # ln I
 
     if sigma is not None:
         w = 1.0 / (np.asarray(sigma, dtype=float) ** 2)
@@ -147,7 +147,9 @@ def _auto_guinier(
 
 
 if os.getenv("AUTORG_PROFILE", "0") == "1":
-    import cProfile, pstats, io
+    import cProfile
+    import pstats
+    import io
     _pr = cProfile.Profile()
     _pr.enable()
 
