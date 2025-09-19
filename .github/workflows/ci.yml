@@ -96,7 +96,7 @@ jobs:
       - name: Compute branch + short sha
         run: |
           SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
           echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
 
@@ -233,7 +233,7 @@ jobs:
       - name: Compute branch + short sha
         run: |
           SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
           echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
 
@@ -292,7 +292,7 @@ jobs:
       - name: Compute branch + short sha
         run: |
           SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
           echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
 
