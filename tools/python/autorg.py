@@ -14,78 +14,83 @@ def _auto_guinier(
     q, intensity, sigma=None, min_points=10, max_qrg=1.3, min_qrg=0.3, r2_floor=0.90
 ):
     """
-    Auto-Guinier with sliding start/end, optional sigma-weighting.
+    Faster Auto-Guinier using cumulative sums (O(1) per window).
+
+    Scans all windows [i:j] with j>=i+min_points-1, computes weighted or
+    unweighted linear regression of ln I vs q^2 via prefix sums. This avoids
+    per-window lstsq/allocations and drastically reduces overhead.
 
     Returns RAW-like tuple:
         (rg, izero, rg_err, izero_err, qmin, qmax, qrg_min, qrg_max, idx_min, idx_max, r_sqr)
-    Error estimates are left as 0.0 placeholders for now.
+    Error estimates are left as 0.0 placeholders.
     """
     q = np.asarray(q, dtype=float)
-    intensity = np.asarray(intensity, dtype=float)
-    w = None
-    if sigma is not None:
-        sigma = np.asarray(sigma, dtype=float)
-        w = 1.0 / (sigma**2)
-
+    I = np.asarray(intensity, dtype=float)
     n = q.size
     if n < min_points:
         raise ValueError(f"Not enough points for Guinier fit (need >= {min_points}).")
 
-    x_all = q**2
-    y_all = np.log(intensity)
+    x = q * q                 # q^2
+    y = np.log(I)             # ln I
 
-    def _linfit(x, y, w=None):
-        if w is None:
-            m, b = np.polyfit(x, y, 1)
-            yhat = m * x + b
-        else:
-            # Weighted linear regression via normal equations
-            W = np.diag(w)
-            A = np.vstack([x, np.ones_like(x)]).T
-            # Solve (A^T W A) beta = A^T W y
-            ATA = A.T @ W @ A
-            ATy = A.T @ W @ y
-            beta = np.linalg.lstsq(ATA, ATy, rcond=None)[0]
-            m, b = beta[0], beta[1]
-            yhat = m * x + b
-        # Weighted/Unweighted R^2
-        if w is None:
-            ss_res = float(np.sum((y - yhat) ** 2))
-            ss_tot = float(np.sum((y - np.mean(y)) ** 2))
-        else:
-            ss_res = float(np.sum(w * (y - yhat) ** 2))
-            ybar = float(np.sum(w * y) / np.sum(w))
-            ss_tot = float(np.sum(w * (y - ybar) ** 2))
-        r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
-        return float(m), float(b), float(r2)
+    if sigma is not None:
+        w = 1.0 / (np.asarray(sigma, dtype=float) ** 2)
+    else:
+        w = np.ones_like(y)
 
-    best = None  # (rg, I0, 0, 0, qmin, qmax, qrg_min, qrg_max, i0, i1, r2)
+    # Prefix sums for O(1) window stats
+    # We need: sum w, sum w*x, sum w*y, sum w*x^2, sum w*x*y, sum w*y^2
+    W   = np.concatenate(([0.0], np.cumsum(w)))
+    WX  = np.concatenate(([0.0], np.cumsum(w * x)))
+    WY  = np.concatenate(([0.0], np.cumsum(w * y)))
+    WXX = np.concatenate(([0.0], np.cumsum(w * x * x)))
+    WXY = np.concatenate(([0.0], np.cumsum(w * x * y)))
+    WYY = np.concatenate(([0.0], np.cumsum(w * y * y)))
 
-    # Explore windows [i:j] with >= min_points
+    def window_sums(i, j):
+        # inclusive indices i..j
+        return (
+            W[j+1]  - W[i],
+            WX[j+1] - WX[i],
+            WY[j+1] - WY[i],
+            WXX[j+1]- WXX[i],
+            WXY[j+1]- WXY[i],
+            WYY[j+1]- WYY[i],
+        )
+
+    best = None  # (rg, I0, 0, 0, qmin, qmax, qrg_min, qrg_max, i, j, r2)
+
     for i in range(0, n - min_points + 1):
         for j in range(i + min_points - 1, n):
-            x = x_all[i : j + 1]
-            y = y_all[i : j + 1]
-            ww = None if w is None else w[i : j + 1]
-
-            try:
-                m, b, r2 = _linfit(x, y, ww)
-            except Exception:
+            wsum, wx, wy, wxx, wxy, wyy = window_sums(i, j)
+            # Guard against degenerate windows
+            denom = (wsum * wxx - wx * wx)
+            if denom <= 0.0:
                 continue
 
-            if m >= 0:  # must be negative slope
+            # Weighted linear regression y = m x + b
+            m = (wsum * wxy - wx * wy) / denom
+            b = (wy - m * wx) / wsum
+            if m >= 0.0:
+                continue  # Guinier slope must be negative
+
+            # Goodness-of-fit (weighted R^2)
+            # SSE = sum w (y - (m x + b))^2 = sum w y^2 - 2m sum w xy - 2b sum w y + m^2 sum w x^2 + 2 m b sum w x + b^2 sum w
+            sse = (
+                wyy - 2.0 * m * wxy - 2.0 * b * wy + m * m * wxx + 2.0 * m * b * wx + b * b * wsum
+            )
+            ybar = wy / wsum
+            sst = (wyy - wsum * ybar * ybar)
+            if sst <= 0.0:
+                continue
+            r2 = 1.0 - (sse / sst)
+            if r2 < r2_floor:
                 continue
 
             rg = float(np.sqrt(-3.0 * m))
             qrg_min = float(q[i] * rg)
             qrg_max = float(q[j] * rg)
-
-            # Guinier window constraints
-            if not (min_qrg <= qrg_min <= max_qrg):
-                continue
-            if not (min_qrg <= qrg_max <= max_qrg):
-                continue
-            if r2 < r2_floor:
+            if not (min_qrg <= qrg_min <= max_qrg and min_qrg <= qrg_max <= max_qrg):
                 continue
 
             candidate = (
@@ -99,30 +104,31 @@ def _auto_guinier(
                 qrg_max,
                 i,
                 j,
-                r2,
+                float(r2),
             )
-
             if best is None:
                 best = candidate
             else:
-                # Prefer higher R^2; break ties by larger window, then lower qmin
                 if candidate[-1] > best[-1]:
                     best = candidate
                 elif np.isclose(candidate[-1], best[-1]):
                     curr_len = best[9] - best[8]
                     cand_len = candidate[9] - candidate[8]
-                    if cand_len > curr_len or (
-                        cand_len == curr_len and candidate[4] < best[4]
-                    ):
+                    if cand_len > curr_len or (cand_len == curr_len and candidate[4] < best[4]):
                         best = candidate
 
     if best is None:
-        # Fall back to the first feasible window without lower-bound constraint
+        # Fallback: use the first feasible window of size min_points
         i, j = 0, min_points - 1
-        m, b, r2 = _linfit(
-            x_all[i : j + 1], y_all[i : j + 1], None if w is None else w[i : j + 1]
-        )
+        wsum, wx, wy, wxx, wxy, wyy = window_sums(i, j)
+        denom = (wsum * wxx - wx * wx)
+        if denom <= 0.0:
+            # degenerate; return a minimal default
+            return (0.0, 0.0, 0.0, 0.0, float(q[0]), float(q[min_points-1]), 0.0, 0.0, 0, min_points-1, 0.0)
+        m = (wsum * wxy - wx * wy) / denom
+        b = (wy - m * wx) / wsum
         rg = float(np.sqrt(max(0.0, -3.0 * m)))
+        r2 = 0.0
         best = (
             rg,
             float(np.exp(b)),
@@ -138,6 +144,12 @@ def _auto_guinier(
         )
 
     return best
+
+
+if os.getenv("AUTORG_PROFILE", "0") == "1":
+    import cProfile, pstats, io
+    _pr = cProfile.Profile()
+    _pr.enable()
 
 
 os.environ["MPLCONFIGDIR"] = "/tmp/"
@@ -217,3 +229,9 @@ def calculate_rg(file_path, output_file):
 if __name__ == "__main__":
     args = parse_args()
     calculate_rg(args.file_path, args.output_file)
+    if os.getenv("AUTORG_PROFILE", "0") == "1":
+        _pr.disable()
+        s = io.StringIO()
+        ps = pstats.Stats(_pr, stream=s).sort_stats("cumtime")
+        ps.print_stats(30)
+        sys.stderr.write("\n[autorg profile]\n" + s.getvalue() + "\n")
