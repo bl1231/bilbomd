@@ -79,6 +79,8 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -96,7 +98,7 @@ jobs:
       - name: Compute branch + short sha
         run: |
           SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
           echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
 
@@ -111,25 +113,31 @@ jobs:
             const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
             core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
 
+      - name: Detect version bump (backend)
+        id: bump
+        shell: bash
+        run: |
+          CURR="$(jq -r .version apps/backend/package.json)"
+          PREV="$(git show HEAD^:apps/backend/package.json 2>/dev/null | jq -r .version || echo '')"
+          echo "curr=$CURR prev=$PREV"
+          if [ -n "$PREV" ] && [ "$CURR" != "$PREV" ]; then
+            echo "SHOULD_SEMVER=true" >> "$GITHUB_ENV"
+          else
+            echo "SHOULD_SEMVER=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Docker metadata (tags/labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-backend
           tags: |
-            # main-only semver (only on the Changesets bump commit)
-            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && github.actor == 'github-actions[bot]' }}
-            # main latest
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # always include the SHA tag
             type=raw,value=${{ github.sha }}
-            # PR tags (event)
             type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
-            # PR tags (branch push with open PR)
             type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
-            type=raw,value=pr-${{ steps.pr.outputs.number }}-${{ env.SHORT_SHA }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
-            # branch tags (non-main)
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
 
@@ -161,6 +169,9 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -178,17 +189,42 @@ jobs:
           echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
 
+      - name: Resolve PR number for this branch (if any)
+        id: pr
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const branch = context.ref.replace('refs/heads/', '');
+            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
+            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
+
+      - name: Detect version bump (ui)
+        id: bump
+        shell: bash
+        run: |
+          CURR="$(jq -r .version apps/ui/package.json)"
+          PREV="$(git show HEAD^:apps/ui/package.json 2>/dev/null | jq -r .version || echo '')"
+          echo "curr=$CURR prev=$PREV"
+          if [ -n "$PREV" ] && [ "$CURR" != "$PREV" ]; then
+            echo "SHOULD_SEMVER=true" >> "$GITHUB_ENV"
+          else
+            echo "SHOULD_SEMVER=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-ui
           tags: |
-            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && github.actor == 'github-actions[bot]' }}
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=${{ github.sha }}
             type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
 
@@ -220,6 +256,9 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -233,9 +272,33 @@ jobs:
       - name: Compute branch + short sha
         run: |
           SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
           echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Resolve PR number for this branch (if any)
+        id: pr
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const branch = context.ref.replace('refs/heads/', '');
+            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
+            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
+
+      - name: Detect version bump (worker)
+        id: bump
+        shell: bash
+        run: |
+          CURR="$(jq -r .version apps/worker/package.json)"
+          PREV="$(git show HEAD^:apps/worker/package.json 2>/dev/null | jq -r .version || echo '')"
+          echo "curr=$CURR prev=$PREV"
+          if [ -n "$PREV" ] && [ "$CURR" != "$PREV" ]; then
+            echo "SHOULD_SEMVER=true" >> "$GITHUB_ENV"
+          else
+            echo "SHOULD_SEMVER=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Docker metadata
         id: meta
@@ -243,11 +306,12 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-worker
           tags: |
-            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && github.actor == 'github-actions[bot]' }}
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=${{ github.sha }}
             type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
 
@@ -279,6 +343,9 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -292,9 +359,33 @@ jobs:
       - name: Compute branch + short sha
         run: |
           SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-12)
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
           echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Resolve PR number for this branch (if any)
+        id: pr
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const branch = context.ref.replace('refs/heads/', '');
+            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
+            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
+
+      - name: Detect version bump (scoper)
+        id: bump
+        shell: bash
+        run: |
+          CURR="$(jq -r .version apps/scoper/package.json)"
+          PREV="$(git show HEAD^:apps/scoper/package.json 2>/dev/null | jq -r .version || echo '')"
+          echo "curr=$CURR prev=$PREV"
+          if [ -n "$PREV" ] && [ "$CURR" != "$PREV" ]; then
+            echo "SHOULD_SEMVER=true" >> "$GITHUB_ENV"
+          else
+            echo "SHOULD_SEMVER=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Docker metadata
         id: meta
@@ -302,11 +393,12 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-scoper
           tags: |
-            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && github.actor == 'github-actions[bot]' }}
+            type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=${{ github.sha }}
             type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
             type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
 
@@ -331,14 +423,15 @@ jobs:
   schema:
     name: Build schema
     needs: changes
-    if: needs.changes.outputs.schema == 'true' && needs.changes.outputs.backend != 'true' && needs.changes.outputs.ui != 'true' && needs.changes.outputs.worker != 'true' && needs.changes.outputs.scoper != 'true'
+    if: needs.changes.outputs.schema == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # optional: run pnpm install and a typecheck/build just to validate schema compiles
+        with:
+          fetch-depth: 2
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.16.1
+          version: 10.17.0
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Build schema

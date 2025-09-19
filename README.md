@@ -18,25 +18,25 @@ There are several different SAXS modeling pipelines available.
 
 This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided PDB file and experimental SAXS data.
 
-![Classic PDB](apps/ui/public/images/bilbomd-classic-pdb-schematic.png)
+![Classic PDB](apps/ui/public/images/bilbomd-classic-pdb-schematic-dark.png)
 
 ### BilboMD Classic w/CRD inputs
 
 This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided CRD and PSF file and experimental SAXS data. The CRD and PSF files can be generated using [CHARMM GUI](https://www.charmm-gui.org/).
 
-![Classic CRD](apps/ui/public/images/bilbomd-classic-crd-schematic.png)
+![Classic CRD](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
 
 ### BilboMD Auto
 
 This pipeline is designed to take Alphafold models and a Per residue Alignment Error (PAE) matrix in combination with your experimental SAXS data.
 
-![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic.png)
+![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
 
 ### BilboMD AF
 
 This pipeline is designed to run Alphafold2 on your provided protein sequence and then run the Auto pipeline above.
 
-![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic.png)
+![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
 
 ## Deployment
 
