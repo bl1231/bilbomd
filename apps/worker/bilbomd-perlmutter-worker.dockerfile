@@ -8,7 +8,7 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
-# Build stage 2 - Miniconda3
+# Build stage 2 - conda
 FROM builder AS build-conda
 
 # Download and install Miniforge3
@@ -21,24 +21,13 @@ ENV PATH="/miniforge3/bin/:${PATH}"
 
 # Update conda
 RUN conda update -y -n base -c defaults conda && \
-    conda install -y cython swig doxygen && \
-    conda clean -afy
-
-# Copy environment.yml and install dependencies
-COPY environment.yml /tmp/environment.yml
-RUN conda env update -f /tmp/environment.yml && \
-    rm /tmp/environment.yml && \
+    conda install -y numpy scipy cython swig doxygen matplotlib python-igraph && \
     conda clean -afy
 
 # -----------------------------------------------------------------------------
 # Build stage 4 - CHARMM
 FROM build-conda AS build-charmm
-ARG CHARMM_VER=c48b2
-
-# Probably not needed for OpenMM, but installed anyways for testing purposes.
-# RUN apt-get update && \ 
-#     apt-get install -y fftw3 fftw3-dev && \
-#     rm -rf /var/lib/apt/lists/*
+ARG CHARMM_VER=c49b2
 
 # COPY ./charmm/${CHARMM_VER}.tar.gz /usr/local/src/
 RUN wget https://bl1231.als.lbl.gov/pickup/charmm/${CHARMM_VER}.tar.gz -O /usr/local/src/${CHARMM_VER}.tar.gz
@@ -83,7 +72,10 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends imp && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Copy conda from build-conda stage
 COPY --from=bilbomd-worker-step2 /miniforge3 /miniforge3
+
+# Copy the app from the intermediate stage
 COPY --from=bilbomd-perlmutter-worker-intermediate /app /app
 
 # Copy only the CHARMM binary and its required libs
