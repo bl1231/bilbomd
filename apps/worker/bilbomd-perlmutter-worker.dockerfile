@@ -8,7 +8,7 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
-# Build stage 2 - Miniconda3
+# Build stage 2 - conda
 FROM builder AS build-conda
 
 # Download and install Miniforge3
@@ -21,45 +21,20 @@ ENV PATH="/miniforge3/bin/:${PATH}"
 
 # Update conda
 RUN conda update -y -n base -c defaults conda && \
-    conda install -y cython swig doxygen && \
-    conda clean -afy
-
-# Copy environment.yml and install dependencies
-COPY environment.yml /tmp/environment.yml
-RUN conda env update -f /tmp/environment.yml && \
-    rm /tmp/environment.yml && \
-    conda clean -afy
-
-# -----------------------------------------------------------------------------
-# Build stage 3 - OpenMM
-FROM build-conda AS build-openmm
-ARG OPENMM_VER=8.1.2
-
-# COPY ./openmm/${OPENMM_VER}.tar.gz /usr/local/src
-# Download the OpenMM source code using wget
-RUN wget https://github.com/openmm/openmm/archive/refs/tags/${OPENMM_VER}.tar.gz -O /usr/local/src/${OPENMM_VER}.tar.gz
-
-RUN tar -zxvf /usr/local/src/${OPENMM_VER}.tar.gz -C /usr/local/src && \
-    rm /usr/local/src/${OPENMM_VER}.tar.gz
-WORKDIR /usr/local/src/openmm-${OPENMM_VER}/build
-RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/openmm
-
-RUN make -j$(nproc) && make install
-
-# Set environment variables needed for CHARMM build
-ENV CUDATK=/usr/local/cuda
-ENV OPENMM_PLUGIN_DIR=/usr/local/openmm/lib/plugins
-ENV LD_LIBRARY_PATH=/usr/local/openmm/lib:$OPENMM_PLUGIN_DIR:$LD_LIBRARY_PATH
+    conda install -y -c conda-forge \
+    numpy==2.3.3 \
+    scipy==1.16.2 \
+    cython==3.1.4 \
+    swig==4.3.1 \
+    doxygen==1.13.2 \
+    matplotlib==3.9.1 \
+    python-igraph==0.11.9 \
+    && conda clean -afy
 
 # -----------------------------------------------------------------------------
 # Build stage 4 - CHARMM
-FROM build-openmm AS build-charmm
-ARG CHARMM_VER=c48b2
-
-# Probably not needed for OpenMM, but installed anyways for testing purposes.
-# RUN apt-get update && \ 
-#     apt-get install -y fftw3 fftw3-dev && \
-#     rm -rf /var/lib/apt/lists/*
+FROM build-conda AS build-charmm
+ARG CHARMM_VER=c49b2
 
 # COPY ./charmm/${CHARMM_VER}.tar.gz /usr/local/src/
 RUN wget https://bl1231.als.lbl.gov/pickup/charmm/${CHARMM_VER}.tar.gz -O /usr/local/src/${CHARMM_VER}.tar.gz
@@ -74,26 +49,8 @@ RUN make -j$(nproc) -C build/cmake install
 RUN cp /usr/local/src/charmm/bin/charmm /usr/local/bin/
 
 # -----------------------------------------------------------------------------
-# Build stage 5 - BioXTAS RAW
-FROM build-charmm AS bilbomd-worker-step1
-
-# Copy the BioXTAS GitHiub master zip file
-WORKDIR /tmp
-# COPY bioxtas/bioxtasraw-master.zip .
-
-# Download the BioXTAS RAW master zip file using wget
-RUN wget https://github.com/jbhopkins/bioxtasraw/archive/refs/heads/master.zip -O bioxtasraw-master.zip
-RUN unzip bioxtasraw-master.zip && rm bioxtasraw-master.zip
-
-# Install BioXTAS RAW into local Python environment
-WORKDIR /tmp/bioxtasraw-master
-RUN python setup.py build_ext --inplace && \
-    pip install . && \
-    rm -rf /tmp/bioxtasraw-master
-
-# -----------------------------------------------------------------------------
-# Build stage 6 - IMP
-FROM bilbomd-worker-step1 AS bilbomd-worker-step2
+# Build stage 5 - IMP
+FROM build-charmm AS bilbomd-worker-step2
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common && \
     add-apt-repository ppa:salilab/ppa && \
@@ -102,30 +59,37 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
-
 # Build stage 7 - worker app (intermediate)
 FROM bilbomd-worker-step2 AS bilbomd-perlmutter-worker-intermediate
 ARG USER_ID
 WORKDIR /app
-COPY scripts/ scripts/
+# App-specific worker scripts
+COPY apps/worker/scripts/ /app/scripts/
+# Shared helper scripts moved to monorepo tools/python
+COPY tools/python/ /app/scripts/
 RUN chown -R $USER_ID:0 /app
 
 # Build stage 8 - Final runtime image
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS bilbomd-perlmutter-worker
 
-COPY --from=bilbomd-worker-step2 /usr/local/openmm /usr/local/openmm
-COPY --from=bilbomd-worker-step2 /usr/local/openmm/lib /usr/local/openmm/lib
-COPY --from=bilbomd-worker-step2 /usr/local/openmm/lib/plugins /usr/local/openmm/lib/plugins
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends software-properties-common parallel && \
+    add-apt-repository ppa:salilab/ppa && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends imp && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Copy conda from build-conda stage
 COPY --from=bilbomd-worker-step2 /miniforge3 /miniforge3
+
+# Copy the app from the intermediate stage
 COPY --from=bilbomd-perlmutter-worker-intermediate /app /app
-COPY --from=bilbomd-worker-step2 /usr/bin/ /usr/bin/
-COPY --from=bilbomd-worker-step2 /usr/local/bin/ /usr/local/bin/
-COPY --from=bilbomd-worker-step2 /usr/lib/ /usr/lib/
-COPY --from=bilbomd-worker-step2 /usr/local/lib/ /usr/local/lib/
-COPY --from=bilbomd-worker-step2 /usr/local/src/charmm/lib /usr/local/src/charmm/lib
+
+# Copy only the CHARMM binary and its required libs
+COPY --from=bilbomd-worker-step2 /usr/local/bin/charmm /usr/local/bin/charmm
+
 # Set environment variables
-ENV PATH="/miniforge3/bin/:${PATH}"
-ENV OPENMM_PLUGIN_DIR=/usr/local/openmm/lib/plugins
-ENV LD_LIBRARY_PATH=/usr/local/openmm/lib:/usr/local/openmm/lib/plugins:/usr/lib:/usr/local/lib:$LD_LIBRARY_PATH
+ENV PATH="/miniforge3/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
 
 WORKDIR /app
