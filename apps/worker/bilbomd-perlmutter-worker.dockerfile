@@ -21,8 +21,15 @@ ENV PATH="/miniforge3/bin/:${PATH}"
 
 # Update conda
 RUN conda update -y -n base -c defaults conda && \
-    conda install -y numpy scipy cython swig doxygen matplotlib python-igraph && \
-    conda clean -afy
+    conda install -y -c conda-forge \
+    numpy==2.3.3 \
+    scipy==1.16.2 \
+    cython==3.1.4 \
+    swig==4.3.1 \
+    doxygen==1.13.2 \
+    matplotlib==3.9.1 \
+    python-igraph==0.11.9 \
+    && conda clean -afy
 
 # -----------------------------------------------------------------------------
 # Build stage 4 - CHARMM
