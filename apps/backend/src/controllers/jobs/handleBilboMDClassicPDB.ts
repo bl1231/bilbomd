@@ -19,16 +19,9 @@ import { pdbJobSchema } from '../../validation/index.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
-const handleBilboMDClassicPDB = async (
-  req: Request,
-  res: Response,
-  user: IUser,
-  UUID: string
-) => {
+const handleBilboMDClassicPDB = async (req: Request, res: Response, user: IUser, UUID: string) => {
   try {
-    const isResubmission = Boolean(
-      req.body.resubmit === true || req.body.resubmit === 'true'
-    )
+    const isResubmission = Boolean(req.body.resubmit === true || req.body.resubmit === 'true')
     const originalJobId = req.body.original_job_id || null
     logger.info(`isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`)
 
@@ -211,7 +204,7 @@ const handleBilboMDClassicPDB = async (
       title: newJob.title,
       uuid: newJob.uuid,
       jobid: newJob.id,
-      md_engine // hint for the worker orchestrator
+      md_engine
     }
 
     // Queue the job
@@ -232,8 +225,8 @@ const handleBilboMDClassicPDB = async (
       error instanceof Error
         ? error.message
         : typeof error === 'string'
-        ? error
-        : 'Unknown error occurred'
+          ? error
+          : 'Unknown error occurred'
 
     logger.error('handleBilboMDClassicPDB error:', error)
     res.status(500).json({ message: msg })

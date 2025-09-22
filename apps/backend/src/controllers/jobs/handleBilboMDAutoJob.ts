@@ -11,6 +11,7 @@ import {
   IUser,
   BilboMdAutoJob,
   IBilboMDAutoJob,
+  IBilboMDSteps,
   JobStatus,
   StepStatus
 } from '@bilbomd/mongodb-schema'
@@ -24,18 +25,15 @@ import { autoJobSchema } from '../../validation/index.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
-const handleBilboMDAutoJob = async (
-  req: Request,
-  res: Response,
-  user: IUser,
-  UUID: string
-) => {
+const handleBilboMDAutoJob = async (req: Request, res: Response, user: IUser, UUID: string) => {
   try {
-    const isResubmission = Boolean(
-      req.body.resubmit === true || req.body.resubmit === 'true'
-    )
+    const isResubmission = Boolean(req.body.resubmit === true || req.body.resubmit === 'true')
     const originalJobId = req.body.original_job_id || null
     logger.info(`isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`)
+
+    const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
+    const md_engine: 'CHARMM' | 'OpenMM' = mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+    logger.info(`Selected md_engine: ${md_engine}`)
 
     const { bilbomd_mode: bilbomdMode } = req.body
 
@@ -129,6 +127,34 @@ const handleBilboMDAutoJob = async (
       }
     }
 
+    // Build default steps, allow minor tweaks based on md_engine
+    const stepsInit: IBilboMDSteps = {
+      pdb2crd: { status: StepStatus.Waiting, message: '' },
+      minimize: { status: StepStatus.Waiting, message: '' },
+      initfoxs: { status: StepStatus.Waiting, message: '' },
+      heat: { status: StepStatus.Waiting, message: '' },
+      md: { status: StepStatus.Waiting, message: '' },
+      dcd2pdb: { status: StepStatus.Waiting, message: '' },
+      pdb_remediate: { status: StepStatus.Waiting, message: '' },
+      foxs: { status: StepStatus.Waiting, message: '' },
+      multifoxs: { status: StepStatus.Waiting, message: '' },
+      results: { status: StepStatus.Waiting, message: '' },
+      email: { status: StepStatus.Waiting, message: '' }
+    } as const
+
+    // If using OpenMM, note that pdb2crd is not needed and will be skipped downstream.
+    const stepsAdjusted = {
+      ...stepsInit,
+      pdb2crd: {
+        ...stepsInit.pdb2crd,
+        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
+      },
+      pdb_remediate: {
+        ...stepsInit.pdb_remediate,
+        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
+      }
+    }
+
     // Initialize BilboMdAuto Job Data
     const newJob: IBilboMDAutoJob = new BilboMdAutoJob({
       title: req.body.title,
@@ -143,20 +169,8 @@ const handleBilboMDAutoJob = async (
       conformational_sampling: 3,
       time_submitted: new Date(),
       user: user,
-      steps: {
-        pdb2crd: { status: StepStatus.Waiting, message: '' },
-        pae: { status: StepStatus.Waiting, message: '' },
-        autorg: { status: StepStatus.Waiting, message: '' },
-        minimize: { status: StepStatus.Waiting, message: '' },
-        initfoxs: { status: StepStatus.Waiting, message: '' },
-        heat: { status: StepStatus.Waiting, message: '' },
-        md: { status: StepStatus.Waiting, message: '' },
-        dcd2pdb: { status: StepStatus.Waiting, message: '' },
-        foxs: { status: StepStatus.Waiting, message: '' },
-        multifoxs: { status: StepStatus.Waiting, message: '' },
-        results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
-      },
+      steps: stepsAdjusted,
+      md_engine,
       ...(isResubmission && originalJobId ? { resubmitted_from: originalJobId } : {})
     })
 
@@ -168,8 +182,8 @@ const handleBilboMDAutoJob = async (
     await writeJobParams(newJob.id)
 
     // ---------------------------------------------------------- //
-    // Convert PDB to PSF and CRD
-    if (!config.runOnNERSC) {
+    // Convert PDB to PSF and CRD (only if not on NERSC and not OpenMM)
+    if (!config.runOnNERSC && md_engine !== 'OpenMM') {
       const Pdb2CrdBullId = await queuePdb2CrdJob({
         type: 'Pdb2Crd',
         title: 'convert PDB to CRD',
@@ -184,20 +198,21 @@ const handleBilboMDAutoJob = async (
       // Need to wait here until the BullMQ job is finished
       await waitForJobCompletion(Pdb2CrdBullId, pdb2crdQueueEvents)
       logger.info('Pdb2Crd completed.')
+
+      // Add PSF and CRD files to Mongo entry
+      newJob.psf_file = 'bilbomd_pdb2crd.psf'
+      newJob.crd_file = 'bilbomd_pdb2crd.crd'
+      await newJob.save()
     }
     // ---------------------------------------------------------- //
-
-    // Add PSF and CRD files to Mongo entry
-    newJob.psf_file = 'bilbomd_pdb2crd.psf'
-    newJob.crd_file = 'bilbomd_pdb2crd.crd'
-    await newJob.save()
 
     // Create BullMQ Job object
     const jobData = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id
+      jobid: newJob.id,
+      md_engine
     }
 
     // Queue the job
@@ -209,15 +224,16 @@ const handleBilboMDAutoJob = async (
     res.status(200).json({
       message: `New ${bilbomdMode} Job successfully created`,
       jobid: newJob.id,
-      uuid: newJob.uuid
+      uuid: newJob.uuid,
+      md_engine
     })
   } catch (error) {
     const msg =
       error instanceof Error
         ? error.message
         : typeof error === 'string'
-        ? error
-        : 'Unknown error occurred'
+          ? error
+          : 'Unknown error occurred'
 
     logger.error('handleBilboMDAutoJob error:', error)
     res.status(500).json({ message: msg })
