@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { MockInstance } from 'vitest'
 
 import { runPythonStep } from '../runPythonStep.js'
 import { EventEmitter } from 'events'
@@ -28,7 +29,7 @@ describe('runPythonStep', () => {
     mockChild.stderr = stderrEmitter
     mockChild.kill = vi.fn()
     // make our mocked spawn return the fake child process
-    ;(spawn as unknown as vi.Mock).mockReturnValue(mockChild)
+    ;(spawn as unknown as MockInstance).mockReturnValue(mockChild)
   })
 
   it('spawns the correct process with args', async () => {
