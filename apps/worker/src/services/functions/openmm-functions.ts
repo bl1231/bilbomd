@@ -1,7 +1,7 @@
 import { config } from '../../config/config.js'
 import path from 'path'
 import { Job as BullMQJob } from 'bullmq'
-import { IBilboMDPDBJob, IStepStatus } from '@bilbomd/mongodb-schema'
+import { IBilboMDPDBJob, IBilboMDAutoJob, IStepStatus } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import { updateStepStatus } from './mongo-utils.js'
 import fs from 'fs-extra'
@@ -153,7 +153,7 @@ const extractConstraintsFromConstInp = async (
 }
 
 const buildOpenMMConfigForJob = (
-  DBjob: IBilboMDPDBJob,
+  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
   workDir: string
 ): OpenMMConfig => ({
   input: {
@@ -209,7 +209,9 @@ const buildOpenMMConfigForJob = (
 
 // Prepare (build + write) a single YAML config for all downstream OpenMM steps.
 // Returns the absolute path to the written config.
-const prepareOpenMMConfigYamlForJob = async (DBjob: IBilboMDPDBJob): Promise<string> => {
+const prepareOpenMMConfigYamlForJob = async (
+  DBjob: IBilboMDPDBJob | IBilboMDAutoJob
+): Promise<string> => {
   const workDir = path.join(config.uploadDir, DBjob.uuid)
   const cfg = buildOpenMMConfigForJob(DBjob, workDir)
   const constInpPath = path.join(workDir, DBjob.const_inp_file)
@@ -226,7 +228,7 @@ type OmmStepKey = 'minimize' | 'heat' | 'md'
 
 const runOmmStep = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob,
+  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
   stepKey: OmmStepKey,
   scriptRelPath: string,
   opts?: {
@@ -292,7 +294,7 @@ const runOmmStep = async (
 
 const runOmmMinimize = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob,
+  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
   opts?: {
     cwd?: string
     platform?: 'CUDA' | 'OpenCL' | 'CPU'
@@ -306,7 +308,7 @@ const runOmmMinimize = async (
 
 const runOmmHeat = (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob,
+  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
   opts?: {
     cwd?: string
     platform?: 'CUDA' | 'OpenCL' | 'CPU'
@@ -318,7 +320,7 @@ const runOmmHeat = (
 
 const runOmmMD = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob,
+  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
   opts?: {
     cwd?: string
     platform?: 'CUDA' | 'OpenCL' | 'CPU'
