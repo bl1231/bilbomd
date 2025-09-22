@@ -209,7 +209,7 @@ const handleBilboMDAlphaFoldJob = async (
           ? error
           : 'Unknown error occurred'
 
-    logger.error('handleBilboMAlphaFoldJob error:', error)
+    logger.error('handleBilboMDAlphaFoldJob error:', error)
     res.status(500).json({ message: msg })
   }
 }
