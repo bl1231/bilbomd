@@ -1,8 +1,8 @@
 // Unmock loggers for this test file so we get real coverage
 // Must be before any imports
-vi.unmock('./loggers.js')
+vi.unmock('../loggers.js')
 import { describe, it, expect, vi } from 'vitest'
-import { logger } from './loggers.js'
+import { logger } from '../loggers.js'
 
 describe('loggers.ts', () => {
   it('should log messages in the correct format to Console', () => {

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as nodemailer from 'nodemailer'
 // hbs import not needed in test
-import { sendJobCompleteEmail } from './mailer.js'
-import { logger } from './loggers.js'
+import { sendJobCompleteEmail } from '../mailer.js'
+import { logger } from '../loggers.js'
 
 vi.mock('nodemailer', () => {
   const createTransport = vi.fn()
