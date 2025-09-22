@@ -1,6 +1,3 @@
-// Set env var before importing logger
-process.env.BILBOMD_LOGS = process.env.BILBOMD_LOGS || '/tmp/bilbomd-logs-test'
-
 // Unmock loggers for this test file so we get real coverage
 // Must be before any imports
 vi.unmock('./loggers.js')
