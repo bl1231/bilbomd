@@ -1,22 +1,22 @@
-// src/lib/runPythonStep.ts
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
+import readline from 'node:readline'
 
 export interface RunPythonOptions {
-  pythonBin?: string // default: '/opt/envs/openmm/bin/python'
-  cwd?: string // working dir for the step
-  env?: NodeJS.ProcessEnv // extra env (merged on top of process.env)
-  timeoutMs?: number // hard timeout
+  pythonBin?: string
+  cwd?: string
+  env?: NodeJS.ProcessEnv
+  timeoutMs?: number
   onStdoutLine?: (line: string) => void
   onStderrLine?: (line: string) => void
-  killSignal?: NodeJS.Signals | number // default: 'SIGTERM'
+  killSignal?: NodeJS.Signals | number
 }
 
 export async function runPythonStep(
   scriptPath: string,
   configYamlPath: string,
   opts: RunPythonOptions = {}
-): Promise<{ code: number; signal: NodeJS.Signals | null }> {
+): Promise<{ code: number | null; signal: NodeJS.Signals | null }> {
   const {
     pythonBin = '/opt/envs/openmm/bin/python',
     cwd,
@@ -33,50 +33,52 @@ export async function runPythonStep(
     stdio: ['ignore', 'pipe', 'pipe']
   })
 
-  // Line-buffered streaming
-  let stdoutBuf = ''
-  let stderrBuf = ''
-
-  child.stdout.setEncoding('utf8')
-  child.stderr.setEncoding('utf8')
-
-  child.stdout.on('data', (chunk: string) => {
-    stdoutBuf += chunk
-    let idx
-    while ((idx = stdoutBuf.indexOf('\n')) !== -1) {
-      const line = stdoutBuf.slice(0, idx)
-      stdoutBuf = stdoutBuf.slice(idx + 1)
-      onStdoutLine?.(line)
-    }
+  // Handle spawn errors (e.g., ENOENT) so we don’t hang forever
+  const errorP = once(child, 'error').then(([err]) => {
+    throw err
   })
 
-  child.stderr.on('data', (chunk: string) => {
-    stderrBuf += chunk
-    let idx
-    while ((idx = stderrBuf.indexOf('\n')) !== -1) {
-      const line = stderrBuf.slice(0, idx)
-      stderrBuf = stderrBuf.slice(idx + 1)
-      onStderrLine?.(line)
-    }
-  })
+  // Robust line-reading (handles CRLF and backpressure)
+  let rlOut: readline.Interface | undefined
+  let rlErr: readline.Interface | undefined
+  if (child.stdout) {
+    rlOut = readline.createInterface({ input: child.stdout })
+    rlOut.on('line', (line) => onStdoutLine?.(line.replace(/\r$/, '')))
+  }
+  if (child.stderr) {
+    rlErr = readline.createInterface({ input: child.stderr })
+    rlErr.on('line', (line) => onStderrLine?.(line.replace(/\r$/, '')))
+  }
 
-  // Timeout guard
-  let timeoutHandle: NodeJS.Timeout | undefined
+  // Timeout (track both timers)
+  let termTimer: NodeJS.Timeout | undefined
+  let killTimer: NodeJS.Timeout | undefined
   if (timeoutMs && timeoutMs > 0) {
-    timeoutHandle = setTimeout(() => {
-      child.kill(killSignal)
-      // escalate if it hangs
-      setTimeout(() => child.kill('SIGKILL'), 5000)
+    termTimer = setTimeout(() => {
+      try {
+        child.kill(killSignal)
+      } catch {}
+      killTimer = setTimeout(() => {
+        try {
+          child.kill('SIGKILL')
+        } catch {}
+      }, 5000)
     }, timeoutMs)
   }
 
-  const [code, signal] = (await once(child, 'exit')) as [number, NodeJS.Signals | null]
+  // Prefer 'close' so all stdio is drained
+  const closeP = once(child, 'close').then(([code, signal]) => ({ code, signal }))
 
-  if (timeoutHandle) clearTimeout(timeoutHandle)
+  let result: { code: number | null; signal: NodeJS.Signals | null }
+  try {
+    result = await Promise.race([closeP, errorP])
+  } finally {
+    // Cleanup
+    if (termTimer) clearTimeout(termTimer)
+    if (killTimer) clearTimeout(killTimer)
+    rlOut?.close()
+    rlErr?.close()
+  }
 
-  // Flush any remainder without newline
-  if (stdoutBuf) onStdoutLine?.(stdoutBuf)
-  if (stderrBuf) onStderrLine?.(stderrBuf)
-
-  return { code, signal }
+  return result
 }
