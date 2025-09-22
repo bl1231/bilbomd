@@ -2,17 +2,12 @@ import { v4 as uuid } from 'uuid'
 import path from 'path'
 import fs from 'fs-extra'
 import mongoose from 'mongoose'
-import { logger } from '../middleware/loggers.js'
+import { logger } from '../../middleware/loggers.js'
 import multer from 'multer'
-import {
-  BilboMdSANSJob,
-  IBilboMDSANSJob,
-  User,
-  IUser
-} from '@bilbomd/mongodb-schema'
+import { BilboMdSANSJob, IBilboMDSANSJob, User, IUser } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
-import { sanitizeConstInpFile, writeJobParams } from './jobs/index.js'
-import { queueJob } from '../queues/bilbomd.js'
+import { sanitizeConstInpFile, writeJobParams } from './index.js'
+import { queueJob } from '../../queues/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 

@@ -1,12 +1,12 @@
-import { logger } from '../middleware/loggers.js'
-import { config } from '../config/config.js'
+import { logger } from '../../middleware/loggers.js'
+import { config } from '../../config/config.js'
 import multer from 'multer'
 import fs from 'fs-extra'
 import path from 'path'
 import { v4 as uuid, validate as uuidValidate, version as uuidVersion } from 'uuid'
 import { User, IUser, MultiJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
-import { queueJob } from '../queues/multimd.js'
+import { queueJob } from '../../queues/multimd.js'
 
 const createNewMultiJob = async (req: Request, res: Response) => {
   const UUID = uuid()
@@ -81,9 +81,7 @@ const handleBilboMDMultiJobCreation = async (
     })
   }
 
-  const invalidUUIDs = bilbomd_uuids.filter(
-    (id) => !uuidValidate(id) || uuidVersion(id) !== 4
-  )
+  const invalidUUIDs = bilbomd_uuids.filter((id) => !uuidValidate(id) || uuidVersion(id) !== 4)
 
   if (invalidUUIDs.length > 0) {
     logger.error(`Invalid UUIDs detected: ${invalidUUIDs.join(', ')}`)
