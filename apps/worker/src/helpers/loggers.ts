@@ -4,8 +4,7 @@ import moment from 'moment-timezone'
 
 const { combine, timestamp, label, printf, colorize } = format
 const localTimezone = 'America/Los_Angeles'
-const logsFolder = `/bilbomd/logs`
-
+// Use process.env.BILBOMD_LOGS directly to ensure it's always up-to-date
 const customTimestamp = () => moment().tz(localTimezone).format('YYYY-MM-DD HH:mm:ss')
 
 const logFormat = printf(({ level, message, label, timestamp }) => {
@@ -15,7 +14,7 @@ const logFormat = printf(({ level, message, label, timestamp }) => {
 // Declare as an array of any transport types available
 const loggerTransports = [
   new DailyRotateFile({
-    filename: `${logsFolder}/bilbomd-worker-%DATE%.log`,
+    filename: `${process.env.BILBOMD_LOGS}/bilbomd-worker-%DATE%.log`,
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
     maxSize: '10m',
@@ -23,7 +22,7 @@ const loggerTransports = [
   }),
   new DailyRotateFile({
     level: 'error',
-    filename: `${logsFolder}/bilbomd-worker-error-%DATE%.log`,
+    filename: `${process.env.BILBOMD_LOGS}/bilbomd-worker-error-%DATE%.log`,
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
     maxSize: '10m',
@@ -42,4 +41,4 @@ const logger = createLogger({
   transports: loggerTransports
 })
 
-export { logger, logsFolder }
+export { logger }

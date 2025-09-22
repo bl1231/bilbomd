@@ -22,7 +22,6 @@
     "start": "npm run build && node dist/server.js",
     "test": "vitest --run --coverage",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "server": "nodemon ."
   },
   "dependencies": {
