@@ -1,4 +1,4 @@
-// vitest.config.ts
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
@@ -8,7 +8,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./test/setup.ts'],
     coverage: {
-      reporter: ['text', 'json', 'html']
+      reporter: ['text', 'json', 'html'],
+      exclude: ['node_modules/', 'build/', 'dist/', '**/*.d.ts']
     }
   }
 })

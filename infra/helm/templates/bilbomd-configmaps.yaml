@@ -5,40 +5,41 @@ metadata:
   namespace: bilbomd
 data:
   BILBOMD_BACKEND_HOST: localhost
-  BILBOMD_BACKEND_PORT: "3501"
-  BILBOMD_URL: "{{ .Values.bilbomd.url }}"
-  BILBOMD_FQDN: "{{ .Values.ingress.fqdn }}"
+  BILBOMD_BACKEND_PORT: '3501'
+  BILBOMD_URL: '{{ .Values.bilbomd.url }}'
+  BILBOMD_FQDN: '{{ .Values.ingress.fqdn }}'
   MONGO_AUTH_SRC: admin
   MONGO_DB: bilbomd
   MONGO_HOSTNAME: mongo
-  MONGO_PORT: "27017"
+  MONGO_PORT: '27017'
   MONGO_USERNAME: bilbomd-backend-user
   REDIS_HOST: redis
-  REDIS_PORT: "6379"
-  SEND_EMAIL_NOTIFICATIONS: "true"
+  REDIS_PORT: '6379'
+  SEND_EMAIL_NOTIFICATIONS: 'true'
   SEND_EMAIL_USER: bilbomd@lbl.gov
   DATA_VOL: /bilbomd/uploads
-  NODE_ENV: "{{ .Values.env.NODE_ENV }}"
-  BILBOMD_ENV: "{{ .Values.env.BILBOMD_ENV }}"
+  BILBOMD_LOGS: /bilbomd/logs
+  NODE_ENV: '{{ .Values.env.NODE_ENV }}'
+  BILBOMD_ENV: '{{ .Values.env.BILBOMD_ENV }}'
   BILBOMD_DEPLOY_SITE: nersc
-  USE_NERSC: "true"
-  NERSC_PROJECT: "m4659"
+  USE_NERSC: 'true'
+  NERSC_PROJECT: 'm4659'
   SFAPI_URL: https://api.nersc.gov/api/v1.2
-  SFAPI_TOKEN_EXPIRES: "{{ .Values.sfapi.token_expires }}"
-  SCRIPT_DIR: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}"
-  UPLOAD_DIR: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.uploads }}"
-  WORK_DIR: "{{ .Values.pscratch }}/{{ .Values.working_dir }}"
-  PREPARE_CHARMM_SLURM_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-bilbomd-slurm-file.sh"
-  PREPARE_OMM_SLURM_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-openmm-slurm-file.py"
-  CP2CFS_SCRIPT: "{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/copy-back-to-cfs.sh"
-  ENABLE_BILBOMD_SANS: "false"
-  ENABLE_BILBOMD_MULTI: "false"
-  ENABLE_HOME_PAGE_ALERT: "false"
+  SFAPI_TOKEN_EXPIRES: '{{ .Values.sfapi.token_expires }}'
+  SCRIPT_DIR: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}'
+  UPLOAD_DIR: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.uploads }}'
+  WORK_DIR: '{{ .Values.pscratch }}/{{ .Values.working_dir }}'
+  PREPARE_CHARMM_SLURM_SCRIPT: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-bilbomd-slurm-file.sh'
+  PREPARE_OMM_SLURM_SCRIPT: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-openmm-slurm-file.py'
+  CP2CFS_SCRIPT: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/copy-back-to-cfs.sh'
+  ENABLE_BILBOMD_SANS: 'false'
+  ENABLE_BILBOMD_MULTI: 'false'
+  ENABLE_HOME_PAGE_ALERT: 'false'
   CHARMM_TOPOLOGY: /app/scripts/bilbomd_top_par_files.str
   CHARMM_TEMPLATES: /app/build/templates/bilbomd
   CHARMM: /usr/local/bin/charmm
   FOXS: /usr/bin/foxs
   MULTIFOXS: /usr/bin/multi_foxs
-  ORCID_ISSUER: "{{ .Values.auth.orcid_issuer }}"
-  ORCID_CLIENT_ID: "{{ .Values.auth.orcid_client_id }}"
-  ORCID_REDIRECT_URI: "{{ .Values.auth.orcid_redirect_uri }}"
+  ORCID_ISSUER: '{{ .Values.auth.orcid_issuer }}'
+  ORCID_CLIENT_ID: '{{ .Values.auth.orcid_client_id }}'
+  ORCID_REDIRECT_URI: '{{ .Values.auth.orcid_redirect_uri }}'
