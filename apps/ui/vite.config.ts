@@ -4,7 +4,6 @@ import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 console.log('Starting Vite configuration...')
-// console.log(process.env)
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   server: {
@@ -39,11 +38,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            return id
-              .toString()
-              .split('node_modules/')[1]
-              .split('/')[0]
-              .toString()
+            return id.toString().split('node_modules/')[1].split('/')[0].toString()
           }
         }
       }
@@ -59,6 +54,9 @@ export default defineConfig({
       deps: {
         inline: ['@mui/x-data-grid']
       }
+    },
+    coverage: {
+      exclude: ['node_modules/', 'build/', 'dist/', '**/*.d.ts']
     }
   }
 })
