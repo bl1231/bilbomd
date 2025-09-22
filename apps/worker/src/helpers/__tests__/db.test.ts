@@ -24,11 +24,10 @@ describe('connectDB', () => {
     process.env.MONGO_DB = 'testdb'
     process.env.MONGO_AUTH_SRC = 'admin'
 
-    const expectedUrl =
-      'mongodb://testuser:testpass@localhost:27017/testdb?authSource=admin'
+    const expectedUrl = 'mongodb://testuser:testpass@localhost:27017/testdb?authSource=admin'
 
     // 👇 Dynamic import after setting env
-    const { connectDB } = await import('./db.js')
+    const { connectDB } = await import('../db.js')
 
     await connectDB()
     expect(mongoose.connect).toHaveBeenCalledWith(expectedUrl)
@@ -39,7 +38,7 @@ describe('connectDB', () => {
       throw new Error('connection failed')
     })
     // 👇 Dynamic import after setting env
-    const { connectDB } = await import('./db.js')
+    const { connectDB } = await import('../db.js')
     const result = await connectDB()
     expect(result).toBeUndefined() // because connectDB returns nothing
     expect(mongoose.connect).toHaveBeenCalled()

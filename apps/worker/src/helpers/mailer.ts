@@ -1,19 +1,10 @@
 import nodemailer from 'nodemailer'
 import hbs from 'nodemailer-express-handlebars'
-// import path from 'path'
 import { logger } from './loggers.js'
 
 const user = process.env.SEND_EMAIL_USER
 const name = process.env.BILBOMD_FQDN
-// const viewPath = path.resolve(__dirname, '../templates/mailer/')
-const viewPath = '/app/dist/templates/mailer/'
-
-const transporter = nodemailer.createTransport({
-  name: name,
-  host: 'smtp-relay.gmail.com',
-  port: 25,
-  secure: false
-})
+const viewPath = process.env.BILBOMD_MAILER_TEMPLATES || '/app/dist/templates/mailer/'
 
 const sendJobCompleteEmail = (
   email: string,
@@ -25,12 +16,18 @@ const sendJobCompleteEmail = (
   logger.info(`Sending job complete email, isError: ${isError}`)
 
   let emailLayout
-
   if (isError === true) {
     emailLayout = 'joberror'
   } else {
     emailLayout = 'jobcomplete'
   }
+
+  const transporter = nodemailer.createTransport({
+    name: name,
+    host: 'smtp-relay.gmail.com',
+    port: 25,
+    secure: false
+  })
 
   transporter.use(
     'compile',
