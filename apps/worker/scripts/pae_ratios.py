@@ -8,15 +8,132 @@ from collections import defaultdict
 from typing import Tuple, Optional
 import igraph
 import numpy as np
+import yaml
 
 # This is defining the pLDDT threshold for determing flex/rigid
 # which Alphafold2 writes to the B-factor column
 # B_THRESHOLD = 50.00
 # PAE_POWER = 2.0
+
 MIN_CLUSTER_LENGTH = 5
 CONST_FILE_PATH = "const.inp"
 CLUSTER_FILE = "clusters.csv"
 TEMP_FILE_JSON = "temp.json"
+
+# --- PDB mode flag and caches ---
+USE_PDB = False
+# Indexed list mapping 0-based residue index -> (chain_id, resseq)
+PDB_INDEX_TO_RES = []
+# Per-residue pLDDT accumulator: (chain_id, resseq) -> [bfactors...]
+PDB_RES_PLDDT = defaultdict(list)
+
+
+def _prepare_pdb_mappings(pdb_file: str) -> int:
+    """
+    Build PDB_INDEX_TO_RES (sequence of residues across all chains) and
+    PDB_RES_PLDDT (per-residue list of B-factors which hold pLDDT).
+    Returns the number of residues discovered.
+    """
+    global PDB_INDEX_TO_RES, PDB_RES_PLDDT
+    PDB_INDEX_TO_RES = []
+    PDB_RES_PLDDT.clear()
+    seen_res = set()  # track first atom per residue to build index ordering
+
+    with open(file=pdb_file, mode="r", encoding="utf8") as fh:
+        for line in fh:
+            if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                continue
+            # PDB fixed columns
+            chain_id = line[21].strip() or " "
+            resseq_str = line[22:26].strip()
+            icode = line[26].strip()  # insertion code
+            bfact_str = line[60:66].strip()
+
+            if not resseq_str:
+                continue
+            try:
+                resseq = int(resseq_str)
+            except ValueError:
+                continue
+
+            # accumulate pLDDT (B-factor) per (chain, resseq)
+            try:
+                b = float(bfact_str)
+                PDB_RES_PLDDT[(chain_id, resseq)].append(b)
+            except Exception:
+                pass
+
+            # use (chain, resseq, icode) to identify first occurrence order
+            key = (chain_id, resseq, icode)
+            if key not in seen_res:
+                seen_res.add(key)
+                PDB_INDEX_TO_RES.append((chain_id, resseq))
+
+    return len(PDB_INDEX_TO_RES)
+
+
+def get_first_and_last_residue_numbers_pdb(pdb_file: str) -> Tuple[int, int]:
+    """
+    For PDB-based runs, we want indices that map 1..N so that SELECTED_* math
+    yields 0..N-1 windows for the PAE slice.
+    """
+    n = _prepare_pdb_mappings(pdb_file)
+    # Return (1, N) so first-1 == 0 and last-1 == N-1
+    return 1, n
+
+
+def define_segments_pdb(pdb_file: str):
+    """
+    Return 0-based residue indices that act as 'split points' between chains.
+    For compatibility with the CRD-based logic, we return indices i-1 at chain
+    boundaries so sort_and_separate_cluster() will break clusters at chain edges.
+    """
+    if not PDB_INDEX_TO_RES:
+        _prepare_pdb_mappings(pdb_file)
+    segs = []
+    for i in range(1, len(PDB_INDEX_TO_RES)):
+        prev_chain = PDB_INDEX_TO_RES[i - 1][0]
+        curr_chain = PDB_INDEX_TO_RES[i][0]
+        if prev_chain != curr_chain:
+            segs.append(i - 1)
+    return segs
+
+
+def calculate_bfactor_avg_for_region_pdb(
+    _ignored_file, first_index: int, last_index: int, _ignored_first_resnum: int
+) -> float:
+    """
+    Average per-residue pLDDT (stored in B-factor) across the inclusive
+    index range [first_index, last_index] in the flattened residue list.
+    """
+    if not PDB_INDEX_TO_RES:
+        raise RuntimeError("PDB mappings not prepared.")
+    vals = []
+    for idx in range(first_index, last_index + 1):
+        chain_id, resseq = PDB_INDEX_TO_RES[idx]
+        arr = PDB_RES_PLDDT.get((chain_id, resseq), [])
+        if arr:
+            vals.append(sum(arr) / len(arr))
+    return (sum(vals) / len(vals)) if vals else 0.0
+
+
+def identify_new_rigid_domain_pdb(
+    _ignored_file, first_index: int, last_index: int, _ignored_first_resnum: int
+):
+    """
+    Return (start_residue, end_residue, segid) for the region defined by
+    0-based indices. segid will be the PDB chain ID.
+    """
+    if not PDB_INDEX_TO_RES:
+        raise RuntimeError("PDB mappings not prepared.")
+    chain_start, res_start = PDB_INDEX_TO_RES[first_index]
+    chain_end, res_end = PDB_INDEX_TO_RES[last_index]
+    if chain_start != chain_end:
+        # Should not happen because we split clusters at chain edges,
+        # but guard anyway.
+        return None
+    segid = chain_start if chain_start else " "
+    return (res_start, res_end, segid)
 
 
 def get_first_and_last_residue_numbers(
@@ -325,12 +442,15 @@ def calculate_bfactor_avg_for_region(
     """
     Calculate the average B-factor for a given cluster region.
 
-    :param crd_file: Path to the CRD file.
-    :param first_resnum_cluster: The starting residue number of the cluster region.
-    :param last_resnum_cluster: The ending residue number of the cluster region.
-    :param first_resnum: The first residue number in the sequence.
-    :return: The average B-factor for the region.
+    :param crd_file: Path to the CRD file (ignored for PDB mode).
+    :param first_resnum_cluster: start index for region (0-based for PDB mode).
+    :param last_resnum_cluster: end index for region (0-based for PDB mode).
+    :param first_resnum: first residue number in the sequence (ignored for PDB mode).
     """
+    if USE_PDB:
+        return calculate_bfactor_avg_for_region_pdb(
+            crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
+        )
     bfactors = []
     with open(file=crd_file, mode="r", encoding="utf8") as infile:
         for line in infile:
@@ -340,8 +460,7 @@ def calculate_bfactor_avg_for_region(
                 resnum = words[1]
 
                 if (
-                    float(bfactor)
-                    > 0.0  # Ensure only B-factors greater than 0.0 are considered
+                    float(bfactor) > 0.0
                     and bfactor.replace(".", "", 1).isdigit()
                     and int(resnum) >= first_resnum_cluster + first_resnum
                     and int(resnum) <= last_resnum_cluster + first_resnum
@@ -351,21 +470,21 @@ def calculate_bfactor_avg_for_region(
     if bfactors:
         return sum(bfactors) / len(bfactors)
     else:
-        return 0.0  # Or handle this case as needed
+        return 0.0
 
 
 def identify_new_rigid_domain(
     crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
 ):
     """
-    Identify and return a new rigid domain as a tuple of (start_residue, end_residue, segment_id).
-
-    :param crd_file: Path to the CRD file.
-    :param first_resnum_cluster: The starting residue number of the cluster region.
-    :param last_resnum_cluster: The ending residue number of the cluster region.
-    :param first_resnum: The first residue number in the sequence.
-    :return: A tuple (start_residue, end_residue, segment_id) representing the new rigid domain, or None if not found.
+    Identify and return a new rigid domain as a tuple of
+    (start_residue, end_residue, segment_id).
     """
+    if USE_PDB:
+        return identify_new_rigid_domain_pdb(
+            crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
+        )
+
     str1 = str2 = segid = None
     with open(file=crd_file, mode="r", encoding="utf8") as infile:
         for line in infile:
@@ -445,6 +564,47 @@ def define_rigid_bodies(
     return rigid_body_optimized
 
 
+def write_constraints_yaml(rigid_body_list: list, output_path: str):
+    """Write constraints.yaml with schema expected by OpenMM steps.
+    Schema:
+    constraints:
+      fixed_bodies: [{ name, segments: [{chain_id, residues:{start, stop}}] }]
+      rigid_bodies: [{ name, segments: [{chain_id, residues:{start, stop}}] }]
+    """
+
+    def _segments_from_rigid_body(rb):
+        return [
+            {
+                "chain_id": segid if isinstance(segid, str) else str(segid),
+                "residues": {"start": int(start), "stop": int(stop)},
+            }
+            for (start, stop, segid) in rb
+        ]
+
+    fixed_bodies = []
+    rigid_bodies = []
+    if rigid_body_list:
+        # First RB → fixed bodies
+        fixed_bodies.append(
+            {
+                "name": "FixedBody1",
+                "segments": _segments_from_rigid_body(rigid_body_list[0]),
+            }
+        )
+        # Remaining RBs → rigid bodies
+        for i, rb in enumerate(rigid_body_list[1:], start=1):
+            rigid_bodies.append(
+                {
+                    "name": f"RigidBody{i}",
+                    "segments": _segments_from_rigid_body(rb),
+                }
+            )
+
+    data = {"constraints": {"fixed_bodies": fixed_bodies, "rigid_bodies": rigid_bodies}}
+    with open(output_path, "w", encoding="utf-8") as fh:
+        yaml.safe_dump(data, fh, sort_keys=False)
+
+
 def write_const_file(rigid_body_list: list, output_file):
     """
     Write const.inp file
@@ -493,15 +653,20 @@ def write_const_file(rigid_body_list: list, output_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Extract PAE matrix for interacxtive region from an AlphaFold PAE matrix."
+        description="Extract PAE clusters and emit constraints for BilboMD (const.inp for CHARMM; optional constraints.yaml for OpenMM)."
+    )
+    parser.add_argument("pae_file", type=str, help="Path to the PAE JSON file.")
+
+    grp = parser.add_mutually_exclusive_group(required=True)
+    grp.add_argument("--crd_file", type=str, help="Path to a CRD file.")
+    grp.add_argument(
+        "--pdb_file", type=str, help="Path to a PDB file (preferred for OpenMM)."
     )
 
-    parser.add_argument("pae_file", type=str, help="Name of the PAE JSON file.")
-    parser.add_argument("crd_file", type=str, help="Name of the CRD file.")
     parser.add_argument(
         "--pae_power",
         type=float,
-        help="PAE power used to weight the cluster_leiden() function (default: 2.0)",
+        help="PAE power used to weight the community detection (default: 2.0)",
         default=2.0,
     )
     parser.add_argument(
@@ -510,16 +675,30 @@ if __name__ == "__main__":
         help="pLDDT cutoff value to filter residues (default: 50.0)",
         default=50,
     )
-
+    parser.add_argument(
+        "--emit-constraints",
+        type=str,
+        help="If set, also write constraints YAML usable by OpenMM",
+    )
+    parser.add_argument(
+        "--no-const",
+        action="store_true",
+        help="If set, do not write const.inp",
+    )
     args = parser.parse_args()
 
-    first_residue, last_residue = get_first_and_last_residue_numbers(args.crd_file)
-    # print(f"first_residue: {first_residue} last_residues: {last_residue}")
+    # Determine input mode
 
-    # define_segments is used to define breakpoint between PROA-PROB-PROC etc.
-    # it is needed in cases where clusting results in a single Leiden cluster
-    # that spans multiple chains.
-    chain_segments = define_segments(args.crd_file)
+    USE_PDB = args.pdb_file is not None
+
+    if USE_PDB:
+        first_residue, last_residue = get_first_and_last_residue_numbers_pdb(
+            args.pdb_file
+        )
+        chain_segments = define_segments_pdb(args.pdb_file)
+    else:
+        first_residue, last_residue = get_first_and_last_residue_numbers(args.crd_file)
+        chain_segments = define_segments(args.crd_file)
     # print(f"here in main - {chain_segments}")
     SELECTED_ROWS_START = first_residue - 1
     SELECTED_ROWS_END = last_residue - 1
@@ -540,9 +719,15 @@ if __name__ == "__main__":
         args.pae_power,
     )
 
+    input_struct = args.pdb_file if USE_PDB else args.crd_file
     rigid_bodies_from_pae = define_rigid_bodies(
-        pae_clusters, args.crd_file, first_residue, chain_segments, args.plddt_cutoff
+        pae_clusters, input_struct, first_residue, chain_segments, args.plddt_cutoff
     )
 
-    write_const_file(rigid_bodies_from_pae, CONST_FILE_PATH)
+    if args.emit_constraints:
+        write_constraints_yaml(rigid_bodies_from_pae, args.emit_constraints)
+    if not args.no_const:
+        write_const_file(rigid_bodies_from_pae, CONST_FILE_PATH)
+    else:
+        print("Skipping const.inp as requested (--no-const)")
     print("------------- done -------------")

@@ -106,19 +106,19 @@ def prepare_input(workdir, upload_dir):
 
 
 # -----------------------------
-# Convert const.inp to OpenMM config yaml
+# Prepare the OpenMM config yaml
 # -----------------------------
 
 
 def prepare_openmm_config(config, params):
 
-    # Locate const.inp
+    # Locate const.inp (optional for Auto/AlphaFold pipelines)
     const_inp_path = os.path.join(config["workdir"], "const.inp")
-    if not os.path.exists(const_inp_path):
+    const_exists = os.path.exists(const_inp_path)
+    if not const_exists:
         print(
-            f"Warning: {const_inp_path} not found. Skipping OpenMM config generation."
+            f"Warning: {const_inp_path} not found. Proceeding with empty constraints."
         )
-        return None
 
     # Build OpenMM config dictionary
     openmm_config = {
@@ -172,43 +172,47 @@ def prepare_openmm_config(config, params):
 
     fixed_bodies = []
     rigid_bodies_dict = {}
-    with open(const_inp_path, "r") as f:
-        for line in f:
-            line = line.strip()
-            # Fixed bodies
-            m_fixed = re.match(
-                r"define fixed(\d+) sele \( resid (\d+):(\d+) .and. segid (\w+) \) end",
-                line,
-            )
-            if m_fixed:
-                idx, start, stop, segid = m_fixed.groups()
-                fixed_bodies.append(
-                    {
-                        "name": f"FixedBody{idx}",
-                        "segments": [
-                            {
-                                "chain_id": segid[-1],
-                                "residues": {"start": int(start), "stop": int(stop)},
-                            }
-                        ],
-                    }
+    if const_exists:
+        with open(const_inp_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                # Fixed bodies
+                m_fixed = re.match(
+                    r"define fixed(\d+) sele \( resid (\d+):(\d+) .and. segid (\w+) \) end",
+                    line,
                 )
-            # Rigid bodies
-            m_rigid = re.match(
-                r"define rigid(\d+) sele \( resid (\d+):(\d+) .and. segid (\w+) \) end",
-                line,
-            )
-            if m_rigid:
-                idx, start, stop, segid = m_rigid.groups()
-                name = f"RigidBody{idx}"
-                segment = {
-                    "chain_id": segid[-1],
-                    "residues": {"start": int(start), "stop": int(stop)},
-                }
-                if name not in rigid_bodies_dict:
-                    rigid_bodies_dict[name] = {"name": name, "segments": [segment]}
-                else:
-                    rigid_bodies_dict[name]["segments"].append(segment)
+                if m_fixed:
+                    idx, start, stop, segid = m_fixed.groups()
+                    fixed_bodies.append(
+                        {
+                            "name": f"FixedBody{idx}",
+                            "segments": [
+                                {
+                                    "chain_id": segid[-1],
+                                    "residues": {
+                                        "start": int(start),
+                                        "stop": int(stop),
+                                    },
+                                }
+                            ],
+                        }
+                    )
+                # Rigid bodies
+                m_rigid = re.match(
+                    r"define rigid(\d+) sele \( resid (\d+):(\d+) .and. segid (\w+) \) end",
+                    line,
+                )
+                if m_rigid:
+                    idx, start, stop, segid = m_rigid.groups()
+                    name = f"RigidBody{idx}"
+                    segment = {
+                        "chain_id": segid[-1],
+                        "residues": {"start": int(start), "stop": int(stop)},
+                    }
+                    if name not in rigid_bodies_dict:
+                        rigid_bodies_dict[name] = {"name": name, "segments": [segment]}
+                    else:
+                        rigid_bodies_dict[name]["segments"].append(segment)
 
     rigid_bodies = list(rigid_bodies_dict.values())
 
@@ -346,10 +350,50 @@ update_status alphafold Success
     return section
 
 
-def generate_pae2const_section(config):
-    # Generate PAE to constraint file section
-    # ...existing code...
-    pass
+def generate_pae2const_section(config, params):
+    pae_file = params.get("pae_file", "alphafold/model_pae.json")
+    pdb_file = params.get("pdb_file", "openmm/minimization/minimized.pdb")
+    section = f"""
+# --------------------------------------------------------------------------------------
+# Generate constraints.yaml from PAE/PDB
+update_status pae2constraints Running
+echo "Generating constraints.yaml from PAE..."
+srun --ntasks=1 \\
+     --cpus-per-task={config['num_cores']} \\
+     --cpu-bind=cores \\
+     --job-name pae2constraints \\
+     podman-hpc run --rm \\
+        -v $WORKDIR:/bilbomd/work \\
+        {config['openmm_worker']} /bin/bash -c "
+            set -e
+            cd /bilbomd/work
+            python /app/scripts/pae_ratios.py {pae_file} \
+                --pdb_file {pdb_file} \
+                --emit-constraints constraints.yaml \
+                --no-const
+    "
+PAE2CONS_EXIT=$?
+check_exit_code $PAE2CONS_EXIT pae2constraints
+update_status pae2constraints Success
+
+# --------------------------------------------------------------------------------------
+# Merge constraints into openmm_config.yaml
+update_status consmerge Running
+srun --ntasks=1 \\
+     --cpus-per-task=1 \\
+     --job-name consmerge \
+     podman-hpc run --rm \
+        -v $WORKDIR:/bilbomd/work \
+        {config['openmm_worker']} /bin/bash -c "
+            set -e
+            cd /bilbomd/work
+            python /app/scripts/nersc/merge_constraints.py openmm_config.yaml constraints.yaml openmm_config.yaml
+    "
+CONS_EXIT=$?
+check_exit_code $CONS_EXIT consmerge
+update_status consmerge Success
+"""
+    return section
 
 
 def generate_minimize_section(config):
@@ -424,7 +468,7 @@ srun --ntasks=1 \\
         {config['bilbomd_worker']} /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
-            foxs ${foxs_args} > initial_foxs_analysis.log 2> initial_foxs_analysis_error.log
+            foxs {foxs_args} > initial_foxs_analysis.log 2> initial_foxs_analysis_error.log
         "
 INITFOXS_EXIT=$?
 check_exit_code $INITFOXS_EXIT initfoxs
@@ -511,7 +555,7 @@ update_status md Running
              python /app/scripts/openmm/md.py openmm_config.yaml --rg-set {i}
          "
 """
-        section += f"MD_EXIT=$?\ncheck_exit_code $MD_EXIT md\n"
+        section += "MD_EXIT=$?\ncheck_exit_code $MD_EXIT md\n"
     section += "echo 'OpenMM MD complete'\nupdate_status md Success\n"
     return section
 
@@ -647,7 +691,9 @@ def main():
     # Step 3: Create status file
     create_status_file(config["workdir"])
 
-    # Step 4: Prepare OpenMM config from const.inp
+    # Step 3.5: Create a const.inp if needed
+
+    # Step 4: Prepare OpenMM config file
     prepare_openmm_config(config, params)
 
     # Step 5: Generate Slurm script sections
@@ -656,7 +702,9 @@ def main():
     slurm_sections.append(add_helper_functions())
     if params.get("job_type") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
-        slurm_sections.append(generate_pae2const_section(config))
+        slurm_sections.append(generate_pae2const_section(config, params))
+    if params.get("job_type") == "BilboMdAuto":
+        slurm_sections.append(generate_pae2const_section(config, params))
     slurm_sections.append(generate_minimize_section(config))
     slurm_sections.append(generate_initial_foxs_analysis_section(config, params))
     slurm_sections.append(generate_heat_section(config))
