@@ -3,7 +3,9 @@ import { logger } from '../../middleware/loggers.js'
 import {
   BilboMdAlphaFoldJob,
   IBilboMDAlphaFoldJob,
-  IAlphaFoldEntity
+  IAlphaFoldEntity,
+  IBilboMDSteps,
+  StepStatus
 } from '@bilbomd/mongodb-schema'
 import { alphafoldJobSchema } from '../../validation/index.js'
 import { ValidationError } from 'yup'
@@ -36,6 +38,11 @@ const handleBilboMDAlphaFoldJob = async (
     return
   }
   const jobDir = path.join(uploadFolder, UUID)
+
+  const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
+  const md_engine: 'CHARMM' | 'OpenMM' = mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+  logger.info(`Selected md_engine: ${md_engine}`)
+
   const { bilbomd_mode: bilbomdMode } = req.body
   const files = req.files as { [fieldname: string]: Express.Multer.File[] }
   logger.info(`bilbomdMode: ${bilbomdMode}`)
@@ -94,22 +101,13 @@ const handleBilboMDAlphaFoldJob = async (
     // If the values calculated by autorg are outside of the limits set in the mongodb
     // schema then the job will not be created in mongodb and things fail in a way that
     // the user has no idea what has gone wrong.
-    const { rg, rg_min, rg_max }: AutoRgResults = await spawnAutoRgCalculator(
-      jobDir,
-      datFileName
-    )
+    const { rg, rg_min, rg_max }: AutoRgResults = await spawnAutoRgCalculator(jobDir, datFileName)
     // Extract limits from schema
     const rgMinBound = BilboMdAlphaFoldJob.schema.path('rg_min')?.options.min ?? 10
     const rgMaxBound = BilboMdAlphaFoldJob.schema.path('rg_max')?.options.max ?? 100
 
     // Validate AutoRg values before creating job
-    if (
-      rg <= 0 ||
-      rg_min < rgMinBound ||
-      rg_max > rgMaxBound ||
-      rg_min > rg ||
-      rg > rg_max
-    ) {
+    if (rg <= 0 || rg_min < rgMinBound || rg_max > rgMaxBound || rg_min > rg || rg > rg_max) {
       logger.warn(
         `Invalid AutoRg values for job ${req.body.title || UUID}: ${JSON.stringify({
           rg,
@@ -127,7 +125,36 @@ const handleBilboMDAlphaFoldJob = async (
       })
       return
     }
-    const now = new Date()
+
+    const stepsInit: IBilboMDSteps = {
+      alphafold: { status: StepStatus.Waiting, message: '' },
+      pdb2crd: { status: StepStatus.Waiting, message: '' },
+      pae: { status: StepStatus.Waiting, message: '' },
+      autorg: { status: StepStatus.Waiting, message: '' },
+      minimize: { status: StepStatus.Waiting, message: '' },
+      initfoxs: { status: StepStatus.Waiting, message: '' },
+      heat: { status: StepStatus.Waiting, message: '' },
+      md: { status: StepStatus.Waiting, message: '' },
+      dcd2pdb: { status: StepStatus.Waiting, message: '' },
+      foxs: { status: StepStatus.Waiting, message: '' },
+      multifoxs: { status: StepStatus.Waiting, message: '' },
+      copy_results_to_cfs: { status: StepStatus.Waiting, message: '' },
+      results: { status: StepStatus.Waiting, message: '' },
+      email: { status: StepStatus.Waiting, message: '' }
+    }
+
+    // If using OpenMM, note that pdb2crd is not needed and will be skipped downstream.
+    const stepsAdjusted = {
+      ...stepsInit,
+      pdb2crd: {
+        ...stepsInit.pdb2crd,
+        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
+      },
+      dcd2pdb: {
+        ...stepsInit.dcd2pdb,
+        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
+      }
+    }
 
     const newJob: IBilboMDAlphaFoldJob = new BilboMdAlphaFoldJob({
       title: req.body.title,
@@ -140,24 +167,10 @@ const handleBilboMDAlphaFoldJob = async (
       alphafold_entities: parsedEntities,
       conformational_sampling: 3,
       status: 'Submitted',
-      time_submitted: now,
+      time_submitted: new Date(),
       user,
-      steps: {
-        alphafold: {},
-        pdb2crd: {},
-        pae: {},
-        autorg: {},
-        minimize: {},
-        initfoxs: {},
-        heat: {},
-        md: {},
-        dcd2pdb: {},
-        foxs: {},
-        multifoxs: {},
-        copy_results_to_cfs: {},
-        results: {},
-        email: {}
-      }
+      steps: stepsAdjusted,
+      md_engine
     })
 
     // Save the job to the database
@@ -167,13 +180,17 @@ const handleBilboMDAlphaFoldJob = async (
     // Write Job params for use by NERSC job script.
     await writeJobParams(newJob.id)
 
-    // Queue the job
-    const BullId = await queueJob({
+    // Create BullMQ Job object
+    const jobData = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id
-    })
+      jobid: newJob.id,
+      md_engine
+    }
+
+    // Queue the job
+    const BullId = await queueJob(jobData)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
@@ -181,11 +198,19 @@ const handleBilboMDAlphaFoldJob = async (
     res.status(200).json({
       message: `New ${bilbomdMode} Job ${newJob.title} successfully created`,
       jobid: newJob.id,
-      uuid: newJob.uuid
+      uuid: newJob.uuid,
+      md_engine
     })
   } catch (error) {
-    logger.error(error)
-    res.status(500).json({ message: 'Failed to create handleBilboMDAlphaFoldJob job' })
+    const msg =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : 'Unknown error occurred'
+
+    logger.error('handleBilboMDAlphaFoldJob error:', error)
+    res.status(500).json({ message: msg })
   }
 }
 

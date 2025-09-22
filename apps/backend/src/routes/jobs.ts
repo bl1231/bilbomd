@@ -9,8 +9,8 @@ import {
   getLogForStep
 } from '../controllers/jobs/index.js'
 // import { createNewAlphaFoldJob } from '../controllers/alphafoldJobsController.js'
-import { createNewSANSJob } from '../controllers/sansJobController.js'
-import { createNewMultiJob } from '../controllers/multiMdController.js'
+import { createNewSANSJob } from '../controllers/jobs/sansJobController.js'
+import { createNewMultiJob } from '../controllers/jobs/multiMdController.js'
 import { downloadPDB, getFoxsData } from '../controllers/downloadController.js'
 import { getFile } from '../controllers/fileDownloadController.js'
 import { checkFiles } from '../controllers/resubmitController.js'
