@@ -431,16 +431,35 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - name: Extract pnpm version from package.json
+
+      # (Optional but recommended) align Node with your repo
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
         id: pnpm_version
         run: |
-          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/pnpm@([0-9.]+).*/\1/')
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
           echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ steps.pnpm_version.outputs.pnpm_version }}
-      - name: Install
+
+      - name: Activate exact pnpm via Corepack
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Show tool versions (debug)
+        run: |
+          node -v
+          pnpm -v
+          jq -r '.packageManager' package.json
+
+      - name: Install deps
         run: pnpm install --frozen-lockfile
+
       - name: Build schema
         run: pnpm -C packages/mongodb-schema run build
 
