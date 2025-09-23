@@ -36,7 +36,7 @@ def setup_environment(uuid):
 
     # Docker images
     openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.10"
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.24"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.26"
     af_worker = "bilbomd/bilbomd-colabfold:0.0.8"
 
     # Number of cores
@@ -253,6 +253,8 @@ def create_status_file(workdir):
     steps = [
         "alphafold",
         "pae",
+        "pae2constraints",
+        "consmerge",
         "autorg",
         "minimize",
         "initfoxs",
@@ -364,12 +366,12 @@ srun --ntasks=1 \\
      --job-name pae2constraints \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        {config['openmm_worker']} /bin/bash -c "
+        {config['bilbomd_worker']} /bin/bash -c "
             set -e
             cd /bilbomd/work
-            python /app/scripts/pae_ratios.py {pae_file} \
-                --pdb_file {pdb_file} \
-                --emit-constraints constraints.yaml \
+            python /app/scripts/pae_ratios.py {pae_file} \\
+                --pdb_file {pdb_file} \\
+                --emit-constraints constraints.yaml \\
                 --no-const
     "
 PAE2CONS_EXIT=$?
@@ -381,10 +383,10 @@ update_status pae2constraints Success
 update_status consmerge Running
 srun --ntasks=1 \\
      --cpus-per-task=1 \\
-     --job-name consmerge \
-     podman-hpc run --rm \
-        -v $WORKDIR:/bilbomd/work \
-        {config['openmm_worker']} /bin/bash -c "
+     --job-name consmerge \\
+     podman-hpc run --rm \\
+        -v $WORKDIR:/bilbomd/work \\
+        {config['bilbomd_worker']} /bin/bash -c "
             set -e
             cd /bilbomd/work
             python /app/scripts/nersc/merge_constraints.py openmm_config.yaml constraints.yaml openmm_config.yaml
@@ -691,8 +693,6 @@ def main():
     # Step 3: Create status file
     create_status_file(config["workdir"])
 
-    # Step 3.5: Create a const.inp if needed
-
     # Step 4: Prepare OpenMM config file
     prepare_openmm_config(config, params)
 
@@ -700,10 +700,10 @@ def main():
     slurm_sections = []
     slurm_sections.append(generate_slurm_header(config))
     slurm_sections.append(add_helper_functions())
-    if params.get("job_type") == "BilboMdAlphaFold":
+    if params.get("__t") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
         slurm_sections.append(generate_pae2const_section(config, params))
-    if params.get("job_type") == "BilboMdAuto":
+    if params.get("__t") == "BilboMdAuto":
         slurm_sections.append(generate_pae2const_section(config, params))
     slurm_sections.append(generate_minimize_section(config))
     slurm_sections.append(generate_initial_foxs_analysis_section(config, params))
