@@ -432,13 +432,13 @@ jobs:
         with:
           fetch-depth: 2
 
-      # (Optional but recommended) align Node with your repo
+      # 1) Setup Node from .nvmrc (NO pnpm cache here)
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-          cache: 'pnpm'
 
+      # 2) Activate exact pnpm via Corepack
       - name: Enable Corepack
         run: corepack enable
 
@@ -448,10 +448,24 @@ jobs:
           PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
           echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Activate exact pnpm via Corepack
+      - name: Activate pnpm
         run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
 
-      - name: Show tool versions (debug)
+      # (Optional) Cache pnpm store (recommended)
+      - name: Get pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ steps.pnpm_version.outputs.pnpm_version }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ steps.pnpm_version.outputs.pnpm_version }}-
+
+      # Debug versions
+      - name: Show tool versions
         run: |
           node -v
           pnpm -v
