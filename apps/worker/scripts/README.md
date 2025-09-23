@@ -6,6 +6,10 @@ Some notes on stuff in the scripts directory.
 
 The directory contains all of the CHARMM topology and parameter files. They will be copied into the container when it is built.
 
+## `/openmm`
+
+The directory contains all of the OpenMM Python scripts.
+
 ## `/nersc`
 
 This directory will contain various scripts used submitting NERSC jobs.
