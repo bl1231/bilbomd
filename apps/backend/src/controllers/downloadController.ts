@@ -131,7 +131,7 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
       return res.status(404).json({ message: 'results directory unavailable.' })
     }
 
-    const datFileBase = job.data_file.split('.')[0]
+    const datFileBase = path.basename(job.data_file, path.extname(job.data_file))
     // Try both possible file names for the original .dat file
     const possibleDatFiles = [
       path.join(jobDir, `minimization_output_${datFileBase}.dat`),
@@ -152,21 +152,43 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
     if (foundDatFile) {
       data.push(await createDataObject(foundDatFile, jobDir))
     } else {
-      logger.warn(`No original .dat file found for base ${datFileBase}`)
+      logger.warn(
+        `No original .dat file found for base ${datFileBase} (proceeding with ensemble data if present)`
+      )
     }
 
-    const files = await fs.readdir(resultsDir)
-    const filePattern = /^multi_state_model_\d+_1_1\.dat$/
+    let files: string[] = []
+    let ensembleCount = 0
+    try {
+      files = await fs.readdir(resultsDir)
+    } catch (e) {
+      logger.warn(`FoXS results directory not readable: ${resultsDir} (${(e as Error).message})`)
+    }
 
+    const filePattern = /^multi_state_model_\d+_1_1\.dat$/
     for (const file of files) {
       if (filePattern.test(file)) {
-        // logger.info(`getFoXSData ${file}`)
         const filename = path.join(resultsDir, file)
-        data.push(await createDataObject(filename, jobDir))
+        try {
+          data.push(await createDataObject(filename, jobDir))
+          ensembleCount += 1
+        } catch (e) {
+          logger.warn(`Skipping unreadable FoXS ensemble file ${filename}: ${(e as Error).message}`)
+        }
       }
     }
 
-    res.json(data)
+    if (!foundDatFile && ensembleCount === 0) {
+      // Nothing to show: return a clear, stable 404 the UI can handle
+      return res.status(404).json({
+        code: 'FOXS_DATA_UNAVAILABLE',
+        message:
+          'No FoXS data available for this job (experimental .dat missing and no ensemble outputs found).',
+        details: { datBase: datFileBase }
+      })
+    }
+
+    return res.json(data)
   } catch (error) {
     logger.error(`error getting FoXS analysis data ${error}`)
     return res
@@ -256,14 +278,19 @@ const parseFileContent = (fileContent: string): FoxsDataPoint[] => {
   return fileContent
     .trim()
     .split('\n')
-    .filter((line) => !line.startsWith('#')) // Filter out lines starting with '#'
-    .map((line) => {
-      const [q, exp_intensity, model_intensity, error] = line.trim().split(/\s+/)
+    .filter((line) => line.trim().length > 0 && !line.startsWith('#'))
+    .map((line) => line.trim().split(/\s+/))
+    .filter((cols) => cols.length >= 4)
+    .map(([q, exp_intensity, model_intensity, error]) => {
+      const qn = Number.parseFloat(q)
+      const ei = Number.parseFloat(exp_intensity)
+      const mi = Number.parseFloat(model_intensity)
+      const er = Number.parseFloat(error)
       return {
-        q: parseFloat(q),
-        exp_intensity: parseFloat(exp_intensity),
-        model_intensity: parseFloat(model_intensity),
-        error: parseFloat(error)
+        q: Number.isFinite(qn) ? qn : 0,
+        exp_intensity: Number.isFinite(ei) ? ei : 0,
+        model_intensity: Number.isFinite(mi) ? mi : 0,
+        error: Number.isFinite(er) && er > 0 ? er : 1
       }
     })
 }
