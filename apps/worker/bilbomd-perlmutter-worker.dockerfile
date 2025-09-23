@@ -29,10 +29,12 @@ RUN conda update -y -n base -c defaults conda && \
     doxygen==1.13.2 \
     matplotlib==3.9.1 \
     python-igraph==0.11.9 \
+    pyyaml \
+    pandas \
     && conda clean -afy
 
 # -----------------------------------------------------------------------------
-# Build stage 4 - CHARMM
+# Build stage 3 - CHARMM
 FROM build-conda AS build-charmm
 ARG CHARMM_VER=c49b2
 
@@ -49,18 +51,8 @@ RUN make -j$(nproc) -C build/cmake install
 RUN cp /usr/local/src/charmm/bin/charmm /usr/local/bin/
 
 # -----------------------------------------------------------------------------
-# Build stage 5 - IMP
-FROM build-charmm AS bilbomd-worker-step2
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends software-properties-common && \
-    add-apt-repository ppa:salilab/ppa && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends imp && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# -----------------------------------------------------------------------------
-# Build stage 7 - worker app (intermediate)
-FROM bilbomd-worker-step2 AS bilbomd-perlmutter-worker-intermediate
+# Build stage 4 - worker app (intermediate)
+FROM build-charmm AS bilbomd-perlmutter-worker-intermediate
 ARG USER_ID
 WORKDIR /app
 # App-specific worker scripts
@@ -69,24 +61,25 @@ COPY apps/worker/scripts/ /app/scripts/
 COPY tools/python/ /app/scripts/
 RUN chown -R $USER_ID:0 /app
 
-# Build stage 8 - Final runtime image
+# -----------------------------------------------------------------------------
+# Build stage 5 - Final runtime image
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS bilbomd-perlmutter-worker
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common parallel && \
     add-apt-repository ppa:salilab/ppa && \
     apt-get update && \
-    apt-get install -y --no-install-recommends imp && \
+    apt-get install -y --no-install-recommends imp=2.23.0-1~jammy && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy conda from build-conda stage
-COPY --from=bilbomd-worker-step2 /miniforge3 /miniforge3
+COPY --from=bilbomd-perlmutter-worker-intermediate /miniforge3 /miniforge3
 
 # Copy the app from the intermediate stage
 COPY --from=bilbomd-perlmutter-worker-intermediate /app /app
 
 # Copy only the CHARMM binary and its required libs
-COPY --from=bilbomd-worker-step2 /usr/local/bin/charmm /usr/local/bin/charmm
+COPY --from=bilbomd-perlmutter-worker-intermediate /usr/local/bin/charmm /usr/local/bin/charmm
 
 # Set environment variables
 ENV PATH="/miniforge3/bin:${PATH}"

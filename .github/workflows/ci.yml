@@ -4,11 +4,13 @@ on:
   push:
     branches: [main, 'feature/**', 'fix/**', 'hotfix/**', 'release/**', 'monorepo/**']
     paths-ignore:
-      - '**/*.md'
+      - 'README.md'
+      - 'docs/**/*.md'
   pull_request:
     branches: [main]
     paths-ignore:
-      - '**/*.md'
+      - 'README.md'
+      - 'docs/**/*.md'
   workflow_dispatch: {}
 
 permissions:
@@ -429,11 +431,49 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: pnpm/action-setup@v4
+
+      # 1) Setup Node from .nvmrc (NO pnpm cache here)
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v4
         with:
-          version: 10.17.0
-      - name: Install
+          node-version-file: '.nvmrc'
+
+      # 2) Activate exact pnpm via Corepack
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      # (Optional) Cache pnpm store (recommended)
+      - name: Get pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ steps.pnpm_version.outputs.pnpm_version }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ steps.pnpm_version.outputs.pnpm_version }}-
+
+      # Debug versions
+      - name: Show tool versions
+        run: |
+          node -v
+          pnpm -v
+          jq -r '.packageManager' package.json
+
+      - name: Install deps
         run: pnpm install --frozen-lockfile
+
       - name: Build schema
         run: pnpm -C packages/mongodb-schema run build
 
