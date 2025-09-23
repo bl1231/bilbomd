@@ -204,26 +204,19 @@ def define_segments(crd_file: str):
 def correct_json_brackets(pae, output_file_path):
     """
     Removes the leading '[' and trailing ']' from a JSON-like string in the
-    file, if present, and writes the result to an output file.
+    file, if present, and returns the corrected string.
     """
-    with open(file=pae, mode="r", encoding="utf8") as infile, open(
-        file=output_file_path, mode="w", encoding="utf8"
-    ) as output_file_handle:
-        # Read the content of the file as a string
+    with open(file=pae, mode="r", encoding="utf8") as infile:
         json_content = infile.read()
-        # Check if the string starts with '[' and ends with ']'
         if json_content.startswith("[") and json_content.endswith("]"):
-            # Remove the first and last characters
             corrected_content = json_content[1:-1]
-            output_file_handle.write(corrected_content)
+            return corrected_content
         else:
-            # Write the original content if it doesn't start
-            # with '[' and end with ']'
-            output_file_handle.write(json_content)
+            return json_content
 
 
 def define_clusters_for_selected_pae(
-    pae_file: str,
+    pae_data,
     row_start: int,
     row_end: int,
     col_start: int,
@@ -232,10 +225,9 @@ def define_clusters_for_selected_pae(
 ):
     """
     Define PAE clusters
+    Accepts a dict (parsed JSON) instead of a filename.
     """
-    with open(file=pae_file, mode="r", encoding="utf8") as json_file:
-        data = json.load(json_file)
-
+    data = pae_data
     if "pae" in data:
         matrix = data["pae"]
     elif "predicted_aligned_error" in data:
@@ -244,7 +236,6 @@ def define_clusters_for_selected_pae(
         raise ValueError("Invalid PAE JSON format.")
 
     selected_matrix = []
-
     for i, row in enumerate(matrix):
         if row_start <= i <= row_end:
             new_row = [
@@ -708,10 +699,12 @@ if __name__ == "__main__":
     # set global constant for pae_power
     PAE_POWER = args.pae_power
 
-    correct_json_brackets(args.pae_file, TEMP_FILE_JSON)
+    # Read and correct PAE JSON in memory
+    corrected_json_str = correct_json_brackets(args.pae_file, None)
+    pae_data = json.loads(corrected_json_str)
 
     pae_clusters = define_clusters_for_selected_pae(
-        TEMP_FILE_JSON,
+        pae_data,
         SELECTED_ROWS_START,
         SELECTED_ROWS_END,
         SELECTED_COLS_START,
