@@ -73,8 +73,8 @@ jobs:
 
   backend:
     name: Build & Push backend
+    if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: backend-${{ github.ref }}
@@ -167,8 +167,8 @@ jobs:
 
   ui:
     name: Build & Push ui
+    if: needs.changes.outputs.ui == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    if: needs.changes.outputs.ui == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: ui-${{ github.ref }}
@@ -258,8 +258,8 @@ jobs:
 
   worker:
     name: Build & Push worker
+    if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    if: needs.changes.outputs.worker == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: worker-${{ github.ref }}
@@ -349,8 +349,8 @@ jobs:
 
   scoper:
     name: Build & Push scoper
+    if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    if: needs.changes.outputs.scoper == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: scoper-${{ github.ref }}
@@ -440,8 +440,8 @@ jobs:
 
   schema:
     name: Build schema
+    if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    if: needs.changes.outputs.schema == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -497,7 +497,7 @@ jobs:
     name: Branch Protection Gate
     runs-on: ubuntu-latest
     needs: [backend, ui, worker, scoper, schema]
-    if: always()
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     steps:
       - name: Check build results
         run: |
