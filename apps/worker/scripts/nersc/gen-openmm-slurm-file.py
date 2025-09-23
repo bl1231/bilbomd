@@ -445,16 +445,24 @@ def generate_initial_foxs_analysis_section(config, params):
     max_c1 = 1.05
     min_c2 = -0.50
     max_c2 = 2.00
-    minimized_pdb = os.path.join(config["workdir"], "openmm/minimization/minimized.pdb")
-    foxs_args = (
-        f"--offset "
-        f"--min_c1={min_c1} "
-        f"--max_c1={max_c1} "
-        f"--min_c2={min_c2} "
-        f"--max_c2={max_c2} "
-        f"--profile_size={profile_size} "
-        f"{minimized_pdb} {saxs_data}"
-    )
+    minimized_pdb = os.path.join(".", "openmm/minimization/minimized.pdb")
+    saxs_data_in_container = os.path.join(".", params.get("data_file"))
+
+    # build foxs args as a list, each argument separate
+    foxs_args = [
+        "--offset",
+        f"--min_c1={min_c1}",
+        f"--max_c1={max_c1}",
+        f"--min_c2={min_c2}",
+        f"--max_c2={max_c2}",
+        f"--profile_size={profile_size}",
+        minimized_pdb,
+        saxs_data_in_container,
+    ]
+
+    # join with line continuations for readability
+    foxs_args_wrapped = " \\\n                ".join(foxs_args)
+
     section = f"""
 
 # --------------------------------------------------------------------------------------
@@ -470,7 +478,10 @@ srun --ntasks=1 \\
         {config['bilbomd_worker']} /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
-            foxs {foxs_args} > initial_foxs_analysis.log 2> initial_foxs_analysis_error.log
+            foxs \\
+                {foxs_args_wrapped} \\
+                > initial_foxs_analysis.log \\
+                2> initial_foxs_analysis_error.log
         "
 INITFOXS_EXIT=$?
 check_exit_code $INITFOXS_EXIT initfoxs
