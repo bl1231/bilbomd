@@ -134,14 +134,14 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-backend
           tags: |
+            # main: semver only if version bumped
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
+            # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ github.sha }}
-            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            # main: short sha for traceability
+            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
+            # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
-            type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
-            type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
-            type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -158,8 +158,12 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             BACKEND_GIT_HASH=${{ github.sha }}
             BACKEND_VERSION=${{ env.VERSION }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-backend:buildcache
+            type=gha
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-backend:buildcache,mode=max
+            type=gha,mode=max
 
   ui:
     name: Build & Push ui
@@ -221,14 +225,14 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-ui
           tags: |
+            # main: semver only if version bumped
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
+            # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ github.sha }}
-            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            # main: short sha for traceability
+            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
+            # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
-            type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
-            type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
-            type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -245,8 +249,12 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             UI_GIT_HASH=${{ env.SHORT_SHA }}
             UI_VERSION=${{ env.VERSION }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-ui:buildcache
+            type=gha
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-ui:buildcache,mode=max
+            type=gha,mode=max
 
   worker:
     name: Build & Push worker
@@ -308,14 +316,14 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-worker
           tags: |
+            # main: semver only if version bumped
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
+            # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ github.sha }}
-            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            # main: short sha for traceability
+            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
+            # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
-            type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
-            type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
-            type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -332,8 +340,12 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             WORKER_GIT_HASH=${{ github.sha }}
             WORKER_VERSION=${{ env.VERSION }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-worker:buildcache
+            type=gha
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-worker:buildcache,mode=max
+            type=gha,mode=max
 
   scoper:
     name: Build & Push scoper
@@ -395,14 +407,14 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-scoper
           tags: |
+            # main: semver only if version bumped
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
+            # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ github.sha }}
-            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+            # main: short sha for traceability
+            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
+            # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
-            type=raw,value=pr-${{ steps.pr.outputs.number }},enable=${{ steps.pr.outputs.number != '' && github.event_name != 'pull_request' }}
-            type=raw,value=branch-${{ env.SAFE_BRANCH }}-latest,enable=${{ github.ref != 'refs/heads/main' }}
-            type=raw,value=branch-${{ env.SAFE_BRANCH }}-${{ env.SHORT_SHA }},enable=${{ github.ref != 'refs/heads/main' }}
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -419,8 +431,12 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             SCOPER_GIT_HASH=${{ github.sha }}
             SCOPER_VERSION=${{ env.VERSION }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-scoper:buildcache
+            type=gha
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-scoper:buildcache,mode=max
+            type=gha,mode=max
 
   schema:
     name: Build schema
