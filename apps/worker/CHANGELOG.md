@@ -1,5 +1,16 @@
 # @bilbomd/worker
 
+## 1.18.0
+
+### Minor Changes
+
+- 05fc856: Refactoring to support `OpenMM` as th` `md_engine`.
+  In particular this PR includes improvments to the Python script that runs on NERSC to prepare Slurm batch files.
+
+### Patch Changes
+
+- 76784b5: fix paths in `gen-openmm-slurm-file.py` script.
+
 ## 1.17.2
 
 ### Patch Changes

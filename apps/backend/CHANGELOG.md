@@ -1,5 +1,12 @@
 # @bilbomd/backend
 
+## 1.23.3
+
+### Patch Changes
+
+- a56cf6a: Make backend and ui more resilient to missing FoXS data files.
+  Added a utility bash script for fetching the latest semver tags for all the bilbomd apps.
+
 ## 1.23.2
 
 ### Patch Changes
