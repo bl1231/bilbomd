@@ -2,22 +2,9 @@ import { useState } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router'
 import PulseLoader from 'react-spinners/PulseLoader'
 import useTitle from 'hooks/useTitle'
-import {
-  Button,
-  Typography,
-  Alert,
-  AlertTitle,
-  Box,
-  CircularProgress
-} from '@mui/material'
+import { Button, Typography, Alert, AlertTitle, Box, CircularProgress } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
-import {
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle
-} from '@mui/material'
+import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import LinearProgress from '@mui/material/LinearProgress'
 import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace'
@@ -39,6 +26,7 @@ import ScoperFoXSAnalysis from 'features/scoperjob/ScoperFoXSAnalysis'
 import FoXSAnalysis from './FoXSAnalysis'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useGetJobByIdQuery, useDeleteJobMutation } from 'slices/jobsApiSlice'
+import { skipToken } from '@reduxjs/toolkit/query'
 import BilboMdFeedback from 'features/analysis/BilboMdFeedback'
 import { BilboMDJob, BilboMDMultiJob } from 'types/interfaces'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
@@ -58,6 +46,25 @@ const SingleJobPage = () => {
   const theme = useTheme()
   const token = useSelector(selectCurrentToken)
   const { id } = useParams()
+  // if (!id) {
+  //   return (
+  //     <Alert
+  //       severity="error"
+  //       variant="outlined"
+  //     >
+  //       <AlertTitle>Invalid URL</AlertTitle>
+  //       <Typography variant="body2">No job id was provided in the route.</Typography>
+  //       <Box mt={2}>
+  //         <Button
+  //           variant="contained"
+  //           onClick={() => navigate('/dashboard/jobs')}
+  //         >
+  //           Return to Jobs List
+  //         </Button>
+  //       </Box>
+  //     </Alert>
+  //   )
+  // }
   const location = useLocation()
   const navigate = useNavigate()
   const returnParams = location.state?.returnParams ?? ''
@@ -79,7 +86,7 @@ const SingleJobPage = () => {
     data: job,
     isLoading,
     isError
-  } = useGetJobByIdQuery(id, {
+  } = useGetJobByIdQuery(id ?? skipToken, {
     pollingInterval: 30000,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
@@ -92,12 +99,12 @@ const SingleJobPage = () => {
   } = useGetConfigsQuery('configData')
 
   const getProgressValue = () => {
-    if (job?.scoper) {
-      return parseFloat(job?.bullmq?.bullmq?.progress ?? '0')
-    }
-    return (
-      job?.mongo?.progress ?? parseFloat(job?.bullmq?.bullmq?.progress ?? '0')
-    )
+    if (!job) return 0
+    const bull = parseFloat(job?.bullmq?.bullmq?.progress ?? '0')
+    if (job?.scoper) return isFinite(bull) ? bull : 0
+    const mongoProg = typeof job?.mongo?.progress === 'number' ? job.mongo.progress : NaN
+    const v = isFinite(mongoProg) ? mongoProg : bull
+    return isFinite(v) ? v : 0
   }
 
   if (isLoading) {
@@ -106,15 +113,18 @@ const SingleJobPage = () => {
 
   if (isError) {
     return (
-      <Alert severity='warning' variant='outlined'>
+      <Alert
+        severity="warning"
+        variant="outlined"
+      >
         <AlertTitle>Job Not Found or Deleted</AlertTitle>
-        <Typography variant='body2'>
-          This job could not be loaded. It may have been deleted or expired, or
-          there may be a problem communicating with the backend server.
+        <Typography variant="body2">
+          This job could not be loaded. It may have been deleted or expired, or there may be a
+          problem communicating with the backend server.
         </Typography>
         <Box mt={2}>
           <Button
-            variant='contained'
+            variant="contained"
             onClick={() => navigate('/dashboard/jobs')}
           >
             Return to Jobs List
@@ -125,10 +135,8 @@ const SingleJobPage = () => {
   }
 
   if (configIsLoading) return <CircularProgress />
-  if (configError)
-    return <Alert severity='error'>Error loading configuration data</Alert>
-  if (!config)
-    return <Alert severity='warning'>No configuration data available</Alert>
+  if (configError) return <Alert severity="error">Error loading configuration data</Alert>
+  if (!config) return <Alert severity="warning">No configuration data available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
 
@@ -141,7 +149,7 @@ const SingleJobPage = () => {
         }
       })
 
-      if (response.data) {
+      if (response && response.data) {
         const contentDisposition = response.headers['content-disposition']
         let filename = 'download.tar.gz' // Default filename if not specified
         if (contentDisposition) {
@@ -167,10 +175,7 @@ const SingleJobPage = () => {
   }
 
   const getStatusColors = (status: JobStatusEnum, theme: Theme) => {
-    const statusColors: Record<
-      JobStatusEnum,
-      { background: string; text: string }
-    > = {
+    const statusColors: Record<JobStatusEnum, { background: string; text: string }> = {
       Submitted: {
         background: '#d6e4ff',
         text: theme.palette.mode === 'light' ? 'black' : 'white'
@@ -213,34 +218,31 @@ const SingleJobPage = () => {
     }
   }
 
-  const statusColors = getStatusColors(
-    (job?.mongo.status as JobStatusEnum) || 'Pending',
-    theme
-  )
+  const statusColors = getStatusColors((job?.mongo.status as JobStatusEnum) || 'Pending', theme)
 
-  const isMultiMDJob = (
-    job: BilboMDJob | BilboMDMultiJob
-  ): job is BilboMDMultiJob => {
+  const isMultiMDJob = (job: BilboMDJob | BilboMDMultiJob): job is BilboMDMultiJob => {
     return !('__t' in job.mongo) && 'bilbomd_uuids' in job.mongo
   }
 
   // console.log('job', job)
 
-  const jobTypeRouteSegment = job
-    ? jobTypeToRoute[job.mongo.__t] || 'classic'
-    : 'classic'
+  const jobTypeRouteSegment = job ? jobTypeToRoute[job.mongo.__t] || 'classic' : 'classic'
 
   const content = job ? (
     <>
-      <Grid container spacing={2} rowSpacing={2}>
+      <Grid
+        container
+        spacing={2}
+        rowSpacing={2}
+      >
         <Grid size={{ xs: 1 }}>
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Nav</Typography>
           </HeaderBox>
           <Item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Button
-              variant='contained'
-              size='small'
+              variant="contained"
+              size="small"
               startIcon={<KeyboardBackspaceIcon />}
               onClick={() => navigate(`/dashboard/jobs${returnParams}`)}
             >
@@ -254,11 +256,14 @@ const SingleJobPage = () => {
             <Typography>Job Title</Typography>
           </HeaderBox>
           <Item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant='h3'>{job.mongo.title}</Typography>
+            <Typography variant="h3">{job.mongo.title}</Typography>
           </Item>
         </Grid>
 
-        <Grid size={{ xs: 3 }} sx={{ minWidth: '160px' }}>
+        <Grid
+          size={{ xs: 3 }}
+          sx={{ minWidth: '160px' }}
+        >
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Status</Typography>
           </HeaderBox>
@@ -268,7 +273,10 @@ const SingleJobPage = () => {
               color: statusColors.text
             }}
           >
-            <Typography variant='h3' sx={{ ml: 1 }}>
+            <Typography
+              variant="h3"
+              sx={{ ml: 1 }}
+            >
               {job.mongo.status}
             </Typography>
           </Item>
@@ -280,11 +288,14 @@ const SingleJobPage = () => {
           </HeaderBox>
           <Item sx={{ display: 'flex', alignItems: 'center' }}>
             <LinearProgress
-              variant='determinate'
+              variant="determinate"
               value={getProgressValue()}
               sx={{ flexGrow: 1 }}
             />
-            <Typography variant='h3' sx={{ ml: 1 }}>
+            <Typography
+              variant="h3"
+              sx={{ ml: 1 }}
+            >
               {getProgressValue().toFixed(0)} %
             </Typography>
           </Item>
@@ -397,7 +408,7 @@ const SingleJobPage = () => {
                 <Typography>
                   Molstar Viewer
                   <Box
-                    component='span'
+                    component="span"
                     sx={{ color: 'yellow', fontSize: '0.75em' }}
                   >
                     experimental
@@ -416,7 +427,7 @@ const SingleJobPage = () => {
             </HeaderBox>
             <Item>
               <Button
-                variant='contained'
+                variant="contained"
                 onClick={() => {
                   void handleDownload(job.mongo.id)
                 }}
@@ -429,11 +440,9 @@ const SingleJobPage = () => {
                 job.mongo.__t === 'BilboMdCRD' ||
                 job.mongo.__t === 'BilboMdAuto') && (
                 <Button
-                  variant='contained'
+                  variant="contained"
                   onClick={() =>
-                    navigate(
-                      `/dashboard/jobs/${jobTypeRouteSegment}/resubmit/${job.id}`
-                    )
+                    navigate(`/dashboard/jobs/${jobTypeRouteSegment}/resubmit/${job.id}`)
                   }
                   sx={{ my: 2, mr: 2 }}
                 >
@@ -442,8 +451,8 @@ const SingleJobPage = () => {
               )}
 
               <Button
-                variant='outlined'
-                color='error'
+                variant="outlined"
+                color="error"
                 startIcon={<DeleteIcon />}
                 onClick={() => setOpenDeleteDialog(true)}
               >
@@ -460,8 +469,7 @@ const SingleJobPage = () => {
                 >
                   results.tar.gz
                 </span>{' '}
-                tar archive will contains your original files plus some output
-                files from BilboMD.
+                tar archive will contains your original files plus some output files from BilboMD.
               </Typography>
             </Item>
           </Grid>
@@ -470,14 +478,16 @@ const SingleJobPage = () => {
         {job.mongo.status === 'Error' && (
           <Grid size={{ xs: 12 }}>
             <HeaderBox sx={{ py: '6px' }}>
-              <Typography>Error - {job.bullmq.bullmq.failedReason}</Typography>
+              <Typography>Error - {job.bullmq?.bullmq?.failedReason ?? 'Unknown error'}</Typography>
             </HeaderBox>
 
             <Item>
-              <Alert severity='error' variant='outlined'>
-                Hmmmm... Well something didn&apos;t work. Please try submitting
-                again and if things still don&apos;t work contact Scott or
-                Michal.
+              <Alert
+                severity="error"
+                variant="outlined"
+              >
+                Hmmmm... Well something didn&apos;t work. Please try submitting again and if things
+                still don&apos;t work contact Scott or Michal.
               </Alert>
               {/* <JobError job={job} /> */}
             </Item>
@@ -501,15 +511,21 @@ const SingleJobPage = () => {
         <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete this job? This action cannot be
-            undone.
+            Are you sure you want to delete this job? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)} color='primary'>
+          <Button
+            onClick={() => setOpenDeleteDialog(false)}
+            color="primary"
+          >
             Cancel
           </Button>
-          <Button onClick={handleDeleteJob} color='error' variant='contained'>
+          <Button
+            onClick={handleDeleteJob}
+            color="error"
+            variant="contained"
+          >
             Delete
           </Button>
         </DialogActions>

@@ -7,6 +7,10 @@ import CircularProgress from '@mui/material/CircularProgress'
 import FoXSEnsembleCharts from 'features/foxs/FoXSEnsembleCharts'
 import Item from 'themes/components/Item'
 
+// Allows dynamic keys like model_intensity_1, residual_1, etc., without using `any`
+type CombinedFoxsDataDynamic = CombinedFoxsData &
+  Record<`model_intensity_${number}` | `residual_${number}`, number>
+
 const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
   data
     .filter((item) => item.exp_intensity > 0 && item.model_intensity > 0)
@@ -18,64 +22,64 @@ const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
     }))
 
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
-  if (foxsDataArray.length < 2) {
-    console.error('Not enough data to process.')
+  if (!Array.isArray(foxsDataArray) || foxsDataArray.length < 2) {
+    console.warn('FoXSAnalysis: Not enough data to process ensemble comparison.')
+    return []
+  }
+
+  const base = foxsDataArray[0]
+  if (!base || !Array.isArray(base.data) || base.data.length === 0) {
+    console.warn('FoXSAnalysis: Base FoXS dataset is empty or invalid.')
     return []
   }
 
   // Initially map over the base data to calculate model intensities and residuals
-  let baseData: CombinedFoxsData[] = foxsDataArray[0].data.map(
-    (point, index) => {
-      const q = point.q != null ? parseFloat(point.q.toFixed(4)) : 0
-      const exp_intensity =
-        point.exp_intensity != null
-          ? parseFloat(point.exp_intensity.toFixed(4))
-          : 0
-      const error =
-        point.error != null
-          ? Math.max(parseFloat(point.error.toFixed(4)), 0)
-          : 1 // avoid division by 0
+  let baseData: CombinedFoxsData[] = base.data.map((point, index) => {
+    const q = point?.q != null ? parseFloat(point.q.toFixed(4)) : 0
+    const exp_intensity =
+      point?.exp_intensity != null ? parseFloat(point.exp_intensity.toFixed(4)) : 0
+    const error = point?.error != null ? Math.max(parseFloat(point.error.toFixed(4)), 0) : 1
 
-      const combinedData: CombinedFoxsData = { q, exp_intensity, error }
+    const combinedData: CombinedFoxsDataDynamic = {
+      q,
+      exp_intensity,
+      error
+    } as CombinedFoxsDataDynamic
 
-      foxsDataArray.slice(1).forEach((foxsData, dataIndex) => {
-        const modelIntensityKey = `model_intensity_${dataIndex + 1}`
-        const residualKey = `residual_${dataIndex + 1}`
-        const currentPoint = foxsData.data[index]
+    foxsDataArray.slice(1).forEach((foxsData, dataIndex) => {
+      const modelIntensityKey = `model_intensity_${dataIndex + 1}` as const
+      const residualKey = `residual_${dataIndex + 1}` as const
+      const currentPoint = foxsData?.data?.[index]
 
-        if (currentPoint) {
-          const model_intensity =
-            currentPoint.model_intensity != null
-              ? Math.max(parseFloat(currentPoint.model_intensity.toFixed(4)), 0)
-              : 0
-          combinedData[modelIntensityKey] = model_intensity
+      if (currentPoint) {
+        const model_intensity =
+          currentPoint.model_intensity != null
+            ? Math.max(parseFloat(currentPoint.model_intensity.toFixed(4)), 0)
+            : 0
+        combinedData[modelIntensityKey] = model_intensity
+        combinedData[residualKey] =
+          error !== 0 ? parseFloat(((exp_intensity - model_intensity) / error).toFixed(4)) : 0
+      }
+    })
 
-          combinedData[residualKey] =
-            error !== 0
-              ? parseFloat(
-                  ((exp_intensity - model_intensity) / error).toFixed(4)
-                )
-              : 0 // handle potential division by 0
-        }
-      })
-
-      return combinedData
-    }
-  )
+    return combinedData
+  })
 
   // Filter the baseData array to exclude any data points with negative exp_intensity values
-  baseData = baseData.filter((dataPoint) => dataPoint.exp_intensity > 0)
+  baseData = baseData.filter((dataPoint) => (dataPoint?.exp_intensity ?? 0) > 0)
 
   return baseData
 }
 
 const calculateResiduals = (dataPoints: FoxsDataPoint[]) => {
-  return dataPoints.map((item) => ({
-    q: parseFloat(item.q.toFixed(4)),
-    res: parseFloat(
-      ((item.exp_intensity - item.model_intensity) / item.error).toFixed(4)
-    )
-  }))
+  const arr = Array.isArray(dataPoints) ? dataPoints : []
+  return arr.map((item) => {
+    const q = item?.q != null ? parseFloat(item.q.toFixed(4)) : 0
+    const num = (item?.exp_intensity ?? 0) - (item?.model_intensity ?? 0)
+    const denom = item?.error ?? 1
+    const res = denom !== 0 ? parseFloat((num / denom).toFixed(4)) : 0
+    return { q, res }
+  })
 }
 
 const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
@@ -85,32 +89,36 @@ const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
     refetchOnMountOrArgChange: true
   })
 
-  const foxsData: FoxsData[] = data as FoxsData[]
-  // console.log('id:', id, '\n', 'foxsData -->', foxsData)
-  // Prepare original data to reduce the number of digits after the decimal point
-  // and filter out negative values
-  const origData = useMemo(
-    () => (foxsData ? prepData(foxsData[0].data) : []),
+  const foxsData = useMemo(() => (Array.isArray(data) ? (data as FoxsData[]) : []), [data])
+
+  const hasBase = useMemo(
+    () => foxsData.length > 0 && Array.isArray(foxsData[0]?.data) && foxsData[0]!.data.length > 0,
     [foxsData]
+  )
+
+  const hasEnsemble = useMemo(() => foxsData.length > 1, [foxsData])
+
+  const origData = useMemo(
+    () => (hasBase ? prepData(foxsData[0]!.data as FoxsDataPoint[]) : []),
+    [hasBase, foxsData]
   )
   const ensembleData = useMemo(
-    () => (foxsData ? combineFoxsData(foxsData) : []),
-    [foxsData]
+    () => (hasEnsemble ? combineFoxsData(foxsData) : []),
+    [hasEnsemble, foxsData]
   )
 
-  // Calculate residual values for both datasets
   const origResiduals = useMemo(
-    () => (foxsData ? calculateResiduals(origData) : []),
-    [origData, foxsData]
+    () => (origData.length ? calculateResiduals(origData) : []),
+    [origData]
   )
 
-  // Define a Memoized calculation for min and max Y axis values
   const { minYAxis, maxYAxis } = useMemo(() => {
+    if (!origResiduals.length) return { minYAxis: -1, maxYAxis: 1 }
     const maxY = Math.max(...origResiduals.map((r) => Math.abs(r.res)))
-    return { minYAxis: -maxY, maxYAxis: maxY }
+    const safe = Number.isFinite(maxY) && maxY > 0 ? maxY : 1
+    return { minYAxis: -safe, maxYAxis: safe }
   }, [origResiduals])
 
-  // Handle loading and error states
   if (isLoading)
     return (
       <div
@@ -125,12 +133,29 @@ const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
       </div>
     )
 
-  if (isError || !data)
+  if (isError) {
     return (
-      <Alert severity='info' variant='outlined'>
-        <AlertTitle>FoXS data is unavailable for this job.</AlertTitle>
+      <Alert
+        severity="error"
+        variant="outlined"
+      >
+        <AlertTitle>FoXS request failed.</AlertTitle>
+        The server returned an error while fetching FoXS data.
       </Alert>
     )
+  }
+
+  if (!hasBase) {
+    return (
+      <Alert
+        severity="info"
+        variant="outlined"
+      >
+        <AlertTitle>FoXS data is unavailable for this job.</AlertTitle>
+        No experimental <code>.dat</code> or base FoXS dataset was found.
+      </Alert>
+    )
+  }
 
   // Pull out the other info needed for the FoXS plots
   // const origPDBFile = foxsData[0].filename
@@ -142,7 +167,10 @@ const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
 
   return (
     <Item>
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         <Grid size={{ xs: 6 }}>
           <FoXSChart
             title={`Original Model`}
@@ -156,12 +184,22 @@ const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
           />
         </Grid>
         <Grid size={{ xs: 6 }}>
-          <FoXSEnsembleCharts
-            combinedData={ensembleData}
-            foxsData={foxsData}
-            minYAxis={minYAxis}
-            maxYAxis={maxYAxis}
-          />
+          {hasEnsemble && ensembleData.length ? (
+            <FoXSEnsembleCharts
+              combinedData={ensembleData}
+              foxsData={foxsData}
+              minYAxis={minYAxis}
+              maxYAxis={maxYAxis}
+            />
+          ) : (
+            <Alert
+              severity="info"
+              variant="outlined"
+            >
+              <AlertTitle>No ensemble data</AlertTitle>
+              Only a single FoXS dataset is available; ensemble comparison charts are hidden.
+            </Alert>
+          )}
         </Grid>
       </Grid>
     </Item>
