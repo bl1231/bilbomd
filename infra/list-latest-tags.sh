@@ -78,8 +78,16 @@ for pkg in $IMAGES; do
   ver_and_date="$(printf '%s\n' "$tags" | latest_semver || true)"
   ver="$(printf '%s' "$ver_and_date" | awk '{print $1}')"
   date="$(printf '%s' "$ver_and_date" | awk '{print $2}')"
+  local_date=""
+  if [[ -n "$date" ]]; then
+    # Try GNU date (Linux), then gdate (macOS coreutils), then BSD date (macOS)
+    local_date="$(date -d "$date" "+%Y-%m-%d %H:%M:%S %Z" 2>/dev/null \
+      || gdate -d "$date" "+%Y-%m-%d %H:%M:%S %Z" 2>/dev/null \
+      || { epoch="$(date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$date" "+%s" 2>/dev/null)"; \
+           if [[ -n "$epoch" ]]; then date -r "$epoch" "+%Y-%m-%d %H:%M:%S %Z"; else echo "$date"; fi; })"
+  fi
   if [[ -n "$ver" ]]; then
-    echo -e "${pkg}\t${ver}\t${date}\tghcr.io/${OWNER}/${pkg}:${ver}"
+    echo -e "${pkg}\t${ver}\t${local_date}\tghcr.io/${OWNER}/${pkg}:${ver}"
   else
     echo "${pkg}: (no semver tag found)"
   fi
