@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 1.23.4
+
+### Patch Changes
+
+- 8cc2f8f: fix a bug in the mailer that was hardcoding a boolean `false` as tthe literal template name for all emails. yuck!
+
 ## 1.23.3
 
 ### Patch Changes
