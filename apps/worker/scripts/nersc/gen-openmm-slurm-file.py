@@ -504,7 +504,6 @@ srun --ntasks=1 \\
      --job-name heat \\
      podman-hpc run --rm --gpu \\
         -v $WORKDIR:/bilbomd/work \\
-        -v $UPLOAD_DIR:/cfs \\
         {config['openmm_worker']} /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
@@ -560,7 +559,6 @@ update_status md Running
          --env SLURM_NTASKS \\
          --env CUDA_VISIBLE_DEVICES \\
          -v $WORKDIR:/bilbomd/work \\
-         -v $UPLOAD_DIR:/cfs \\
          {config['openmm_worker']} /bin/bash -c "
              set -e
              export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
@@ -589,7 +587,6 @@ srun --ntasks=1 \\
      --job-name foxs \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        -v $UPLOAD_DIR:/cfs \\
         {config['bilbomd_worker']} /bin/bash -c "
             set -e
             cd /bilbomd/work/openmm/md &&
@@ -603,7 +600,7 @@ update_status foxs Success
     return section
 
 
-def generate_multifoxs_section(config):
+def generate_multifoxs_section(config, params):
     section = f"""
 # --------------------------------------------------------------------------------------
 # Run MultiFoXS on FoXS results
@@ -618,11 +615,15 @@ srun --ntasks=1 \\
      --job-name multifoxs \\
      podman-hpc run --rm \\
          -v $WORKDIR:/bilbomd/work \\
-         -v $UPLOAD_DIR:/cfs \\
          {config['bilbomd_worker']} /bin/bash -c "
             set -e
             cd /bilbomd/work/multifoxs &&
-            python /app/scripts/nersc/run-multifoxs.py
+            python /app/scripts/nersc/run-multifoxs.py \\
+                --foxs-list ../openmm/md/foxs_dat_files.txt \\
+                --prefix ../openmm/md \\
+                --saxs-data ../{params.get('data_file')} \\
+                --out-list ./foxs_dat_files_for_multifoxs.txt \\
+                --log ./multi_foxs.log
         "
 MFOXS_EXIT=$?
 check_exit_code $MFOXS_EXIT multifoxs
@@ -721,7 +722,7 @@ def main():
     slurm_sections.append(generate_heat_section(config))
     slurm_sections.append(generate_md_section(config))
     slurm_sections.append(generate_foxs_section(config))
-    slurm_sections.append(generate_multifoxs_section(config))
+    slurm_sections.append(generate_multifoxs_section(config, params))
     slurm_sections.append(generate_analysis_section(config))
     # slurm_sections.append(generate_copy_section(config))
     slurm_sections.append(generate_end_matters(config))
