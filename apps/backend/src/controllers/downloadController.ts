@@ -132,10 +132,12 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
     }
 
     const datFileBase = path.basename(job.data_file, path.extname(job.data_file))
-    // Try both possible file names for the original .dat file
+    // Try all possible file names for the original .dat file
+    // The OpenMM option does end up outputting to a subdirectory
     const possibleDatFiles = [
       path.join(jobDir, `minimization_output_${datFileBase}.dat`),
-      path.join(jobDir, `minimized_${datFileBase}.dat`)
+      path.join(jobDir, `minimized_${datFileBase}.dat`),
+      path.join(jobDir, 'openmm', 'minimization', `minimized_${datFileBase}.dat`)
     ]
 
     let foundDatFile = null
