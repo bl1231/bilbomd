@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 1.18.2
+
+### Patch Changes
+
+- fb148b1: Fixes to `multi_foxs` steps for the NERSC deployment
+  - adjust backend `getFoxsBilboData` to look in the `openmm/md` directory for results
+  - adjust the worker `run-multifoxs.py` script to accept various command line args.
+- 4e3b5a9: Fix nodemailer `defaultLayout` which should be a string NOT a boolean, but also must be defined otherwise you get `main` as your email template. So it seems we need to define it as an empty string so that we can override it later with our custom template.
+
 ## 1.18.1
 
 ### Patch Changes
