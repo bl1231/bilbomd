@@ -23,7 +23,8 @@ const sendVerificationEmail = (email: string, url: string, code: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath
+        partialsDir: partialsPath,
+        defaultLayout: ''
       },
       viewPath: viewPath,
       extName: '.handlebars'
@@ -59,7 +60,8 @@ const sendMagickLinkEmail = (email: string, url: string, otp: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath
+        partialsDir: partialsPath,
+        defaultLayout: ''
       },
       viewPath: viewPath,
       extName: '.handlebars'
@@ -96,7 +98,8 @@ const sendOtpEmail = (email: string, otp: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath
+        partialsDir: partialsPath,
+        defaultLayout: ''
       },
       viewPath: viewPath,
       extName: '.handlebars'
@@ -153,7 +156,8 @@ const sendUpdatedEmailMessage = (newEmail: string, oldEmail: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath
+        partialsDir: partialsPath,
+        defaultLayout: ''
       },
       viewPath: viewPath,
       extName: '.handlebars'
@@ -191,7 +195,8 @@ const sendDeleteAccountSuccessEmail = (email: string, username: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath
+        partialsDir: partialsPath,
+        defaultLayout: ''
       },
       viewPath: viewPath,
       extName: '.handlebars'
