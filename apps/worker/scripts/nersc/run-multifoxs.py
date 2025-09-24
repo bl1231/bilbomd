@@ -121,7 +121,7 @@ def main(argv: List[str] | None = None) -> int:
 
     foxs_list = Path(args.foxs_list)
     prefix_dir = Path(args.prefix)
-    saxs_output = Path(args.saxs)
+    saxs_output = Path(args.saxs_data)
     out_list = Path(args.out_list)
     log_path = Path(args.log)
 
@@ -140,7 +140,9 @@ def main(argv: List[str] | None = None) -> int:
 
     if args.dry_run:
         if args.verbose:
-            print("[multifoxs] Dry run: prepared list file but will not execute multi_foxs.")
+            print(
+                "[multifoxs] Dry run: prepared list file but will not execute multi_foxs."
+            )
         return 0
 
     cmd = ["multi_foxs"]
