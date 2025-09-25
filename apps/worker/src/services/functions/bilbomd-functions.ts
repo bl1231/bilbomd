@@ -28,7 +28,11 @@ interface FoxsRunDir {
 
 const extractPDBFilesFromDCD = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
 
@@ -38,7 +42,7 @@ const extractPDBFilesFromDCD = async (
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: '',
     charmm_out_file: '',
-    in_psf_file: DBjob.psf_file,
+    in_psf_file: DBjob.psf_file ?? '',
     in_crd_file: '',
     inp_basename: '',
     in_dcd: '',
@@ -93,14 +97,30 @@ const extractPDBFilesFromDCD = async (
 
 const generateFoxsRunDirs = (
   analysisDir: string,
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): FoxsRunDir[] => {
   const foxsRunDirs: FoxsRunDir[] = []
-  const step = Math.max(Math.round((DBjob.rg_max - DBjob.rg_min) / 5), 1)
+  if (
+    typeof DBjob.rg_min !== 'number' ||
+    typeof DBjob.rg_max !== 'number' ||
+    typeof DBjob.conformational_sampling !== 'number'
+  ) {
+    throw new Error(
+      'DBjob.rg_min, rg_max, and conformational_sampling must be defined numbers'
+    )
+  }
+  const rgMin: number = DBjob.rg_min
+  const rgMax: number = DBjob.rg_max
+  const conformationalSampling: number = DBjob.conformational_sampling
+  const step: number = Math.max(Math.round((rgMax - rgMin) / 5), 1)
 
-  for (let rg = DBjob.rg_min; rg <= DBjob.rg_max; rg += step) {
-    for (let run = 1; run <= DBjob.conformational_sampling; run++) {
-      const foxsRunDir = path.join(analysisDir, `rg${rg}_run${run}`)
+  for (let rg: number = rgMin; rg <= rgMax; rg += step) {
+    for (let run: number = 1; run <= conformationalSampling; run++) {
+      const foxsRunDir: string = path.join(analysisDir, `rg${rg}_run${run}`)
       foxsRunDirs.push({ dir: foxsRunDir, rg, run })
     }
   }
@@ -122,11 +142,23 @@ const processFoxsRunDir = async (
 
   // Process the directory
   await generateDCD2PDBInpFile(DCD2PDBParams, rg, run)
-  await spawnCharmm(DCD2PDBParams, MQJob) // Run CHARMM to extract PDB
+  // Always pass a BullMQJob argument to match spawnCharmm signature
+  // If MQJob is undefined, pass a minimal dummy object with required shape
+  const jobArg =
+    MQJob ??
+    ({
+      updateProgress: async () => {},
+      log: async () => {}
+    } as unknown as BullMQJob)
+  await spawnCharmm(DCD2PDBParams, jobArg) // Run CHARMM to extract PDB
 }
 
 const remediatePDBFiles = async (
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
   const analysisDir = path.join(outputDir, 'foxs')
@@ -201,7 +233,11 @@ const writeSegidToChainid = async (inputFile: string): Promise<void> => {
 }
 
 const prepareFoXSInputs = async (
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<string[]> => {
   const jobDir = path.join(config.uploadDir, DBjob.uuid)
   const foxsDir = path.join(jobDir, 'foxs')
@@ -213,7 +249,8 @@ const prepareFoXSInputs = async (
       .readdirSync(base)
       .map((name) => path.join(base, name))
       .filter(
-        (fullPath) => fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()
+        (fullPath) =>
+          fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()
       )
   }
 
@@ -272,7 +309,11 @@ const prepareFoXSInputs = async (
 
 const runFoXS = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   let status: IStepStatus = {
     status: 'Running',

@@ -48,7 +48,8 @@ const handleError = async (
   DBjob: IJob,
   step?: keyof IBilboMDSteps
 ) => {
-  const errorMsg = step || (error instanceof Error ? error.message : String(error))
+  const errorMsg =
+    step || (error instanceof Error ? error.message : String(error))
 
   // Updates primay status in MongoDB
   await updateJobStatus(DBjob, 'Error')
@@ -60,7 +61,9 @@ const handleError = async (
     }
     await updateStepStatus(DBjob, step, status)
   } else {
-    logger.error(`Step not provided or invalid when handling error: ${errorMsg}`)
+    logger.error(
+      `Step not provided or invalid when handling error: ${errorMsg}`
+    )
   }
 
   MQjob.log(`error ${errorMsg}`)
@@ -75,7 +78,13 @@ const handleError = async (
   const recipientEmail = (DBjob.user as IUser).email
   if (MQjob.attemptsMade >= 3) {
     if (config.sendEmailNotifications) {
-      sendJobCompleteEmail(recipientEmail, config.bilbomdUrl, DBjob.id, DBjob.title, true)
+      sendJobCompleteEmail(
+        recipientEmail,
+        config.bilbomdUrl,
+        DBjob.id,
+        DBjob.title,
+        true
+      )
       logger.warn(`email notification sent to ${recipientEmail}`)
       await MQjob.log(`email notification sent to ${recipientEmail}`)
     }
@@ -83,7 +92,10 @@ const handleError = async (
   throw new Error('BilboMD failed')
 }
 
-const updateJobStatus = async (job: IJob, status: JobStatusEnum): Promise<void> => {
+const updateJobStatus = async (
+  job: IJob,
+  status: JobStatusEnum
+): Promise<void> => {
   job.status = status
   await job.save()
 }
@@ -106,10 +118,14 @@ const makeFoxsDatFileList = async (dir: string) => {
     // Wait for both streams to finish writing and closing
     await Promise.all([
       new Promise<void>((resolve, reject) =>
-        stdoutStream.on('finish', () => resolve()).on('error', (err) => reject(err))
+        stdoutStream
+          .on('finish', () => resolve())
+          .on('error', (err) => reject(err))
       ),
       new Promise<void>((resolve, reject) =>
-        errorStream.on('finish', () => resolve()).on('error', (err) => reject(err))
+        errorStream
+          .on('finish', () => resolve())
+          .on('error', (err) => reject(err))
       )
     ])
   } catch (error) {
@@ -197,7 +213,11 @@ const spawnMultiFoxs = (params: MultiFoxsParams): Promise<void> => {
   const multiFoxOpts = { cwd: multiFoxsDir }
 
   return new Promise((resolve, reject) => {
-    const multiFoxs: ChildProcess = spawn(config.multifoxsBin, multiFoxArgs, multiFoxOpts)
+    const multiFoxs: ChildProcess = spawn(
+      config.multifoxsBin,
+      multiFoxArgs,
+      multiFoxOpts
+    )
     multiFoxs.stdout?.on('data', (data) => {
       logStream.write(data.toString())
     })
@@ -243,7 +263,11 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
   const opts = { cwd: params.out_dir }
 
   return new Promise((resolve, reject) => {
-    const runPaeToConst: ChildProcess = spawn('/opt/envs/base/bin/python', args, opts)
+    const runPaeToConst: ChildProcess = spawn(
+      '/opt/envs/base/bin/python',
+      args,
+      opts
+    )
     runPaeToConst.stdout?.on('data', (data) => {
       logger.info(`runPaeToConst stdout:  ${data.toString()}`)
       logStream.write(data.toString())
@@ -268,7 +292,9 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
             resolve(code.toString())
           } else {
             logger.error(`runPaeToConst close error exit code: ${code}`)
-            reject(new Error('runPaeToConst failed. Please see the error log file'))
+            reject(
+              new Error('runPaeToConst failed. Please see the error log file')
+            )
           }
         })
         .catch((streamError) => {
@@ -440,8 +466,8 @@ const runMinimize = async (
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: 'minimize.inp',
     charmm_out_file: 'minimize.out',
-    in_psf_file: DBjob.psf_file,
-    in_crd_file: DBjob.crd_file
+    in_psf_file: DBjob.psf_file ?? '',
+    in_crd_file: DBjob.crd_file ?? ''
   }
   try {
     let status: IStepStatus = {
@@ -477,9 +503,9 @@ const runHeat = async (
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: 'heat.inp',
     charmm_out_file: 'heat.out',
-    in_psf_file: DBjob.psf_file,
+    in_psf_file: DBjob.psf_file ?? '',
     in_crd_file: 'minimization_output.crd',
-    constinp: DBjob.const_inp_file
+    constinp: DBjob.const_inp_file ?? ''
   }
   try {
     let status: IStepStatus = {
@@ -515,11 +541,11 @@ const runMolecularDynamics = async (
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: '',
     charmm_out_file: '',
-    in_psf_file: DBjob.psf_file,
+    in_psf_file: DBjob.psf_file ?? '',
     in_crd_file: '',
-    constinp: DBjob.const_inp_file,
-    rg_min: DBjob.rg_min,
-    rg_max: DBjob.rg_max,
+    constinp: DBjob.const_inp_file ?? '',
+    rg_min: DBjob.rg_min ?? 20,
+    rg_max: DBjob.rg_max ?? 60,
     conf_sample: DBjob.conformational_sampling,
     timestep: 0.001,
     inp_basename: '',
@@ -599,7 +625,11 @@ const copyFiles = async ({
 
 const prepareResults = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDCRDJob | IBilboMDPDBJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDCRDJob
+    | IBilboMDPDBJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   try {
     const jobDir = path.join(config.uploadDir, DBjob.uuid)
@@ -624,8 +654,8 @@ const prepareResults = async (
       const pdbSource = (await fs.pathExists(openmmPdb))
         ? openmmPdb
         : (await fs.pathExists(charmmPdb))
-        ? charmmPdb
-        : null
+          ? charmmPdb
+          : null
 
       if (pdbSource) {
         await copyFiles({
@@ -636,18 +666,27 @@ const prepareResults = async (
           isCritical: false
         })
       } else {
-        logger.warn('No minimized PDB found (checked OpenMM and CHARMM locations).')
+        logger.warn(
+          'No minimized PDB found (checked OpenMM and CHARMM locations).'
+        )
       }
 
       // --- Copy the DAT file for the minimized PDB (supports both layouts)
-      const charmmDat = path.join(jobDir, `minimization_output_${baseDataName}.dat`)
-      const openmmDat = path.join(jobDir, 'minimize', `minimized_${baseDataName}.dat`)
+      const charmmDat = path.join(
+        jobDir,
+        `minimization_output_${baseDataName}.dat`
+      )
+      const openmmDat = path.join(
+        jobDir,
+        'minimize',
+        `minimized_${baseDataName}.dat`
+      )
 
       const datSource = (await fs.pathExists(openmmDat))
         ? openmmDat
         : (await fs.pathExists(charmmDat))
-        ? charmmDat
-        : null
+          ? charmmDat
+          : null
 
       if (datSource) {
         await copyFiles({
@@ -658,7 +697,9 @@ const prepareResults = async (
           isCritical: false
         })
       } else {
-        logger.warn('No minimized DAT file found (checked OpenMM and CHARMM locations).')
+        logger.warn(
+          'No minimized DAT file found (checked OpenMM and CHARMM locations).'
+        )
       }
     }
 
@@ -750,12 +791,18 @@ const prepareResults = async (
         const ensembleFileContent = await fs.readFile(ensembleFile, 'utf8')
         const pdbFilesRelative = extractPdbPaths(ensembleFileContent)
 
-        const pdbFilesFullPath = pdbFilesRelative.map((item) => path.join(jobDir, item))
+        const pdbFilesFullPath = pdbFilesRelative.map((item) =>
+          path.join(jobDir, item)
+        )
         // Extract the first N PDB files to string[]
         const numToCopy = Math.min(pdbFilesFullPath.length, i)
         const ensembleModelFiles = pdbFilesFullPath.slice(0, numToCopy)
         const ensembleSize = ensembleModelFiles.length
-        await concatenateAndSaveAsEnsemble(ensembleModelFiles, ensembleSize, resultsDir)
+        await concatenateAndSaveAsEnsemble(
+          ensembleModelFiles,
+          ensembleSize,
+          resultsDir
+        )
 
         MQjob.log(
           `Gathered ${pdbFilesFullPath.length} PDB files from ensembles_size_${i}.txt`
@@ -822,7 +869,11 @@ const spawnRgyrDmaxScript = async (DBjob: IJob): Promise<void> => {
   const opts = { cwd: jobDir }
 
   return new Promise((resolve, reject) => {
-    const runRgyrDmaxScript: ChildProcess = spawn('/opt/envs/base/bin/python', args, opts)
+    const runRgyrDmaxScript: ChildProcess = spawn(
+      '/opt/envs/base/bin/python',
+      args,
+      opts
+    )
 
     runRgyrDmaxScript.stdout?.on('data', (data) => {
       logger.info(`Rgyr Dmax script stdout: ${data.toString()}`)
@@ -847,11 +898,15 @@ const spawnRgyrDmaxScript = async (DBjob: IJob): Promise<void> => {
 
       await Promise.all(closeStreamsPromises)
       if (code === 0) {
-        logger.info(`Rgyr Dmax script completed successfully with exit code ${code}`)
+        logger.info(
+          `Rgyr Dmax script completed successfully with exit code ${code}`
+        )
         resolve()
       } else {
         logger.error(`Rgyr Dmax script failed with exit code ${code}`)
-        reject(new Error('Rgyr Dmax script failed. Please see the error log file.'))
+        reject(
+          new Error('Rgyr Dmax script failed. Please see the error log file.')
+        )
       }
     })
   })
@@ -868,7 +923,11 @@ const spawnFeedbackScript = async (DBjob: IJob): Promise<void> => {
   const opts = { cwd: resultsDir }
 
   return new Promise((resolve, reject) => {
-    const runFeedbackScript: ChildProcess = spawn('/opt/envs/base/bin/python', args, opts)
+    const runFeedbackScript: ChildProcess = spawn(
+      '/opt/envs/base/bin/python',
+      args,
+      opts
+    )
 
     runFeedbackScript.stdout?.on('data', (data) => {
       logger.info(`Feedback script stdout: ${data.toString()}`)
@@ -894,12 +953,17 @@ const spawnFeedbackScript = async (DBjob: IJob): Promise<void> => {
       await Promise.all(closeStreamsPromises)
 
       if (code === 0) {
-        logger.info(`Feedback script completed successfully with exit code ${code}`)
+        logger.info(
+          `Feedback script completed successfully with exit code ${code}`
+        )
 
         // Read and save feedback.json to DBjob
         const feedbackFilePath = path.join(resultsDir, 'feedback.json')
         try {
-          const feedbackData = await fs.promises.readFile(feedbackFilePath, 'utf-8')
+          const feedbackData = await fs.promises.readFile(
+            feedbackFilePath,
+            'utf-8'
+          )
           const feedbackJSON = JSON.parse(feedbackData)
 
           logger.info(
@@ -920,14 +984,20 @@ const spawnFeedbackScript = async (DBjob: IJob): Promise<void> => {
         }
       } else {
         logger.error(`Feedback script failed with exit code ${code}`)
-        reject(new Error('Feedback script failed. Please see the error log file.'))
+        reject(
+          new Error('Feedback script failed. Please see the error log file.')
+        )
       }
     })
   })
 }
 
 const createReadmeFile = async (
-  DBjob: IBilboMDCRDJob | IBilboMDPDBJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob,
+  DBjob:
+    | IBilboMDCRDJob
+    | IBilboMDPDBJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob,
   numEnsembles: number,
   resultsDir: string
 ): Promise<void> => {

@@ -60,7 +60,9 @@ const prepareMultiMDdatFileList = async (DBJob: IMultiJob): Promise<void> => {
           await fs.appendFile(outputFilePath, `${filePath}\n`)
         }
 
-        logger.info(`Found ${pdbDatFiles.length} .pdb.dat files for UUID: ${uuid}`)
+        logger.info(
+          `Found ${pdbDatFiles.length} .pdb.dat files for UUID: ${uuid}`
+        )
       } else {
         logger.warn(`Foxs directory does not exist for UUID: ${uuid}`)
       }
@@ -74,34 +76,31 @@ const prepareMultiMDdatFileList = async (DBJob: IMultiJob): Promise<void> => {
 }
 
 const getMainSAXSDataFileName = async (DBJob: IMultiJob): Promise<string> => {
-  try {
-    logger.info(`Processing MultiJob: ${DBJob.title}`)
+  logger.info(`Processing MultiJob: ${DBJob.title}`)
 
-    // Check if bilbomd_jobs is populated
-    if (!DBJob.bilbomd_jobs || DBJob.bilbomd_jobs.length === 0) {
-      logger.info('No associated jobs found or bilbomd_jobs is not populated.')
-      return
-    }
+  // Check if bilbomd_jobs is populated
+  if (!DBJob.bilbomd_jobs || DBJob.bilbomd_jobs.length === 0) {
+    const msg = 'No associated jobs found or bilbomd_jobs is not populated.'
+    logger.info(msg)
+    throw new Error(msg)
+  }
 
-    logger.info(`Running MultiFoXS with ${DBJob.data_file_from} SAXS data`)
+  logger.info(`Running MultiFoXS with ${DBJob.data_file_from} SAXS data`)
 
-    // Find the job matching the UUID in data_file_from
-    const mainBilboMDRun = DBJob.bilbomd_jobs.find(
-      (job) => job.uuid === DBJob.data_file_from
+  // Find the job matching the UUID in data_file_from
+  const mainBilboMDRun = DBJob.bilbomd_jobs.find(
+    (job) => job.uuid === DBJob.data_file_from
+  )
+
+  if (mainBilboMDRun && mainBilboMDRun.data_file) {
+    logger.info(
+      `Experimental SAXS Data file for main BilboMD job (UUID: ${DBJob.data_file_from}): ${mainBilboMDRun.data_file}`
     )
-
-    if (mainBilboMDRun) {
-      logger.info(
-        `Experimental SAXS Data file for main BilboMD job (UUID: ${DBJob.data_file_from}): ${mainBilboMDRun.data_file}`
-      )
-      return mainBilboMDRun.data_file
-    } else {
-      logger.warn(
-        `No job found in bilbomd_jobs with UUID matching data_file_from: ${DBJob.data_file_from}`
-      )
-    }
-  } catch (error) {
-    logger.error('Error processing jobs:', error)
+    return mainBilboMDRun.data_file
+  } else {
+    const msg = `No job found in bilbomd_jobs with UUID matching data_file_from: ${DBJob.data_file_from}`
+    logger.warn(msg)
+    throw new Error(msg)
   }
 }
 
@@ -173,7 +172,11 @@ const spawnMultiFoxs = async (DBjob: IMultiJob): Promise<void> => {
   const multiFoxOpts = { cwd: multiFoxsDir }
 
   return new Promise((resolve, reject) => {
-    const multiFoxs: ChildProcess = spawn(config.multifoxsBin, multiFoxArgs, multiFoxOpts)
+    const multiFoxs: ChildProcess = spawn(
+      config.multifoxsBin,
+      multiFoxArgs,
+      multiFoxOpts
+    )
     multiFoxs.stdout?.on('data', (data) => {
       logStream.write(data.toString())
     })
@@ -259,30 +262,34 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
         time_completed: job.time_completed
       }))
     }
-    await writeJsonFile(path.join(resultsDir, 'bilbomd_job.json'), simplifiedJob)
+    await writeJsonFile(
+      path.join(resultsDir, 'bilbomd_job.json'),
+      simplifiedJob
+    )
 
     // Construct ensemble PDB files
     const numEnsembles = await getNumEnsembles(multifoxsLogFile)
     logger.info(`prepareResults numEnsembles: ${numEnsembles}`)
 
     if (numEnsembles > 0) {
-      const ensemblePromises = Array.from({ length: numEnsembles }, (_, i) => i + 1).map(
-        async (i) => {
-          const ensembleFile = path.join(multiFoxsDir, `ensembles_size_${i}.txt`)
-          const ensembleContent = await fs.readFile(ensembleFile, 'utf8')
-          const pdbFiles = extractPdbPaths(ensembleContent)
+      const ensemblePromises = Array.from(
+        { length: numEnsembles },
+        (_, i) => i + 1
+      ).map(async (i) => {
+        const ensembleFile = path.join(multiFoxsDir, `ensembles_size_${i}.txt`)
+        const ensembleContent = await fs.readFile(ensembleFile, 'utf8')
+        const pdbFiles = extractPdbPaths(ensembleContent)
 
-          if (pdbFiles.length > 0) {
-            const numToCopy = Math.min(pdbFiles.length, i)
-            const filesToConcatenate = pdbFiles.slice(0, numToCopy)
-            await concatenateAndSaveAsEnsemble(
-              filesToConcatenate,
-              filesToConcatenate.length,
-              resultsDir
-            )
-          }
+        if (pdbFiles.length > 0) {
+          const numToCopy = Math.min(pdbFiles.length, i)
+          const filesToConcatenate = pdbFiles.slice(0, numToCopy)
+          await concatenateAndSaveAsEnsemble(
+            filesToConcatenate,
+            filesToConcatenate.length,
+            resultsDir
+          )
         }
-      )
+      })
       await Promise.all(ensemblePromises)
     }
 
@@ -459,7 +466,13 @@ const handleJobEmailNotification = async (
     await updateStepStatus(DBjob, 'email', status)
 
     try {
-      sendJobCompleteEmail(user.email, config.bilbomdUrl, DBjob.id, DBjob.title, false)
+      sendJobCompleteEmail(
+        user.email,
+        config.bilbomdUrl,
+        DBjob.id,
+        DBjob.title,
+        false
+      )
       logger.info(`Email notification sent to ${user.email}`)
       status = {
         status: 'Success',
@@ -467,7 +480,9 @@ const handleJobEmailNotification = async (
       }
       await updateStepStatus(DBjob, 'email', status)
     } catch (emailError) {
-      logger.error(`Failed to send email to ${user.email}: ${emailError.message}`)
+      logger.error(
+        `Failed to send email to ${user.email}: ${emailError.message}`
+      )
       status = {
         status: 'Error',
         message: `Failed to send email: ${emailError.message}`
