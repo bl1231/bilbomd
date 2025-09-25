@@ -3,14 +3,6 @@
     "target": "ESNext",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "baseUrl": "./src",
-    "paths": {
-      "*": ["./src/*"]
-    },
-    "types": [
-      "node",
-      "vitest"
-    ],
     "allowJs": true,
     "checkJs": false,
     "outDir": "dist" ,
