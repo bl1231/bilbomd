@@ -1,6 +1,6 @@
 // Set log directory and mailer template path for all tests before anything else
 process.env.BILBOMD_LOGS = process.env.BILBOMD_LOGS || '/tmp/bilbomd-logs-test'
-process.env.BILBOMD_MAILER_TEMPLATES || __dirname + '../src/templates/mailer'
+process.env.BILBOMD_MAILER_TEMPLATES = process.env.BILBOMD_MAILER_TEMPLATES || __dirname + '../src/templates/mailer'
 process.env.BILBOMD_MAILER_HOST = process.env.BILBOMD_MAILER_HOST || 'smtp-relay.gmail.com'
 process.env.BILBOMD_MAILER_PORT = process.env.BILBOMD_MAILER_PORT || '25'
 import { vi } from 'vitest'
