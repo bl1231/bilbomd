@@ -1,19 +1,30 @@
 import dotenv from 'dotenv'
 dotenv.config({ path: './test/.env.test' })
-import { logger } from '../src/middleware/loggers'
+import { logger } from '../src/middleware/loggers.js'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import mongoose from 'mongoose'
-import { vi, beforeAll } from 'vitest'
+import { vi, beforeAll, Mock } from 'vitest'
 import fs from 'fs-extra'
+
+declare global {
+  var __useMock: Mock
+  var __sendMailMock: Mock
+}
 
 beforeAll(() => {
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'info').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
-  vi.spyOn(logger, 'info').mockImplementation((message: string) => {})
-  vi.spyOn(logger, 'warn').mockImplementation((message: string) => {})
-  vi.spyOn(logger, 'error').mockImplementation((message: string) => {})
+  vi.spyOn(logger, 'info').mockImplementation(function (this: typeof logger, ..._args: any[]) {
+    return this
+  })
+  vi.spyOn(logger, 'warn').mockImplementation(function (this: typeof logger, ..._args: any[]) {
+    return this
+  })
+  vi.spyOn(logger, 'error').mockImplementation(function (this: typeof logger, ..._args: any[]) {
+    return this
+  })
 })
 
 // Setup MongoDB Memory Server
@@ -48,3 +59,29 @@ const testDataDir = process.env.DATA_VOL ?? '/tmp/bilbomd-data'
 await fs.ensureDir(testDataDir)
 await fs.emptyDir(testDataDir)
 // console.log(`[setup] Emptied test data directory: ${testDataDir}`)
+
+// Hoisted nodemailer mocks so transporter is ready before import of mailer.ts
+const { __useMock, __sendMailMock } = vi.hoisted(() => ({
+  __useMock: vi.fn(),
+  __sendMailMock: vi.fn()
+}))
+
+// Attach mocks to the global object for access in all tests
+globalThis.__useMock = __useMock
+globalThis.__sendMailMock = __sendMailMock
+
+vi.mock('nodemailer', () => {
+  const createTransport = vi.fn(() => ({
+    use: globalThis.__useMock,
+    sendMail: globalThis.__sendMailMock
+  }))
+  return {
+    __esModule: true,
+    default: { createTransport },
+    createTransport
+  }
+})
+
+vi.mock('nodemailer-express-handlebars', () => ({
+  default: vi.fn(() => ({}))
+}))
