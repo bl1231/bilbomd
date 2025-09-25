@@ -1,48 +1,48 @@
 ingress:
-  host: "ingress.bilbomd.production.svc.spin.nersc.org"
-  fqdn: "bilbomd-nersc.bl1231.als.lbl.gov"
-  secret: "ui-tls"
+  host: 'ingress.bilbomd.production.svc.spin.nersc.org'
+  fqdn: 'bilbomd-nersc.bl1231.als.lbl.gov'
+  secret: 'ui-tls'
 
 bilbomd:
-  url: "https://bilbomd-nersc.bl1231.als.lbl.gov"
+  url: 'https://bilbomd-nersc.bl1231.als.lbl.gov'
 
 env:
-  NODE_ENV: "production"
-  BILBOMD_ENV: "production"
+  NODE_ENV: 'production'
+  BILBOMD_ENV: 'production'
 
 auth:
-  orcid_issuer: "https://orcid.org"
-  orcid_client_id: "APP-XXXXXXXXXX"
-  orcid_redirect_uri: "https://bilbomd-nersc.bl1231.als.lbl.gov/api/v1/auth/orcid/callback"
+  orcid_issuer: 'https://orcid.org'
+  orcid_client_id: 'APP-XXXXXXXXXX'
+  orcid_redirect_uri: 'https://bilbomd-nersc.bl1231.als.lbl.gov/api/v1/auth/orcid/callback'
 
 logs:
-  backend: "bilbomd/prod/logs/backend"
-  worker: "bilbomd/prod/logs/worker"
-  ui: "bilbomd/prod/logs/ui"
+  backend: 'bilbomd/prod/logs/backend'
+  worker: 'bilbomd/prod/logs/worker'
+  ui: 'bilbomd/prod/logs/ui'
 
-backups: "bilbomd/prod/backups"
+backups: 'bilbomd/prod/backups'
 
-scripts: "bilbomd/prod/scripts"
+scripts: 'bilbomd/prod/scripts'
 
-uploads: "bilbomd/prod/uploads"
+uploads: 'bilbomd/prod/uploads'
 
-working_dir: "bilbomd/prod/"
+working_dir: 'bilbomd/prod/'
 
 mongo:
   name: mongo
   image:
     repository: mongo
-    tag: 7.0.19
+    tag: 7.0.24
     pullPolicy: IfNotPresent
     secret: registry-nersc
   config:
-    MONGO_INITDB_ROOT_USERNAME: "bilbomd-backend-user"
+    MONGO_INITDB_ROOT_USERNAME: 'bilbomd-backend-user'
 
 redis:
   name: redis
   image:
     repository: redis
-    tag: 7.4.2
+    tag: 7.4.5
     pullPolicy: Always
     secret: registry-nersc
 
@@ -54,7 +54,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: 1.21.5
+    tag: 1.22.2
     pullPolicy: Always
     secret: ghcr
 
@@ -66,7 +66,7 @@ backend:
     user: null
     repository: bilbomd-backend
     build: null
-    tag: 1.22.0
+    tag: 1.23.5
     pullPolicy: Always
     secret: ghcr
 
@@ -78,6 +78,6 @@ worker:
     user: null
     repository: bilbomd-worker
     build: null
-    tag: 1.16.0
+    tag: 1.18.2
     pullPolicy: Always
     secret: ghcr

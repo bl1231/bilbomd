@@ -1,25 +1,7 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
-import type { MockInstance } from 'vitest'
-import nodemailer from 'nodemailer'
-// hbs import not needed in test
+import { __useMock, __sendMailMock } from '../../../test/setup.js'
 import { sendJobCompleteEmail } from '../mailer.js'
 import { logger } from '../loggers.js'
-
-vi.mock('nodemailer', () => {
-  const createTransport = vi.fn()
-  return {
-    default: { createTransport },
-    createTransport
-  }
-})
-vi.mock('nodemailer-express-handlebars', () => ({
-  default: vi.fn(() => ({}))
-}))
-vi.mock('../loggers.js', () => ({
-  logger: {
-    info: vi.fn()
-  }
-}))
 
 describe('sendJobCompleteEmail', () => {
   let sendMailMock: Mock
@@ -27,12 +9,8 @@ describe('sendJobCompleteEmail', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    sendMailMock = vi.fn()
-    useMock = vi.fn()
-    ;(nodemailer.createTransport as unknown as MockInstance).mockReturnValue({
-      use: useMock,
-      sendMail: sendMailMock
-    })
+    sendMailMock = __sendMailMock
+    useMock = __useMock
   })
 
   it('calls sendMail with correct parameters for job complete', () => {

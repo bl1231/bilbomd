@@ -4,14 +4,14 @@ import hbs from 'nodemailer-express-handlebars'
 
 const user = process.env.SEND_EMAIL_USER
 const name = process.env.BILBOMD_FQDN
-
-const viewPath = '/app/dist/templates/views/'
-const partialsPath = '/app/dist/templates/partials/'
+const mailHost = process.env.BILBOMD_MAILER_HOST || 'smtp-relay.gmail.com'
+const mailPort = process.env.BILBOMD_MAILER_PORT ? parseInt(process.env.BILBOMD_MAILER_PORT) : 25
+const viewPath = process.env.BILBOMD_MAILER_TEMPLATES || '/app/dist/templates/mailer/'
 
 const transporter = nodemailer.createTransport({
   name: name,
-  host: 'smtp-relay.gmail.com',
-  port: 25,
+  host: mailHost,
+  port: mailPort,
   secure: false
 })
 
@@ -23,7 +23,6 @@ const sendVerificationEmail = (email: string, url: string, code: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath,
         defaultLayout: ''
       },
       viewPath: viewPath,
@@ -60,7 +59,6 @@ const sendMagickLinkEmail = (email: string, url: string, otp: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath,
         defaultLayout: ''
       },
       viewPath: viewPath,
@@ -98,7 +96,6 @@ const sendOtpEmail = (email: string, otp: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath,
         defaultLayout: ''
       },
       viewPath: viewPath,
@@ -156,7 +153,6 @@ const sendUpdatedEmailMessage = (newEmail: string, oldEmail: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath,
         defaultLayout: ''
       },
       viewPath: viewPath,
@@ -195,7 +191,6 @@ const sendDeleteAccountSuccessEmail = (email: string, username: string) => {
       viewEngine: {
         extname: '.handlebars',
         layoutsDir: viewPath,
-        partialsDir: partialsPath,
         defaultLayout: ''
       },
       viewPath: viewPath,
