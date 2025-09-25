@@ -145,15 +145,7 @@ const processFoxsRunDir = async (
 
   // Process the directory
   await generateDCD2PDBInpFile(DCD2PDBParams, rg, run)
-  // Always pass a BullMQJob argument to match spawnCharmm signature
-  // If MQJob is undefined, pass a minimal dummy object with required shape
-  const jobArg =
-    MQJob ??
-    ({
-      updateProgress: async () => {},
-      log: async () => {}
-    } as unknown as BullMQJob)
-  await spawnCharmm(DCD2PDBParams, jobArg) // Run CHARMM to extract PDB
+  await spawnCharmm(DCD2PDBParams, MQJob) // Run CHARMM to extract PDB
 }
 
 const remediatePDBFiles = async (

@@ -160,7 +160,10 @@ const generateInputFile = async (params: CharmmParams): Promise<void> => {
   await writeInputFile(templateString, params)
 }
 
-const spawnCharmm = (params: CharmmParams, MQjob: BullMQJob): Promise<void> => {
+const spawnCharmm = (
+  params: CharmmParams,
+  MQjob?: BullMQJob
+): Promise<void> => {
   const {
     charmm_inp_file: inputFile,
     charmm_out_file: outputFile,
@@ -212,7 +215,7 @@ const spawnCharmm = (params: CharmmParams, MQjob: BullMQJob): Promise<void> => {
 
 const spawnFoXS = async (
   foxsRunDir: string,
-  MQjob: BullMQJob
+  MQjob?: BullMQJob
 ): Promise<void> => {
   try {
     const files = await fs.readdir(foxsRunDir)
