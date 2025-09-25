@@ -223,12 +223,23 @@ const handleMonitoringError = async (
   await job.save()
 }
 
+const createDefaultNerscInfo = (): INerscInfo => {
+  return {
+    jobid: '',
+    state: NerscStatus.UNKNOWN,
+    qos: '',
+    time_submitted: new Date(0),
+    time_started: new Date(0),
+    time_completed: new Date(0)
+  }
+}
+
 const updateJobNerscState = async (
   job: IJob,
   nerscState: INerscInfo
 ): Promise<void> => {
   if (!job.nersc) {
-    job.nersc = {} as INerscInfo
+    job.nersc = createDefaultNerscInfo()
   }
   job.nersc.state = nerscState.state
   job.nersc.qos = nerscState.qos
