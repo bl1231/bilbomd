@@ -1,7 +1,7 @@
 {
   "name": "@bilbomd/backend",
-  "description": "backend server for BilboMD webapp",
   "version": "1.23.5",
+  "description": "Backend server for BilboMD webapp",
   "main": "dist/server.js",
   "files": [
     "dist",
@@ -9,7 +9,6 @@
     "views",
     "scripts"
   ],
-  "private": true,
   "type": "module",
   "scripts": {
     "clean": "rimraf dist/*",
