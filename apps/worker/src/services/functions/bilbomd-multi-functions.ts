@@ -168,11 +168,19 @@ const spawnMultiFoxs = async (DBjob: IMultiJob): Promise<void> => {
   const errorFile = path.join(multiFoxsDir, 'multi_foxs_error.log')
   const logStream = fs.createWriteStream(logFile)
   const errorStream = fs.createWriteStream(errorFile)
-  const saxsData = path.join(
-    config.uploadDir,
-    DBjob.data_file_from,
-    await getMainSAXSDataFileName(DBjob)
-  )
+  let saxsData: string
+  try {
+    saxsData = path.join(
+      config.uploadDir,
+      DBjob.data_file_from,
+      await getMainSAXSDataFileName(DBjob)
+    )
+  } catch (error) {
+    logger.error(
+      `Failed to get main SAXS data file name: ${getErrorMessage(error)}`
+    )
+    throw error // Re-throw to fail the spawn process
+  }
   const multiFoxArgs = ['-o', saxsData, '../multi_md_foxs_files.txt']
   const multiFoxOpts = { cwd: multiFoxsDir }
 
@@ -315,13 +323,23 @@ const createReadmeFile = async (
   numEnsembles: number,
   resultsDir: string
 ): Promise<void> => {
+  let saxsDataFileName: string
+  try {
+    saxsDataFileName = await getMainSAXSDataFileName(DBjob)
+  } catch (error) {
+    logger.error(
+      `Failed to get main SAXS data file name for README: ${getErrorMessage(error)}`
+    )
+    saxsDataFileName = 'N/A' // Placeholder for README
+  }
+
   const readmeContent = `
 # BilboMD Multi Job Results
 
 This directory contains the results for your ${DBjob.title} BilboMD Multi job.
 
 - Job Title:  ${DBjob.title}
-- Experimental SAXS dat file: ${await getMainSAXSDataFileName(DBjob)}
+- Experimental SAXS dat file: ${saxsDataFileName}
 - All calcualted scattering profiles from previous selected BilboMD runs
 - Job ID:  ${DBjob._id}
 - UUID:  ${DBjob.uuid}

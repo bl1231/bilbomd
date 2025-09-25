@@ -208,8 +208,8 @@ const buildOpenMMConfigForJob = (
           ) {
             throw new Error('rg_min and rg_max must be defined numbers')
           }
-          const rg_min = DBjob.rg_min as number
-          const rg_max = DBjob.rg_max as number
+          const rg_min = DBjob.rg_min
+          const rg_max = DBjob.rg_max
           return Array.from({ length: 6 }, (_, i) =>
             Math.round(rg_min + (i * (rg_max - rg_min)) / 5)
           )
