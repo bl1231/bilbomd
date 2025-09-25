@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 1.23.6
+
+### Patch Changes
+
+- dbe5618: Cleanup the node mailer code
+
 ## 1.23.5
 
 ### Patch Changes

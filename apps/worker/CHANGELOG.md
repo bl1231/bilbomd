@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 1.18.3
+
+### Patch Changes
+
+- dbe5618: Cleanup the node mailer code
+
 ## 1.18.2
 
 ### Patch Changes
