@@ -9,6 +9,9 @@ import { updateStepStatus } from '../functions/mongo-utils.js'
 const uploadFolder = process.env.DATA_VOL ?? '/bilbomd/uploads'
 const CHARMM_BIN = process.env.CHARMM ?? '/usr/local/bin/charmm'
 
+const getErrorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
+
 interface Pdb2CrdCharmmInputData {
   uuid: string
   pdb_file: string
@@ -34,14 +37,18 @@ const processPdb2CrdJob = async (MQJob: BullMQJob) => {
   try {
     await MQJob.updateProgress(1)
     logger.info(`UUID: ${MQJob.data.uuid}`)
-    foundJob = await Job.findOne({ uuid: MQJob.data.uuid }).populate('user').exec()
+    foundJob = await Job.findOne({ uuid: MQJob.data.uuid })
+      .populate('user')
+      .exec()
 
     if (!foundJob) {
       logger.warn(
         `No MongoDB entry found for: ${MQJob.data.uuid}. Must be from PAE Jiffy.`
       )
     } else {
-      logger.info(`MongoDB entry for ${MQJob.data.type} Job found: ${foundJob.uuid}`)
+      logger.info(
+        `MongoDB entry for ${MQJob.data.type} Job found: ${foundJob.uuid}`
+      )
     }
     if (foundJob) {
       await updateStepStatus(foundJob, 'pdb2crd', status)
@@ -109,7 +116,7 @@ const processPdb2CrdJob = async (MQJob: BullMQJob) => {
   } catch (error) {
     status = {
       status: 'Error',
-      message: `Error during conversion PDB to CRD/PSF ${error.message}`
+      message: `Error during conversion PDB to CRD/PSF ${getErrorMessage(error)}`
     }
 
     if (foundJob) {
@@ -141,7 +148,9 @@ const createPdb2CrdCharmmInpFiles = async (
   const args = [pdb2crd_script, inputPDB, '.']
 
   return new Promise<string[]>((resolve, reject) => {
-    const pdb2crd = spawn('/opt/envs/base/bin/python', args, { cwd: workingDir })
+    const pdb2crd = spawn('/opt/envs/base/bin/python', args, {
+      cwd: workingDir
+    })
 
     pdb2crd.stdout.on('data', (data: Buffer) => {
       logStream.write(data.toString())
@@ -187,12 +196,16 @@ const createPdb2CrdCharmmInpFiles = async (
                 }
               })
 
-              logger.info(`Successfully parsed output files: ${outputFiles.join(', ')}`)
+              logger.info(
+                `Successfully parsed output files: ${outputFiles.join(', ')}`
+              )
               resolve(outputFiles)
             })
           } else {
             logger.error(`createCharmmInpFile error with exit code: ${code}`)
-            reject(new Error(`createCharmmInpFile error with exit code: ${code}`))
+            reject(
+              new Error(`createCharmmInpFile error with exit code: ${code}`)
+            )
           }
         })
         .catch((streamError) => {
@@ -244,7 +257,9 @@ const spawnPdb2CrdCharmm = (
       charmm.on('close', (code) => {
         if (code === 0) {
           MQJob.log(`pdb2crd done with ${inputFile}`)
-          logger.info(`CHARMM execution succeeded: ${inputFile}, exit code: ${code}`)
+          logger.info(
+            `CHARMM execution succeeded: ${inputFile}, exit code: ${code}`
+          )
           resolve(charmmOutput)
         } else {
           logger.error(
@@ -318,11 +333,17 @@ const spawnAF2PAEInpFileMaker = async (
         .then(() => {
           // Only proceed once all streams are closed
           if (code === 0) {
-            logger.info(`spawnAF2PAEInpFileMaker success with exit code: ${code}`)
+            logger.info(
+              `spawnAF2PAEInpFileMaker success with exit code: ${code}`
+            )
             resolve(code.toString())
           } else {
-            logger.error(`spawnAF2PAEInpFileMaker error with exit code: ${code}`)
-            reject(new Error(`spawnAF2PAEInpFileMaker error with exit code: ${code}`))
+            logger.error(
+              `spawnAF2PAEInpFileMaker error with exit code: ${code}`
+            )
+            reject(
+              new Error(`spawnAF2PAEInpFileMaker error with exit code: ${code}`)
+            )
           }
         })
         .catch((streamError) => {

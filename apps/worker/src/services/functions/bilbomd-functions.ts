@@ -20,6 +20,9 @@ import { logger } from '../../helpers/loggers.js'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
 
+const getErrorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
+
 interface FoxsRunDir {
   dir: string
   rg: number
@@ -85,13 +88,13 @@ const extractPDBFilesFromDCD = async (
     }
     await updateStepStatus(DBjob, 'dcd2pdb', status)
     logger.info('PDB extraction completed.')
-  } catch (error) {
+  } catch (error: unknown) {
     status = {
       status: 'Error',
-      message: `Error during CHARMM Extract PDBs from DCD Trajectories: ${error.message}`
+      message: `Error during CHARMM Extract PDBs from DCD Trajectories: ${getErrorMessage(error)}`
     }
     await updateStepStatus(DBjob, 'dcd2pdb', status)
-    logger.error(`PDB extraction failed: ${error.message}`)
+    logger.error(`PDB extraction failed: ${getErrorMessage(error)}`)
   }
 }
 
@@ -195,13 +198,13 @@ const remediatePDBFiles = async (
     }
     await updateStepStatus(DBjob, 'pdb_remediate', status)
     logger.info('All PDB files have been remediated.')
-  } catch (error) {
+  } catch (error: unknown) {
     status = {
       status: 'Error',
-      message: `Error during PDB file remediation: ${error.message}`
+      message: `Error during PDB file remediation: ${getErrorMessage(error)}`
     }
     await updateStepStatus(DBjob, 'pdb_remediate', status)
-    logger.error(`PDB remediation failed: ${error.message}`)
+    logger.error(`PDB remediation failed: ${getErrorMessage(error)}`)
   }
 }
 
@@ -227,7 +230,7 @@ const writeSegidToChainid = async (inputFile: string): Promise<void> => {
     // Join the modified lines and overwrite the original file
     await fs.promises.writeFile(inputFile, modifiedLines.join('\n'), 'utf-8')
     // logger.info(`Processed PDB file saved as ${inputFile}`)
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error processing the PDB file:', error)
   }
 }
@@ -293,7 +296,7 @@ const prepareFoXSInputs = async (
           const rel = path.relative(path.dirname(dst), src)
           await fs.ensureSymlink(rel, dst)
         }
-      } catch (error) {
+      } catch (error: unknown) {
         // If symlink fails (e.g., on some filesystems), fall back to copying
         logger.error('Error creating symlink ', error)
         if (!fs.existsSync(dst)) {
@@ -357,14 +360,14 @@ const runFoXS = async (
       message: 'FoXS Calculations have completed.'
     }
     await updateStepStatus(DBjob, 'foxs', status)
-  } catch (error) {
+  } catch (error: unknown) {
     // Handle errors and update status to Error
     status = {
       status: 'Error',
-      message: `Error in FoXS Calculations: ${error.message}`
+      message: `Error in FoXS Calculations: ${getErrorMessage(error)}`
     }
     await updateStepStatus(DBjob, 'foxs', status)
-    logger.error(`FoXS calculations failed: ${error.message}`)
+    logger.error(`FoXS calculations failed: ${getErrorMessage(error)}`)
   } finally {
     if (heartbeat) clearInterval(heartbeat)
   }

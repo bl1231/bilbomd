@@ -17,6 +17,9 @@ const environment: string = process.env.NODE_ENV || 'development'
 const version: string = process.env.BILBOMD_WORKER_VERSION || '0.0.0'
 const gitHash: string = process.env.BILBOMD_WORKER_GIT_HASH || '321cba'
 
+const getErrorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
+
 if (environment === 'production') {
   logger.info('Running in production mode')
 } else {
@@ -141,7 +144,9 @@ if (config.runOnNERSC) {
     try {
       await monitorAndCleanupJobs()
     } catch (error) {
-      logger.error(`Monitoring and cleanup process failed: ${error.message}`)
+      logger.error(
+        `Monitoring and cleanup process failed: ${getErrorMessage(error)}`
+      )
     } finally {
       isMonitoring = false
     }

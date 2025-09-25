@@ -10,6 +10,9 @@ import { spawn, ChildProcess } from 'node:child_process'
 import Handlebars from 'handlebars'
 import { updateStepStatus } from './mongo-utils.js'
 
+const getErrorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
+
 const initializeJob = async (MQJob: BullMQJob, DBjob: IJob): Promise<void> => {
   try {
     // Make sure the user exists in MongoDB
@@ -79,7 +82,13 @@ const handleJobEmailNotification = async (
     await updateStepStatus(DBjob, 'email', status)
 
     try {
-      sendJobCompleteEmail(user.email, config.bilbomdUrl, DBjob.id, DBjob.title, false)
+      sendJobCompleteEmail(
+        user.email,
+        config.bilbomdUrl,
+        DBjob.id,
+        DBjob.title,
+        false
+      )
       logger.info(`Email notification sent to ${user.email}`)
       await MQjob.log(`Email notification sent to ${user.email}`)
 
@@ -89,10 +98,12 @@ const handleJobEmailNotification = async (
       }
       await updateStepStatus(DBjob, 'email', status)
     } catch (emailError) {
-      logger.error(`Failed to send email to ${user.email}: ${emailError.message}`)
+      logger.error(
+        `Failed to send email to ${user.email}: ${getErrorMessage(emailError)}`
+      )
       status = {
         status: 'Error',
-        message: `Failed to send email: ${emailError.message}`
+        message: `Failed to send email: ${getErrorMessage(emailError)}`
       }
       await updateStepStatus(DBjob, 'email', status)
     }
@@ -119,7 +130,10 @@ const generateDCD2PDBInpFile = async (
   await generateInputFile(params)
 }
 
-const writeInputFile = async (template: string, params: CharmmParams): Promise<void> => {
+const writeInputFile = async (
+  template: string,
+  params: CharmmParams
+): Promise<void> => {
   try {
     const outFile = path.join(params.out_dir, params.charmm_inp_file)
     const templ = Handlebars.compile(template)
@@ -134,7 +148,10 @@ const writeInputFile = async (template: string, params: CharmmParams): Promise<v
 }
 
 const readTemplate = async (templateName: string): Promise<string> => {
-  const templateFile = path.join(config.charmmTemplateDir, `${templateName}.handlebars`)
+  const templateFile = path.join(
+    config.charmmTemplateDir,
+    `${templateName}.handlebars`
+  )
   return fs.readFile(templateFile, 'utf8')
 }
 
@@ -144,7 +161,11 @@ const generateInputFile = async (params: CharmmParams): Promise<void> => {
 }
 
 const spawnCharmm = (params: CharmmParams, MQjob: BullMQJob): Promise<void> => {
-  const { charmm_inp_file: inputFile, charmm_out_file: outputFile, out_dir } = params
+  const {
+    charmm_inp_file: inputFile,
+    charmm_out_file: outputFile,
+    out_dir
+  } = params
   const charmmArgs = ['-o', outputFile, '-i', inputFile]
   const charmmOpts = { cwd: out_dir }
 
@@ -189,7 +210,10 @@ const spawnCharmm = (params: CharmmParams, MQjob: BullMQJob): Promise<void> => {
   })
 }
 
-const spawnFoXS = async (foxsRunDir: string, MQjob: BullMQJob): Promise<void> => {
+const spawnFoXS = async (
+  foxsRunDir: string,
+  MQjob: BullMQJob
+): Promise<void> => {
   try {
     const files = await fs.readdir(foxsRunDir)
     logger.info(`Spawn FoXS jobs: ${foxsRunDir}`)
@@ -215,7 +239,9 @@ const spawnFoXS = async (foxsRunDir: string, MQjob: BullMQJob): Promise<void> =>
             }
             resolve()
           } else {
-            reject(new Error(`FoXS process for ${file} exited with code ${code}`))
+            reject(
+              new Error(`FoXS process for ${file} exited with code ${code}`)
+            )
           }
         })
 

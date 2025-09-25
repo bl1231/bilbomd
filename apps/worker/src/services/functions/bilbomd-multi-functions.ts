@@ -15,6 +15,9 @@ import {
   concatenateAndSaveAsEnsemble
 } from './bilbomd-step-functions.js'
 
+const getErrorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
+
 const execPromise = promisify(exec)
 
 const prepareMultiMDdatFileList = async (DBJob: IMultiJob): Promise<void> => {
@@ -123,10 +126,10 @@ const runMultiFoxs = async (DBjob: IMultiJob): Promise<void> => {
   } catch (error) {
     status = {
       status: 'Error',
-      message: `Error during MultiFoXS Calculations: ${error.message}`
+      message: `Error during MultiFoXS Calculations: ${getErrorMessage(error)}`
     }
     await updateStepStatus(DBjob, 'multifoxs', status)
-    logger.error(`MultiFoXS Calculation failed: ${error.message}`)
+    logger.error(`MultiFoXS Calculation failed: ${getErrorMessage(error)}`)
   }
 }
 
@@ -149,10 +152,12 @@ const prepareMultiMDResults = async (DBjob: IMultiJob): Promise<void> => {
   } catch (error) {
     status = {
       status: 'Error',
-      message: `Error during Prepare BilboMD job results: ${error.message}`
+      message: `Error during Prepare BilboMD job results: ${getErrorMessage(error)}`
     }
     await updateStepStatus(DBjob, 'results', status)
-    logger.error(`Prepare BilboMD job results failed: ${error.message}`)
+    logger.error(
+      `Prepare BilboMD job results failed: ${getErrorMessage(error)}`
+    )
   }
 }
 
@@ -300,7 +305,7 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
     const archiveName = `results-${DBjob.uuid.split('-')[0]}.tar.gz`
     await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
   } catch (error) {
-    logger.error(`Error in prepareResults: ${error.message}`)
+    logger.error(`Error in prepareResults: ${getErrorMessage(error)}`)
     throw error
   }
 }
@@ -394,7 +399,9 @@ const writeJsonFile = async (filePath: string, data: unknown) => {
     await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
     logger.info(`JSON file written to: ${filePath}`)
   } catch (error) {
-    logger.error(`Error writing JSON file to ${filePath}: ${error.message}`)
+    logger.error(
+      `Error writing JSON file to ${filePath}: ${getErrorMessage(error)}`
+    )
     throw error
   }
 }
@@ -481,11 +488,11 @@ const handleJobEmailNotification = async (
       await updateStepStatus(DBjob, 'email', status)
     } catch (emailError) {
       logger.error(
-        `Failed to send email to ${user.email}: ${emailError.message}`
+        `Failed to send email to ${user.email}: ${getErrorMessage(emailError)}`
       )
       status = {
         status: 'Error',
-        message: `Failed to send email: ${emailError.message}`
+        message: `Failed to send email: ${getErrorMessage(emailError)}`
       }
       await updateStepStatus(DBjob, 'email', status)
     }
