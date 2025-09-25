@@ -55,7 +55,7 @@
   // Exclusions for performance
   "files.exclude": {
     "**/node_modules": true,
-    "**/dist": true,
+    "**/dist": false,
     "**/build": true,
     ".pnpm-store": true
   },
