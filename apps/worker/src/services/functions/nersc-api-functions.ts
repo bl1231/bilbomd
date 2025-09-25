@@ -66,7 +66,9 @@ const executeNerscScript = async (
 
   try {
     const response = await axios.post(url, data, { headers })
-    logger.info(`Script executed successfully: ${JSON.stringify(response.data)}`)
+    logger.info(
+      `Script executed successfully: ${JSON.stringify(response.data)}`
+    )
     return response.data.task_id
   } catch (error) {
     logger.error(`Error executing script on NERSC: ${error}`)
@@ -92,7 +94,9 @@ const submitJobToNersc = async (Job: IJob): Promise<string> => {
 
   try {
     const response = await axios.post(url, data, { headers })
-    logger.info(`Job submitted to Superfacility API: ${JSON.stringify(response.data)}`)
+    logger.info(
+      `Job submitted to Superfacility API: ${JSON.stringify(response.data)}`
+    )
     return response.data.task_id
   } catch (error) {
     logger.error(`Failed to Submit BilboMD Job to Superfacility API: ${error}`)
@@ -100,7 +104,9 @@ const submitJobToNersc = async (Job: IJob): Promise<string> => {
   }
 }
 
-const monitorTaskAtNERSC = async (taskID: string): Promise<TaskStatusResponse> => {
+const monitorTaskAtNERSC = async (
+  taskID: string
+): Promise<TaskStatusResponse> => {
   let token = await ensureValidToken()
   const url = `${config.nerscBaseAPI}/tasks/${taskID}`
   // logger.info(`monitorTaskAtNERSC url: ${url}`)
@@ -262,7 +268,10 @@ const monitorJobAtNERSC = async (
   return statusResponse
 }
 
-const getSlurmOutFile = async (UUID: string, jobID: string): Promise<string> => {
+const getSlurmOutFile = async (
+  UUID: string,
+  jobID: string
+): Promise<string> => {
   const token = await ensureValidToken()
   const path = `${config.nerscWorkDir}/${UUID}/slurm-${jobID}.out`
   const url = `${config.nerscBaseAPI}/utilities/download/perlmutter/${encodeURIComponent(
@@ -331,15 +340,19 @@ const getSlurmStatusFile = async (UUID: string): Promise<string> => {
 }
 
 const updateStatus = async (MQjob: BullMQJob, DBJob: IJob) => {
+  if (!DBJob.steps) {
+    DBJob.steps = {} as IBilboMDSteps
+  }
+  const currentSteps = DBJob.steps
   const UUID = DBJob.uuid
   const contents: string = await getSlurmStatusFile(UUID)
   const lines = contents.split('\n')
 
   lines.forEach((line) => {
     const [step, status] = line.split(':').map((part) => part.trim())
-    if (step in DBJob.steps) {
+    if (step in currentSteps) {
       const key = step as keyof IBilboMDSteps // Assert that step is a valid key of IBilboMDSteps
-      DBJob.steps[key] = {
+      currentSteps[key] = {
         status: status as StepStatusEnum,
         message: status
       }
@@ -348,7 +361,7 @@ const updateStatus = async (MQjob: BullMQJob, DBJob: IJob) => {
 
   try {
     await DBJob.save()
-    const progress = calculateProgress(DBJob.steps)
+    const progress = calculateProgress(currentSteps)
     await MQjob.updateProgress(progress)
   } catch (error) {
     logger.error(`Unable to save job status for ${DBJob._id}: ${error}`)
@@ -371,7 +384,10 @@ const calculateProgress = (steps: IBilboMDSteps): number => {
     )
   }
 
-  const totalWeight = Object.values(stepWeights).reduce((acc, weight) => acc + weight, 0)
+  const totalWeight = Object.values(stepWeights).reduce(
+    (acc, weight) => acc + weight,
+    0
+  )
   if (totalWeight === 0) {
     logger.error('Total weight is zero. Check stepWeights configuration.')
     return 20 // Minimum progress
@@ -391,7 +407,9 @@ const calculateProgress = (steps: IBilboMDSteps): number => {
     }
   }
 
-  logger.info(`Completed Weight: ${completedWeight}, Total Weight: ${totalWeight}`)
+  logger.info(
+    `Completed Weight: ${completedWeight}, Total Weight: ${totalWeight}`
+  )
 
   // Calculate progress
   const progress = (completedWeight / totalWeight) * 70 + 20 // Scale between 20% and 90%

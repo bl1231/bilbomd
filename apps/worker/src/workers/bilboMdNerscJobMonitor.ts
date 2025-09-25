@@ -56,15 +56,13 @@ const updateJobStateInMongoDB = async (
   nerscState: INerscInfo
 ): Promise<void> => {
   try {
-    await updateJobNerscState(job, nerscState) // Update state in MongoDB
-    const progress = await calculateProgress(
-      (job.toObject() as { steps?: IBilboMDSteps }).steps
-    ) // Calculate progress
+    await updateJobNerscState(job, nerscState)
+    const progress = await calculateProgress(job.steps)
     job.progress = progress
     const jobid = job.nersc?.jobid ?? 'unknown'
     const state = job.nersc?.state ?? 'unknown'
     logger.info(`Job: ${jobid} State: ${state} Progress: ${progress}%`)
-    await job.save() // Save the updated job
+    await job.save()
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     logger.error(`Error updating job ${job.nersc?.jobid} in MongoDB: ${msg}`)
@@ -404,6 +402,9 @@ const updateSingleJobStep = async (
   message: string
 ): Promise<void> => {
   try {
+    if (!DBJob.steps) {
+      DBJob.steps = {} as IBilboMDSteps
+    }
     DBJob.steps[stepName] = { status, message }
     await DBJob.save()
   } catch (error) {
@@ -420,6 +421,7 @@ const updateJobStepsFromSlurmStatusFile = async (
     if (!DBJob.steps) {
       DBJob.steps = {} as IBilboMDSteps
     }
+    const currentSteps = DBJob.steps
     const UUID = DBJob.uuid
     const contents: string = await getSlurmStatusFile(UUID)
     const lines = contents.split('\n').filter(Boolean) // Filter out empty lines
@@ -428,13 +430,13 @@ const updateJobStepsFromSlurmStatusFile = async (
     const updatedSteps = lines.reduce(
       (acc, line) => {
         const [step, status] = line.split(':').map((part) => part.trim())
-        if (step in DBJob.steps) {
+        if (step in currentSteps) {
           const key = step as keyof IBilboMDSteps
           acc[key] = { status: status as StepStatusEnum, message: status }
         }
         return acc
       },
-      { ...DBJob.steps } as IBilboMDSteps
+      { ...currentSteps } as IBilboMDSteps
     )
 
     // Apply the updated steps to the job

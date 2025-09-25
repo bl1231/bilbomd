@@ -400,6 +400,9 @@ const updateSingleJobStep = async (
   message: string
 ): Promise<void> => {
   try {
+    if (!DBJob.steps) {
+      DBJob.steps = {} as IBilboMDSteps
+    }
     DBJob.steps[stepName] = { status, message }
     await DBJob.save()
   } catch (error) {
