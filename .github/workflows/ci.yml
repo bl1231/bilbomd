@@ -146,8 +146,8 @@ jobs:
 
       - name: Prep local buildx cache (backend)
         run: |
-          sudo mkdir -p /scr/buildkit-cache/backend
-          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/backend
+          mkdir -p /scr/buildkit-cache/backend
+          chown -R "$USER":"$USER" /scr/buildkit-cache/backend
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -240,8 +240,8 @@ jobs:
 
       - name: Prep local buildx cache (ui)
         run: |
-          sudo mkdir -p /scr/buildkit-cache/ui
-          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/ui
+          mkdir -p /scr/buildkit-cache/ui
+          chown -R "$USER":"$USER" /scr/buildkit-cache/ui
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -334,8 +334,8 @@ jobs:
 
       - name: Prep local buildx cache (worker)
         run: |
-          sudo mkdir -p /scr/buildkit-cache/worker
-          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/worker
+          mkdir -p /scr/buildkit-cache/worker
+          chown -R "$USER":"$USER" /scr/buildkit-cache/worker
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -428,8 +428,8 @@ jobs:
 
       - name: Prep local buildx cache (scoper)
         run: |
-          sudo mkdir -p /scr/buildkit-cache/scoper
-          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/scoper
+          mkdir -p /scr/buildkit-cache/scoper
+          chown -R "$USER":"$USER" /scr/buildkit-cache/scoper
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -480,18 +480,21 @@ jobs:
       - name: Activate pnpm
         run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
 
-      # (Optional) Cache pnpm store (recommended)
-      - name: Get pnpm store path
-        id: pnpm_store
-        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+      - name: Prep local pnpm store (schema)
+        run: |
+          mkdir -p /scr/pnpm-store
+          chown -R "$USER":"$USER" /scr/pnpm-store
+          pnpm config set store-dir /scr/pnpm-store
 
-      - name: Cache pnpm store
-        uses: runs-on/cache@v4
+      # Only cache TS incremental build info for schema package (keep pnpm store local)
+      - name: Cache TS incremental (schema)
+        uses: actions/cache@v4
         with:
-          path: ${{ steps.pnpm_store.outputs.store_path }}
-          key: pnpm-store-${{ steps.pnpm_version.outputs.pnpm_version }}-${{ hashFiles('pnpm-lock.yaml') }}
+          path: |
+            packages/mongodb-schema/tsconfig.tsbuildinfo
+          key: schema-tsbuild-${{ runner.os }}-${{ hashFiles('packages/mongodb-schema/tsconfig.json', 'packages/mongodb-schema/src/**/*.ts') }}
           restore-keys: |
-            pnpm-store-${{ steps.pnpm_version.outputs.pnpm_version }}-
+            schema-tsbuild-${{ runner.os }}-
 
       # Debug versions
       - name: Show tool versions
