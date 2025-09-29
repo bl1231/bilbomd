@@ -144,6 +144,11 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
+      - name: Prep local buildx cache (backend)
+        run: |
+          sudo mkdir -p /scr/buildkit-cache/backend
+          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/backend
+
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -160,11 +165,9 @@ jobs:
             BACKEND_GIT_HASH=${{ github.sha }}
             BACKEND_VERSION=${{ env.VERSION }}
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-backend:buildcache
-            type=gha
+            type=local,src=/scr/buildkit-cache/backend
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-backend:buildcache,mode=max
-            type=gha,mode=max
+            type=local,dest=/scr/buildkit-cache/backend,mode=max
 
   ui:
     name: Build & Push ui
@@ -235,6 +238,11 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
+      - name: Prep local buildx cache (ui)
+        run: |
+          sudo mkdir -p /scr/buildkit-cache/ui
+          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/ui
+
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -251,11 +259,9 @@ jobs:
             UI_GIT_HASH=${{ env.SHORT_SHA }}
             UI_VERSION=${{ env.VERSION }}
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-ui:buildcache
-            type=gha
+            type=local,src=/scr/buildkit-cache/ui
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-ui:buildcache,mode=max
-            type=gha,mode=max
+            type=local,dest=/scr/buildkit-cache/ui,mode=max
 
   worker:
     name: Build & Push worker
@@ -326,6 +332,11 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
+      - name: Prep local buildx cache (worker)
+        run: |
+          sudo mkdir -p /scr/buildkit-cache/worker
+          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/worker
+
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -342,11 +353,9 @@ jobs:
             WORKER_GIT_HASH=${{ github.sha }}
             WORKER_VERSION=${{ env.VERSION }}
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-worker:buildcache
-            type=gha
+            type=local,src=/scr/buildkit-cache/worker
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-worker:buildcache,mode=max
-            type=gha,mode=max
+            type=local,dest=/scr/buildkit-cache/worker,mode=max
 
   scoper:
     name: Build & Push scoper
@@ -417,6 +426,11 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
+      - name: Prep local buildx cache (scoper)
+        run: |
+          sudo mkdir -p /scr/buildkit-cache/scoper
+          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/scoper
+
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -433,11 +447,9 @@ jobs:
             SCOPER_GIT_HASH=${{ github.sha }}
             SCOPER_VERSION=${{ env.VERSION }}
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-scoper:buildcache
-            type=gha
+            type=local,src=/scr/buildkit-cache/scoper
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-scoper:buildcache,mode=max
-            type=gha,mode=max
+            type=local,dest=/scr/buildkit-cache/scoper,mode=max
 
   schema:
     name: Build schema
