@@ -147,7 +147,7 @@ jobs:
       - name: Prep local buildx cache (backend)
         run: |
           sudo mkdir -p /scr/buildkit-cache/backend
-          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/backend
+          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/backend
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -241,7 +241,7 @@ jobs:
       - name: Prep local buildx cache (ui)
         run: |
           sudo mkdir -p /scr/buildkit-cache/ui
-          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/ui
+          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/ui
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -335,7 +335,7 @@ jobs:
       - name: Prep local buildx cache (worker)
         run: |
           sudo mkdir -p /scr/buildkit-cache/worker
-          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/worker
+          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/worker
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -429,7 +429,7 @@ jobs:
       - name: Prep local buildx cache (scoper)
         run: |
           sudo mkdir -p /scr/buildkit-cache/scoper
-          sudo chown -R "$USER":"$USER" /scr/buildkit-cache/scoper
+          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/scoper
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -483,7 +483,7 @@ jobs:
       - name: Prep local pnpm store (schema)
         run: |
           sudo mkdir -p /scr/pnpm-store
-          sudo chown -R "$USER":"$USER" /scr/pnpm-store
+          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
           pnpm config set store-dir /scr/pnpm-store
 
       # Only cache TS incremental build info for schema package (keep pnpm store local)
