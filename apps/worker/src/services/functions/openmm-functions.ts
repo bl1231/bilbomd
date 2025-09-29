@@ -1,7 +1,11 @@
 import { config } from '../../config/config.js'
 import path from 'path'
 import { Job as BullMQJob } from 'bullmq'
-import { IBilboMDPDBJob, IBilboMDAutoJob, IStepStatus } from '@bilbomd/mongodb-schema'
+import {
+  IBilboMDPDBJob,
+  IBilboMDAutoJob,
+  IStepStatus
+} from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import { updateStepStatus } from './mongo-utils.js'
 import fs from 'fs-extra'
@@ -48,7 +52,10 @@ const extractConstraintsFromConstInp = async (
     const lines = raw.split(/\r?\n/)
 
     // Collect name -> {start, stop, segid}
-    const defines = new Map<string, { start: number; stop: number; segid: string }>()
+    const defines = new Map<
+      string,
+      { start: number; stop: number; segid: string }
+    >()
 
     // Regexes (case-insensitive, tolerant of whitespace)
     const defineRe =
@@ -91,7 +98,8 @@ const extractConstraintsFromConstInp = async (
           .filter((t) => t.length > 0)
         for (const token of nameTokens) {
           // keep only tokens that correspond to defines
-          if (defines.has(token.toLowerCase())) fixedNames.push(token.toLowerCase())
+          if (defines.has(token.toLowerCase()))
+            fixedNames.push(token.toLowerCase())
         }
         i = j - 1
       }
@@ -117,7 +125,8 @@ const extractConstraintsFromConstInp = async (
           .map((t) => t.trim())
           .filter((t) => t.length > 0)
         for (const token of nameTokens) {
-          if (defines.has(token.toLowerCase())) rigidNames.push(token.toLowerCase())
+          if (defines.has(token.toLowerCase()))
+            rigidNames.push(token.toLowerCase())
         }
         i = j - 1
       }
@@ -192,9 +201,19 @@ const buildOpenMMConfigForJob = (
         timestep: 0.001
       },
       rgyr: {
-        rgs: Array.from({ length: 6 }, (_, i) =>
-          Math.round(DBjob.rg_min + (i * (DBjob.rg_max - DBjob.rg_min)) / 5)
-        ),
+        rgs: (() => {
+          if (
+            typeof DBjob.rg_min !== 'number' ||
+            typeof DBjob.rg_max !== 'number'
+          ) {
+            throw new Error('rg_min and rg_max must be defined numbers')
+          }
+          const rg_min = DBjob.rg_min
+          const rg_max = DBjob.rg_max
+          return Array.from({ length: 6 }, (_, i) =>
+            Math.round(rg_min + (i * (rg_max - rg_min)) / 5)
+          )
+        })(),
         k_rg: 10,
         report_interval: 1000,
         filename: 'rgyr.csv'
@@ -214,10 +233,12 @@ const prepareOpenMMConfigYamlForJob = async (
 ): Promise<string> => {
   const workDir = path.join(config.uploadDir, DBjob.uuid)
   const cfg = buildOpenMMConfigForJob(DBjob, workDir)
-  const constInpPath = path.join(workDir, DBjob.const_inp_file)
-  if (await fs.pathExists(constInpPath)) {
-    const constraints = await extractConstraintsFromConstInp(constInpPath)
-    if (constraints) cfg.constraints = constraints
+  if (DBjob.const_inp_file) {
+    const constInpPath = path.join(workDir, DBjob.const_inp_file)
+    if (await fs.pathExists(constInpPath)) {
+      const constraints = await extractConstraintsFromConstInp(constInpPath)
+      if (constraints) cfg.constraints = constraints
+    }
   }
   const yamlPath = await writeOpenMMConfigYaml(workDir, cfg)
   logger.info(`OpenMM config YAML written: ${yamlPath}`)
@@ -303,7 +324,13 @@ const runOmmMinimize = async (
     timeoutMs?: number
   }
 ): Promise<void> => {
-  return runOmmStep(MQjob, DBjob, 'minimize', 'scripts/openmm/minimize.py', opts)
+  return runOmmStep(
+    MQjob,
+    DBjob,
+    'minimize',
+    'scripts/openmm/minimize.py',
+    opts
+  )
 }
 
 const runOmmHeat = (
@@ -351,7 +378,9 @@ const runOmmMD = async (
 
   // Determine concurrency
   const envCUDA = process.env.CUDA_VISIBLE_DEVICES
-  const gpuCount = envCUDA ? envCUDA.split(',').filter(Boolean).length : undefined
+  const gpuCount = envCUDA
+    ? envCUDA.split(',').filter(Boolean).length
+    : undefined
   const maxParallel = opts?.concurrency ?? gpuCount ?? 1
 
   // Light-weight concurrency limiter
@@ -426,7 +455,9 @@ const runOmmMD = async (
   }
 
   if (failed > 0) {
-    throw new Error(`${stepName} completed with ${failed} failures out of ${rgs.length}`)
+    throw new Error(
+      `${stepName} completed with ${failed} failures out of ${rgs.length}`
+    )
   }
 
   await updateStepStatus(DBjob, stepKey, {

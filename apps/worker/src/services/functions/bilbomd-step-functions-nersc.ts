@@ -58,12 +58,14 @@ const updateNerscSpecificSteps = async (DBJob: IJob): Promise<void> => {
   }
 
   // Add NERSC-specific steps if they are missing
-  DBJob.steps.nersc_prepare_slurm_batch = DBJob.steps.nersc_prepare_slurm_batch || {
+  DBJob.steps.nersc_prepare_slurm_batch = DBJob.steps
+    .nersc_prepare_slurm_batch || {
     status: 'Waiting',
     message: 'Step not started'
   }
 
-  DBJob.steps.nersc_submit_slurm_batch = DBJob.steps.nersc_submit_slurm_batch || {
+  DBJob.steps.nersc_submit_slurm_batch = DBJob.steps
+    .nersc_submit_slurm_batch || {
     status: 'Waiting',
     message: 'Step not started'
   }
@@ -73,7 +75,8 @@ const updateNerscSpecificSteps = async (DBJob: IJob): Promise<void> => {
     message: 'Step not started'
   }
 
-  DBJob.steps.nersc_copy_results_to_cfs = DBJob.steps.nersc_copy_results_to_cfs || {
+  DBJob.steps.nersc_copy_results_to_cfs = DBJob.steps
+    .nersc_copy_results_to_cfs || {
     status: 'Waiting',
     message: 'Waiting until job is completed'
   }
@@ -88,7 +91,10 @@ const updateNerscSpecificSteps = async (DBJob: IJob): Promise<void> => {
   logger.info(`Updated NERSC-specific steps for job: ${DBJob.uuid}`)
 }
 
-const makeBilboMDSlurm = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
+const makeBilboMDSlurm = async (
+  MQjob: BullMQJob,
+  DBjob: IJob
+): Promise<void> => {
   const stepName = 'nersc_prepare_slurm_batch'
   try {
     await MQjob.log('start nersc prepare slurm batch')
@@ -99,13 +105,14 @@ const makeBilboMDSlurm = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> =>
       'Preparation of Slurm batch file has started.'
     )
 
-    const mdEngine = DBjob.md_engine;
-    logger.info(`MD engine: ${mdEngine}`);
-    const prepSlurmScript = mdEngine === 'OpenMM'
-      ? config.scripts.prepareOMMSlurmScript
-      : config.scripts.prepareCHARMMSlurmScript;
-    logger.info(`Using prepSlurmScript: ${prepSlurmScript}`);
-    const prepTaskID = await executeNerscScript(prepSlurmScript, DBjob.uuid);
+    const mdEngine = DBjob.md_engine
+    logger.info(`MD engine: ${mdEngine}`)
+    const prepSlurmScript =
+      mdEngine === 'OpenMM'
+        ? config.scripts.prepareOMMSlurmScript
+        : config.scripts.prepareCHARMMSlurmScript
+    logger.info(`Using prepSlurmScript: ${prepSlurmScript}`)
+    const prepTaskID = await executeNerscScript(prepSlurmScript, DBjob.uuid)
 
     const prepResult: INerscTaskResult = await monitorTaskAtNERSC(prepTaskID)
     logger.info(`prepResult: ${JSON.stringify(prepResult)}`)
@@ -161,11 +168,19 @@ const makeBilboMDSlurm = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> =>
   }
 }
 
-const submitBilboMDSlurm = async (MQjob: BullMQJob, DBjob: IJob): Promise<string> => {
+const submitBilboMDSlurm = async (
+  MQjob: BullMQJob,
+  DBjob: IJob
+): Promise<string> => {
   const stepName = 'nersc_submit_slurm_batch'
   try {
     await MQjob.log('start nersc submit slurm batch')
-    await updateJobStatus(DBjob, stepName, 'Running', 'Submitting Slurm batch file')
+    await updateJobStatus(
+      DBjob,
+      stepName,
+      'Running',
+      'Submitting Slurm batch file'
+    )
 
     const submitTaskID = await submitJobToNersc(DBjob)
     const submitResult = await monitorTaskAtNERSC(submitTaskID)
@@ -180,13 +195,18 @@ const submitBilboMDSlurm = async (MQjob: BullMQJob, DBjob: IJob): Promise<string
     DBjob.nersc = {
       jobid: nerscJobID,
       state: 'PENDING',
-      qos: undefined,
+      qos: '',
       time_submitted: new Date(),
       time_started: undefined,
       time_completed: undefined
     }
 
-    await updateJobStatus(DBjob, stepName, 'Success', `NERSC JobID ${nerscJobID}`)
+    await updateJobStatus(
+      DBjob,
+      stepName,
+      'Success',
+      `NERSC JobID ${nerscJobID}`
+    )
     await MQjob.log('end nersc submit slurm batch')
     return nerscJobID
   } catch (error) {
@@ -212,7 +232,12 @@ const monitorBilboMDJob = async (
 ): Promise<void> => {
   try {
     await MQjob.log('start nersc watch job')
-    await updateJobStatus(DBjob, 'nersc_job_status', 'Running', 'Watching BilboMD Job')
+    await updateJobStatus(
+      DBjob,
+      'nersc_job_status',
+      'Running',
+      'Watching BilboMD Job'
+    )
 
     const jobResult = await monitorJobAtNERSC(MQjob, DBjob, Pjob)
     logger.info(`jobResult: ${JSON.stringify(jobResult)}`)
@@ -243,7 +268,10 @@ const monitorBilboMDJob = async (
   }
 }
 
-const prepareBilboMDResults = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
+const prepareBilboMDResults = async (
+  MQjob: BullMQJob,
+  DBjob: IJob
+): Promise<void> => {
   try {
     await updateJobStatus(
       DBjob,
@@ -321,7 +349,10 @@ const copyBilboMDResults = async (MQjob: BullMQJob, DBjob: IJob) => {
   }
 }
 
-const sendBilboMDEmail = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
+const sendBilboMDEmail = async (
+  MQjob: BullMQJob,
+  DBjob: IJob
+): Promise<void> => {
   try {
     await updateJobStatus(
       DBjob,

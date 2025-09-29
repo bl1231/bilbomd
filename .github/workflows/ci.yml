@@ -2,15 +2,16 @@ name: BilboMD CI
 
 on:
   push:
-    branches: [main, 'feature/**', 'fix/**', 'hotfix/**', 'release/**', 'monorepo/**']
+    branches:
+      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
     paths-ignore:
-      - 'README.md'
-      - 'docs/**/*.md'
+      - "README.md"
+      - "docs/**/*.md"
   pull_request:
     branches: [main]
     paths-ignore:
-      - 'README.md'
-      - 'docs/**/*.md'
+      - "README.md"
+      - "docs/**/*.md"
   workflow_dispatch: {}
 
 permissions:
@@ -21,7 +22,7 @@ permissions:
 jobs:
   changes:
     name: Detect changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       ui: ${{ steps.filter.outputs.ui }}
@@ -75,7 +76,7 @@ jobs:
     name: Build & Push backend
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     concurrency:
       group: backend-${{ github.ref }}
       cancel-in-progress: true
@@ -143,6 +144,11 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
+      - name: Prep local buildx cache (backend)
+        run: |
+          sudo mkdir -p /scr/buildkit-cache/backend
+          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/backend
+
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -159,17 +165,15 @@ jobs:
             BACKEND_GIT_HASH=${{ github.sha }}
             BACKEND_VERSION=${{ env.VERSION }}
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-backend:buildcache
-            type=gha
+            type=local,src=/scr/buildkit-cache/backend
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-backend:buildcache,mode=max
-            type=gha,mode=max
+            type=local,dest=/scr/buildkit-cache/backend,mode=max
 
   ui:
     name: Build & Push ui
     if: needs.changes.outputs.ui == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     concurrency:
       group: ui-${{ github.ref }}
       cancel-in-progress: true
@@ -234,6 +238,11 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
+      - name: Prep local buildx cache (ui)
+        run: |
+          sudo mkdir -p /scr/buildkit-cache/ui
+          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/ui
+
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -250,17 +259,15 @@ jobs:
             UI_GIT_HASH=${{ env.SHORT_SHA }}
             UI_VERSION=${{ env.VERSION }}
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-ui:buildcache
-            type=gha
+            type=local,src=/scr/buildkit-cache/ui
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-ui:buildcache,mode=max
-            type=gha,mode=max
+            type=local,dest=/scr/buildkit-cache/ui,mode=max
 
   worker:
     name: Build & Push worker
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     concurrency:
       group: worker-${{ github.ref }}
       cancel-in-progress: true
@@ -325,6 +332,11 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
+      - name: Prep local buildx cache (worker)
+        run: |
+          sudo mkdir -p /scr/buildkit-cache/worker
+          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/worker
+
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -341,17 +353,15 @@ jobs:
             WORKER_GIT_HASH=${{ github.sha }}
             WORKER_VERSION=${{ env.VERSION }}
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-worker:buildcache
-            type=gha
+            type=local,src=/scr/buildkit-cache/worker
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-worker:buildcache,mode=max
-            type=gha,mode=max
+            type=local,dest=/scr/buildkit-cache/worker,mode=max
 
   scoper:
     name: Build & Push scoper
     if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     concurrency:
       group: scoper-${{ github.ref }}
       cancel-in-progress: true
@@ -416,6 +426,11 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
+      - name: Prep local buildx cache (scoper)
+        run: |
+          sudo mkdir -p /scr/buildkit-cache/scoper
+          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/scoper
+
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -432,17 +447,15 @@ jobs:
             SCOPER_GIT_HASH=${{ github.sha }}
             SCOPER_VERSION=${{ env.VERSION }}
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-scoper:buildcache
-            type=gha
+            type=local,src=/scr/buildkit-cache/scoper
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/bilbomd-scoper:buildcache,mode=max
-            type=gha,mode=max
+            type=local,dest=/scr/buildkit-cache/scoper,mode=max
 
   schema:
     name: Build schema
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -452,7 +465,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: ".nvmrc"
 
       # 2) Activate exact pnpm via Corepack
       - name: Enable Corepack
@@ -467,18 +480,21 @@ jobs:
       - name: Activate pnpm
         run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
 
-      # (Optional) Cache pnpm store (recommended)
-      - name: Get pnpm store path
-        id: pnpm_store
-        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+      - name: Prep local pnpm store (schema)
+        run: |
+          sudo mkdir -p /scr/pnpm-store
+          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
+          pnpm config set store-dir /scr/pnpm-store
 
-      - name: Cache pnpm store
+      # Only cache TS incremental build info for schema package (keep pnpm store local)
+      - name: Cache TS incremental (schema)
         uses: actions/cache@v4
         with:
-          path: ${{ steps.pnpm_store.outputs.store_path }}
-          key: pnpm-store-${{ steps.pnpm_version.outputs.pnpm_version }}-${{ hashFiles('pnpm-lock.yaml') }}
+          path: |
+            packages/mongodb-schema/tsconfig.tsbuildinfo
+          key: schema-tsbuild-${{ runner.os }}-${{ hashFiles('packages/mongodb-schema/tsconfig.json', 'packages/mongodb-schema/src/**/*.ts') }}
           restore-keys: |
-            pnpm-store-${{ steps.pnpm_version.outputs.pnpm_version }}-
+            schema-tsbuild-${{ runner.os }}-
 
       # Debug versions
       - name: Show tool versions
@@ -495,7 +511,7 @@ jobs:
 
   gate:
     name: Branch Protection Gate
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     needs: [backend, ui, worker, scoper, schema]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     steps:

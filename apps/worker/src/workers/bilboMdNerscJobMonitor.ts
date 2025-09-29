@@ -20,10 +20,6 @@ import {
   sendBilboMDEmail
 } from '../services/functions/job-monitor-functions.js'
 
-interface MonitoringError {
-  message: string
-}
-
 const fetchIncompleteJobs = async (): Promise<IJob[]> => {
   return DBJob.find({
     status: { $ne: JobStatus.Completed }, // Jobs with a non-Completed status
@@ -34,15 +30,22 @@ const fetchIncompleteJobs = async (): Promise<IJob[]> => {
 
 const queryNERSCForJobState = async (job: IJob): Promise<INerscInfo | null> => {
   try {
-    const nerscState = await fetchNERSCJobState(job.nersc?.jobid)
+    const jobid = job.nersc?.jobid
+    if (!jobid) {
+      logger.warn('Job has no NERSC jobid.')
+      await handleStateFetchFailure(job)
+      return null
+    }
+    const nerscState = await fetchNERSCJobState(jobid)
     if (!nerscState) {
-      logger.warn(`Failed to fetch NERSC state for job ${job.nersc?.jobid}.`)
+      logger.warn(`Failed to fetch NERSC state for job ${jobid}.`)
       await handleStateFetchFailure(job)
       return null
     }
     return nerscState
   } catch (error) {
-    logger.error(`Error querying NERSC for job ${job.nersc?.jobid}: ${error.message}`)
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.error(`Error querying NERSC for job ${job.nersc?.jobid}: ${msg}`)
     await handleMonitoringError(job, error)
     return null
   }
@@ -53,15 +56,16 @@ const updateJobStateInMongoDB = async (
   nerscState: INerscInfo
 ): Promise<void> => {
   try {
-    await updateJobNerscState(job, nerscState) // Update state in MongoDB
-    const progress = await calculateProgress(job.toObject().steps) // Calculate progress
+    await updateJobNerscState(job, nerscState)
+    const progress = await calculateProgress(job.steps)
     job.progress = progress
-    logger.info(
-      `Job: ${job.nersc.jobid} State: ${job.nersc.state} Progress: ${progress}%`
-    )
-    await job.save() // Save the updated job
+    const jobid = job.nersc?.jobid ?? 'unknown'
+    const state = job.nersc?.state ?? 'unknown'
+    logger.info(`Job: ${jobid} State: ${state} Progress: ${progress}%`)
+    await job.save()
   } catch (error) {
-    logger.error(`Error updating job ${job.nersc?.jobid} in MongoDB: ${error.message}`)
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.error(`Error updating job ${job.nersc?.jobid} in MongoDB: ${msg}`)
     await handleMonitoringError(job, error)
   }
 }
@@ -78,7 +82,8 @@ const markJobAsCompleted = async (job: IJob): Promise<void> => {
       return
     }
 
-    logger.info(`Job ${job.nersc?.jobid} is COMPLETED. Initiating cleanup.`)
+    const jobid = job.nersc?.jobid ?? 'unknown'
+    logger.info(`Job ${jobid} is COMPLETED. Initiating cleanup.`)
     job.cleanup_in_progress = true
     await job.save()
 
@@ -87,7 +92,8 @@ const markJobAsCompleted = async (job: IJob): Promise<void> => {
     job.cleanup_in_progress = false
     await job.save()
   } catch (error) {
-    logger.error(`Error during cleanup for job ${job.nersc?.jobid}: ${error.message}`)
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.error(`Error during cleanup for job ${job.nersc?.jobid}: ${msg}`)
 
     // Make sure to reset the flag so it's not stuck forever
     job.cleanup_in_progress = false
@@ -95,45 +101,51 @@ const markJobAsCompleted = async (job: IJob): Promise<void> => {
   }
 }
 
-const markJobAsFailed = async (job: IJob) => {
+const markJobAsFailed = async (job: IJob): Promise<void> => {
   try {
-    logger.info(`Marking job ${job.nersc?.jobid} as FAILED`)
+    const jobid = job.nersc?.jobid ?? 'unknown'
+    logger.info(`Marking job ${jobid} as FAILED`)
     job.status = 'Failed'
     await job.save()
   } catch (err) {
-    logger.error(`Error marking job ${job.nersc?.jobid} as FAILED: ${err.message}`)
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`Error marking job ${job.nersc?.jobid} as FAILED: ${msg}`)
   }
 }
 
-const markJobAsCancelled = async (job: IJob) => {
+const markJobAsCancelled = async (job: IJob): Promise<void> => {
   try {
-    logger.info(`Marking job ${job.nersc?.jobid} as CANCELLED`)
+    const jobid = job.nersc?.jobid ?? 'unknown'
+    logger.info(`Marking job ${jobid} as CANCELLED`)
     job.status = 'Cancelled'
     await job.save()
   } catch (err) {
-    logger.error(`Error marking job ${job.nersc?.jobid} as CANCELLED: ${err.message}`)
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`Error marking job ${job.nersc?.jobid} as CANCELLED: ${msg}`)
   }
 }
 
-const markJobAsPending = async (job: IJob) => {
+const markJobAsPending = async (job: IJob): Promise<void> => {
   try {
     job.status = 'Pending'
     await job.save()
   } catch (err) {
-    logger.error(`Error marking job ${job.nersc?.jobid} as PENDING: ${err.message}`)
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`Error marking job ${job.nersc?.jobid} as PENDING: ${msg}`)
   }
 }
 
-const markJobAsRunning = async (job: IJob) => {
+const markJobAsRunning = async (job: IJob): Promise<void> => {
   try {
     job.status = 'Running'
     await job.save()
   } catch (err) {
-    logger.error(`Error marking job ${job.nersc?.jobid} as RUNNING: ${err.message}`)
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`Error marking job ${job.nersc?.jobid} as RUNNING: ${msg}`)
   }
 }
 
-const monitorAndCleanupJobs = async () => {
+const monitorAndCleanupJobs = async (): Promise<void> => {
   try {
     logger.info('Starting job monitoring and cleanup...')
 
@@ -160,7 +172,9 @@ const monitorAndCleanupJobs = async () => {
         case 'OUT_OF_MEMORY':
         case 'NODE_FAIL':
           // Maybe resubmit job if it times out?
-          logger.warn(`Job ${job.nersc?.jobid} failed with state: ${nerscState.state}`)
+          logger.warn(
+            `Job ${job.nersc?.jobid} failed with state: ${nerscState.state}`
+          )
           await markJobAsFailed(job)
           break
 
@@ -191,20 +205,42 @@ const monitorAndCleanupJobs = async () => {
       }
     }
   } catch (error) {
-    logger.error(`Error during job monitoring: ${error.message}`)
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.error(`Error during job monitoring: ${msg}`)
   }
 }
 
 const handleMonitoringError = async (
   job: IJob,
-  error: MonitoringError
+  error: unknown
 ): Promise<void> => {
-  await updateSingleJobStep(job, 'nersc_job_status', 'Error', `Error: ${error.message}`)
+  const msg =
+    error && typeof error === 'object' && 'message' in error
+      ? (error as { message: string }).message
+      : String(error)
+  await updateSingleJobStep(job, 'nersc_job_status', 'Error', `Error: ${msg}`)
   job.status = 'Error'
   await job.save()
 }
 
-const updateJobNerscState = async (job: IJob, nerscState: INerscInfo) => {
+const createDefaultNerscInfo = (): INerscInfo => {
+  return {
+    jobid: '',
+    state: NerscStatus.UNKNOWN,
+    qos: '',
+    time_submitted: new Date(0),
+    time_started: new Date(0),
+    time_completed: new Date(0)
+  }
+}
+
+const updateJobNerscState = async (
+  job: IJob,
+  nerscState: INerscInfo
+): Promise<void> => {
+  if (!job.nersc) {
+    job.nersc = createDefaultNerscInfo()
+  }
   job.nersc.state = nerscState.state
   job.nersc.qos = nerscState.qos
   job.nersc.time_started = nerscState.time_started
@@ -234,7 +270,8 @@ const normalizeState = (state: string): NerscStatusEnum => {
   }
 
   return (
-    map[state] || (NerscStatus[state as keyof typeof NerscStatus] ?? NerscStatus.UNKNOWN)
+    map[state] ||
+    (NerscStatus[state as keyof typeof NerscStatus] ?? NerscStatus.UNKNOWN)
   )
 }
 
@@ -258,7 +295,9 @@ const cleanSlurmState = (
   }
 }
 
-const fetchNERSCJobState = async (jobID: string): Promise<INerscInfo> => {
+const fetchNERSCJobState = async (
+  jobID: string
+): Promise<INerscInfo | null> => {
   const url = `${config.nerscBaseAPI}/compute/jobs/perlmutter/${jobID}?sacct=true`
   // logger.info(`Fetching state for NERSC job: ${jobID} from URL: ${url}`)
 
@@ -276,11 +315,9 @@ const fetchNERSCJobState = async (jobID: string): Promise<INerscInfo> => {
 
       // Log the entire jobDetails object for debugging
       // logger.info(`Job Details for ${jobID}: ${JSON.stringify(jobDetails, null, 2)}`)
-      const parseDate = (dateStr: string | undefined): Date | null => {
-        const parsedDate = dateStr ? new Date(dateStr) : null
-        return parsedDate instanceof Date && !isNaN(parsedDate.getTime())
-          ? parsedDate
-          : null
+      const parseDate = (dateStr?: string): Date => {
+        const d = dateStr ? new Date(dateStr) : new Date(NaN)
+        return isNaN(d.getTime()) ? new Date(0) : d
       }
 
       return {
@@ -295,12 +332,13 @@ const fetchNERSCJobState = async (jobID: string): Promise<INerscInfo> => {
       logger.warn(`No output received for NERSC job: ${jobID}`)
       return null
     }
-  } catch (error) {
+  } catch (error: unknown) {
     if (axios.isAxiosError(error) && error.response?.status === 403) {
       logger.error(`Authorization error for job ${jobID}. Check your token.`)
       throw new Error('Authorization failed. Token might need refresh.')
     } else {
-      logger.error(`Error fetching state for NERSC job ${jobID}: ${error.message}`)
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.error(`Error fetching state for NERSC job ${jobID}: ${msg}`)
       throw error
     }
   }
@@ -317,9 +355,8 @@ const handleStateFetchFailure = async (job: IJob) => {
 
 const performJobCleanup = async (DBjob: IJob) => {
   try {
-    logger.info(
-      `Starting cleanup for job: ${DBjob.nersc.jobid}, current state: COMPLETED`
-    )
+    const jobid = DBjob.nersc?.jobid ?? 'unknown'
+    logger.info(`Starting cleanup for job: ${jobid}, current state: COMPLETED`)
 
     // Perform cleanup tasks
     await copyBilboMDResults(DBjob)
@@ -332,13 +369,14 @@ const performJobCleanup = async (DBjob: IJob) => {
     // Update job status to 'Completed'
     DBjob.status = 'Completed'
     DBjob.progress = 100
-    logger.info(`Cleanup completed successfully for job ${DBjob.nersc.jobid}`)
+    logger.info(`Cleanup completed successfully for job ${jobid}`)
 
     // Save the updated job status
     await DBjob.save()
-  } catch (error) {
-    // Handle unexpected errors during cleanup
-    logger.error(`Error during cleanup for job ${DBjob.nersc.jobid}: ${error.message}`)
+  } catch (error: unknown) {
+    const jobid = DBjob.nersc?.jobid ?? 'unknown'
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.error(`Error during cleanup for job ${jobid}: ${msg}`)
 
     // Mark job as 'Error' and save
     DBjob.status = 'Error'
@@ -346,7 +384,7 @@ const performJobCleanup = async (DBjob: IJob) => {
   }
 }
 
-const calculateProgress = async (steps: IBilboMDSteps): Promise<number> => {
+const calculateProgress = async (steps?: IBilboMDSteps): Promise<number> => {
   if (!steps) return 0
 
   // Extract all step statuses from the steps object
@@ -360,7 +398,9 @@ const calculateProgress = async (steps: IBilboMDSteps): Promise<number> => {
   if (totalSteps === 0) return 0 // Avoid division by zero
 
   // Count the steps marked as 'Success'
-  const completedSteps = validSteps.filter((step) => step?.status === 'Success').length
+  const completedSteps = validSteps.filter(
+    (step) => step?.status === 'Success'
+  ).length
 
   // Calculate the percentage of completed steps
   return Math.round((completedSteps / totalSteps) * 100)
@@ -373,6 +413,9 @@ const updateSingleJobStep = async (
   message: string
 ): Promise<void> => {
   try {
+    if (!DBJob.steps) {
+      DBJob.steps = {} as IBilboMDSteps
+    }
     DBJob.steps[stepName] = { status, message }
     await DBJob.save()
   } catch (error) {
@@ -382,8 +425,14 @@ const updateSingleJobStep = async (
   }
 }
 
-const updateJobStepsFromSlurmStatusFile = async (DBJob: IJob): Promise<void> => {
+const updateJobStepsFromSlurmStatusFile = async (
+  DBJob: IJob
+): Promise<void> => {
   try {
+    if (!DBJob.steps) {
+      DBJob.steps = {} as IBilboMDSteps
+    }
+    const currentSteps = DBJob.steps
     const UUID = DBJob.uuid
     const contents: string = await getSlurmStatusFile(UUID)
     const lines = contents.split('\n').filter(Boolean) // Filter out empty lines
@@ -392,13 +441,13 @@ const updateJobStepsFromSlurmStatusFile = async (DBJob: IJob): Promise<void> => 
     const updatedSteps = lines.reduce(
       (acc, line) => {
         const [step, status] = line.split(':').map((part) => part.trim())
-        if (step in DBJob.steps) {
+        if (step in currentSteps) {
           const key = step as keyof IBilboMDSteps
           acc[key] = { status: status as StepStatusEnum, message: status }
         }
         return acc
       },
-      { ...DBJob.steps } as IBilboMDSteps
+      { ...currentSteps } as IBilboMDSteps
     )
 
     // Apply the updated steps to the job

@@ -20,6 +20,9 @@ import { logger } from '../../helpers/loggers.js'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
 
+const getErrorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
+
 interface FoxsRunDir {
   dir: string
   rg: number
@@ -28,7 +31,11 @@ interface FoxsRunDir {
 
 const extractPDBFilesFromDCD = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
 
@@ -38,7 +45,7 @@ const extractPDBFilesFromDCD = async (
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: '',
     charmm_out_file: '',
-    in_psf_file: DBjob.psf_file,
+    in_psf_file: DBjob.psf_file ?? '',
     in_crd_file: '',
     inp_basename: '',
     in_dcd: '',
@@ -81,26 +88,42 @@ const extractPDBFilesFromDCD = async (
     }
     await updateStepStatus(DBjob, 'dcd2pdb', status)
     logger.info('PDB extraction completed.')
-  } catch (error) {
+  } catch (error: unknown) {
     status = {
       status: 'Error',
-      message: `Error during CHARMM Extract PDBs from DCD Trajectories: ${error.message}`
+      message: `Error during CHARMM Extract PDBs from DCD Trajectories: ${getErrorMessage(error)}`
     }
     await updateStepStatus(DBjob, 'dcd2pdb', status)
-    logger.error(`PDB extraction failed: ${error.message}`)
+    logger.error(`PDB extraction failed: ${getErrorMessage(error)}`)
   }
 }
 
 const generateFoxsRunDirs = (
   analysisDir: string,
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): FoxsRunDir[] => {
   const foxsRunDirs: FoxsRunDir[] = []
-  const step = Math.max(Math.round((DBjob.rg_max - DBjob.rg_min) / 5), 1)
+  if (
+    typeof DBjob.rg_min !== 'number' ||
+    typeof DBjob.rg_max !== 'number' ||
+    typeof DBjob.conformational_sampling !== 'number'
+  ) {
+    throw new Error(
+      'DBjob.rg_min, rg_max, and conformational_sampling must be defined numbers'
+    )
+  }
+  const rgMin: number = DBjob.rg_min
+  const rgMax: number = DBjob.rg_max
+  const conformationalSampling: number = DBjob.conformational_sampling
+  const step: number = Math.max(Math.round((rgMax - rgMin) / 5), 1)
 
-  for (let rg = DBjob.rg_min; rg <= DBjob.rg_max; rg += step) {
-    for (let run = 1; run <= DBjob.conformational_sampling; run++) {
-      const foxsRunDir = path.join(analysisDir, `rg${rg}_run${run}`)
+  for (let rg: number = rgMin; rg <= rgMax; rg += step) {
+    for (let run: number = 1; run <= conformationalSampling; run++) {
+      const foxsRunDir: string = path.join(analysisDir, `rg${rg}_run${run}`)
       foxsRunDirs.push({ dir: foxsRunDir, rg, run })
     }
   }
@@ -126,7 +149,11 @@ const processFoxsRunDir = async (
 }
 
 const remediatePDBFiles = async (
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
   const analysisDir = path.join(outputDir, 'foxs')
@@ -163,13 +190,13 @@ const remediatePDBFiles = async (
     }
     await updateStepStatus(DBjob, 'pdb_remediate', status)
     logger.info('All PDB files have been remediated.')
-  } catch (error) {
+  } catch (error: unknown) {
     status = {
       status: 'Error',
-      message: `Error during PDB file remediation: ${error.message}`
+      message: `Error during PDB file remediation: ${getErrorMessage(error)}`
     }
     await updateStepStatus(DBjob, 'pdb_remediate', status)
-    logger.error(`PDB remediation failed: ${error.message}`)
+    logger.error(`PDB remediation failed: ${getErrorMessage(error)}`)
   }
 }
 
@@ -195,13 +222,17 @@ const writeSegidToChainid = async (inputFile: string): Promise<void> => {
     // Join the modified lines and overwrite the original file
     await fs.promises.writeFile(inputFile, modifiedLines.join('\n'), 'utf-8')
     // logger.info(`Processed PDB file saved as ${inputFile}`)
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error processing the PDB file:', error)
   }
 }
 
 const prepareFoXSInputs = async (
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<string[]> => {
   const jobDir = path.join(config.uploadDir, DBjob.uuid)
   const foxsDir = path.join(jobDir, 'foxs')
@@ -213,7 +244,8 @@ const prepareFoXSInputs = async (
       .readdirSync(base)
       .map((name) => path.join(base, name))
       .filter(
-        (fullPath) => fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()
+        (fullPath) =>
+          fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()
       )
   }
 
@@ -256,7 +288,7 @@ const prepareFoXSInputs = async (
           const rel = path.relative(path.dirname(dst), src)
           await fs.ensureSymlink(rel, dst)
         }
-      } catch (error) {
+      } catch (error: unknown) {
         // If symlink fails (e.g., on some filesystems), fall back to copying
         logger.error('Error creating symlink ', error)
         if (!fs.existsSync(dst)) {
@@ -272,7 +304,11 @@ const prepareFoXSInputs = async (
 
 const runFoXS = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   let status: IStepStatus = {
     status: 'Running',
@@ -316,14 +352,14 @@ const runFoXS = async (
       message: 'FoXS Calculations have completed.'
     }
     await updateStepStatus(DBjob, 'foxs', status)
-  } catch (error) {
+  } catch (error: unknown) {
     // Handle errors and update status to Error
     status = {
       status: 'Error',
-      message: `Error in FoXS Calculations: ${error.message}`
+      message: `Error in FoXS Calculations: ${getErrorMessage(error)}`
     }
     await updateStepStatus(DBjob, 'foxs', status)
-    logger.error(`FoXS calculations failed: ${error.message}`)
+    logger.error(`FoXS calculations failed: ${getErrorMessage(error)}`)
   } finally {
     if (heartbeat) clearInterval(heartbeat)
   }

@@ -15,7 +15,8 @@
     "copy-assets": "copyfiles --all --up 1 --exclude \"./**/*.{ts,tsx}\" \"./src/**/*\" ./dist",
     "lint": "eslint",
     "tsc": "tsc",
-    "build": "npm-run-all clean copy-assets lint tsc",
+    "tsc:build": "tsc -p tsconfig.build.json",
+    "build": "npm-run-all clean copy-assets lint tsc:build",
     "build:ci": "npm-run-all clean copy-assets tsc",
     "dev:start": "npm-run-all build start",
     "dev": "nodemon --watch src --ext ts,ejs --exec npm run start",
@@ -50,7 +51,9 @@
     "winston-daily-rotate-file": "^5.0.0",
     "yaml": "^2.8.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/qs": "^6.14.0"
+  },
   "_moduleAliases": {
     "@services": "build/services",
     "@models": "build/models",

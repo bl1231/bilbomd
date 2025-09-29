@@ -13,6 +13,9 @@ const updateStepStatus = async (
   status: IStepStatus
 ) => {
   try {
+    if (!job.steps) {
+      job.steps = {} as IBilboMDSteps
+    }
     // Update the specific step directly on the Job document
     job.steps[stepName] = status
 
@@ -26,7 +29,11 @@ const updateStepStatus = async (
   }
 }
 
-const handleStepError = async (jobId: string, stepName: string, error: unknown) => {
+const handleStepError = async (
+  jobId: string,
+  stepName: string,
+  error: unknown
+) => {
   // Convert error to string if it's not an Error object
   const errorMessage = error instanceof Error ? error.message : String(error)
   // Update the step status to 'Error'

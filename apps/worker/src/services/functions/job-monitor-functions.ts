@@ -12,7 +12,10 @@ import {
 import { logger } from '../../helpers/loggers.js'
 import { config } from '../../config/config.js'
 import fs from 'fs-extra'
-import { executeNerscScript, monitorTaskAtNERSC } from './nersc-api-functions.js'
+import {
+  executeNerscScript,
+  monitorTaskAtNERSC
+} from './nersc-api-functions.js'
 import {
   isBilboMDPDBJob,
   isBilboMDCRDJob,
@@ -138,7 +141,10 @@ const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
   }
 }
 
-const sendBilboMDEmail = async (DBjob: IJob, message: EmailMessage): Promise<void> => {
+const sendBilboMDEmail = async (
+  DBjob: IJob,
+  message: EmailMessage
+): Promise<void> => {
   try {
     // Log the beginning of the process
     await updateSingleJobStep(
@@ -160,7 +166,7 @@ const sendBilboMDEmail = async (DBjob: IJob, message: EmailMessage): Promise<voi
     )
 
     logger.info(
-      `Email sent for job ${DBjob.nersc.jobid} with message: ${message.message}`
+      `Email sent for job ${DBjob.nersc?.jobid ?? 'unknown'} with message: ${message.message}`
     )
   } catch (error) {
     let errorMessage = 'Unknown error'
@@ -178,7 +184,11 @@ const sendBilboMDEmail = async (DBjob: IJob, message: EmailMessage): Promise<voi
 }
 
 const prepareResults = async (
-  DBjob: IBilboMDCRDJob | IBilboMDPDBJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob:
+    | IBilboMDCRDJob
+    | IBilboMDPDBJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   try {
     const outputDir = path.join(config.uploadDir, DBjob.uuid)
@@ -302,7 +312,11 @@ const prepareResults = async (
         const numToCopy = Math.min(pdbFilesFullPath.length, i)
         const ensembleModelFiles = pdbFilesFullPath.slice(0, numToCopy)
         const ensembleSize = ensembleModelFiles.length
-        await concatenateAndSaveAsEnsemble(ensembleModelFiles, ensembleSize, resultsDir)
+        await concatenateAndSaveAsEnsemble(
+          ensembleModelFiles,
+          ensembleSize,
+          resultsDir
+        )
       }
     }
 
@@ -345,7 +359,10 @@ const prepareResults = async (
   }
 }
 
-const cleanupJob = async (DBjob: IJob, message: EmailMessage): Promise<void> => {
+const cleanupJob = async (
+  DBjob: IJob,
+  message: EmailMessage
+): Promise<void> => {
   try {
     // Update MongoDB job status and completion time
     DBjob.status = 'Completed'
@@ -366,7 +383,7 @@ const cleanupJob = async (DBjob: IJob, message: EmailMessage): Promise<void> => 
         config.bilbomdUrl,
         DBjob.id,
         DBjob.title,
-        message.error
+        message.error ?? false
       )
       logger.info(`email notification sent to ${user.email}`)
     }
@@ -383,6 +400,9 @@ const updateSingleJobStep = async (
   message: string
 ): Promise<void> => {
   try {
+    if (!DBJob.steps) {
+      DBJob.steps = {} as IBilboMDSteps
+    }
     DBJob.steps[stepName] = { status, message }
     await DBJob.save()
   } catch (error) {
@@ -418,7 +438,8 @@ const handleError = async (
   DBJob: IJob,
   step?: keyof IBilboMDSteps
 ) => {
-  const errorMsg = step || (error instanceof Error ? error.message : String(error))
+  const errorMsg =
+    step || (error instanceof Error ? error.message : String(error))
 
   // Updates top level job status in MongoDB
   DBJob.status = 'Error'
@@ -430,7 +451,9 @@ const handleError = async (
     }
     await updateStepStatus(DBJob, step, status)
   } else {
-    logger.error(`Step not provided or invalid when handling error: ${errorMsg}`)
+    logger.error(
+      `Step not provided or invalid when handling error: ${errorMsg}`
+    )
   }
 
   logger.error(`handleError errorMsg: ${errorMsg}`)
