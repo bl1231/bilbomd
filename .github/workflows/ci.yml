@@ -2,15 +2,16 @@ name: BilboMD CI
 
 on:
   push:
-    branches: [main, 'feature/**', 'fix/**', 'hotfix/**', 'release/**', 'monorepo/**']
+    branches:
+      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
     paths-ignore:
-      - 'README.md'
-      - 'docs/**/*.md'
+      - "README.md"
+      - "docs/**/*.md"
   pull_request:
     branches: [main]
     paths-ignore:
-      - 'README.md'
-      - 'docs/**/*.md'
+      - "README.md"
+      - "docs/**/*.md"
   workflow_dispatch: {}
 
 permissions:
@@ -21,7 +22,7 @@ permissions:
 jobs:
   changes:
     name: Detect changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       ui: ${{ steps.filter.outputs.ui }}
@@ -75,7 +76,7 @@ jobs:
     name: Build & Push backend
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     concurrency:
       group: backend-${{ github.ref }}
       cancel-in-progress: true
@@ -169,7 +170,7 @@ jobs:
     name: Build & Push ui
     if: needs.changes.outputs.ui == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     concurrency:
       group: ui-${{ github.ref }}
       cancel-in-progress: true
@@ -260,7 +261,7 @@ jobs:
     name: Build & Push worker
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     concurrency:
       group: worker-${{ github.ref }}
       cancel-in-progress: true
@@ -351,7 +352,7 @@ jobs:
     name: Build & Push scoper
     if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     concurrency:
       group: scoper-${{ github.ref }}
       cancel-in-progress: true
@@ -442,7 +443,7 @@ jobs:
     name: Build schema
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -452,7 +453,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: ".nvmrc"
 
       # 2) Activate exact pnpm via Corepack
       - name: Enable Corepack
@@ -495,7 +496,7 @@ jobs:
 
   gate:
     name: Branch Protection Gate
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     needs: [backend, ui, worker, scoper, schema]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     steps:
