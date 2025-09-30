@@ -5,8 +5,21 @@ type Params = {
 }
 
 type PaeParams = Params & {
-  in_crd: string
+  out_dir: string
   in_pae: string
+  /** Provide exactly one of these two: */
+  in_crd?: string
+  in_pdb?: string
+
+  /** Optional knobs supported by pae_ratios.py */
+  pae_power?: number
+  plddt_cutoff?: number
+  emit_constraints?: EmitConstraintsMode
+  no_const?: boolean
+
+  /** Optional overrides (sensible defaults provided) */
+  python_bin?: string // default: '/opt/envs/base/bin/python'
+  script_path?: string // default: '/app/scripts/pae_ratios.py'
 }
 
 type CharmmParams = Params & {
