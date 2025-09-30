@@ -345,7 +345,7 @@ def write_pdb_2_crd_inp_files(chains, output_dir, pdb_file_path):
             last_type = molinfo.get("last_residue_type", "UNKNOWN")
 
             if types_present == {"PRO"} and last_type == "PRO":
-                gen_opts = "setup warn first NTER last CTER"
+                gen_opts = "setup warn first none last CTER"
             else:
                 gen_opts = charmm_gen_options.get(
                     molecule_type, "setup warn first none last none"
