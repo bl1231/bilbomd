@@ -1,5 +1,13 @@
 # @bilbomd/worker
 
+## 1.18.4
+
+### Patch Changes
+
+- a37ac24: Cleanup some of the Typescript errors encountered when turning on 'strict' is true.
+- db8ebb2: Refactor `spawnPaeToConst` to handle new `pae_ratios.py` command line args/
+  Adjust `apps/worker/scripts/nersc/gen-bilbomd-slurm-file.sh` to handle new `pa_ratios.py` command line args.
+
 ## 1.18.3
 
 ### Patch Changes

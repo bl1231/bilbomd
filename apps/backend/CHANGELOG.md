@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 1.24.0
+
+### Minor Changes
+
+- c787560: Refactor the af2pae route and controller to use `pae_ratios.py` directly instead of queing to run the pdb2crd code in worker.
+
 ## 1.23.6
 
 ### Patch Changes
