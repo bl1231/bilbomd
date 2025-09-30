@@ -26,8 +26,8 @@ const spawnPaeToConstDirect = async (params: {
   const logStream = fs.createWriteStream(logFile, { flags: 'a' })
   const errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
 
-  const pythonBin = '/opt/envs/base/bin/python' // Adjust if needed
-  const af2paeScript = '/app/scripts/pae_ratios.py' // Path to your updated script
+  const pythonBin = '/miniforge3/bin/python'
+  const af2paeScript = '/app/scripts/pae_ratios.py'
 
   // Build args: pae_file is positional, then --pdb_file
   const args = [af2paeScript, params.in_pae, '--pdb_file', params.in_pdb]

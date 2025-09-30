@@ -14,7 +14,7 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
     rm Miniforge3-$(uname)-$(uname -m).sh
 
 # Add Conda to PATH
-ENV PATH="/miniforge3/bin/:${PATH}"
+ENV PATH="/miniforge3/bin:${PATH}"
 
 # Copy in the environment.yml file
 COPY apps/backend/environment.yml /tmp/environment.yml
