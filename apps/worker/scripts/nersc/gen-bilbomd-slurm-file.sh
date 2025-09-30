@@ -597,7 +597,7 @@ generate_pae2const_commands() {
 # Create const.inp from Alphafold PAE Matrix
 update_status pae Running
 echo "Calculate const.inp from PAE matrix..."
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name pae2const podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pae_ratios.py ${pae_file} ${in_crd_file} > pae_ratios.log 2>&1"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name pae2const podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pae_ratios.py --crd_file ${in_crd_file} ${pae_file} > pae_ratios.log 2>&1"
 PAE_EXIT=\$?
 check_exit_code \$PAE_EXIT pae
 

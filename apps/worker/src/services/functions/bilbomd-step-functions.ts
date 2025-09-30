@@ -252,44 +252,86 @@ const spawnMultiFoxs = (params: MultiFoxsParams): Promise<void> => {
 }
 
 const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
+  // Basic validation of mutually exclusive inputs
+  const hasCRD = Boolean(params.in_crd)
+  const hasPDB = Boolean(params.in_pdb)
+  if ((hasCRD && hasPDB) || (!hasCRD && !hasPDB)) {
+    throw new Error('Exactly one of in_crd or in_pdb must be provided')
+  }
+
+  // Ensure output dir exists (no-op if it already does)
+  fs.mkdirSync(params.out_dir, { recursive: true })
+
   const logFile = path.join(params.out_dir, 'af2pae.log')
   const errorFile = path.join(params.out_dir, 'af2pae_error.log')
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
-  const paeFile = params.in_pae
-  const crdFile = params.in_crd
-  const af2pae_script = '/app/scripts/pae_ratios.py'
-  const args = [af2pae_script, paeFile, crdFile]
+  const logStream = fs.createWriteStream(logFile, { flags: 'a' })
+  const errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
+
+  const pythonBin = params.python_bin ?? '/opt/envs/base/bin/python'
+  const af2paeScript = params.script_path ?? '/app/scripts/pae_ratios.py'
+
+  // Build CLI args per new usage:
+  // usage: pae_ratios.py [-h] (--crd_file CRD_FILE | --pdb_file PDB_FILE)
+  //                      [--pae_power PAE_POWER] [--plddt_cutoff PLDDT_CUTOFF]
+  //                      [--emit-constraints EMIT_CONSTRAINTS] [--no-const]
+  //                      pae_file
+  const fileFlag = hasCRD
+    ? ['--crd_file', params.in_crd as string]
+    : ['--pdb_file', params.in_pdb as string]
+
+  const optionalFlags: string[] = []
+  if (params.pae_power !== undefined) {
+    optionalFlags.push('--pae_power', String(params.pae_power))
+  }
+  if (params.plddt_cutoff !== undefined) {
+    optionalFlags.push('--plddt_cutoff', String(params.plddt_cutoff))
+  }
+  if (params.emit_constraints) {
+    optionalFlags.push('--emit-constraints', params.emit_constraints)
+  }
+  if (params.no_const) {
+    optionalFlags.push('--no-const')
+  }
+
+  const args = [af2paeScript, ...fileFlag, ...optionalFlags, params.in_pae]
+
   const opts = { cwd: params.out_dir }
 
   return new Promise((resolve, reject) => {
-    const runPaeToConst: ChildProcess = spawn(
-      '/opt/envs/base/bin/python',
-      args,
-      opts
-    )
+    const runPaeToConst: ChildProcess = spawn(pythonBin, args, opts)
+
     runPaeToConst.stdout?.on('data', (data) => {
-      logger.info(`runPaeToConst stdout:  ${data.toString()}`)
-      logStream.write(data.toString())
+      const s = data.toString()
+      logger.info(`runPaeToConst stdout: ${s}`)
+      logStream.write(s)
     })
+
     runPaeToConst.stderr?.on('data', (data) => {
-      logger.error(`runPaeToConst stderr:  ${data.toString()}`)
-      errorStream.write(data.toString())
+      const s = data.toString()
+      logger.error(`runPaeToConst stderr: ${s}`)
+      errorStream.write(s)
     })
+
     runPaeToConst.on('error', (error) => {
       logger.error(`runPaeToConst error: ${error}`)
-      reject(error)
+      // ensure streams are closed before rejecting
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).finally(() => reject(error))
     })
-    runPaeToConst.on('exit', (code: number) => {
-      const closeStreamsPromises = [
-        new Promise((resolveStream) => logStream.end(resolveStream)),
-        new Promise((resolveStream) => errorStream.end(resolveStream))
-      ]
-      Promise.all(closeStreamsPromises)
+
+    runPaeToConst.on('exit', (code: number | null) => {
+      const closeStreams = Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ])
+
+      closeStreams
         .then(() => {
           if (code === 0) {
             logger.info(`runPaeToConst close success exit code: ${code}`)
-            resolve(code.toString())
+            resolve(String(code))
           } else {
             logger.error(`runPaeToConst close error exit code: ${code}`)
             reject(
