@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 1.18.5
+
+### Patch Changes
+
+- 5e867df: remove CHARMM NTER patch
+
 ## 1.18.4
 
 ### Patch Changes
