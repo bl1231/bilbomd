@@ -10,15 +10,9 @@ import igraph
 import numpy as np
 import yaml
 
-# This is defining the pLDDT threshold for determing flex/rigid
-# which Alphafold2 writes to the B-factor column
-# B_THRESHOLD = 50.00
-# PAE_POWER = 2.0
 
 MIN_CLUSTER_LENGTH = 5
 CONST_FILE_PATH = "const.inp"
-CLUSTER_FILE = "clusters.csv"
-TEMP_FILE_JSON = "temp.json"
 
 # --- PDB mode flag and caches ---
 USE_PDB = False
@@ -596,16 +590,144 @@ def write_constraints_yaml(rigid_body_list: list, output_path: str):
         yaml.safe_dump(data, fh, sort_keys=False)
 
 
-def write_const_file(rigid_body_list: list, output_file):
+def classify_residue(residue):
     """
-    Write const.inp file
+    Classify a residue name into molecule type.
     """
+    protein_residues = set(
+        [
+            "ALA",
+            "CYS",
+            "ASP",
+            "GLU",
+            "PHE",
+            "GLY",
+            "HIS",
+            "ILE",
+            "LYS",
+            "LEU",
+            "MET",
+            "ASN",
+            "PRO",
+            "GLN",
+            "ARG",
+            "SER",
+            "THR",
+            "VAL",
+            "TRP",
+            "TYR",
+            "SEP",
+            "TPO",
+            "PTR",
+        ]
+    )
+    dna_residues = set(["DA", "DC", "DG", "DT", "DI", "ADE", "CYT", "GUA", "THY"])
+    rna_residues = set(["A", "C", "G", "U", "I"])
+    carbohydrate_residues = set(
+        [
+            "AFL",
+            "ALL",
+            "BMA",
+            "BGC",
+            "BOG",
+            "FCA",
+            "FCB",
+            "FMF",
+            "FUC",
+            "FUL",
+            "G4S",
+            "GAL",
+            "GLA",
+            "GLB",
+            "GLC",
+            "GLS",
+            "GSA",
+            "LAK",
+            "LAT",
+            "MAF",
+            "MAL",
+            "NAG",
+            "NAN",
+            "NGA",
+            "SIA",
+            "SLB",
+        ]
+    )
+
+    if residue in protein_residues:
+        return "PRO"
+    elif residue in dna_residues:
+        return "DNA"
+    elif residue in rna_residues:
+        return "RNA"
+    elif residue in carbohydrate_residues:
+        return "CAR"
+    else:
+        return "UNKNOWN"
+
+
+def determine_molecule_type_details(lines):
+    """
+    Returns a dictionary with molecule type info for the chain.
+    """
+    types_present = set()
+    residue_types = []
+
+    for line in lines:
+        if line.startswith(("ATOM", "HETATM")):
+            residue = line[17:20].strip()
+            mol_type = classify_residue(residue)
+            types_present.add(mol_type)
+            residue_types.append(mol_type)
+
+    return {
+        "types_present": types_present,
+        "first_residue_type": residue_types[0] if residue_types else "UNKNOWN",
+        "last_residue_type": residue_types[-1] if residue_types else "UNKNOWN",
+    }
+
+
+def get_segid_renaming_map(pdb_file: str) -> dict:
+    """
+    Build a mapping from original chain ID (segid) to renamed segid as per pdb2crd.py logic.
+    """
+    chains = {}
+    with open(pdb_file, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith(("ATOM", "HETATM")):
+                chain_id = line[21].strip() or " "
+                if chain_id not in chains:
+                    chains[chain_id] = []
+                chains[chain_id].append(line)
+
+    renaming = {}
+    for chain_id, lines in chains.items():
+        molinfo = determine_molecule_type_details(lines)
+        types_present = molinfo.get("types_present", set())
+        mol_type = (
+            "PRO" if types_present == {"PRO"} else next(iter(types_present), "UNKNOWN")
+        )
+        renaming[chain_id] = f"{mol_type}{chain_id}"
+
+    return renaming
+
+
+def write_const_file(rigid_body_list: list, output_file, input_file: str = None):
+    """
+    Write const.inp file for CHARMM molecular dynamics jobs.
+
+    Since PDB files are converted to CRD/PSF via pdb2crd.py, which renames chain segids
+    (e.g., Protein chain A -> PROA, DNA chain Y -> DNAY), we apply the same renaming
+    logic here to ensure segids in const.inp match those in the CRD/PSF files.
+    """
+    renaming = {}
+    if input_file and input_file.endswith(".pdb"):
+        renaming = get_segid_renaming_map(input_file)
+
     dock_count = 0
     rigid_body_count = 0
-    # print(f"rigid body list: {rigid_body_list}")
     with open(file=output_file, mode="w", encoding="utf8") as const_file:
         for rigid_body in rigid_body_list:
-            # print(f"rigid_body: {rigid_body}")
             rigid_body_count += 1
             p = 0
             n = 0
@@ -613,11 +735,13 @@ def write_const_file(rigid_body_list: list, output_file):
                 start_residue = rigid_domain[0]
                 end_residue = rigid_domain[1]
                 segment = rigid_domain[2]
+                # Apply renaming if available
+                renamed_segment = renaming.get(segment, segment)
                 if rigid_body_count == 1:
                     p += 1
                     const_file.write(
                         f"define fixed{p} sele ( resid {start_residue}:{end_residue}"
-                        f" .and. segid {segment} ) end\n"
+                        f" .and. segid {renamed_segment} ) end\n"
                     )
                     if p == len(rigid_body):
                         const_file.write("cons fix sele ")
@@ -629,7 +753,7 @@ def write_const_file(rigid_body_list: list, output_file):
                     n += 1
                     const_file.write(
                         f"define rigid{n} sele ( resid {start_residue}:{end_residue}"
-                        f" .and. segid {segment} ) end\n"
+                        f" .and. segid {renamed_segment} ) end\n"
                     )
                     if n == len(rigid_body):
                         dock_count += 1
@@ -720,7 +844,7 @@ if __name__ == "__main__":
     if args.emit_constraints:
         write_constraints_yaml(rigid_bodies_from_pae, args.emit_constraints)
     if not args.no_const:
-        write_const_file(rigid_bodies_from_pae, CONST_FILE_PATH)
+        write_const_file(rigid_bodies_from_pae, CONST_FILE_PATH, input_struct)
     else:
         print("Skipping const.inp as requested (--no-const)")
     print("------------- done -------------")
