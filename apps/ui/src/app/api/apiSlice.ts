@@ -73,7 +73,8 @@ export const apiSlice = createApi({
     'FoxsAnalysis',
     'Stats',
     'Token',
-    'AdminQueue'
+    'AdminQueue',
+    'Af2PaeViz'
   ],
   endpoints: () => ({})
 })
