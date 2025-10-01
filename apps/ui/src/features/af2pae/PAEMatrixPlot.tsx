@@ -12,6 +12,43 @@ type VizJSON = {
   downsample?: number
   clusters: VizCluster[]
   mask?: { plddt_cutoff?: number; low_confidence_residues?: number[] }
+  chains?: { id: string; start: number; end: number }[]
+}
+// Draw dashed lines for chain boundaries
+function drawChainBoundaryLines(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  viz: VizJSON,
+  matrixSize: number[][]
+) {
+  if (!viz.chains || viz.chains.length < 2) return
+  const L = viz.length
+  // infer downsample if not provided by comparing matrix size (rows) vs length
+  const s = viz.downsample ?? Math.max(1, Math.round(L / matrixSize.length))
+  ctx.save()
+  ctx.lineWidth = 1
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)'
+  ctx.setLineDash([4, 3])
+  for (let i = 0; i < viz.chains.length - 1; ++i) {
+    const chain = viz.chains[i]
+    // Draw boundary after chain.end (inclusive), so boundary is after this residue
+    const boundaryIdx = chain.end
+    // The pixel position is after residue boundaryIdx
+    const x = residueToPx(boundaryIdx + 1, L, canvas.width, s)
+    const y = residueToPx(boundaryIdx + 1, L, canvas.height, s)
+    // Horizontal line
+    ctx.beginPath()
+    ctx.moveTo(0, y)
+    ctx.lineTo(canvas.width, y)
+    ctx.stroke()
+    // Vertical line
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, canvas.height)
+    ctx.stroke()
+  }
+  ctx.setLineDash([])
+  ctx.restore()
 }
 
 type PAEMatrixPlotProps = {
@@ -119,35 +156,37 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
         ) {
           continue
         }
-        const box = c.bbox ?? computeBBoxFromRanges(c.ranges)
-        const [iMin, jMin, iMax, jMax] = box
+        // Draw one rectangle per individual range on the diagonal
+        for (const [a, b] of c.ranges) {
+          // Diagonal box for this range: [a,a,b,b]
+          const x = residueToPx(a, L, canvas.width, s)
+          const y = residueToPx(a, L, canvas.height, s)
+          const x2 = residueToPx(b + 1, L, canvas.width, s)
+          const y2 = residueToPx(b + 1, L, canvas.height, s)
+          const w = x2 - x
+          const h = y2 - y
 
-        // convert to pixel rect (inclusive indices → cover full cells)
-        const x = residueToPx(jMin, L, canvas.width, s)
-        const y = residueToPx(iMin, L, canvas.height, s)
-        const x2 = residueToPx(jMax + 1, L, canvas.width, s)
-        const y2 = residueToPx(iMax + 1, L, canvas.height, s)
-        const w = x2 - x
-        const h = y2 - y
+          ctx.save()
+          ctx.globalAlpha = 0.15
+          ctx.fillStyle =
+            c.type === 'rigid' ? 'rgba(255,0,0,1)' : 'rgba(30,144,255,1)'
+          ctx.fillRect(x, y, w, h)
+          ctx.restore()
 
-        ctx.save()
-        // fill tint
-        ctx.globalAlpha = 0.15
-        ctx.fillStyle =
-          c.type === 'rigid' ? 'rgba(255,0,0,1)' : 'rgba(30,144,255,1)'
-        ctx.fillRect(x, y, w, h)
-        ctx.restore()
-
-        // outline
-        ctx.lineWidth = 3
-        ctx.strokeStyle = '#000'
-        ctx.strokeRect(
-          Math.floor(x) + 0.5,
-          Math.floor(y) + 0.5,
-          Math.ceil(w) - 1,
-          Math.ceil(h) - 1
-        )
+          ctx.lineWidth = 2
+          ctx.strokeStyle = '#000'
+          ctx.strokeRect(
+            Math.floor(x) + 0.5,
+            Math.floor(y) + 0.5,
+            Math.ceil(w) - 1,
+            Math.ceil(h) - 1
+          )
+        }
       }
+    }
+    // Draw chain boundary lines on top of overlays
+    if (viz) {
+      drawChainBoundaryLines(ctx, canvas, viz, matrix)
     }
   }, [matrix, nRows, nCols, viz, showRigid, showFixed])
 

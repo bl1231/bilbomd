@@ -790,6 +790,77 @@ if __name__ == "__main__":
         ctype = "fixed" if i == 0 else "rigid"
         clusters.append(Cluster(cid=i, ctype=ctype, ranges=ranges))
 
+    # --- Compute chains spans (1-based inclusive) for viz.json
+    chains = []
+    if USE_PDB:
+        # Walk the flattened residue index built earlier
+        if not PDB_INDEX_TO_RES:
+            _prepare_pdb_mappings(args.pdb_file)
+        N = len(PDB_INDEX_TO_RES)
+        if N > 0:
+            cur_id = PDB_INDEX_TO_RES[0][0] or " "
+            start = 1
+            for i in range(2, N + 1):  # 1..N (1-based)
+                prev_id = PDB_INDEX_TO_RES[i - 2][0] or " "
+                curr_id = PDB_INDEX_TO_RES[i - 1][0] or " "
+                if curr_id != prev_id:
+                    chains.append(
+                        {"id": prev_id, "start": int(start), "end": int(i - 1)}
+                    )
+                    start = i
+            # close last span
+            chains.append(
+                {
+                    "id": PDB_INDEX_TO_RES[-1][0] or " ",
+                    "start": int(start),
+                    "end": int(N),
+                }
+            )
+    else:
+        # CRD mode: scan segid per residue, compress to spans; map to global 1-based indices
+        # (global index = resnum - first_residue + 1)
+        mapping = []  # list of (resnum:int, segid:str)
+        with open(file=args.crd_file, mode="r", encoding="utf8") as infile:
+            start_processing = False
+            for line in infile:
+                if not start_processing:
+                    if line.strip().endswith("EXT"):
+                        start_processing = True
+                    continue
+                words = line.split()
+                if len(words) >= 8:
+                    try:
+                        resnum = int(words[1])
+                        segid = str(words[7])
+                        mapping.append((resnum, segid))
+                    except Exception:
+                        continue
+        mapping.sort(key=lambda t: t[0])
+        if mapping:
+            cur_seg = mapping[0][1]
+            seg_start_resnum = mapping[0][0]
+            prev_resnum = mapping[0][0]
+            for resnum, segid in mapping[1:]:
+                if segid != cur_seg:
+                    chains.append(
+                        {
+                            "id": cur_seg,
+                            "start": int(seg_start_resnum - first_residue + 1),
+                            "end": int(prev_resnum - first_residue + 1),
+                        }
+                    )
+                    cur_seg = segid
+                    seg_start_resnum = resnum
+                prev_resnum = resnum
+            # close last span
+            chains.append(
+                {
+                    "id": cur_seg,
+                    "start": int(seg_start_resnum - first_residue + 1),
+                    "end": int(prev_resnum - first_residue + 1),
+                }
+            )
+
     # 5) Write artifacts
     save_pae_bin("pae.bin", pae_ds)
     save_pae_png("pae.png", pae_ds)
@@ -801,6 +872,7 @@ if __name__ == "__main__":
         plddt_cutoff=args.plddt_cutoff,
         low_conf=None,
         downsample=(s if s > 1 else None),
+        chains=chains,
     )
     # --- Visualization artifacts end
 

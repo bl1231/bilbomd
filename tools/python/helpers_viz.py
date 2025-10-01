@@ -37,6 +37,7 @@ def write_viz_json(
     plddt_cutoff: int | None = None,
     low_conf: List[int] | None = None,
     downsample: int | None = None,
+    chains: List[Dict[str, Any]] | None = None,
 ) -> None:
     payload: Dict[str, Any] = {
         "length": length,
@@ -50,13 +51,18 @@ def write_viz_json(
             for c in clusters
         ],
     }
+
     if plddt_cutoff is not None or low_conf:
         payload["mask"] = {
             "plddt_cutoff": plddt_cutoff,
             "low_confidence_residues": low_conf or [],
         }
+
     if downsample and downsample > 1:
         payload["downsample"] = downsample
+
+    if chains:
+        payload["chains"] = chains
 
     with open(out_path, "w") as f:
         json.dump(payload, f, separators=(",", ":"), ensure_ascii=False)
