@@ -8,12 +8,15 @@ import {
   TableBody,
   TableCell,
   TableContainer,
-  TableRow
+  TableRow,
+  FormGroup,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material'
 import CircularProgress from '@mui/material/CircularProgress'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field, FormikHelpers } from 'formik'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { af2paeJiffySchema } from 'schemas/Alphafold2PAEValidationSchema'
 import FileSelect from 'features/jobs/FileSelect'
 import { Debug } from 'components/Debug'
@@ -25,12 +28,18 @@ import {
   useGetAf2PaeStatusQuery,
   useGetAf2PaeConstFileQuery
 } from 'slices/jobsApiSlice'
+import {
+  useGetVizJsonQuery,
+  useGetPaeBinQuery,
+  useGetVizPngQuery
+} from 'slices/alphafoldPaeVizSlice'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
 import PAESlider from './PAESlider'
 import PlddtSlider from './PlddtSlider'
 import PAEJiffyInstructions from './PAEJiffyInstructions'
 import ConstInpFile from './ConstInpFile'
+import PAEMatrixPlot from './PAEMatrixPlot'
 
 interface FileWithDeets extends File {
   name: string
@@ -57,6 +66,8 @@ const Alphafold2PAEJiffy = () => {
   const [shapeCount, setShapeCount] = useState(0)
   const [jobStartTime, setJobStartTime] = useState<number | null>(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
+  const [showRigid, setShowRigid] = useState(true)
+  const [showFixed, setShowFixed] = useState(true)
 
   const { data: statusData, isError: statusIsError } = useGetAf2PaeStatusQuery(
     uuid,
@@ -153,6 +164,52 @@ const Alphafold2PAEJiffy = () => {
     skip: skipQuery
   })
 
+  // --- PAE viz helpers start
+  function reshapeFloat32(
+    buf: ArrayBuffer,
+    length: number,
+    downsample = 1
+  ): number[][] {
+    const Lds = Math.floor(length / (downsample || 1))
+    const floats = new Float32Array(buf)
+    // guard: infer size if metadata mismatches
+    const N =
+      floats.length === Lds * Lds ? Lds : Math.floor(Math.sqrt(floats.length))
+    const out: number[][] = Array.from({ length: N }, () => Array(N).fill(0))
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        out[i][j] = floats[i * N + j]
+      }
+    }
+    return out
+  }
+  // --- PAE viz helpers end
+
+  // --- PAE viz artifact hooks
+  const { data: viz, isSuccess: vizOk } = useGetVizJsonQuery(uuid, {
+    skip: skipQuery
+  })
+  const { data: paeBuf, isSuccess: binOk } = useGetPaeBinQuery(uuid, {
+    skip: skipQuery
+  })
+  const { data: vizPng, isSuccess: vizPngOk } = useGetVizPngQuery(uuid, {
+    skip: skipQuery
+  })
+
+  const matrix = useMemo(() => {
+    if (!vizOk || !binOk || !viz || !paeBuf) return null
+    try {
+      return reshapeFloat32(
+        paeBuf as ArrayBuffer,
+        viz.length,
+        viz.downsample ?? 1
+      )
+    } catch (e) {
+      console.error('Failed to parse pae.bin', e)
+      return null
+    }
+  }, [vizOk, binOk, viz, paeBuf])
+
   useEffect(() => {
     if (constInpData) {
       const shapeCount = (constInpData.match(/shape/g) || []).length
@@ -162,7 +219,10 @@ const Alphafold2PAEJiffy = () => {
   }, [constInpData])
 
   const content = (
-    <Grid container spacing={2}>
+    <Grid
+      container
+      spacing={2}
+    >
       <Grid size={{ xs: 12 }}>
         <PAEJiffyInstructions />
       </Grid>
@@ -210,7 +270,7 @@ const Alphafold2PAEJiffy = () => {
                         </Typography>
                         <Typography
                           sx={{ mt: 1, fontSize: '1.2rem' }}
-                          data-testid='job-timer'
+                          data-testid="job-timer"
                         >
                           Time elapsed:{' '}
                           {`${Math.floor(timeElapsed / 60)
@@ -222,7 +282,7 @@ const Alphafold2PAEJiffy = () => {
                       </Box>
                     )}
                     {statusIsError && (
-                      <Typography color='error'>
+                      <Typography color="error">
                         Error checking job status
                       </Typography>
                     )}
@@ -230,7 +290,7 @@ const Alphafold2PAEJiffy = () => {
                       <Typography>Loading const.inp file...</Typography>
                     )}
                     {fileError && (
-                      <Typography color='error'>
+                      <Typography color="error">
                         Error fetching const.inp file
                       </Typography>
                     )}
@@ -252,13 +312,13 @@ const Alphafold2PAEJiffy = () => {
                           {values && (
                             <>
                               <TableContainer sx={{ width: '400px' }}>
-                                <Table aria-label='simple table'>
+                                <Table aria-label="simple table">
                                   <TableBody>
                                     <TableRow>
                                       <TableCell>
                                         <b>PDB File</b>
                                       </TableCell>
-                                      <TableCell align='right'>
+                                      <TableCell align="right">
                                         {values.pdb_file?.name}
                                       </TableCell>
                                     </TableRow>
@@ -266,7 +326,7 @@ const Alphafold2PAEJiffy = () => {
                                       <TableCell>
                                         <b>PAE File</b>
                                       </TableCell>
-                                      <TableCell align='right'>
+                                      <TableCell align="right">
                                         {values.pae_file?.name}
                                       </TableCell>
                                     </TableRow>
@@ -274,7 +334,7 @@ const Alphafold2PAEJiffy = () => {
                                       <TableCell>
                                         <b>Clustering Weight</b>
                                       </TableCell>
-                                      <TableCell align='right'>
+                                      <TableCell align="right">
                                         {parseFloat(values.pae_power).toFixed(
                                           1
                                         )}
@@ -284,7 +344,7 @@ const Alphafold2PAEJiffy = () => {
                                       <TableCell>
                                         <b>pLDDT Cutoff</b>
                                       </TableCell>
-                                      <TableCell align='right'>
+                                      <TableCell align="right">
                                         {parseFloat(
                                           values.plddt_cutoff
                                         ).toFixed(1)}
@@ -294,7 +354,7 @@ const Alphafold2PAEJiffy = () => {
                                       <TableCell>
                                         <b>CHARMM shapes (max 20)</b>
                                       </TableCell>
-                                      <TableCell align='right'>
+                                      <TableCell align="right">
                                         {shapeCount}
                                       </TableCell>
                                     </TableRow>
@@ -306,13 +366,86 @@ const Alphafold2PAEJiffy = () => {
                         </Alert>
 
                         <ConstInpFile constfile={constfile} />
-
+                        {/* --- PAE viz start */}
+                        <Box sx={{ mt: 2 }}>
+                          <HeaderBox>
+                            <Typography>Visualization</Typography>
+                          </HeaderBox>
+                          <Paper sx={{ p: 1 }}>
+                            <FormGroup
+                              row
+                              sx={{ mb: 1 }}
+                            >
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={showRigid}
+                                    onChange={(e) =>
+                                      setShowRigid(e.target.checked)
+                                    }
+                                    size="small"
+                                  />
+                                }
+                                label="Show rigid"
+                              />
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={showFixed}
+                                    onChange={(e) =>
+                                      setShowFixed(e.target.checked)
+                                    }
+                                    size="small"
+                                  />
+                                }
+                                label="Show fixed"
+                              />
+                            </FormGroup>
+                            {matrix ? (
+                              <PAEMatrixPlot
+                                matrix={matrix}
+                                viz={viz}
+                                showRigid={showRigid}
+                                showFixed={showFixed}
+                              />
+                            ) : vizPngOk && vizPng ? (
+                              <img
+                                alt="PAE visualization"
+                                src={URL.createObjectURL(vizPng as Blob)}
+                                style={{
+                                  maxWidth: 420,
+                                  border: '1px solid #ccc'
+                                }}
+                                onLoad={(e) => {
+                                  // Revoke URL after image loads to avoid memory leaks
+                                  const target =
+                                    e.currentTarget as HTMLImageElement
+                                  URL.revokeObjectURL(target.src)
+                                }}
+                              />
+                            ) : (
+                              <Typography variant="body2">
+                                Loading visualization…
+                              </Typography>
+                            )}
+                            {!matrix && (
+                              <Typography
+                                variant="caption"
+                                sx={{ display: 'block', mt: 1 }}
+                              >
+                                Showing static fallback while binary matrix
+                                loads.
+                              </Typography>
+                            )}
+                          </Paper>
+                        </Box>
+                        {/* --- PAE viz end */}
                         <Box
                           sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}
                         >
                           <Download uuid={uuid} />
                           <Button
-                            variant='contained'
+                            variant="contained"
                             onClick={() =>
                               handleTryNewParameters(values, resetForm)
                             }
@@ -320,8 +453,8 @@ const Alphafold2PAEJiffy = () => {
                             Try New Parameters
                           </Button>
                           <Button
-                            variant='outlined'
-                            type='button'
+                            variant="outlined"
+                            type="button"
                             onClick={() => {
                               handleReset()
                               const resetValues = {
@@ -348,11 +481,14 @@ const Alphafold2PAEJiffy = () => {
                     <Grid
                       container
                       columns={12}
-                      direction='column'
+                      direction="column"
                       sx={{ display: 'flex' }}
                     >
                       {isError && (
-                        <Alert severity='error' sx={{ my: 2 }}>
+                        <Alert
+                          severity="error"
+                          sx={{ my: 2 }}
+                        >
                           <AlertTitle>Error</AlertTitle>
                           {(() => {
                             if (!error) return 'An unknown error occurred.'
@@ -379,17 +515,17 @@ const Alphafold2PAEJiffy = () => {
                         </Alert>
                       )}
                       <Field
-                        name='pdb_file'
-                        id='pdb-file-upload'
+                        name="pdb_file"
+                        id="pdb-file-upload"
                         as={FileSelect}
-                        title='Select File'
+                        title="Select File"
                         disabled={isSubmitting}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.pdb_file && touched.pdb_file}
                         errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                        fileType='AlphaFold2 PDB *.pdb'
-                        fileExt='.pdb'
+                        fileType="AlphaFold2 PDB *.pdb"
+                        fileExt=".pdb"
                         onFileChange={(file: FileWithDeets) => {
                           void setFieldValue('pdb_file', file)
                           setOriginalFiles({
@@ -399,17 +535,17 @@ const Alphafold2PAEJiffy = () => {
                         }}
                       />
                       <Field
-                        name='pae_file'
-                        id='pae-file-upload'
+                        name="pae_file"
+                        id="pae-file-upload"
                         as={FileSelect}
-                        title='Select File'
+                        title="Select File"
                         disabled={isSubmitting}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.pae_file && touched.pae_file}
                         errorMessage={errors.pae_file ? errors.pae_file : ''}
-                        fileType='AlphaFold2 PAE *.json'
-                        fileExt='.json'
+                        fileType="AlphaFold2 PAE *.json"
+                        fileExt=".json"
                         onFileChange={(file: FileWithDeets) => {
                           void setFieldValue('pae_file', file)
                           setOriginalFiles({
@@ -419,15 +555,15 @@ const Alphafold2PAEJiffy = () => {
                         }}
                       />
                       <Field
-                        name='pae_power'
-                        id='pae-power-slider'
+                        name="pae_power"
+                        id="pae-power-slider"
                         as={PAESlider}
                         setFieldValue={setFieldValue}
                         value={values.pae_power}
                       />
                       <Field
-                        name='plddt_cutoff'
-                        id='plddt-cutoff-slider'
+                        name="plddt_cutoff"
+                        id="plddt-cutoff-slider"
                         as={PlddtSlider}
                         setFieldValue={setFieldValue}
                         value={values.plddt_cutoff}
@@ -437,9 +573,12 @@ const Alphafold2PAEJiffy = () => {
                           <LinearProgress />
                         </Box>
                       )}
-                      <Grid size={{ xs: 6 }} sx={{ my: 2 }}>
+                      <Grid
+                        size={{ xs: 6 }}
+                        sx={{ my: 2 }}
+                      >
                         <Button
-                          type='submit'
+                          type="submit"
                           disabled={
                             !isValid ||
                             values.pdb_file === null ||
@@ -447,8 +586,8 @@ const Alphafold2PAEJiffy = () => {
                           }
                           loading={isSubmitting}
                           endIcon={<SendIcon />}
-                          loadingPosition='end'
-                          variant='contained'
+                          loadingPosition="end"
+                          variant="contained"
                           sx={{ width: '110px' }}
                         >
                           <span>Submit</span>
