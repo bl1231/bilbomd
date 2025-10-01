@@ -10,15 +10,15 @@ import igraph
 import numpy as np
 import yaml
 
-# This is defining the pLDDT threshold for determing flex/rigid
-# which Alphafold2 writes to the B-factor column
-# B_THRESHOLD = 50.00
-# PAE_POWER = 2.0
+from pdb_utils import (
+    classify_residue,
+    determine_molecule_type_details,
+    get_segid_renaming_map,
+)
+
 
 MIN_CLUSTER_LENGTH = 5
 CONST_FILE_PATH = "const.inp"
-CLUSTER_FILE = "clusters.csv"
-TEMP_FILE_JSON = "temp.json"
 
 # --- PDB mode flag and caches ---
 USE_PDB = False
@@ -596,16 +596,22 @@ def write_constraints_yaml(rigid_body_list: list, output_path: str):
         yaml.safe_dump(data, fh, sort_keys=False)
 
 
-def write_const_file(rigid_body_list: list, output_file):
+def write_const_file(rigid_body_list: list, output_file, input_file: str = None):
     """
-    Write const.inp file
+    Write const.inp file for CHARMM molecular dynamics jobs.
+
+    Since PDB files are converted to CRD/PSF via pdb2crd.py, which renames chain segids
+    (e.g., Protein chain A -> PROA, DNA chain Y -> DNAY), we apply the same renaming
+    logic here to ensure segids in const.inp match those in the CRD/PSF files.
     """
+    renaming = {}
+    if input_file and input_file.endswith(".pdb"):
+        renaming = get_segid_renaming_map(input_file)
+
     dock_count = 0
     rigid_body_count = 0
-    # print(f"rigid body list: {rigid_body_list}")
     with open(file=output_file, mode="w", encoding="utf8") as const_file:
         for rigid_body in rigid_body_list:
-            # print(f"rigid_body: {rigid_body}")
             rigid_body_count += 1
             p = 0
             n = 0
@@ -613,11 +619,13 @@ def write_const_file(rigid_body_list: list, output_file):
                 start_residue = rigid_domain[0]
                 end_residue = rigid_domain[1]
                 segment = rigid_domain[2]
+                # Apply renaming if available
+                renamed_segment = renaming.get(segment, segment)
                 if rigid_body_count == 1:
                     p += 1
                     const_file.write(
                         f"define fixed{p} sele ( resid {start_residue}:{end_residue}"
-                        f" .and. segid {segment} ) end\n"
+                        f" .and. segid {renamed_segment} ) end\n"
                     )
                     if p == len(rigid_body):
                         const_file.write("cons fix sele ")
@@ -629,7 +637,7 @@ def write_const_file(rigid_body_list: list, output_file):
                     n += 1
                     const_file.write(
                         f"define rigid{n} sele ( resid {start_residue}:{end_residue}"
-                        f" .and. segid {segment} ) end\n"
+                        f" .and. segid {renamed_segment} ) end\n"
                     )
                     if n == len(rigid_body):
                         dock_count += 1
@@ -720,7 +728,7 @@ if __name__ == "__main__":
     if args.emit_constraints:
         write_constraints_yaml(rigid_bodies_from_pae, args.emit_constraints)
     if not args.no_const:
-        write_const_file(rigid_bodies_from_pae, CONST_FILE_PATH)
+        write_const_file(rigid_bodies_from_pae, CONST_FILE_PATH, input_struct)
     else:
         print("Skipping const.inp as requested (--no-const)")
     print("------------- done -------------")
