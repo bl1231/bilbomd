@@ -155,7 +155,8 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
   const leftSchematicCanvasRef = useRef<HTMLCanvasElement>(null)
   const nRows = matrix.length
   const nCols = matrix[0]?.length || 0
-  const size = 800 // px
+  const [size, setSize] = useState(600)
+  const divRef = useRef<HTMLDivElement>(null)
 
   const rectsRef = useRef<ScreenRect[]>([])
   const [hovered, setHovered] = useState<ScreenRect | null>(null)
@@ -349,7 +350,30 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
         }
       }
     }
-  }, [matrix, nRows, nCols, viz, showRigid, showFixed, showClusters, hovered])
+  }, [
+    matrix,
+    nRows,
+    nCols,
+    viz,
+    showRigid,
+    showFixed,
+    showClusters,
+    hovered,
+    size
+  ])
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (divRef.current) {
+        const availableWidth = divRef.current.clientWidth - 20
+        setSize(Math.min(600, Math.max(200, availableWidth)))
+      }
+    }
+    updateSize()
+    const resizeObserver = new ResizeObserver(updateSize)
+    if (divRef.current) resizeObserver.observe(divRef.current)
+    return () => resizeObserver.disconnect()
+  }, [])
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current
@@ -402,7 +426,10 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
     : null
 
   return (
-    <div style={{ position: 'relative', width: size + 20, height: size + 20 }}>
+    <div
+      ref={divRef}
+      style={{ position: 'relative', width: '100%', height: size + 20 }}
+    >
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex' }}>
           <div

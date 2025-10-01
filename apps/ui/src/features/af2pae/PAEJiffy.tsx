@@ -40,6 +40,7 @@ import PlddtSlider from './PlddtSlider'
 import PAEJiffyInstructions from './PAEJiffyInstructions'
 import ConstInpFile from './ConstInpFile'
 import PAEMatrixPlot from './PAEMatrixPlot'
+import PAEMatrixPlotExplanation from './PAEMatrixPlotExplanation'
 
 interface FileWithDeets extends File {
   name: string
@@ -367,7 +368,6 @@ const Alphafold2PAEJiffy = () => {
                         </Alert>
 
                         <ConstInpFile constfile={constfile} />
-                        {/* --- PAE viz start */}
                         <Box sx={{ mt: 2 }}>
                           <HeaderBox>
                             <Typography>Visualization</Typography>
@@ -414,46 +414,52 @@ const Alphafold2PAEJiffy = () => {
                                 label="Show clusters"
                               />
                             </FormGroup>
-                            {matrix ? (
-                              <PAEMatrixPlot
-                                matrix={matrix}
-                                viz={viz}
-                                showRigid={showRigid}
-                                showFixed={showFixed}
-                                showClusters={showClusters}
-                              />
-                            ) : vizPngOk && vizPng ? (
-                              <img
-                                alt="PAE visualization"
-                                src={URL.createObjectURL(vizPng as Blob)}
-                                style={{
-                                  maxWidth: 420,
-                                  border: '1px solid #ccc'
-                                }}
-                                onLoad={(e) => {
-                                  // Revoke URL after image loads to avoid memory leaks
-                                  const target =
-                                    e.currentTarget as HTMLImageElement
-                                  URL.revokeObjectURL(target.src)
-                                }}
-                              />
-                            ) : (
-                              <Typography variant="body2">
-                                Loading visualization…
-                              </Typography>
-                            )}
-                            {!matrix && (
-                              <Typography
-                                variant="caption"
-                                sx={{ display: 'block', mt: 1 }}
-                              >
-                                Showing static fallback while binary matrix
-                                loads.
-                              </Typography>
-                            )}
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
+                              <Box sx={{ flexShrink: 0, mr: 2 }}>
+                                {matrix ? (
+                                  <PAEMatrixPlot
+                                    matrix={matrix}
+                                    viz={viz}
+                                    showRigid={showRigid}
+                                    showFixed={showFixed}
+                                    showClusters={showClusters}
+                                  />
+                                ) : vizPngOk && vizPng ? (
+                                  <img
+                                    alt="PAE visualization"
+                                    src={URL.createObjectURL(vizPng as Blob)}
+                                    style={{
+                                      maxWidth: 420,
+                                      border: '1px solid #ccc'
+                                    }}
+                                    onLoad={(e) => {
+                                      // Revoke URL after image loads to avoid memory leaks
+                                      const target =
+                                        e.currentTarget as HTMLImageElement
+                                      URL.revokeObjectURL(target.src)
+                                    }}
+                                  />
+                                ) : (
+                                  <Typography variant="body2">
+                                    Loading visualization…
+                                  </Typography>
+                                )}
+                                {!matrix && (
+                                  <Typography
+                                    variant="caption"
+                                    sx={{ display: 'block', mt: 1 }}
+                                  >
+                                    Showing static fallback while binary matrix
+                                    loads.
+                                  </Typography>
+                                )}
+                              </Box>
+                              <Box sx={{ flex: 1 }}>
+                                <PAEMatrixPlotExplanation />
+                              </Box>
+                            </Box>
                           </Paper>
                         </Box>
-                        {/* --- PAE viz end */}
                         <Box
                           sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}
                         >
