@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 
 type ClusterType = 'rigid' | 'fixed'
 type VizCluster = {
@@ -13,6 +13,16 @@ type VizJSON = {
   clusters: VizCluster[]
   mask?: { plddt_cutoff?: number; low_confidence_residues?: number[] }
   chains?: { id: string; start: number; end: number }[]
+}
+
+type ScreenRect = {
+  id: number
+  type: ClusterType
+  range: [number, number]
+  x: number
+  y: number
+  w: number
+  h: number
 }
 // Draw dashed lines for chain boundaries
 function drawChainBoundaryLines(
@@ -49,6 +59,33 @@ function drawChainBoundaryLines(
   }
   ctx.setLineDash([])
   ctx.restore()
+}
+
+function formatRangeByChains(range: [number, number], viz?: VizJSON): string[] {
+  if (!viz?.chains) {
+    return [`${range[0]}-${range[1]}`]
+  }
+  const result: string[] = []
+  const [start, end] = range
+  for (const chain of viz.chains) {
+    const chainStart = chain.start
+    const chainEnd = chain.end
+    if (end < chainStart) {
+      // range ends before this chain
+      break
+    }
+    if (start > chainEnd) {
+      // range starts after this chain
+      continue
+    }
+    // Overlapping segment
+    const segStart = Math.max(start, chainStart)
+    const segEnd = Math.min(end, chainEnd)
+    const localStart = segStart - chainStart + 1
+    const localEnd = segEnd - chainStart + 1
+    result.push(`${chain.id}:${localStart}-${localEnd}`)
+  }
+  return result.length > 0 ? result : [`${start}-${end}`]
 }
 
 type PAEMatrixPlotProps = {
@@ -95,17 +132,17 @@ function colormap(val: number): string {
 }
 
 // Compute bounding box in px from inclusive ranges
-function computeBBoxFromRanges(
-  ranges: [number, number][]
-): [number, number, number, number] {
-  let minStart = Infinity
-  let maxEnd = -Infinity
-  for (const [a, b] of ranges) {
-    if (a < minStart) minStart = a
-    if (b > maxEnd) maxEnd = b
-  }
-  return [minStart, minStart, maxEnd, maxEnd]
-}
+// function computeBBoxFromRanges(
+//   ranges: [number, number][]
+// ): [number, number, number, number] {
+//   let minStart = Infinity
+//   let maxEnd = -Infinity
+//   for (const [a, b] of ranges) {
+//     if (a < minStart) minStart = a
+//     if (b > maxEnd) maxEnd = b
+//   }
+//   return [minStart, minStart, maxEnd, maxEnd]
+// }
 function residueToPx(i1: number, L: number, canvasSize: number, s: number) {
   // Convert 1-based residue index to pixel start in canvas space.
   // If downsample s>1, we map indices to the downsampled grid.
@@ -126,11 +163,17 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
   const nCols = matrix[0]?.length || 0
   const size = 400 // px
 
+  const containerRef = useRef<HTMLDivElement>(null)
+  const rectsRef = useRef<ScreenRect[]>([])
+  const [hovered, setHovered] = useState<ScreenRect | null>(null)
+  const [tipPos, setTipPos] = useState<{ x: number; y: number } | null>(null)
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    rectsRef.current = []
     // Clear
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     if (nRows === 0 || nCols === 0) return
@@ -166,6 +209,16 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
           const w = x2 - x
           const h = y2 - y
 
+          rectsRef.current.push({
+            id: c.id,
+            type: c.type,
+            range: [a, b],
+            x,
+            y,
+            w,
+            h
+          })
+
           ctx.save()
           ctx.globalAlpha = 0.15
           ctx.fillStyle =
@@ -184,19 +237,103 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
         }
       }
     }
+    if (hovered) {
+      ctx.save()
+      ctx.lineWidth = 2
+      ctx.strokeStyle = 'yellow'
+      ctx.setLineDash([6, 3])
+      ctx.strokeRect(
+        Math.floor(hovered.x) + 0.5,
+        Math.floor(hovered.y) + 0.5,
+        Math.ceil(hovered.w) - 1,
+        Math.ceil(hovered.h) - 1
+      )
+      ctx.restore()
+    }
     // Draw chain boundary lines on top of overlays
     if (viz) {
       drawChainBoundaryLines(ctx, canvas, viz, matrix)
     }
-  }, [matrix, nRows, nCols, viz, showRigid, showFixed])
+  }, [matrix, nRows, nCols, viz, showRigid, showFixed, hovered])
+
+  function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    const container = containerRef.current
+    if (!canvas || !container) return
+    const rect = canvas.getBoundingClientRect()
+    const crect = container.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const px = (e.clientX - rect.left) * scaleX
+    const py = (e.clientY - rect.top) * scaleY
+    // topmost hit: iterate in reverse draw order
+    const hit =
+      [...rectsRef.current]
+        .reverse()
+        .find(
+          (r) => px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h
+        ) || null
+    setHovered(hit)
+    if (hit) {
+      // tooltip position relative to container
+      setTipPos({
+        x: e.clientX - crect.left + 10,
+        y: e.clientY - crect.top + 10
+      })
+      if (canvas.style.cursor !== 'pointer') canvas.style.cursor = 'pointer'
+    } else {
+      setTipPos(null)
+      if (canvas.style.cursor !== 'default') canvas.style.cursor = 'default'
+    }
+  }
+
+  function handleMouseLeave() {
+    const canvas = canvasRef.current
+    if (canvas) canvas.style.cursor = 'default'
+    setHovered(null)
+    setTipPos(null)
+  }
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={size}
-      height={size}
-      style={{ border: '1px solid #ccc', imageRendering: 'pixelated' }}
-    />
+    <div
+      ref={containerRef}
+      style={{ position: 'relative', width: size, height: size }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={size}
+        height={size}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          border: '1px solid #ccc',
+          imageRendering: 'pixelated',
+          display: 'block'
+        }}
+      />
+      {hovered && tipPos && (
+        <div
+          style={{
+            position: 'absolute',
+            left: tipPos.x,
+            top: tipPos.y,
+            background: 'rgba(0,0,0,0.8)',
+            color: '#fff',
+            padding: '4px 6px',
+            borderRadius: 4,
+            fontSize: 12,
+            pointerEvents: 'none',
+            maxWidth: 260,
+            whiteSpace: 'pre-wrap'
+          }}
+        >
+          {`Cluster #${hovered.id} \u2022 ${hovered.type}\n`}
+          {formatRangeByChains(hovered.range, viz).map((label, idx) => (
+            <div key={idx}>{label}</div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
