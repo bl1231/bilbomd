@@ -163,7 +163,6 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
   const nCols = matrix[0]?.length || 0
   const size = 400 // px
 
-  const containerRef = useRef<HTMLDivElement>(null)
   const rectsRef = useRef<ScreenRect[]>([])
   const [hovered, setHovered] = useState<ScreenRect | null>(null)
   const [tipPos, setTipPos] = useState<{ x: number; y: number } | null>(null)
@@ -258,15 +257,12 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current
-    const container = containerRef.current
-    if (!canvas || !container) return
+    if (!canvas) return
     const rect = canvas.getBoundingClientRect()
-    const crect = container.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
     const scaleY = canvas.height / rect.height
     const px = (e.clientX - rect.left) * scaleX
     const py = (e.clientY - rect.top) * scaleY
-    // topmost hit: iterate in reverse draw order
     const hit =
       [...rectsRef.current]
         .reverse()
@@ -275,11 +271,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
         ) || null
     setHovered(hit)
     if (hit) {
-      // tooltip position relative to container
-      setTipPos({
-        x: e.clientX - crect.left + 10,
-        y: e.clientY - crect.top + 10
-      })
+      setTipPos({ x: e.clientX + 10, y: e.clientY + 10 }) // viewport coords with offset
       if (canvas.style.cursor !== 'pointer') canvas.style.cursor = 'pointer'
     } else {
       setTipPos(null)
@@ -294,11 +286,27 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
     setTipPos(null)
   }
 
+  const MAX_TIP_WIDTH = 260
+  const MARGIN = 8
+  const clampedTip = tipPos
+    ? {
+        left: Math.min(
+          tipPos.x,
+          (typeof window !== 'undefined' ? window.innerWidth : size) -
+            MAX_TIP_WIDTH -
+            MARGIN
+        ),
+        top: Math.min(
+          tipPos.y,
+          (typeof window !== 'undefined' ? window.innerHeight : size) -
+            80 -
+            MARGIN
+        ) // approx height
+      }
+    : null
+
   return (
-    <div
-      ref={containerRef}
-      style={{ position: 'relative', width: size, height: size }}
-    >
+    <div style={{ position: 'relative', width: size, height: size }}>
       <canvas
         ref={canvasRef}
         width={size}
@@ -311,12 +319,13 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
           display: 'block'
         }}
       />
-      {hovered && tipPos && (
+      {hovered && clampedTip && (
         <div
           style={{
-            position: 'absolute',
-            left: tipPos.x,
-            top: tipPos.y,
+            position: 'fixed',
+            left: clampedTip.left,
+            top: clampedTip.top,
+            zIndex: 10000,
             background: 'rgba(0,0,0,0.8)',
             color: '#fff',
             padding: '4px 6px',
