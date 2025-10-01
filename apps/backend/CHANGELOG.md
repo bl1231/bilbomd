@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 1.24.2
+
+### Patch Changes
+
+- 67e9cb5: add biopython to backend docker image
+
 ## 1.24.1
 
 ### Patch Changes
