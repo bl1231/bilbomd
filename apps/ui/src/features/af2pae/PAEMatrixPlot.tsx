@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react'
 
-type ClusterType = 'rigid' | 'fixed'
+type ClusterType = 'rigid' | 'fixed' | 'cluster'
 type VizCluster = {
   id: number
   type: ClusterType
@@ -94,6 +94,7 @@ type PAEMatrixPlotProps = {
   viz?: VizJSON
   showRigid?: boolean
   showFixed?: boolean
+  showClusters?: boolean
 }
 
 // Viridis colormap approximation using a small lookup table
@@ -131,18 +132,6 @@ function colormap(val: number): string {
   return `rgb(${r},${g},${b})`
 }
 
-// Compute bounding box in px from inclusive ranges
-// function computeBBoxFromRanges(
-//   ranges: [number, number][]
-// ): [number, number, number, number] {
-//   let minStart = Infinity
-//   let maxEnd = -Infinity
-//   for (const [a, b] of ranges) {
-//     if (a < minStart) minStart = a
-//     if (b > maxEnd) maxEnd = b
-//   }
-//   return [minStart, minStart, maxEnd, maxEnd]
-// }
 function residueToPx(i1: number, L: number, canvasSize: number, s: number) {
   // Convert 1-based residue index to pixel start in canvas space.
   // If downsample s>1, we map indices to the downsampled grid.
@@ -156,7 +145,8 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
   matrix,
   viz,
   showRigid = true,
-  showFixed = true
+  showFixed = true,
+  showClusters = true
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const nRows = matrix.length
@@ -194,7 +184,8 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
       for (const c of viz.clusters) {
         if (
           (c.type === 'rigid' && showRigid === false) ||
-          (c.type === 'fixed' && showFixed === false)
+          (c.type === 'fixed' && showFixed === false) ||
+          (c.type === 'cluster' && showClusters === false)
         ) {
           continue
         }
@@ -221,7 +212,50 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
           ctx.save()
           ctx.globalAlpha = 0.15
           ctx.fillStyle =
-            c.type === 'rigid' ? 'rgba(255,0,0,1)' : 'rgba(30,144,255,1)'
+            c.type === 'rigid'
+              ? 'rgba(255,0,0,1)'
+              : c.type === 'fixed'
+                ? 'rgba(30,144,255,1)'
+                : 'rgba(0,255,0,1)' // cluster
+          ctx.fillRect(x, y, w, h)
+          ctx.restore()
+
+          ctx.lineWidth = 2
+          ctx.strokeStyle = '#000'
+          ctx.strokeRect(
+            Math.floor(x) + 0.5,
+            Math.floor(y) + 0.5,
+            Math.ceil(w) - 1,
+            Math.ceil(h) - 1
+          )
+        }
+      }
+
+      // Draw bbox rectangles if showClusters is true
+      if (showClusters) {
+        for (const c of viz.clusters) {
+          if (!c.bbox) continue
+          const [x1, y1, x2, y2] = c.bbox
+          const x = residueToPx(x1, L, canvas.width, s)
+          const y = residueToPx(y1, L, canvas.height, s)
+          const x2Px = residueToPx(x2 + 1, L, canvas.width, s)
+          const y2Px = residueToPx(y2 + 1, L, canvas.height, s)
+          const w = x2Px - x
+          const h = y2Px - y
+
+          rectsRef.current.push({
+            id: c.id,
+            type: 'cluster',
+            range: [x1, x2],
+            x,
+            y,
+            w,
+            h
+          })
+
+          ctx.save()
+          ctx.globalAlpha = 0.15
+          ctx.fillStyle = 'rgba(0,255,0,1)' // cluster color
           ctx.fillRect(x, y, w, h)
           ctx.restore()
 
@@ -253,7 +287,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
     if (viz) {
       drawChainBoundaryLines(ctx, canvas, viz, matrix)
     }
-  }, [matrix, nRows, nCols, viz, showRigid, showFixed, hovered])
+  }, [matrix, nRows, nCols, viz, showRigid, showFixed, showClusters, hovered])
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current

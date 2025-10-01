@@ -68,6 +68,7 @@ const Alphafold2PAEJiffy = () => {
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [showRigid, setShowRigid] = useState(true)
   const [showFixed, setShowFixed] = useState(true)
+  const [showClusters, setShowClusters] = useState(true)
 
   const { data: statusData, isError: statusIsError } = useGetAf2PaeStatusQuery(
     uuid,
@@ -400,6 +401,18 @@ const Alphafold2PAEJiffy = () => {
                                 }
                                 label="Show fixed"
                               />
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={showClusters}
+                                    onChange={(e) =>
+                                      setShowClusters(e.target.checked)
+                                    }
+                                    size="small"
+                                  />
+                                }
+                                label="Show clusters"
+                              />
                             </FormGroup>
                             {matrix ? (
                               <PAEMatrixPlot
@@ -407,6 +420,7 @@ const Alphafold2PAEJiffy = () => {
                                 viz={viz}
                                 showRigid={showRigid}
                                 showFixed={showFixed}
+                                showClusters={showClusters}
                               />
                             ) : vizPngOk && vizPng ? (
                               <img
