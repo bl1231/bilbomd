@@ -1,5 +1,13 @@
 # @bilbomd/backend
 
+## 1.24.1
+
+### Patch Changes
+
+- f17071f: move python `pae_ratios.py` script to tools/python
+  move python `pdb2crd.py` script to tools/python
+  move segid mol type util functions to `pdb_utils.py` script in tools/python
+
 ## 1.24.0
 
 ### Minor Changes
