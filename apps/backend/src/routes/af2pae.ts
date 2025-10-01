@@ -2,7 +2,11 @@ import express from 'express'
 import {
   createNewConstFile,
   downloadConstFile,
-  getAf2PaeStatus
+  getAf2PaeStatus,
+  getVizJson,
+  getPaeBin,
+  getPaePng,
+  getVizPng
 } from '../controllers/af2paeController.js'
 import { verifyJWT } from '../middleware/verifyJWT.js'
 
@@ -14,6 +18,10 @@ router.route('/').get(downloadConstFile).post(createNewConstFile)
 
 router.route('/status').get(getAf2PaeStatus)
 
-// router.route('/:uuid/const.inp').get(downloadConstFile)
+// Visualization endpoints
+router.get('/:uuid/viz.json', getVizJson)
+router.get('/:uuid/pae.bin', getPaeBin)
+router.get('/:uuid/pae.png', getPaePng)
+router.get('/:uuid/viz.png', getVizPng)
 
 export default router
