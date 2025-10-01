@@ -221,4 +221,99 @@ const downloadConstFile = async (req: Request, res: Response) => {
   }
 }
 
-export { createNewConstFile, getAf2PaeStatus, downloadConstFile }
+const getVizJson = async (req: Request, res: Response) => {
+  const uuid = req.params.uuid
+  if (!uuid) {
+    return res.status(400).json({ message: 'UUID parameter required.' })
+  }
+  const filePath = path.join(uploadFolder, uuid, 'viz.json')
+  try {
+    const exists = await fs.pathExists(filePath)
+    if (!exists) {
+      return res.status(404).json({ message: 'viz.json not found' })
+    }
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    res.setHeader('Content-Type', 'application/json')
+    res.sendFile(filePath)
+  } catch (error) {
+    logger.error(`Error serving viz.json for UUID ${uuid}: ${error}`)
+    res.status(500).json({ message: 'Error serving viz.json' })
+  }
+}
+
+const getPaeBin = async (req: Request, res: Response) => {
+  const uuid = req.params.uuid
+  if (!uuid) {
+    return res.status(400).json({ message: 'UUID parameter required.' })
+  }
+  const filePath = path.join(uploadFolder, uuid, 'pae.bin')
+  try {
+    const exists = await fs.pathExists(filePath)
+    if (!exists) {
+      return res.status(404).json({ message: 'pae.bin not found' })
+    }
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    res.setHeader('Content-Type', 'application/octet-stream')
+    const stream = fs.createReadStream(filePath)
+    stream.pipe(res)
+    stream.on('error', (err) => {
+      logger.error(`Error streaming pae.bin for UUID ${uuid}: ${err}`)
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Error streaming pae.bin' })
+      }
+    })
+  } catch (error) {
+    logger.error(`Error serving pae.bin for UUID ${uuid}: ${error}`)
+    res.status(500).json({ message: 'Error serving pae.bin' })
+  }
+}
+
+const getPaePng = async (req: Request, res: Response) => {
+  const uuid = req.params.uuid
+  if (!uuid) {
+    return res.status(400).json({ message: 'UUID parameter required.' })
+  }
+  const filePath = path.join(uploadFolder, uuid, 'pae.png')
+  try {
+    const exists = await fs.pathExists(filePath)
+    if (!exists) {
+      return res.status(404).json({ message: 'pae.png not found' })
+    }
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    res.setHeader('Content-Type', 'image/png')
+    res.sendFile(filePath)
+  } catch (error) {
+    logger.error(`Error serving pae.png for UUID ${uuid}: ${error}`)
+    res.status(500).json({ message: 'Error serving pae.png' })
+  }
+}
+
+const getVizPng = async (req: Request, res: Response) => {
+  const uuid = req.params.uuid
+  if (!uuid) {
+    return res.status(400).json({ message: 'UUID parameter required.' })
+  }
+  const filePath = path.join(uploadFolder, uuid, 'viz.png')
+  try {
+    const exists = await fs.pathExists(filePath)
+    if (!exists) {
+      return res.status(404).json({ message: 'viz.png not found' })
+    }
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    res.setHeader('Content-Type', 'image/png')
+    res.sendFile(filePath)
+  } catch (error) {
+    logger.error(`Error serving viz.png for UUID ${uuid}: ${error}`)
+    res.status(500).json({ message: 'Error serving viz.png' })
+  }
+}
+
+export {
+  createNewConstFile,
+  getAf2PaeStatus,
+  downloadConstFile,
+  getVizJson,
+  getPaeBin,
+  getPaePng,
+  getVizPng
+}
