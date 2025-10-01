@@ -16,6 +16,14 @@ from pdb_utils import (
     get_segid_renaming_map,
 )
 
+from helpers_viz import (
+    Cluster,
+    stride_downsample,
+    write_viz_json,
+    save_pae_bin,
+    save_pae_png,
+    save_viz_png,
+)
 
 MIN_CLUSTER_LENGTH = 5
 CONST_FILE_PATH = "const.inp"
@@ -724,6 +732,77 @@ if __name__ == "__main__":
     rigid_bodies_from_pae = define_rigid_bodies(
         pae_clusters, input_struct, first_residue, chain_segments, args.plddt_cutoff
     )
+
+    # --- Visualization artifacts start
+    # 1) Build full PAE numpy matrix
+    if "predicted_aligned_error" in pae_data:
+        pae_full = np.array(pae_data["predicted_aligned_error"], dtype=np.float32)
+    elif "pae" in pae_data:
+        pae_full = np.array(pae_data["pae"], dtype=np.float32)
+    else:
+        raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+
+    # 2) Determine L
+    L = pae_full.shape[0]
+    # 3) Downsample factor
+    s = 2 if L > 1200 else 1
+    pae_ds = stride_downsample(pae_full, s)
+
+    # 4) Convert rigid_bodies_from_pae (list of lists of (start_residue, end_residue, segid)) into Cluster objects
+    clusters = []
+    if USE_PDB:
+        # Build mapping from (chain_id, resseq) -> global 1-based index
+        res_to_global = {}
+        for idx, (chain_id, resseq) in enumerate(PDB_INDEX_TO_RES):
+            res_to_global[(chain_id, resseq)] = idx + 1  # 1-based
+
+        def tuple_to_global(tup):
+            start_res, end_res, segid = tup
+            # Find all indices in PDB_INDEX_TO_RES with matching (chain_id, resseq) in [start_res, end_res]
+            # For each residue in that segment, get its global index
+            # But since we want contiguous blocks, just get the global indices for start_res and end_res in this segid
+            global_start = res_to_global.get((segid, start_res), None)
+            global_end = res_to_global.get((segid, end_res), None)
+            if global_start is None or global_end is None:
+                # Try to fallback to string conversion if segid is not str
+                global_start = res_to_global.get((str(segid), start_res), None)
+                global_end = res_to_global.get((str(segid), end_res), None)
+            return (global_start, global_end)
+
+    else:
+        # CRD mode: contiguous numbering
+        first_crd = first_residue
+
+        def tuple_to_global(tup):
+            start_res, end_res, segid = tup
+            global_start = start_res - first_crd + 1
+            global_end = end_res - first_crd + 1
+            return (global_start, global_end)
+
+    for i, rb in enumerate(rigid_bodies_from_pae):
+        # Each rb: list of tuples (start_res, end_res, segid)
+        ranges = []
+        for tup in rb:
+            gstart, gend = tuple_to_global(tup)
+            if gstart is not None and gend is not None:
+                # 1-based inclusive
+                ranges.append((gstart, gend))
+        ctype = "fixed" if i == 0 else "rigid"
+        clusters.append(Cluster(cid=i, ctype=ctype, ranges=ranges))
+
+    # 5) Write artifacts
+    save_pae_bin("pae.bin", pae_ds)
+    save_pae_png("pae.png", pae_ds)
+    save_viz_png("viz.png", pae_ds, clusters)
+    write_viz_json(
+        "viz.json",
+        length=L,
+        clusters=clusters,
+        plddt_cutoff=args.plddt_cutoff,
+        low_conf=None,
+        downsample=(s if s > 1 else None),
+    )
+    # --- Visualization artifacts end
 
     if args.emit_constraints:
         write_constraints_yaml(rigid_bodies_from_pae, args.emit_constraints)
