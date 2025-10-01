@@ -414,11 +414,8 @@ const Alphafold2PAEJiffy = () => {
                                 label="Show clusters"
                               />
                             </FormGroup>
-                            <Grid
-                              container
-                              spacing={2}
-                            >
-                              <Grid size={{ xs: 12, md: 6 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
+                              <Box sx={{ flexShrink: 0, mr: 2 }}>
                                 {matrix ? (
                                   <PAEMatrixPlot
                                     matrix={matrix}
@@ -456,11 +453,11 @@ const Alphafold2PAEJiffy = () => {
                                     loads.
                                   </Typography>
                                 )}
-                              </Grid>
-                              <Grid size={{ xs: 12, md: 6 }}>
+                              </Box>
+                              <Box sx={{ flex: 1 }}>
                                 <PAEMatrixPlotExplanation />
-                              </Grid>
-                            </Grid>
+                              </Box>
+                            </Box>
                           </Paper>
                         </Box>
                         <Box

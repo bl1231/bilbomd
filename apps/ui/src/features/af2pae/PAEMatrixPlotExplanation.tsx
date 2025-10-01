@@ -1,4 +1,11 @@
-import { Typography, Box, List, ListItem, ListItemText } from '@mui/material'
+import {
+  Typography,
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+  Link
+} from '@mui/material'
 
 const ColorBox = ({ color }: { color: string }) => (
   <Box
@@ -22,12 +29,26 @@ const paeColors = [
 
 const PAEMatrixPlotExplanation = () => {
   return (
-    <Box sx={{ ml: 2, maxWidth: 500 }}>
+    <Box sx={{ ml: 3 }}>
       <Typography
         variant="h4"
         gutterBottom
       >
         Interpreting the PAE Matrix
+      </Typography>
+
+      <Typography variant="body1">
+        The PAE matrix is a key output of AlphaFold, providing insights into the
+        predicted alignment errors between residues. If you would like a more
+        detailed explanation of the PAE matrix please have a look at these{' '}
+        <Link
+          href="https://www.ebi.ac.uk/training/online/courses/alphafold/inputs-and-outputs/evaluating-alphafolds-predicted-structures-using-confidence-scores/pae-a-measure-of-global-confidence-in-alphafold-predictions/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          tutorial materials
+        </Link>{' '}
+        developed as part of EMBL-EBI Training on AlphaFold.
       </Typography>
 
       <Typography
@@ -83,7 +104,7 @@ const PAEMatrixPlotExplanation = () => {
           <ListItemText
             primary={
               <>
-                Dark/low <ColorBox color={paeColors[0]} />{' '}
+                Dark/low <ColorBox color={paeColors[0]} />
                 <ColorBox color={paeColors[1]} /> PAE values = residues are
                 predicted confidently relative to each other (domain is rigid).
               </>
