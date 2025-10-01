@@ -29,7 +29,8 @@ function drawChainBoundaryLines(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   viz: VizJSON,
-  matrixSize: number[][]
+  matrixSize: number[][],
+  nCols: number
 ) {
   if (!viz.chains || viz.chains.length < 2) return
   const L = viz.length
@@ -44,8 +45,8 @@ function drawChainBoundaryLines(
     // Draw boundary after chain.end (inclusive), so boundary is after this residue
     const boundaryIdx = chain.end
     // The pixel position is after residue boundaryIdx
-    const x = residueToPx(boundaryIdx + 1, L, canvas.width, s)
-    const y = residueToPx(boundaryIdx + 1, L, canvas.height, s)
+    const x = residueToPx(boundaryIdx + 1, canvas.width, s, nCols)
+    const y = residueToPx(boundaryIdx + 1, canvas.height, s, nCols)
     // Horizontal line
     ctx.beginPath()
     ctx.moveTo(0, y)
@@ -132,11 +133,10 @@ function colormap(val: number): string {
   return `rgb(${r},${g},${b})`
 }
 
-function residueToPx(i1: number, L: number, canvasSize: number, s: number) {
+function residueToPx(i1: number, canvasSize: number, s: number, nCols: number) {
   // Convert 1-based residue index to pixel start in canvas space.
-  // If downsample s>1, we map indices to the downsampled grid.
-  const dsL = Math.max(1, Math.floor(L / s))
-  const cell = canvasSize / dsL
+  // Use the same cell size as the heatmap: canvasSize / nCols
+  const cell = canvasSize / nCols
   const idx0 = Math.floor((i1 - 1) / s) // 0-based cell
   return idx0 * cell
 }
@@ -149,9 +149,11 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
   showClusters = true
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const topSchematicCanvasRef = useRef<HTMLCanvasElement>(null)
+  const leftSchematicCanvasRef = useRef<HTMLCanvasElement>(null)
   const nRows = matrix.length
   const nCols = matrix[0]?.length || 0
-  const size = 400 // px
+  const size = 800 // px
 
   const rectsRef = useRef<ScreenRect[]>([])
   const [hovered, setHovered] = useState<ScreenRect | null>(null)
@@ -192,10 +194,10 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
         // Draw one rectangle per individual range on the diagonal
         for (const [a, b] of c.ranges) {
           // Diagonal box for this range: [a,a,b,b]
-          const x = residueToPx(a, L, canvas.width, s)
-          const y = residueToPx(a, L, canvas.height, s)
-          const x2 = residueToPx(b + 1, L, canvas.width, s)
-          const y2 = residueToPx(b + 1, L, canvas.height, s)
+          const x = residueToPx(a, canvas.width, s, nCols)
+          const y = residueToPx(a, canvas.height, s, nCols)
+          const x2 = residueToPx(b + 1, canvas.width, s, nCols)
+          const y2 = residueToPx(b + 1, canvas.height, s, nCols)
           const w = x2 - x
           const h = y2 - y
 
@@ -236,10 +238,10 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
         for (const c of viz.clusters) {
           if (!c.bbox) continue
           const [x1, y1, x2, y2] = c.bbox
-          const x = residueToPx(x1, L, canvas.width, s)
-          const y = residueToPx(y1, L, canvas.height, s)
-          const x2Px = residueToPx(x2 + 1, L, canvas.width, s)
-          const y2Px = residueToPx(y2 + 1, L, canvas.height, s)
+          const x = residueToPx(x1, canvas.width, s, nCols)
+          const y = residueToPx(y1, canvas.height, s, nCols)
+          const x2Px = residueToPx(x2 + 1, canvas.width, s, nCols)
+          const y2Px = residueToPx(y2 + 1, canvas.height, s, nCols)
           const w = x2Px - x
           const h = y2Px - y
 
@@ -285,7 +287,63 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
     }
     // Draw chain boundary lines on top of overlays
     if (viz) {
-      drawChainBoundaryLines(ctx, canvas, viz, matrix)
+      drawChainBoundaryLines(ctx, canvas, viz, matrix, nCols)
+    }
+
+    // Draw schematic above the plot
+    const topSchematicCanvas = topSchematicCanvasRef.current
+    if (topSchematicCanvas && viz?.chains) {
+      const schematicCtx = topSchematicCanvas.getContext('2d')
+      if (schematicCtx) {
+        schematicCtx.clearRect(0, 0, size, 20)
+        const L = viz.length
+        const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
+        const colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc']
+        for (let i = 0; i < viz.chains.length; i++) {
+          const chain = viz.chains[i]
+          const startPx = residueToPx(chain.start, size, s, nCols)
+          const endPx = residueToPx(chain.end + 1, size, s, nCols)
+          schematicCtx.fillStyle = colors[i % colors.length]
+          schematicCtx.fillRect(startPx, 0, endPx - startPx, 20)
+          // Add chain ID text
+          schematicCtx.fillStyle = 'black'
+          schematicCtx.font = '10px Arial'
+          schematicCtx.textAlign = 'center'
+          schematicCtx.fillText(
+            `Chain ${chain.id}`,
+            startPx + (endPx - startPx) / 2,
+            14
+          )
+        }
+      }
+    }
+
+    // Draw schematic to the left of the plot
+    const leftSchematicCanvas = leftSchematicCanvasRef.current
+    if (leftSchematicCanvas && viz?.chains) {
+      const schematicCtx = leftSchematicCanvas.getContext('2d')
+      if (schematicCtx) {
+        schematicCtx.clearRect(0, 0, 20, size)
+        const L = viz.length
+        const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
+        const colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc']
+        for (let i = 0; i < viz.chains.length; i++) {
+          const chain = viz.chains[i]
+          const startPx = residueToPx(chain.start, size, s, nCols)
+          const endPx = residueToPx(chain.end + 1, size, s, nCols)
+          schematicCtx.fillStyle = colors[i % colors.length]
+          schematicCtx.fillRect(0, startPx, 20, endPx - startPx)
+          // Add chain ID text (rotated vertically)
+          schematicCtx.save()
+          schematicCtx.translate(15, startPx + (endPx - startPx) / 2)
+          schematicCtx.rotate(-Math.PI / 2) // -90 degrees for vertical text
+          schematicCtx.fillStyle = 'black'
+          schematicCtx.font = '10px Arial'
+          schematicCtx.textAlign = 'center'
+          schematicCtx.fillText(`Chain ${chain.id}`, 0, 0)
+          schematicCtx.restore()
+        }
+      }
     }
   }, [matrix, nRows, nCols, viz, showRigid, showFixed, showClusters, hovered])
 
@@ -340,19 +398,61 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
     : null
 
   return (
-    <div style={{ position: 'relative', width: size, height: size }}>
-      <canvas
-        ref={canvasRef}
-        width={size}
-        height={size}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          border: '1px solid #ccc',
-          imageRendering: 'pixelated',
-          display: 'block'
-        }}
-      />
+    <div style={{ position: 'relative', width: size + 20, height: size + 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex' }}>
+          <div
+            style={{
+              width: 20,
+              height: 20,
+              border: '1px solid #9f9f9fff',
+              borderBottom: 'none',
+              borderRight: 'none',
+              backgroundColor: '#f9f9f9'
+            }}
+          />
+          <canvas
+            ref={topSchematicCanvasRef}
+            width={size}
+            height={20}
+            style={{
+              border: '1px solid #ccc',
+              borderBottom: 'none',
+              borderLeft: 'none',
+              imageRendering: 'pixelated',
+              display: 'block'
+            }}
+          />
+        </div>
+        <div style={{ display: 'flex' }}>
+          <canvas
+            ref={leftSchematicCanvasRef}
+            width={20}
+            height={size}
+            style={{
+              border: '1px solid #ccc',
+              borderRight: 'none',
+              borderTop: 'none',
+              imageRendering: 'pixelated',
+              display: 'block'
+            }}
+          />
+          <canvas
+            ref={canvasRef}
+            width={size}
+            height={size}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{
+              border: '1px solid #ccc',
+              borderLeft: 'none',
+              borderTop: 'none',
+              imageRendering: 'pixelated',
+              display: 'block'
+            }}
+          />
+        </div>
+      </div>
       {hovered && clampedTip && (
         <div
           style={{
