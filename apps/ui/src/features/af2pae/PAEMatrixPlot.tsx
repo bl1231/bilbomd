@@ -47,15 +47,17 @@ function drawChainBoundaryLines(
     // The pixel position is after residue boundaryIdx
     const x = residueToPx(boundaryIdx + 1, canvas.width, s, nCols)
     const y = residueToPx(boundaryIdx + 1, canvas.height, s, nCols)
+    const yLine = Math.floor(y) + 0.5
+    const xLine = Math.floor(x) + 0.5
     // Horizontal line
     ctx.beginPath()
-    ctx.moveTo(0, y)
-    ctx.lineTo(canvas.width, y)
+    ctx.moveTo(0, yLine)
+    ctx.lineTo(canvas.width, yLine)
     ctx.stroke()
     // Vertical line
     ctx.beginPath()
-    ctx.moveTo(x, 0)
-    ctx.lineTo(x, canvas.height)
+    ctx.moveTo(xLine, 0)
+    ctx.lineTo(xLine, canvas.height)
     ctx.stroke()
   }
   ctx.setLineDash([])
@@ -223,7 +225,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
           ctx.restore()
 
           ctx.lineWidth = 2
-          ctx.strokeStyle = '#000'
+          ctx.strokeStyle = '#d01a1aff'
           ctx.strokeRect(
             Math.floor(x) + 0.5,
             Math.floor(y) + 0.5,
@@ -262,7 +264,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
           ctx.restore()
 
           ctx.lineWidth = 2
-          ctx.strokeStyle = '#000'
+          ctx.strokeStyle = '#d812c4ff'
           ctx.strokeRect(
             Math.floor(x) + 0.5,
             Math.floor(y) + 0.5,
@@ -295,6 +297,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
     if (topSchematicCanvas && viz?.chains) {
       const schematicCtx = topSchematicCanvas.getContext('2d')
       if (schematicCtx) {
+        schematicCtx.imageSmoothingEnabled = false
         schematicCtx.clearRect(0, 0, size, 20)
         const L = viz.length
         const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
@@ -323,6 +326,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
     if (leftSchematicCanvas && viz?.chains) {
       const schematicCtx = leftSchematicCanvas.getContext('2d')
       if (schematicCtx) {
+        schematicCtx.imageSmoothingEnabled = false
         schematicCtx.clearRect(0, 0, 20, size)
         const L = viz.length
         const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
@@ -403,24 +407,21 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
         <div style={{ display: 'flex' }}>
           <div
             style={{
-              width: 20,
+              width: 22,
               height: 20,
-              border: '1px solid #9f9f9fff',
-              borderBottom: 'none',
-              borderRight: 'none',
-              backgroundColor: '#f9f9f9'
+              border: '0px solid #9f9f9fff',
+              backgroundColor: '#f9f9f9',
+              flexShrink: 0
             }}
           />
           <canvas
             ref={topSchematicCanvasRef}
-            width={size}
+            width={size - 1}
             height={20}
             style={{
               border: '1px solid #ccc',
-              borderBottom: 'none',
-              borderLeft: 'none',
-              imageRendering: 'pixelated',
-              display: 'block'
+              display: 'block',
+              imageRendering: 'pixelated'
             }}
           />
         </div>
@@ -431,10 +432,8 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
             height={size}
             style={{
               border: '1px solid #ccc',
-              borderRight: 'none',
-              borderTop: 'none',
-              imageRendering: 'pixelated',
-              display: 'block'
+              display: 'block',
+              imageRendering: 'pixelated'
             }}
           />
           <canvas
@@ -447,7 +446,6 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
               border: '1px solid #ccc',
               borderLeft: 'none',
               borderTop: 'none',
-              imageRendering: 'pixelated',
               display: 'block'
             }}
           />
