@@ -325,6 +325,72 @@ def _build_edges_from_similarity(
         return edges, weights
 
 
+def _chain_id_for_index(idx: int, chain_segs: list) -> int:
+    if not chain_segs:
+        return 0
+    c = 0
+    for b in chain_segs:
+        if idx > b:
+            c += 1
+        else:
+            break
+    return c
+
+
+def _cluster_span(cluster: list[int]) -> tuple[int, int]:
+    return (min(cluster), max(cluster))
+
+
+def _should_merge(
+    pae: np.ndarray, a_span, b_span, chain_segs, tau, cov, tau_cross, cov_cross
+) -> bool:
+    ai, aj = a_span
+    bi, bj = b_span
+    block = pae[ai : aj + 1, bi : bj + 1]
+    if block.size == 0:
+        return False
+    cross = _chain_id_for_index(ai, chain_segs) != _chain_id_for_index(bi, chain_segs)
+    thr = tau_cross if cross else tau
+    need = cov_cross if cross else cov
+    med = float(np.median(block))
+    coverage = float(np.mean(block <= thr))
+    return (med <= thr) and (coverage >= need)
+
+
+def _merge_adjacent_by_affinity(
+    pae: np.ndarray,
+    clusters: list[list[int]],
+    chain_segs: list,
+    tau: float,
+    cov: float,
+    tau_cross: float,
+    cov_cross: float,
+) -> list[list[int]]:
+    # Sort by span start for adjacency
+    spans = [(_cluster_span(c), i) for i, c in enumerate(clusters)]
+    spans.sort(key=lambda t: t[0][0])
+    clusters = [clusters[i] for _, i in spans]
+    changed = True
+    while changed and len(clusters) > 1:
+        changed = False
+        i = 0
+        while i < len(clusters) - 1:
+            a = clusters[i]
+            b = clusters[i + 1]
+            a_span = _cluster_span(a)
+            b_span = _cluster_span(b)
+            if _should_merge(
+                pae, a_span, b_span, chain_segs, tau, cov, tau_cross, cov_cross
+            ):
+                merged = sorted(set(a) | set(b))
+                clusters[i] = merged
+                del clusters[i + 1]
+                changed = True
+            else:
+                i += 1
+    return clusters
+
+
 def define_clusters_for_selected_pae(
     pae_data,
     row_start: int,
@@ -343,6 +409,10 @@ def define_clusters_for_selected_pae(
     interchain_cutoff: float = 5.0,
     leiden_resolution: float = 1.0,
     leiden_iters: int = 10,
+    merge_tau: float = 7.0,
+    merge_coverage: float = 0.6,
+    cross_merge_tau: float = 5.5,
+    cross_merge_coverage: float = 0.7,
 ):
     """
     Define PAE clusters
@@ -410,6 +480,15 @@ def define_clusters_for_selected_pae(
         membership_clusters[cluster].append(index)
 
     sorted_clusters = sorted(membership_clusters.values(), key=len, reverse=True)
+    sorted_clusters = _merge_adjacent_by_affinity(
+        pae_matrix,
+        sorted_clusters,
+        chain_segs or [],
+        tau=merge_tau,
+        cov=merge_coverage,
+        tau_cross=cross_merge_tau,
+        cov_cross=cross_merge_coverage,
+    )
     return sorted_clusters
 
 
@@ -913,6 +992,30 @@ if __name__ == "__main__":
         help="Leiden iterations (default 10)",
     )
     parser.add_argument(
+        "--merge_tau",
+        type=float,
+        default=7.0,
+        help="Post-merge: τ (Å) threshold for median off-diagonal PAE between adjacent clusters",
+    )
+    parser.add_argument(
+        "--merge_coverage",
+        type=float,
+        default=0.6,
+        help="Post-merge: required fraction of pairs ≤ τ within the off-diagonal block (0..1)",
+    )
+    parser.add_argument(
+        "--cross_merge_tau",
+        type=float,
+        default=5.5,
+        help="Post-merge: stricter τ (Å) for cross-chain merges",
+    )
+    parser.add_argument(
+        "--cross_merge_coverage",
+        type=float,
+        default=0.7,
+        help="Post-merge: coverage for cross-chain merges (0..1)",
+    )
+    parser.add_argument(
         "--emit-constraints",
         type=str,
         help="If set, also write constraints YAML usable by OpenMM",
@@ -966,6 +1069,11 @@ if __name__ == "__main__":
         interchain_cutoff=args.interchain_cutoff,
         leiden_resolution=args.leiden_resolution,
         leiden_iters=args.leiden_iters,
+        knn_mode=args.knn_mode,
+        merge_tau=args.merge_tau,
+        merge_coverage=args.merge_coverage,
+        cross_merge_tau=args.cross_merge_tau,
+        cross_merge_coverage=args.cross_merge_coverage,
     )
 
     input_struct = args.pdb_file if USE_PDB else args.crd_file
