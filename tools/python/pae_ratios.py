@@ -321,7 +321,6 @@ def define_clusters_for_selected_pae(
     row_end: int,
     col_start: int,
     col_end: int,
-    pae_power: float,
     *,
     graph_sim: str = "exp",
     sigma: float = 8.0,
@@ -374,6 +373,16 @@ def define_clusters_for_selected_pae(
     if edges:
         g.add_edges(edges)
         g.es["weight"] = sel_weights
+
+    # Debug: report basic graph stats
+    try:
+        print(
+            f"[clustering] n={size}, edges={len(edges)}, "
+            f"knn={knn}, cutoff={pae_cutoff}, interchain_cutoff={interchain_cutoff}, "
+            f"min_seq_sep={min_seq_sep}"
+        )
+    except Exception:
+        pass
 
     vc = g.community_leiden(
         weights="weight" if edges else None,
@@ -490,7 +499,7 @@ def find_and_update_sequential_rigid_domains(lists_of_tuples):
     seen_pairs = set()  # To keep track of seen pairs and avoid duplicates
     updates = {}  # To store updates for each tuple
     updated = False  # Flag to indicate if updates were made
-    print("-----------------")
+
     for outer_list in lists_of_tuples:
         for start1, end1, chain1 in outer_list:
             for other_outer_list in lists_of_tuples:
@@ -502,9 +511,9 @@ def find_and_update_sequential_rigid_domains(lists_of_tuples):
                                 (start1, end1, chain1),
                                 (start2, end2, chain2),
                             ) not in seen_pairs:
-                                print(
-                                    f"Adjacent Rigid Domains: ({start1}, {end1}, '{chain1}') and ({start2}, {end2}, '{chain2}')"
-                                )
+                                # print(
+                                #     f"Adjacent Rigid Domains: ({start1}, {end1}, '{chain1}') and ({start2}, {end2}, '{chain2}')"
+                                # )
                                 updates[(start1, end1, chain1)] = (start1, end1 - 1)
                                 updates[(start2, end2, chain2)] = (start2 + 1, end2)
                                 seen_pairs.add(
@@ -517,9 +526,9 @@ def find_and_update_sequential_rigid_domains(lists_of_tuples):
                                 (start2, end2, chain2),
                                 (start1, end1, chain1),
                             ) not in seen_pairs:
-                                print(
-                                    f"Adjacent Rigid Domains: ({start2}, {end2}, '{chain2}') and ({start1}, {end1}, '{chain1}')"
-                                )
+                                # print(
+                                #     f"Adjacent Rigid Domains: ({start2}, {end2}, '{chain2}') and ({start1}, {end1}, '{chain1}')"
+                                # )
                                 updates[(start2, end2, chain2)] = (start2, end2 - 1)
                                 updates[(start1, end1, chain1)] = (start1 + 1, end1)
                                 seen_pairs.add(
@@ -603,6 +612,36 @@ def identify_new_rigid_domain(
     return None
 
 
+def _merge_overlapping_domains(
+    domains: list[tuple[int, int, str]],
+) -> list[tuple[int, int, str]]:
+    """
+    Merge overlapping or contiguous residue ranges with the same segid,
+    and deduplicate exact duplicates.
+    Input: list of (start, end, segid)
+    Output: merged list
+    """
+    # Deduplicate exact duplicates
+    unique_domains = list(set(domains))
+    # Sort by segid, then start
+    unique_domains.sort(key=lambda x: (x[2], x[0], x[1]))
+    merged = []
+    for d in unique_domains:
+        s, e, seg = d
+        if s > e:
+            s, e = e, s
+        if not merged or seg != merged[-1][2]:
+            merged.append((s, e, seg))
+        else:
+            last_s, last_e, last_seg = merged[-1]
+            # If overlapping or contiguous, merge
+            if s <= last_e + 1:
+                merged[-1] = (min(last_s, s), max(last_e, e), seg)
+            else:
+                merged.append((s, e, seg))
+    return merged
+
+
 def define_rigid_bodies(
     clusters: list,
     crd_file: str,
@@ -617,9 +656,9 @@ def define_rigid_bodies(
     Rigid Bodies contain one of more Rigid Domains
     Rigid Domains are defined by a tuple of (start_residue, end_residue, segment_id)
     """
-    # print(f"chain_segment_list: {chain_segment_list}")
-    # print(f"first_resnum: {first_resnum}")
-    # print(f"clusters: {clusters}")
+    # print(f"[define_rigid_bodies] chain_segment_list: {chain_segment_list}")
+    # print(f"[define_rigid_bodies] first_resnum: {first_resnum}")
+    # print(f"[define_rigid_bodies] clusters: {clusters}")
     rigid_bodies = []
     for _, cluster in enumerate(clusters):
         rigid_body = []
@@ -628,6 +667,12 @@ def define_rigid_bodies(
             for region in sorted_cluster:
                 first_resnum_cluster = region[0]
                 last_resnum_cluster = region[-1]
+
+                # if USE_PDB:
+                #     print(
+                #         f"Region indices {first_resnum_cluster}-{last_resnum_cluster} "
+                #         f"-> {PDB_INDEX_TO_RES[first_resnum_cluster]} ... {PDB_INDEX_TO_RES[last_resnum_cluster]}"
+                #     )
 
                 # Calculate the average B-factor for the current region
                 bfactor_avg = calculate_bfactor_avg_for_region(
@@ -643,10 +688,17 @@ def define_rigid_bodies(
                         first_resnum,
                     )
                     if new_rigid_domain:
-                        print(
-                            f"New Rigid Domain: {new_rigid_domain} pLDDT: {round(bfactor_avg, 2)}"
-                        )
-                        rigid_body.append(new_rigid_domain)
+                        # Normalize orientation (start <= end)
+                        s, e, seg = new_rigid_domain
+                        if s is not None and e is not None and s > e:
+                            s, e = e, s
+                        normalized = (s, e, seg)
+                        # print(
+                        #     f"New Rigid Domain: {normalized} pLDDT: {round(bfactor_avg, 2)}"
+                        # )
+                        # Deduplicate within this rigid body
+                        if normalized not in rigid_body:
+                            rigid_body.append(normalized)
             rigid_bodies.append(rigid_body)
 
     # remove empty lists from our list of lists of tuples
@@ -661,8 +713,13 @@ def define_rigid_bodies(
         updated, rigid_body_optimized = find_and_update_sequential_rigid_domains(
             all_non_empty_rigid_bodies
         )
-    print(f"Optimized Rigid Bodies: {all_non_empty_rigid_bodies}")
-    return rigid_body_optimized
+    # Merge overlapping or duplicate residue ranges in each rigid body
+    merged_rigid_bodies = []
+    for rb in rigid_body_optimized:
+        merged_rb = _merge_overlapping_domains(rb)
+        merged_rigid_bodies.append(merged_rb)
+    print(f"Optimized Rigid Bodies: {merged_rigid_bodies}")
+    return merged_rigid_bodies
 
 
 def write_constraints_yaml(rigid_body_list: list, output_path: str):
@@ -726,9 +783,11 @@ def write_const_file(rigid_body_list: list, output_file, input_file: str = None)
             p = 0
             n = 0
             for rigid_domain in rigid_body:
-                start_residue = rigid_domain[0]
-                end_residue = rigid_domain[1]
+                start_residue = int(rigid_domain[0])
+                end_residue = int(rigid_domain[1])
                 segment = rigid_domain[2]
+                if start_residue > end_residue:
+                    start_residue, end_residue = end_residue, start_residue
                 # Apply renaming if available
                 renamed_segment = renaming.get(segment, segment)
                 if rigid_body_count == 1:
@@ -771,13 +830,6 @@ if __name__ == "__main__":
     grp.add_argument(
         "--pdb_file", type=str, help="Path to a PDB file (preferred for OpenMM)."
     )
-
-    parser.add_argument(
-        "--pae_power",
-        type=float,
-        help="PAE power used to weight the community detection (default: 2.0)",
-        default=2.0,
-    )
     parser.add_argument(
         "--plddt_cutoff",
         type=float,
@@ -794,7 +846,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sigma",
         type=float,
-        default=8.0,
+        default=10.0,
         help="Sigma (Å) for exp similarity: exp(-(PAE/sigma)^2)",
     )
     parser.add_argument(
@@ -806,7 +858,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--knn",
         type=int,
-        default=20,
+        default=0,
         help="k for k-NN sparsification (per node). 0 disables and uses threshold graph",
     )
     parser.add_argument(
@@ -818,7 +870,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--min_seq_sep",
         type=int,
-        default=8,
+        default=4,
         help="Downweight/limit very short-range edges: require |i-j| ≥ this to include (0 to disable)",
     )
     parser.add_argument(
@@ -830,8 +882,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--leiden_resolution",
         type=float,
-        default=1.0,
-        help="Leiden resolution parameter γ (default 1.0)",
+        default=0.95,
+        help="Leiden resolution parameter γ (default 0.95)",
     )
     parser.add_argument(
         "--leiden_iters",
@@ -854,6 +906,7 @@ if __name__ == "__main__":
     # Determine input mode
 
     USE_PDB = args.pdb_file is not None
+    print(f"Using {'PDB' if USE_PDB else 'CRD'} input mode.")
 
     if USE_PDB:
         first_residue, last_residue = get_first_and_last_residue_numbers_pdb(
@@ -863,14 +916,14 @@ if __name__ == "__main__":
     else:
         first_residue, last_residue = get_first_and_last_residue_numbers(args.crd_file)
         chain_segments = define_segments(args.crd_file)
-    # print(f"here in main - {chain_segments}")
+        # Convert absolute (resnum-1) boundaries to indices relative to first_residue
+        if first_residue is not None:
+            offset = first_residue - 1
+            chain_segments = [max(0, idx - offset) for idx in chain_segments]
     SELECTED_ROWS_START = first_residue - 1
     SELECTED_ROWS_END = last_residue - 1
     SELECTED_COLS_START = SELECTED_ROWS_START
     SELECTED_COLS_END = SELECTED_ROWS_END
-
-    # set global constant for pae_power
-    PAE_POWER = args.pae_power
 
     # Read and correct PAE JSON in memory
     corrected_json_str = correct_json_brackets(args.pae_file, None)
@@ -882,7 +935,6 @@ if __name__ == "__main__":
         SELECTED_ROWS_END,
         SELECTED_COLS_START,
         SELECTED_COLS_END,
-        args.pae_power,
         graph_sim=args.graph_sim,
         sigma=args.sigma,
         linear_T=args.linear_T,
@@ -900,6 +952,10 @@ if __name__ == "__main__":
         pae_clusters, input_struct, first_residue, chain_segments, args.plddt_cutoff
     )
 
+    # Debug: print counts
+    print(f"Number of Rigid Bodies: {len(rigid_bodies_from_pae)}")
+    print(f"Total Rigid Domains: {sum(len(rb) for rb in rigid_bodies_from_pae)}")
+
     # --- Visualization artifacts start
     # 1) Build full PAE numpy matrix
     if "predicted_aligned_error" in pae_data:
@@ -912,7 +968,7 @@ if __name__ == "__main__":
     # 2) Determine L
     L = pae_full.shape[0]
     # 3) Downsample factor
-    s = 2 if L > 1200 else 1
+    s = 2 if L > 1600 else 1
     pae_ds = stride_downsample(pae_full, s)
 
     # 4) Convert rigid_bodies_from_pae (list of lists of (start_residue, end_residue, segid)) into Cluster objects
