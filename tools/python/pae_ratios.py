@@ -341,11 +341,90 @@ def _cluster_span(cluster: list[int]) -> tuple[int, int]:
     return (min(cluster), max(cluster))
 
 
+# --- New helpers for set-based off-diagonal stats ---
+from collections import defaultdict
+
+
+def _majority_chain_id(indices: list[int], chain_segs: list) -> int:
+    """Return the majority chain id for a set of 0-based indices, based on chain_segs."""
+    if not chain_segs or not indices:
+        return 0
+    counts = defaultdict(int)
+    for idx in indices:
+        cid = _chain_id_for_index(idx, chain_segs)
+        counts[cid] += 1
+    # return the chain id with max count
+    return max(counts.items(), key=lambda kv: kv[1])[0]
+
+
+def _offdiag_stats_sets(
+    pae: np.ndarray,
+    a_idx: list[int],
+    b_idx: list[int],
+    chain_segs: list,
+    tau: float,
+    tau_cross: float,
+    cov: float,
+    cov_cross: float,
+) -> tuple[bool, float, float, float, float]:
+    """
+    Compute median and coverage for the true off-diagonal block between the two
+    *sets* of indices (a_idx x b_idx), not their rectangular spans.
+    Returns (cross, median, coverage, thr, need).
+    """
+    if not a_idx or not b_idx:
+        return (False, float("inf"), 0.0, tau, cov)
+    arr = pae[np.ix_(a_idx, b_idx)]
+    if arr.size == 0:
+        return (False, float("inf"), 0.0, tau, cov)
+    # majority-chain heuristic for threshold selection
+    a_cid = _majority_chain_id(a_idx, chain_segs)
+    b_cid = _majority_chain_id(b_idx, chain_segs)
+    cross = a_cid != b_cid
+    thr = tau_cross if cross else tau
+    need = cov_cross if cross else cov
+    med = float(np.median(arr))
+    coverage = float(np.mean(arr <= thr))
+    return (cross, med, coverage, thr, need)
+
+
+def _is_span(x) -> bool:
+    """Return True if x looks like a (start, end) 2-tuple/list/array of ints."""
+    if isinstance(x, (list, tuple, np.ndarray)) and len(x) == 2:
+        a, b = x[0], x[1]
+        return isinstance(a, (int, np.integer)) and isinstance(b, (int, np.integer))
+    return False
+
+
 def _should_merge(
-    pae: np.ndarray, a_span, b_span, chain_segs, tau, cov, tau_cross, cov_cross
+    pae: np.ndarray,
+    a_span_or_set,
+    b_span_or_set,
+    chain_segs,
+    tau,
+    cov,
+    tau_cross,
+    cov_cross,
 ) -> bool:
-    ai, aj = a_span
-    bi, bj = b_span
+    """
+    Decide merge using *true* cluster membership when possible.
+    - If inputs are not 2-length spans, treat them as sets of indices and evaluate on np.ix_(a,b).
+    - If inputs are 2-length spans, fall back to rectangular span evaluation.
+    """
+    # Prefer set-based evaluation unless both are explicit 2-length spans.
+    if not _is_span(a_span_or_set) or not _is_span(b_span_or_set):
+        a_idx = list(a_span_or_set)
+        b_idx = list(b_span_or_set)
+        if len(a_idx) == 0 or len(b_idx) == 0:
+            return False
+        cross, med, coverage, thr, need = _offdiag_stats_sets(
+            pae, a_idx, b_idx, chain_segs, tau, tau_cross, cov, cov_cross
+        )
+        return (med <= thr) and (coverage >= need)
+
+    # Fall back: rectangular spans
+    ai, aj = a_span_or_set
+    bi, bj = b_span_or_set
     block = pae[ai : aj + 1, bi : bj + 1]
     if block.size == 0:
         return False
@@ -357,7 +436,7 @@ def _should_merge(
     return (med <= thr) and (coverage >= need)
 
 
-def _merge_adjacent_by_affinity(
+def _merge_clusters_by_affinity(
     pae: np.ndarray,
     clusters: list[list[int]],
     chain_segs: list,
@@ -365,52 +444,107 @@ def _merge_adjacent_by_affinity(
     cov: float,
     tau_cross: float,
     cov_cross: float,
+    mode: str = "adjacent",
 ) -> list[list[int]]:
-    # Sort by span start for adjacency
-    spans = [(_cluster_span(c), i) for i, c in enumerate(clusters)]
-    spans.sort(key=lambda t: t[0][0])
-    clusters = [clusters[i] for _, i in spans]
-    changed = True
-    while changed and len(clusters) > 1:
-        changed = False
-        i = 0
-        while i < len(clusters) - 1:
-            a = clusters[i]
-            b = clusters[i + 1]
-            a_span = _cluster_span(a)
-            b_span = _cluster_span(b)
-            if _should_merge(
-                pae, a_span, b_span, chain_segs, tau, cov, tau_cross, cov_cross
-            ):
-                merged = sorted(set(a) | set(b))
-                clusters[i] = merged
-                del clusters[i + 1]
+    """
+    Merge clusters based on affinity, either only adjacent clusters (mode='adjacent')
+    or any pair (mode='any').
+    """
+
+    def try_merge(a, b):
+        ok = _should_merge(
+            pae,
+            a,  # pass full index set
+            b,
+            chain_segs,
+            tau,
+            cov,
+            tau_cross,
+            cov_cross,
+        )
+        if not ok:
+            return None
+        # Compute stats for scoring
+        cross, med, coverage, thr, need = _offdiag_stats_sets(
+            pae, a, b, chain_segs, tau, tau_cross, cov, cov_cross
+        )
+        merged = sorted(set(a) | set(b))
+        return (merged, coverage, med)
+
+    if mode == "adjacent":
+        spans = [(_cluster_span(c), i) for i, c in enumerate(clusters)]
+        spans.sort(key=lambda t: t[0][0])
+        clusters = [clusters[i] for _, i in spans]
+        changed = True
+        while changed and len(clusters) > 1:
+            changed = False
+            i = 0
+            while i < len(clusters) - 1:
+                a = clusters[i]
+                b = clusters[i + 1]
+                res = try_merge(a, b)
+                if res is not None:
+                    merged, _covscore, _med = res
+                    clusters[i] = merged
+                    del clusters[i + 1]
+                    changed = True
+                else:
+                    i += 1
+        return clusters
+
+    elif mode == "any":
+        changed = True
+        while changed and len(clusters) > 1:
+            changed = False
+            best = None  # (score_cov, score_med, i, j, merged_list)
+            n = len(clusters)
+            for i in range(n):
+                ai = clusters[i]
+                for j in range(i + 1, n):
+                    bj = clusters[j]
+                    res = try_merge(ai, bj)
+                    if res is None:
+                        continue
+                    merged, covscore, med = res
+                    cand = (covscore, -med, i, j, merged)
+                    if best is None or cand > best:
+                        best = cand
+            if best is not None:
+                _covscore, _negmed, i, j, merged = best
+                # rebuild cluster list with merged pair
+                new_clusters = []
+                for k, c in enumerate(clusters):
+                    if k == i or k == j:
+                        continue
+                    new_clusters.append(c)
+                new_clusters.append(merged)
+                clusters = new_clusters
                 changed = True
-            else:
-                i += 1
-    return clusters
+        return clusters
+    else:
+        raise ValueError(f"Unknown merge mode: {mode}")
 
 
-def _debug_offdiag_stats_by_spans(
-    pae: np.ndarray, a_span: tuple[int, int], b_span: tuple[int, int], label: str = ""
-):
-    """Spans are 0-based, inclusive."""
-    ai, aj = a_span
-    bi, bj = b_span
-    block = pae[ai : aj + 1, bi : bj + 1]
-    if block.size == 0:
-        print(f"[DEBUG] {label} empty block for spans {ai+1}:{aj+1} vs {bi+1}:{bj+1}")
-        return
-    med = float(np.median(block))
-    cov6 = float(np.mean(block <= 6.0))
-    cov65 = float(np.mean(block <= 6.5))
-    cov7 = float(np.mean(block <= 7.0))
-    cov75 = float(np.mean(block <= 7.5))
-    cov150 = float(np.mean(block <= 15.0))
-    print(
-        f"[DEBUG] {label} {ai+1}:{aj+1} vs {bi+1}:{bj+1} -> "
-        f"median={med:.2f} cov<=6={cov6:.2f} cov<=6.5={cov65:.2f} cov<=7={cov7:.2f} cov<=7.5={cov75:.2f} cov<=15={cov150:.2f}"
-    )
+# def _debug_offdiag_stats_by_spans(
+#     pae: np.ndarray, a_span: tuple[int, int], b_span: tuple[int, int], label: str = ""
+# ):
+#     """Spans are 0-based, inclusive."""
+#     ai, aj = a_span
+#     bi, bj = b_span
+#     block = pae[ai : aj + 1, bi : bj + 1]
+#     if block.size == 0:
+#         print(f"[DEBUG] {label} empty block for spans {ai+1}:{aj+1} vs {bi+1}:{bj+1}")
+#         return
+#     med = float(np.median(block))
+#     cov6 = float(np.mean(block <= 6.0))
+#     cov65 = float(np.mean(block <= 6.5))
+#     cov7 = float(np.mean(block <= 7.0))
+#     cov75 = float(np.mean(block <= 7.5))
+#     cov150 = float(np.mean(block <= 15.0))
+#     print(
+#         f"[DEBUG] {label} {ai+1}:{aj+1} vs {bi+1}:{bj+1} -> "
+#         f"median={med:.2f} cov<=6={cov6:.2f} cov<=6.5={cov65:.2f} cov<=7={cov7:.2f} cov<=7.5={cov75:.2f} cov<=15={cov150:.2f}"
+#     )
 
 
 # --- Helper functions for rigid body/domain stats ---
@@ -522,6 +656,7 @@ def define_clusters_for_selected_pae(
     merge_coverage: float = 0.6,
     cross_merge_tau: float = 5.5,
     cross_merge_coverage: float = 0.7,
+    cross_merge_mode: str = "adjacent",
 ):
     """
     Define PAE clusters
@@ -589,7 +724,7 @@ def define_clusters_for_selected_pae(
         membership_clusters[cluster].append(index)
 
     sorted_clusters = sorted(membership_clusters.values(), key=len, reverse=True)
-    sorted_clusters = _merge_adjacent_by_affinity(
+    sorted_clusters = _merge_clusters_by_affinity(
         pae_matrix,
         sorted_clusters,
         chain_segs or [],
@@ -597,6 +732,7 @@ def define_clusters_for_selected_pae(
         cov=merge_coverage,
         tau_cross=cross_merge_tau,
         cov_cross=cross_merge_coverage,
+        mode=cross_merge_mode,
     )
     return sorted_clusters
 
@@ -1153,6 +1289,14 @@ if __name__ == "__main__":
         help="Minimum segment length; shorter segments are dropped in cleanup",
     )
     parser.add_argument(
+        "--cross_merge_mode",
+        type=str,
+        choices=["adjacent", "any"],
+        default="adjacent",
+        help="Post-merge mode: 'adjacent' (default) merges only neighbors, "
+        "'any' allows merging of any pair that meets thresholds.",
+    )
+    parser.add_argument(
         "--emit-constraints",
         type=str,
         help="If set, also write constraints YAML usable by OpenMM",
@@ -1211,6 +1355,7 @@ if __name__ == "__main__":
         merge_coverage=args.merge_coverage,
         cross_merge_tau=args.cross_merge_tau,
         cross_merge_coverage=args.cross_merge_coverage,
+        cross_merge_mode=args.cross_merge_mode,
     )
 
     input_struct = args.pdb_file if USE_PDB else args.crd_file
@@ -1238,24 +1383,24 @@ if __name__ == "__main__":
 
     # DEBUG sca2 weak off-diagonal stats
     # Build quick array of chain IDs per flattened index (PDB mode)
-    if USE_PDB:
-        chain_by_idx = np.array([cid for (cid, _res) in PDB_INDEX_TO_RES])
-        spans = []
-        for cl in pae_clusters:  # clusters as lists of 0-based indices
-            s, e = min(cl), max(cl)
-            # majority chain for this cluster
-            maj_chain = None
-            if len(cl) > 0:
-                vals, counts = np.unique(chain_by_idx[cl], return_counts=True)
-                maj_chain = vals[np.argmax(counts)]
-            spans.append((s, e, maj_chain))
-        # pick the largest 'B' cluster
-        b_candidates = [(e - s, s, e) for (s, e, c) in spans if c == "B"]
-        if b_candidates:
-            _, bs, be = max(b_candidates)  # largest by length
-            _debug_offdiag_stats_by_spans(
-                pae_full, (430 - 1, 456 - 1), (bs, be), label="A430-456 vs BigB"
-            )
+    # if USE_PDB:
+    #     chain_by_idx = np.array([cid for (cid, _res) in PDB_INDEX_TO_RES])
+    #     spans = []
+    #     for cl in pae_clusters:  # clusters as lists of 0-based indices
+    #         s, e = min(cl), max(cl)
+    #         # majority chain for this cluster
+    #         maj_chain = None
+    #         if len(cl) > 0:
+    #             vals, counts = np.unique(chain_by_idx[cl], return_counts=True)
+    #             maj_chain = vals[np.argmax(counts)]
+    #         spans.append((s, e, maj_chain))
+    #     # pick the largest 'B' cluster
+    #     b_candidates = [(e - s, s, e) for (s, e, c) in spans if c == "B"]
+    #     if b_candidates:
+    #         _, bs, be = max(b_candidates)  # largest by length
+    #         _debug_offdiag_stats_by_spans(
+    #             pae_full, (430 - 1, 456 - 1), (bs, be), label="A430-456 vs BigB"
+    #         )
 
     # --- Stats: median PAE per rigid body and per rigid domain
     print_rigid_stats(pae_full, rigid_bodies_from_pae, USE_PDB, first_residue)
@@ -1381,16 +1526,16 @@ if __name__ == "__main__":
             )
 
     # DEBUG
-    DEBUG_OFFDIAG = None
-    if USE_PDB and b_candidates:
-        # A: 430–456 (1-based), B: convert 0-based to 1-based inclusive
-        DEBUG_OFFDIAG = (430, 456, bs + 1, be + 1)
+    # DEBUG_OFFDIAG = None
+    # if USE_PDB and b_candidates:
+    #     # A: 430–456 (1-based), B: convert 0-based to 1-based inclusive
+    #     DEBUG_OFFDIAG = (430, 456, bs + 1, be + 1)
 
     save_viz_png(
         "viz.png",
         pae_ds,
         clusters,
-        offdiag_rects=([DEBUG_OFFDIAG] if DEBUG_OFFDIAG else None),
+        # offdiag_rects=([DEBUG_OFFDIAG] if DEBUG_OFFDIAG else None),
         stride=s,
     )
 
