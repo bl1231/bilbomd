@@ -445,10 +445,12 @@ def _merge_clusters_by_affinity(
     tau_cross: float,
     cov_cross: float,
     mode: str = "adjacent",
-) -> list[list[int]]:
+) -> tuple[list[list[int]], list[bool]]:
     """
-    Merge clusters based on affinity, either only adjacent clusters (mode='adjacent')
-    or any pair (mode='any').
+    Merge clusters based on affinity.
+    - Always starts with 'adjacent' mode to reduce cluster count efficiently.
+    - If mode='any', follows with a greedy merge of any qualifying pairs on the reduced set.
+    Returns (clusters, global_merged_flags) where global_merged_flags[i] is True if cluster i was created by a global merge.
     """
 
     def try_merge(a, b):
@@ -471,28 +473,31 @@ def _merge_clusters_by_affinity(
         merged = sorted(set(a) | set(b))
         return (merged, coverage, med)
 
-    if mode == "adjacent":
-        spans = [(_cluster_span(c), i) for i, c in enumerate(clusters)]
-        spans.sort(key=lambda t: t[0][0])
-        clusters = [clusters[i] for _, i in spans]
-        changed = True
-        while changed and len(clusters) > 1:
-            changed = False
-            i = 0
-            while i < len(clusters) - 1:
-                a = clusters[i]
-                b = clusters[i + 1]
-                res = try_merge(a, b)
-                if res is not None:
-                    merged, _covscore, _med = res
-                    clusters[i] = merged
-                    del clusters[i + 1]
-                    changed = True
-                else:
-                    i += 1
-        return clusters
+    # Step 1: Always run 'adjacent' mode first to reduce cluster count
+    spans = [(_cluster_span(c), i) for i, c in enumerate(clusters)]
+    spans.sort(key=lambda t: t[0][0])
+    clusters = [clusters[i] for _, i in spans]
+    changed = True
+    while changed and len(clusters) > 1:
+        changed = False
+        i = 0
+        while i < len(clusters) - 1:
+            a = clusters[i]
+            b = clusters[i + 1]
+            res = try_merge(a, b)
+            if res is not None:
+                merged, _covscore, _med = res
+                clusters[i] = merged
+                del clusters[i + 1]
+                changed = True
+            else:
+                i += 1
 
-    elif mode == "any":
+    # Initialize global merge flags: all False initially (none merged yet)
+    global_merged_flags = [False] * len(clusters)
+
+    # Step 2: If mode is 'any', run an additional greedy merge on the reduced set
+    if mode == "any":
         changed = True
         while changed and len(clusters) > 1:
             changed = False
@@ -511,40 +516,23 @@ def _merge_clusters_by_affinity(
                         best = cand
             if best is not None:
                 _covscore, _negmed, i, j, merged = best
-                # rebuild cluster list with merged pair
+                # Rebuild cluster list with merged pair
                 new_clusters = []
+                global_merged_flags_new = []
                 for k, c in enumerate(clusters):
                     if k == i or k == j:
                         continue
                     new_clusters.append(c)
+                    global_merged_flags_new.append(global_merged_flags[k])
                 new_clusters.append(merged)
+                global_merged_flags_new.append(
+                    True
+                )  # Mark the new merged cluster as globally merged
                 clusters = new_clusters
+                global_merged_flags = global_merged_flags_new
                 changed = True
-        return clusters
-    else:
-        raise ValueError(f"Unknown merge mode: {mode}")
 
-
-# def _debug_offdiag_stats_by_spans(
-#     pae: np.ndarray, a_span: tuple[int, int], b_span: tuple[int, int], label: str = ""
-# ):
-#     """Spans are 0-based, inclusive."""
-#     ai, aj = a_span
-#     bi, bj = b_span
-#     block = pae[ai : aj + 1, bi : bj + 1]
-#     if block.size == 0:
-#         print(f"[DEBUG] {label} empty block for spans {ai+1}:{aj+1} vs {bi+1}:{bj+1}")
-#         return
-#     med = float(np.median(block))
-#     cov6 = float(np.mean(block <= 6.0))
-#     cov65 = float(np.mean(block <= 6.5))
-#     cov7 = float(np.mean(block <= 7.0))
-#     cov75 = float(np.mean(block <= 7.5))
-#     cov150 = float(np.mean(block <= 15.0))
-#     print(
-#         f"[DEBUG] {label} {ai+1}:{aj+1} vs {bi+1}:{bj+1} -> "
-#         f"median={med:.2f} cov<=6={cov6:.2f} cov<=6.5={cov65:.2f} cov<=7={cov7:.2f} cov<=7.5={cov75:.2f} cov<=15={cov150:.2f}"
-#     )
+    return clusters, global_merged_flags
 
 
 # --- Helper functions for rigid body/domain stats ---
@@ -724,7 +712,8 @@ def define_clusters_for_selected_pae(
         membership_clusters[cluster].append(index)
 
     sorted_clusters = sorted(membership_clusters.values(), key=len, reverse=True)
-    sorted_clusters = _merge_clusters_by_affinity(
+    # In define_clusters_for_selected_pae, after the _merge_clusters_by_affinity call:
+    sorted_clusters, global_merged_flags = _merge_clusters_by_affinity(
         pae_matrix,
         sorted_clusters,
         chain_segs or [],
@@ -734,7 +723,8 @@ def define_clusters_for_selected_pae(
         cov_cross=cross_merge_coverage,
         mode=cross_merge_mode,
     )
-    return sorted_clusters
+    # Now return the flags too
+    return sorted_clusters, global_merged_flags
 
 
 def is_float(arg):
@@ -987,7 +977,8 @@ def define_rigid_bodies(
     chain_segment_list: list,
     plddt_cutoff: float,
     min_segment_len: int,
-) -> list:
+    global_merged_flags: list[bool] | None = None,
+) -> tuple[list, list[bool]]:
     """
     Define all Rigid Domains
 
@@ -999,7 +990,8 @@ def define_rigid_bodies(
     # print(f"[define_rigid_bodies] first_resnum: {first_resnum}")
     # print(f"[define_rigid_bodies] clusters: {clusters}")
     rigid_bodies = []
-    for _, cluster in enumerate(clusters):
+    rigid_body_flags = []
+    for i, cluster in enumerate(clusters):
         rigid_body = []
         if len(cluster) >= MIN_CLUSTER_LENGTH:
             sorted_cluster = sort_and_separate_cluster(cluster, chain_segment_list)
@@ -1039,9 +1031,14 @@ def define_rigid_bodies(
                         if normalized not in rigid_body:
                             rigid_body.append(normalized)
             rigid_bodies.append(rigid_body)
+            rigid_body_flags.append(
+                global_merged_flags[i] if global_merged_flags else False
+            )
 
     # remove empty lists from our list of lists of tuples
-    all_non_empty_rigid_bodies = [cluster for cluster in rigid_bodies if cluster]
+    idxs = [i for i, rb in enumerate(rigid_bodies) if rb]
+    all_non_empty_rigid_bodies = [rigid_bodies[i] for i in idxs]
+    rigid_body_flags = [rigid_body_flags[i] for i in idxs]
     print(f"Rigid Bodies: {all_non_empty_rigid_bodies}")
 
     # Now we need to make sure that none of the Rigid Domains (defined as tuples) are
@@ -1061,7 +1058,8 @@ def define_rigid_bodies(
 
     # Merge overlaps already done; now drop tiny segments and coalesce adjacents per segid
     cleaned: list[list[tuple[int, int, str]]] = []
-    for rb in merged_rigid_bodies:
+    cleaned_flags = []
+    for rb, flag in zip(merged_rigid_bodies, rigid_body_flags):
         # drop too-short
         rb2 = [
             (s, e, seg) for (s, e, seg) in rb if (e - s + 1) >= max(1, min_segment_len)
@@ -1075,11 +1073,11 @@ def define_rigid_bodies(
             else:
                 ps, pe, pseg = coalesced[-1]
                 coalesced[-1] = (ps, max(pe, e), pseg)
-        cleaned.append(coalesced)
-    # Drop any empty rigid bodies to avoid downstream viz errors
-    cleaned = [rb for rb in cleaned if rb]
+        if coalesced:  # Only add if not empty after cleanup
+            cleaned.append(coalesced)
+            cleaned_flags.append(flag)
     print(f"Cleaned Rigid Bodies: {cleaned}")
-    return cleaned
+    return cleaned, cleaned_flags
 
 
 def write_constraints_yaml(rigid_body_list: list, output_path: str):
@@ -1334,7 +1332,7 @@ if __name__ == "__main__":
     corrected_json_str = correct_json_brackets(args.pae_file, None)
     pae_data = json.loads(corrected_json_str)
 
-    pae_clusters = define_clusters_for_selected_pae(
+    pae_clusters, global_merged_flags = define_clusters_for_selected_pae(
         pae_data,
         SELECTED_ROWS_START,
         SELECTED_ROWS_END,
@@ -1359,13 +1357,14 @@ if __name__ == "__main__":
     )
 
     input_struct = args.pdb_file if USE_PDB else args.crd_file
-    rigid_bodies_from_pae = define_rigid_bodies(
+    rigid_bodies_from_pae, rigid_body_flags = define_rigid_bodies(
         pae_clusters,
         input_struct,
         first_residue,
         chain_segments,
         args.plddt_cutoff,
         args.min_segment_len,
+        global_merged_flags,
     )
 
     # Debug: print counts
@@ -1452,7 +1451,11 @@ if __name__ == "__main__":
                 ranges.append((gstart, gend))
         if ranges:
             ctype = "fixed" if i == 0 else "rigid"
-            clusters.append(Cluster(cid=i, ctype=ctype, ranges=ranges))
+            clusters.append(
+                Cluster(
+                    cid=i, ctype=ctype, ranges=ranges, global_merge=rigid_body_flags[i]
+                )
+            )
 
     # --- Compute chains spans (1-based inclusive) for viz.json
     chains = []

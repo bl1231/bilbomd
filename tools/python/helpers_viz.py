@@ -12,6 +12,7 @@ class Cluster:
     cid: int
     ctype: ClusterType
     ranges: List[Tuple[int, int]]  # 1-based inclusive
+    global_merge: bool = False
 
     def bbox(self) -> Tuple[int, int, int, int]:
         # diagonal square bbox covering all ranges
@@ -29,6 +30,7 @@ def stride_downsample(mat: np.ndarray, s: int) -> np.ndarray:
     m = mat.shape[1] - (mat.shape[1] % s)
     return mat[:n:s, :m:s]
 
+
 def write_viz_json(
     out_path: str,
     length: int,
@@ -38,17 +40,21 @@ def write_viz_json(
     downsample: int | None = None,
     chains: List[Dict[str, Any]] | None = None,
 ) -> None:
-    payload: Dict[str, Any] = {
-        "length": length,
-        "clusters": [
+    cluster_list = []
+    for i, c in enumerate(clusters):
+        global_merge = c.global_merge
+        cluster_list.append(
             {
                 "id": c.cid,
                 "type": c.ctype,
                 "ranges": [[a, b] for (a, b) in c.ranges],
                 "bbox": list(c.bbox()),
+                "global_merge": global_merge,  # New field in JSON
             }
-            for c in clusters
-        ],
+        )
+    payload: Dict[str, Any] = {
+        "length": length,
+        "clusters": cluster_list,
     }
 
     if plddt_cutoff is not None or low_conf:
@@ -64,7 +70,7 @@ def write_viz_json(
         payload["chains"] = chains
 
     with open(out_path, "w") as f:
-        json.dump(payload, f, separators=(",", ":"), ensure_ascii=False)
+        json.dump(payload, f, indent=2, separators=(",", ":"), ensure_ascii=False)
 
 
 def save_pae_bin(out_path: str, mat: np.ndarray) -> None:
@@ -86,7 +92,13 @@ def save_pae_png(out_path: str, mat: np.ndarray) -> None:
     plt.close(fig)
 
 
-def save_viz_png(out_path: str, mat: np.ndarray, clusters: List[Cluster]) -> None:
+def save_viz_png(
+    out_path: str,
+    mat: np.ndarray,
+    clusters: List[Cluster],
+    offdiag_rects: List[Tuple[int, int, int, int]] | None = None,
+    stride: int = 1,
+) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
@@ -118,6 +130,41 @@ def save_viz_png(out_path: str, mat: np.ndarray, clusters: List[Cluster]) -> Non
                 (x, y), w, h, linewidth=0.6, edgecolor=edge, facecolor=face
             )
         )
+
+    # Optional: draw off-diagonal debug rectangles (row_start,row_end,col_start,col_end), 1-based inclusive
+    if offdiag_rects:
+        for r_start, r_end, c_start, c_end in offdiag_rects:
+            if r_start is None or r_end is None or c_start is None or c_end is None:
+                continue
+            # convert 1-based inclusive -> 0-based half-open
+            a0 = max(0, int(r_start) - 1)
+            a1 = max(0, int(r_end))
+            b0 = max(0, int(c_start) - 1)
+            b1 = max(0, int(c_end))
+
+            s = max(1, stride)
+            # map to downsampled pixels; ceil-div for end to include last pixel
+            x0 = b0 // s
+            y0 = a0 // s
+            x1 = (b1 + s - 1) // s
+            y1 = (a1 + s - 1) // s
+
+            # clamp to image bounds
+            x0 = max(0, min(x0, L - 1))
+            y0 = max(0, min(y0, L - 1))
+            x1 = max(0, min(x1, L))
+            y1 = max(0, min(y1, L))
+
+            ax.add_patch(
+                patches.Rectangle(
+                    (x0, y0),
+                    x1 - x0,
+                    y1 - y0,
+                    linewidth=1,
+                    edgecolor=(1, 0, 1),
+                    facecolor="none",
+                )
+            )
 
     fig.savefig(out_path, dpi=256)
     plt.close(fig)
