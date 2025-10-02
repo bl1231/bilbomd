@@ -391,6 +391,115 @@ def _merge_adjacent_by_affinity(
     return clusters
 
 
+def _debug_offdiag_stats_by_spans(
+    pae: np.ndarray, a_span: tuple[int, int], b_span: tuple[int, int], label: str = ""
+):
+    """Spans are 0-based, inclusive."""
+    ai, aj = a_span
+    bi, bj = b_span
+    block = pae[ai : aj + 1, bi : bj + 1]
+    if block.size == 0:
+        print(f"[DEBUG] {label} empty block for spans {ai+1}:{aj+1} vs {bi+1}:{bj+1}")
+        return
+    med = float(np.median(block))
+    cov6 = float(np.mean(block <= 6.0))
+    cov65 = float(np.mean(block <= 6.5))
+    cov7 = float(np.mean(block <= 7.0))
+    cov75 = float(np.mean(block <= 7.5))
+    cov150 = float(np.mean(block <= 15.0))
+    print(
+        f"[DEBUG] {label} {ai+1}:{aj+1} vs {bi+1}:{bj+1} -> "
+        f"median={med:.2f} cov<=6={cov6:.2f} cov<=6.5={cov65:.2f} cov<=7={cov7:.2f} cov<=7.5={cov75:.2f} cov<=15={cov150:.2f}"
+    )
+
+
+# --- Helper functions for rigid body/domain stats ---
+def _tuple_to_global_mapper(use_pdb: bool, first_residue: int):
+    """Return a function that maps (start_res, end_res, segid) -> (gstart, gend) in 1-based global indices."""
+    if use_pdb:
+        # Build mapping from (chain_id, resseq) -> global 1-based index using prepared PDB_INDEX_TO_RES
+        res_to_global = {}
+        for idx, (chain_id, resseq) in enumerate(PDB_INDEX_TO_RES):
+            res_to_global[(chain_id, resseq)] = idx + 1
+            # also allow string-casted chain ids
+            res_to_global[(str(chain_id), resseq)] = idx + 1
+
+        def _map_pdb(tup):
+            start_res, end_res, segid = tup
+            gs = res_to_global.get((segid, start_res))
+            ge = res_to_global.get((segid, end_res))
+            return (gs, ge)
+
+        return _map_pdb
+    else:
+        first_crd = first_residue
+
+        def _map_crd(tup):
+            start_res, end_res, _seg = tup
+            gs = start_res - first_crd + 1
+            ge = end_res - first_crd + 1
+            return (gs, ge)
+
+        return _map_crd
+
+
+def _median_block(pae: np.ndarray, gstart: int, gend: int) -> float:
+    """Median PAE within the diagonal block [gstart,gend] (1-based inclusive)."""
+    if gstart is None or gend is None:
+        return float("nan")
+    a0 = int(gstart) - 1
+    a1 = int(gend)
+    if a0 < 0 or a1 <= a0 or a1 > pae.shape[0]:
+        return float("nan")
+    block = pae[a0:a1, a0:a1]
+    if block.size == 0:
+        return float("nan")
+    return float(np.median(block))
+
+
+def _mean_block(pae: np.ndarray, gstart: int, gend: int) -> float:
+    """Mean PAE within the diagonal block [gstart,gend] (1-based inclusive)."""
+    if gstart is None or gend is None:
+        return float("nan")
+    a0 = int(gstart) - 1
+    a1 = int(gend)
+    if a0 < 0 or a1 <= a0 or a1 > pae.shape[0]:
+        return float("nan")
+    block = pae[a0:a1, a0:a1]
+    if block.size == 0:
+        return float("nan")
+    return float(np.mean(block))
+
+
+def print_rigid_stats(
+    pae: np.ndarray, rigid_bodies: list, use_pdb: bool, first_residue: int
+):
+    """Print median PAE per rigid body and per rigid domain."""
+    mapper = _tuple_to_global_mapper(use_pdb, first_residue)
+    for rb_idx, rb in enumerate(rigid_bodies, start=1):
+        domain_meds = []
+        print(f"[stats] RigidBody {rb_idx}: n_domains={len(rb)}")
+        for s, e, seg in rb:
+            gs, ge = mapper((s, e, seg))
+            # normalize orientation and clamp
+            if gs is not None and ge is not None and gs > ge:
+                gs, ge = ge, gs
+            med = _median_block(pae, gs, ge)
+            mean = _mean_block(pae, gs, ge)
+            domain_meds.append(med)
+            domain_meds.append(mean)
+            seg_str = seg if isinstance(seg, str) else str(seg)
+            print(
+                f"  - {seg_str}:{int(s)}-{int(e)} (global {gs}-{ge}) len={int(e)-int(s)+1} median={med:.2f} Å mean={mean:.2f} Å"
+            )
+        if domain_meds:
+            # robust overall median across all domain pixels: median of medians is fine for printing
+            overall = float(np.nanmedian(np.array(domain_meds, dtype=float)))
+            print(
+                f"  > RigidBody {rb_idx} median-of-domains = {overall:.2f} Å mean-of-domains = {np.nanmean(np.array(domain_meds, dtype=float)):.2f} Å"
+            )
+
+
 def define_clusters_for_selected_pae(
     pae_data,
     row_start: int,
@@ -741,6 +850,7 @@ def define_rigid_bodies(
     first_resnum: int,
     chain_segment_list: list,
     plddt_cutoff: float,
+    min_segment_len: int,
 ) -> list:
     """
     Define all Rigid Domains
@@ -812,7 +922,28 @@ def define_rigid_bodies(
         merged_rb = _merge_overlapping_domains(rb)
         merged_rigid_bodies.append(merged_rb)
     print(f"Optimized Rigid Bodies: {merged_rigid_bodies}")
-    return merged_rigid_bodies
+
+    # Merge overlaps already done; now drop tiny segments and coalesce adjacents per segid
+    cleaned: list[list[tuple[int, int, str]]] = []
+    for rb in merged_rigid_bodies:
+        # drop too-short
+        rb2 = [
+            (s, e, seg) for (s, e, seg) in rb if (e - s + 1) >= max(1, min_segment_len)
+        ]
+        # coalesce adjacent within same segid
+        rb2.sort(key=lambda x: (x[2], x[0], x[1]))
+        coalesced: list[tuple[int, int, str]] = []
+        for s, e, seg in rb2:
+            if not coalesced or coalesced[-1][2] != seg or s > coalesced[-1][1] + 1:
+                coalesced.append((s, e, seg))
+            else:
+                ps, pe, pseg = coalesced[-1]
+                coalesced[-1] = (ps, max(pe, e), pseg)
+        cleaned.append(coalesced)
+    # Drop any empty rigid bodies to avoid downstream viz errors
+    cleaned = [rb for rb in cleaned if rb]
+    print(f"Cleaned Rigid Bodies: {cleaned}")
+    return cleaned
 
 
 def write_constraints_yaml(rigid_body_list: list, output_path: str):
@@ -1016,6 +1147,12 @@ if __name__ == "__main__":
         help="Post-merge: coverage for cross-chain merges (0..1)",
     )
     parser.add_argument(
+        "--min_segment_len",
+        type=int,
+        default=6,
+        help="Minimum segment length; shorter segments are dropped in cleanup",
+    )
+    parser.add_argument(
         "--emit-constraints",
         type=str,
         help="If set, also write constraints YAML usable by OpenMM",
@@ -1078,7 +1215,12 @@ if __name__ == "__main__":
 
     input_struct = args.pdb_file if USE_PDB else args.crd_file
     rigid_bodies_from_pae = define_rigid_bodies(
-        pae_clusters, input_struct, first_residue, chain_segments, args.plddt_cutoff
+        pae_clusters,
+        input_struct,
+        first_residue,
+        chain_segments,
+        args.plddt_cutoff,
+        args.min_segment_len,
     )
 
     # Debug: print counts
@@ -1093,6 +1235,30 @@ if __name__ == "__main__":
         pae_full = np.array(pae_data["pae"], dtype=np.float32)
     else:
         raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+
+    # DEBUG sca2 weak off-diagonal stats
+    # Build quick array of chain IDs per flattened index (PDB mode)
+    if USE_PDB:
+        chain_by_idx = np.array([cid for (cid, _res) in PDB_INDEX_TO_RES])
+        spans = []
+        for cl in pae_clusters:  # clusters as lists of 0-based indices
+            s, e = min(cl), max(cl)
+            # majority chain for this cluster
+            maj_chain = None
+            if len(cl) > 0:
+                vals, counts = np.unique(chain_by_idx[cl], return_counts=True)
+                maj_chain = vals[np.argmax(counts)]
+            spans.append((s, e, maj_chain))
+        # pick the largest 'B' cluster
+        b_candidates = [(e - s, s, e) for (s, e, c) in spans if c == "B"]
+        if b_candidates:
+            _, bs, be = max(b_candidates)  # largest by length
+            _debug_offdiag_stats_by_spans(
+                pae_full, (430 - 1, 456 - 1), (bs, be), label="A430-456 vs BigB"
+            )
+
+    # --- Stats: median PAE per rigid body and per rigid domain
+    print_rigid_stats(pae_full, rigid_bodies_from_pae, USE_PDB, first_residue)
 
     # 2) Determine L
     L = pae_full.shape[0]
@@ -1139,8 +1305,9 @@ if __name__ == "__main__":
             if gstart is not None and gend is not None:
                 # 1-based inclusive
                 ranges.append((gstart, gend))
-        ctype = "fixed" if i == 0 else "rigid"
-        clusters.append(Cluster(cid=i, ctype=ctype, ranges=ranges))
+        if ranges:
+            ctype = "fixed" if i == 0 else "rigid"
+            clusters.append(Cluster(cid=i, ctype=ctype, ranges=ranges))
 
     # --- Compute chains spans (1-based inclusive) for viz.json
     chains = []
@@ -1213,10 +1380,24 @@ if __name__ == "__main__":
                 }
             )
 
+    # DEBUG
+    DEBUG_OFFDIAG = None
+    if USE_PDB and b_candidates:
+        # A: 430–456 (1-based), B: convert 0-based to 1-based inclusive
+        DEBUG_OFFDIAG = (430, 456, bs + 1, be + 1)
+
+    save_viz_png(
+        "viz.png",
+        pae_ds,
+        clusters,
+        offdiag_rects=([DEBUG_OFFDIAG] if DEBUG_OFFDIAG else None),
+        stride=s,
+    )
+
     # 5) Write artifacts
     save_pae_bin("pae.bin", pae_ds)
     save_pae_png("pae.png", pae_ds)
-    save_viz_png("viz.png", pae_ds, clusters)
+    # save_viz_png("viz.png", pae_ds, clusters)
     write_viz_json(
         "viz.json",
         length=L,
