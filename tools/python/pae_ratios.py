@@ -223,6 +223,98 @@ def correct_json_brackets(pae, output_file_path):
             return json_content
 
 
+def _similarity_from_pae(
+    pae_matrix: np.ndarray,
+    method: str = "exp",
+    sigma: float = 8.0,
+    T: float = 30.0,
+) -> np.ndarray:
+    """Convert PAE (Å) to bounded similarity in [0,1].
+    exp:    S = exp(-(PAE/sigma)^2)
+    linear: S = max(0, 1 - PAE/T)
+    """
+    pae = np.asarray(pae_matrix, dtype=np.float64)
+    if method == "exp":
+        S = np.exp(-((pae / max(1e-9, sigma)) ** 2))
+    else:
+        S = 1.0 - (pae / max(1e-9, T))
+        S[S < 0] = 0.0
+    # zero self-similarity to avoid trivial dominance
+    np.fill_diagonal(S, 0.0)
+    return S
+
+
+def _is_cross_chain(i: int, j: int, chain_segs: list) -> bool:
+    """True if i and j lie on different chains given split indices (0-based, split BEFORE index)."""
+    if not chain_segs:
+        return False
+
+    def chain_id(idx: int) -> int:
+        c = 0
+        for b in chain_segs:
+            if idx > b:
+                c += 1
+            else:
+                break
+        return c
+
+    return chain_id(i) != chain_id(j)
+
+
+def _build_edges_from_similarity(
+    S: np.ndarray,
+    pae: np.ndarray,
+    pae_cutoff: float,
+    k: int,
+    min_seq_sep: int,
+    chain_segs: list,
+    interchain_cutoff: float,
+) -> tuple[list[tuple[int, int]], np.ndarray]:
+    """Return (edges, weights) for igraph from similarity S with constraints.
+    - Keep only edges with PAE ≤ pae_cutoff.
+    - If k>0: per-row keep top-k neighbors by similarity (symmetrize).
+    - Apply |i-j| ≥ min_seq_sep if min_seq_sep>0.
+    - For cross-chain pairs, require PAE ≤ interchain_cutoff.
+    """
+    n = S.shape[0]
+    mask = pae <= pae_cutoff
+    if min_seq_sep and min_seq_sep > 0:
+        ii, jj = np.indices((n, n))
+        mask &= np.abs(ii - jj) >= min_seq_sep
+
+    # Inter-chain stricter rule
+    if chain_segs:
+        for i in range(n):
+            for j in range(n):
+                if mask[i, j] and _is_cross_chain(i, j, chain_segs):
+                    if pae[i, j] > interchain_cutoff:
+                        mask[i, j] = False
+
+    S_masked = np.where(mask, S, 0.0)
+
+    if k and k > 0:
+        edges_set: set[tuple[int, int]] = set()
+        for i in range(n):
+            row = S_masked[i]
+            if not np.any(row):
+                continue
+            k_eff = min(k, n - 1)
+            idx = np.argpartition(-row, kth=k_eff)[:k_eff]
+            idx = [j for j in idx if row[j] > 0 and j != i]
+            for j in idx:
+                a, b = (i, j) if i < j else (j, i)
+                edges_set.add((a, b))
+        edges = sorted(edges_set)
+        weights = np.array([S_masked[i, j] for (i, j) in edges], dtype=float)
+        return edges, weights
+    else:
+        ii, jj = np.triu_indices(n, k=1)
+        keep = S_masked[ii, jj] > 0
+        edges = list(zip(ii[keep].tolist(), jj[keep].tolist()))
+        weights = S_masked[ii[keep], jj[keep]].astype(float)
+        return edges, weights
+
+
 def define_clusters_for_selected_pae(
     pae_data,
     row_start: int,
@@ -230,6 +322,17 @@ def define_clusters_for_selected_pae(
     col_start: int,
     col_end: int,
     pae_power: float,
+    *,
+    graph_sim: str = "exp",
+    sigma: float = 8.0,
+    linear_T: float = 30.0,
+    knn: int = 20,
+    pae_cutoff: float = 10.0,
+    min_seq_sep: int = 8,
+    chain_segs: list | None = None,
+    interchain_cutoff: float = 5.0,
+    leiden_resolution: float = 1.0,
+    leiden_iters: int = 10,
 ):
     """
     Define PAE clusters
@@ -243,39 +346,39 @@ def define_clusters_for_selected_pae(
     else:
         raise ValueError("Invalid PAE JSON format.")
 
-    selected_matrix = []
+    selected = []
     for i, row in enumerate(matrix):
         if row_start <= i <= row_end:
             new_row = [
                 value if col_start <= j <= col_end else 30.0
                 for j, value in enumerate(row)
             ]
-            selected_matrix.append(new_row)
+            selected.append(new_row)
+    pae_matrix = np.array(selected, dtype=np.float64)
 
-    selected_data = {"predicted_aligned_error": selected_matrix}
-
-    if "predicted_aligned_error" not in selected_data:
-        raise ValueError("Invalid PAE JSON format.")
-
-    pae_matrix = np.array(selected_data["predicted_aligned_error"], dtype=np.float64)
-
-    pae_cutoff = 10
-    graph_resolution = 1
-    # Avoid divide-by-zero by adding a small epsilon value to the denominator
-    epsilon = 1e-6  # You can adjust this value based on your specific needs
-    weights = 1 / (pae_matrix + epsilon) ** pae_power
-    print(f"pae_power: {pae_power}")
+    # Build similarity and edges
+    S = _similarity_from_pae(pae_matrix, method=graph_sim, sigma=sigma, T=linear_T)
+    edges, sel_weights = _build_edges_from_similarity(
+        S=S,
+        pae=pae_matrix,
+        pae_cutoff=pae_cutoff,
+        k=knn,
+        min_seq_sep=min_seq_sep,
+        chain_segs=chain_segs or [],
+        interchain_cutoff=interchain_cutoff,
+    )
 
     g = igraph.Graph()
-    size = weights.shape[0]
+    size = pae_matrix.shape[0]
     g.add_vertices(range(size))
-    edges = np.argwhere(pae_matrix < pae_cutoff)
-    sel_weights = weights[edges.T[0], edges.T[1]]
-    g.add_edges(edges)
-    g.es["weight"] = sel_weights
+    if edges:
+        g.add_edges(edges)
+        g.es["weight"] = sel_weights
 
     vc = g.community_leiden(
-        weights="weight", resolution=graph_resolution / 100, n_iterations=10
+        weights="weight" if edges else None,
+        resolution=leiden_resolution,
+        n_iterations=leiden_iters,
     )
     membership = np.array(vc.membership)
 
@@ -283,7 +386,6 @@ def define_clusters_for_selected_pae(
     for index, cluster in enumerate(membership):
         membership_clusters[cluster].append(index)
 
-    # Directly sort the cluster values by their length in descending order
     sorted_clusters = sorted(membership_clusters.values(), key=len, reverse=True)
     return sorted_clusters
 
@@ -683,6 +785,61 @@ if __name__ == "__main__":
         default=50,
     )
     parser.add_argument(
+        "--graph_sim",
+        type=str,
+        choices=["exp", "linear"],
+        default="exp",
+        help="Similarity transform for PAE→weight (default: exp)",
+    )
+    parser.add_argument(
+        "--sigma",
+        type=float,
+        default=8.0,
+        help="Sigma (Å) for exp similarity: exp(-(PAE/sigma)^2)",
+    )
+    parser.add_argument(
+        "--linear_T",
+        type=float,
+        default=30.0,
+        help="T for linear similarity: max(0, 1 - PAE/T)",
+    )
+    parser.add_argument(
+        "--knn",
+        type=int,
+        default=20,
+        help="k for k-NN sparsification (per node). 0 disables and uses threshold graph",
+    )
+    parser.add_argument(
+        "--pae_cutoff",
+        type=float,
+        default=10.0,
+        help="Edge kept only if PAE ≤ cutoff (Å).",
+    )
+    parser.add_argument(
+        "--min_seq_sep",
+        type=int,
+        default=8,
+        help="Downweight/limit very short-range edges: require |i-j| ≥ this to include (0 to disable)",
+    )
+    parser.add_argument(
+        "--interchain_cutoff",
+        type=float,
+        default=5.0,
+        help="Allow cross-chain edges only if PAE ≤ this value (Å).",
+    )
+    parser.add_argument(
+        "--leiden_resolution",
+        type=float,
+        default=1.0,
+        help="Leiden resolution parameter γ (default 1.0)",
+    )
+    parser.add_argument(
+        "--leiden_iters",
+        type=int,
+        default=10,
+        help="Leiden iterations (default 10)",
+    )
+    parser.add_argument(
         "--emit-constraints",
         type=str,
         help="If set, also write constraints YAML usable by OpenMM",
@@ -726,6 +883,16 @@ if __name__ == "__main__":
         SELECTED_COLS_START,
         SELECTED_COLS_END,
         args.pae_power,
+        graph_sim=args.graph_sim,
+        sigma=args.sigma,
+        linear_T=args.linear_T,
+        knn=args.knn,
+        pae_cutoff=args.pae_cutoff,
+        min_seq_sep=args.min_seq_sep,
+        chain_segs=chain_segments,
+        interchain_cutoff=args.interchain_cutoff,
+        leiden_resolution=args.leiden_resolution,
+        leiden_iters=args.leiden_iters,
     )
 
     input_struct = args.pdb_file if USE_PDB else args.crd_file
