@@ -27,24 +27,27 @@ except ImportError:
     print("Please `pip install pyyaml` to use this runner.", file=sys.stderr)
     sys.exit(1)
 
+
 def _resolve_path(p: str, base: str) -> str:
     return p if os.path.isabs(p) else os.path.abspath(os.path.join(base, p))
 
+
 def _read_text(p: str) -> str:
-    with open(p, 'r', encoding='utf-8', errors='replace') as f:
-        return f.read().replace('\r\n', '\n').replace('\r', '\n')
+    with open(p, "r", encoding="utf-8", errors="replace") as f:
+        return f.read().replace("\r\n", "\n").replace("\r", "\n")
+
 
 def compare_to_gold(case_outdir: str, gold_root: str, case_name: str) -> dict:
     """Compare key artifacts against a gold directory.
     Returns a dict: { 'checked': bool, 'ok': bool, 'details': str }
     Writes unified diffs into the case outdir when mismatches occur.
     """
-    result = { 'checked': False, 'ok': False, 'details': '' }
+    result = {"checked": False, "ok": False, "details": ""}
     if not gold_root:
         return result
     gold_dir = os.path.join(gold_root, case_name)
     if not os.path.isdir(gold_dir):
-        result['details'] = f"gold dir missing: {gold_dir}"
+        result["details"] = f"gold dir missing: {gold_dir}"
         return result
 
     checks = []
@@ -52,8 +55,8 @@ def compare_to_gold(case_outdir: str, gold_root: str, case_name: str) -> dict:
 
     # Files to compare as text
     targets = [
-        ('const.inp', 'const.diff'),
-        ('constraints.yaml', 'constraints.diff'),
+        ("const.inp", "const.diff"),
+        ("constraints.yaml", "constraints.diff"),
     ]
 
     for fname, diffname in targets:
@@ -82,21 +85,26 @@ def compare_to_gold(case_outdir: str, gold_root: str, case_name: str) -> dict:
                 new_txt.splitlines(True),
                 fromfile=f"gold/{case_name}/{fname}",
                 tofile=f"new/{case_name}/{fname}",
-                lineterm=''
+                lineterm="",
             )
-            with open(os.path.join(case_outdir, diffname), 'w', encoding='utf-8') as df:
+            with open(os.path.join(case_outdir, diffname), "w", encoding="utf-8") as df:
                 df.writelines(diff)
 
-    result['checked'] = True
-    result['ok'] = overall_ok
-    result['details'] = '; '.join(checks)
+    result["checked"] = True
+    result["ok"] = overall_ok
+    result["details"] = "; ".join(checks)
     return result
 
-PAE_SCRIPT = os.path.abspath(os.path.join(os.path.dirname(__file__), "tools", "python", "pae_ratios.py"))
+
+PAE_SCRIPT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "tools", "python", "pae_ratios.py")
+)
+
 
 def ensure_dir(p: str):
     os.makedirs(p, exist_ok=True)
     return p
+
 
 def validate_case(c: Dict[str, Any]) -> None:
     if "name" not in c:
@@ -109,31 +117,59 @@ def validate_case(c: Dict[str, Any]) -> None:
         if k in c and not os.path.exists(c[k]):
             raise ValueError(f"{c['name']}: path not found: {k}={c[k]}")
 
-def build_cmd(case: Dict[str, Any], emit_constraints: bool, no_const: bool) -> List[str]:
+
+def build_cmd(
+    case: Dict[str, Any], emit_constraints: bool, no_const: bool, args
+) -> List[str]:
     cmd = [sys.executable, PAE_SCRIPT, case["pae"]]
     if "pdb" in case:
         cmd += ["--pdb_file", case["pdb"]]
     else:
         cmd += ["--crd_file", case["crd"]]
-    if "pae_power" in case:
-        cmd += ["--pae_power", str(case["pae_power"])]
-    if "plddt_cutoff" in case:
-        cmd += ["--plddt_cutoff", str(case["plddt_cutoff"])]
+
+    def add_opt(flag: str, key: str):
+        if key in case and case[key] is not None:
+            cmd.extend([flag, str(case[key])])
+        elif getattr(args, key, None) is not None:
+            cmd.extend([flag, str(getattr(args, key))])
+
+    # New clustering/graph options
+    add_opt("--graph_sim", "graph_sim")
+    add_opt("--sigma", "sigma")
+    add_opt("--linear_T", "linear_T")
+    add_opt("--knn", "knn")
+    add_opt("--pae_cutoff", "pae_cutoff")
+    add_opt("--min_seq_sep", "min_seq_sep")
+    add_opt("--interchain_cutoff", "interchain_cutoff")
+    add_opt("--leiden_resolution", "leiden_resolution")
+    add_opt("--leiden_iters", "leiden_iters")
+    add_opt("--plddt_cutoff", "plddt_cutoff")
+
     if emit_constraints:
         cmd += ["--emit-constraints", "constraints.yaml"]
     if no_const:
         cmd += ["--no-const"]
     return cmd
 
-def run_case(case: Dict[str, Any], outdir: str, emit_constraints: bool, no_const: bool, gold_root: str | None = None) -> Dict[str, Any]:
+
+def run_case(
+    case: Dict[str, Any],
+    outdir: str,
+    emit_constraints: bool,
+    no_const: bool,
+    args,
+    gold_root: str | None = None,
+) -> Dict[str, Any]:
     ensure_dir(outdir)
     start = time.time()
     # We run inside the case outdir so the script writes artifacts there
-    cmd = build_cmd(case, emit_constraints, no_const)
+    cmd = build_cmd(case, emit_constraints, no_const, args)
     log_path = os.path.join(outdir, "run.log")
     with open(log_path, "w", encoding="utf-8") as logf:
         logf.write("CMD: " + " ".join(cmd) + "\n\n")
-        proc = subprocess.Popen(cmd, cwd=outdir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        proc = subprocess.Popen(
+            cmd, cwd=outdir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
         for line in proc.stdout:  # stream to log
             logf.write(line)
         ret = proc.wait()
@@ -149,8 +185,20 @@ def run_case(case: Dict[str, Any], outdir: str, emit_constraints: bool, no_const
         "viz_png": os.path.exists(os.path.join(outdir, "viz.png")),
         "log": True,
     }
-    gold = compare_to_gold(outdir, gold_root, case["name"]) if gold_root else { 'checked': False, 'ok': False, 'details': '' }
-    return {"name": case["name"], "ret": ret, "duration": dur, "files": files, "outdir": outdir, "gold": gold}
+    gold = (
+        compare_to_gold(outdir, gold_root, case["name"])
+        if gold_root
+        else {"checked": False, "ok": False, "details": ""}
+    )
+    return {
+        "name": case["name"],
+        "ret": ret,
+        "duration": dur,
+        "files": files,
+        "outdir": outdir,
+        "gold": gold,
+    }
+
 
 def summarize(results: List[Dict[str, Any]]) -> str:
     rows = []
@@ -159,8 +207,10 @@ def summarize(results: List[Dict[str, Any]]) -> str:
     rows.append("-" * len(hdr))
     for r in results:
         f = r["files"]
-        gold = r.get('gold', {})
-        gold_cell = '-' if not gold.get('checked') else ('OK' if gold.get('ok') else 'DIFF')
+        gold = r.get("gold", {})
+        gold_cell = (
+            "-" if not gold.get("checked") else ("OK" if gold.get("ok") else "DIFF")
+        )
         rows.append(
             f"{r['name'][:30]:30}  {r['ret']:>3}  {r['duration']:6.1f}  "
             f"{'Y' if f['const_inp'] else '-':>5}  "
@@ -174,16 +224,49 @@ def summarize(results: List[Dict[str, Any]]) -> str:
         )
     return "\n".join(rows)
 
+
 def main():
     ap = argparse.ArgumentParser(
         description="Batch runner for pae_ratios.py over a YAML manifest."
     )
     ap.add_argument("manifest", help="Path to YAML listing test cases")
     ap.add_argument("--outdir", default="pae_batch_out", help="Root output dir")
-    ap.add_argument("--emit-constraints", action="store_true", help="Also write constraints.yaml for each case")
+    ap.add_argument(
+        "--emit-constraints",
+        action="store_true",
+        help="Also write constraints.yaml for each case",
+    )
     ap.add_argument("--no-const", action="store_true", help="Skip writing const.inp")
-    ap.add_argument("--clean", action="store_true", help="Wipe the --outdir before running")
+    ap.add_argument(
+        "--clean", action="store_true", help="Wipe the --outdir before running"
+    )
     ap.add_argument("--gold", help="Path to gold results root (per-case subfolders)")
+    ap.add_argument(
+        "--graph_sim",
+        choices=["exp", "linear"],
+        help="Similarity transform for PAE→weight",
+    )
+    ap.add_argument("--sigma", type=float, help="Sigma for exp kernel (Å)")
+    ap.add_argument("--linear_T", type=float, help="T for linear kernel (Å)")
+    ap.add_argument("--knn", type=int, help="k for k-NN sparsification (0 disables)")
+    ap.add_argument(
+        "--pae_cutoff", type=float, help="Edge kept only if PAE ≤ cutoff (Å)"
+    )
+    ap.add_argument(
+        "--min_seq_sep", type=int, help="Require |i-j| ≥ this (0 to disable)"
+    )
+    ap.add_argument(
+        "--interchain_cutoff",
+        type=float,
+        help="Cross-chain edges require PAE ≤ this (Å)",
+    )
+    ap.add_argument("--leiden_resolution", type=float, help="Leiden resolution γ")
+    ap.add_argument("--leiden_iters", type=int, help="Leiden iterations")
+    ap.add_argument(
+        "--plddt_cutoff",
+        type=float,
+        help="pLDDT cutoff for accepting regions (use negative to disable)",
+    )
     args = ap.parse_args()
 
     with open(args.manifest, "r", encoding="utf-8") as fh:
@@ -209,11 +292,14 @@ def main():
             print(f"[SKIP] {c.get('name','<noname>')}: {e}", file=sys.stderr)
             continue
         case_dir = ensure_dir(os.path.join(args.outdir, c["name"]))
-        res = run_case(c, case_dir, args.emit_constraints, args.no_const, args.gold)
+        res = run_case(
+            c, case_dir, args.emit_constraints, args.no_const, args, args.gold
+        )
         print(f"[{c['name']}] rc={res['ret']}  {res['duration']:.1f}s  -> {case_dir}")
         results.append(res)
 
     print("\n" + summarize(results))
+
 
 if __name__ == "__main__":
     main()
