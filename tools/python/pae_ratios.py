@@ -269,6 +269,7 @@ def _build_edges_from_similarity(
     min_seq_sep: int,
     chain_segs: list,
     interchain_cutoff: float,
+    knn_mode: str = "union",
 ) -> tuple[list[tuple[int, int]], np.ndarray]:
     """Return (edges, weights) for igraph from similarity S with constraints.
     - Keep only edges with PAE ≤ pae_cutoff.
@@ -293,15 +294,24 @@ def _build_edges_from_similarity(
     S_masked = np.where(mask, S, 0.0)
 
     if k and k > 0:
-        edges_set: set[tuple[int, int]] = set()
+        # Precompute top-k neighbors per row
+        topk = [None] * n
         for i in range(n):
             row = S_masked[i]
             if not np.any(row):
+                topk[i] = []
                 continue
             k_eff = min(k, n - 1)
             idx = np.argpartition(-row, kth=k_eff)[:k_eff]
             idx = [j for j in idx if row[j] > 0 and j != i]
-            for j in idx:
+            idx.sort(key=lambda j: row[j], reverse=True)
+            topk[i] = idx
+
+        edges_set: set[tuple[int, int]] = set()
+        for i in range(n):
+            for j in topk[i]:
+                if knn_mode == "mutual" and i not in topk[j]:
+                    continue
                 a, b = (i, j) if i < j else (j, i)
                 edges_set.add((a, b))
         edges = sorted(edges_set)
@@ -326,6 +336,7 @@ def define_clusters_for_selected_pae(
     sigma: float = 8.0,
     linear_T: float = 30.0,
     knn: int = 20,
+    knn_mode: str = "union",
     pae_cutoff: float = 10.0,
     min_seq_sep: int = 8,
     chain_segs: list | None = None,
@@ -357,6 +368,8 @@ def define_clusters_for_selected_pae(
 
     # Build similarity and edges
     S = _similarity_from_pae(pae_matrix, method=graph_sim, sigma=sigma, T=linear_T)
+    # Symmetrize for stability
+    S = 0.5 * (S + S.T)
     edges, sel_weights = _build_edges_from_similarity(
         S=S,
         pae=pae_matrix,
@@ -365,6 +378,7 @@ def define_clusters_for_selected_pae(
         min_seq_sep=min_seq_sep,
         chain_segs=chain_segs or [],
         interchain_cutoff=interchain_cutoff,
+        knn_mode=knn_mode,
     )
 
     g = igraph.Graph()
@@ -860,6 +874,13 @@ if __name__ == "__main__":
         type=int,
         default=0,
         help="k for k-NN sparsification (per node). 0 disables and uses threshold graph",
+    )
+    parser.add_argument(
+        "--knn_mode",
+        type=str,
+        choices=["union", "mutual"],
+        default="union",
+        help="k-NN mode: 'union' (default) or 'mutual' (edge only if i is in j's top-k AND j in i's top-k)",
     )
     parser.add_argument(
         "--pae_cutoff",
