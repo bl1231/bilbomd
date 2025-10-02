@@ -1,0 +1,10 @@
+define fixed1 sele ( resid 1:293 .and. segid PROA ) end
+define fixed2 sele ( resid 19:38 .and. segid PROB ) end
+cons fix sele fixed1 .or. fixed2 end 
+
+define rigid1 sele ( resid 70:140 .and. segid PROB ) end
+define rigid2 sele ( resid 148:195 .and. segid PROB ) end
+shape desc dock1 rigid sele rigid1 .or. rigid2 end 
+
+return 
+

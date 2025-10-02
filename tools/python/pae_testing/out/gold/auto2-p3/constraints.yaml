@@ -1,0 +1,31 @@
+constraints:
+  fixed_bodies:
+  - name: FixedBody1
+    segments:
+    - chain_id: PROA
+      residues:
+        start: 217
+        stop: 670
+    - chain_id: PROA
+      residues:
+        start: 681
+        stop: 805
+  rigid_bodies:
+  - name: RigidBody1
+    segments:
+    - chain_id: PROA
+      residues:
+        start: 3
+        stop: 114
+  - name: RigidBody2
+    segments:
+    - chain_id: PROA
+      residues:
+        start: 117
+        stop: 186
+  - name: RigidBody3
+    segments:
+    - chain_id: PROA
+      residues:
+        start: 672
+        stop: 678

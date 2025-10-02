@@ -1,0 +1,28 @@
+define fixed1 sele ( resid 220:296 .and. segid PROA ) end
+define fixed2 sele ( resid 300:357 .and. segid PROA ) end
+define fixed3 sele ( resid 370:545 .and. segid PROA ) end
+define fixed4 sele ( resid 549:669 .and. segid PROA ) end
+define fixed5 sele ( resid 681:752 .and. segid PROA ) end
+define fixed6 sele ( resid 762:804 .and. segid PROA ) end
+cons fix sele fixed1 .or. fixed2 .or. fixed3 .or. fixed4 .or. fixed5 .or. fixed6 end 
+
+define rigid1 sele ( resid 3:114 .and. segid PROA ) end
+shape desc dock1 rigid sele rigid1 end 
+
+define rigid1 sele ( resid 117:185 .and. segid PROA ) end
+shape desc dock2 rigid sele rigid1 end 
+
+define rigid1 sele ( resid 359:367 .and. segid PROA ) end
+shape desc dock3 rigid sele rigid1 end 
+
+define rigid1 sele ( resid 672:679 .and. segid PROA ) end
+shape desc dock4 rigid sele rigid1 end 
+
+define rigid1 sele ( resid 754:759 .and. segid PROA ) end
+shape desc dock5 rigid sele rigid1 end 
+
+define rigid1 sele ( resid 213:217 .and. segid PROA ) end
+shape desc dock6 rigid sele rigid1 end 
+
+return 
+

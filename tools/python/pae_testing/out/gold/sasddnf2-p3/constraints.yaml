@@ -1,0 +1,29 @@
+constraints:
+  fixed_bodies:
+  - name: FixedBody1
+    segments:
+    - chain_id: A
+      residues:
+        start: 1
+        stop: 294
+    - chain_id: B
+      residues:
+        start: 18
+        stop: 39
+  rigid_bodies:
+  - name: RigidBody1
+    segments:
+    - chain_id: B
+      residues:
+        start: 69
+        stop: 140
+    - chain_id: B
+      residues:
+        start: 149
+        stop: 195
+  - name: RigidBody2
+    segments:
+    - chain_id: B
+      residues:
+        start: 142
+        stop: 146

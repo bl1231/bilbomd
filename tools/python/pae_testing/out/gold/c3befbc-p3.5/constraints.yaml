@@ -1,0 +1,137 @@
+constraints:
+  fixed_bodies:
+  - name: FixedBody1
+    segments:
+    - chain_id: A
+      residues:
+        start: 105
+        stop: 286
+    - chain_id: A
+      residues:
+        start: 291
+        stop: 324
+    - chain_id: A
+      residues:
+        start: 534
+        stop: 544
+    - chain_id: A
+      residues:
+        start: 549
+        stop: 597
+    - chain_id: B
+      residues:
+        start: 10
+        stop: 183
+    - chain_id: B
+      residues:
+        start: 752
+        stop: 756
+    - chain_id: B
+      residues:
+        start: 759
+        stop: 763
+  rigid_bodies:
+  - name: RigidBody1
+    segments:
+    - chain_id: A
+      residues:
+        start: 1
+        stop: 40
+    - chain_id: A
+      residues:
+        start: 50
+        stop: 69
+    - chain_id: A
+      residues:
+        start: 81
+        stop: 102
+    - chain_id: A
+      residues:
+        start: 327
+        stop: 369
+    - chain_id: A
+      residues:
+        start: 372
+        stop: 514
+    - chain_id: A
+      residues:
+        start: 517
+        stop: 531
+    - chain_id: A
+      residues:
+        start: 600
+        stop: 638
+  - name: RigidBody2
+    segments:
+    - chain_id: B
+      residues:
+        start: 240
+        stop: 536
+  - name: RigidBody3
+    segments:
+    - chain_id: B
+      residues:
+        start: 766
+        stop: 770
+    - chain_id: B
+      residues:
+        start: 774
+        stop: 908
+  - name: RigidBody4
+    segments:
+    - chain_id: B
+      residues:
+        start: 607
+        stop: 620
+    - chain_id: B
+      residues:
+        start: 631
+        stop: 685
+    - chain_id: B
+      residues:
+        start: 690
+        stop: 749
+  - name: RigidBody5
+    segments:
+    - chain_id: B
+      residues:
+        start: 185
+        stop: 236
+    - chain_id: B
+      residues:
+        start: 540
+        stop: 563
+    - chain_id: B
+      residues:
+        start: 568
+        stop: 600
+  - name: RigidBody6
+    segments:
+    - chain_id: C
+      residues:
+        start: 2
+        stop: 65
+  - name: RigidBody7
+    segments:
+    - chain_id: A
+      residues:
+        start: 42
+        stop: 48
+  - name: RigidBody8
+    segments:
+    - chain_id: A
+      residues:
+        start: 72
+        stop: 76
+  - name: RigidBody9
+    segments:
+    - chain_id: B
+      residues:
+        start: 3
+        stop: 7
+  - name: RigidBody10
+    segments:
+    - chain_id: B
+      residues:
+        start: 625
+        stop: 628
