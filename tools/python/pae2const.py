@@ -25,7 +25,6 @@ from helpers_viz import (
 from pdb_utils import get_segid_renaming_map
 
 # Constants
-CONST_FILE_PATH = "const.inp"
 MIN_CLUSTER_LENGTH = 3
 PDB_INDEX_TO_RES = []
 PDB_RES_PLDDT = defaultdict(list)
@@ -431,7 +430,8 @@ class PAEConfig:
     min_segment_len: int = 6
 
     # Output settings (optional, for flexibility)
-    emit_constraints: Optional[str] = None  # Path for YAML output
+    openmm_const_file: Optional[str] = None  # Path for YAML output
+    charmm_const_file: Optional[str] = "const.inp"
     no_const: bool = False  # Flag to skip const.inp
 
     def __post_init__(self):
@@ -1300,10 +1300,12 @@ class PAEProcessor:
     def write_outputs(self, input_file: str):
         """Write output files: const.inp and optionally constraints.yaml."""
         if not self.config.no_const:
-            self._write_const_file(self.rigid_bodies, "const.inp", input_file)
-        if self.config.emit_constraints:
+            self._write_const_file(
+                self.rigid_bodies, self.config.charmm_const_file, input_file
+            )
+        if self.config.openmm_const_file:
             self._write_constraints_yaml(
-                self.rigid_bodies, self.config.emit_constraints
+                self.rigid_bodies, self.config.openmm_const_file
             )
 
     @staticmethod
@@ -1853,9 +1855,15 @@ if __name__ == "__main__":
         "'any' (default) allows merging of any pair that meets thresholds.",
     )
     parser.add_argument(
-        "--emit-constraints",
+        "--openmm-const-file",
         type=str,
         help="If set, also write constraints YAML usable by OpenMM",
+    )
+    parser.add_argument(
+        "--charmm-const-file",
+        type=str,
+        default="const.inp",
+        help="Path for const.inp output file (default: const.inp). Use --no-const to skip.",
     )
     parser.add_argument(
         "--no-const",
@@ -1883,7 +1891,8 @@ if __name__ == "__main__":
         cross_merge_coverage=args.cross_merge_coverage,
         cross_merge_mode=args.cross_merge_mode,
         min_segment_len=args.min_segment_len,
-        emit_constraints=args.emit_constraints,
+        openmm_const_file=args.openmm_const_file,
+        charmm_const_file=args.charmm_const_file,
         no_const=args.no_const,
     )
 

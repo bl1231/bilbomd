@@ -119,7 +119,7 @@ def validate_case(c: Dict[str, Any]) -> None:
 
 
 def build_cmd(
-    case: Dict[str, Any], emit_constraints: bool, no_const: bool, args
+    case: Dict[str, Any], openmm_const_file: bool, no_const: bool, args
 ) -> List[str]:
     cmd = [sys.executable, PAE_SCRIPT, case["pae"]]
     if "pdb" in case:
@@ -151,8 +151,8 @@ def build_cmd(
     add_opt("--min_segment_len", "min_segment_len")
     add_opt("--cross_merge_mode", "cross_merge_mode")
 
-    if emit_constraints:
-        cmd += ["--emit-constraints", "constraints.yaml"]
+    if openmm_const_file:
+        cmd += ["--openmm-const-file", "openmm_constraints.yaml"]
     if no_const:
         cmd += ["--no-const"]
     return cmd
@@ -161,7 +161,7 @@ def build_cmd(
 def run_case(
     case: Dict[str, Any],
     outdir: str,
-    emit_constraints: bool,
+    openmm_const_file: bool,
     no_const: bool,
     args,
     gold_root: str | None = None,
@@ -169,7 +169,7 @@ def run_case(
     ensure_dir(outdir)
     start = time.time()
     # We run inside the case outdir so the script writes artifacts there
-    cmd = build_cmd(case, emit_constraints, no_const, args)
+    cmd = build_cmd(case, openmm_const_file, no_const, args)
     log_path = os.path.join(outdir, "run.log")
     with open(log_path, "w", encoding="utf-8") as logf:
         logf.write("CMD: " + " ".join(cmd) + "\n\n")
@@ -238,7 +238,7 @@ def main():
     ap.add_argument("manifest", help="Path to YAML listing test cases")
     ap.add_argument("--outdir", default="pae_batch_out", help="Root output dir")
     ap.add_argument(
-        "--emit-constraints",
+        "--openmm-const-file",
         action="store_true",
         help="Also write constraints.yaml for each case",
     )
@@ -299,7 +299,7 @@ def main():
             continue
         case_dir = ensure_dir(os.path.join(args.outdir, c["name"]))
         res = run_case(
-            c, case_dir, args.emit_constraints, args.no_const, args, args.gold
+            c, case_dir, args.openmm_const_file, args.no_const, args, args.gold
         )
         print(f"[{c['name']}] rc={res['ret']}  {res['duration']:.1f}s  -> {case_dir}")
         results.append(res)
