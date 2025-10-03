@@ -421,11 +421,11 @@ class PAEConfig:
     pae_cutoff: float = 10.0
     min_seq_sep: int = 4
     interchain_cutoff: float = 5.0
-    leiden_resolution: float = 0.95
+    leiden_resolution: float = 0.35
     leiden_iters: int = 10
     merge_tau: float = 7.0
     merge_coverage: float = 0.6
-    cross_merge_tau: float = 5.5
+    cross_merge_tau: float = 15.0
     cross_merge_coverage: float = 0.7
     cross_merge_mode: str = "adjacent"
     min_segment_len: int = 6
@@ -468,8 +468,8 @@ class PAEConfig:
         if not (0.0 < float(self.interchain_cutoff) <= 50.0):
             raise ValueError("interchain_cutoff must be in (0, 50]")
 
-        if not (0.0 < float(self.leiden_resolution) <= 5.0):
-            raise ValueError("leiden_resolution must be in (0, 5]")
+        if not (0.0 < float(self.leiden_resolution) <= 1.0):
+            raise ValueError("leiden_resolution must be in (0, 1]")
         if int(self.leiden_iters) < 1:
             raise ValueError("leiden_iters must be ≥ 1")
 
@@ -737,10 +737,10 @@ class PAEProcessor:
         all_non_empty_rigid_bodies = [rigid_bodies[i] for i in idxs]
         rigid_body_flags = [rigid_body_flags[i] for i in idxs]
 
-        print("Rigid Bodies:")
-        for i, rb in enumerate(all_non_empty_rigid_bodies, start=1):
-            formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
-            print(f"  Rigid Body {i}: {formatted_rb}")
+        # print("Rigid Bodies:")
+        # for i, rb in enumerate(all_non_empty_rigid_bodies, start=1):
+        #     formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
+        #     print(f"  Rigid Body {i}: {formatted_rb}")
 
         # Ensure no Rigid Domains are adjacent; adjust to create a 2-residue gap
         updated = True
@@ -756,10 +756,10 @@ class PAEProcessor:
         for rb in rigid_body_optimized:
             merged_rb = self._merge_overlapping_domains(rb)
             merged_rigid_bodies.append(merged_rb)
-        print("Optimized Rigid Bodies:")
-        for i, rb in enumerate(merged_rigid_bodies, start=1):
-            formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
-            print(f"  Rigid Body {i}: {formatted_rb}")
+        # print("Optimized Rigid Bodies:")
+        # for i, rb in enumerate(merged_rigid_bodies, start=1):
+        #     formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
+        #     print(f"  Rigid Body {i}: {formatted_rb}")
 
         # Drop tiny segments and coalesce overlapping within same segid
         cleaned: list[list[tuple[int, int, str, float]]] = []
@@ -790,10 +790,10 @@ class PAEProcessor:
             if coalesced:  # Only add if not empty after cleanup
                 cleaned.append(coalesced)
                 cleaned_flags.append(flag)
-        print("Cleaned Rigid Bodies:")
-        for i, rb in enumerate(cleaned, start=1):
-            formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
-            print(f"  Rigid Body {i}: {formatted_rb}")
+        # print("Cleaned Rigid Bodies:")
+        # for i, rb in enumerate(cleaned, start=1):
+        #     formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
+        #     print(f"  Rigid Body {i}: {formatted_rb}")
 
         # Final gap enforcement using the existing helper across ALL rigid bodies
         # (handles both intra-RB domains and adjacent domains across different RBs)
@@ -817,12 +817,12 @@ class PAEProcessor:
                 final_rbs.append(rb2)
                 final_flags.append(flag)
 
-        print(
-            "Rigid Bodies after enforcing min-gap with _find_and_update_sequential_rigid_domains:"
-        )
-        for i, rb in enumerate(final_rbs, start=1):
-            formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
-            print(f"  Rigid Body {i}: {formatted_rb}")
+        # print(
+        #     "Rigid Bodies after enforcing min-gap with _find_and_update_sequential_rigid_domains:"
+        # )
+        # for i, rb in enumerate(final_rbs, start=1):
+        #     formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
+        #     print(f"  Rigid Body {i}: {formatted_rb}")
 
         # Set instance attributes
         self.rigid_bodies = final_rbs
@@ -1052,6 +1052,7 @@ class PAEProcessor:
                 pae, a, b, chain_segs, tau, tau_cross, cov, cov_cross
             )
             merged = sorted(set(a) | set(b))
+
             return (merged, coverage, med)
 
         # Step 1: Always run 'adjacent' mode first to reduce cluster count
@@ -1106,6 +1107,16 @@ class PAEProcessor:
                         new_clusters.append(c)
                         global_merged_flags_new.append(global_merged_flags[k])
                     new_clusters.append(merged)
+
+                    # --- DEBUG: print mean PAE value in the true off-diagonal block ---
+                    block = pae[np.ix_(a, b)]
+                    if block.size > 0:
+                        mean_val = float(np.mean(block))
+                        print(
+                            f"[merge-debug] clusters ({min(a)}-{max(a)}) vs ({min(b)}-{max(b)}): "
+                            f"meanPAE={mean_val:.2f} Å, median={med:.2f} Å, coverage={_covscore:.2f}"
+                        )
+
                     global_merged_flags_new.append(
                         True
                     )  # Mark the new merged cluster as globally merged
@@ -1623,8 +1634,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--leiden_resolution",
         type=float,
-        default=0.95,
-        help="Leiden resolution parameter γ (default 0.95)",
+        default=0.35,
+        help="Leiden resolution parameter γ (default 0.35)",
     )
     parser.add_argument(
         "--leiden_iters",
@@ -1647,13 +1658,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cross_merge_tau",
         type=float,
-        default=5.5,
+        default=15.0,
         help="Post-merge: stricter τ (Å) for cross-chain merges",
     )
     parser.add_argument(
         "--cross_merge_coverage",
         type=float,
-        default=0.7,
+        default=0.6,
         help="Post-merge: coverage for cross-chain merges (0..1)",
     )
     parser.add_argument(
