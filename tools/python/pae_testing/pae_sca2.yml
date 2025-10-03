@@ -28,7 +28,7 @@ cases:
     linear_T: 30
     knn: 0
     min_seq_sep: 8
-    interchain_cutoff: 15
+    interchain_cutoff: 10
     leiden_resolution: 0.30
     leiden_iters: 10
     merge_tau: 10.0
@@ -64,7 +64,7 @@ cases:
     linear_T: 30
     knn: 0
     min_seq_sep: 8
-    interchain_cutoff: 15
+    interchain_cutoff: 10
     leiden_resolution: 0.30
     leiden_iters: 10
     merge_tau: 10.0
@@ -100,7 +100,7 @@ cases:
     linear_T: 30
     knn: 0
     min_seq_sep: 8
-    interchain_cutoff: 15
+    interchain_cutoff: 10
     leiden_resolution: 0.30
     leiden_iters: 10
     merge_tau: 10.0
@@ -136,7 +136,7 @@ cases:
     linear_T: 30
     knn: 0
     min_seq_sep: 8
-    interchain_cutoff: 15
+    interchain_cutoff: 10
     leiden_resolution: 0.30
     leiden_iters: 10
     merge_tau: 10.0
@@ -172,7 +172,7 @@ cases:
     linear_T: 30
     knn: 0
     min_seq_sep: 8
-    interchain_cutoff: 15
+    interchain_cutoff: 10
     leiden_resolution: 0.30
     leiden_iters: 10
     merge_tau: 10.0
