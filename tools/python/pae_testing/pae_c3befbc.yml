@@ -1,0 +1,39 @@
+# Each case has a unique name and paths to PAE + structure.
+# You can mix PDB and CRD cases.
+cases:
+  - name: big-c3befbc-adjacent
+    pae: ../../../test_scripts/data/big-c3befbc/c3befbc-pae.json
+    pdb: ../../../test_scripts/data/big-c3befbc/c3befbc.pdb
+    plddt_cutoff: 50
+    graph_sim: exp
+    sigma: 10
+    linear_T: 30
+    knn: 0
+    min_seq_sep: 8
+    interchain_cutoff: 1
+    leiden_resolution: 0.30
+    leiden_iters: 10
+    merge_tau: 7.5
+    merge_coverage: 0.6
+    cross_merge_tau: 5.5
+    cross_merge_coverage: 0.55
+    min_segment_len: 14
+    cross_merge_mode: adjacent
+  - name: big-c3befbc-offdiag
+    pae: ../../../test_scripts/data/big-c3befbc/c3befbc-pae.json
+    pdb: ../../../test_scripts/data/big-c3befbc/c3befbc.pdb
+    plddt_cutoff: 50
+    graph_sim: exp
+    sigma: 10
+    linear_T: 30
+    knn: 0
+    min_seq_sep: 8
+    interchain_cutoff: 15
+    leiden_resolution: 0.30
+    leiden_iters: 10
+    merge_tau: 10.0
+    merge_coverage: 0.6
+    cross_merge_tau: 18.0
+    cross_merge_coverage: 0.6
+    min_segment_len: 14
+    cross_merge_mode: any
