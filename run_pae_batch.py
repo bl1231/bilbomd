@@ -13,13 +13,13 @@ Run a batch of PAE→constraints tests using pae_ratios.py.
 """
 
 import argparse
+import difflib
+import os
+import shutil
 import subprocess
 import sys
-import os
 import time
-import shutil
-from typing import Dict, Any, List
-import difflib
+from typing import Any, Dict, List
 
 try:
     import yaml  # PyYAML (already used in repo)
@@ -97,7 +97,7 @@ def compare_to_gold(case_outdir: str, gold_root: str, case_name: str) -> dict:
 
 
 PAE_SCRIPT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "tools", "python", "pae_ratios.py")
+    os.path.join(os.path.dirname(__file__), "tools", "python", "pae2const.py")
 )
 
 
@@ -110,7 +110,7 @@ def validate_case(c: Dict[str, Any]) -> None:
     if "name" not in c:
         raise ValueError("case missing 'name'")
     if "pae" not in c:
-        raise ValueError(f"{c.get('name','<noname>')}: missing 'pae'")
+        raise ValueError(f"{c.get('name', '<noname>')}: missing 'pae'")
     if not (("pdb" in c) ^ ("crd" in c)):  # exactly one of pdb or crd
         raise ValueError(f"{c['name']}: specify exactly one of 'pdb' or 'crd'")
     for k in ("pae", "pdb", "crd"):
@@ -295,7 +295,7 @@ def main():
         try:
             validate_case(c)
         except Exception as e:
-            print(f"[SKIP] {c.get('name','<noname>')}: {e}", file=sys.stderr)
+            print(f"[SKIP] {c.get('name', '<noname>')}: {e}", file=sys.stderr)
             continue
         case_dir = ensure_dir(os.path.join(args.outdir, c["name"]))
         res = run_case(
