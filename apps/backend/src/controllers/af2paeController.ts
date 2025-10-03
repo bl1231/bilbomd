@@ -31,9 +31,9 @@ const spawnPaeToConstDirect = async (params: {
 
   // Build args: pae_file is positional, then --pdb_file
   const args = [af2paeScript, params.in_pae, '--pdb_file', params.in_pdb]
-  if (params.pae_power !== undefined) {
-    args.push('--pae_power', String(params.pae_power))
-  }
+  // if (params.pae_power !== undefined) {
+  //   args.push('--pae_power', String(params.pae_power))
+  // }
   if (params.plddt_cutoff !== undefined) {
     args.push('--plddt_cutoff', String(params.plddt_cutoff))
   }
