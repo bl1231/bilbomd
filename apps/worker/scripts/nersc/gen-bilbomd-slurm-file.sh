@@ -168,7 +168,7 @@ read_job_params() {
         pae_file=$(jq -r '.pae_file' $WORKDIR/params.json)
         in_psf_file="bilbomd_pdb2crd.psf"
         in_crd_file="bilbomd_pdb2crd.crd"
-        constinp="const.inp" # Will be calculated by pae_ratios.py
+        constinp="const.inp" # Will be calculated by pae2const.py
         if [ -z "$pdb_file" ]; then
             echo "Error: Missing PDB file."
             return 1
@@ -184,7 +184,7 @@ read_job_params() {
         pae_file="af-pae.json"
         in_psf_file="bilbomd_pdb2crd.psf"
         in_crd_file="bilbomd_pdb2crd.crd"
-        constinp="const.inp" # Will be calculated by pae_ratios.py
+        constinp="const.inp" # Will be calculated by pae2const.py
         if [ -z "$fasta_file" ]; then
             echo "Error: Missing FASTA file."
             return 1
@@ -597,7 +597,7 @@ generate_pae2const_commands() {
 # Create const.inp from Alphafold PAE Matrix
 update_status pae Running
 echo "Calculate const.inp from PAE matrix..."
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name pae2const podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pae_ratios.py --crd_file ${in_crd_file} ${pae_file} > pae_ratios.log 2>&1"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name pae2const podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pae2const.py --crd_file ${in_crd_file} ${pae_file} > pae_ratios.log 2>&1"
 PAE_EXIT=\$?
 check_exit_code \$PAE_EXIT pae
 

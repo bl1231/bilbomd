@@ -104,6 +104,68 @@ build
 
 # TernJS port file
 .tern-port
+# Python-specific ignores
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Packaging and distribution
+*.egg-info/
+.eggs/
+develop-eggs/
+dist/
+build/
+downloads/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg
+MANIFEST
+.installed.cfg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Logs and caches
+pip-log.txt
+pip-delete-this-directory.txt
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Translations and docs
+*.mo
+*.pot
+docs/_build/
+
+# Framework-specific
+local_settings.py
+db.sqlite3
+instance/
+.webassets-cache
+.scrapy
 
 # The BilboMD components that have their own GitHub repositories
 secrets
@@ -117,3 +179,6 @@ backend-dev-tmp
 *.zip
 .qodo
 .turbo
+
+# pae testing outputs
+tools/python/pae_testing/out

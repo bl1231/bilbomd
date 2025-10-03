@@ -289,13 +289,11 @@ const spawnAF2PAEInpFileMaker = async (
   const errorFile = path.join(af2paeDir, 'af2pae_error.log')
   const logStream = fs.createWriteStream(logFile)
   const errorStream = fs.createWriteStream(errorFile)
-  const af2pae_script = '/app/scripts/pae_ratios.py'
+  const af2pae_script = '/app/scripts/pae2const.py'
   const args = [
     af2pae_script,
     paeFile,
     'bilbomd_pdb2crd.crd',
-    '--pae_power',
-    paePower,
     '--plddt_cutoff',
     plddtCutoff
   ]

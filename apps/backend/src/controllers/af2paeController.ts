@@ -10,7 +10,7 @@ import { spawn } from 'node:child_process'
 const uploadFolder: string = process.env.DATA_VOL ?? '/bilbomd/uploads'
 
 // New helper function: Adapted from spawnPaeToConst in the worker app.
-// Directly spawns pae_ratios.py with --pdb_file (no CRD needed).
+// Directly spawns pae2const.py with --pdb_file (no CRD needed).
 const spawnPaeToConstDirect = async (params: {
   in_pdb: string
   in_pae: string
@@ -27,7 +27,7 @@ const spawnPaeToConstDirect = async (params: {
   const errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
 
   const pythonBin = '/miniforge3/bin/python'
-  const af2paeScript = '/app/scripts/pae_ratios.py'
+  const af2paeScript = '/app/scripts/pae2const.py'
 
   // Build args: pae_file is positional, then --pdb_file
   const args = [af2paeScript, params.in_pae, '--pdb_file', params.in_pdb]
