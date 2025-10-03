@@ -1,7 +1,8 @@
 # helper functions for visualization of PAE matrices and clusters
-from dataclasses import dataclass
-from typing import List, Tuple, Literal, Dict, Any
 import json
+from dataclasses import dataclass
+from typing import Any, Dict, List, Literal, Tuple
+
 import numpy as np
 
 ClusterType = Literal["rigid", "fixed"]
@@ -103,8 +104,8 @@ def save_viz_png(
     import matplotlib
 
     matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
     import matplotlib.patches as patches
+    import matplotlib.pyplot as plt
 
     L = mat.shape[0]
     print(f"Saving viz PNG {out_path} with {len(clusters)} clusters for {L}x{L} matrix")
