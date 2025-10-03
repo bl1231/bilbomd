@@ -747,7 +747,7 @@ class PAEProcessor:
         while updated:
             updated, rigid_body_optimized = (
                 self._find_and_update_sequential_rigid_domains(
-                    all_non_empty_rigid_bodies
+                    all_non_empty_rigid_bodies, min_gap=2
                 )
             )
 
@@ -795,9 +795,38 @@ class PAEProcessor:
             formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
             print(f"  Rigid Body {i}: {formatted_rb}")
 
-        # Set instance attributes after enforcing inter-RB gaps
-        self.rigid_bodies = cleaned
-        self.rigid_body_flags = cleaned_flags
+        # Final gap enforcement using the existing helper across ALL rigid bodies
+        # (handles both intra-RB domains and adjacent domains across different RBs)
+        updated = True
+        rb_after_gap = cleaned
+        while updated:
+            updated, rb_after_gap = self._find_and_update_sequential_rigid_domains(
+                rb_after_gap, min_gap=2
+            )
+
+        # After nudging edges, re-drop any segments that may have become too short
+        final_rbs: list[list[tuple[int, int, str, float]]] = []
+        final_flags: list[bool] = []
+        for rb, flag in zip(rb_after_gap, cleaned_flags):
+            rb2 = [
+                (s, e, seg, avg)
+                for (s, e, seg, avg) in rb
+                if (e - s + 1) >= max(1, self.config.min_segment_len)
+            ]
+            if rb2:
+                final_rbs.append(rb2)
+                final_flags.append(flag)
+
+        print(
+            "Rigid Bodies after enforcing min-gap with _find_and_update_sequential_rigid_domains:"
+        )
+        for i, rb in enumerate(final_rbs, start=1):
+            formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
+            print(f"  Rigid Body {i}: {formatted_rb}")
+
+        # Set instance attributes
+        self.rigid_bodies = final_rbs
+        self.rigid_body_flags = final_flags
 
     def print_rigid_stats(self):
         # Build full PAE numpy matrix
@@ -1242,117 +1271,97 @@ class PAEProcessor:
         return regions
 
     @staticmethod
-    def _find_and_update_sequential_rigid_domains(lists_of_tuples):
+    def _find_and_update_sequential_rigid_domains(lists_of_tuples, min_gap: int = 2):
         """
-        Identify and adjust adjacent rigid domains in a list of tuples.
+        Identify and adjust sequential rigid domains on the same chain so there is at least `min_gap`
+        residues **between** them (i.e., start2 - end1 - 1 >= min_gap).
 
-        This function iterates over a list of lists, where each inner list contains tuples
-        representing Rigid Domains. Each tuple consists of the start residue, end residue,
-        and the chain identifier. The function identifies adjacent rigid domains within the
-        same chain and adjusts them by creating a 2-residue gap between consecutive domains.
-        The adjustment is done by decrementing the end of the first domain and incrementing
-        the start of the second domain.
-
-        Parameters:
-        -----------
-        lists_of_tuples : list of lists of tuples
-            A list where each inner list contains tuples representing rigid domains. Each
-            tuple is of the form (start_residue, end_residue, chain), where `start_residue`
-            and `end_residue` are integers indicating the range of residues, and `chain` is
-            a string representing the chain ID.
+        For each pair on the same chain where the gap is too small, we "nudge" the boundaries outward.
+        We do this symmetrically where possible:
+        - Let gap = start2 - end1 - 1.
+        - If gap >= min_gap: OK.
+        - Else, need = min_gap - gap.
+            * Move end1 left by ceil(need/2)
+            * Move start2 right by floor(need/2)
+        If one side would invert its segment (start > end), we clamp that side and push the remaining
+        needed adjustment to the other side.
 
         Returns:
-        --------
-        tuple (bool, list of list of tuples)
-            - A boolean indicating whether any updates were made to the rigid domains.
-            - The updated list of lists containing the adjusted rigid domains.
-
-        Example:
-        --------
-        Given a list of tuples representing rigid domains:
-
-        >>> lists_of_tuples = [
-        >>>     [(10, 20, "A"), (21, 30, "A")],
-        >>>     [(5, 15, "B"), (16, 25, "B")]
-        >>> ]
-
-        The function will identify that (10, 20, "A") and (21, 30, "A") are adjacent and
-        will update them to (10, 19, "A") and (22, 30, "A"), respectively, creating a
-        2-residue gap between the domains.
-
-        Collaboration Note:
-        -------------------
-        This function was collaboratively developed by ChatGPT and Scott
-
+        (updated: bool, updated_lists: list[list[tuple[int,int,str,float]]])
         """
-        seen_pairs = set()  # To keep track of seen pairs and avoid duplicates
-        updates = {}  # To store updates for each tuple
-        updated = False  # Flag to indicate if updates were made
+        if min_gap < 0:
+            min_gap = 0
 
-        for outer_list in lists_of_tuples:
-            for start1, end1, chain1, avg1 in outer_list:
-                for other_outer_list in lists_of_tuples:
-                    for start2, end2, chain2, avg2 in other_outer_list:
-                        if chain1 == chain2:
-                            if end1 + 1 == start2:
-                                # Ensure the pair is not considered in reverse
-                                if (
-                                    (start1, end1, chain1, avg1),
-                                    (start2, end2, chain2, avg2),
-                                ) not in seen_pairs:
-                                    # print(
-                                    #     f"Adjacent Rigid Domains: ({start1}, {end1}, '{chain1}') and ({start2}, {end2}, '{chain2}')"
-                                    # )
-                                    updates[(start1, end1, chain1, avg1)] = (
-                                        start1,
-                                        end1 - 1,
-                                        avg1,
-                                    )
-                                    updates[(start2, end2, chain2, avg2)] = (
-                                        start2 + 1,
-                                        end2,
-                                        avg2,
-                                    )
-                                    seen_pairs.add(
-                                        (
-                                            (start1, end1, chain1, avg1),
-                                            (start2, end2, chain2, avg2),
-                                        )
-                                    )
-                                    updated = True
+        # Collect proposed updates
+        updated = False
+        updates = {}  # key=(s,e,seg,avg) -> (new_s,new_e,avg)
 
-                            elif end2 + 1 == start1:
-                                if (
-                                    (start2, end2, chain2, avg2),
-                                    (start1, end1, chain1, avg1),
-                                ) not in seen_pairs:
-                                    # print(
-                                    #     f"Adjacent Rigid Domains: ({start2}, {end2}, '{chain2}') and ({start1}, {end1}, '{chain1}')"
-                                    # )
-                                    updates[(start2, end2, chain2, avg2)] = (
-                                        start2,
-                                        end2 - 1,
-                                        avg2,
-                                    )
-                                    updates[(start1, end1, chain1, avg1)] = (
-                                        start1 + 1,
-                                        end1,
-                                        avg1,
-                                    )
-                                    seen_pairs.add(
-                                        (
-                                            (start2, end2, chain2, avg2),
-                                            (start1, end1, chain1, avg1),
-                                        )
-                                    )
-                                    updated = True
+        # Group all domains by segid for simpler ordered comparisons
+        by_seg: dict[str, list[tuple[int, int, str, float]]] = {}
+        for outer in lists_of_tuples:
+            for s, e, seg, avg in outer:
+                by_seg.setdefault(seg, []).append((s, e, seg, avg))
 
-        # Apply the updates to the original list
-        for i, outer_list in enumerate(lists_of_tuples):
-            for j, (start, end, chain, avg) in enumerate(outer_list):
-                if (start, end, chain, avg) in updates:
-                    new_start, new_end, new_avg = updates[(start, end, chain, avg)]
-                    lists_of_tuples[i][j] = (new_start, new_end, chain, new_avg)
+        for seg, domains in by_seg.items():
+            # Sort by start then end (normalized)
+            domains_sorted = sorted(
+                domains, key=lambda d: (min(d[0], d[1]), max(d[0], d[1]))
+            )
+
+            for i in range(len(domains_sorted) - 1):
+                s1, e1, _seg1, a1 = domains_sorted[i]
+                s2, e2, _seg2, a2 = domains_sorted[i + 1]
+
+                # normalize orientation
+                if s1 > e1:
+                    s1, e1 = e1, s1
+                if s2 > e2:
+                    s2, e2 = e2, s2
+
+                # current gap in residues between the two domains
+                gap = s2 - e1 - 1
+                if gap >= min_gap:
+                    continue
+
+                need = min_gap - gap  # how many residues to create
+                left_push = (need + 1) // 2  # ceil(need/2)
+                right_push = need // 2  # floor(need/2)
+
+                new_e1 = e1 - left_push
+                new_s2 = s2 + right_push
+
+                # If left collapses, transfer deficit to right
+                if new_e1 < s1:
+                    deficit = s1 - new_e1
+                    new_e1 = s1
+                    new_s2 += deficit
+
+                # If right collapses, transfer deficit to left
+                if new_s2 > e2:
+                    deficit = new_s2 - e2
+                    new_s2 = e2
+                    new_e1 -= deficit
+                    if new_e1 < s1:
+                        new_e1 = s1  # clamp; cleanup later may drop too-short segments
+
+                if new_e1 != e1 or new_s2 != s2:
+                    updates[(domains_sorted[i][0], domains_sorted[i][1], seg, a1)] = (
+                        s1,
+                        new_e1,
+                        a1,
+                    )
+                    updates[
+                        (domains_sorted[i + 1][0], domains_sorted[i + 1][1], seg, a2)
+                    ] = (new_s2, e2, a2)
+                    updated = True
+
+        # Apply updates
+        for i, outer in enumerate(lists_of_tuples):
+            for j, (s, e, seg, avg) in enumerate(outer):
+                key = (s, e, seg, avg)
+                if key in updates:
+                    ns, ne, na = updates[key]
+                    lists_of_tuples[i][j] = (ns, ne, seg, na)
 
         return updated, lists_of_tuples
 
