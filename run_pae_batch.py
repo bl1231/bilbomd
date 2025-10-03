@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Run a batch of PAE→constraints tests using pae_ratios.py.
+Run a batch of PAE→constraints tests using pae2const.py.
 
 - Reads a YAML manifest of cases
-- Runs pae_ratios.py for each case
+- Runs pae2const.py for each case
 - Writes outputs under an --outdir/<case-name> folder:
     const.inp
     constraints.yaml (optional, if requested)
@@ -233,7 +233,7 @@ def summarize(results: List[Dict[str, Any]]) -> str:
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Batch runner for pae_ratios.py over a YAML manifest."
+        description="Batch runner for pae2const.py over a YAML manifest."
     )
     ap.add_argument("manifest", help="Path to YAML listing test cases")
     ap.add_argument("--outdir", default="pae_batch_out", help="Root output dir")
