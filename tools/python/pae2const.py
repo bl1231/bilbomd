@@ -598,16 +598,111 @@ class PAEProcessor:
         )
         return sorted_clusters, global_merged_flags
 
-    def define_rigid_bodies(self, input_file):
-        self.rigid_bodies, self.rigid_body_flags = define_rigid_bodies(
-            self.clusters,
-            input_file,
-            self.first_residue,
-            self.chain_segments,
-            self.config.plddt_cutoff,
-            self.config.min_segment_len,
-            self.global_merged_flags,
-        )
+    def define_rigid_bodies(self):
+        """
+        Define all Rigid Bodies and Rigid Domains from clusters.
+
+        Rigid Bodies contain one or more Rigid Domains.
+        Rigid Domains are defined by tuples of (start_residue, end_residue, segment_id).
+
+        This method uses self.clusters, self.input_file, self.first_residue, self.chain_segments,
+        self.config.plddt_cutoff, self.config.min_segment_len, and self.global_merged_flags.
+        It sets self.rigid_bodies and self.rigid_body_flags.
+        """
+        if not self.clusters:
+            raise ValueError(
+                "Clusters must be defined before defining rigid bodies. Call define_clusters() first."
+            )
+
+        rigid_bodies = []
+        rigid_body_flags = []
+
+        for i, cluster in enumerate(self.clusters):
+            rigid_body = []
+            if len(cluster) >= MIN_CLUSTER_LENGTH:
+                sorted_cluster = sort_and_separate_cluster(cluster, self.chain_segments)
+                for region in sorted_cluster:
+                    first_resnum_cluster = region[0]
+                    last_resnum_cluster = region[-1]
+
+                    # Calculate the average B-factor for the current region using the input handler
+                    bfactor_avg = self.input_handler.calculate_bfactor_avg_for_region(
+                        self.input_file,
+                        first_resnum_cluster,
+                        last_resnum_cluster,
+                        self.first_residue,
+                    )
+
+                    # If the average B-factor is above the threshold, identify a new rigid domain
+                    if bfactor_avg > self.config.plddt_cutoff:
+                        new_rigid_domain = self.input_handler.identify_new_rigid_domain(
+                            self.input_file,
+                            first_resnum_cluster,
+                            last_resnum_cluster,
+                            self.first_residue,
+                        )
+                        if new_rigid_domain:
+                            # Normalize orientation (start <= end)
+                            s, e, seg = new_rigid_domain
+                            if s is not None and e is not None and s > e:
+                                s, e = e, s
+                            normalized = (s, e, seg)
+                            # Deduplicate within this rigid body
+                            if normalized not in rigid_body:
+                                rigid_body.append(normalized)
+
+            rigid_bodies.append(rigid_body)
+            rigid_body_flags.append(
+                self.global_merged_flags[i] if self.global_merged_flags else False
+            )
+
+        # Remove empty lists from our list of lists of tuples
+        idxs = [i for i, rb in enumerate(rigid_bodies) if rb]
+        all_non_empty_rigid_bodies = [rigid_bodies[i] for i in idxs]
+        rigid_body_flags = [rigid_body_flags[i] for i in idxs]
+        print(f"Rigid Bodies: {all_non_empty_rigid_bodies}")
+
+        # Ensure no Rigid Domains are adjacent; adjust to create a 2-residue gap
+        updated = True
+        while updated:
+            updated, rigid_body_optimized = find_and_update_sequential_rigid_domains(
+                all_non_empty_rigid_bodies
+            )
+
+        # Merge overlapping or duplicate residue ranges in each rigid body
+        merged_rigid_bodies = []
+        for rb in rigid_body_optimized:
+            merged_rb = _merge_overlapping_domains(rb)
+            merged_rigid_bodies.append(merged_rb)
+        print(f"Optimized Rigid Bodies: {merged_rigid_bodies}")
+
+        # Drop tiny segments and coalesce adjacents per segid
+        cleaned: list[list[tuple[int, int, str]]] = []
+        cleaned_flags = []
+        for rb, flag in zip(merged_rigid_bodies, rigid_body_flags):
+            # Drop too-short segments
+            rb2 = [
+                (s, e, seg)
+                for (s, e, seg) in rb
+                if (e - s + 1) >= max(1, self.config.min_segment_len)
+            ]
+            # Coalesce adjacent within same segid
+            rb2.sort(key=lambda x: (x[2], x[0], x[1]))
+            coalesced: list[tuple[int, int, str]] = []
+            for s, e, seg in rb2:
+                if not coalesced or coalesced[-1][2] != seg or s > coalesced[-1][1] + 1:
+                    coalesced.append((s, e, seg))
+                else:
+                    ps, pe, pseg = coalesced[-1]
+                    coalesced[-1] = (ps, max(pe, e), pseg)
+            if coalesced:  # Only add if not empty after cleanup
+                cleaned.append(coalesced)
+                cleaned_flags.append(flag)
+        print(f"Cleaned Rigid Bodies: {cleaned}")
+
+        # Set instance attributes
+        self.rigid_bodies = cleaned
+        self.rigid_body_flags = cleaned_flags
 
     def print_rigid_stats(self):
         # Build full PAE numpy matrix
@@ -1307,72 +1402,6 @@ def find_and_update_sequential_rigid_domains(lists_of_tuples):
     return updated, lists_of_tuples
 
 
-# def calculate_bfactor_avg_for_region(
-#     crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
-# ):
-#     """
-#     Calculate the average B-factor for a given cluster region.
-
-#     :param crd_file: Path to the CRD file (ignored for PDB mode).
-#     :param first_resnum_cluster: start index for region (0-based for PDB mode).
-#     :param last_resnum_cluster: end index for region (0-based for PDB mode).
-#     :param first_resnum: first residue number in the sequence (ignored for PDB mode).
-#     """
-#     if USE_PDB:
-#         return calculate_bfactor_avg_for_region_pdb(
-#             crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
-#         )
-#     bfactors = []
-#     with open(file=crd_file, mode="r", encoding="utf8") as infile:
-#         for line in infile:
-#             words = line.split()
-#             if len(words) >= 10 and is_float(words[9]) and not words[0].startswith("*"):
-#                 bfactor = words[9]
-#                 resnum = words[1]
-
-#                 if (
-#                     float(bfactor) > 0.0
-#                     and bfactor.replace(".", "", 1).isdigit()
-#                     and int(resnum) >= first_resnum_cluster + first_resnum
-#                     and int(resnum) <= last_resnum_cluster + first_resnum
-#                 ):
-#                     bfactors.append(float(bfactor))
-
-#     if bfactors:
-#         return sum(bfactors) / len(bfactors)
-#     else:
-#         return 0.0
-
-
-# def identify_new_rigid_domain(
-#     crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
-# ):
-#     """
-#     Identify and return a new rigid domain as a tuple of
-#     (start_residue, end_residue, segment_id).
-#     """
-#     if USE_PDB:
-#         return identify_new_rigid_domain_pdb(
-#             crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
-#         )
-
-#     str1 = str2 = segid = None
-#     with open(file=crd_file, mode="r", encoding="utf8") as infile:
-#         for line in infile:
-#             words = line.split()
-#             if len(words) >= 10 and is_float(words[9]) and not words[0].startswith("*"):
-#                 resnum = int(words[1])
-#                 if resnum == first_resnum_cluster + first_resnum:
-#                     str1 = int(words[8])
-#                 elif resnum == last_resnum_cluster + first_resnum:
-#                     str2 = int(words[8])
-#                     segid = words[7]
-
-#     if str1 is not None and str2 is not None and segid is not None:
-#         return (str1, str2, segid)
-#     return None
-
-
 def _merge_overlapping_domains(
     domains: list[tuple[int, int, str]],
 ) -> list[tuple[int, int, str]]:
@@ -1401,116 +1430,6 @@ def _merge_overlapping_domains(
             else:
                 merged.append((s, e, seg))
     return merged
-
-
-def define_rigid_bodies(
-    clusters: list,
-    crd_file: str,
-    first_resnum: int,
-    chain_segment_list: list,
-    plddt_cutoff: float,
-    min_segment_len: int,
-    global_merged_flags: list[bool] | None = None,
-) -> tuple[list, list[bool]]:
-    """
-    Define all Rigid Domains
-
-    note:
-    Rigid Bodies contain one of more Rigid Domains
-    Rigid Domains are defined by a tuple of (start_residue, end_residue, segment_id)
-    """
-    # print(f"[define_rigid_bodies] chain_segment_list: {chain_segment_list}")
-    # print(f"[define_rigid_bodies] first_resnum: {first_resnum}")
-    # print(f"[define_rigid_bodies] clusters: {clusters}")
-    rigid_bodies = []
-    rigid_body_flags = []
-    for i, cluster in enumerate(clusters):
-        rigid_body = []
-        if len(cluster) >= MIN_CLUSTER_LENGTH:
-            sorted_cluster = sort_and_separate_cluster(cluster, chain_segment_list)
-            for region in sorted_cluster:
-                first_resnum_cluster = region[0]
-                last_resnum_cluster = region[-1]
-
-                # if USE_PDB:
-                #     print(
-                #         f"Region indices {first_resnum_cluster}-{last_resnum_cluster} "
-                #         f"-> {PDB_INDEX_TO_RES[first_resnum_cluster]} ... {PDB_INDEX_TO_RES[last_resnum_cluster]}"
-                #     )
-
-                # Calculate the average B-factor for the current region
-                bfactor_avg = calculate_bfactor_avg_for_region(
-                    crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
-                )
-
-                # If the average B-factor is above the threshold, identify a new rigid domain
-                if bfactor_avg > plddt_cutoff:
-                    new_rigid_domain = identify_new_rigid_domain(
-                        crd_file,
-                        first_resnum_cluster,
-                        last_resnum_cluster,
-                        first_resnum,
-                    )
-                    if new_rigid_domain:
-                        # Normalize orientation (start <= end)
-                        s, e, seg = new_rigid_domain
-                        if s is not None and e is not None and s > e:
-                            s, e = e, s
-                        normalized = (s, e, seg)
-                        # print(
-                        #     f"New Rigid Domain: {normalized} pLDDT: {round(bfactor_avg, 2)}"
-                        # )
-                        # Deduplicate within this rigid body
-                        if normalized not in rigid_body:
-                            rigid_body.append(normalized)
-            rigid_bodies.append(rigid_body)
-            rigid_body_flags.append(
-                global_merged_flags[i] if global_merged_flags else False
-            )
-
-    # remove empty lists from our list of lists of tuples
-    idxs = [i for i, rb in enumerate(rigid_bodies) if rb]
-    all_non_empty_rigid_bodies = [rigid_bodies[i] for i in idxs]
-    rigid_body_flags = [rigid_body_flags[i] for i in idxs]
-    print(f"Rigid Bodies: {all_non_empty_rigid_bodies}")
-
-    # Now we need to make sure that none of the Rigid Domains (defined as tuples) are
-    # adjacent to each other, and if they are, we need to adjust the start and end so
-    # that we establish a 2 residue gap between them.
-    updated = True
-    while updated:
-        updated, rigid_body_optimized = find_and_update_sequential_rigid_domains(
-            all_non_empty_rigid_bodies
-        )
-    # Merge overlapping or duplicate residue ranges in each rigid body
-    merged_rigid_bodies = []
-    for rb in rigid_body_optimized:
-        merged_rb = _merge_overlapping_domains(rb)
-        merged_rigid_bodies.append(merged_rb)
-    print(f"Optimized Rigid Bodies: {merged_rigid_bodies}")
-
-    # Merge overlaps already done; now drop tiny segments and coalesce adjacents per segid
-    cleaned: list[list[tuple[int, int, str]]] = []
-    cleaned_flags = []
-    for rb, flag in zip(merged_rigid_bodies, rigid_body_flags):
-        # drop too-short
-        rb2 = [
-            (s, e, seg) for (s, e, seg) in rb if (e - s + 1) >= max(1, min_segment_len)
-        ]
-        # coalesce adjacent within same segid
-        rb2.sort(key=lambda x: (x[2], x[0], x[1]))
-        coalesced: list[tuple[int, int, str]] = []
-        for s, e, seg in rb2:
-            if not coalesced or coalesced[-1][2] != seg or s > coalesced[-1][1] + 1:
-                coalesced.append((s, e, seg))
-            else:
-                ps, pe, pseg = coalesced[-1]
-                coalesced[-1] = (ps, max(pe, e), pseg)
-        if coalesced:  # Only add if not empty after cleanup
-            cleaned.append(coalesced)
-            cleaned_flags.append(flag)
-    print(f"Cleaned Rigid Bodies: {cleaned}")
-    return cleaned, cleaned_flags
 
 
 def write_constraints_yaml(rigid_body_list: list, output_path: str):
@@ -1813,40 +1732,10 @@ if __name__ == "__main__":
     corrected_json_str = correct_json_brackets(args.pae_file, None)
     pae_data = json.loads(corrected_json_str)
 
-    pae_clusters, global_merged_flags = define_clusters_for_selected_pae(
-        pae_data,
-        SELECTED_ROWS_START,
-        SELECTED_ROWS_END,
-        SELECTED_COLS_START,
-        SELECTED_COLS_END,
-        graph_sim=args.graph_sim,
-        sigma=args.sigma,
-        linear_T=args.linear_T,
-        knn=args.knn,
-        pae_cutoff=args.pae_cutoff,
-        min_seq_sep=args.min_seq_sep,
-        chain_segs=chain_segments,
-        interchain_cutoff=args.interchain_cutoff,
-        leiden_resolution=args.leiden_resolution,
-        leiden_iters=args.leiden_iters,
-        knn_mode=args.knn_mode,
-        merge_tau=args.merge_tau,
-        merge_coverage=args.merge_coverage,
-        cross_merge_tau=args.cross_merge_tau,
-        cross_merge_coverage=args.cross_merge_coverage,
-        cross_merge_mode=args.cross_merge_mode,
-    )
-
     input_struct = args.pdb_file if USE_PDB else args.crd_file
-    rigid_bodies_from_pae, rigid_body_flags = define_rigid_bodies(
-        pae_clusters,
-        input_struct,
-        first_residue,
-        chain_segments,
-        args.plddt_cutoff,
-        args.min_segment_len,
-        global_merged_flags,
-    )
+    processor.define_rigid_bodies()
+    rigid_bodies_from_pae = processor.rigid_bodies
+    rigid_body_flags = processor.rigid_body_flags
 
     # Debug: print counts
     print(f"Number of Rigid Bodies: {len(rigid_bodies_from_pae)}")
@@ -2023,6 +1912,13 @@ if __name__ == "__main__":
     if not args.no_const:
         write_const_file(rigid_bodies_from_pae, CONST_FILE_PATH, input_struct)
     else:
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
         print("Skipping const.inp as requested (--no-const)")
         print("Skipping const.inp as requested (--no-const)")
         print("Skipping const.inp as requested (--no-const)")
