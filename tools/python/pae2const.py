@@ -5,25 +5,20 @@ Provides functions to create const.inp file from PAE and CRD files
 import argparse
 import json
 from collections import defaultdict
-from typing import Tuple, Optional
+from typing import Optional, Tuple
+
 import igraph
 import numpy as np
 import yaml
-
-from pdb_utils import (
-    classify_residue,
-    determine_molecule_type_details,
-    get_segid_renaming_map,
-)
-
 from helpers_viz import (
     Cluster,
-    stride_downsample,
-    write_viz_json,
     save_pae_bin,
     save_pae_png,
     save_viz_png,
+    stride_downsample,
+    write_viz_json,
 )
+from pdb_utils import get_segid_renaming_map
 
 MIN_CLUSTER_LENGTH = 5
 CONST_FILE_PATH = "const.inp"
@@ -342,7 +337,6 @@ def _cluster_span(cluster: list[int]) -> tuple[int, int]:
 
 
 # --- New helpers for set-based off-diagonal stats ---
-from collections import defaultdict
 
 
 def _majority_chain_id(indices: list[int], chain_segs: list) -> int:
@@ -612,7 +606,7 @@ def print_rigid_stats(
             domain_meds.append(mean)
             seg_str = seg if isinstance(seg, str) else str(seg)
             print(
-                f"  - {seg_str}:{int(s)}-{int(e)} (global {gs}-{ge}) len={int(e)-int(s)+1} median={med:.2f} Å mean={mean:.2f} Å"
+                f"  - {seg_str}:{int(s)}-{int(e)} (global {gs}-{ge}) len={int(e) - int(s) + 1} median={med:.2f} Å mean={mean:.2f} Å"
             )
         if domain_meds:
             # robust overall median across all domain pixels: median of medians is fine for printing
