@@ -88,7 +88,7 @@ def save_pae_png(out_path: str, mat: np.ndarray) -> None:
     fig = plt.figure(figsize=(4, 4), dpi=256)  # sharp
     ax = plt.axes([0, 0, 1, 1])
     ax.axis("off")
-    im = ax.imshow(mat, vmin=0.0, vmax=31.0, cmap="viridis", origin="upper")
+    ax.imshow(mat, vmin=0.0, vmax=31.0, cmap="viridis", origin="upper")
     fig.savefig(out_path, dpi=256)
     plt.close(fig)
 
