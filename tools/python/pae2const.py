@@ -1,5 +1,5 @@
 """
-Provides functions to create const.inp file from PAE and CRD files
+Provides functions to create CHARMM const.inp or OpenMM constraints.yaml file from PAE and CRD files
 """
 
 import argparse
@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import igraph
 import numpy as np
 import yaml
+
 from helpers_viz import (
     Cluster,
     save_pae_bin,
@@ -211,7 +212,6 @@ class PDBHandler(InputHandler):
         chains = []
         N = len(self.pdb_index_to_res)
         if N > 0:
-            cur_id = self.pdb_index_to_res[0][0] or " "
             start = 1
             for i in range(2, N + 1):  # 1..N (1-based)
                 prev_id = self.pdb_index_to_res[i - 2][0] or " "
@@ -619,7 +619,9 @@ class PAEProcessor:
         for i, cluster in enumerate(self.clusters):
             rigid_body = []
             if len(cluster) >= MIN_CLUSTER_LENGTH:
-                sorted_cluster = sort_and_separate_cluster(cluster, self.chain_segments)
+                sorted_cluster = self._sort_and_separate_cluster(
+                    cluster, self.chain_segments
+                )
                 for region in sorted_cluster:
                     first_resnum_cluster = region[0]
                     last_resnum_cluster = region[-1]
@@ -664,14 +666,16 @@ class PAEProcessor:
         # Ensure no Rigid Domains are adjacent; adjust to create a 2-residue gap
         updated = True
         while updated:
-            updated, rigid_body_optimized = find_and_update_sequential_rigid_domains(
-                all_non_empty_rigid_bodies
+            updated, rigid_body_optimized = (
+                self._find_and_update_sequential_rigid_domains(
+                    all_non_empty_rigid_bodies
+                )
             )
 
         # Merge overlapping or duplicate residue ranges in each rigid body
         merged_rigid_bodies = []
         for rb in rigid_body_optimized:
-            merged_rb = _merge_overlapping_domains(rb)
+            merged_rb = self._merge_overlapping_domains(rb)
             merged_rigid_bodies.append(merged_rb)
         print(f"Optimized Rigid Bodies: {merged_rigid_bodies}")
 
@@ -1094,6 +1098,174 @@ class PAEProcessor:
             const_file.write("return \n")
             const_file.write("\n")
 
+    @staticmethod
+    def _sort_and_separate_cluster(numbers, chain_segs: list):
+        """
+        Sorts a list of numbers and separates them into contiguous regions.
+
+        A "region" is defined as a sequence of consecutive numbers in the sorted list.
+        The separation of regions occurs when a break in consecutiveness is detected,
+        or when a number is found in the `chain_segs` list, which acts as a separator.
+
+        Parameters:
+        -----------
+        numbers : list of int
+            A list of integers that needs to be sorted and separated into regions.
+
+        chain_segs : list of int
+            A list of integers that serve as separators. When a number from `numbers`
+            is found in `chain_segs`, it causes a break in the region, even if the
+            numbers are otherwise consecutive.
+
+        Returns:
+        --------
+        list of list of int
+            A list of lists, where each inner list represents a contiguous region
+            of numbers, excluding any breaks caused by numbers in `chain_segs`.
+
+        Example:
+        --------
+        >>> PAEProcessor._sort_and_separate_cluster([1, 2, 3, 7, 8, 9, 11], [3, 8])
+        [[1, 2], [3], [7], [8, 9], [11]]
+        """
+        numbers = sorted(numbers)
+        regions = []
+        current_region = [numbers[0]]
+        for i in range(1, len(numbers)):
+            if (numbers[i] == numbers[i - 1] + 1) and (
+                numbers[i - 1] not in chain_segs
+            ):
+                current_region.append(numbers[i])
+            else:
+                regions.append(current_region)
+                current_region = [numbers[i]]
+
+        regions.append(current_region)
+        return regions
+
+    @staticmethod
+    def _find_and_update_sequential_rigid_domains(lists_of_tuples):
+        """
+        Identify and adjust adjacent rigid domains in a list of tuples.
+
+        This function iterates over a list of lists, where each inner list contains tuples
+        representing Rigid Domains. Each tuple consists of the start residue, end residue,
+        and the chain identifier. The function identifies adjacent rigid domains within the
+        same chain and adjusts them by creating a 2-residue gap between consecutive domains.
+        The adjustment is done by decrementing the end of the first domain and incrementing
+        the start of the second domain.
+
+        Parameters:
+        -----------
+        lists_of_tuples : list of lists of tuples
+            A list where each inner list contains tuples representing rigid domains. Each
+            tuple is of the form (start_residue, end_residue, chain), where `start_residue`
+            and `end_residue` are integers indicating the range of residues, and `chain` is
+            a string representing the chain ID.
+
+        Returns:
+        --------
+        tuple (bool, list of list of tuples)
+            - A boolean indicating whether any updates were made to the rigid domains.
+            - The updated list of lists containing the adjusted rigid domains.
+
+        Example:
+        --------
+        Given a list of tuples representing rigid domains:
+
+        >>> lists_of_tuples = [
+        >>>     [(10, 20, "A"), (21, 30, "A")],
+        >>>     [(5, 15, "B"), (16, 25, "B")]
+        >>> ]
+
+        The function will identify that (10, 20, "A") and (21, 30, "A") are adjacent and
+        will update them to (10, 19, "A") and (22, 30, "A"), respectively, creating a
+        2-residue gap between the domains.
+
+        Collaboration Note:
+        -------------------
+        This function was collaboratively developed by ChatGPT and Scott
+
+        """
+        seen_pairs = set()  # To keep track of seen pairs and avoid duplicates
+        updates = {}  # To store updates for each tuple
+        updated = False  # Flag to indicate if updates were made
+
+        for outer_list in lists_of_tuples:
+            for start1, end1, chain1 in outer_list:
+                for other_outer_list in lists_of_tuples:
+                    for start2, end2, chain2 in other_outer_list:
+                        if chain1 == chain2:
+                            if end1 + 1 == start2:
+                                # Ensure the pair is not considered in reverse
+                                if (
+                                    (start1, end1, chain1),
+                                    (start2, end2, chain2),
+                                ) not in seen_pairs:
+                                    # print(
+                                    #     f"Adjacent Rigid Domains: ({start1}, {end1}, '{chain1}') and ({start2}, {end2}, '{chain2}')"
+                                    # )
+                                    updates[(start1, end1, chain1)] = (start1, end1 - 1)
+                                    updates[(start2, end2, chain2)] = (start2 + 1, end2)
+                                    seen_pairs.add(
+                                        ((start1, end1, chain1), (start2, end2, chain2))
+                                    )
+                                    updated = True
+
+                            elif end2 + 1 == start1:
+                                if (
+                                    (start2, end2, chain2),
+                                    (start1, end1, chain1),
+                                ) not in seen_pairs:
+                                    # print(
+                                    #     f"Adjacent Rigid Domains: ({start2}, {end2}, '{chain2}') and ({start1}, {end1}, '{chain1}')"
+                                    # )
+                                    updates[(start2, end2, chain2)] = (start2, end2 - 1)
+                                    updates[(start1, end1, chain1)] = (start1 + 1, end1)
+                                    seen_pairs.add(
+                                        ((start2, end2, chain2), (start1, end1, chain1))
+                                    )
+                                    updated = True
+
+        # Apply the updates to the original list
+        for i, outer_list in enumerate(lists_of_tuples):
+            for j, (start, end, chain) in enumerate(outer_list):
+                if (start, end, chain) in updates:
+                    new_start, new_end = updates[(start, end, chain)]
+                    lists_of_tuples[i][j] = (new_start, new_end, chain)
+
+        return updated, lists_of_tuples
+
+    @staticmethod
+    def _merge_overlapping_domains(
+        domains: list[tuple[int, int, str]],
+    ) -> list[tuple[int, int, str]]:
+        """
+        Merge overlapping or contiguous residue ranges with the same segid,
+        and deduplicate exact duplicates.
+        Input: list of (start, end, segid)
+        Output: merged list
+        """
+        # Deduplicate exact duplicates
+        unique_domains = list(set(domains))
+        # Sort by segid, then start
+        unique_domains.sort(key=lambda x: (x[2], x[0], x[1]))
+        merged = []
+        for d in unique_domains:
+            s, e, seg = d
+            if s > e:
+                s, e = e, s
+            if not merged or seg != merged[-1][2]:
+                merged.append((s, e, seg))
+            else:
+                last_s, last_e, last_seg = merged[-1]
+                # If overlapping or contiguous, merge
+                if s <= last_e + 1:
+                    merged[-1] = (min(last_s, s), max(last_e, e), seg)
+                else:
+                    merged.append((s, e, seg))
+        return merged
+
 
 def _is_cross_chain(i: int, j: int, chain_segs: list) -> bool:
     """True if i and j lie on different chains given split indices (0-based, split BEFORE index)."""
@@ -1256,172 +1428,6 @@ def is_float(arg):
         return True
     except (ValueError, TypeError):
         return False
-
-
-def sort_and_separate_cluster(numbers, chain_segs: list):
-    """
-    Sorts a list of numbers and separates them into contiguous regions.
-
-    A "region" is defined as a sequence of consecutive numbers in the sorted list.
-    The separation of regions occurs when a break in consecutiveness is detected,
-    or when a number is found in the `chain_segs` list, which acts as a separator.
-
-    Parameters:
-    -----------
-    numbers : list of int
-        A list of integers that needs to be sorted and separated into regions.
-
-    chain_segs : list of int
-        A list of integers that serve as separators. When a number from `numbers`
-        is found in `chain_segs`, it causes a break in the region, even if the
-        numbers are otherwise consecutive.
-
-    Returns:
-    --------
-    list of list of int
-        A list of lists, where each inner list represents a contiguous region
-        of numbers, excluding any breaks caused by numbers in `chain_segs`.
-
-    Example:
-    --------
-    >>> sort_and_separate_cluster([1, 2, 3, 7, 8, 9, 11], [3, 8])
-    [[1, 2], [3], [7], [8, 9], [11]]
-    """
-    numbers = sorted(numbers)
-    regions = []
-    current_region = [numbers[0]]
-    for i in range(1, len(numbers)):
-        if (numbers[i] == numbers[i - 1] + 1) and (numbers[i - 1] not in chain_segs):
-            current_region.append(numbers[i])
-        else:
-            regions.append(current_region)
-            current_region = [numbers[i]]
-
-    regions.append(current_region)
-    return regions
-
-
-def find_and_update_sequential_rigid_domains(lists_of_tuples):
-    """
-    Identify and adjust adjacent rigid domains in a list of tuples.
-
-    This function iterates over a list of lists, where each inner list contains tuples
-    representing Rigid Domains. Each tuple consists of the start residue, end residue,
-    and the chain identifier. The function identifies adjacent rigid domains within the
-    same chain and adjusts them by creating a 2-residue gap between consecutive domains.
-    The adjustment is done by decrementing the end of the first domain and incrementing
-    the start of the second domain.
-
-    Parameters:
-    -----------
-    lists_of_tuples : list of lists of tuples
-        A list where each inner list contains tuples representing rigid domains. Each
-        tuple is of the form (start_residue, end_residue, chain), where `start_residue`
-        and `end_residue` are integers indicating the range of residues, and `chain` is
-        a string representing the chain ID.
-
-    Returns:
-    --------
-    tuple (bool, list of list of tuples)
-        - A boolean indicating whether any updates were made to the rigid domains.
-        - The updated list of lists containing the adjusted rigid domains.
-
-    Example:
-    --------
-    Given a list of tuples representing rigid domains:
-
-    >>> lists_of_tuples = [
-    >>>     [(10, 20, "A"), (21, 30, "A")],
-    >>>     [(5, 15, "B"), (16, 25, "B")]
-    >>> ]
-
-    The function will identify that (10, 20, "A") and (21, 30, "A") are adjacent and
-    will update them to (10, 19, "A") and (22, 30, "A"), respectively, creating a
-    2-residue gap between the domains.
-
-    Collaboration Note:
-    -------------------
-    This function was collaboratively developed by ChatGPT and Scott
-
-    """
-    seen_pairs = set()  # To keep track of seen pairs and avoid duplicates
-    updates = {}  # To store updates for each tuple
-    updated = False  # Flag to indicate if updates were made
-
-    for outer_list in lists_of_tuples:
-        for start1, end1, chain1 in outer_list:
-            for other_outer_list in lists_of_tuples:
-                for start2, end2, chain2 in other_outer_list:
-                    if chain1 == chain2:
-                        if end1 + 1 == start2:
-                            # Ensure the pair is not considered in reverse
-                            if (
-                                (start1, end1, chain1),
-                                (start2, end2, chain2),
-                            ) not in seen_pairs:
-                                # print(
-                                #     f"Adjacent Rigid Domains: ({start1}, {end1}, '{chain1}') and ({start2}, {end2}, '{chain2}')"
-                                # )
-                                updates[(start1, end1, chain1)] = (start1, end1 - 1)
-                                updates[(start2, end2, chain2)] = (start2 + 1, end2)
-                                seen_pairs.add(
-                                    ((start1, end1, chain1), (start2, end2, chain2))
-                                )
-                                updated = True
-
-                        elif end2 + 1 == start1:
-                            if (
-                                (start2, end2, chain2),
-                                (start1, end1, chain1),
-                            ) not in seen_pairs:
-                                # print(
-                                #     f"Adjacent Rigid Domains: ({start2}, {end2}, '{chain2}') and ({start1}, {end1}, '{chain1}')"
-                                # )
-                                updates[(start2, end2, chain2)] = (start2, end2 - 1)
-                                updates[(start1, end1, chain1)] = (start1 + 1, end1)
-                                seen_pairs.add(
-                                    ((start2, end2, chain2), (start1, end1, chain1))
-                                )
-                                updated = True
-
-    # Apply the updates to the original list
-    for i, outer_list in enumerate(lists_of_tuples):
-        for j, (start, end, chain) in enumerate(outer_list):
-            if (start, end, chain) in updates:
-                new_start, new_end = updates[(start, end, chain)]
-                lists_of_tuples[i][j] = (new_start, new_end, chain)
-
-    return updated, lists_of_tuples
-
-
-def _merge_overlapping_domains(
-    domains: list[tuple[int, int, str]],
-) -> list[tuple[int, int, str]]:
-    """
-    Merge overlapping or contiguous residue ranges with the same segid,
-    and deduplicate exact duplicates.
-    Input: list of (start, end, segid)
-    Output: merged list
-    """
-    # Deduplicate exact duplicates
-    unique_domains = list(set(domains))
-    # Sort by segid, then start
-    unique_domains.sort(key=lambda x: (x[2], x[0], x[1]))
-    merged = []
-    for d in unique_domains:
-        s, e, seg = d
-        if s > e:
-            s, e = e, s
-        if not merged or seg != merged[-1][2]:
-            merged.append((s, e, seg))
-        else:
-            last_s, last_e, last_seg = merged[-1]
-            # If overlapping or contiguous, merge
-            if s <= last_e + 1:
-                merged[-1] = (min(last_s, s), max(last_e, e), seg)
-            else:
-                merged.append((s, e, seg))
-    return merged
 
 
 if __name__ == "__main__":
@@ -1608,7 +1614,4 @@ if __name__ == "__main__":
     # Generate outputs
     processor.print_rigid_stats()
     processor.generate_visualization_artifacts()
-    processor.write_outputs(processor.input_file)
-    processor.write_outputs(processor.input_file)
-    processor.write_outputs(processor.input_file)
     processor.write_outputs(processor.input_file)
