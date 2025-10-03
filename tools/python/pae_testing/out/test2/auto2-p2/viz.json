@@ -1,1 +1,0 @@
-{"length":809,"clusters":[{"id":0,"type":"fixed","ranges":[[214,672],[677,807]],"bbox":[214,214,807,807]},{"id":1,"type":"rigid","ranges":[[1,188]],"bbox":[1,1,188,188]}],"mask":{"plddt_cutoff":50.0,"low_confidence_residues":[]},"chains":[{"id":"PROA","start":1,"end":809}]}

@@ -1,1 +1,0 @@
-{"length":524,"clusters":[{"id":0,"type":"fixed","ranges":[[1,297],[340,366]],"bbox":[1,1,366,366]},{"id":1,"type":"rigid","ranges":[[391,520]],"bbox":[391,391,520,520]}],"mask":{"plddt_cutoff":50.0,"low_confidence_residues":[]},"chains":[{"id":"A","start":1,"end":324},{"id":"B","start":325,"end":524}]}
