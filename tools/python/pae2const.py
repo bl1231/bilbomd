@@ -457,54 +457,6 @@ class PAEProcessor:
         self.input_file = None
         self.config = config
 
-    def _prepare_pdb_mappings(self, pdb_file: str) -> int:
-        """
-        Build PDB_INDEX_TO_RES (sequence of residues across all chains) and
-        PDB_RES_PLDDT (per-residue list of B-factors which hold pLDDT).
-        Returns the number of residues discovered.
-
-        This method populates self.pdb_index_to_res and self.pdb_res_plddt.
-        """
-        pdb_path = Path(pdb_file)
-        if not pdb_path.exists():
-            raise FileNotFoundError(f"PDB file not found: {pdb_file}")
-
-        self.pdb_index_to_res = []
-        self.pdb_res_plddt.clear()
-        seen_res = set()  # Track first atom per residue to build index ordering
-
-        with open(pdb_path, "r", encoding="utf-8") as fh:
-            for line in fh:
-                if not (line.startswith("ATOM") or line.startswith("HETATM")):
-                    continue
-                # PDB fixed columns
-                chain_id = line[21].strip() or " "
-                resseq_str = line[22:26].strip()
-                icode = line[26].strip()  # Insertion code
-                bfact_str = line[60:66].strip()
-
-                if not resseq_str:
-                    continue
-                try:
-                    resseq = int(resseq_str)
-                except ValueError:
-                    continue
-
-                # Accumulate pLDDT (B-factor) per (chain, resseq)
-                try:
-                    b = float(bfact_str)
-                    self.pdb_res_plddt[(chain_id, resseq)].append(b)
-                except ValueError:
-                    pass
-
-                # Use (chain, resseq, icode) to identify first occurrence order
-                key = (chain_id, resseq, icode)
-                if key not in seen_res:
-                    seen_res.add(key)
-                    self.pdb_index_to_res.append((chain_id, resseq))
-
-        return len(self.pdb_index_to_res)
-
     def load_pae_data(self, pae_file: str) -> None:
         """
         Load and correct PAE JSON data from file, storing it in self.pae_data.
@@ -533,137 +485,118 @@ class PAEProcessor:
         """
         Unified method to get first and last residue numbers from PDB or CRD file.
 
-        Dispatches based on self.use_pdb.
+        Delegates to the input handler.
         """
-        if self.use_pdb:
-            return self._get_first_and_last_residue_numbers_pdb(file)
-        else:
-            return self._get_first_and_last_residue_numbers_crd(file)
+        return self.input_handler.get_first_and_last_residue_numbers(file)
 
-    def _get_first_and_last_residue_numbers_pdb(self, pdb_file: str) -> Tuple[int, int]:
-        """
-        For PDB-based runs, return (1, N) for 1-based indexing.
-        """
-        n = self._prepare_pdb_mappings(pdb_file)
-        return 1, n  # First-1 == 0, last-1 == N-1
-
-    def _get_first_and_last_residue_numbers_crd(
-        self, crd_file: str
-    ) -> Tuple[Optional[int], Optional[int]]:
-        """
-        Extract first and last residue numbers from a CRD file.
-        """
-        crd_path = Path(crd_file)
-        if not crd_path.exists():
-            raise FileNotFoundError(f"CRD file not found: {crd_file}")
-
-        first_resnum = None
-        last_resnum = None
-        start_processing = False
-
-        with open(crd_path, "r", encoding="utf-8") as infile:
-            for line in infile:
-                if not start_processing:
-                    if line.strip().endswith("EXT"):
-                        start_processing = True
-                    continue
-
-                words = line.split()
-                if start_processing and words:
-                    if first_resnum is None:
-                        try:
-                            first_resnum = int(words[1])
-                        except (ValueError, IndexError):
-                            continue
-                    try:
-                        last_resnum = int(words[1])
-                    except (ValueError, IndexError):
-                        pass
-
-        return first_resnum, last_resnum
-
-    def define_segments(self, file: str) -> list[int]:
+    def define_segments(self, file: str) -> List[int]:
         """
         Unified method to define chain segments (0-based split indices).
 
-        Dispatches based on self.use_pdb.
+        Delegates to the input handler.
         """
-        if self.use_pdb:
-            return self._define_segments_pdb(file)
-        else:
-            return self._define_segments_crd(file)
-
-    def _define_segments_pdb(self, pdb_file: str) -> list[int]:
-        """
-        Return 0-based residue indices that act as 'split points' between chains.
-        """
-        if not self.pdb_index_to_res:
-            self._prepare_pdb_mappings(pdb_file)
-
-        segs = []
-        for i in range(1, len(self.pdb_index_to_res)):
-            prev_chain = self.pdb_index_to_res[i - 1][0]
-            curr_chain = self.pdb_index_to_res[i][0]
-            if prev_chain != curr_chain:
-                segs.append(i - 1)
-        return segs
-
-    def _define_segments_crd(self, crd_file: str) -> list[int]:
-        """
-        Define segments by detecting differing segids in CRD file.
-        """
-        crd_path = Path(crd_file)
-        if not crd_path.exists():
-            raise FileNotFoundError(f"CRD file not found: {crd_file}")
-
-        differing_pairs = []
-        current_line = None
-
-        with open(crd_path, "r", encoding="utf-8") as infile:
-            for line in infile:
-                line_split = line.split()
-                if current_line is None:
-                    current_line = line_split
-                    continue
-
-                if (
-                    len(current_line) == 10
-                    and len(line_split) == 10
-                    and current_line[7] != line_split[7]
-                ):
-                    differing_pairs.append(int(current_line[1]) - 1)
-                current_line = line_split
-
-        return differing_pairs
+        return self.input_handler.define_segments(file)
 
     def define_clusters(self):
         row_start = self.first_residue - 1
         row_end = self.last_residue - 1
         col_start = row_start
         col_end = row_end
-        self.clusters, self.global_merged_flags = define_clusters_for_selected_pae(
-            self.pae_data,
-            row_start,
-            row_end,
-            col_start,
-            col_end,
-            graph_sim=self.config.graph_sim,
-            sigma=self.config.sigma,
-            linear_T=self.config.linear_T,
-            knn=self.config.knn,
-            pae_cutoff=self.config.pae_cutoff,
-            min_seq_sep=self.config.min_seq_sep,
-            chain_segs=self.chain_segments,
-            interchain_cutoff=self.config.interchain_cutoff,
-            leiden_resolution=self.config.leiden_resolution,
-            leiden_iters=self.config.leiden_iters,
-            knn_mode=self.config.knn_mode,
-            merge_tau=self.config.merge_tau,
-            merge_coverage=self.config.merge_coverage,
-            cross_merge_tau=self.config.cross_merge_tau,
-            cross_merge_coverage=self.config.cross_merge_coverage,
-            cross_merge_mode=self.config.cross_merge_mode,
+        self.clusters, self.global_merged_flags = (
+            self._define_clusters_for_selected_pae(
+                self.pae_data,
+                row_start,
+                row_end,
+                col_start,
+                col_end,
+            )
         )
+
+    def _define_clusters_for_selected_pae(
+        self,
+        row_start: int,
+        row_end: int,
+        col_start: int,
+        col_end: int,
+    ):
+        """
+        Define PAE clusters using Leiden algorithm.
+        Moved from standalone function; now uses self.config for parameters.
+        """
+        data = self.pae_data
+        if "pae" in data:
+            matrix = data["pae"]
+        elif "predicted_aligned_error" in data:
+            matrix = data["predicted_aligned_error"]
+        else:
+            raise ValueError("Invalid PAE JSON format.")
+
+        selected = []
+        for i, row in enumerate(matrix):
+            if row_start <= i <= row_end:
+                new_row = [
+                    value if col_start <= j <= col_end else 30.0
+                    for j, value in enumerate(row)
+                ]
+                selected.append(new_row)
+        pae_matrix = np.array(selected, dtype=np.float64)
+
+        # Build similarity and edges (using self.config)
+        S = _similarity_from_pae(
+            pae_matrix,
+            method=self.config.graph_sim,
+            sigma=self.config.sigma,
+            T=self.config.linear_T,
+        )
+        S = 0.5 * (S + S.T)  # Symmetrize
+        edges, sel_weights = _build_edges_from_similarity(
+            S=S,
+            pae=pae_matrix,
+            pae_cutoff=self.config.pae_cutoff,
+            k=self.config.knn,
+            min_seq_sep=self.config.min_seq_sep,
+            chain_segs=self.chain_segments or [],
+            interchain_cutoff=self.config.interchain_cutoff,
+            knn_mode=self.config.knn_mode,
+        )
+
+        g = igraph.Graph()
+        size = pae_matrix.shape[0]
+        g.add_vertices(range(size))
+        if edges:
+            g.add_edges(edges)
+            g.es["weight"] = sel_weights
+
+        # Debug print (optional, or use logging)
+        print(
+            f"[clustering] n={size}, edges={len(edges)}, "
+            f"knn={self.config.knn}, cutoff={self.config.pae_cutoff}, interchain_cutoff={self.config.interchain_cutoff}, "
+            f"min_seq_sep={self.config.min_seq_sep}"
+        )
+
+        vc = g.community_leiden(
+            weights="weight" if edges else None,
+            resolution=self.config.leiden_resolution,
+            n_iterations=self.config.leiden_iters,
+        )
+        membership = np.array(vc.membership)
+
+        membership_clusters = defaultdict(list)
+        for index, cluster in enumerate(membership):
+            membership_clusters[cluster].append(index)
+
+        sorted_clusters = sorted(membership_clusters.values(), key=len, reverse=True)
+        sorted_clusters, global_merged_flags = _merge_clusters_by_affinity(
+            pae_matrix,
+            sorted_clusters,
+            self.chain_segments or [],
+            tau=self.config.merge_tau,
+            cov=self.config.merge_coverage,
+            tau_cross=self.config.cross_merge_tau,
+            cov_cross=self.config.cross_merge_coverage,
+            mode=self.config.cross_merge_mode,
+        )
+        return sorted_clusters, global_merged_flags
 
     def define_rigid_bodies(self, input_file):
         self.rigid_bodies, self.rigid_body_flags = define_rigid_bodies(
@@ -782,90 +715,41 @@ class PAEProcessor:
             print("Skipping const.inp as requested (--no-const)")
 
 
-def _prepare_pdb_mappings(pdb_file: str) -> int:
-    """
-    Build PDB_INDEX_TO_RES (sequence of residues across all chains) and
-    PDB_RES_PLDDT (per-residue list of B-factors which hold pLDDT).
-    Returns the number of residues discovered.
-
-    This method populates global PDB_INDEX_TO_RES and PDB_RES_PLDDT.
-    """
-    pdb_path = Path(pdb_file)
-    if not pdb_path.exists():
-        raise FileNotFoundError(f"PDB file not found: {pdb_file}")
-
-    PDB_INDEX_TO_RES.clear()
-    PDB_RES_PLDDT.clear()
-    seen_res = set()  # Track first atom per residue to build index ordering
-
-    with open(pdb_path, "r", encoding="utf-8") as fh:
-        for line in fh:
-            if not (line.startswith("ATOM") or line.startswith("HETATM")):
-                continue
-            # PDB fixed columns
-            chain_id = line[21].strip() or " "
-            resseq_str = line[22:26].strip()
-            icode = line[26].strip()  # Insertion code
-            bfact_str = line[60:66].strip()
-
-            if not resseq_str:
-                continue
-            try:
-                resseq = int(resseq_str)
-            except ValueError:
-                continue
-
-            # Accumulate pLDDT (B-factor) per (chain, resseq)
-            try:
-                b = float(bfact_str)
-                PDB_RES_PLDDT[(chain_id, resseq)].append(b)
-            except ValueError:
-                pass
-
-            # Use (chain, resseq, icode) to identify first occurrence order
-            key = (chain_id, resseq, icode)
-            if key not in seen_res:
-                seen_res.add(key)
-                PDB_INDEX_TO_RES.append((chain_id, resseq))
-
-    return len(PDB_INDEX_TO_RES)
+# def identify_new_rigid_domain_pdb(
+#     _ignored_file, first_index: int, last_index: int, _ignored_first_resnum: int
+# ):
+#     """
+#     Return (start_residue, end_residue, segid) for the region defined by
+#     0-based indices. segid will be the PDB chain ID.
+#     """
+#     if not PDB_INDEX_TO_RES:
+#         raise RuntimeError("PDB mappings not prepared.")
+#     chain_start, res_start = PDB_INDEX_TO_RES[first_index]
+#     chain_end, res_end = PDB_INDEX_TO_RES[last_index]
+#     if chain_start != chain_end:
+#         # Should not happen because we split clusters at chain edges,
+#         # but guard anyway.
+#         return None
+#     segid = chain_start if chain_start else " "
+#     return (res_start, res_end, segid)
 
 
-def identify_new_rigid_domain_pdb(
-    _ignored_file, first_index: int, last_index: int, _ignored_first_resnum: int
-):
-    """
-    Return (start_residue, end_residue, segid) for the region defined by
-    0-based indices. segid will be the PDB chain ID.
-    """
-    if not PDB_INDEX_TO_RES:
-        raise RuntimeError("PDB mappings not prepared.")
-    chain_start, res_start = PDB_INDEX_TO_RES[first_index]
-    chain_end, res_end = PDB_INDEX_TO_RES[last_index]
-    if chain_start != chain_end:
-        # Should not happen because we split clusters at chain edges,
-        # but guard anyway.
-        return None
-    segid = chain_start if chain_start else " "
-    return (res_start, res_end, segid)
-
-
-def calculate_bfactor_avg_for_region_pdb(
-    _ignored_file, first_index: int, last_index: int, _ignored_first_resnum: int
-):
-    """
-    Average per-residue pLDDT (stored in B-factor) across the inclusive
-    index range [first_index, last_index] in the flattened residue list.
-    """
-    if not PDB_INDEX_TO_RES:
-        raise RuntimeError("PDB mappings not prepared.")
-    vals = []
-    for idx in range(first_index, last_index + 1):
-        chain_id, resseq = PDB_INDEX_TO_RES[idx]
-        arr = PDB_RES_PLDDT.get((chain_id, resseq), [])
-        if arr:
-            vals.append(sum(arr) / len(arr))
-    return (sum(vals) / len(vals)) if vals else 0.0
+# def calculate_bfactor_avg_for_region_pdb(
+#     _ignored_file, first_index: int, last_index: int, _ignored_first_resnum: int
+# ):
+#     """
+#     Average per-residue pLDDT (stored in B-factor) across the inclusive
+#     index range [first_index, last_index] in the flattened residue list.
+#     """
+#     if not PDB_INDEX_TO_RES:
+#         raise RuntimeError("PDB mappings not prepared.")
+#     vals = []
+#     for idx in range(first_index, last_index + 1):
+#         chain_id, resseq = PDB_INDEX_TO_RES[idx]
+#         arr = PDB_RES_PLDDT.get((chain_id, resseq), [])
+#         if arr:
+#             vals.append(sum(arr) / len(arr))
+#     return (sum(vals) / len(vals)) if vals else 0.0
 
 
 def correct_json_brackets(pae, output_file_path):
@@ -1276,111 +1160,6 @@ def print_rigid_stats(
             )
 
 
-def define_clusters_for_selected_pae(
-    pae_data,
-    row_start: int,
-    row_end: int,
-    col_start: int,
-    col_end: int,
-    *,
-    graph_sim: str = "exp",
-    sigma: float = 8.0,
-    linear_T: float = 30.0,
-    knn: int = 20,
-    knn_mode: str = "union",
-    pae_cutoff: float = 10.0,
-    min_seq_sep: int = 8,
-    chain_segs: list | None = None,
-    interchain_cutoff: float = 5.0,
-    leiden_resolution: float = 1.0,
-    leiden_iters: int = 10,
-    merge_tau: float = 7.0,
-    merge_coverage: float = 0.6,
-    cross_merge_tau: float = 5.5,
-    cross_merge_coverage: float = 0.7,
-    cross_merge_mode: str = "adjacent",
-):
-    """
-    Define PAE clusters
-    Accepts a dict (parsed JSON) instead of a filename.
-    """
-    data = pae_data
-    if "pae" in data:
-        matrix = data["pae"]
-    elif "predicted_aligned_error" in data:
-        matrix = data["predicted_aligned_error"]
-    else:
-        raise ValueError("Invalid PAE JSON format.")
-
-    selected = []
-    for i, row in enumerate(matrix):
-        if row_start <= i <= row_end:
-            new_row = [
-                value if col_start <= j <= col_end else 30.0
-                for j, value in enumerate(row)
-            ]
-            selected.append(new_row)
-    pae_matrix = np.array(selected, dtype=np.float64)
-
-    # Build similarity and edges
-    S = _similarity_from_pae(pae_matrix, method=graph_sim, sigma=sigma, T=linear_T)
-    # Symmetrize for stability
-    S = 0.5 * (S + S.T)
-    edges, sel_weights = _build_edges_from_similarity(
-        S=S,
-        pae=pae_matrix,
-        pae_cutoff=pae_cutoff,
-        k=knn,
-        min_seq_sep=min_seq_sep,
-        chain_segs=chain_segs or [],
-        interchain_cutoff=interchain_cutoff,
-        knn_mode=knn_mode,
-    )
-
-    g = igraph.Graph()
-    size = pae_matrix.shape[0]
-    g.add_vertices(range(size))
-    if edges:
-        g.add_edges(edges)
-        g.es["weight"] = sel_weights
-
-    # Debug: report basic graph stats
-    try:
-        print(
-            f"[clustering] n={size}, edges={len(edges)}, "
-            f"knn={knn}, cutoff={pae_cutoff}, interchain_cutoff={interchain_cutoff}, "
-            f"min_seq_sep={min_seq_sep}"
-        )
-    except Exception:
-        pass
-
-    vc = g.community_leiden(
-        weights="weight" if edges else None,
-        resolution=leiden_resolution,
-        n_iterations=leiden_iters,
-    )
-    membership = np.array(vc.membership)
-
-    membership_clusters = defaultdict(list)
-    for index, cluster in enumerate(membership):
-        membership_clusters[cluster].append(index)
-
-    sorted_clusters = sorted(membership_clusters.values(), key=len, reverse=True)
-    # In define_clusters_for_selected_pae, after the _merge_clusters_by_affinity call:
-    sorted_clusters, global_merged_flags = _merge_clusters_by_affinity(
-        pae_matrix,
-        sorted_clusters,
-        chain_segs or [],
-        tau=merge_tau,
-        cov=merge_coverage,
-        tau_cross=cross_merge_tau,
-        cov_cross=cross_merge_coverage,
-        mode=cross_merge_mode,
-    )
-    # Now return the flags too
-    return sorted_clusters, global_merged_flags
-
-
 def is_float(arg):
     """
     Returns True if arg can be converted to a float, False otherwise.
@@ -1528,70 +1307,70 @@ def find_and_update_sequential_rigid_domains(lists_of_tuples):
     return updated, lists_of_tuples
 
 
-def calculate_bfactor_avg_for_region(
-    crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
-):
-    """
-    Calculate the average B-factor for a given cluster region.
+# def calculate_bfactor_avg_for_region(
+#     crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
+# ):
+#     """
+#     Calculate the average B-factor for a given cluster region.
 
-    :param crd_file: Path to the CRD file (ignored for PDB mode).
-    :param first_resnum_cluster: start index for region (0-based for PDB mode).
-    :param last_resnum_cluster: end index for region (0-based for PDB mode).
-    :param first_resnum: first residue number in the sequence (ignored for PDB mode).
-    """
-    if USE_PDB:
-        return calculate_bfactor_avg_for_region_pdb(
-            crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
-        )
-    bfactors = []
-    with open(file=crd_file, mode="r", encoding="utf8") as infile:
-        for line in infile:
-            words = line.split()
-            if len(words) >= 10 and is_float(words[9]) and not words[0].startswith("*"):
-                bfactor = words[9]
-                resnum = words[1]
+#     :param crd_file: Path to the CRD file (ignored for PDB mode).
+#     :param first_resnum_cluster: start index for region (0-based for PDB mode).
+#     :param last_resnum_cluster: end index for region (0-based for PDB mode).
+#     :param first_resnum: first residue number in the sequence (ignored for PDB mode).
+#     """
+#     if USE_PDB:
+#         return calculate_bfactor_avg_for_region_pdb(
+#             crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
+#         )
+#     bfactors = []
+#     with open(file=crd_file, mode="r", encoding="utf8") as infile:
+#         for line in infile:
+#             words = line.split()
+#             if len(words) >= 10 and is_float(words[9]) and not words[0].startswith("*"):
+#                 bfactor = words[9]
+#                 resnum = words[1]
 
-                if (
-                    float(bfactor) > 0.0
-                    and bfactor.replace(".", "", 1).isdigit()
-                    and int(resnum) >= first_resnum_cluster + first_resnum
-                    and int(resnum) <= last_resnum_cluster + first_resnum
-                ):
-                    bfactors.append(float(bfactor))
+#                 if (
+#                     float(bfactor) > 0.0
+#                     and bfactor.replace(".", "", 1).isdigit()
+#                     and int(resnum) >= first_resnum_cluster + first_resnum
+#                     and int(resnum) <= last_resnum_cluster + first_resnum
+#                 ):
+#                     bfactors.append(float(bfactor))
 
-    if bfactors:
-        return sum(bfactors) / len(bfactors)
-    else:
-        return 0.0
+#     if bfactors:
+#         return sum(bfactors) / len(bfactors)
+#     else:
+#         return 0.0
 
 
-def identify_new_rigid_domain(
-    crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
-):
-    """
-    Identify and return a new rigid domain as a tuple of
-    (start_residue, end_residue, segment_id).
-    """
-    if USE_PDB:
-        return identify_new_rigid_domain_pdb(
-            crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
-        )
+# def identify_new_rigid_domain(
+#     crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
+# ):
+#     """
+#     Identify and return a new rigid domain as a tuple of
+#     (start_residue, end_residue, segment_id).
+#     """
+#     if USE_PDB:
+#         return identify_new_rigid_domain_pdb(
+#             crd_file, first_resnum_cluster, last_resnum_cluster, first_resnum
+#         )
 
-    str1 = str2 = segid = None
-    with open(file=crd_file, mode="r", encoding="utf8") as infile:
-        for line in infile:
-            words = line.split()
-            if len(words) >= 10 and is_float(words[9]) and not words[0].startswith("*"):
-                resnum = int(words[1])
-                if resnum == first_resnum_cluster + first_resnum:
-                    str1 = int(words[8])
-                elif resnum == last_resnum_cluster + first_resnum:
-                    str2 = int(words[8])
-                    segid = words[7]
+#     str1 = str2 = segid = None
+#     with open(file=crd_file, mode="r", encoding="utf8") as infile:
+#         for line in infile:
+#             words = line.split()
+#             if len(words) >= 10 and is_float(words[9]) and not words[0].startswith("*"):
+#                 resnum = int(words[1])
+#                 if resnum == first_resnum_cluster + first_resnum:
+#                     str1 = int(words[8])
+#                 elif resnum == last_resnum_cluster + first_resnum:
+#                     str2 = int(words[8])
+#                     segid = words[7]
 
-    if str1 is not None and str2 is not None and segid is not None:
-        return (str1, str2, segid)
-    return None
+#     if str1 is not None and str2 is not None and segid is not None:
+#         return (str1, str2, segid)
+#     return None
 
 
 def _merge_overlapping_domains(
@@ -1958,14 +1737,17 @@ if __name__ == "__main__":
         action="store_true",
         help="If set, do not write const.inp",
     )
+
     args = parser.parse_args()
 
     config = PAEConfig(
         plddt_cutoff=args.plddt_cutoff,
-        knn=args.knn,
         graph_sim=args.graph_sim,
-        pae_cutoff=args.pae_cutoff,
+        sigma=args.sigma,
+        linear_T=args.linear_T,
+        knn=args.knn,
         knn_mode=args.knn_mode,
+        pae_cutoff=args.pae_cutoff,
         min_seq_sep=args.min_seq_sep,
         interchain_cutoff=args.interchain_cutoff,
         leiden_resolution=args.leiden_resolution,
@@ -1975,24 +1757,48 @@ if __name__ == "__main__":
         cross_merge_tau=args.cross_merge_tau,
         cross_merge_coverage=args.cross_merge_coverage,
         cross_merge_mode=args.cross_merge_mode,
+        min_segment_len=args.min_segment_len,
+        emit_constraints=args.emit_constraints,
+        no_const=args.no_const,
     )
 
-    USE_PDB = args.pdb_file is not None
-    print(f"Using {'PDB' if USE_PDB else 'CRD'} input mode.")
-
+    # Instantiate processor first
     processor = PAEProcessor(config=config)
-    processor.input_handler = PDBHandler() if USE_PDB else CRDHandler()
-    processor.input_file = args.pdb_file if USE_PDB else args.crd_file
+
+    # Determine handler based on input type and set processor attributes
+    if args.pdb_file:
+        processor.input_handler = PDBHandler()
+        processor.input_file = args.pdb_file
+    elif args.crd_file:
+        processor.input_handler = CRDHandler()
+        processor.input_file = args.crd_file
+
+    # Load PAE data and set up processor state
+    processor.load_pae_data(args.pae_file)
     processor.first_residue, processor.last_residue = (
         processor.get_first_and_last_residue_numbers(processor.input_file)
     )
     processor.chain_segments = processor.define_segments(processor.input_file)
-    if not USE_PDB:
-        if processor.first_residue is not None:
-            offset = processor.first_residue - 1
-            processor.chain_segments = [
-                max(0, idx - offset) for idx in processor.chain_segments
-            ]
+
+    # Adjust chain segments for CRD mode (if needed)
+    if args.crd_file and processor.first_residue is not None:
+        offset = processor.first_residue - 1
+        processor.chain_segments = [
+            max(0, idx - offset) for idx in processor.chain_segments
+        ]
+
+    # Define clusters and rigid bodies using processor methods
+    processor.define_clusters()
+    processor.define_rigid_bodies(processor.input_file)
+
+    # Generate outputs
+    processor.print_rigid_stats()
+    processor.generate_visualization_artifacts()
+    processor.write_outputs(processor.input_file)
+
+    # --------- refactored up to here ---------
+    # need to figure out how to refactor teh code below to use the processor object
+    # and its attributes/methods.
 
     first_residue = processor.first_residue
     last_residue = processor.last_residue
@@ -2218,13 +2024,15 @@ if __name__ == "__main__":
         write_const_file(rigid_bodies_from_pae, CONST_FILE_PATH, input_struct)
     else:
         print("Skipping const.inp as requested (--no-const)")
-    print("------------- done -------------")
-    print("------------- done -------------")
-    print("------------- done -------------")
-    print("------------- done -------------")
-    print("------------- done -------------")
-    print("------------- done -------------")
-    print("------------- done -------------")
-    print("------------- done -------------")
-    print("------------- done -------------")
-    print("------------- done -------------")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
+        print("Skipping const.inp as requested (--no-const)")
