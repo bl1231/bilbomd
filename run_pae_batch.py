@@ -143,7 +143,13 @@ def build_cmd(
     add_opt("--interchain_cutoff", "interchain_cutoff")
     add_opt("--leiden_resolution", "leiden_resolution")
     add_opt("--leiden_iters", "leiden_iters")
+    add_opt("--merge_tau", "merge_tau")
     add_opt("--plddt_cutoff", "plddt_cutoff")
+    add_opt("--merge_coverage", "merge_coverage")
+    add_opt("--cross_merge_tau", "cross_merge_tau")
+    add_opt("--cross_merge_coverage", "cross_merge_coverage")
+    add_opt("--min_segment_len", "min_segment_len")
+    add_opt("--cross_merge_mode", "cross_merge_mode")
 
     if emit_constraints:
         cmd += ["--emit-constraints", "constraints.yaml"]
