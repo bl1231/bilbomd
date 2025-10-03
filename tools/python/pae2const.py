@@ -541,14 +541,14 @@ class PAEProcessor:
         pae_matrix = np.array(selected, dtype=np.float64)
 
         # Build similarity and edges (using self.config)
-        S = _similarity_from_pae(
+        S = self._similarity_from_pae(
             pae_matrix,
             method=self.config.graph_sim,
             sigma=self.config.sigma,
             T=self.config.linear_T,
         )
         S = 0.5 * (S + S.T)  # Symmetrize
-        edges, sel_weights = _build_edges_from_similarity(
+        edges, sel_weights = self._build_edges_from_similarity(
             S=S,
             pae=pae_matrix,
             pae_cutoff=self.config.pae_cutoff,
@@ -585,7 +585,7 @@ class PAEProcessor:
             membership_clusters[cluster].append(index)
 
         sorted_clusters = sorted(membership_clusters.values(), key=len, reverse=True)
-        sorted_clusters, global_merged_flags = _merge_clusters_by_affinity(
+        sorted_clusters, global_merged_flags = self._merge_clusters_by_affinity(
             pae_matrix,
             sorted_clusters,
             self.chain_segments or [],
@@ -800,37 +800,299 @@ class PAEProcessor:
             chains=chains,
         )
 
-    def write_outputs(self, input_file):
-        if self.config.emit_constraints:
-            write_constraints_yaml(self.rigid_bodies, self.config.emit_constraints)
-        if not self.config.no_const:
-            write_const_file(self.rigid_bodies, CONST_FILE_PATH, input_file)
+    @staticmethod
+    def _similarity_from_pae(
+        pae_matrix: np.ndarray,
+        method: str = "exp",
+        sigma: float = 8.0,
+        T: float = 30.0,
+    ) -> np.ndarray:
+        """Convert PAE (Å) to bounded similarity in [0,1].
+        exp:    S = exp(-(PAE/sigma)^2)
+        linear: S = max(0, 1 - PAE/T)
+        """
+        pae = np.asarray(pae_matrix, dtype=np.float64)
+        if method == "exp":
+            S = np.exp(-((pae / max(1e-9, sigma)) ** 2))
         else:
-            print("Skipping const.inp as requested (--no-const)")
+            S = 1.0 - (pae / max(1e-9, T))
+            S[S < 0] = 0.0
+        # zero self-similarity to avoid trivial dominance
+        np.fill_diagonal(S, 0.0)
+        return S
 
+    @staticmethod
+    def _build_edges_from_similarity(
+        S: np.ndarray,
+        pae: np.ndarray,
+        pae_cutoff: float,
+        k: int,
+        min_seq_sep: int,
+        chain_segs: list,
+        interchain_cutoff: float,
+        knn_mode: str = "union",
+    ) -> tuple[list[tuple[int, int]], np.ndarray]:
+        """Return (edges, weights) for igraph from similarity S with constraints.
+        - Keep only edges with PAE ≤ pae_cutoff.
+        - If k>0: per-row keep top-k neighbors by similarity (symmetrize).
+        - Apply |i-j| ≥ min_seq_sep if min_seq_sep>0.
+        - For cross-chain pairs, require PAE ≤ interchain_cutoff.
+        """
+        n = S.shape[0]
+        mask = pae <= pae_cutoff
+        if min_seq_sep and min_seq_sep > 0:
+            ii, jj = np.indices((n, n))
+            mask &= np.abs(ii - jj) >= min_seq_sep
 
-# -------------------END Of PAEProcessor class------------------- #
+        # Inter-chain stricter rule
+        if chain_segs:
+            for i in range(n):
+                for j in range(n):
+                    if mask[i, j] and _is_cross_chain(i, j, chain_segs):
+                        if pae[i, j] > interchain_cutoff:
+                            mask[i, j] = False
 
+        S_masked = np.where(mask, S, 0.0)
 
-def _similarity_from_pae(
-    pae_matrix: np.ndarray,
-    method: str = "exp",
-    sigma: float = 8.0,
-    T: float = 30.0,
-) -> np.ndarray:
-    """Convert PAE (Å) to bounded similarity in [0,1].
-    exp:    S = exp(-(PAE/sigma)^2)
-    linear: S = max(0, 1 - PAE/T)
-    """
-    pae = np.asarray(pae_matrix, dtype=np.float64)
-    if method == "exp":
-        S = np.exp(-((pae / max(1e-9, sigma)) ** 2))
-    else:
-        S = 1.0 - (pae / max(1e-9, T))
-        S[S < 0] = 0.0
-    # zero self-similarity to avoid trivial dominance
-    np.fill_diagonal(S, 0.0)
-    return S
+        if k and k > 0:
+            # Precompute top-k neighbors per row
+            topk = [None] * n
+            for i in range(n):
+                row = S_masked[i]
+                if not np.any(row):
+                    topk[i] = []
+                    continue
+                k_eff = min(k, n - 1)
+                idx = np.argpartition(-row, kth=k_eff)[:k_eff]
+                idx = [j for j in idx if row[j] > 0 and j != i]
+                idx.sort(key=lambda j: row[j], reverse=True)
+                topk[i] = idx
+
+            edges_set: set[tuple[int, int]] = set()
+            for i in range(n):
+                for j in topk[i]:
+                    if knn_mode == "mutual" and i not in topk[j]:
+                        continue
+                    a, b = (i, j) if i < j else (j, i)
+                    edges_set.add((a, b))
+            edges = sorted(edges_set)
+            weights = np.array([S_masked[i, j] for (i, j) in edges], dtype=float)
+            return edges, weights
+        else:
+            ii, jj = np.triu_indices(n, k=1)
+            keep = S_masked[ii, jj] > 0
+            edges = list(zip(ii[keep].tolist(), jj[keep].tolist()))
+            weights = S_masked[ii[keep], jj[keep]].astype(float)
+            return edges, weights
+
+    @staticmethod
+    def _merge_clusters_by_affinity(
+        pae: np.ndarray,
+        clusters: list[list[int]],
+        chain_segs: list,
+        tau: float,
+        cov: float,
+        tau_cross: float,
+        cov_cross: float,
+        mode: str = "adjacent",
+    ) -> tuple[list[list[int]], list[bool]]:
+        """
+        Merge clusters based on affinity.
+        - Always starts with 'adjacent' mode to reduce cluster count efficiently.
+        - If mode='any', follows with a greedy merge of any qualifying pairs on the reduced set.
+        Returns (clusters, global_merged_flags) where global_merged_flags[i] is True if cluster i was created by a global merge.
+        """
+
+        def try_merge(a, b):
+            ok = _should_merge(
+                pae,
+                a,  # pass full index set
+                b,
+                chain_segs,
+                tau,
+                cov,
+                tau_cross,
+                cov_cross,
+            )
+            if not ok:
+                return None
+            # Compute stats for scoring
+            cross, med, coverage, thr, need = _offdiag_stats_sets(
+                pae, a, b, chain_segs, tau, tau_cross, cov, cov_cross
+            )
+            merged = sorted(set(a) | set(b))
+            return (merged, coverage, med)
+
+        # Step 1: Always run 'adjacent' mode first to reduce cluster count
+        spans = [(_cluster_span(c), i) for i, c in enumerate(clusters)]
+        spans.sort(key=lambda t: t[0][0])
+        clusters = [clusters[i] for _, i in spans]
+        changed = True
+        while changed and len(clusters) > 1:
+            changed = False
+            i = 0
+            while i < len(clusters) - 1:
+                a = clusters[i]
+                b = clusters[i + 1]
+                res = try_merge(a, b)
+                if res is not None:
+                    merged, _covscore, _med = res
+                    clusters[i] = merged
+                    del clusters[i + 1]
+                    changed = True
+                else:
+                    i += 1
+
+        # Initialize global merge flags: all False initially (none merged yet)
+        global_merged_flags = [False] * len(clusters)
+
+        # Step 2: If mode is 'any', run an additional greedy merge on the reduced set
+        if mode == "any":
+            changed = True
+            while changed and len(clusters) > 1:
+                changed = False
+                best = None  # (score_cov, score_med, i, j, merged_list)
+                n = len(clusters)
+                for i in range(n):
+                    ai = clusters[i]
+                    for j in range(i + 1, n):
+                        bj = clusters[j]
+                        res = try_merge(ai, bj)
+                        if res is None:
+                            continue
+                        merged, covscore, med = res
+                        cand = (covscore, -med, i, j, merged)
+                        if best is None or cand > best:
+                            best = cand
+                if best is not None:
+                    _covscore, _negmed, i, j, merged = best
+                    # Rebuild cluster list with merged pair
+                    new_clusters = []
+                    global_merged_flags_new = []
+                    for k, c in enumerate(clusters):
+                        if k == i or k == j:
+                            continue
+                        new_clusters.append(c)
+                        global_merged_flags_new.append(global_merged_flags[k])
+                    new_clusters.append(merged)
+                    global_merged_flags_new.append(
+                        True
+                    )  # Mark the new merged cluster as globally merged
+                    clusters = new_clusters
+                    global_merged_flags = global_merged_flags_new
+                    changed = True
+
+        return clusters, global_merged_flags
+
+    def write_outputs(self, input_file: str):
+        """Write output files: const.inp and optionally constraints.yaml."""
+        if not self.config.no_const:
+            self._write_const_file(self.rigid_bodies, "const.inp", input_file)
+        if self.config.emit_constraints:
+            self._write_constraints_yaml(
+                self.rigid_bodies, self.config.emit_constraints
+            )
+
+    @staticmethod
+    def _write_constraints_yaml(rigid_body_list: list, output_path: str):
+        """Write constraints.yaml with schema expected by OpenMM steps.
+        Schema:
+        constraints:
+          fixed_bodies: [{ name, segments: [{chain_id, residues:{start, stop}}] }]
+          rigid_bodies: [{ name, segments: [{chain_id, residues:{start, stop}}] }]
+        """
+
+        def _segments_from_rigid_body(rb):
+            return [
+                {
+                    "chain_id": segid if isinstance(segid, str) else str(segid),
+                    "residues": {"start": int(start), "stop": int(stop)},
+                }
+                for (start, stop, segid) in rb
+            ]
+
+        fixed_bodies = []
+        rigid_bodies = []
+        if rigid_body_list:
+            # First RB → fixed bodies
+            fixed_bodies.append(
+                {
+                    "name": "FixedBody1",
+                    "segments": _segments_from_rigid_body(rigid_body_list[0]),
+                }
+            )
+            # Remaining RBs → rigid bodies
+            for i, rb in enumerate(rigid_body_list[1:], start=1):
+                rigid_bodies.append(
+                    {
+                        "name": f"RigidBody{i}",
+                        "segments": _segments_from_rigid_body(rb),
+                    }
+                )
+
+        data = {
+            "constraints": {"fixed_bodies": fixed_bodies, "rigid_bodies": rigid_bodies}
+        }
+        with open(output_path, "w", encoding="utf-8") as fh:
+            yaml.safe_dump(data, fh, sort_keys=False)
+
+    @staticmethod
+    def _write_const_file(
+        rigid_body_list: list, output_file: str, input_file: str = None
+    ):
+        """
+        Write const.inp file for CHARMM molecular dynamics jobs.
+
+        Since PDB files are converted to CRD/PSF via pdb2crd.py, which renames chain segids
+        (e.g., Protein chain A -> PROA, DNA chain Y -> DNAY), we apply the same renaming
+        logic here to ensure segids in const.inp match those in the CRD/PSF files.
+        """
+        renaming = {}
+        if input_file and input_file.endswith(".pdb"):
+            renaming = get_segid_renaming_map(input_file)
+
+        dock_count = 0
+        rigid_body_count = 0
+        with open(file=output_file, mode="w", encoding="utf8") as const_file:
+            for rigid_body in rigid_body_list:
+                rigid_body_count += 1
+                p = 0
+                n = 0
+                for rigid_domain in rigid_body:
+                    start_residue = int(rigid_domain[0])
+                    end_residue = int(rigid_domain[1])
+                    segment = rigid_domain[2]
+                    if start_residue > end_residue:
+                        start_residue, end_residue = end_residue, start_residue
+                    # Apply renaming if available
+                    renamed_segment = renaming.get(segment, segment)
+                    if rigid_body_count == 1:
+                        p += 1
+                        const_file.write(
+                            f"define fixed{p} sele ( resid {start_residue}:{end_residue}"
+                            f" .and. segid {renamed_segment} ) end\n"
+                        )
+                        if p == len(rigid_body):
+                            const_file.write("cons fix sele ")
+                            for number in range(1, p):
+                                const_file.write(f"fixed{number} .or. ")
+                            const_file.write(f"fixed{p} end \n")
+                            const_file.write("\n")
+                    elif rigid_body_count > 1:
+                        n += 1
+                        const_file.write(
+                            f"define rigid{n} sele ( resid {start_residue}:{end_residue}"
+                            f" .and. segid {renamed_segment} ) end\n"
+                        )
+                        if n == len(rigid_body):
+                            dock_count += 1
+                            const_file.write(f"shape desc dock{dock_count} rigid sele ")
+                            for number in range(1, n):
+                                const_file.write(f"rigid{number} .or. ")
+                            const_file.write(f"rigid{n} end \n")
+                            const_file.write("\n")
+            const_file.write("return \n")
+            const_file.write("\n")
 
 
 def _is_cross_chain(i: int, j: int, chain_segs: list) -> bool:
@@ -848,70 +1110,6 @@ def _is_cross_chain(i: int, j: int, chain_segs: list) -> bool:
         return c
 
     return chain_id(i) != chain_id(j)
-
-
-def _build_edges_from_similarity(
-    S: np.ndarray,
-    pae: np.ndarray,
-    pae_cutoff: float,
-    k: int,
-    min_seq_sep: int,
-    chain_segs: list,
-    interchain_cutoff: float,
-    knn_mode: str = "union",
-) -> tuple[list[tuple[int, int]], np.ndarray]:
-    """Return (edges, weights) for igraph from similarity S with constraints.
-    - Keep only edges with PAE ≤ pae_cutoff.
-    - If k>0: per-row keep top-k neighbors by similarity (symmetrize).
-    - Apply |i-j| ≥ min_seq_sep if min_seq_sep>0.
-    - For cross-chain pairs, require PAE ≤ interchain_cutoff.
-    """
-    n = S.shape[0]
-    mask = pae <= pae_cutoff
-    if min_seq_sep and min_seq_sep > 0:
-        ii, jj = np.indices((n, n))
-        mask &= np.abs(ii - jj) >= min_seq_sep
-
-    # Inter-chain stricter rule
-    if chain_segs:
-        for i in range(n):
-            for j in range(n):
-                if mask[i, j] and _is_cross_chain(i, j, chain_segs):
-                    if pae[i, j] > interchain_cutoff:
-                        mask[i, j] = False
-
-    S_masked = np.where(mask, S, 0.0)
-
-    if k and k > 0:
-        # Precompute top-k neighbors per row
-        topk = [None] * n
-        for i in range(n):
-            row = S_masked[i]
-            if not np.any(row):
-                topk[i] = []
-                continue
-            k_eff = min(k, n - 1)
-            idx = np.argpartition(-row, kth=k_eff)[:k_eff]
-            idx = [j for j in idx if row[j] > 0 and j != i]
-            idx.sort(key=lambda j: row[j], reverse=True)
-            topk[i] = idx
-
-        edges_set: set[tuple[int, int]] = set()
-        for i in range(n):
-            for j in topk[i]:
-                if knn_mode == "mutual" and i not in topk[j]:
-                    continue
-                a, b = (i, j) if i < j else (j, i)
-                edges_set.add((a, b))
-        edges = sorted(edges_set)
-        weights = np.array([S_masked[i, j] for (i, j) in edges], dtype=float)
-        return edges, weights
-    else:
-        ii, jj = np.triu_indices(n, k=1)
-        keep = S_masked[ii, jj] > 0
-        edges = list(zip(ii[keep].tolist(), jj[keep].tolist()))
-        weights = S_masked[ii[keep], jj[keep]].astype(float)
-        return edges, weights
 
 
 def _chain_id_for_index(idx: int, chain_segs: list) -> int:
@@ -1021,134 +1219,6 @@ def _should_merge(
     return (med <= thr) and (coverage >= need)
 
 
-def _merge_clusters_by_affinity(
-    pae: np.ndarray,
-    clusters: list[list[int]],
-    chain_segs: list,
-    tau: float,
-    cov: float,
-    tau_cross: float,
-    cov_cross: float,
-    mode: str = "adjacent",
-) -> tuple[list[list[int]], list[bool]]:
-    """
-    Merge clusters based on affinity.
-    - Always starts with 'adjacent' mode to reduce cluster count efficiently.
-    - If mode='any', follows with a greedy merge of any qualifying pairs on the reduced set.
-    Returns (clusters, global_merged_flags) where global_merged_flags[i] is True if cluster i was created by a global merge.
-    """
-
-    def try_merge(a, b):
-        ok = _should_merge(
-            pae,
-            a,  # pass full index set
-            b,
-            chain_segs,
-            tau,
-            cov,
-            tau_cross,
-            cov_cross,
-        )
-        if not ok:
-            return None
-        # Compute stats for scoring
-        cross, med, coverage, thr, need = _offdiag_stats_sets(
-            pae, a, b, chain_segs, tau, tau_cross, cov, cov_cross
-        )
-        merged = sorted(set(a) | set(b))
-        return (merged, coverage, med)
-
-    # Step 1: Always run 'adjacent' mode first to reduce cluster count
-    spans = [(_cluster_span(c), i) for i, c in enumerate(clusters)]
-    spans.sort(key=lambda t: t[0][0])
-    clusters = [clusters[i] for _, i in spans]
-    changed = True
-    while changed and len(clusters) > 1:
-        changed = False
-        i = 0
-        while i < len(clusters) - 1:
-            a = clusters[i]
-            b = clusters[i + 1]
-            res = try_merge(a, b)
-            if res is not None:
-                merged, _covscore, _med = res
-                clusters[i] = merged
-                del clusters[i + 1]
-                changed = True
-            else:
-                i += 1
-
-    # Initialize global merge flags: all False initially (none merged yet)
-    global_merged_flags = [False] * len(clusters)
-
-    # Step 2: If mode is 'any', run an additional greedy merge on the reduced set
-    if mode == "any":
-        changed = True
-        while changed and len(clusters) > 1:
-            changed = False
-            best = None  # (score_cov, score_med, i, j, merged_list)
-            n = len(clusters)
-            for i in range(n):
-                ai = clusters[i]
-                for j in range(i + 1, n):
-                    bj = clusters[j]
-                    res = try_merge(ai, bj)
-                    if res is None:
-                        continue
-                    merged, covscore, med = res
-                    cand = (covscore, -med, i, j, merged)
-                    if best is None or cand > best:
-                        best = cand
-            if best is not None:
-                _covscore, _negmed, i, j, merged = best
-                # Rebuild cluster list with merged pair
-                new_clusters = []
-                global_merged_flags_new = []
-                for k, c in enumerate(clusters):
-                    if k == i or k == j:
-                        continue
-                    new_clusters.append(c)
-                    global_merged_flags_new.append(global_merged_flags[k])
-                new_clusters.append(merged)
-                global_merged_flags_new.append(
-                    True
-                )  # Mark the new merged cluster as globally merged
-                clusters = new_clusters
-                global_merged_flags = global_merged_flags_new
-                changed = True
-
-    return clusters, global_merged_flags
-
-
-def _tuple_to_global_mapper(use_pdb: bool, first_residue: int):
-    """Return a function that maps (start_res, end_res, segid) -> (gstart, gend) in 1-based global indices."""
-    if use_pdb:
-        # Build mapping from (chain_id, resseq) -> global 1-based index using prepared PDB_INDEX_TO_RES
-        res_to_global = {}
-        for idx, (chain_id, resseq) in enumerate(PDB_INDEX_TO_RES):
-            res_to_global[(chain_id, resseq)] = idx + 1
-            # also allow string-casted chain ids
-            res_to_global[(str(chain_id), resseq)] = idx + 1
-
-        def _map_pdb(tup):
-            start_res, end_res, segid = tup
-            gs = res_to_global.get((segid, start_res))
-            ge = res_to_global.get((segid, end_res))
-            return (gs, ge)
-
-        return _map_pdb
-    else:
-        first_crd = first_residue
-
-        def _map_crd(tup):
-            start_res, end_res, _seg = tup
-            gs = start_res - first_crd + 1
-            ge = end_res - first_crd + 1
-            return (gs, ge)
-
-        return _map_crd
-
-
 def _median_block(pae: np.ndarray, gstart: int, gend: int) -> float:
     """Median PAE within the diagonal block [gstart,gend] (1-based inclusive)."""
     if gstart is None or gend is None:
@@ -1175,35 +1245,6 @@ def _mean_block(pae: np.ndarray, gstart: int, gend: int) -> float:
     if block.size == 0:
         return float("nan")
     return float(np.mean(block))
-
-
-def print_rigid_stats(
-    pae: np.ndarray, rigid_bodies: list, use_pdb: bool, first_residue: int
-):
-    """Print median PAE per rigid body and per rigid domain."""
-    mapper = _tuple_to_global_mapper(use_pdb, first_residue)
-    for rb_idx, rb in enumerate(rigid_bodies, start=1):
-        domain_meds = []
-        print(f"[stats] RigidBody {rb_idx}: n_domains={len(rb)}")
-        for s, e, seg in rb:
-            gs, ge = mapper((s, e, seg))
-            # normalize orientation and clamp
-            if gs is not None and ge is not None and gs > ge:
-                gs, ge = ge, gs
-            med = _median_block(pae, gs, ge)
-            mean = _mean_block(pae, gs, ge)
-            domain_meds.append(med)
-            domain_meds.append(mean)
-            seg_str = seg if isinstance(seg, str) else str(seg)
-            print(
-                f"  - {seg_str}:{int(s)}-{int(e)} (global {gs}-{ge}) len={int(e) - int(s) + 1} median={med:.2f} Å mean={mean:.2f} Å"
-            )
-        if domain_meds:
-            # robust overall median across all domain pixels: median of medians is fine for printing
-            overall = float(np.nanmedian(np.array(domain_meds, dtype=float)))
-            print(
-                f"  > RigidBody {rb_idx} median-of-domains = {overall:.2f} Å mean-of-domains = {np.nanmean(np.array(domain_meds, dtype=float)):.2f} Å"
-            )
 
 
 def is_float(arg):
@@ -1381,103 +1422,6 @@ def _merge_overlapping_domains(
             else:
                 merged.append((s, e, seg))
     return merged
-
-
-def write_constraints_yaml(rigid_body_list: list, output_path: str):
-    """Write constraints.yaml with schema expected by OpenMM steps.
-    Schema:
-    constraints:
-      fixed_bodies: [{ name, segments: [{chain_id, residues:{start, stop}}] }]
-      rigid_bodies: [{ name, segments: [{chain_id, residues:{start, stop}}] }]
-    """
-
-    def _segments_from_rigid_body(rb):
-        return [
-            {
-                "chain_id": segid if isinstance(segid, str) else str(segid),
-                "residues": {"start": int(start), "stop": int(stop)},
-            }
-            for (start, stop, segid) in rb
-        ]
-
-    fixed_bodies = []
-    rigid_bodies = []
-    if rigid_body_list:
-        # First RB → fixed bodies
-        fixed_bodies.append(
-            {
-                "name": "FixedBody1",
-                "segments": _segments_from_rigid_body(rigid_body_list[0]),
-            }
-        )
-        # Remaining RBs → rigid bodies
-        for i, rb in enumerate(rigid_body_list[1:], start=1):
-            rigid_bodies.append(
-                {
-                    "name": f"RigidBody{i}",
-                    "segments": _segments_from_rigid_body(rb),
-                }
-            )
-
-    data = {"constraints": {"fixed_bodies": fixed_bodies, "rigid_bodies": rigid_bodies}}
-    with open(output_path, "w", encoding="utf-8") as fh:
-        yaml.safe_dump(data, fh, sort_keys=False)
-
-
-def write_const_file(rigid_body_list: list, output_file, input_file: str = None):
-    """
-    Write const.inp file for CHARMM molecular dynamics jobs.
-
-    Since PDB files are converted to CRD/PSF via pdb2crd.py, which renames chain segids
-    (e.g., Protein chain A -> PROA, DNA chain Y -> DNAY), we apply the same renaming
-    logic here to ensure segids in const.inp match those in the CRD/PSF files.
-    """
-    renaming = {}
-    if input_file and input_file.endswith(".pdb"):
-        renaming = get_segid_renaming_map(input_file)
-
-    dock_count = 0
-    rigid_body_count = 0
-    with open(file=output_file, mode="w", encoding="utf8") as const_file:
-        for rigid_body in rigid_body_list:
-            rigid_body_count += 1
-            p = 0
-            n = 0
-            for rigid_domain in rigid_body:
-                start_residue = int(rigid_domain[0])
-                end_residue = int(rigid_domain[1])
-                segment = rigid_domain[2]
-                if start_residue > end_residue:
-                    start_residue, end_residue = end_residue, start_residue
-                # Apply renaming if available
-                renamed_segment = renaming.get(segment, segment)
-                if rigid_body_count == 1:
-                    p += 1
-                    const_file.write(
-                        f"define fixed{p} sele ( resid {start_residue}:{end_residue}"
-                        f" .and. segid {renamed_segment} ) end\n"
-                    )
-                    if p == len(rigid_body):
-                        const_file.write("cons fix sele ")
-                        for number in range(1, p):
-                            const_file.write(f"fixed{number} .or. ")
-                        const_file.write(f"fixed{p} end \n")
-                        const_file.write("\n")
-                elif rigid_body_count > 1:
-                    n += 1
-                    const_file.write(
-                        f"define rigid{n} sele ( resid {start_residue}:{end_residue}"
-                        f" .and. segid {renamed_segment} ) end\n"
-                    )
-                    if n == len(rigid_body):
-                        dock_count += 1
-                        const_file.write(f"shape desc dock{dock_count} rigid sele ")
-                        for number in range(1, n):
-                            const_file.write(f"rigid{number} .or. ")
-                        const_file.write(f"rigid{n} end \n")
-                        const_file.write("\n")
-        const_file.write("return \n")
-        const_file.write("\n")
 
 
 if __name__ == "__main__":
@@ -1664,5 +1608,7 @@ if __name__ == "__main__":
     # Generate outputs
     processor.print_rigid_stats()
     processor.generate_visualization_artifacts()
+    processor.write_outputs(processor.input_file)
+    processor.write_outputs(processor.input_file)
     processor.write_outputs(processor.input_file)
     processor.write_outputs(processor.input_file)
