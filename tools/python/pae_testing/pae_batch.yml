@@ -1,63 +1,159 @@
 # Each case has a unique name and paths to PAE + structure.
 # You can mix PDB and CRD cases.
 cases:
-  - name: auto1-p2
+  - name: auto1-1
     pae: ../../../test_scripts/data/auto1/auto1-pae.json
     pdb: ../../../test_scripts/data/auto1/auto1.pdb
-    pae_power: 2.0
     plddt_cutoff: 50
-  - name: auto1-p3
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: auto1-2
     pae: ../../../test_scripts/data/auto1/auto1-pae.json
     pdb: ../../../test_scripts/data/auto1/auto1.pdb
-    pae_power: 3.0
     plddt_cutoff: 50
-  - name: auto1-p4
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: auto1-3
     pae: ../../../test_scripts/data/auto1/auto1-pae.json
     pdb: ../../../test_scripts/data/auto1/auto1.pdb
-    pae_power: 4.0
     plddt_cutoff: 50
-  - name: auto2-p2
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: auto2-1
     pae: ../../../test_scripts/data/auto2/auto2-pae.json
     crd: ../../../test_scripts/data/auto2/auto2.crd
-    pae_power: 2.0
     plddt_cutoff: 50
-  - name: auto2-p3
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: auto2-2
     pae: ../../../test_scripts/data/auto2/auto2-pae.json
     crd: ../../../test_scripts/data/auto2/auto2.crd
-    pae_power: 3.0
     plddt_cutoff: 50
-  - name: auto2-p4
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: auto2-3
     pae: ../../../test_scripts/data/auto2/auto2-pae.json
     crd: ../../../test_scripts/data/auto2/auto2.crd
-    pae_power: 4.0
     plddt_cutoff: 50
-  - name: c3befbc-p2
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: c3befbc-1
     pae: ../../../test_scripts/data/big-c3befbc/c3befbc-pae.json
     pdb: ../../../test_scripts/data/big-c3befbc/c3befbc.pdb
-    pae_power: 2.0
     plddt_cutoff: 50
-  - name: c3befbc-p3
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: c3befbc-2
     pae: ../../../test_scripts/data/big-c3befbc/c3befbc-pae.json
     pdb: ../../../test_scripts/data/big-c3befbc/c3befbc.pdb
-    pae_power: 3.0
     plddt_cutoff: 50
-  - name: c3befbc-p3.5
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: c3befbc-3
     pae: ../../../test_scripts/data/big-c3befbc/c3befbc-pae.json
     pdb: ../../../test_scripts/data/big-c3befbc/c3befbc.pdb
-    pae_power: 3.5
     plddt_cutoff: 50
-  - name: sasddnf2-p2
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: sasdnf2-sep0
     pae: ../../../test_scripts/data/sasdnf2/sasdnf2-pae.json
     pdb: ../../../test_scripts/data/sasdnf2/sasdnf2.pdb
-    pae_power: 2.0
     plddt_cutoff: 50
-  - name: sasddnf2-p3
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 0
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: sasdnf2-sep2
     pae: ../../../test_scripts/data/sasdnf2/sasdnf2-pae.json
     pdb: ../../../test_scripts/data/sasdnf2/sasdnf2.pdb
-    pae_power: 3.0
     plddt_cutoff: 50
-  - name: sasddnf2-p4
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 2
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
+  - name: sasdnf2-sep8
     pae: ../../../test_scripts/data/sasdnf2/sasdnf2-pae.json
     pdb: ../../../test_scripts/data/sasdnf2/sasdnf2.pdb
-    pae_power: 4.0
     plddt_cutoff: 50
+    graph_sim: exp
+    sigma: 12
+    linear_T: 30
+    knn: 20
+    pae_cutoff: 10
+    min_seq_sep: 8
+    interchain_cutoff: 5
+    leiden_resolution: 0.5
+    leiden_iters: 10
