@@ -1407,7 +1407,7 @@ if __name__ == "__main__":
     # 2) Determine L
     L = pae_full.shape[0]
     # 3) Downsample factor
-    s = 2 if L > 1600 else 1
+    s = 2 if L > 1800 else 1
     pae_ds = stride_downsample(pae_full, s)
 
     # 4) Convert rigid_bodies_from_pae (list of lists of (start_residue, end_residue, segid)) into Cluster objects
@@ -1540,6 +1540,7 @@ if __name__ == "__main__":
         clusters,
         # offdiag_rects=([DEBUG_OFFDIAG] if DEBUG_OFFDIAG else None),
         stride=s,
+        chains=chains,
     )
 
     # 5) Write artifacts
