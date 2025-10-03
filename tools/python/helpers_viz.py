@@ -98,6 +98,7 @@ def save_viz_png(
     clusters: List[Cluster],
     offdiag_rects: List[Tuple[int, int, int, int]] | None = None,
     stride: int = 1,
+    chains: List[Dict[str, Any]] | None = None,
 ) -> None:
     import matplotlib
 
@@ -177,6 +178,15 @@ def save_viz_png(
                     facecolor="none",
                 )
             )
+
+    # Draw chain borders as dashed lines
+    if chains:
+        for chain in chains[:-1]:  # Skip the last chain as it has no border after it
+            border_pos = chain["end"]
+            # Vertical line at the end of the chain
+            ax.axvline(x=border_pos, linestyle="--", color="black", linewidth=0.7)
+            # Horizontal line at the end of the chain
+            ax.axhline(y=border_pos, linestyle="--", color="black", linewidth=0.7)
 
     fig.savefig(out_path, dpi=256)
     plt.close(fig)
