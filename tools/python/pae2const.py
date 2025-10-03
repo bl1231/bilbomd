@@ -4,8 +4,11 @@ Provides functions to create const.inp file from PAE and CRD files
 
 import argparse
 import json
+from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Optional, Tuple
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 import igraph
 import numpy as np
@@ -20,15 +23,763 @@ from helpers_viz import (
 )
 from pdb_utils import get_segid_renaming_map
 
-MIN_CLUSTER_LENGTH = 5
+# Constants
 CONST_FILE_PATH = "const.inp"
-
-# --- PDB mode flag and caches ---
-USE_PDB = False
-# Indexed list mapping 0-based residue index -> (chain_id, resseq)
+MIN_CLUSTER_LENGTH = 3
 PDB_INDEX_TO_RES = []
-# Per-residue pLDDT accumulator: (chain_id, resseq) -> [bfactors...]
 PDB_RES_PLDDT = defaultdict(list)
+USE_PDB = False  # Will be set in main
+
+
+class InputHandler(ABC):
+    @abstractmethod
+    def get_first_and_last_residue_numbers(
+        self, file: str
+    ) -> Tuple[Optional[int], Optional[int]]:
+        pass
+
+    @abstractmethod
+    def define_segments(self, file: str) -> List[int]:
+        pass
+
+    @abstractmethod
+    def calculate_bfactor_avg_for_region(
+        self, file: str, first_index: int, last_index: int, first_resnum: int
+    ) -> float:
+        pass
+
+    @abstractmethod
+    def identify_new_rigid_domain(
+        self, file: str, first_index: int, last_index: int, first_resnum: int
+    ) -> Optional[Tuple[int, int, str]]:
+        pass
+
+    @abstractmethod
+    def get_tuple_to_global_mapper(self, first_residue: int) -> callable:
+        pass
+
+    @abstractmethod
+    def get_chains(self, file: str, first_residue: int) -> List[Dict[str, Any]]:
+        pass
+
+
+class PDBHandler(InputHandler):
+    def __init__(self):
+        self.pdb_index_to_res = []
+        self.pdb_res_plddt = defaultdict(list)
+
+    def _prepare_pdb_mappings(self, pdb_file: str) -> int:
+        """
+        Build pdb_index_to_res (sequence of residues across all chains) and
+        pdb_res_plddt (per-residue list of B-factors which hold pLDDT).
+        Returns the number of residues discovered.
+
+        This populates self.pdb_index_to_res and self.pdb_res_plddt.
+        Also sets global PDB_INDEX_TO_RES and PDB_RES_PLDDT for compatibility.
+        """
+        pdb_path = Path(pdb_file)
+        if not pdb_path.exists():
+            raise FileNotFoundError(f"PDB file not found: {pdb_file}")
+
+        self.pdb_index_to_res.clear()
+        self.pdb_res_plddt.clear()
+        seen_res = set()  # Track first atom per residue to build index ordering
+
+        with open(pdb_path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                    continue
+                # PDB fixed columns
+                chain_id = line[21].strip() or " "
+                resseq_str = line[22:26].strip()
+                icode = line[26].strip()  # Insertion code
+                bfact_str = line[60:66].strip()
+
+                if not resseq_str:
+                    continue
+                try:
+                    resseq = int(resseq_str)
+                except ValueError:
+                    continue
+
+                # Accumulate pLDDT (B-factor) per (chain, resseq)
+                try:
+                    b = float(bfact_str)
+                    self.pdb_res_plddt[(chain_id, resseq)].append(b)
+                except ValueError:
+                    pass
+
+                # Use (chain, resseq, icode) to identify first occurrence order
+                key = (chain_id, resseq, icode)
+                if key not in seen_res:
+                    seen_res.add(key)
+                    self.pdb_index_to_res.append((chain_id, resseq))
+
+        # Set globals for compatibility
+        global PDB_INDEX_TO_RES, PDB_RES_PLDDT
+        PDB_INDEX_TO_RES = self.pdb_index_to_res[:]
+        PDB_RES_PLDDT = self.pdb_res_plddt.copy()
+
+        return len(self.pdb_index_to_res)
+
+    def get_first_and_last_residue_numbers(self, pdb_file: str) -> Tuple[int, int]:
+        """
+        For PDB-based runs, return (1, N) for 1-based indexing.
+        """
+        n = self._prepare_pdb_mappings(pdb_file)
+        return 1, n  # First-1 == 0, last-1 == N-1
+
+    def define_segments(self, pdb_file: str) -> List[int]:
+        """
+        Return 0-based residue indices that act as 'split points' between chains.
+        """
+        if not self.pdb_index_to_res:
+            self._prepare_pdb_mappings(pdb_file)
+
+        segs = []
+        for i in range(1, len(self.pdb_index_to_res)):
+            prev_chain = self.pdb_index_to_res[i - 1][0]
+            curr_chain = self.pdb_index_to_res[i][0]
+            if prev_chain != curr_chain:
+                segs.append(i - 1)
+        return segs
+
+    def calculate_bfactor_avg_for_region(
+        self,
+        _ignored_file: str,
+        first_index: int,
+        last_index: int,
+        _ignored_first_resnum: int,
+    ) -> float:
+        """
+        Average per-residue pLDDT (stored in B-factor) across the inclusive
+        index range [first_index, last_index] in the flattened residue list.
+        """
+        if not self.pdb_index_to_res:
+            raise RuntimeError("PDB mappings not prepared.")
+        vals = []
+        for idx in range(first_index, last_index + 1):
+            chain_id, resseq = self.pdb_index_to_res[idx]
+            arr = self.pdb_res_plddt.get((chain_id, resseq), [])
+            if arr:
+                vals.append(sum(arr) / len(arr))
+        return (sum(vals) / len(vals)) if vals else 0.0
+
+    def identify_new_rigid_domain(
+        self,
+        _ignored_file: str,
+        first_index: int,
+        last_index: int,
+        _ignored_first_resnum: int,
+    ) -> Optional[Tuple[int, int, str]]:
+        """
+        Return (start_residue, end_residue, segid) for the region defined by
+        0-based indices. segid will be the PDB chain ID.
+        """
+        if not self.pdb_index_to_res:
+            raise RuntimeError("PDB mappings not prepared.")
+        chain_start, res_start = self.pdb_index_to_res[first_index]
+        chain_end, res_end = self.pdb_index_to_res[last_index]
+        if chain_start != chain_end:
+            # Should not happen because we split clusters at chain edges,
+            # but guard anyway.
+            return None
+        segid = chain_start if chain_start else " "
+        return (res_start, res_end, segid)
+
+    def get_tuple_to_global_mapper(self, first_residue: int) -> callable:
+        """Return a function that maps (start_res, end_res, segid) -> (gstart, gend) in 1-based global indices."""
+        # Build mapping from (chain_id, resseq) -> global 1-based index
+        res_to_global = {}
+        for idx, (chain_id, resseq) in enumerate(self.pdb_index_to_res):
+            res_to_global[(chain_id, resseq)] = idx + 1
+            # also allow string-casted chain ids
+            res_to_global[(str(chain_id), resseq)] = idx + 1
+
+        def _map_pdb(tup):
+            start_res, end_res, segid = tup
+            gs = res_to_global.get((segid, start_res))
+            ge = res_to_global.get((segid, end_res))
+            return (gs, ge)
+
+        return _map_pdb
+
+    def get_chains(self, pdb_file: str, first_residue: int) -> List[Dict[str, Any]]:
+        """Compute chains spans (1-based inclusive) for viz.json"""
+        if not self.pdb_index_to_res:
+            self._prepare_pdb_mappings(pdb_file)
+        chains = []
+        N = len(self.pdb_index_to_res)
+        if N > 0:
+            cur_id = self.pdb_index_to_res[0][0] or " "
+            start = 1
+            for i in range(2, N + 1):  # 1..N (1-based)
+                prev_id = self.pdb_index_to_res[i - 2][0] or " "
+                curr_id = self.pdb_index_to_res[i - 1][0] or " "
+                if curr_id != prev_id:
+                    chains.append(
+                        {"id": prev_id, "start": int(start), "end": int(i - 1)}
+                    )
+                    start = i
+            # close last span
+            chains.append(
+                {
+                    "id": self.pdb_index_to_res[-1][0] or " ",
+                    "start": int(start),
+                    "end": int(N),
+                }
+            )
+        return chains
+
+
+class CRDHandler(InputHandler):
+    def get_first_and_last_residue_numbers(
+        self, crd_file: str
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """
+        Extract first and last residue numbers from a CRD file.
+        """
+        crd_path = Path(crd_file)
+        if not crd_path.exists():
+            raise FileNotFoundError(f"CRD file not found: {crd_file}")
+
+        first_resnum = None
+        last_resnum = None
+        start_processing = False
+
+        with open(crd_path, "r", encoding="utf-8") as infile:
+            for line in infile:
+                if not start_processing:
+                    if line.strip().endswith("EXT"):
+                        start_processing = True
+                    continue
+
+                words = line.split()
+                if start_processing and words:
+                    if first_resnum is None:
+                        try:
+                            first_resnum = int(words[1])
+                        except (ValueError, IndexError):
+                            continue
+                    try:
+                        last_resnum = int(words[1])
+                    except (ValueError, IndexError):
+                        pass
+
+        return first_resnum, last_resnum
+
+    def define_segments(self, crd_file: str) -> List[int]:
+        """
+        Define segments by detecting differing segids in CRD file.
+        """
+        crd_path = Path(crd_file)
+        if not crd_path.exists():
+            raise FileNotFoundError(f"CRD file not found: {crd_file}")
+
+        differing_pairs = []
+        current_line = None
+
+        with open(crd_path, "r", encoding="utf-8") as infile:
+            for line in infile:
+                line_split = line.split()
+                if current_line is None:
+                    current_line = line_split
+                    continue
+
+                if (
+                    len(current_line) == 10
+                    and len(line_split) == 10
+                    and current_line[7] != line_split[7]
+                ):
+                    differing_pairs.append(int(current_line[1]) - 1)
+                current_line = line_split
+
+        return differing_pairs
+
+    def calculate_bfactor_avg_for_region(
+        self, file: str, first_index: int, last_index: int, first_resnum: int
+    ) -> float:
+        """
+        Calculate the average B-factor for a given cluster region in CRD.
+        """
+        bfactors = []
+        with open(file=file, mode="r", encoding="utf8") as infile:
+            for line in infile:
+                words = line.split()
+                if (
+                    len(words) >= 10
+                    and is_float(words[9])
+                    and not words[0].startswith("*")
+                ):
+                    bfactor = words[9]
+                    resnum = words[1]
+
+                    if (
+                        float(bfactor) > 0.0
+                        and bfactor.replace(".", "", 1).isdigit()
+                        and int(resnum) >= first_index + first_resnum
+                        and int(resnum) <= last_index + first_resnum
+                    ):
+                        bfactors.append(float(bfactor))
+
+        if bfactors:
+            return sum(bfactors) / len(bfactors)
+        else:
+            return 0.0
+
+    def identify_new_rigid_domain(
+        self, file: str, first_index: int, last_index: int, first_resnum: int
+    ) -> Optional[Tuple[int, int, str]]:
+        """
+        Identify and return a new rigid domain as a tuple of
+        (start_residue, end_residue, segment_id).
+        """
+        str1 = str2 = segid = None
+        with open(file=file, mode="r", encoding="utf8") as infile:
+            for line in infile:
+                words = line.split()
+                if (
+                    len(words) >= 10
+                    and is_float(words[9])
+                    and not words[0].startswith("*")
+                ):
+                    resnum = int(words[1])
+                    if resnum == first_index + first_resnum:
+                        str1 = int(words[8])
+                    elif resnum == last_index + first_resnum:
+                        str2 = int(words[8])
+                        segid = words[7]
+
+        if str1 is not None and str2 is not None and segid is not None:
+            return (str1, str2, segid)
+        return None
+
+    def get_tuple_to_global_mapper(self, first_residue: int) -> callable:
+        first_crd = first_residue
+
+        def _map_crd(tup):
+            start_res, end_res, _seg = tup
+            gs = start_res - first_crd + 1
+            ge = end_res - first_crd + 1
+            return (gs, ge)
+
+        return _map_crd
+
+    def get_chains(self, file: str, first_residue: int) -> List[Dict[str, Any]]:
+        """Compute chains spans (1-based inclusive) for viz.json"""
+        mapping = []  # list of (resnum:int, segid:str)
+        with open(file=file, mode="r", encoding="utf8") as infile:
+            start_processing = False
+            for line in infile:
+                if not start_processing:
+                    if line.strip().endswith("EXT"):
+                        start_processing = True
+                    continue
+                words = line.split()
+                if len(words) >= 8:
+                    try:
+                        resnum = int(words[1])
+                        segid = str(words[7])
+                        mapping.append((resnum, segid))
+                    except Exception:
+                        continue
+        mapping.sort(key=lambda t: t[0])
+        chains = []
+        if mapping:
+            cur_seg = mapping[0][1]
+            seg_start_resnum = mapping[0][0]
+            prev_resnum = mapping[0][0]
+            for resnum, segid in mapping[1:]:
+                if segid != cur_seg:
+                    chains.append(
+                        {
+                            "id": cur_seg,
+                            "start": int(seg_start_resnum - first_residue + 1),
+                            "end": int(prev_resnum - first_residue + 1),
+                        }
+                    )
+                    cur_seg = segid
+                    seg_start_resnum = resnum
+                prev_resnum = resnum
+            # close last span
+            chains.append(
+                {
+                    "id": cur_seg,
+                    "start": int(seg_start_resnum - first_residue + 1),
+                    "end": int(prev_resnum - first_residue + 1),
+                }
+            )
+        return chains
+
+
+@dataclass
+class PAEConfig:
+    plddt_cutoff: float = 50.0
+    graph_sim: str = "exp"
+    sigma: float = 10.0
+    linear_T: float = 30.0
+    knn: int = 0
+    knn_mode: str = "union"
+    pae_cutoff: float = 10.0
+    min_seq_sep: int = 4
+    interchain_cutoff: float = 5.0
+    leiden_resolution: float = 0.95
+    leiden_iters: int = 10
+    merge_tau: float = 7.0
+    merge_coverage: float = 0.6
+    cross_merge_tau: float = 5.5
+    cross_merge_coverage: float = 0.7
+    cross_merge_mode: str = "adjacent"
+    min_segment_len: int = 6
+
+    # Output settings (optional, for flexibility)
+    emit_constraints: Optional[str] = None  # Path for YAML output
+    no_const: bool = False  # Flag to skip const.inp
+
+    def __post_init__(self):
+        # Add basic validation if needed
+        if self.plddt_cutoff < 0:
+            raise ValueError("plddt_cutoff must be non-negative")
+        # Add more validations as needed
+
+
+class PAEProcessor:
+    def __init__(self, config: PAEConfig):
+        self.input_handler = None
+        self.pae_data = {}
+        self.clusters = []
+        self.global_merged_flags = []
+        self.rigid_bodies = []
+        self.rigid_body_flags = []
+        self.first_residue = None
+        self.last_residue = None
+        self.chain_segments = []
+        self.input_file = None
+        self.config = config
+
+    def _prepare_pdb_mappings(self, pdb_file: str) -> int:
+        """
+        Build PDB_INDEX_TO_RES (sequence of residues across all chains) and
+        PDB_RES_PLDDT (per-residue list of B-factors which hold pLDDT).
+        Returns the number of residues discovered.
+
+        This method populates self.pdb_index_to_res and self.pdb_res_plddt.
+        """
+        pdb_path = Path(pdb_file)
+        if not pdb_path.exists():
+            raise FileNotFoundError(f"PDB file not found: {pdb_file}")
+
+        self.pdb_index_to_res = []
+        self.pdb_res_plddt.clear()
+        seen_res = set()  # Track first atom per residue to build index ordering
+
+        with open(pdb_path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                    continue
+                # PDB fixed columns
+                chain_id = line[21].strip() or " "
+                resseq_str = line[22:26].strip()
+                icode = line[26].strip()  # Insertion code
+                bfact_str = line[60:66].strip()
+
+                if not resseq_str:
+                    continue
+                try:
+                    resseq = int(resseq_str)
+                except ValueError:
+                    continue
+
+                # Accumulate pLDDT (B-factor) per (chain, resseq)
+                try:
+                    b = float(bfact_str)
+                    self.pdb_res_plddt[(chain_id, resseq)].append(b)
+                except ValueError:
+                    pass
+
+                # Use (chain, resseq, icode) to identify first occurrence order
+                key = (chain_id, resseq, icode)
+                if key not in seen_res:
+                    seen_res.add(key)
+                    self.pdb_index_to_res.append((chain_id, resseq))
+
+        return len(self.pdb_index_to_res)
+
+    def load_pae_data(self, pae_file: str) -> None:
+        """
+        Load and correct PAE JSON data from file, storing it in self.pae_data.
+
+        Corrects JSON by removing leading/trailing brackets if present.
+        """
+        pae_path = Path(pae_file)
+        if not pae_path.exists():
+            raise FileNotFoundError(f"PAE file not found: {pae_file}")
+
+        with open(pae_path, "r", encoding="utf-8") as infile:
+            json_content = infile.read()
+            if json_content.startswith("[") and json_content.endswith("]"):
+                corrected_content = json_content[1:-1]
+            else:
+                corrected_content = json_content
+
+        try:
+            self.pae_data = json.loads(corrected_content)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in PAE file {pae_file}: {e}")
+
+    def get_first_and_last_residue_numbers(
+        self, file: str
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """
+        Unified method to get first and last residue numbers from PDB or CRD file.
+
+        Dispatches based on self.use_pdb.
+        """
+        if self.use_pdb:
+            return self._get_first_and_last_residue_numbers_pdb(file)
+        else:
+            return self._get_first_and_last_residue_numbers_crd(file)
+
+    def _get_first_and_last_residue_numbers_pdb(self, pdb_file: str) -> Tuple[int, int]:
+        """
+        For PDB-based runs, return (1, N) for 1-based indexing.
+        """
+        n = self._prepare_pdb_mappings(pdb_file)
+        return 1, n  # First-1 == 0, last-1 == N-1
+
+    def _get_first_and_last_residue_numbers_crd(
+        self, crd_file: str
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """
+        Extract first and last residue numbers from a CRD file.
+        """
+        crd_path = Path(crd_file)
+        if not crd_path.exists():
+            raise FileNotFoundError(f"CRD file not found: {crd_file}")
+
+        first_resnum = None
+        last_resnum = None
+        start_processing = False
+
+        with open(crd_path, "r", encoding="utf-8") as infile:
+            for line in infile:
+                if not start_processing:
+                    if line.strip().endswith("EXT"):
+                        start_processing = True
+                    continue
+
+                words = line.split()
+                if start_processing and words:
+                    if first_resnum is None:
+                        try:
+                            first_resnum = int(words[1])
+                        except (ValueError, IndexError):
+                            continue
+                    try:
+                        last_resnum = int(words[1])
+                    except (ValueError, IndexError):
+                        pass
+
+        return first_resnum, last_resnum
+
+    def define_segments(self, file: str) -> list[int]:
+        """
+        Unified method to define chain segments (0-based split indices).
+
+        Dispatches based on self.use_pdb.
+        """
+        if self.use_pdb:
+            return self._define_segments_pdb(file)
+        else:
+            return self._define_segments_crd(file)
+
+    def _define_segments_pdb(self, pdb_file: str) -> list[int]:
+        """
+        Return 0-based residue indices that act as 'split points' between chains.
+        """
+        if not self.pdb_index_to_res:
+            self._prepare_pdb_mappings(pdb_file)
+
+        segs = []
+        for i in range(1, len(self.pdb_index_to_res)):
+            prev_chain = self.pdb_index_to_res[i - 1][0]
+            curr_chain = self.pdb_index_to_res[i][0]
+            if prev_chain != curr_chain:
+                segs.append(i - 1)
+        return segs
+
+    def _define_segments_crd(self, crd_file: str) -> list[int]:
+        """
+        Define segments by detecting differing segids in CRD file.
+        """
+        crd_path = Path(crd_file)
+        if not crd_path.exists():
+            raise FileNotFoundError(f"CRD file not found: {crd_file}")
+
+        differing_pairs = []
+        current_line = None
+
+        with open(crd_path, "r", encoding="utf-8") as infile:
+            for line in infile:
+                line_split = line.split()
+                if current_line is None:
+                    current_line = line_split
+                    continue
+
+                if (
+                    len(current_line) == 10
+                    and len(line_split) == 10
+                    and current_line[7] != line_split[7]
+                ):
+                    differing_pairs.append(int(current_line[1]) - 1)
+                current_line = line_split
+
+        return differing_pairs
+
+    def define_clusters(self):
+        row_start = self.first_residue - 1
+        row_end = self.last_residue - 1
+        col_start = row_start
+        col_end = row_end
+        self.clusters, self.global_merged_flags = define_clusters_for_selected_pae(
+            self.pae_data,
+            row_start,
+            row_end,
+            col_start,
+            col_end,
+            graph_sim=self.config.graph_sim,
+            sigma=self.config.sigma,
+            linear_T=self.config.linear_T,
+            knn=self.config.knn,
+            pae_cutoff=self.config.pae_cutoff,
+            min_seq_sep=self.config.min_seq_sep,
+            chain_segs=self.chain_segments,
+            interchain_cutoff=self.config.interchain_cutoff,
+            leiden_resolution=self.config.leiden_resolution,
+            leiden_iters=self.config.leiden_iters,
+            knn_mode=self.config.knn_mode,
+            merge_tau=self.config.merge_tau,
+            merge_coverage=self.config.merge_coverage,
+            cross_merge_tau=self.config.cross_merge_tau,
+            cross_merge_coverage=self.config.cross_merge_coverage,
+            cross_merge_mode=self.config.cross_merge_mode,
+        )
+
+    def define_rigid_bodies(self, input_file):
+        self.rigid_bodies, self.rigid_body_flags = define_rigid_bodies(
+            self.clusters,
+            input_file,
+            self.first_residue,
+            self.chain_segments,
+            self.config.plddt_cutoff,
+            self.config.min_segment_len,
+            self.global_merged_flags,
+        )
+
+    def print_rigid_stats(self):
+        # Build full PAE numpy matrix
+        if "predicted_aligned_error" in self.pae_data:
+            pae_full = np.array(
+                self.pae_data["predicted_aligned_error"], dtype=np.float32
+            )
+        elif "pae" in self.pae_data:
+            pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        else:
+            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+        mapper = self.input_handler.get_tuple_to_global_mapper(self.first_residue)
+        for rb_idx, rb in enumerate(self.rigid_bodies, start=1):
+            domain_meds = []
+            print(f"[stats] RigidBody {rb_idx}: n_domains={len(rb)}")
+            for s, e, seg in rb:
+                gs, ge = mapper((s, e, seg))
+                # normalize orientation and clamp
+                if gs is not None and ge is not None and gs > ge:
+                    gs, ge = ge, gs
+                med = _median_block(pae_full, gs, ge)
+                mean = _mean_block(pae_full, gs, ge)
+                domain_meds.append(med)
+                domain_meds.append(mean)
+                seg_str = seg if isinstance(seg, str) else str(seg)
+                print(
+                    f"  - {seg_str}:{int(s)}-{int(e)} (global {gs}-{ge}) len={int(e) - int(s) + 1} median={med:.2f} Å mean={mean:.2f} Å"
+                )
+            if domain_meds:
+                # robust overall median across all domain pixels: median of medians is fine for printing
+                overall = float(np.nanmedian(np.array(domain_meds, dtype=float)))
+                print(
+                    f"  > RigidBody {rb_idx} median-of-domains = {overall:.2f} Å mean-of-domains = {np.nanmean(np.array(domain_meds, dtype=float)):.2f} Å"
+                )
+
+    def generate_visualization_artifacts(self):
+        # 1) Build full PAE numpy matrix
+        if "predicted_aligned_error" in self.pae_data:
+            pae_full = np.array(
+                self.pae_data["predicted_aligned_error"], dtype=np.float32
+            )
+        elif "pae" in self.pae_data:
+            pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        else:
+            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+
+        # 2) Determine L
+        L = pae_full.shape[0]
+        # 3) Downsample factor
+        s = 2 if L > 1800 else 1
+        pae_ds = stride_downsample(pae_full, s)
+
+        # 4) Convert rigid_bodies_from_pae (list of lists of (start_residue, end_residue, segid)) into Cluster objects
+        clusters = []
+        tuple_to_global = self.input_handler.get_tuple_to_global_mapper(
+            self.first_residue
+        )
+
+        for i, rb in enumerate(self.rigid_bodies):
+            ranges = []
+            for tup in rb:
+                gstart, gend = tuple_to_global(tup)
+                if gstart is not None and gend is not None:
+                    ranges.append((gstart, gend))
+            if ranges:
+                ctype = "fixed" if i == 0 else "rigid"
+                clusters.append(
+                    Cluster(
+                        cid=i,
+                        ctype=ctype,
+                        ranges=ranges,
+                        global_merge=self.rigid_body_flags[i],
+                    )
+                )
+
+        # --- Compute chains spans (1-based inclusive) for viz.json
+        chains = self.input_handler.get_chains(self.input_file, self.first_residue)
+
+        save_viz_png(
+            "viz.png",
+            pae_ds,
+            clusters,
+            stride=s,
+            chains=chains,
+        )
+
+        save_pae_bin("pae.bin", pae_ds)
+        save_pae_png("pae.png", pae_ds)
+        write_viz_json(
+            "viz.json",
+            length=L,
+            clusters=clusters,
+            plddt_cutoff=self.config.plddt_cutoff,
+            low_conf=None,
+            downsample=(s if s > 1 else None),
+            chains=chains,
+        )
+
+    def write_outputs(self, input_file):
+        if self.config.emit_constraints:
+            write_constraints_yaml(self.rigid_bodies, self.config.emit_constraints)
+        if not self.config.no_const:
+            write_const_file(self.rigid_bodies, CONST_FILE_PATH, input_file)
+        else:
+            print("Skipping const.inp as requested (--no-const)")
 
 
 def _prepare_pdb_mappings(pdb_file: str) -> int:
@@ -36,20 +787,25 @@ def _prepare_pdb_mappings(pdb_file: str) -> int:
     Build PDB_INDEX_TO_RES (sequence of residues across all chains) and
     PDB_RES_PLDDT (per-residue list of B-factors which hold pLDDT).
     Returns the number of residues discovered.
-    """
-    global PDB_INDEX_TO_RES, PDB_RES_PLDDT
-    PDB_INDEX_TO_RES = []
-    PDB_RES_PLDDT.clear()
-    seen_res = set()  # track first atom per residue to build index ordering
 
-    with open(file=pdb_file, mode="r", encoding="utf8") as fh:
+    This method populates global PDB_INDEX_TO_RES and PDB_RES_PLDDT.
+    """
+    pdb_path = Path(pdb_file)
+    if not pdb_path.exists():
+        raise FileNotFoundError(f"PDB file not found: {pdb_file}")
+
+    PDB_INDEX_TO_RES.clear()
+    PDB_RES_PLDDT.clear()
+    seen_res = set()  # Track first atom per residue to build index ordering
+
+    with open(pdb_path, "r", encoding="utf-8") as fh:
         for line in fh:
             if not (line.startswith("ATOM") or line.startswith("HETATM")):
                 continue
             # PDB fixed columns
             chain_id = line[21].strip() or " "
             resseq_str = line[22:26].strip()
-            icode = line[26].strip()  # insertion code
+            icode = line[26].strip()  # Insertion code
             bfact_str = line[60:66].strip()
 
             if not resseq_str:
@@ -59,65 +815,20 @@ def _prepare_pdb_mappings(pdb_file: str) -> int:
             except ValueError:
                 continue
 
-            # accumulate pLDDT (B-factor) per (chain, resseq)
+            # Accumulate pLDDT (B-factor) per (chain, resseq)
             try:
                 b = float(bfact_str)
                 PDB_RES_PLDDT[(chain_id, resseq)].append(b)
-            except Exception:
+            except ValueError:
                 pass
 
-            # use (chain, resseq, icode) to identify first occurrence order
+            # Use (chain, resseq, icode) to identify first occurrence order
             key = (chain_id, resseq, icode)
             if key not in seen_res:
                 seen_res.add(key)
                 PDB_INDEX_TO_RES.append((chain_id, resseq))
 
     return len(PDB_INDEX_TO_RES)
-
-
-def get_first_and_last_residue_numbers_pdb(pdb_file: str) -> Tuple[int, int]:
-    """
-    For PDB-based runs, we want indices that map 1..N so that SELECTED_* math
-    yields 0..N-1 windows for the PAE slice.
-    """
-    n = _prepare_pdb_mappings(pdb_file)
-    # Return (1, N) so first-1 == 0 and last-1 == N-1
-    return 1, n
-
-
-def define_segments_pdb(pdb_file: str):
-    """
-    Return 0-based residue indices that act as 'split points' between chains.
-    For compatibility with the CRD-based logic, we return indices i-1 at chain
-    boundaries so sort_and_separate_cluster() will break clusters at chain edges.
-    """
-    if not PDB_INDEX_TO_RES:
-        _prepare_pdb_mappings(pdb_file)
-    segs = []
-    for i in range(1, len(PDB_INDEX_TO_RES)):
-        prev_chain = PDB_INDEX_TO_RES[i - 1][0]
-        curr_chain = PDB_INDEX_TO_RES[i][0]
-        if prev_chain != curr_chain:
-            segs.append(i - 1)
-    return segs
-
-
-def calculate_bfactor_avg_for_region_pdb(
-    _ignored_file, first_index: int, last_index: int, _ignored_first_resnum: int
-) -> float:
-    """
-    Average per-residue pLDDT (stored in B-factor) across the inclusive
-    index range [first_index, last_index] in the flattened residue list.
-    """
-    if not PDB_INDEX_TO_RES:
-        raise RuntimeError("PDB mappings not prepared.")
-    vals = []
-    for idx in range(first_index, last_index + 1):
-        chain_id, resseq = PDB_INDEX_TO_RES[idx]
-        arr = PDB_RES_PLDDT.get((chain_id, resseq), [])
-        if arr:
-            vals.append(sum(arr) / len(arr))
-    return (sum(vals) / len(vals)) if vals else 0.0
 
 
 def identify_new_rigid_domain_pdb(
@@ -139,69 +850,22 @@ def identify_new_rigid_domain_pdb(
     return (res_start, res_end, segid)
 
 
-def get_first_and_last_residue_numbers(
-    crd_file: str,
-) -> Tuple[Optional[int], Optional[int]]:
+def calculate_bfactor_avg_for_region_pdb(
+    _ignored_file, first_index: int, last_index: int, _ignored_first_resnum: int
+):
     """
-    Returns the first and last residue numbers from a CRD file. Ignores initial comment
-    lines starting with '*', starts processing lines after a line ending in 'EXT'.
-
-    :param crd_file: Path to the CRD file.
-    :return: A tuple containing the first and last residue numbers. Returns None for
-            each if not found.
+    Average per-residue pLDDT (stored in B-factor) across the inclusive
+    index range [first_index, last_index] in the flattened residue list.
     """
-    first_resnum = None
-    last_resnum = None
-    start_processing = False  # Flag to indicate when to start processing lines
-
-    with open(file=crd_file, mode="r", encoding="utf8") as infile:
-        for line in infile:
-            # Skip all lines until we find the line ending with 'EXT'
-            # I hope this is univeral to all CRD files.
-            if not start_processing:
-                if line.strip().endswith("EXT"):
-                    start_processing = True
-                continue  # Skip current iteration and proceed to the next line
-
-            words = line.split()
-            # Start processing lines to find first and last residue numbers
-            if start_processing and words:
-                if first_resnum is None:
-                    try:
-                        first_resnum = int(
-                            words[1]
-                        )  # Assuming col 1 has the residue numbers
-                    except ValueError:
-                        continue  # Skip lines that do not start with an integer
-                try:
-                    # Continuously update last_resnum
-                    last_resnum = int(words[1])
-                except ValueError:
-                    pass  # Ignore lines that do not start with an integer
-
-    return first_resnum, last_resnum
-
-
-def define_segments(crd_file: str):
-    """
-    Defines segments. But what is it actually doing?
-    """
-    differing_pairs = []
-    with open(file=crd_file, mode="r", encoding="utf8") as infile:
-        current_line = infile.readline().split()
-        line_number = 1
-        for line in infile:
-            line_number += 1
-            next_line = line.split()
-
-            if (
-                len(current_line) == 10
-                and len(next_line) == 10
-                and current_line[7] != next_line[7]
-            ):
-                differing_pairs.append(int(current_line[1]) - 1)
-            current_line = next_line  # Move to the next line
-    return differing_pairs
+    if not PDB_INDEX_TO_RES:
+        raise RuntimeError("PDB mappings not prepared.")
+    vals = []
+    for idx in range(first_index, last_index + 1):
+        chain_id, resseq = PDB_INDEX_TO_RES[idx]
+        arr = PDB_RES_PLDDT.get((chain_id, resseq), [])
+        if arr:
+            vals.append(sum(arr) / len(arr))
+    return (sum(vals) / len(vals)) if vals else 0.0
 
 
 def correct_json_brackets(pae, output_file_path):
@@ -334,9 +998,6 @@ def _chain_id_for_index(idx: int, chain_segs: list) -> int:
 
 def _cluster_span(cluster: list[int]) -> tuple[int, int]:
     return (min(cluster), max(cluster))
-
-
-# --- New helpers for set-based off-diagonal stats ---
 
 
 def _majority_chain_id(indices: list[int], chain_segs: list) -> int:
@@ -529,7 +1190,6 @@ def _merge_clusters_by_affinity(
     return clusters, global_merged_flags
 
 
-# --- Helper functions for rigid body/domain stats ---
 def _tuple_to_global_mapper(use_pdb: bool, first_residue: int):
     """Return a function that maps (start_res, end_res, segid) -> (gstart, gend) in 1-based global indices."""
     if use_pdb:
@@ -1300,23 +1960,44 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Determine input mode
+    config = PAEConfig(
+        plddt_cutoff=args.plddt_cutoff,
+        knn=args.knn,
+        graph_sim=args.graph_sim,
+        pae_cutoff=args.pae_cutoff,
+        knn_mode=args.knn_mode,
+        min_seq_sep=args.min_seq_sep,
+        interchain_cutoff=args.interchain_cutoff,
+        leiden_resolution=args.leiden_resolution,
+        leiden_iters=args.leiden_iters,
+        merge_tau=args.merge_tau,
+        merge_coverage=args.merge_coverage,
+        cross_merge_tau=args.cross_merge_tau,
+        cross_merge_coverage=args.cross_merge_coverage,
+        cross_merge_mode=args.cross_merge_mode,
+    )
 
     USE_PDB = args.pdb_file is not None
     print(f"Using {'PDB' if USE_PDB else 'CRD'} input mode.")
 
-    if USE_PDB:
-        first_residue, last_residue = get_first_and_last_residue_numbers_pdb(
-            args.pdb_file
-        )
-        chain_segments = define_segments_pdb(args.pdb_file)
-    else:
-        first_residue, last_residue = get_first_and_last_residue_numbers(args.crd_file)
-        chain_segments = define_segments(args.crd_file)
-        # Convert absolute (resnum-1) boundaries to indices relative to first_residue
-        if first_residue is not None:
-            offset = first_residue - 1
-            chain_segments = [max(0, idx - offset) for idx in chain_segments]
+    processor = PAEProcessor(config=config)
+    processor.input_handler = PDBHandler() if USE_PDB else CRDHandler()
+    processor.input_file = args.pdb_file if USE_PDB else args.crd_file
+    processor.first_residue, processor.last_residue = (
+        processor.get_first_and_last_residue_numbers(processor.input_file)
+    )
+    processor.chain_segments = processor.define_segments(processor.input_file)
+    if not USE_PDB:
+        if processor.first_residue is not None:
+            offset = processor.first_residue - 1
+            processor.chain_segments = [
+                max(0, idx - offset) for idx in processor.chain_segments
+            ]
+
+    first_residue = processor.first_residue
+    last_residue = processor.last_residue
+    chain_segments = processor.chain_segments
+    input_struct = processor.input_file
     SELECTED_ROWS_START = first_residue - 1
     SELECTED_ROWS_END = last_residue - 1
     SELECTED_COLS_START = SELECTED_ROWS_START
@@ -1374,29 +2055,8 @@ if __name__ == "__main__":
     else:
         raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
 
-    # DEBUG sca2 weak off-diagonal stats
-    # Build quick array of chain IDs per flattened index (PDB mode)
-    # if USE_PDB:
-    #     chain_by_idx = np.array([cid for (cid, _res) in PDB_INDEX_TO_RES])
-    #     spans = []
-    #     for cl in pae_clusters:  # clusters as lists of 0-based indices
-    #         s, e = min(cl), max(cl)
-    #         # majority chain for this cluster
-    #         maj_chain = None
-    #         if len(cl) > 0:
-    #             vals, counts = np.unique(chain_by_idx[cl], return_counts=True)
-    #             maj_chain = vals[np.argmax(counts)]
-    #         spans.append((s, e, maj_chain))
-    #     # pick the largest 'B' cluster
-    #     b_candidates = [(e - s, s, e) for (s, e, c) in spans if c == "B"]
-    #     if b_candidates:
-    #         _, bs, be = max(b_candidates)  # largest by length
-    #         _debug_offdiag_stats_by_spans(
-    #             pae_full, (430 - 1, 456 - 1), (bs, be), label="A430-456 vs BigB"
-    #         )
-
     # --- Stats: median PAE per rigid body and per rigid domain
-    print_rigid_stats(pae_full, rigid_bodies_from_pae, USE_PDB, first_residue)
+    processor.print_rigid_stats()
 
     # 2) Determine L
     L = pae_full.shape[0]
@@ -1558,4 +2218,13 @@ if __name__ == "__main__":
         write_const_file(rigid_bodies_from_pae, CONST_FILE_PATH, input_struct)
     else:
         print("Skipping const.inp as requested (--no-const)")
+    print("------------- done -------------")
+    print("------------- done -------------")
+    print("------------- done -------------")
+    print("------------- done -------------")
+    print("------------- done -------------")
+    print("------------- done -------------")
+    print("------------- done -------------")
+    print("------------- done -------------")
+    print("------------- done -------------")
     print("------------- done -------------")
