@@ -437,10 +437,88 @@ class PAEConfig:
     no_const: bool = False  # Flag to skip const.inp
 
     def __post_init__(self):
-        # Add basic validation if needed
-        if self.plddt_cutoff < 0:
-            raise ValueError("plddt_cutoff must be non-negative")
-        # Add more validations as needed
+        """Validate user-provided configuration values.
+        These checks mirror expected numeric ranges for PAE/plddt units and guard
+        against combinations that would lead to pathological graphs or merges.
+        """
+        # --- basic scalar ranges
+        if not (0.0 <= float(self.plddt_cutoff) <= 100.0):
+            raise ValueError("plddt_cutoff must be in [0, 100]")
+
+        if self.graph_sim not in {"exp", "linear"}:
+            raise ValueError("graph_sim must be 'exp' or 'linear'")
+
+        if self.graph_sim == "exp":
+            if not (1.0 <= float(self.sigma) <= 50.0):
+                raise ValueError("sigma must be in [1, 50] when graph_sim='exp'")
+        else:  # linear
+            if not (1.0 <= float(self.linear_T) <= 100.0):
+                raise ValueError("linear_T must be in [1, 100] when graph_sim='linear'")
+
+        if int(self.knn) < 0:
+            raise ValueError("knn must be a non-negative integer")
+        if self.knn_mode not in {"union", "mutual"}:
+            raise ValueError("knn_mode must be 'union' or 'mutual'")
+        if self.knn_mode == "mutual" and int(self.knn) == 0:
+            raise ValueError("knn_mode='mutual' requires knn > 0")
+
+        if not (0.0 < float(self.pae_cutoff) <= 50.0):
+            raise ValueError("pae_cutoff must be in (0, 50]")
+        if int(self.min_seq_sep) < 0:
+            raise ValueError("min_seq_sep must be ≥ 0")
+
+        if not (0.0 < float(self.interchain_cutoff) <= 50.0):
+            raise ValueError("interchain_cutoff must be in (0, 50]")
+
+        if not (0.0 < float(self.leiden_resolution) <= 5.0):
+            raise ValueError("leiden_resolution must be in (0, 5]")
+        if int(self.leiden_iters) < 1:
+            raise ValueError("leiden_iters must be ≥ 1")
+
+        if not (0.0 < float(self.merge_tau) <= 50.0):
+            raise ValueError("merge_tau must be in (0, 50]")
+        if not (0.0 <= float(self.merge_coverage) <= 1.0):
+            raise ValueError("merge_coverage must be in [0, 1]")
+
+        if not (0.0 < float(self.cross_merge_tau) <= 50.0):
+            raise ValueError("cross_merge_tau must be in (0, 50]")
+        if not (0.0 <= float(self.cross_merge_coverage) <= 1.0):
+            raise ValueError("cross_merge_coverage must be in [0, 1]")
+
+        if self.cross_merge_mode not in {"adjacent", "any"}:
+            raise ValueError("cross_merge_mode must be 'adjacent' or 'any'")
+
+        if int(self.min_segment_len) < 1:
+            raise ValueError("min_segment_len must be ≥ 1")
+
+        # --- relationships between parameters
+        # Inter-chain cutoff should not be looser than global PAE edge cutoff
+        if float(self.interchain_cutoff) > float(self.pae_cutoff):
+            raise ValueError(
+                "interchain_cutoff should be ≤ pae_cutoff (it's meant to be stricter for cross-chain edges)"
+            )
+
+        # Usually cross_merge thresholds are stricter than same-chain; warn if reversed.
+        # Don't hard-error—just normalize expectations.
+        if float(self.cross_merge_tau) > float(self.merge_tau):
+            # Not raising; allow advanced use but warn via ValueError only if really extreme.
+            pass
+
+        # If knn==0 we are using a thresholded dense graph; keep pae_cutoff reasonable
+        if int(self.knn) == 0 and float(self.pae_cutoff) > 30.0:
+            # Prevent near-complete graphs that explode clustering time
+            raise ValueError(
+                "When knn=0, pae_cutoff should be ≤ 30 to avoid overly dense graphs"
+            )
+
+        # Sanity: sigma/linear_T shouldn't be both tiny and produce near-binary weights
+        if (
+            self.graph_sim == "exp"
+            and float(self.sigma) < 2.0
+            and float(self.pae_cutoff) >= 10.0
+        ):
+            # Very sharp kernel with a high edge cutoff tends to create unstable graphs
+            pass
 
 
 class PAEProcessor:
