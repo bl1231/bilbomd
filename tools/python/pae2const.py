@@ -6,7 +6,7 @@ import argparse
 import json
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -931,6 +931,52 @@ class PAEProcessor:
             chains=chains,
         )
 
+    def write_run_config(self, output_path: str = "pae2const.conf", fmt: str = "yaml"):
+        """
+        Write a configuration/run-summary file capturing:
+          - CLI/config values used
+          - basic runtime context (input file, residue span, chain splits)
+          - counts of clusters and rigid bodies that were produced
+        The default format is YAML for readability; set fmt="json" to write JSON instead.
+        """
+        # Build a serializable payload
+        try:
+            cfg = asdict(self.config)
+        except Exception:
+            # Fallback: shallow dict via __dict__
+            cfg = dict(self.config.__dict__)
+
+        payload = {
+            "input_file": self.input_file,
+            "mode": "pdb" if isinstance(self.input_handler, PDBHandler) else "crd",
+            "first_residue": int(self.first_residue)
+            if self.first_residue is not None
+            else None,
+            "last_residue": int(self.last_residue)
+            if self.last_residue is not None
+            else None,
+            "chain_segments": [int(x) for x in (self.chain_segments or [])],
+            "config": cfg,
+            "summary": {
+                "num_clusters": int(
+                    len(self.clusters) if self.clusters is not None else 0
+                ),
+                "num_rigid_bodies": int(
+                    len(self.rigid_bodies) if self.rigid_bodies is not None else 0
+                ),
+            },
+        }
+
+        # Write the file
+        if fmt.lower() in ("yaml", "yml"):
+            with open(output_path, "w", encoding="utf-8") as fh:
+                yaml.safe_dump(payload, fh, sort_keys=False, default_flow_style=False)
+        else:
+            with open(output_path, "w", encoding="utf-8") as fh:
+                json.dump(payload, fh, indent=2)
+
+        print(f"[info] Wrote run configuration to {output_path} ({fmt.upper()})")
+
     @staticmethod
     def _similarity_from_pae(
         pae_matrix: np.ndarray,
@@ -1052,7 +1098,6 @@ class PAEProcessor:
                 pae, a, b, chain_segs, tau, tau_cross, cov, cov_cross
             )
             merged = sorted(set(a) | set(b))
-
             return (merged, coverage, med)
 
         # Step 1: Always run 'adjacent' mode first to reduce cluster count
@@ -1080,6 +1125,7 @@ class PAEProcessor:
 
         # Step 2: If mode is 'any', run an additional greedy merge on the reduced set
         if mode == "any":
+            # Greedy global merging to convergence
             changed = True
             while changed and len(clusters) > 1:
                 changed = False
@@ -1087,17 +1133,19 @@ class PAEProcessor:
                 n = len(clusters)
                 for i in range(n):
                     ai = clusters[i]
+                    spanA = _cluster_span(ai)
                     for j in range(i + 1, n):
                         bj = clusters[j]
+                        spanB = _cluster_span(bj)
                         res = try_merge(ai, bj)
                         if res is None:
                             continue
                         merged, covscore, med = res
-                        cand = (covscore, -med, i, j, merged)
+                        cand = (covscore, -med, i, j, merged, (spanA, spanB))
                         if best is None or cand > best:
                             best = cand
                 if best is not None:
-                    _covscore, _negmed, i, j, merged = best
+                    _covscore, _negmed, i, j, merged, (_sA, _sB) = best
                     # Rebuild cluster list with merged pair
                     new_clusters = []
                     global_merged_flags_new = []
@@ -1107,22 +1155,69 @@ class PAEProcessor:
                         new_clusters.append(c)
                         global_merged_flags_new.append(global_merged_flags[k])
                     new_clusters.append(merged)
-
-                    # --- DEBUG: print mean PAE value in the true off-diagonal block ---
-                    block = pae[np.ix_(a, b)]
-                    if block.size > 0:
-                        mean_val = float(np.mean(block))
-                        print(
-                            f"[merge-debug] clusters ({min(a)}-{max(a)}) vs ({min(b)}-{max(b)}): "
-                            f"meanPAE={mean_val:.2f} Å, median={med:.2f} Å, coverage={_covscore:.2f}"
-                        )
-
-                    global_merged_flags_new.append(
-                        True
-                    )  # Mark the new merged cluster as globally merged
+                    # Mark the new merged cluster as globally merged
+                    global_merged_flags_new.append(True)
                     clusters = new_clusters
                     global_merged_flags = global_merged_flags_new
                     changed = True
+
+            # After greedy 'any' pass completes, compute non-merged off-diagonal stats **on the final cluster set only**
+            nonmerge_stats = []
+            n = len(clusters)
+            for i in range(n):
+                ai = clusters[i]
+                spanA = _cluster_span(ai)
+                for j in range(i + 1, n):
+                    bj = clusters[j]
+                    spanB = _cluster_span(bj)
+                    # Decide with true sets
+                    ok = _should_merge(
+                        pae, ai, bj, chain_segs, tau, cov, tau_cross, cov_cross
+                    )
+                    if ok:
+                        continue  # would merge; skip
+                    # Gather stats for reporting
+                    cross, med, coverage, thr, need = _offdiag_stats_sets(
+                        pae, ai, bj, chain_segs, tau, tau_cross, cov, cov_cross
+                    )
+                    block = pae[np.ix_(ai, bj)]
+                    mean_val = float(np.mean(block)) if block.size > 0 else float("nan")
+                    nonmerge_stats.append(
+                        {
+                            "mean": mean_val,
+                            "median": med,
+                            "coverage": coverage,
+                            "cross": cross,
+                            "thr": thr,
+                            "need": need,
+                            "spanA": spanA,
+                            "spanB": spanB,
+                        }
+                    )
+
+            if nonmerge_stats:
+                nonmerge_stats.sort(
+                    key=lambda d: (float("inf") if np.isnan(d["mean"]) else d["mean"]),
+                    reverse=True,
+                )
+                print(
+                    f"[merge-debug] Non-merged off-diagonal blocks {len(nonmerge_stats)} (sorted by meanPAE ascending):"
+                )
+                for d in nonmerge_stats:
+                    a0, a1 = d["spanA"]
+                    b0, b1 = d["spanB"]
+                    mean_val = d["mean"]
+                    med = d["median"]
+                    covv = d["coverage"]
+                    cross = d["cross"]
+                    thr = d["thr"]
+                    need = d["need"]
+                    cross_flag = "cross" if cross else "same"
+                    print(
+                        f"  ({a0}-{a1}) vs ({b0}-{b1}) [{cross_flag}] "
+                        f"meanPAE={mean_val:.2f} Å, median={med:.2f} Å, coverage={covv:.2f} "
+                        f"(τ={thr:.2f}, req_cov={need:.2f})"
+                    )
 
         return clusters, global_merged_flags
 
@@ -1670,16 +1765,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--min_segment_len",
         type=int,
-        default=6,
+        default=10,
         help="Minimum segment length; shorter segments are dropped in cleanup",
     )
     parser.add_argument(
         "--cross_merge_mode",
         type=str,
         choices=["adjacent", "any"],
-        default="adjacent",
-        help="Post-merge mode: 'adjacent' (default) merges only neighbors, "
-        "'any' allows merging of any pair that meets thresholds.",
+        default="any",
+        help="Post-merge mode: 'adjacent' merges only neighbors, "
+        "'any' (default) allows merging of any pair that meets thresholds.",
     )
     parser.add_argument(
         "--emit-constraints",
@@ -1748,4 +1843,6 @@ if __name__ == "__main__":
     # Generate outputs
     processor.print_rigid_stats()
     processor.generate_visualization_artifacts()
+    # Write a readable run configuration snapshot alongside the artifacts
+    processor.write_run_config("pae2const.yaml", fmt="yaml")
     processor.write_outputs(processor.input_file)
