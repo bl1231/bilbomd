@@ -126,10 +126,22 @@ def save_viz_png(
         face = (1, 0, 0, 0.12) if c.ctype == "rigid" else (0, 0.45, 1, 0.10)
         edge = (0, 0, 0, 1)
         ax.add_patch(
-            patches.Rectangle(
-                (x, y), w, h, linewidth=0.6, edgecolor=edge, facecolor=face
-            )
+            patches.Rectangle((x, y), w, h, linewidth=2, edgecolor=edge, facecolor=face)
         )
+        # If the cluster is composed of multiple discontiguous ranges, add per-range mini boxes
+        if len(c.ranges) > 1:
+            for ra, rb in c.ranges:
+                rx, ry, rw, rh = rect_from_bbox((ra, ra, rb, rb))
+                ax.add_patch(
+                    patches.Rectangle(
+                        (rx, ry),
+                        rw,
+                        rh,
+                        linewidth=1,
+                        edgecolor=(1, 0, 1),  # magenta
+                        facecolor="none",
+                    )
+                )
 
     # Optional: draw off-diagonal debug rectangles (row_start,row_end,col_start,col_end), 1-based inclusive
     if offdiag_rects:
