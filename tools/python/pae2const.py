@@ -24,12 +24,6 @@ from helpers_viz import (
 )
 from pdb_utils import get_segid_renaming_map
 
-# Constants
-MIN_CLUSTER_LENGTH = 3
-PDB_INDEX_TO_RES = []
-PDB_RES_PLDDT = defaultdict(list)
-USE_PDB = False  # Will be set in main
-
 
 class InputHandler(ABC):
     @abstractmethod
@@ -75,7 +69,6 @@ class PDBHandler(InputHandler):
         Returns the number of residues discovered.
 
         This populates self.pdb_index_to_res and self.pdb_res_plddt.
-        Also sets global PDB_INDEX_TO_RES and PDB_RES_PLDDT for compatibility.
         """
         pdb_path = Path(pdb_file)
         if not pdb_path.exists():
@@ -114,11 +107,6 @@ class PDBHandler(InputHandler):
                 if key not in seen_res:
                     seen_res.add(key)
                     self.pdb_index_to_res.append((chain_id, resseq))
-
-        # Set globals for compatibility
-        global PDB_INDEX_TO_RES, PDB_RES_PLDDT
-        PDB_INDEX_TO_RES = self.pdb_index_to_res[:]
-        PDB_RES_PLDDT = self.pdb_res_plddt.copy()
 
         return len(self.pdb_index_to_res)
 
@@ -769,7 +757,7 @@ class PAEProcessor:
 
         for i, cluster in enumerate(self.clusters):
             rigid_body = []
-            if len(cluster) >= MIN_CLUSTER_LENGTH:
+            if len(cluster) >= self.config.min_segment_len:
                 sorted_cluster = self._sort_and_separate_cluster(
                     cluster, self.chain_segments
                 )
@@ -1552,7 +1540,7 @@ class PAEProcessor:
     @staticmethod
     def _merge_overlapping_domains(
         domains: list[tuple[int, int, str, float]],
-    ) -> list[tuple[int, int, str, float]]:
+    ) -> List[Tuple[int, int, str, float]]:
         """
         Merge overlapping or contiguous residue ranges with the same segid,
         and deduplicate exact duplicates.
