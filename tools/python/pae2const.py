@@ -555,6 +555,82 @@ class PAEProcessor:
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in PAE file {pae_file}: {e}")
 
+    def validate_alignment(self) -> None:
+        """
+        Validate that the input structure (PDB/CRD) aligns with the PAE matrix.
+        Checks performed:
+          1) PAE is square (LxL)
+          2) Expected residue count from input (last-first+1) equals L
+          3) Chain-segment split indices are in-range and increasing
+        Raises ValueError with actionable detail if validation fails.
+        """
+        # 1) Load PAE as ndarray and verify square
+        if "predicted_aligned_error" in self.pae_data:
+            pae_full = np.array(
+                self.pae_data["predicted_aligned_error"], dtype=np.float32
+            )
+        elif "pae" in self.pae_data:
+            pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        else:
+            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+
+        if pae_full.ndim != 2 or pae_full.shape[0] != pae_full.shape[1]:
+            raise ValueError(
+                f"PAE must be a square matrix, got shape {pae_full.shape}."
+            )
+        L = int(pae_full.shape[0])
+
+        # 2) Determine expected residue count from input handler
+        if self.first_residue is None or self.last_residue is None:
+            raise ValueError(
+                "first_residue/last_residue not set before alignment validation."
+            )
+        expected_len = int(self.last_residue - self.first_residue + 1)
+        if expected_len <= 0:
+            raise ValueError(
+                f"Invalid residue span from input file: first={self.first_residue}, last={self.last_residue}."
+            )
+
+        # PDB safety: ensure handler prepared mappings (should be true if get_first_and_last_residue_numbers ran)
+        if isinstance(self.input_handler, PDBHandler):
+            # _prepare_pdb_mappings was called inside get_first_and_last_residue_numbers
+            mapped_len = len(self.input_handler.pdb_index_to_res)
+            if mapped_len and mapped_len != expected_len:
+                # This should never happen; keep it as a guardrail.
+                raise ValueError(
+                    f"PDB mapping length mismatch: mapping={mapped_len}, span={expected_len} "
+                    f"(first={self.first_residue}, last={self.last_residue})."
+                )
+
+        # 3) Compare lengths
+        if expected_len != L:
+            raise ValueError(
+                "Input structure length does not match PAE matrix.\n"
+                f"- PAE length (L): {L}\n"
+                f"- Structure residue span: first={self.first_residue}, last={self.last_residue}, count={expected_len}\n"
+                "Please ensure the PAE JSON corresponds to this structure (same sequence/truncation/chains)."
+            )
+
+        # 4) Chain segment sanity checks: indices must be strictly increasing and in range [0, L-2]
+        if self.chain_segments:
+            segs = list(self.chain_segments)
+            if any((not isinstance(x, (int, np.integer))) for x in segs):
+                raise ValueError(f"chain_segments must be integers, got: {segs}")
+            if segs != sorted(segs):
+                raise ValueError(
+                    f"chain_segments must be sorted ascending, got: {segs}"
+                )
+            if any(x < 0 or x >= L - 1 for x in segs):
+                raise ValueError(
+                    f"chain_segments out of range for PAE length {L}: {segs}. "
+                    "Split points are 0-based indices that mark the last residue of a chain."
+                )
+
+        # If we got here, basic alignment checks passed
+        print(
+            f"[validate] Input aligns with PAE: L={L}, residues={expected_len}, chainsplits={len(self.chain_segments or [])}"
+        )
+
     def get_first_and_last_residue_numbers(
         self, file: str
     ) -> Tuple[Optional[int], Optional[int]]:
@@ -1835,6 +1911,9 @@ if __name__ == "__main__":
         processor.chain_segments = [
             max(0, idx - offset) for idx in processor.chain_segments
         ]
+
+    # Validate that input structure and PAE matrix align before proceeding
+    processor.validate_alignment()
 
     # Define clusters and rigid bodies using processor methods
     processor.define_clusters()
