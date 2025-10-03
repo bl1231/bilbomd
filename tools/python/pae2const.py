@@ -736,9 +736,11 @@ class PAEProcessor:
         idxs = [i for i, rb in enumerate(rigid_bodies) if rb]
         all_non_empty_rigid_bodies = [rigid_bodies[i] for i in idxs]
         rigid_body_flags = [rigid_body_flags[i] for i in idxs]
+
         print("Rigid Bodies:")
         for i, rb in enumerate(all_non_empty_rigid_bodies, start=1):
-            print(f"  Rigid Body {i}: {rb}")
+            formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
+            print(f"  Rigid Body {i}: {formatted_rb}")
 
         # Ensure no Rigid Domains are adjacent; adjust to create a 2-residue gap
         updated = True
@@ -756,9 +758,10 @@ class PAEProcessor:
             merged_rigid_bodies.append(merged_rb)
         print("Optimized Rigid Bodies:")
         for i, rb in enumerate(merged_rigid_bodies, start=1):
-            print(f"  Rigid Body {i}: {rb}")
+            formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
+            print(f"  Rigid Body {i}: {formatted_rb}")
 
-        # Drop tiny segments and coalesce adjacents per segid
+        # Drop tiny segments and coalesce overlapping within same segid
         cleaned: list[list[tuple[int, int, str, float]]] = []
         cleaned_flags = []
         for rb, flag in zip(merged_rigid_bodies, rigid_body_flags):
@@ -768,28 +771,31 @@ class PAEProcessor:
                 for (s, e, seg, avg) in rb
                 if (e - s + 1) >= max(1, self.config.min_segment_len)
             ]
-            # Coalesce adjacent within same segid
+            # Coalesce overlapping within same segid (not merely adjacent)
             rb2.sort(key=lambda x: (x[2], x[0], x[1]))
             coalesced: list[tuple[int, int, str, float]] = []
             for s, e, seg, avg in rb2:
-                if not coalesced or coalesced[-1][2] != seg or s > coalesced[-1][1] + 1:
+                if not coalesced or coalesced[-1][2] != seg or s > coalesced[-1][1]:
+                    # start a new segment when there is any gap (including a 1-residue gap),
+                    # only merge if segments actually overlap
                     coalesced.append((s, e, seg, avg))
                 else:
                     ps, pe, pseg, pavg = coalesced[-1]
                     coalesced[-1] = (
-                        ps,
+                        min(ps, s),
                         max(pe, e),
                         pseg,
                         (pavg + avg) / 2,
-                    )  # average the avgs
+                    )
             if coalesced:  # Only add if not empty after cleanup
                 cleaned.append(coalesced)
                 cleaned_flags.append(flag)
         print("Cleaned Rigid Bodies:")
         for i, rb in enumerate(cleaned, start=1):
-            print(f"  Rigid Body {i}: {rb}")
+            formatted_rb = [(s, e, seg, round(avg, 2)) for s, e, seg, avg in rb]
+            print(f"  Rigid Body {i}: {formatted_rb}")
 
-        # Set instance attributes
+        # Set instance attributes after enforcing inter-RB gaps
         self.rigid_bodies = cleaned
         self.rigid_body_flags = cleaned_flags
 
