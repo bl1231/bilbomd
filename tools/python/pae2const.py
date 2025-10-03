@@ -52,7 +52,7 @@ class InputHandler(ABC):
     @abstractmethod
     def identify_new_rigid_domain(
         self, file: str, first_index: int, last_index: int, first_resnum: int
-    ) -> Optional[Tuple[int, int, str]]:
+    ) -> Optional[Tuple[int, int, str, float]]:
         pass
 
     @abstractmethod
@@ -172,10 +172,10 @@ class PDBHandler(InputHandler):
         first_index: int,
         last_index: int,
         _ignored_first_resnum: int,
-    ) -> Optional[Tuple[int, int, str]]:
+    ) -> Optional[Tuple[int, int, str, float]]:
         """
-        Return (start_residue, end_residue, segid) for the region defined by
-        0-based indices. segid will be the PDB chain ID.
+        Return (start_residue, end_residue, segid, avg_plddt) for the region defined by
+        0-based indices. segid will be the PDB chain ID. avg_plddt is placeholder, will be overridden.
         """
         if not self.pdb_index_to_res:
             raise RuntimeError("PDB mappings not prepared.")
@@ -186,7 +186,7 @@ class PDBHandler(InputHandler):
             # but guard anyway.
             return None
         segid = chain_start if chain_start else " "
-        return (res_start, res_end, segid)
+        return (res_start, res_end, segid, 0.0)
 
     def get_tuple_to_global_mapper(self, first_residue: int) -> callable:
         """Return a function that maps (start_res, end_res, segid) -> (gstart, gend) in 1-based global indices."""
@@ -306,21 +306,19 @@ class CRDHandler(InputHandler):
         with open(file=file, mode="r", encoding="utf8") as infile:
             for line in infile:
                 words = line.split()
-                if (
-                    len(words) >= 10
-                    and is_float(words[9])
-                    and not words[0].startswith("*")
-                ):
-                    bfactor = words[9]
-                    resnum = words[1]
-
-                    if (
-                        float(bfactor) > 0.0
-                        and bfactor.replace(".", "", 1).isdigit()
-                        and int(resnum) >= first_index + first_resnum
-                        and int(resnum) <= last_index + first_resnum
-                    ):
-                        bfactors.append(float(bfactor))
+                if len(words) >= 10 and not words[0].startswith("*"):
+                    try:
+                        bfactor = float(words[9])
+                        resnum = int(words[1])
+                        if (
+                            bfactor > 0.0
+                            and str(bfactor).replace(".", "", 1).isdigit()
+                            and resnum >= first_index + first_resnum
+                            and resnum <= last_index + first_resnum
+                        ):
+                            bfactors.append(bfactor)
+                    except (ValueError, TypeError):
+                        pass
 
         if bfactors:
             return sum(bfactors) / len(bfactors)
@@ -329,29 +327,29 @@ class CRDHandler(InputHandler):
 
     def identify_new_rigid_domain(
         self, file: str, first_index: int, last_index: int, first_resnum: int
-    ) -> Optional[Tuple[int, int, str]]:
+    ) -> Optional[Tuple[int, int, str, float]]:
         """
         Identify and return a new rigid domain as a tuple of
-        (start_residue, end_residue, segment_id).
+        (start_residue, end_residue, segment_id, avg_plddt).
         """
         str1 = str2 = segid = None
         with open(file=file, mode="r", encoding="utf8") as infile:
             for line in infile:
                 words = line.split()
-                if (
-                    len(words) >= 10
-                    and is_float(words[9])
-                    and not words[0].startswith("*")
-                ):
-                    resnum = int(words[1])
-                    if resnum == first_index + first_resnum:
-                        str1 = int(words[8])
-                    elif resnum == last_index + first_resnum:
-                        str2 = int(words[8])
-                        segid = words[7]
+                if len(words) >= 10 and not words[0].startswith("*"):
+                    try:
+                        float(words[9])  # just to check
+                        resnum = int(words[1])
+                        if resnum == first_index + first_resnum:
+                            str1 = int(words[8])
+                        elif resnum == last_index + first_resnum:
+                            str2 = int(words[8])
+                            segid = words[7]
+                    except (ValueError, TypeError):
+                        pass
 
         if str1 is not None and str2 is not None and segid is not None:
-            return (str1, str2, segid)
+            return (str1, str2, segid, 0.0)
         return None
 
     def get_tuple_to_global_mapper(self, first_residue: int) -> callable:
@@ -644,7 +642,6 @@ class PAEProcessor:
             g.add_edges(edges)
             g.es["weight"] = sel_weights
 
-        # Debug print (optional, or use logging)
         print(
             f"[clustering] n={size}, edges={len(edges)}, "
             f"knn={self.config.knn}, cutoff={self.config.pae_cutoff}, interchain_cutoff={self.config.interchain_cutoff}, "
@@ -722,10 +719,10 @@ class PAEProcessor:
                         )
                         if new_rigid_domain:
                             # Normalize orientation (start <= end)
-                            s, e, seg = new_rigid_domain
+                            s, e, seg, _ = new_rigid_domain
                             if s is not None and e is not None and s > e:
                                 s, e = e, s
-                            normalized = (s, e, seg)
+                            normalized = (s, e, seg, bfactor_avg)
                             # Deduplicate within this rigid body
                             if normalized not in rigid_body:
                                 rigid_body.append(normalized)
@@ -739,7 +736,9 @@ class PAEProcessor:
         idxs = [i for i, rb in enumerate(rigid_bodies) if rb]
         all_non_empty_rigid_bodies = [rigid_bodies[i] for i in idxs]
         rigid_body_flags = [rigid_body_flags[i] for i in idxs]
-        print(f"Rigid Bodies: {all_non_empty_rigid_bodies}")
+        print("Rigid Bodies:")
+        for i, rb in enumerate(all_non_empty_rigid_bodies, start=1):
+            print(f"  Rigid Body {i}: {rb}")
 
         # Ensure no Rigid Domains are adjacent; adjust to create a 2-residue gap
         updated = True
@@ -755,31 +754,40 @@ class PAEProcessor:
         for rb in rigid_body_optimized:
             merged_rb = self._merge_overlapping_domains(rb)
             merged_rigid_bodies.append(merged_rb)
-        print(f"Optimized Rigid Bodies: {merged_rigid_bodies}")
+        print("Optimized Rigid Bodies:")
+        for i, rb in enumerate(merged_rigid_bodies, start=1):
+            print(f"  Rigid Body {i}: {rb}")
 
         # Drop tiny segments and coalesce adjacents per segid
-        cleaned: list[list[tuple[int, int, str]]] = []
+        cleaned: list[list[tuple[int, int, str, float]]] = []
         cleaned_flags = []
         for rb, flag in zip(merged_rigid_bodies, rigid_body_flags):
             # Drop too-short segments
             rb2 = [
-                (s, e, seg)
-                for (s, e, seg) in rb
+                (s, e, seg, avg)
+                for (s, e, seg, avg) in rb
                 if (e - s + 1) >= max(1, self.config.min_segment_len)
             ]
             # Coalesce adjacent within same segid
             rb2.sort(key=lambda x: (x[2], x[0], x[1]))
-            coalesced: list[tuple[int, int, str]] = []
-            for s, e, seg in rb2:
+            coalesced: list[tuple[int, int, str, float]] = []
+            for s, e, seg, avg in rb2:
                 if not coalesced or coalesced[-1][2] != seg or s > coalesced[-1][1] + 1:
-                    coalesced.append((s, e, seg))
+                    coalesced.append((s, e, seg, avg))
                 else:
-                    ps, pe, pseg = coalesced[-1]
-                    coalesced[-1] = (ps, max(pe, e), pseg)
+                    ps, pe, pseg, pavg = coalesced[-1]
+                    coalesced[-1] = (
+                        ps,
+                        max(pe, e),
+                        pseg,
+                        (pavg + avg) / 2,
+                    )  # average the avgs
             if coalesced:  # Only add if not empty after cleanup
                 cleaned.append(coalesced)
                 cleaned_flags.append(flag)
-        print(f"Cleaned Rigid Bodies: {cleaned}")
+        print("Cleaned Rigid Bodies:")
+        for i, rb in enumerate(cleaned, start=1):
+            print(f"  Rigid Body {i}: {rb}")
 
         # Set instance attributes
         self.rigid_bodies = cleaned
@@ -798,8 +806,9 @@ class PAEProcessor:
         mapper = self.input_handler.get_tuple_to_global_mapper(self.first_residue)
         for rb_idx, rb in enumerate(self.rigid_bodies, start=1):
             domain_meds = []
+            domain_avgs = []
             print(f"[stats] RigidBody {rb_idx}: n_domains={len(rb)}")
-            for s, e, seg in rb:
+            for s, e, seg, avg_plddt in rb:
                 gs, ge = mapper((s, e, seg))
                 # normalize orientation and clamp
                 if gs is not None and ge is not None and gs > ge:
@@ -808,15 +817,20 @@ class PAEProcessor:
                 mean = _mean_block(pae_full, gs, ge)
                 domain_meds.append(med)
                 domain_meds.append(mean)
+                domain_avgs.append(avg_plddt)
                 seg_str = seg if isinstance(seg, str) else str(seg)
                 print(
-                    f"  - {seg_str}:{int(s)}-{int(e)} (global {gs}-{ge}) len={int(e) - int(s) + 1} median={med:.2f} Å mean={mean:.2f} Å"
+                    f"  - {seg_str}:{int(s)}-{int(e)} (global {gs}-{ge}) len={int(e) - int(s) + 1} median={med:.2f} Å mean={mean:.2f} Å avg_pLDDT={avg_plddt:.2f}"
                 )
             if domain_meds:
                 # robust overall median across all domain pixels: median of medians is fine for printing
-                overall = float(np.nanmedian(np.array(domain_meds, dtype=float)))
+                overall_med = float(np.nanmedian(np.array(domain_meds, dtype=float)))
+                overall_mean = float(np.nanmean(np.array(domain_meds, dtype=float)))
+                overall_avg_plddt = float(
+                    np.nanmean(np.array(domain_avgs, dtype=float))
+                )
                 print(
-                    f"  > RigidBody {rb_idx} median-of-domains = {overall:.2f} Å mean-of-domains = {np.nanmean(np.array(domain_meds, dtype=float)):.2f} Å"
+                    f"  > RigidBody {rb_idx} median-of-domains = {overall_med:.2f} Å mean-of-domains = {overall_mean:.2f} Å avg_pLDDT-of-domains = {overall_avg_plddt:.2f}"
                 )
 
     def generate_visualization_artifacts(self):
@@ -845,7 +859,7 @@ class PAEProcessor:
         for i, rb in enumerate(self.rigid_bodies):
             ranges = []
             for tup in rb:
-                gstart, gend = tuple_to_global(tup)
+                gstart, gend = tuple_to_global(tup[:3])
                 if gstart is not None and gend is not None:
                     ranges.append((gstart, gend))
             if ranges:
@@ -1090,7 +1104,7 @@ class PAEProcessor:
                     "chain_id": segid if isinstance(segid, str) else str(segid),
                     "residues": {"start": int(start), "stop": int(stop)},
                 }
-                for (start, stop, segid) in rb
+                for (start, stop, segid, _) in rb
             ]
 
         fixed_bodies = []
@@ -1270,58 +1284,80 @@ class PAEProcessor:
         updated = False  # Flag to indicate if updates were made
 
         for outer_list in lists_of_tuples:
-            for start1, end1, chain1 in outer_list:
+            for start1, end1, chain1, avg1 in outer_list:
                 for other_outer_list in lists_of_tuples:
-                    for start2, end2, chain2 in other_outer_list:
+                    for start2, end2, chain2, avg2 in other_outer_list:
                         if chain1 == chain2:
                             if end1 + 1 == start2:
                                 # Ensure the pair is not considered in reverse
                                 if (
-                                    (start1, end1, chain1),
-                                    (start2, end2, chain2),
+                                    (start1, end1, chain1, avg1),
+                                    (start2, end2, chain2, avg2),
                                 ) not in seen_pairs:
                                     # print(
                                     #     f"Adjacent Rigid Domains: ({start1}, {end1}, '{chain1}') and ({start2}, {end2}, '{chain2}')"
                                     # )
-                                    updates[(start1, end1, chain1)] = (start1, end1 - 1)
-                                    updates[(start2, end2, chain2)] = (start2 + 1, end2)
+                                    updates[(start1, end1, chain1, avg1)] = (
+                                        start1,
+                                        end1 - 1,
+                                        avg1,
+                                    )
+                                    updates[(start2, end2, chain2, avg2)] = (
+                                        start2 + 1,
+                                        end2,
+                                        avg2,
+                                    )
                                     seen_pairs.add(
-                                        ((start1, end1, chain1), (start2, end2, chain2))
+                                        (
+                                            (start1, end1, chain1, avg1),
+                                            (start2, end2, chain2, avg2),
+                                        )
                                     )
                                     updated = True
 
                             elif end2 + 1 == start1:
                                 if (
-                                    (start2, end2, chain2),
-                                    (start1, end1, chain1),
+                                    (start2, end2, chain2, avg2),
+                                    (start1, end1, chain1, avg1),
                                 ) not in seen_pairs:
                                     # print(
                                     #     f"Adjacent Rigid Domains: ({start2}, {end2}, '{chain2}') and ({start1}, {end1}, '{chain1}')"
                                     # )
-                                    updates[(start2, end2, chain2)] = (start2, end2 - 1)
-                                    updates[(start1, end1, chain1)] = (start1 + 1, end1)
+                                    updates[(start2, end2, chain2, avg2)] = (
+                                        start2,
+                                        end2 - 1,
+                                        avg2,
+                                    )
+                                    updates[(start1, end1, chain1, avg1)] = (
+                                        start1 + 1,
+                                        end1,
+                                        avg1,
+                                    )
                                     seen_pairs.add(
-                                        ((start2, end2, chain2), (start1, end1, chain1))
+                                        (
+                                            (start2, end2, chain2, avg2),
+                                            (start1, end1, chain1, avg1),
+                                        )
                                     )
                                     updated = True
 
         # Apply the updates to the original list
         for i, outer_list in enumerate(lists_of_tuples):
-            for j, (start, end, chain) in enumerate(outer_list):
-                if (start, end, chain) in updates:
-                    new_start, new_end = updates[(start, end, chain)]
-                    lists_of_tuples[i][j] = (new_start, new_end, chain)
+            for j, (start, end, chain, avg) in enumerate(outer_list):
+                if (start, end, chain, avg) in updates:
+                    new_start, new_end, new_avg = updates[(start, end, chain, avg)]
+                    lists_of_tuples[i][j] = (new_start, new_end, chain, new_avg)
 
         return updated, lists_of_tuples
 
     @staticmethod
     def _merge_overlapping_domains(
-        domains: list[tuple[int, int, str]],
-    ) -> list[tuple[int, int, str]]:
+        domains: list[tuple[int, int, str, float]],
+    ) -> list[tuple[int, int, str, float]]:
         """
         Merge overlapping or contiguous residue ranges with the same segid,
         and deduplicate exact duplicates.
-        Input: list of (start, end, segid)
+        Input: list of (start, end, segid, avg_plddt)
         Output: merged list
         """
         # Deduplicate exact duplicates
@@ -1330,18 +1366,23 @@ class PAEProcessor:
         unique_domains.sort(key=lambda x: (x[2], x[0], x[1]))
         merged = []
         for d in unique_domains:
-            s, e, seg = d
+            s, e, seg, avg = d
             if s > e:
                 s, e = e, s
             if not merged or seg != merged[-1][2]:
-                merged.append((s, e, seg))
+                merged.append((s, e, seg, avg))
             else:
-                last_s, last_e, last_seg = merged[-1]
+                last_s, last_e, last_seg, last_avg = merged[-1]
                 # If overlapping or contiguous, merge
                 if s <= last_e + 1:
-                    merged[-1] = (min(last_s, s), max(last_e, e), seg)
+                    merged[-1] = (
+                        min(last_s, s),
+                        max(last_e, e),
+                        seg,
+                        (last_avg + avg) / 2,
+                    )
                 else:
-                    merged.append((s, e, seg))
+                    merged.append((s, e, seg, avg))
         return merged
 
 
@@ -1495,17 +1536,6 @@ def _mean_block(pae: np.ndarray, gstart: int, gend: int) -> float:
     if block.size == 0:
         return float("nan")
     return float(np.mean(block))
-
-
-def is_float(arg):
-    """
-    Returns True if arg can be converted to a float, False otherwise.
-    """
-    try:
-        float(arg)
-        return True
-    except (ValueError, TypeError):
-        return False
 
 
 if __name__ == "__main__":
