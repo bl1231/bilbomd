@@ -35,7 +35,8 @@ import {
 } from 'slices/alphafoldPaeVizSlice'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
-import PAESlider from './PAESlider'
+import PaeCutoffSlider from './PaeCutoffSlider'
+import LeidenResolutionSlider from './LeidenResolutionSlider'
 import PlddtSlider from './PlddtSlider'
 import PAEJiffyInstructions from './PAEJiffyInstructions'
 import ConstInpFile from './ConstInpFile'
@@ -49,8 +50,9 @@ interface FileWithDeets extends File {
 interface FormValues {
   pdb_file: FileWithDeets | null
   pae_file: FileWithDeets | null
-  pae_power: string
+  pae_cutoff: string
   plddt_cutoff: string
+  leiden_resolution: string
 }
 
 const Alphafold2PAEJiffy = () => {
@@ -88,8 +90,9 @@ const Alphafold2PAEJiffy = () => {
   const [formInitialValues, setFormInitialValues] = useState<FormValues>({
     pdb_file: originalFiles.pdb_file,
     pae_file: originalFiles.pae_file,
-    pae_power: '2.0',
-    plddt_cutoff: '50'
+    plddt_cutoff: '50',
+    pae_cutoff: '10',
+    leiden_resolution: '0.35'
   })
 
   const onSubmit = async (values: FormValues) => {
@@ -100,8 +103,9 @@ const Alphafold2PAEJiffy = () => {
     }
     form.append('pdb_file', values.pdb_file, values.pdb_file.name)
     form.append('pae_file', values.pae_file, values.pae_file.name)
-    form.append('pae_power', values.pae_power)
+    form.append('pae_cutoff', values.pae_cutoff)
     form.append('plddt_cutoff', values.plddt_cutoff)
+    form.append('leiden_resolution', values.leiden_resolution)
     try {
       const response = await calculateAf2PaeJiffy(form).unwrap()
       setUuid(response.uuid)
@@ -132,8 +136,9 @@ const Alphafold2PAEJiffy = () => {
   ) => {
     const newInitial = {
       ...formInitialValues,
-      pae_power: values.pae_power,
+      pae_cutoff: values.pae_cutoff,
       plddt_cutoff: values.plddt_cutoff,
+      leiden_resolution: values.leiden_resolution,
       pdb_file: originalFiles.pdb_file,
       pae_file: originalFiles.pae_file
     }
@@ -308,7 +313,7 @@ const Alphafold2PAEJiffy = () => {
                           Your CHARMM-compatible <code>const.inp</code> file was
                           successfully created!{' '}
                           {values && shapeCount >= 20
-                            ? `But with Clustering Weight = ${parseFloat(values.pae_power).toFixed(1)} there are ${shapeCount} rigid bodies which is too many for CHARMM to handle.`
+                            ? `But with this Clustering Configuration there are ${shapeCount} rigid bodies which is too many for CHARMM to handle.`
                             : ''}
                           <br />
                           {values && (
@@ -334,12 +339,23 @@ const Alphafold2PAEJiffy = () => {
                                     </TableRow>
                                     <TableRow>
                                       <TableCell>
-                                        <b>Clustering Weight</b>
+                                        <b>PAE Cutoff</b>
                                       </TableCell>
                                       <TableCell align="right">
-                                        {parseFloat(values.pae_power).toFixed(
+                                        {parseFloat(values.pae_cutoff).toFixed(
                                           1
                                         )}
+                                        Å
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>
+                                        <b>Leiden Resolution</b>
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {parseFloat(
+                                          values.leiden_resolution
+                                        ).toFixed(2)}
                                       </TableCell>
                                     </TableRow>
                                     <TableRow>
@@ -350,6 +366,7 @@ const Alphafold2PAEJiffy = () => {
                                         {parseFloat(
                                           values.plddt_cutoff
                                         ).toFixed(1)}
+                                        Å
                                       </TableCell>
                                     </TableRow>
                                     <TableRow>
@@ -480,8 +497,9 @@ const Alphafold2PAEJiffy = () => {
                               const resetValues = {
                                 pdb_file: null,
                                 pae_file: null,
-                                pae_power: '2.0',
-                                plddt_cutoff: '50'
+                                pae_cutoff: '10.0',
+                                plddt_cutoff: '50',
+                                leiden_resolution: '0.35'
                               }
                               resetForm({ values: resetValues })
                               setFormInitialValues(resetValues)
@@ -574,19 +592,26 @@ const Alphafold2PAEJiffy = () => {
                           })
                         }}
                       />
-                      {/* <Field
-                        name="pae_power"
-                        id="pae-power-slider"
-                        as={PAESlider}
+                      <Field
+                        name="pae_cutoff"
+                        id="pae-cutoff-slider"
+                        as={PaeCutoffSlider}
                         setFieldValue={setFieldValue}
-                        value={values.pae_power}
-                      /> */}
+                        value={values.pae_cutoff}
+                      />
                       <Field
                         name="plddt_cutoff"
                         id="plddt-cutoff-slider"
                         as={PlddtSlider}
                         setFieldValue={setFieldValue}
                         value={values.plddt_cutoff}
+                      />
+                      <Field
+                        name="leiden_resolution"
+                        id="leiden-resolution-slider"
+                        as={LeidenResolutionSlider}
+                        setFieldValue={setFieldValue}
+                        value={values.leiden_resolution}
                       />
                       {isSubmitting && (
                         <Box sx={{ mt: 1, width: '420px' }}>

@@ -17,6 +17,8 @@ const spawnPaeToConstDirect = async (params: {
   out_dir: string
   pae_power?: number
   plddt_cutoff?: number
+  pae_cutoff?: number
+  leiden_resolution?: number
 }): Promise<void> => {
   // Ensure output dir exists
   fs.mkdirSync(params.out_dir, { recursive: true })
@@ -31,11 +33,14 @@ const spawnPaeToConstDirect = async (params: {
 
   // Build args: pae_file is positional, then --pdb_file
   const args = [af2paeScript, params.in_pae, '--pdb_file', params.in_pdb]
-  // if (params.pae_power !== undefined) {
-  //   args.push('--pae_power', String(params.pae_power))
-  // }
   if (params.plddt_cutoff !== undefined) {
     args.push('--plddt_cutoff', String(params.plddt_cutoff))
+  }
+  if (params.pae_cutoff !== undefined) {
+    args.push('--pae_cutoff', String(params.pae_cutoff))
+  }
+  if (params.leiden_resolution !== undefined) {
+    args.push('--leiden_resolution', String(params.leiden_resolution))
   }
 
   const opts = { cwd: params.out_dir }
@@ -111,8 +116,9 @@ const createNewConstFile = async (req: Request, res: Response) => {
     upload.fields([
       { name: 'pdb_file', maxCount: 1 },
       { name: 'pae_file', maxCount: 1 },
-      { name: 'pae_power', maxCount: 1 },
-      { name: 'plddt_cutoff', maxCount: 1 }
+      { name: 'plddt_cutoff', maxCount: 1 },
+      { name: 'pae_cutoff', maxCount: 1 },
+      { name: 'leiden_resolution', maxCount: 1 }
     ])(req, res, async (err) => {
       if (err) {
         logger.error(err)
@@ -122,7 +128,7 @@ const createNewConstFile = async (req: Request, res: Response) => {
       }
 
       try {
-        const { pae_power, plddt_cutoff } = req.body
+        const { plddt_cutoff, pae_cutoff, leiden_resolution } = req.body
         const email = req.email
         const user = await User.findOne({ email }).exec()
         if (!user) {
@@ -150,8 +156,11 @@ const createNewConstFile = async (req: Request, res: Response) => {
           in_pdb: pdbFilePath,
           in_pae: paeFilePath,
           out_dir: jobDir,
-          pae_power: pae_power ? parseFloat(pae_power) : undefined,
-          plddt_cutoff: plddt_cutoff ? parseFloat(plddt_cutoff) : undefined
+          plddt_cutoff: plddt_cutoff ? parseFloat(plddt_cutoff) : undefined,
+          pae_cutoff: pae_cutoff ? parseFloat(pae_cutoff) : undefined,
+          leiden_resolution: leiden_resolution
+            ? parseFloat(leiden_resolution)
+            : undefined
         })
 
         logger.info(`PAE to const conversion completed for UUID: ${UUID}`)
