@@ -1,5 +1,15 @@
 # @bilbomd/ui
 
+## 1.23.1
+
+### Patch Changes
+
+- 35cf6b9: The new `pae2const.py` does not support `--pae-power` so we will hide it.
+- d5c73d2: Add `PAEMatrixPlotExplanation` with structured educational content to help users interpret teh PAE matrix.
+- 34c6f21: Update all deps
+- Updated dependencies [34c6f21]
+  - @bilbomd/mongodb-schema@1.9.3
+
 ## 1.23.0
 
 ### Minor Changes
