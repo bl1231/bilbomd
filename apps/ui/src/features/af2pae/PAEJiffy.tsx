@@ -304,87 +304,99 @@ const Alphafold2PAEJiffy = () => {
 
                     {status === 'completed' && (
                       <>
-                        <Alert
-                          severity={shapeCount >= 20 ? 'error' : 'success'}
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'flex-start',
+                            gap: 2
+                          }}
                         >
-                          <AlertTitle>
-                            {shapeCount >= 20 ? 'Error' : 'Success'}
-                          </AlertTitle>
-                          Your CHARMM-compatible <code>const.inp</code> file was
-                          successfully created!{' '}
-                          {values && shapeCount >= 20
-                            ? `But with this Clustering Configuration there are ${shapeCount} rigid bodies which is too many for CHARMM to handle.`
-                            : ''}
-                          <br />
-                          {values && (
-                            <>
-                              <TableContainer sx={{ width: '400px' }}>
-                                <Table aria-label="simple table">
-                                  <TableBody>
-                                    <TableRow>
-                                      <TableCell>
-                                        <b>PDB File</b>
-                                      </TableCell>
-                                      <TableCell align="right">
-                                        {values.pdb_file?.name}
-                                      </TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell>
-                                        <b>PAE File</b>
-                                      </TableCell>
-                                      <TableCell align="right">
-                                        {values.pae_file?.name}
-                                      </TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell>
-                                        <b>PAE Cutoff</b>
-                                      </TableCell>
-                                      <TableCell align="right">
-                                        {parseFloat(values.pae_cutoff).toFixed(
-                                          1
-                                        )}
-                                        Å
-                                      </TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell>
-                                        <b>Leiden Resolution</b>
-                                      </TableCell>
-                                      <TableCell align="right">
-                                        {parseFloat(
-                                          values.leiden_resolution
-                                        ).toFixed(2)}
-                                      </TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell>
-                                        <b>pLDDT Cutoff</b>
-                                      </TableCell>
-                                      <TableCell align="right">
-                                        {parseFloat(
-                                          values.plddt_cutoff
-                                        ).toFixed(1)}
-                                        Å
-                                      </TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell>
-                                        <b>CHARMM shapes (max 20)</b>
-                                      </TableCell>
-                                      <TableCell align="right">
-                                        {shapeCount}
-                                      </TableCell>
-                                    </TableRow>
-                                  </TableBody>
-                                </Table>
-                              </TableContainer>
-                            </>
-                          )}
-                        </Alert>
-
-                        <ConstInpFile constfile={constfile} />
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Alert
+                              severity={shapeCount >= 20 ? 'error' : 'success'}
+                            >
+                              <AlertTitle>
+                                {shapeCount >= 20 ? 'Error' : 'Success'}
+                              </AlertTitle>
+                              Your CHARMM-compatible <code>const.inp</code> file
+                              was successfully created!{' '}
+                              {values && shapeCount >= 20
+                                ? `But with this Clustering Configuration there are ${shapeCount} rigid bodies which is too many for CHARMM to handle.`
+                                : ''}
+                              <br />
+                              {values && (
+                                <>
+                                  <TableContainer sx={{ width: '400px' }}>
+                                    <Table aria-label="simple table">
+                                      <TableBody>
+                                        <TableRow>
+                                          <TableCell>
+                                            <b>PDB File</b>
+                                          </TableCell>
+                                          <TableCell align="right">
+                                            {values.pdb_file?.name}
+                                          </TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell>
+                                            <b>PAE File</b>
+                                          </TableCell>
+                                          <TableCell align="right">
+                                            {values.pae_file?.name}
+                                          </TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell>
+                                            <b>PAE Cutoff</b>
+                                          </TableCell>
+                                          <TableCell align="right">
+                                            {parseFloat(
+                                              values.pae_cutoff
+                                            ).toFixed(1)}
+                                            Å
+                                          </TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell>
+                                            <b>Leiden Resolution</b>
+                                          </TableCell>
+                                          <TableCell align="right">
+                                            {parseFloat(
+                                              values.leiden_resolution
+                                            ).toFixed(2)}
+                                          </TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell>
+                                            <b>pLDDT Cutoff</b>
+                                          </TableCell>
+                                          <TableCell align="right">
+                                            {parseFloat(
+                                              values.plddt_cutoff
+                                            ).toFixed(1)}
+                                            Å
+                                          </TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell>
+                                            <b>CHARMM shapes (max 20)</b>
+                                          </TableCell>
+                                          <TableCell align="right">
+                                            {shapeCount}
+                                          </TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
+                                  </TableContainer>
+                                </>
+                              )}
+                            </Alert>
+                          </Box>
+                          <Box sx={{ flex: 1, minWidth: 0, ml: 2 }}>
+                            <ConstInpFile constfile={constfile} />
+                          </Box>
+                        </Box>
                         <Box sx={{ mt: 2 }}>
                           <HeaderBox>
                             <Typography>Visualization</Typography>
