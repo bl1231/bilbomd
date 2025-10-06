@@ -574,13 +574,13 @@ const Alphafold2PAEJiffy = () => {
                           })
                         }}
                       />
-                      <Field
+                      {/* <Field
                         name="pae_power"
                         id="pae-power-slider"
                         as={PAESlider}
                         setFieldValue={setFieldValue}
                         value={values.pae_power}
-                      />
+                      /> */}
                       <Field
                         name="plddt_cutoff"
                         id="plddt-cutoff-slider"
