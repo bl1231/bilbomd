@@ -339,12 +339,23 @@ const Alphafold2PAEJiffy = () => {
                                     </TableRow>
                                     <TableRow>
                                       <TableCell>
-                                        <b>Clustering Config - PAE Cutoff</b>
+                                        <b>PAE Cutoff</b>
                                       </TableCell>
                                       <TableCell align="right">
                                         {parseFloat(values.pae_cutoff).toFixed(
                                           1
                                         )}
+                                        Å
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>
+                                        <b>Leiden Resolution</b>
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {parseFloat(
+                                          values.leiden_resolution
+                                        ).toFixed(2)}
                                       </TableCell>
                                     </TableRow>
                                     <TableRow>
@@ -355,6 +366,7 @@ const Alphafold2PAEJiffy = () => {
                                         {parseFloat(
                                           values.plddt_cutoff
                                         ).toFixed(1)}
+                                        Å
                                       </TableCell>
                                     </TableRow>
                                     <TableRow>

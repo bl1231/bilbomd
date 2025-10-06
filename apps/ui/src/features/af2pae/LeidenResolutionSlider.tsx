@@ -1,4 +1,4 @@
-import { Alert, Chip, Typography } from '@mui/material'
+import { Alert, AlertTitle, Chip, Typography } from '@mui/material'
 import Box from '@mui/material/Box'
 import Slider from '@mui/material/Slider'
 import Grid from '@mui/material/Grid'
@@ -29,7 +29,7 @@ export default function LeidenResolutionSlider({
   return (
     <Box sx={{ width: 420, mt: 4 }}>
       <Typography sx={{ mb: 1 }}>
-        Select <b>Leiden</b> resolution value (default is 0.35)
+        Select <b>Leiden Resolution</b> value (default is 0.35)
       </Typography>
       <Grid
         container
@@ -61,8 +61,34 @@ export default function LeidenResolutionSlider({
           />
         </Grid>
         <Alert severity="info">
-          The Leiden Resolution Higher resolution values lead to more smaller
-          communities, while lower resolutions lead to fewer larger communities.
+          <AlertTitle>Leiden Resolution (γ)</AlertTitle>
+
+          <Typography variant="body2">
+            Controls the granularity of clustering when grouping residues into
+            domains. Higher resolution values produce more, smaller clusters by
+            favoring finer community structure, while lower values produce
+            fewer, larger clusters by merging broader regions together.
+          </Typography>
+
+          <ul style={{ marginTop: 4, marginBottom: 4, paddingLeft: '1.5rem' }}>
+            <li>
+              <Typography variant="body2">
+                <strong>Lower values</strong> (e.g., 0.2–0.5) → coarse grouping;
+                large multi-domain clusters.
+              </Typography>
+            </li>
+            <li>
+              <Typography variant="body2">
+                <strong>Higher values</strong> (e.g., 0.5–1.0) → fine
+                segmentation; smaller, more detailed domains.
+              </Typography>
+            </li>
+          </ul>
+
+          <Typography variant="body2">
+            Use this to tune how aggressively the algorithm subdivides the PAE
+            network.
+          </Typography>
         </Alert>
       </Grid>
     </Box>

@@ -1,4 +1,4 @@
-import { Alert, Chip, Typography } from '@mui/material'
+import { Alert, AlertTitle, Chip, Typography } from '@mui/material'
 import Box from '@mui/material/Box'
 import Slider from '@mui/material/Slider'
 import Grid from '@mui/material/Grid'
@@ -29,7 +29,7 @@ export default function PaeCutoffSlider({
   return (
     <Box sx={{ width: 420, mt: 4 }}>
       <Typography sx={{ mb: 1 }}>
-        Select <b>PAE</b> cutoff value (default is 10)
+        Select <b>PAE Cutoff</b> value (default is 10)
       </Typography>
       <Grid
         container
@@ -53,7 +53,7 @@ export default function PaeCutoffSlider({
             valueLabelFormat={valuetext}
             getAriaValueText={valuetext}
             step={1}
-            min={10}
+            min={5}
             max={30}
             valueLabelDisplay="auto"
             onChange={handleChange}
@@ -61,10 +61,35 @@ export default function PaeCutoffSlider({
           />
         </Grid>
         <Alert severity="info">
-          The PAE cutoff value is used to determine if a rigid domain determined
-          from the PAE matrix should be included in the <b>const.inp</b> file. A{' '}
-          <b>lower</b> PAE cutoff will result in fewer rigid domains. A{' '}
-          <b>higher</b> PAE cutoff will result in more rigid domains.
+          <AlertTitle>PAE Cutoff (Å)</AlertTitle>
+
+          <Typography variant="body2">
+            Controls how permissive the graph is when connecting residues.
+            Residue pairs with predicted alignment error (PAE) values below this
+            cutoff are considered linked in the clustering graph; pairs above it
+            are ignored.
+          </Typography>
+
+          <ul style={{ marginTop: 4, marginBottom: 4, paddingLeft: '1.5rem' }}>
+            <li>
+              <Typography variant="body2">
+                <strong>Lower values</strong> (e.g., 6–8 Å) → only very
+                confident, close interactions are kept → smaller, tighter
+                clusters.
+              </Typography>
+            </li>
+            <li>
+              <Typography variant="body2">
+                <strong>Higher values</strong> (e.g., 12–20 Å) → include looser,
+                more uncertain relationships → larger, more diffuse clusters.
+              </Typography>
+            </li>
+          </ul>
+
+          <Typography variant="body2">
+            In practice, the cutoff determines how much “fuzziness” you allow
+            when identifying regions that move together.
+          </Typography>
         </Alert>
       </Grid>
     </Box>
