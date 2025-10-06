@@ -75,6 +75,7 @@ const Alphafold2PAEJiffy = () => {
   const [showFixed, setShowFixed] = useState(true)
   const [showClusters, setShowClusters] = useState(true)
   const [plddtData, setPlddtData] = useState<PLDDTData[]>([])
+  const [chainBoundaries, setChainBoundaries] = useState<number[]>([])
 
   const { data: statusData, isError: statusIsError } = useGetAf2PaeStatusQuery(
     uuid,
@@ -234,8 +235,9 @@ const Alphafold2PAEJiffy = () => {
       const reader = new FileReader()
       reader.onload = (e) => {
         const content = e.target?.result as string
-        const data = parsePLDDTFromPDB(content)
+        const { data, chainBoundaries } = parsePLDDTFromPDB(content)
         setPlddtData(data)
+        setChainBoundaries(chainBoundaries)
       }
       reader.readAsText(originalFiles.pdb_file)
     }
@@ -503,6 +505,7 @@ const Alphafold2PAEJiffy = () => {
                                 <PLDDTPlot
                                   plddtData={plddtData}
                                   plddtCutoff={parseFloat(values.plddt_cutoff)}
+                                  chainBoundaries={chainBoundaries}
                                 />
                               </Box>
                             </Box>
