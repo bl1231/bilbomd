@@ -116,7 +116,6 @@ const createNewConstFile = async (req: Request, res: Response) => {
     upload.fields([
       { name: 'pdb_file', maxCount: 1 },
       { name: 'pae_file', maxCount: 1 },
-      { name: 'pae_power', maxCount: 1 },
       { name: 'plddt_cutoff', maxCount: 1 },
       { name: 'pae_cutoff', maxCount: 1 },
       { name: 'leiden_resolution', maxCount: 1 }
@@ -129,8 +128,7 @@ const createNewConstFile = async (req: Request, res: Response) => {
       }
 
       try {
-        const { pae_power, plddt_cutoff, pae_cutoff, leiden_resolution } =
-          req.body
+        const { plddt_cutoff, pae_cutoff, leiden_resolution } = req.body
         const email = req.email
         const user = await User.findOne({ email }).exec()
         if (!user) {
@@ -158,7 +156,6 @@ const createNewConstFile = async (req: Request, res: Response) => {
           in_pdb: pdbFilePath,
           in_pae: paeFilePath,
           out_dir: jobDir,
-          pae_power: pae_power ? parseFloat(pae_power) : undefined,
           plddt_cutoff: plddt_cutoff ? parseFloat(plddt_cutoff) : undefined,
           pae_cutoff: pae_cutoff ? parseFloat(pae_cutoff) : undefined,
           leiden_resolution: leiden_resolution
