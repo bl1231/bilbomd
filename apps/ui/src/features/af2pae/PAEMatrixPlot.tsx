@@ -226,7 +226,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
           ctx.restore()
 
           ctx.lineWidth = 2
-          ctx.strokeStyle = '#d01a1aff'
+          ctx.strokeStyle = '#ff007f'
           ctx.strokeRect(
             Math.floor(x) + 0.5,
             Math.floor(y) + 0.5,
@@ -264,8 +264,8 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
           ctx.fillRect(x, y, w, h)
           ctx.restore()
 
-          ctx.lineWidth = 2
-          ctx.strokeStyle = '#d812c4ff'
+          ctx.lineWidth = 3
+          ctx.strokeStyle = '#000'
           ctx.strokeRect(
             Math.floor(x) + 0.5,
             Math.floor(y) + 0.5,
