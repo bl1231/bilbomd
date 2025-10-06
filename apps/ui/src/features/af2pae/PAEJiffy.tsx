@@ -42,6 +42,8 @@ import PAEJiffyInstructions from './PAEJiffyInstructions'
 import ConstInpFile from './ConstInpFile'
 import PAEMatrixPlot from './PAEMatrixPlot'
 import PAEMatrixPlotExplanation from './PAEMatrixPlotExplanation'
+import PLDDTPlot from './PLDDTPlot'
+import { parsePLDDTFromPDB, PLDDTData } from '../../utils/pdbUtils'
 
 interface FileWithDeets extends File {
   name: string
@@ -72,6 +74,7 @@ const Alphafold2PAEJiffy = () => {
   const [showRigid, setShowRigid] = useState(true)
   const [showFixed, setShowFixed] = useState(true)
   const [showClusters, setShowClusters] = useState(true)
+  const [plddtData, setPlddtData] = useState<PLDDTData[]>([])
 
   const { data: statusData, isError: statusIsError } = useGetAf2PaeStatusQuery(
     uuid,
@@ -224,6 +227,19 @@ const Alphafold2PAEJiffy = () => {
       setConstfile(constInpData)
     }
   }, [constInpData])
+
+  useEffect(() => {
+    if (status === 'completed' && originalFiles.pdb_file) {
+      // Assuming you can read the PDB file content; adjust if needed
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const content = e.target?.result as string
+        const data = parsePLDDTFromPDB(content)
+        setPlddtData(data)
+      }
+      reader.readAsText(originalFiles.pdb_file)
+    }
+  }, [status, originalFiles.pdb_file])
 
   const content = (
     <Grid
@@ -483,9 +499,15 @@ const Alphafold2PAEJiffy = () => {
                                   </Typography>
                                 )}
                               </Box>
-                              <Box sx={{ flex: 1 }}>
-                                <PAEMatrixPlotExplanation />
+                              <Box sx={{ flexShrink: 0, mr: 2 }}>
+                                <PLDDTPlot
+                                  plddtData={plddtData}
+                                  plddtCutoff={parseFloat(values.plddt_cutoff)}
+                                />
                               </Box>
+                            </Box>
+                            <Box sx={{ flex: 1 }}>
+                              <PAEMatrixPlotExplanation />
                             </Box>
                           </Paper>
                         </Box>
