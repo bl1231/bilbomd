@@ -1,5 +1,13 @@
 # @bilbomd/scoper
 
+## 1.4.2
+
+### Patch Changes
+
+- 34c6f21: Update all deps
+- Updated dependencies [34c6f21]
+  - @bilbomd/mongodb-schema@1.9.3
+
 ## 1.4.1
 
 ### Patch Changes

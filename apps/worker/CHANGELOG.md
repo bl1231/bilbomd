@@ -1,5 +1,20 @@
 # @bilbomd/worker
 
+## 1.19.0
+
+### Minor Changes
+
+- 8cba652: Complete refactor of `pae_ratios.py`
+  - Renamed to `pae2const.py`.
+  - Added numerous CLI arguments to adjust the clustering behavior.
+  - Improved ability to detect "weak" off-diagonal regions in the PAE matrix.
+
+### Patch Changes
+
+- 34c6f21: Update all deps
+- Updated dependencies [34c6f21]
+  - @bilbomd/mongodb-schema@1.9.3
+
 ## 1.18.6
 
 ### Patch Changes

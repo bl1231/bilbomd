@@ -1,5 +1,22 @@
 # @bilbomd/backend
 
+## 1.26.0
+
+### Minor Changes
+
+- 8cba652: Complete refactor of `pae_ratios.py`
+  - Renamed to `pae2const.py`.
+  - Added numerous CLI arguments to adjust the clustering behavior.
+  - Improved ability to detect "weak" off-diagonal regions in the PAE matrix.
+
+### Patch Changes
+
+- aa20f7f: For got to add a changeset for removing --pae-power
+- 3a183a5: Fixed `autorg.py` so it will handle SAXS dat files with extra stuff at the beginning or end.
+- 34c6f21: Update all deps
+- Updated dependencies [34c6f21]
+  - @bilbomd/mongodb-schema@1.9.3
+
 ## 1.25.0
 
 ### Minor Changes
