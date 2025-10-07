@@ -73,7 +73,9 @@ const Alphafold2PAEJiffy = () => {
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [showRigid, setShowRigid] = useState(true)
   const [showFixed, setShowFixed] = useState(true)
-  const [clusterVisibility, setClusterVisibility] = useState<boolean[]>([])
+  const [clusterVisibility, setClusterVisibility] = useState<
+    Record<number, boolean>
+  >({})
   const [plddtData, setPlddtData] = useState<PLDDTData[]>([])
   const [chainBoundaries, setChainBoundaries] = useState<number[]>([])
   const [submittedValues, setSubmittedValues] = useState<FormValues | null>(
@@ -222,7 +224,9 @@ const Alphafold2PAEJiffy = () => {
 
   useEffect(() => {
     if (viz?.clusters) {
-      setClusterVisibility(new Array(viz.clusters.length).fill(true))
+      const newVis: Record<number, boolean> = {}
+      viz.clusters.forEach((c) => (newVis[c.id] = true))
+      setClusterVisibility(newVis)
     }
   }, [viz])
 
@@ -668,11 +672,12 @@ const Alphafold2PAEJiffy = () => {
                             key={c.id}
                             control={
                               <Checkbox
-                                checked={clusterVisibility[c.id - 1] ?? true}
+                                checked={clusterVisibility[c.id] ?? true}
                                 onChange={(e) => {
-                                  const newVis = [...clusterVisibility]
-                                  newVis[c.id - 1] = e.target.checked
-                                  setClusterVisibility(newVis)
+                                  setClusterVisibility((prev) => ({
+                                    ...prev,
+                                    [c.id]: e.target.checked
+                                  }))
                                 }}
                                 size="small"
                               />
