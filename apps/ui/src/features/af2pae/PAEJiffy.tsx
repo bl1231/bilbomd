@@ -226,6 +226,11 @@ const Alphafold2PAEJiffy = () => {
     }
   }, [viz])
 
+  const plddtCutoff = useMemo(
+    () => parseFloat(submittedValues?.plddt_cutoff || '50'),
+    [submittedValues?.plddt_cutoff]
+  )
+
   const matrix = useMemo(() => {
     if (!vizOk || !binOk || !viz || !paeBuf) return null
     try {
@@ -721,7 +726,7 @@ const Alphafold2PAEJiffy = () => {
                   </Typography>
                   <PLDDTPlot
                     plddtData={plddtData}
-                    plddtCutoff={parseFloat(submittedValues.plddt_cutoff)}
+                    plddtCutoff={plddtCutoff}
                     chainBoundaries={chainBoundaries}
                   />
                 </Box>

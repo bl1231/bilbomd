@@ -122,4 +122,4 @@ const PLDDTPlot: React.FC<PLDDTPlotProps> = ({
   )
 }
 
-export default PLDDTPlot
+export default React.memo(PLDDTPlot)
