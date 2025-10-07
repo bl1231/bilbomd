@@ -336,10 +336,10 @@ const Alphafold2PAEJiffy = () => {
                             display: 'flex',
                             flexDirection: 'row',
                             alignItems: 'flex-start',
-                            gap: 2
+                            gap: 1
                           }}
                         >
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ flex: 1, minWidth: 0, m: 0, pt: 1 }}>
                             <Alert
                               severity={shapeCount >= 20 ? 'error' : 'success'}
                             >
@@ -420,7 +420,7 @@ const Alphafold2PAEJiffy = () => {
                               )}
                             </Alert>
                           </Box>
-                          <Box sx={{ flex: 1, minWidth: 0, ml: 2 }}>
+                          <Box sx={{ flex: 1, minWidth: 0, m: 0 }}>
                             <ConstInpFile constfile={constfile} />
                             <Box
                               sx={{
