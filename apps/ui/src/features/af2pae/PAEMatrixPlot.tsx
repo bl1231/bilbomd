@@ -97,7 +97,7 @@ type PAEMatrixPlotProps = {
   viz?: VizJSON
   showRigid?: boolean
   showFixed?: boolean
-  showClusters?: boolean
+  showClusters?: boolean[]
 }
 
 // Viridis colormap approximation using a small lookup table
@@ -148,7 +148,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
   viz,
   showRigid = true,
   showFixed = true,
-  showClusters = true
+  showClusters = []
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const topSchematicCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -190,7 +190,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
         if (
           (c.type === 'rigid' && showRigid === false) ||
           (c.type === 'fixed' && showFixed === false) ||
-          (c.type === 'cluster' && showClusters === false)
+          (c.type === 'cluster' && !showClusters[c.id - 1])
         ) {
           continue
         }
@@ -236,43 +236,41 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
         }
       }
 
-      // Draw bbox rectangles if showClusters is true
-      if (showClusters) {
-        for (const c of viz.clusters) {
-          if (!c.bbox) continue
-          const [x1, y1, x2, y2] = c.bbox
-          const x = residueToPx(x1, canvas.width, s, nCols)
-          const y = residueToPx(y1, canvas.height, s, nCols)
-          const x2Px = residueToPx(x2 + 1, canvas.width, s, nCols)
-          const y2Px = residueToPx(y2 + 1, canvas.height, s, nCols)
-          const w = x2Px - x
-          const h = y2Px - y
+      // Draw bbox rectangles for visible clusters
+      for (const c of viz.clusters) {
+        if (!c.bbox || !showClusters[c.id - 1]) continue
+        const [x1, y1, x2, y2] = c.bbox
+        const x = residueToPx(x1, canvas.width, s, nCols)
+        const y = residueToPx(y1, canvas.height, s, nCols)
+        const x2Px = residueToPx(x2 + 1, canvas.width, s, nCols)
+        const y2Px = residueToPx(y2 + 1, canvas.height, s, nCols)
+        const w = x2Px - x
+        const h = y2Px - y
 
-          rectsRef.current.push({
-            id: c.id,
-            type: 'cluster',
-            range: [x1, x2],
-            x,
-            y,
-            w,
-            h
-          })
+        rectsRef.current.push({
+          id: c.id,
+          type: 'cluster',
+          range: [x1, x2],
+          x,
+          y,
+          w,
+          h
+        })
 
-          ctx.save()
-          ctx.globalAlpha = 0.15
-          ctx.fillStyle = 'rgba(0,255,0,1)' // cluster color
-          ctx.fillRect(x, y, w, h)
-          ctx.restore()
+        ctx.save()
+        ctx.globalAlpha = 0.15
+        ctx.fillStyle = 'rgba(0,255,0,1)' // cluster color
+        ctx.fillRect(x, y, w, h)
+        ctx.restore()
 
-          ctx.lineWidth = 3
-          ctx.strokeStyle = '#000'
-          ctx.strokeRect(
-            Math.floor(x) + 0.5,
-            Math.floor(y) + 0.5,
-            Math.ceil(w) - 1,
-            Math.ceil(h) - 1
-          )
-        }
+        ctx.lineWidth = 3
+        ctx.strokeStyle = '#000'
+        ctx.strokeRect(
+          Math.floor(x) + 0.5,
+          Math.floor(y) + 0.5,
+          Math.ceil(w) - 1,
+          Math.ceil(h) - 1
+        )
       }
     }
     if (hovered) {

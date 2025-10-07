@@ -73,7 +73,7 @@ const Alphafold2PAEJiffy = () => {
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [showRigid, setShowRigid] = useState(true)
   const [showFixed, setShowFixed] = useState(true)
-  const [showClusters, setShowClusters] = useState(true)
+  const [clusterVisibility, setClusterVisibility] = useState<boolean[]>([])
   const [plddtData, setPlddtData] = useState<PLDDTData[]>([])
   const [chainBoundaries, setChainBoundaries] = useState<number[]>([])
   const [submittedValues, setSubmittedValues] = useState<FormValues | null>(
@@ -219,6 +219,12 @@ const Alphafold2PAEJiffy = () => {
   const { data: vizPng, isSuccess: vizPngOk } = useGetVizPngQuery(uuid, {
     skip: skipQuery
   })
+
+  useEffect(() => {
+    if (viz?.clusters) {
+      setClusterVisibility(new Array(viz.clusters.length).fill(true))
+    }
+  }, [viz])
 
   const matrix = useMemo(() => {
     if (!vizOk || !binOk || !viz || !paeBuf) return null
@@ -652,25 +658,30 @@ const Alphafold2PAEJiffy = () => {
                           }
                           label="Show fixed"
                         />
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={showClusters}
-                              onChange={(e) =>
-                                setShowClusters(e.target.checked)
-                              }
-                              size="small"
-                            />
-                          }
-                          label="Show clusters"
-                        />
+                        {viz?.clusters.map((c) => (
+                          <FormControlLabel
+                            key={c.id}
+                            control={
+                              <Checkbox
+                                checked={clusterVisibility[c.id - 1] ?? true}
+                                onChange={(e) => {
+                                  const newVis = [...clusterVisibility]
+                                  newVis[c.id - 1] = e.target.checked
+                                  setClusterVisibility(newVis)
+                                }}
+                                size="small"
+                              />
+                            }
+                            label={`Cluster ${c.id}`}
+                          />
+                        ))}
                       </FormGroup>{' '}
                       <PAEMatrixPlot
                         matrix={matrix}
                         viz={viz}
                         showRigid={showRigid}
                         showFixed={showFixed}
-                        showClusters={showClusters}
+                        showClusters={clusterVisibility}
                       />
                     </>
                   ) : vizPngOk && vizPng ? (
