@@ -1,5 +1,14 @@
 # @bilbomd/ui
 
+## 1.23.2
+
+### Patch Changes
+
+- 32d385f: Added a pLDDT plot to the PAE Jiffy visualization component
+  improved the performance by memoizing the PAE matrix canvas
+  Implemented a few improvements to the cluster toggle overlay visualizations
+- 8aa0093: Add pae_cutoff and leiden_resolution to PAE Jiffy
+
 ## 1.23.1
 
 ### Patch Changes
