@@ -612,11 +612,11 @@ const Alphafold2PAEJiffy = () => {
       </Grid>
       {status === 'completed' && submittedValues && (
         <>
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ my: 2 }}>
             <HeaderBox>
               <Typography>Visualization</Typography>
             </HeaderBox>
-            <Paper sx={{ p: 1 }}>
+            <Paper sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
                 <Box sx={{ flexShrink: 0, mr: 2 }}>
                   <Typography

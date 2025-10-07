@@ -52,7 +52,7 @@ const PAEMatrixPlotExplanation = () => {
             letterSpacing: '1px'
           }}
         >
-          Explanation
+          Interpreting the PAE Matrix
         </Typography>
       </AccordionSummary>
       <AccordionDetails>
