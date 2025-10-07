@@ -617,51 +617,62 @@ const Alphafold2PAEJiffy = () => {
               <Typography>Visualization</Typography>
             </HeaderBox>
             <Paper sx={{ p: 1 }}>
-              <FormGroup
-                row
-                sx={{ mb: 1 }}
-              >
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={showRigid}
-                      onChange={(e) => setShowRigid(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Show rigid"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={showFixed}
-                      onChange={(e) => setShowFixed(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Show fixed"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={showClusters}
-                      onChange={(e) => setShowClusters(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Show clusters"
-                />
-              </FormGroup>
               <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
                 <Box sx={{ flexShrink: 0, mr: 2 }}>
+                  <Typography
+                    variant="h5"
+                    sx={{ mb: 1 }}
+                  >
+                    PAE Matrix with clustering results overlaid
+                  </Typography>
                   {matrix ? (
-                    <PAEMatrixPlot
-                      matrix={matrix}
-                      viz={viz}
-                      showRigid={showRigid}
-                      showFixed={showFixed}
-                      showClusters={showClusters}
-                    />
+                    <>
+                      {' '}
+                      <FormGroup
+                        row
+                        sx={{ mb: 1 }}
+                      >
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={showRigid}
+                              onChange={(e) => setShowRigid(e.target.checked)}
+                              size="small"
+                            />
+                          }
+                          label="Show rigid"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={showFixed}
+                              onChange={(e) => setShowFixed(e.target.checked)}
+                              size="small"
+                            />
+                          }
+                          label="Show fixed"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={showClusters}
+                              onChange={(e) =>
+                                setShowClusters(e.target.checked)
+                              }
+                              size="small"
+                            />
+                          }
+                          label="Show clusters"
+                        />
+                      </FormGroup>{' '}
+                      <PAEMatrixPlot
+                        matrix={matrix}
+                        viz={viz}
+                        showRigid={showRigid}
+                        showFixed={showFixed}
+                        showClusters={showClusters}
+                      />
+                    </>
                   ) : vizPngOk && vizPng ? (
                     <img
                       alt="PAE visualization"
@@ -690,7 +701,13 @@ const Alphafold2PAEJiffy = () => {
                     </Typography>
                   )}
                 </Box>
-                <Box sx={{ flexShrink: 0, mr: 2 }}>
+                <Box sx={{ flexShrink: 0, mr: 2, pl: 2 }}>
+                  <Typography
+                    variant="h5"
+                    sx={{ mb: 1 }}
+                  >
+                    pLDDT Plot
+                  </Typography>
                   <PLDDTPlot
                     plddtData={plddtData}
                     plddtCutoff={parseFloat(submittedValues.plddt_cutoff)}
