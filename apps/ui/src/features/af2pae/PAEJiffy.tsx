@@ -176,6 +176,15 @@ const Alphafold2PAEJiffy = () => {
   })
 
   // --- PAE viz helpers start
+  // Convert Base64 string (from RTK transformResponse) back to ArrayBuffer
+  function base64ToArrayBuffer(b64: string): ArrayBuffer {
+    const binary = atob(b64)
+    const len = binary.length
+    const bytes = new Uint8Array(len)
+    for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i)
+    return bytes.buffer
+  }
+
   function reshapeFloat32(
     buf: ArrayBuffer,
     length: number,
@@ -210,11 +219,11 @@ const Alphafold2PAEJiffy = () => {
   const matrix = useMemo(() => {
     if (!vizOk || !binOk || !viz || !paeBuf) return null
     try {
-      return reshapeFloat32(
-        paeBuf as ArrayBuffer,
-        viz.length,
-        viz.downsample ?? 1
-      )
+      const buf =
+        typeof paeBuf === 'string'
+          ? base64ToArrayBuffer(paeBuf)
+          : (paeBuf as ArrayBuffer)
+      return reshapeFloat32(buf, viz.length, viz.downsample ?? 1)
     } catch (e) {
       console.error('Failed to parse pae.bin', e)
       return null
@@ -413,6 +422,42 @@ const Alphafold2PAEJiffy = () => {
                           </Box>
                           <Box sx={{ flex: 1, minWidth: 0, ml: 2 }}>
                             <ConstInpFile constfile={constfile} />
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                flexDirection: 'row',
+                                pt: 2,
+                                gap: 2
+                              }}
+                            >
+                              <Download uuid={uuid} />
+                              <Button
+                                variant="contained"
+                                onClick={() =>
+                                  handleTryNewParameters(values, resetForm)
+                                }
+                              >
+                                Try New Parameters
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                type="button"
+                                onClick={() => {
+                                  handleReset()
+                                  const resetValues = {
+                                    pdb_file: null,
+                                    pae_file: null,
+                                    pae_cutoff: '10.0',
+                                    plddt_cutoff: '50',
+                                    leiden_resolution: '0.35'
+                                  }
+                                  resetForm({ values: resetValues })
+                                  setFormInitialValues(resetValues)
+                                }}
+                              >
+                                Reset
+                              </Button>
+                            </Box>
                           </Box>
                         </Box>
                         <Box sx={{ mt: 2 }}>
@@ -474,7 +519,7 @@ const Alphafold2PAEJiffy = () => {
                                 ) : vizPngOk && vizPng ? (
                                   <img
                                     alt="PAE visualization"
-                                    src={URL.createObjectURL(vizPng as Blob)}
+                                    src={vizPng as string}
                                     style={{
                                       maxWidth: 420,
                                       border: '1px solid #ccc'
@@ -513,38 +558,6 @@ const Alphafold2PAEJiffy = () => {
                               <PAEMatrixPlotExplanation />
                             </Box>
                           </Paper>
-                        </Box>
-                        <Box
-                          sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}
-                        >
-                          <Download uuid={uuid} />
-                          <Button
-                            variant="contained"
-                            onClick={() =>
-                              handleTryNewParameters(values, resetForm)
-                            }
-                          >
-                            Try New Parameters
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            type="button"
-                            onClick={() => {
-                              handleReset()
-                              const resetValues = {
-                                pdb_file: null,
-                                pae_file: null,
-                                pae_cutoff: '10.0',
-                                plddt_cutoff: '50',
-                                leiden_resolution: '0.35'
-                              }
-                              resetForm({ values: resetValues })
-                              setFormInitialValues(resetValues)
-                            }}
-                            sx={{ ml: 2 }}
-                          >
-                            Reset
-                          </Button>
                         </Box>
                       </>
                     )}
