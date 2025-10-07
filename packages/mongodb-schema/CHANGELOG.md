@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 1.9.4
+
+### Patch Changes
+
+- 3a61d44: Update pnpm dependencies
+
 ## 1.9.3
 
 ### Patch Changes

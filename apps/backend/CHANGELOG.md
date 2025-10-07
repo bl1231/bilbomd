@@ -1,5 +1,13 @@
 # @bilbomd/backend
 
+## 1.26.2
+
+### Patch Changes
+
+- 3a61d44: Update pnpm dependencies
+- Updated dependencies [3a61d44]
+  - @bilbomd/mongodb-schema@1.9.4
+
 ## 1.26.1
 
 ### Patch Changes

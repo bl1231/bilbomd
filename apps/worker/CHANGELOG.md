@@ -1,5 +1,13 @@
 # @bilbomd/worker
 
+## 1.19.1
+
+### Patch Changes
+
+- 3a61d44: Update pnpm dependencies
+- Updated dependencies [3a61d44]
+  - @bilbomd/mongodb-schema@1.9.4
+
 ## 1.19.0
 
 ### Minor Changes
