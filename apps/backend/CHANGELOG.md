@@ -1,5 +1,57 @@
 # @bilbomd/backend
 
+## 1.26.1
+
+### Patch Changes
+
+- 8aa0093: Add pae_cutoff and leiden_resolution to PAE Jiffy
+
+## 1.26.0
+
+### Minor Changes
+
+- 8cba652: Complete refactor of `pae_ratios.py`
+  - Renamed to `pae2const.py`.
+  - Added numerous CLI arguments to adjust the clustering behavior.
+  - Improved ability to detect "weak" off-diagonal regions in the PAE matrix.
+
+### Patch Changes
+
+- aa20f7f: For got to add a changeset for removing --pae-power
+- 3a183a5: Fixed `autorg.py` so it will handle SAXS dat files with extra stuff at the beginning or end.
+- 34c6f21: Update all deps
+- Updated dependencies [34c6f21]
+  - @bilbomd/mongodb-schema@1.9.3
+
+## 1.25.0
+
+### Minor Changes
+
+- 156f701: Added a visual feedback to PAE Jiffy.
+  - Add new af2pae routes and controllers to the backend
+  - Add new RTK Querys and slices to the frontend
+  - Add new React Component to display the PAE matrix and the calculated const rigid/fixed regions.
+
+## 1.24.2
+
+### Patch Changes
+
+- 67e9cb5: add biopython to backend docker image
+
+## 1.24.1
+
+### Patch Changes
+
+- f17071f: move python `pae_ratios.py` script to tools/python
+  move python `pdb2crd.py` script to tools/python
+  move segid mol type util functions to `pdb_utils.py` script in tools/python
+
+## 1.24.0
+
+### Minor Changes
+
+- c787560: Refactor the af2pae route and controller to use `pae_ratios.py` directly instead of queing to run the pdb2crd code in worker.
+
 ## 1.23.6
 
 ### Patch Changes

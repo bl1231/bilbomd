@@ -1,4 +1,4 @@
-import { Alert, Chip, Typography } from '@mui/material'
+import { Alert, AlertTitle, Chip, Typography } from '@mui/material'
 import Box from '@mui/material/Box'
 import Slider from '@mui/material/Slider'
 import Grid from '@mui/material/Grid'
@@ -29,14 +29,18 @@ export default function PlddtSlider({
   return (
     <Box sx={{ width: 420, mt: 4 }}>
       <Typography sx={{ mb: 1 }}>
-        Select <b>pLDDT</b> cutoff value (default is 50)
+        Select <b>pLDDT Cutoff</b> value (default is 50)
       </Typography>
-      <Grid container spacing={2} alignItems='center'>
+      <Grid
+        container
+        spacing={2}
+        alignItems="center"
+      >
         <Grid>
           <Chip
             label={value}
-            variant='outlined'
-            color='success'
+            variant="outlined"
+            color="success"
             sx={{
               width: 60, // Set a fixed width
               justifyContent: 'center' // Center the label
@@ -51,12 +55,13 @@ export default function PlddtSlider({
             step={1}
             min={10}
             max={98}
-            valueLabelDisplay='auto'
+            valueLabelDisplay="auto"
             onChange={handleChange}
             track={false}
           />
         </Grid>
-        <Alert severity='info'>
+        <Alert severity="info">
+          <AlertTitle>pLDDT Cutoff (Å)</AlertTitle>
           The pLDDT cutoff value is used to determine if a rigid domain
           determined from the PAE matrix should be included in the{' '}
           <b>const.inp</b> file. A <b>lower</b> pLDDT cutoff will result in more

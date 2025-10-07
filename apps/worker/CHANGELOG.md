@@ -1,5 +1,42 @@
 # @bilbomd/worker
 
+## 1.19.0
+
+### Minor Changes
+
+- 8cba652: Complete refactor of `pae_ratios.py`
+  - Renamed to `pae2const.py`.
+  - Added numerous CLI arguments to adjust the clustering behavior.
+  - Improved ability to detect "weak" off-diagonal regions in the PAE matrix.
+
+### Patch Changes
+
+- 34c6f21: Update all deps
+- Updated dependencies [34c6f21]
+  - @bilbomd/mongodb-schema@1.9.3
+
+## 1.18.6
+
+### Patch Changes
+
+- f17071f: move python `pae_ratios.py` script to tools/python
+  move python `pdb2crd.py` script to tools/python
+  move segid mol type util functions to `pdb_utils.py` script in tools/python
+
+## 1.18.5
+
+### Patch Changes
+
+- 5e867df: remove CHARMM NTER patch
+
+## 1.18.4
+
+### Patch Changes
+
+- a37ac24: Cleanup some of the Typescript errors encountered when turning on 'strict' is true.
+- db8ebb2: Refactor `spawnPaeToConst` to handle new `pae_ratios.py` command line args/
+  Adjust `apps/worker/scripts/nersc/gen-bilbomd-slurm-file.sh` to handle new `pa_ratios.py` command line args.
+
 ## 1.18.3
 
 ### Patch Changes

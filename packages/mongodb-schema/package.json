@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/mongodb-schema",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "description": "BilboMD Mongoose Schema",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,9 +25,8 @@
   "homepage": "https://github.com/bl1231/bilbomd/tree/main/packages/mongodb-schema#readme",
   "sideEffects": false,
   "dependencies": {
-    "mongoose": "^8.18.1"
+    "mongoose": "^8.19.1"
   },
-  "devDependencies": {},
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

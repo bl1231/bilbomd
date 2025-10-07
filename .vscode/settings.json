@@ -36,14 +36,21 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[python]": {
-    "editor.defaultFormatter": "ms-python.black-formatter",
     "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    },
     "editor.tabSize": 4,
     "editor.insertSpaces": true,
     "editor.detectIndentation": false,
-    "editor.rulers": [79, 88]
+    "editor.rulers": [
+      79,
+      88
+    ],
+    "editor.formatOnPaste": true,
   },
-
   // Prettier global options (kept from backend)
   "prettier.semi": false,
 
@@ -63,5 +70,6 @@
     "**/node_modules": true,
     "**/dist": true,
     "**/build": true
-  }
+  },
+  "ruff.lineLength": 88
 }

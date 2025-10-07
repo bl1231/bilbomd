@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-import os
-import sys
 import json
-import shutil
-from pathlib import Path
-import yaml
+import os
 import re
+import shutil
+import sys
+from pathlib import Path
+
 import numpy as np
+import yaml
 
 # -----------------------------
 # Argument and Environment Setup
@@ -111,7 +112,6 @@ def prepare_input(workdir, upload_dir):
 
 
 def prepare_openmm_config(config, params):
-
     # Locate const.inp (optional for Auto/AlphaFold pipelines)
     const_inp_path = os.path.join(config["workdir"], "const.inp")
     const_exists = os.path.exists(const_inp_path)
@@ -278,26 +278,26 @@ def create_status_file(workdir):
 
 def generate_slurm_header(config):
     header = f"""#!/bin/bash -l
-#SBATCH --qos={config['queue']}
-#SBATCH --nodes={config['nodes']}
-#SBATCH --time={config['walltime']}
+#SBATCH --qos={config["queue"]}
+#SBATCH --nodes={config["nodes"]}
+#SBATCH --time={config["walltime"]}
 #SBATCH --licenses=cfs,scratch
-#SBATCH --constraint={config['constraint']}
-#SBATCH --account={config['project']}
-#SBATCH --output={config['workdir']}/slurm-%j.out
-#SBATCH --error={config['workdir']}/slurm-%j.err
-#SBATCH --mail-type={config['mailtype']}
-#SBATCH --mail-user={config['mailuser']}
+#SBATCH --constraint={config["constraint"]}
+#SBATCH --account={config["project"]}
+#SBATCH --output={config["workdir"]}/slurm-%j.out
+#SBATCH --error={config["workdir"]}/slurm-%j.err
+#SBATCH --mail-type={config["mailtype"]}
+#SBATCH --mail-user={config["mailuser"]}
 
 # OpenMP settings:
-export OMP_NUM_THREADS={config['num_cores']}
+export OMP_NUM_THREADS={config["num_cores"]}
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
 
 # Global ENV variables
-export UPLOAD_DIR="{config['upload_dir']}"
-export WORKDIR="{config['workdir']}"
-export STATUS_FILE="{config['workdir']}/status.txt"
+export UPLOAD_DIR="{config["upload_dir"]}"
+export WORKDIR="{config["workdir"]}"
+export STATUS_FILE="{config["workdir"]}/status.txt"
 """
     return header
 
@@ -337,9 +337,9 @@ echo "Running AlphaFold..."
 srun --gpus=4 \\
      --job-name alphafold \\
      podman-hpc run --rm --gpu \\
-        -v {config['workdir']}:/bilbomd/work \\
-        -v {config['upload_dir']}:/cfs \\
-        {config['af_worker']} /bin/bash -c "
+        -v {config["workdir"]}:/bilbomd/work \\
+        -v {config["upload_dir"]}:/cfs \\
+        {config["af_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
             colabfold_batch --num-models=3 --amber --use-gpu-relax --num-recycle=4 af-entities.fasta alphafold
@@ -361,15 +361,15 @@ def generate_pae2const_section(config, params):
 update_status pae2constraints Running
 echo "Generating constraints.yaml from PAE..."
 srun --ntasks=1 \\
-     --cpus-per-task={config['num_cores']} \\
+     --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name pae2constraints \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        {config['bilbomd_worker']} /bin/bash -c "
+        {config["bilbomd_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work
-            python /app/scripts/pae_ratios.py {pae_file} \\
+            python /app/scripts/pae2const.py {pae_file} \\
                 --pdb_file {pdb_file} \\
                 --emit-constraints constraints.yaml \\
                 --no-const
@@ -386,7 +386,7 @@ srun --ntasks=1 \\
      --job-name consmerge \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        {config['bilbomd_worker']} /bin/bash -c "
+        {config["bilbomd_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work
             python /app/scripts/nersc/merge_constraints.py openmm_config.yaml constraints.yaml openmm_config.yaml
@@ -405,14 +405,14 @@ def generate_minimize_section(config):
 update_status minimize Running
 echo "Running OpenMM Minimization..."
 srun --ntasks=1 \\
-     --cpus-per-task={config['num_cores']} \\
+     --cpus-per-task={config["num_cores"]} \\
      --gpus-per-task=1 \\
      --cpu-bind=cores \\
      --job-name minimize \\
      podman-hpc run --rm --gpu \\
         -v $WORKDIR:/bilbomd/work \\
         -v $UPLOAD_DIR:/cfs \\
-        {config['openmm_worker']} /bin/bash -c "
+        {config["openmm_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
             python /app/scripts/openmm/minimize.py openmm_config.yaml
@@ -470,12 +470,12 @@ def generate_initial_foxs_analysis_section(config, params):
 update_status initfoxs Running
 echo "Running initial FoXS analysis on minimized structure..."
 srun --ntasks=1 \\
-     --cpus-per-task={config['num_cores']} \\
+     --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name initfoxs \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        {config['bilbomd_worker']} /bin/bash -c "
+        {config["bilbomd_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
             foxs \\
@@ -498,13 +498,13 @@ def generate_heat_section(config):
 update_status heat Running
 echo "Running OpenMM Heating..."
 srun --ntasks=1 \\
-     --cpus-per-task={config['num_cores']} \\
+     --cpus-per-task={config["num_cores"]} \\
      --gpus-per-task=1 \\
      --cpu-bind=cores \\
      --job-name heat \\
      podman-hpc run --rm --gpu \\
         -v $WORKDIR:/bilbomd/work \\
-        {config['openmm_worker']} /bin/bash -c "
+        {config["openmm_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
             python /app/scripts/openmm/heat.py openmm_config.yaml
@@ -559,7 +559,7 @@ update_status md Running
          --env SLURM_NTASKS \\
          --env CUDA_VISIBLE_DEVICES \\
          -v $WORKDIR:/bilbomd/work \\
-         {config['openmm_worker']} /bin/bash -c "
+         {config["openmm_worker"]} /bin/bash -c "
              set -e
              export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
              cd /bilbomd/work/ &&
@@ -582,12 +582,12 @@ PDB_DIR=$WORKDIR/openmm/md
 FOXSDIR=$WORKDIR/foxs
 mkdir -p $FOXSDIR
 srun --ntasks=1 \\
-     --cpus-per-task={config['num_cores']} \\
+     --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name foxs \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        {config['bilbomd_worker']} /bin/bash -c "
+        {config["bilbomd_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work/openmm/md &&
             python /app/scripts/nersc/run-foxs-after-openmm.py --root .
@@ -610,18 +610,18 @@ echo "Running MultiFoXS..."
 MFOXSDIR=$WORKDIR/multifoxs
 mkdir -p $MFOXSDIR
 srun --ntasks=1 \\
-     --cpus-per-task={config['num_cores']} \\
+     --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name multifoxs \\
      podman-hpc run --rm \\
          -v $WORKDIR:/bilbomd/work \\
-         {config['bilbomd_worker']} /bin/bash -c "
+         {config["bilbomd_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work/multifoxs &&
             python /app/scripts/nersc/run-multifoxs.py \\
                 --foxs-list ../openmm/md/foxs_dat_files.txt \\
                 --prefix ../openmm/md \\
-                --saxs-data ../{params.get('data_file')} \\
+                --saxs-data ../{params.get("data_file")} \\
                 --out-list ./foxs_dat_files_for_multifoxs.txt \\
                 --log ./multi_foxs.log
         "
@@ -642,13 +642,13 @@ echo "Running additional analysis..."
 ANALYSIS_DIR=$WORKDIR/analysis
 mkdir -p $ANALYSIS_DIR
 srun --ntasks=1 \\
-     --cpus-per-task={config['num_cores']} \\
+     --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name analysis \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
         -v $UPLOAD_DIR:/cfs \\
-        {config['bilbomd_worker']} /bin/bash -c "
+        {config["bilbomd_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work/analysis &&
             python /app/scripts/openmm/plot_rgyrs.py /bilbomd/work/openmm/md
@@ -666,7 +666,7 @@ def generate_end_matters(config):
 # --------------------------------------------------------------------------------------
 # End of processing
 echo "All steps completed successfully."
-echo DONE processing {config['uuid']}
+echo DONE processing {config["uuid"]}
 sleep 20
 sacct --format=JobID,JobName,Account,AllocCPUS,State,Elapsed,ExitCode,DerivedExitCode,Start,End -j $SLURM_JOB_ID
 """

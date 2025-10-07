@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 1.9.3
+
+### Patch Changes
+
+- 34c6f21: Update all deps
+
 ## 1.9.2
 
 ### Patch Changes

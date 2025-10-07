@@ -268,21 +268,18 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
   const errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
 
   const pythonBin = params.python_bin ?? '/opt/envs/base/bin/python'
-  const af2paeScript = params.script_path ?? '/app/scripts/pae_ratios.py'
+  const af2paeScript = params.script_path ?? '/app/scripts/pae2const.py'
 
   // Build CLI args per new usage:
-  // usage: pae_ratios.py [-h] (--crd_file CRD_FILE | --pdb_file PDB_FILE)
-  //                      [--pae_power PAE_POWER] [--plddt_cutoff PLDDT_CUTOFF]
-  //                      [--emit-constraints EMIT_CONSTRAINTS] [--no-const]
-  //                      pae_file
+
   const fileFlag = hasCRD
     ? ['--crd_file', params.in_crd as string]
     : ['--pdb_file', params.in_pdb as string]
 
   const optionalFlags: string[] = []
-  if (params.pae_power !== undefined) {
-    optionalFlags.push('--pae_power', String(params.pae_power))
-  }
+  // if (params.pae_power !== undefined) {
+  //   optionalFlags.push('--pae_power', String(params.pae_power))
+  // }
   if (params.plddt_cutoff !== undefined) {
     optionalFlags.push('--plddt_cutoff', String(params.plddt_cutoff))
   }

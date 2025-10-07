@@ -1,5 +1,33 @@
 # @bilbomd/ui
 
+## 1.23.2
+
+### Patch Changes
+
+- 32d385f: Added a pLDDT plot to the PAE Jiffy visualization component
+  improved the performance by memoizing the PAE matrix canvas
+  Implemented a few improvements to the cluster toggle overlay visualizations
+- 8aa0093: Add pae_cutoff and leiden_resolution to PAE Jiffy
+
+## 1.23.1
+
+### Patch Changes
+
+- 35cf6b9: The new `pae2const.py` does not support `--pae-power` so we will hide it.
+- d5c73d2: Add `PAEMatrixPlotExplanation` with structured educational content to help users interpret teh PAE matrix.
+- 34c6f21: Update all deps
+- Updated dependencies [34c6f21]
+  - @bilbomd/mongodb-schema@1.9.3
+
+## 1.23.0
+
+### Minor Changes
+
+- 156f701: Added a visual feedback to PAE Jiffy.
+  - Add new af2pae routes and controllers to the backend
+  - Add new RTK Querys and slices to the frontend
+  - Add new React Component to display the PAE matrix and the calculated const rigid/fixed regions.
+
 ## 1.22.2
 
 ### Patch Changes
