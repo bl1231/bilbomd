@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 1.26.1
+
+### Patch Changes
+
+- 8aa0093: Add pae_cutoff and leiden_resolution to PAE Jiffy
+
 ## 1.26.0
 
 ### Minor Changes
