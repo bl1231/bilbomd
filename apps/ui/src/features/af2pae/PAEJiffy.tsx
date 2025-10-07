@@ -76,6 +76,9 @@ const Alphafold2PAEJiffy = () => {
   const [showClusters, setShowClusters] = useState(true)
   const [plddtData, setPlddtData] = useState<PLDDTData[]>([])
   const [chainBoundaries, setChainBoundaries] = useState<number[]>([])
+  const [submittedValues, setSubmittedValues] = useState<FormValues | null>(
+    null
+  )
 
   const { data: statusData, isError: statusIsError } = useGetAf2PaeStatusQuery(
     uuid,
@@ -115,6 +118,7 @@ const Alphafold2PAEJiffy = () => {
       setUuid(response.uuid)
       setJobStartTime(Date.now())
       setSuccess(true)
+      setSubmittedValues(values)
       setFormInitialValues(values)
     } catch (error) {
       console.error('Error submitting form:', error)
@@ -253,451 +257,455 @@ const Alphafold2PAEJiffy = () => {
   }, [status, originalFiles.pdb_file])
 
   const content = (
-    <Grid
-      container
-      spacing={2}
-    >
-      <Grid size={{ xs: 12 }}>
-        <PAEJiffyInstructions />
-      </Grid>
+    <>
+      <Grid
+        container
+        spacing={2}
+      >
+        <Grid size={{ xs: 12 }}>
+          <PAEJiffyInstructions />
+        </Grid>
 
-      <Grid size={{ xs: 12 }}>
-        <HeaderBox>
-          <Typography>Create const.inp from AlphaFold PAE</Typography>
-        </HeaderBox>
-        <Paper sx={{ p: 1 }}>
-          <Formik
-            initialValues={formInitialValues}
-            validationSchema={af2paeJiffySchema}
-            onSubmit={onSubmit}
-            enableReinitialize={true}
-          >
-            {({
-              values,
-              touched,
-              errors,
-              isValid,
-              isSubmitting,
-              setFieldValue,
-              setFieldTouched,
-              resetForm
-            }) => {
-              if (success) {
-                return (
-                  <>
-                    {success && status !== 'completed' && (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          my: 3
-                        }}
-                      >
-                        <CircularProgress />
-                        <Typography sx={{ mt: 2 }}>
-                          Waiting for job to complete... current status:{' '}
-                          {status}
-                        </Typography>
-                        <Typography sx={{ mt: 1, color: 'error.main' }}>
-                          Jobs can take 5-6 minutes.
-                        </Typography>
-                        <Typography
-                          sx={{ mt: 1, fontSize: '1.2rem' }}
-                          data-testid="job-timer"
-                        >
-                          Time elapsed:{' '}
-                          {`${Math.floor(timeElapsed / 60)
-                            .toString()
-                            .padStart(2, '0')} min ${(timeElapsed % 60)
-                            .toString()
-                            .padStart(2, '0')} sec`}
-                        </Typography>
-                      </Box>
-                    )}
-                    {statusIsError && (
-                      <Typography color="error">
-                        Error checking job status
-                      </Typography>
-                    )}
-                    {constFileIsLoading && (
-                      <Typography>Loading const.inp file...</Typography>
-                    )}
-                    {fileError && (
-                      <Typography color="error">
-                        Error fetching const.inp file
-                      </Typography>
-                    )}
-
-                    {status === 'completed' && (
-                      <>
+        <Grid size={{ xs: 12 }}>
+          <HeaderBox>
+            <Typography>Create const.inp from AlphaFold PAE</Typography>
+          </HeaderBox>
+          <Paper sx={{ p: 1 }}>
+            <Formik
+              initialValues={formInitialValues}
+              validationSchema={af2paeJiffySchema}
+              onSubmit={onSubmit}
+              enableReinitialize={true}
+            >
+              {({
+                values,
+                touched,
+                errors,
+                isValid,
+                isSubmitting,
+                setFieldValue,
+                setFieldTouched,
+                resetForm
+              }) => {
+                if (success) {
+                  return (
+                    <>
+                      {success && status !== 'completed' && (
                         <Box
                           sx={{
                             display: 'flex',
-                            flexDirection: 'row',
-                            alignItems: 'flex-start',
-                            gap: 1
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            my: 3
                           }}
                         >
-                          <Box sx={{ flex: 1, minWidth: 0, m: 0, pt: 1 }}>
-                            <Alert
-                              severity={shapeCount >= 20 ? 'error' : 'success'}
-                            >
-                              <AlertTitle>
-                                {shapeCount >= 20 ? 'Error' : 'Success'}
-                              </AlertTitle>
-                              Your CHARMM-compatible <code>const.inp</code> file
-                              was successfully created!{' '}
-                              {values && shapeCount >= 20
-                                ? `But with this Clustering Configuration there are ${shapeCount} rigid bodies which is too many for CHARMM to handle.`
-                                : ''}
-                              <br />
-                              {values && (
-                                <>
-                                  <TableContainer sx={{ width: '400px' }}>
-                                    <Table aria-label="simple table">
-                                      <TableBody>
-                                        <TableRow>
-                                          <TableCell>
-                                            <b>PDB File</b>
-                                          </TableCell>
-                                          <TableCell align="right">
-                                            {values.pdb_file?.name}
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell>
-                                            <b>PAE File</b>
-                                          </TableCell>
-                                          <TableCell align="right">
-                                            {values.pae_file?.name}
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell>
-                                            <b>PAE Cutoff</b>
-                                          </TableCell>
-                                          <TableCell align="right">
-                                            {parseFloat(
-                                              values.pae_cutoff
-                                            ).toFixed(1)}
-                                            Å
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell>
-                                            <b>Leiden Resolution</b>
-                                          </TableCell>
-                                          <TableCell align="right">
-                                            {parseFloat(
-                                              values.leiden_resolution
-                                            ).toFixed(2)}
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell>
-                                            <b>pLDDT Cutoff</b>
-                                          </TableCell>
-                                          <TableCell align="right">
-                                            {parseFloat(
-                                              values.plddt_cutoff
-                                            ).toFixed(1)}
-                                            Å
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell>
-                                            <b>CHARMM shapes (max 20)</b>
-                                          </TableCell>
-                                          <TableCell align="right">
-                                            {shapeCount}
-                                          </TableCell>
-                                        </TableRow>
-                                      </TableBody>
-                                    </Table>
-                                  </TableContainer>
-                                </>
-                              )}
-                            </Alert>
-                          </Box>
-                          <Box sx={{ flex: 1, minWidth: 0, m: 0 }}>
-                            <ConstInpFile constfile={constfile} />
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                flexDirection: 'row',
-                                pt: 2,
-                                gap: 2
-                              }}
-                            >
-                              <Download uuid={uuid} />
-                              <Button
-                                variant="contained"
-                                onClick={() =>
-                                  handleTryNewParameters(values, resetForm)
+                          <CircularProgress />
+                          <Typography sx={{ mt: 2 }}>
+                            Waiting for job to complete... current status:{' '}
+                            {status}
+                          </Typography>
+                          <Typography sx={{ mt: 1, color: 'error.main' }}>
+                            Jobs can take 5-6 minutes.
+                          </Typography>
+                          <Typography
+                            sx={{ mt: 1, fontSize: '1.2rem' }}
+                            data-testid="job-timer"
+                          >
+                            Time elapsed:{' '}
+                            {`${Math.floor(timeElapsed / 60)
+                              .toString()
+                              .padStart(2, '0')} min ${(timeElapsed % 60)
+                              .toString()
+                              .padStart(2, '0')} sec`}
+                          </Typography>
+                        </Box>
+                      )}
+                      {statusIsError && (
+                        <Typography color="error">
+                          Error checking job status
+                        </Typography>
+                      )}
+                      {constFileIsLoading && (
+                        <Typography>Loading const.inp file...</Typography>
+                      )}
+                      {fileError && (
+                        <Typography color="error">
+                          Error fetching const.inp file
+                        </Typography>
+                      )}
+
+                      {status === 'completed' && (
+                        <>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              flexDirection: 'row',
+                              alignItems: 'flex-start',
+                              gap: 1
+                            }}
+                          >
+                            <Box sx={{ flex: 1, minWidth: 0, m: 0, pt: 1 }}>
+                              <Alert
+                                severity={
+                                  shapeCount >= 20 ? 'error' : 'success'
                                 }
                               >
-                                Try New Parameters
-                              </Button>
-                              <Button
-                                variant="outlined"
-                                type="button"
-                                onClick={() => {
-                                  handleReset()
-                                  const resetValues = {
-                                    pdb_file: null,
-                                    pae_file: null,
-                                    pae_cutoff: '10.0',
-                                    plddt_cutoff: '50',
-                                    leiden_resolution: '0.35'
-                                  }
-                                  resetForm({ values: resetValues })
-                                  setFormInitialValues(resetValues)
+                                <AlertTitle>
+                                  {shapeCount >= 20 ? 'Error' : 'Success'}
+                                </AlertTitle>
+                                Your CHARMM-compatible <code>const.inp</code>{' '}
+                                file was successfully created!{' '}
+                                {values && shapeCount >= 20
+                                  ? `But with this Clustering Configuration there are ${shapeCount} rigid bodies which is too many for CHARMM to handle.`
+                                  : ''}
+                                <br />
+                                {values && (
+                                  <>
+                                    <TableContainer sx={{ width: '400px' }}>
+                                      <Table aria-label="simple table">
+                                        <TableBody>
+                                          <TableRow>
+                                            <TableCell>
+                                              <b>PDB File</b>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {values.pdb_file?.name}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <b>PAE File</b>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {values.pae_file?.name}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <b>PAE Cutoff</b>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {parseFloat(
+                                                values.pae_cutoff
+                                              ).toFixed(1)}
+                                              Å
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <b>Leiden Resolution</b>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {parseFloat(
+                                                values.leiden_resolution
+                                              ).toFixed(2)}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <b>pLDDT Cutoff</b>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {parseFloat(
+                                                values.plddt_cutoff
+                                              ).toFixed(1)}
+                                              Å
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <b>CHARMM shapes (max 20)</b>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {shapeCount}
+                                            </TableCell>
+                                          </TableRow>
+                                        </TableBody>
+                                      </Table>
+                                    </TableContainer>
+                                  </>
+                                )}
+                              </Alert>
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0, m: 0 }}>
+                              <ConstInpFile constfile={constfile} />
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'row',
+                                  pt: 2,
+                                  gap: 2
                                 }}
                               >
-                                Reset
-                              </Button>
+                                <Download uuid={uuid} />
+                                <Button
+                                  variant="contained"
+                                  onClick={() =>
+                                    handleTryNewParameters(values, resetForm)
+                                  }
+                                >
+                                  Try New Parameters
+                                </Button>
+                                <Button
+                                  variant="outlined"
+                                  type="button"
+                                  onClick={() => {
+                                    handleReset()
+                                    const resetValues = {
+                                      pdb_file: null,
+                                      pae_file: null,
+                                      pae_cutoff: '10.0',
+                                      plddt_cutoff: '50',
+                                      leiden_resolution: '0.35'
+                                    }
+                                    resetForm({ values: resetValues })
+                                    setFormInitialValues(resetValues)
+                                  }}
+                                >
+                                  Reset
+                                </Button>
+                              </Box>
                             </Box>
                           </Box>
-                        </Box>
-                        <Box sx={{ mt: 2 }}>
-                          <HeaderBox>
-                            <Typography>Visualization</Typography>
-                          </HeaderBox>
-                          <Paper sx={{ p: 1 }}>
-                            <FormGroup
-                              row
-                              sx={{ mb: 1 }}
-                            >
-                              <FormControlLabel
-                                control={
-                                  <Checkbox
-                                    checked={showRigid}
-                                    onChange={(e) =>
-                                      setShowRigid(e.target.checked)
-                                    }
-                                    size="small"
-                                  />
-                                }
-                                label="Show rigid"
-                              />
-                              <FormControlLabel
-                                control={
-                                  <Checkbox
-                                    checked={showFixed}
-                                    onChange={(e) =>
-                                      setShowFixed(e.target.checked)
-                                    }
-                                    size="small"
-                                  />
-                                }
-                                label="Show fixed"
-                              />
-                              <FormControlLabel
-                                control={
-                                  <Checkbox
-                                    checked={showClusters}
-                                    onChange={(e) =>
-                                      setShowClusters(e.target.checked)
-                                    }
-                                    size="small"
-                                  />
-                                }
-                                label="Show clusters"
-                              />
-                            </FormGroup>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
-                              <Box sx={{ flexShrink: 0, mr: 2 }}>
-                                {matrix ? (
-                                  <PAEMatrixPlot
-                                    matrix={matrix}
-                                    viz={viz}
-                                    showRigid={showRigid}
-                                    showFixed={showFixed}
-                                    showClusters={showClusters}
-                                  />
-                                ) : vizPngOk && vizPng ? (
-                                  <img
-                                    alt="PAE visualization"
-                                    src={vizPng as string}
-                                    style={{
-                                      maxWidth: 420,
-                                      border: '1px solid #ccc'
-                                    }}
-                                    onLoad={(e) => {
-                                      // Revoke URL after image loads to avoid memory leaks
-                                      const target =
-                                        e.currentTarget as HTMLImageElement
-                                      URL.revokeObjectURL(target.src)
-                                    }}
-                                  />
-                                ) : (
-                                  <Typography variant="body2">
-                                    Loading visualization…
-                                  </Typography>
-                                )}
-                                {!matrix && (
-                                  <Typography
-                                    variant="caption"
-                                    sx={{ display: 'block', mt: 1 }}
-                                  >
-                                    Showing static fallback while binary matrix
-                                    loads.
-                                  </Typography>
-                                )}
-                              </Box>
-                              <Box sx={{ flexShrink: 0, mr: 2 }}>
-                                <PLDDTPlot
-                                  plddtData={plddtData}
-                                  plddtCutoff={parseFloat(values.plddt_cutoff)}
-                                  chainBoundaries={chainBoundaries}
-                                />
-                              </Box>
-                            </Box>
-                            <Box sx={{ flex: 1 }}>
-                              <PAEMatrixPlotExplanation />
-                            </Box>
-                          </Paper>
-                        </Box>
-                      </>
-                    )}
-                  </>
-                )
-              } else {
-                return (
-                  <Form>
-                    <Grid
-                      container
-                      columns={12}
-                      direction="column"
-                      sx={{ display: 'flex' }}
-                    >
-                      {isError && (
-                        <Alert
-                          severity="error"
+                        </>
+                      )}
+                    </>
+                  )
+                } else {
+                  return (
+                    <Form>
+                      <Grid
+                        container
+                        columns={12}
+                        direction="column"
+                        sx={{ display: 'flex' }}
+                      >
+                        {isError && (
+                          <Alert
+                            severity="error"
+                            sx={{ my: 2 }}
+                          >
+                            <AlertTitle>Error</AlertTitle>
+                            {(() => {
+                              if (!error) return 'An unknown error occurred.'
+                              if (typeof error === 'string') return error
+                              if (
+                                'data' in error &&
+                                typeof error.data === 'object' &&
+                                error.data !== null &&
+                                'message' in error.data
+                              ) {
+                                return (
+                                  (error.data as { message?: string })
+                                    .message || 'An error occurred.'
+                                )
+                              }
+                              if ('message' in error) {
+                                return (
+                                  (error as { message?: string }).message ||
+                                  'An error occurred.'
+                                )
+                              }
+                              return 'An unknown error occurred.'
+                            })()}
+                          </Alert>
+                        )}
+                        <Field
+                          name="pdb_file"
+                          id="pdb-file-upload"
+                          as={FileSelect}
+                          title="Select File"
+                          disabled={isSubmitting}
+                          setFieldValue={setFieldValue}
+                          setFieldTouched={setFieldTouched}
+                          error={errors.pdb_file && touched.pdb_file}
+                          errorMessage={errors.pdb_file ? errors.pdb_file : ''}
+                          fileType="AlphaFold2 PDB *.pdb"
+                          fileExt=".pdb"
+                          onFileChange={(file: FileWithDeets) => {
+                            void setFieldValue('pdb_file', file)
+                            setOriginalFiles({
+                              ...originalFiles,
+                              pdb_file: file
+                            })
+                          }}
+                        />
+                        <Field
+                          name="pae_file"
+                          id="pae-file-upload"
+                          as={FileSelect}
+                          title="Select File"
+                          disabled={isSubmitting}
+                          setFieldValue={setFieldValue}
+                          setFieldTouched={setFieldTouched}
+                          error={errors.pae_file && touched.pae_file}
+                          errorMessage={errors.pae_file ? errors.pae_file : ''}
+                          fileType="AlphaFold2 PAE *.json"
+                          fileExt=".json"
+                          onFileChange={(file: FileWithDeets) => {
+                            void setFieldValue('pae_file', file)
+                            setOriginalFiles({
+                              ...originalFiles,
+                              pae_file: file
+                            })
+                          }}
+                        />
+                        <Field
+                          name="pae_cutoff"
+                          id="pae-cutoff-slider"
+                          as={PaeCutoffSlider}
+                          setFieldValue={setFieldValue}
+                          value={values.pae_cutoff}
+                        />
+                        <Field
+                          name="plddt_cutoff"
+                          id="plddt-cutoff-slider"
+                          as={PlddtSlider}
+                          setFieldValue={setFieldValue}
+                          value={values.plddt_cutoff}
+                        />
+                        <Field
+                          name="leiden_resolution"
+                          id="leiden-resolution-slider"
+                          as={LeidenResolutionSlider}
+                          setFieldValue={setFieldValue}
+                          value={values.leiden_resolution}
+                        />
+                        {isSubmitting && (
+                          <Box sx={{ mt: 1, width: '420px' }}>
+                            <LinearProgress />
+                          </Box>
+                        )}
+                        <Grid
+                          size={{ xs: 6 }}
                           sx={{ my: 2 }}
                         >
-                          <AlertTitle>Error</AlertTitle>
-                          {(() => {
-                            if (!error) return 'An unknown error occurred.'
-                            if (typeof error === 'string') return error
-                            if (
-                              'data' in error &&
-                              typeof error.data === 'object' &&
-                              error.data !== null &&
-                              'message' in error.data
-                            ) {
-                              return (
-                                (error.data as { message?: string }).message ||
-                                'An error occurred.'
-                              )
+                          <Button
+                            type="submit"
+                            disabled={
+                              !isValid ||
+                              values.pdb_file === null ||
+                              values.pae_file === null
                             }
-                            if ('message' in error) {
-                              return (
-                                (error as { message?: string }).message ||
-                                'An error occurred.'
-                              )
-                            }
-                            return 'An unknown error occurred.'
-                          })()}
-                        </Alert>
-                      )}
-                      <Field
-                        name="pdb_file"
-                        id="pdb-file-upload"
-                        as={FileSelect}
-                        title="Select File"
-                        disabled={isSubmitting}
-                        setFieldValue={setFieldValue}
-                        setFieldTouched={setFieldTouched}
-                        error={errors.pdb_file && touched.pdb_file}
-                        errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                        fileType="AlphaFold2 PDB *.pdb"
-                        fileExt=".pdb"
-                        onFileChange={(file: FileWithDeets) => {
-                          void setFieldValue('pdb_file', file)
-                          setOriginalFiles({
-                            ...originalFiles,
-                            pdb_file: file
-                          })
-                        }}
-                      />
-                      <Field
-                        name="pae_file"
-                        id="pae-file-upload"
-                        as={FileSelect}
-                        title="Select File"
-                        disabled={isSubmitting}
-                        setFieldValue={setFieldValue}
-                        setFieldTouched={setFieldTouched}
-                        error={errors.pae_file && touched.pae_file}
-                        errorMessage={errors.pae_file ? errors.pae_file : ''}
-                        fileType="AlphaFold2 PAE *.json"
-                        fileExt=".json"
-                        onFileChange={(file: FileWithDeets) => {
-                          void setFieldValue('pae_file', file)
-                          setOriginalFiles({
-                            ...originalFiles,
-                            pae_file: file
-                          })
-                        }}
-                      />
-                      <Field
-                        name="pae_cutoff"
-                        id="pae-cutoff-slider"
-                        as={PaeCutoffSlider}
-                        setFieldValue={setFieldValue}
-                        value={values.pae_cutoff}
-                      />
-                      <Field
-                        name="plddt_cutoff"
-                        id="plddt-cutoff-slider"
-                        as={PlddtSlider}
-                        setFieldValue={setFieldValue}
-                        value={values.plddt_cutoff}
-                      />
-                      <Field
-                        name="leiden_resolution"
-                        id="leiden-resolution-slider"
-                        as={LeidenResolutionSlider}
-                        setFieldValue={setFieldValue}
-                        value={values.leiden_resolution}
-                      />
-                      {isSubmitting && (
-                        <Box sx={{ mt: 1, width: '420px' }}>
-                          <LinearProgress />
-                        </Box>
-                      )}
-                      <Grid
-                        size={{ xs: 6 }}
-                        sx={{ my: 2 }}
-                      >
-                        <Button
-                          type="submit"
-                          disabled={
-                            !isValid ||
-                            values.pdb_file === null ||
-                            values.pae_file === null
-                          }
-                          loading={isSubmitting}
-                          endIcon={<SendIcon />}
-                          loadingPosition="end"
-                          variant="contained"
-                          sx={{ width: '110px' }}
-                        >
-                          <span>Submit</span>
-                        </Button>
+                            loading={isSubmitting}
+                            endIcon={<SendIcon />}
+                            loadingPosition="end"
+                            variant="contained"
+                            sx={{ width: '110px' }}
+                          >
+                            <span>Submit</span>
+                          </Button>
+                        </Grid>
+                        {process.env.NODE_ENV === 'development' ? (
+                          <Debug />
+                        ) : (
+                          ''
+                        )}
                       </Grid>
-                      {process.env.NODE_ENV === 'development' ? <Debug /> : ''}
-                    </Grid>
-                  </Form>
-                )
-              }
-            }}
-          </Formik>
-        </Paper>
+                    </Form>
+                  )
+                }
+              }}
+            </Formik>
+          </Paper>
+        </Grid>
       </Grid>
-    </Grid>
+      {status === 'completed' && submittedValues && (
+        <>
+          <Box sx={{ mt: 2 }}>
+            <HeaderBox>
+              <Typography>Visualization</Typography>
+            </HeaderBox>
+            <Paper sx={{ p: 1 }}>
+              <FormGroup
+                row
+                sx={{ mb: 1 }}
+              >
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={showRigid}
+                      onChange={(e) => setShowRigid(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Show rigid"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={showFixed}
+                      onChange={(e) => setShowFixed(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Show fixed"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={showClusters}
+                      onChange={(e) => setShowClusters(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Show clusters"
+                />
+              </FormGroup>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
+                <Box sx={{ flexShrink: 0, mr: 2 }}>
+                  {matrix ? (
+                    <PAEMatrixPlot
+                      matrix={matrix}
+                      viz={viz}
+                      showRigid={showRigid}
+                      showFixed={showFixed}
+                      showClusters={showClusters}
+                    />
+                  ) : vizPngOk && vizPng ? (
+                    <img
+                      alt="PAE visualization"
+                      src={vizPng as string}
+                      style={{
+                        maxWidth: 420,
+                        border: '1px solid #ccc'
+                      }}
+                      onLoad={(e) => {
+                        // Revoke URL after image loads to avoid memory leaks
+                        const target = e.currentTarget as HTMLImageElement
+                        URL.revokeObjectURL(target.src)
+                      }}
+                    />
+                  ) : (
+                    <Typography variant="body2">
+                      Loading visualization…
+                    </Typography>
+                  )}
+                  {!matrix && (
+                    <Typography
+                      variant="caption"
+                      sx={{ display: 'block', mt: 1 }}
+                    >
+                      Showing static fallback while binary matrix loads.
+                    </Typography>
+                  )}
+                </Box>
+                <Box sx={{ flexShrink: 0, mr: 2 }}>
+                  <PLDDTPlot
+                    plddtData={plddtData}
+                    plddtCutoff={parseFloat(submittedValues.plddt_cutoff)}
+                    chainBoundaries={chainBoundaries}
+                  />
+                </Box>
+              </Box>
+            </Paper>
+          </Box>
+          <Box sx={{ flex: 1, mt: 2 }}>
+            <PAEMatrixPlotExplanation />
+          </Box>
+        </>
+      )}
+    </>
   )
 
   return content

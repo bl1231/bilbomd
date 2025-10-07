@@ -33,7 +33,7 @@ const paeColors = [
 
 const PAEMatrixPlotExplanation = () => {
   return (
-    <Accordion defaultExpanded={false}>
+    <Accordion defaultExpanded={true}>
       <AccordionSummary
         expandIcon={<ExpandMoreIcon sx={{ color: '#fff' }} />}
         sx={{
