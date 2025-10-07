@@ -71,8 +71,8 @@ const Alphafold2PAEJiffy = () => {
   const [shapeCount, setShapeCount] = useState(0)
   const [jobStartTime, setJobStartTime] = useState<number | null>(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
-  const [showRigid, setShowRigid] = useState(true)
-  const [showFixed, setShowFixed] = useState(true)
+  const [showRigid, setShowRigid] = useState(false)
+  const [showFixed, setShowFixed] = useState(false)
   const [clusterVisibility, setClusterVisibility] = useState<
     Record<number, boolean>
   >({})

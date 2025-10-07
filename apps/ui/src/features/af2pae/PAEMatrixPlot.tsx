@@ -346,6 +346,40 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
             Math.ceil(w) - 1,
             Math.ceil(h) - 1
           )
+
+          // Additionally, draw per-range mini boxes for this cluster when its bbox is shown
+          if (c.ranges && c.ranges.length) {
+            for (const [a, b] of c.ranges) {
+              const rx = residueToPx(a, overlayCanvas.width, s, nCols)
+              const ry = residueToPx(a, overlayCanvas.height, s, nCols)
+              const rx2 = residueToPx(b + 1, overlayCanvas.width, s, nCols)
+              const ry2 = residueToPx(b + 1, overlayCanvas.height, s, nCols)
+              const rw = rx2 - rx
+              const rh = ry2 - ry
+
+              // Include in hit-test so tooltips work while viewing Cluster N
+              rectsRef.current.push({
+                id: c.id,
+                type: 'cluster',
+                range: [a, b],
+                x: rx,
+                y: ry,
+                w: rw,
+                h: rh
+              })
+
+              ctx.save()
+              ctx.lineWidth = 1
+              ctx.strokeStyle = '#ff00ff' // magenta mini-range boxes
+              ctx.strokeRect(
+                Math.floor(rx) + 0.5,
+                Math.floor(ry) + 0.5,
+                Math.ceil(rw) - 1,
+                Math.ceil(rh) - 1
+              )
+              ctx.restore()
+            }
+          }
         }
       }
       if (hovered) {
@@ -494,8 +528,8 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
             height={size}
             style={{
               position: 'absolute',
-              top: 20,
-              left: 20,
+              top: 22,
+              left: 22,
               pointerEvents: 'none',
               border: 'none'
             }}
