@@ -24,34 +24,51 @@ export const alphafoldPaeVizSlice = apiSlice.injectEndpoints({
       ]
     }),
 
-    getPaeBin: build.query<ArrayBuffer, string>({
+    // NOTE: Redux state must be serializable. We convert ArrayBuffer/Blob responses
+    // into serializable strings (Base64 for .bin and object URLs for .png) so
+    // the RTK serializableCheck middleware does not warn.
+    getPaeBin: build.query<string, string>({
       query: (uuid) => ({
         url: `/af2pae/${uuid}/pae.bin`,
         method: 'GET',
         responseHandler: async (response) => await response.arrayBuffer()
       }),
+      transformResponse: (buffer: ArrayBuffer) => {
+        const bytes = new Uint8Array(buffer)
+        const chunkSize = 0x8000
+        let binary = ''
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+        }
+        return btoa(binary) // Base64-encoded string (serializable)
+      },
+      keepUnusedDataFor: 60,
       providesTags: (_r, _e, uuid) => [
         { type: 'Af2PaeViz', id: `${uuid}:pae.bin` }
       ]
     }),
 
-    getVizPng: build.query<Blob, string>({
+    getVizPng: build.query<string, string>({
       query: (uuid) => ({
         url: `/af2pae/${uuid}/viz.png`,
         method: 'GET',
         responseHandler: async (response) => await response.blob()
       }),
+      transformResponse: (blob: Blob) => URL.createObjectURL(blob),
+      keepUnusedDataFor: 60,
       providesTags: (_r, _e, uuid) => [
         { type: 'Af2PaeViz', id: `${uuid}:viz.png` }
       ]
     }),
 
-    getPaePng: build.query<Blob, string>({
+    getPaePng: build.query<string, string>({
       query: (uuid) => ({
         url: `/af2pae/${uuid}/pae.png`,
         method: 'GET',
         responseHandler: async (response) => await response.blob()
       }),
+      transformResponse: (blob: Blob) => URL.createObjectURL(blob),
+      keepUnusedDataFor: 60,
       providesTags: (_r, _e, uuid) => [
         { type: 'Af2PaeViz', id: `${uuid}:pae.png` }
       ]

@@ -50,7 +50,7 @@ const Download = ({ uuid }: DownloadProps) => {
         display: 'flex',
         flexDirection: 'column',
         flex: '1 1 50%',
-        mx: 1
+        mx: 0
       }}
     >
       <Grid
@@ -60,7 +60,7 @@ const Download = ({ uuid }: DownloadProps) => {
         }}
       >
         <Button
-          variant='contained'
+          variant="contained"
           onClick={handleDownload}
           disabled={downloading}
         >

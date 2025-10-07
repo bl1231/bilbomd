@@ -97,7 +97,7 @@ type PAEMatrixPlotProps = {
   viz?: VizJSON
   showRigid?: boolean
   showFixed?: boolean
-  showClusters?: boolean
+  showClusters?: Record<number, boolean>
 }
 
 // Viridis colormap approximation using a small lookup table
@@ -146,11 +146,12 @@ function residueToPx(i1: number, canvasSize: number, s: number, nCols: number) {
 const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
   matrix,
   viz,
-  showRigid = true,
-  showFixed = true,
-  showClusters = true
+  showRigid = false,
+  showFixed = false,
+  showClusters = []
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null)
   const topSchematicCanvasRef = useRef<HTMLCanvasElement>(null)
   const leftSchematicCanvasRef = useRef<HTMLCanvasElement>(null)
   const nRows = matrix.length
@@ -163,88 +164,161 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
   const [tipPos, setTipPos] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    rectsRef.current = []
-    // Clear
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    if (nRows === 0 || nCols === 0) return
-    const cellW = canvas.width / nCols
-    const cellH = canvas.height / nRows
-    // Paint heatmap
-    for (let i = 0; i < nRows; i++) {
-      for (let j = 0; j < nCols; j++) {
-        ctx.fillStyle = colormap(matrix[i][j])
-        ctx.fillRect(j * cellW, i * cellH, cellW, cellH)
+    const drawStatic = () => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      // Clear
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      if (nRows === 0 || nCols === 0) return
+      const cellW = canvas.width / nCols
+      const cellH = canvas.height / nRows
+      // Paint heatmap
+      for (let i = 0; i < nRows; i++) {
+        for (let j = 0; j < nCols; j++) {
+          ctx.fillStyle = colormap(matrix[i][j])
+          ctx.fillRect(j * cellW, i * cellH, cellW, cellH)
+        }
+      }
+      // Draw chain boundary lines on top of heatmap
+      if (viz) {
+        drawChainBoundaryLines(ctx, canvas, viz, matrix, nCols)
+      }
+
+      // Draw schematic above the plot
+      const topSchematicCanvas = topSchematicCanvasRef.current
+      if (topSchematicCanvas && viz?.chains) {
+        const schematicCtx = topSchematicCanvas.getContext('2d')
+        if (schematicCtx) {
+          schematicCtx.imageSmoothingEnabled = false
+          schematicCtx.clearRect(0, 0, size, 20)
+          const L = viz.length
+          const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
+          const colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc']
+          for (let i = 0; i < viz.chains.length; i++) {
+            const chain = viz.chains[i]
+            const startPx = residueToPx(chain.start, size, s, nCols)
+            const endPx = residueToPx(chain.end + 1, size, s, nCols)
+            schematicCtx.fillStyle = colors[i % colors.length]
+            schematicCtx.fillRect(startPx, 0, endPx - startPx, 20)
+            // Add chain ID text
+            schematicCtx.fillStyle = 'black'
+            schematicCtx.font = '10px Arial'
+            schematicCtx.textAlign = 'center'
+            schematicCtx.fillText(
+              `Chain ${chain.id}`,
+              startPx + (endPx - startPx) / 2,
+              14
+            )
+          }
+        }
+      }
+
+      // Draw schematic to the left of the plot
+      const leftSchematicCanvas = leftSchematicCanvasRef.current
+      if (leftSchematicCanvas && viz?.chains) {
+        const schematicCtx = leftSchematicCanvas.getContext('2d')
+        if (schematicCtx) {
+          schematicCtx.imageSmoothingEnabled = false
+          schematicCtx.clearRect(0, 0, 20, size)
+          const L = viz.length
+          const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
+          const colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc']
+          for (let i = 0; i < viz.chains.length; i++) {
+            const chain = viz.chains[i]
+            const startPx = residueToPx(chain.start, size, s, nCols)
+            const endPx = residueToPx(chain.end + 1, size, s, nCols)
+            schematicCtx.fillStyle = colors[i % colors.length]
+            schematicCtx.fillRect(0, startPx, 20, endPx - startPx)
+            // Add chain ID text (rotated vertically)
+            schematicCtx.save()
+            schematicCtx.translate(15, startPx + (endPx - startPx) / 2)
+            schematicCtx.rotate(-Math.PI / 2) // -90 degrees for vertical text
+            schematicCtx.fillStyle = 'black'
+            schematicCtx.font = '10px Arial'
+            schematicCtx.textAlign = 'center'
+            schematicCtx.fillText(`Chain ${chain.id}`, 0, 0)
+            schematicCtx.restore()
+          }
+        }
       }
     }
-    // overlays
-    if (viz && viz.clusters?.length) {
-      const L = viz.length
-      // infer downsample if not provided by comparing matrix size (rows) vs length
-      const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
+    requestAnimationFrame(drawStatic)
+  }, [matrix, nRows, nCols, viz, size])
 
-      for (const c of viz.clusters) {
-        if (
-          (c.type === 'rigid' && showRigid === false) ||
-          (c.type === 'fixed' && showFixed === false) ||
-          (c.type === 'cluster' && showClusters === false)
-        ) {
-          continue
-        }
-        // Draw one rectangle per individual range on the diagonal
-        for (const [a, b] of c.ranges) {
-          // Diagonal box for this range: [a,a,b,b]
-          const x = residueToPx(a, canvas.width, s, nCols)
-          const y = residueToPx(a, canvas.height, s, nCols)
-          const x2 = residueToPx(b + 1, canvas.width, s, nCols)
-          const y2 = residueToPx(b + 1, canvas.height, s, nCols)
-          const w = x2 - x
-          const h = y2 - y
+  useEffect(() => {
+    const drawDynamic = () => {
+      const overlayCanvas = overlayCanvasRef.current
+      if (!overlayCanvas) return
+      const ctx = overlayCanvas.getContext('2d')
+      if (!ctx) return
+      rectsRef.current = []
+      ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
+      // overlays
+      if (viz && viz.clusters?.length) {
+        const L = viz.length
+        // infer downsample if not provided by comparing matrix size (rows) vs length
+        const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
 
-          rectsRef.current.push({
-            id: c.id,
-            type: c.type,
-            range: [a, b],
-            x,
-            y,
-            w,
-            h
-          })
-
-          ctx.save()
-          ctx.globalAlpha = 0.15
-          ctx.fillStyle =
-            c.type === 'rigid'
-              ? 'rgba(255,0,0,1)'
-              : c.type === 'fixed'
-                ? 'rgba(30,144,255,1)'
-                : 'rgba(0,255,0,1)' // cluster
-          ctx.fillRect(x, y, w, h)
-          ctx.restore()
-
-          ctx.lineWidth = 2
-          ctx.strokeStyle = '#ff007f'
-          ctx.strokeRect(
-            Math.floor(x) + 0.5,
-            Math.floor(y) + 0.5,
-            Math.ceil(w) - 1,
-            Math.ceil(h) - 1
-          )
-        }
-      }
-
-      // Draw bbox rectangles if showClusters is true
-      if (showClusters) {
         for (const c of viz.clusters) {
-          if (!c.bbox) continue
+          if (
+            (c.type === 'rigid' && showRigid === false) ||
+            (c.type === 'fixed' && showFixed === false) ||
+            (c.type === 'cluster' && !showClusters?.[c.id])
+          ) {
+            continue
+          }
+          // Draw one rectangle per individual range on the diagonal
+          for (const [a, b] of c.ranges) {
+            // Diagonal box for this range: [a,a,b,b]
+            const x = residueToPx(a, overlayCanvas.width, s, nCols)
+            const y = residueToPx(a, overlayCanvas.height, s, nCols)
+            const x2 = residueToPx(b + 1, overlayCanvas.width, s, nCols)
+            const y2 = residueToPx(b + 1, overlayCanvas.height, s, nCols)
+            const w = x2 - x
+            const h = y2 - y
+
+            rectsRef.current.push({
+              id: c.id,
+              type: c.type,
+              range: [a, b],
+              x,
+              y,
+              w,
+              h
+            })
+
+            ctx.save()
+            ctx.globalAlpha = 0.15
+            ctx.fillStyle =
+              c.type === 'rigid'
+                ? 'rgba(255,0,0,1)'
+                : c.type === 'fixed'
+                  ? 'rgba(30,144,255,1)'
+                  : 'rgba(0,255,0,1)' // cluster
+            ctx.fillRect(x, y, w, h)
+            ctx.restore()
+
+            ctx.lineWidth = 2
+            ctx.strokeStyle = '#ff007f'
+            ctx.strokeRect(
+              Math.floor(x) + 0.5,
+              Math.floor(y) + 0.5,
+              Math.ceil(w) - 1,
+              Math.ceil(h) - 1
+            )
+          }
+        }
+
+        // Draw bbox rectangles for visible clusters
+        for (const c of viz.clusters) {
+          if (!c.bbox || !showClusters?.[c.id]) continue
           const [x1, y1, x2, y2] = c.bbox
-          const x = residueToPx(x1, canvas.width, s, nCols)
-          const y = residueToPx(y1, canvas.height, s, nCols)
-          const x2Px = residueToPx(x2 + 1, canvas.width, s, nCols)
-          const y2Px = residueToPx(y2 + 1, canvas.height, s, nCols)
+          const x = residueToPx(x1, overlayCanvas.width, s, nCols)
+          const y = residueToPx(y1, overlayCanvas.height, s, nCols)
+          const x2Px = residueToPx(x2 + 1, overlayCanvas.width, s, nCols)
+          const y2Px = residueToPx(y2 + 1, overlayCanvas.height, s, nCols)
           const w = x2Px - x
           const h = y2Px - y
 
@@ -272,94 +346,66 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
             Math.ceil(w) - 1,
             Math.ceil(h) - 1
           )
-        }
-      }
-    }
-    if (hovered) {
-      ctx.save()
-      ctx.lineWidth = 2
-      ctx.strokeStyle = 'yellow'
-      ctx.setLineDash([6, 3])
-      ctx.strokeRect(
-        Math.floor(hovered.x) + 0.5,
-        Math.floor(hovered.y) + 0.5,
-        Math.ceil(hovered.w) - 1,
-        Math.ceil(hovered.h) - 1
-      )
-      ctx.restore()
-    }
-    // Draw chain boundary lines on top of overlays
-    if (viz) {
-      drawChainBoundaryLines(ctx, canvas, viz, matrix, nCols)
-    }
 
-    // Draw schematic above the plot
-    const topSchematicCanvas = topSchematicCanvasRef.current
-    if (topSchematicCanvas && viz?.chains) {
-      const schematicCtx = topSchematicCanvas.getContext('2d')
-      if (schematicCtx) {
-        schematicCtx.imageSmoothingEnabled = false
-        schematicCtx.clearRect(0, 0, size, 20)
-        const L = viz.length
-        const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
-        const colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc']
-        for (let i = 0; i < viz.chains.length; i++) {
-          const chain = viz.chains[i]
-          const startPx = residueToPx(chain.start, size, s, nCols)
-          const endPx = residueToPx(chain.end + 1, size, s, nCols)
-          schematicCtx.fillStyle = colors[i % colors.length]
-          schematicCtx.fillRect(startPx, 0, endPx - startPx, 20)
-          // Add chain ID text
-          schematicCtx.fillStyle = 'black'
-          schematicCtx.font = '10px Arial'
-          schematicCtx.textAlign = 'center'
-          schematicCtx.fillText(
-            `Chain ${chain.id}`,
-            startPx + (endPx - startPx) / 2,
-            14
-          )
-        }
-      }
-    }
+          // Additionally, draw per-range mini boxes for this cluster when its bbox is shown
+          if (c.ranges && c.ranges.length) {
+            for (const [a, b] of c.ranges) {
+              const rx = residueToPx(a, overlayCanvas.width, s, nCols)
+              const ry = residueToPx(a, overlayCanvas.height, s, nCols)
+              const rx2 = residueToPx(b + 1, overlayCanvas.width, s, nCols)
+              const ry2 = residueToPx(b + 1, overlayCanvas.height, s, nCols)
+              const rw = rx2 - rx
+              const rh = ry2 - ry
 
-    // Draw schematic to the left of the plot
-    const leftSchematicCanvas = leftSchematicCanvasRef.current
-    if (leftSchematicCanvas && viz?.chains) {
-      const schematicCtx = leftSchematicCanvas.getContext('2d')
-      if (schematicCtx) {
-        schematicCtx.imageSmoothingEnabled = false
-        schematicCtx.clearRect(0, 0, 20, size)
-        const L = viz.length
-        const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
-        const colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc']
-        for (let i = 0; i < viz.chains.length; i++) {
-          const chain = viz.chains[i]
-          const startPx = residueToPx(chain.start, size, s, nCols)
-          const endPx = residueToPx(chain.end + 1, size, s, nCols)
-          schematicCtx.fillStyle = colors[i % colors.length]
-          schematicCtx.fillRect(0, startPx, 20, endPx - startPx)
-          // Add chain ID text (rotated vertically)
-          schematicCtx.save()
-          schematicCtx.translate(15, startPx + (endPx - startPx) / 2)
-          schematicCtx.rotate(-Math.PI / 2) // -90 degrees for vertical text
-          schematicCtx.fillStyle = 'black'
-          schematicCtx.font = '10px Arial'
-          schematicCtx.textAlign = 'center'
-          schematicCtx.fillText(`Chain ${chain.id}`, 0, 0)
-          schematicCtx.restore()
+              // Include in hit-test so tooltips work while viewing Cluster N
+              rectsRef.current.push({
+                id: c.id,
+                type: 'cluster',
+                range: [a, b],
+                x: rx,
+                y: ry,
+                w: rw,
+                h: rh
+              })
+
+              ctx.save()
+              ctx.lineWidth = 1
+              ctx.strokeStyle = '#ff00ff' // magenta mini-range boxes
+              ctx.strokeRect(
+                Math.floor(rx) + 0.5,
+                Math.floor(ry) + 0.5,
+                Math.ceil(rw) - 1,
+                Math.ceil(rh) - 1
+              )
+              ctx.restore()
+            }
+          }
         }
       }
+      if (hovered) {
+        ctx.save()
+        ctx.lineWidth = 2
+        ctx.strokeStyle = 'yellow'
+        ctx.setLineDash([6, 3])
+        ctx.strokeRect(
+          Math.floor(hovered.x) + 0.5,
+          Math.floor(hovered.y) + 0.5,
+          Math.ceil(hovered.w) - 1,
+          Math.ceil(hovered.h) - 1
+        )
+        ctx.restore()
+      }
     }
+    requestAnimationFrame(drawDynamic)
   }, [
-    matrix,
-    nRows,
-    nCols,
-    viz,
     showRigid,
     showFixed,
     showClusters,
     hovered,
-    size
+    viz,
+    size,
+    matrix.length,
+    nCols
   ])
 
   useEffect(() => {
@@ -476,6 +522,18 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
               display: 'block'
             }}
           />
+          <canvas
+            ref={overlayCanvasRef}
+            width={size}
+            height={size}
+            style={{
+              position: 'absolute',
+              top: 22,
+              left: 22,
+              pointerEvents: 'none',
+              border: 'none'
+            }}
+          />
         </div>
       </div>
       {hovered && clampedTip && (
@@ -505,4 +563,4 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
   )
 }
 
-export default PAEMatrixPlot
+export default React.memo(PAEMatrixPlot)
