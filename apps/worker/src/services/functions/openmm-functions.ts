@@ -37,130 +37,6 @@ const writeOpenMMConfigYaml = async (
   return filePath
 }
 
-// Parse a CHARMM-style const.inp to derive OpenMM constraints
-// Supports lines like:
-//   define fixed1 sele ( resid 214:672 .and. segid PROA ) end
-//   cons fix sele fixed1 .or. fixed2 end
-//   define rigid1 sele ( resid 1:188 .and. segid PROA ) end
-//   shape desc dock1 rigid sele rigid1 end
-// Mapping rule: SEGID like PROA -> chain_id "A" (last character)
-const extractConstraintsFromConstInp = async (
-  constInpPath: string
-): Promise<OpenMMConfig['constraints'] | undefined> => {
-  try {
-    const raw = await fs.readFile(constInpPath, 'utf8')
-    const lines = raw.split(/\r?\n/)
-
-    // Collect name -> {start, stop, segid}
-    const defines = new Map<
-      string,
-      { start: number; stop: number; segid: string }
-    >()
-
-    // Regexes (case-insensitive, tolerant of whitespace)
-    const defineRe =
-      /\bdefine\s+(\w+)\s+sele\s*\(\s*resid\s+(\d+)\s*:\s*(\d+)\s*\.and\.\s*segid\s+([A-Za-z0-9_]+)\s*\)\s*end/i
-    const consFixStartRe = /\bcons\s+fix\s+sele\b/i
-    const shapeRigidStartRe = /\bshape\s+desc\b.*\brigid\s+sele\b/i
-
-    // First pass: capture all define blocks
-    for (const line of lines) {
-      const m = line.match(defineRe)
-      if (m) {
-        const [, name, s, e, segid] = m
-        defines.set(name.toLowerCase(), {
-          start: parseInt(s, 10),
-          stop: parseInt(e, 10),
-          segid
-        })
-      }
-    }
-
-    // Second pass: capture cons fix selection names ("name1 .or. name2 ... end")
-    const fixedNames: string[] = []
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-      if (consFixStartRe.test(line)) {
-        // Gather tokens from this line until we hit 'end'
-        let buf = line
-        let j = i + 1
-        while (!/\bend\b/i.test(buf) && j < lines.length) {
-          buf += ' ' + lines[j]
-          j++
-        }
-        // Extract names separated by ".or." or whitespace after 'sele'
-        // Example: cons fix sele fixed1 .or. fixed2 end
-        const afterSele = buf.split(/\bsele\b/i)[1] || ''
-        const nameTokens = afterSele
-          .replace(/\bend\b/i, '')
-          .split(/\s*\.or\.\s*|\s+/i)
-          .map((t) => t.trim())
-          .filter((t) => t.length > 0)
-        for (const token of nameTokens) {
-          // keep only tokens that correspond to defines
-          if (defines.has(token.toLowerCase()))
-            fixedNames.push(token.toLowerCase())
-        }
-        i = j - 1
-      }
-    }
-
-    // Third pass: capture rigid selections referenced by shape desc ... rigid sele <name1> [.or. <name2> ...] end
-    const rigidNames: string[] = []
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-      if (shapeRigidStartRe.test(line)) {
-        // Gather tokens from this line until we hit 'end'
-        let buf = line
-        let j = i + 1
-        while (!/\bend\b/i.test(buf) && j < lines.length) {
-          buf += ' ' + lines[j]
-          j++
-        }
-        // Extract names after 'rigid sele', possibly separated by '.or.'
-        const afterSele = buf.split(/\brigid\s+sele\b/i)[1] || ''
-        const nameTokens = afterSele
-          .replace(/\bend\b/i, '')
-          .split(/\s*\.or\.\s*|\s+/i)
-          .map((t) => t.trim())
-          .filter((t) => t.length > 0)
-        for (const token of nameTokens) {
-          if (defines.has(token.toLowerCase()))
-            rigidNames.push(token.toLowerCase())
-        }
-        i = j - 1
-      }
-    }
-
-    const fixed_bodies = fixedNames.map((nm, idx) => {
-      const def = defines.get(nm)!
-      const chain_id = def.segid.slice(-1) // PROA -> A
-      return {
-        name: `FixedBody${idx + 1}`,
-        chain_id,
-        residues: { start: def.start, stop: def.stop }
-      }
-    })
-
-    const rigid_bodies = rigidNames.map((nm, idx) => {
-      const def = defines.get(nm)!
-      const chain_id = def.segid.slice(-1)
-      return {
-        name: `RigidBody${idx + 1}`,
-        chain_id,
-        residues: { start: def.start, stop: def.stop }
-      }
-    })
-
-    if (fixed_bodies.length === 0 && rigid_bodies.length === 0) return undefined
-    return { fixed_bodies, rigid_bodies }
-  } catch (error) {
-    // Missing file or parse error — be permissive and return undefined
-    logger.warn(`Error extracting constraints from ${constInpPath}: ${error}`)
-    return undefined
-  }
-}
-
 const buildOpenMMConfigForJob = (
   DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
   workDir: string
@@ -228,18 +104,26 @@ const buildOpenMMConfigForJob = (
 
 // Prepare (build + write) a single YAML config for all downstream OpenMM steps.
 // Returns the absolute path to the written config.
-const prepareOpenMMConfigYamlForJob = async (
+const prepareOpenMMConfig = async (
   DBjob: IBilboMDPDBJob | IBilboMDAutoJob
 ): Promise<string> => {
   const workDir = path.join(config.uploadDir, DBjob.uuid)
   const cfg = buildOpenMMConfigForJob(DBjob, workDir)
-  if (DBjob.const_inp_file) {
-    const constInpPath = path.join(workDir, DBjob.const_inp_file)
-    if (await fs.pathExists(constInpPath)) {
-      const constraints = await extractConstraintsFromConstInp(constInpPath)
-      if (constraints) cfg.constraints = constraints
+
+  // Load constraints from openmm_const.yml if it exists
+  const constYamlPath = path.join(workDir, 'openmm_const.yml')
+  if (await fs.pathExists(constYamlPath)) {
+    try {
+      const constYamlRaw = await fs.readFile(constYamlPath, 'utf8')
+      const constCfg = YAML.parse(constYamlRaw)
+      if (constCfg?.constraints) {
+        cfg.constraints = constCfg.constraints
+      }
+    } catch (error) {
+      logger.warn(`Error loading constraints from ${constYamlPath}: ${error}`)
     }
   }
+
   const yamlPath = await writeOpenMMConfigYaml(workDir, cfg)
   logger.info(`OpenMM config YAML written: ${yamlPath}`)
   return yamlPath
@@ -265,7 +149,7 @@ const runOmmStep = async (
   logger.info(`Starting ${stepName} for job ${DBjob.uuid}`)
   const configYamlPath = path.join(workDir, 'openmm_config.yaml')
   if (!(await fs.pathExists(configYamlPath))) {
-    await prepareOpenMMConfigYamlForJob(DBjob)
+    await prepareOpenMMConfig(DBjob)
   }
 
   try {
@@ -364,7 +248,7 @@ const runOmmMD = async (
 
   const configYamlPath = path.join(workDir, 'openmm_config.yaml')
   if (!(await fs.pathExists(configYamlPath))) {
-    await prepareOpenMMConfigYamlForJob(DBjob)
+    await prepareOpenMMConfig(DBjob)
   }
 
   // Read YAML to get Rg list
@@ -466,4 +350,4 @@ const runOmmMD = async (
   })
 }
 
-export { prepareOpenMMConfigYamlForJob, runOmmMinimize, runOmmHeat, runOmmMD }
+export { prepareOpenMMConfig, runOmmMinimize, runOmmHeat, runOmmMD }
