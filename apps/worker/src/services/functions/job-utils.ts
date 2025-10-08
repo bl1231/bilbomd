@@ -148,14 +148,23 @@ const writeInputFile = async (
 }
 
 const readTemplate = async (templateName: string): Promise<string> => {
-  const templateFile = path.join(
-    config.charmmTemplateDir,
-    `${templateName}.handlebars`
-  )
-  return fs.readFile(templateFile, 'utf8')
+  try {
+    const templateFile = path.join(
+      config.charmmTemplateDir,
+      `${templateName}.handlebars`
+    )
+    const content = await fs.readFile(templateFile, 'utf8')
+    return content
+  } catch (error) {
+    logger.error(
+      `Error in readTemplate for ${templateName}: ${getErrorMessage(error)}`
+    )
+    throw error
+  }
 }
 
 const generateInputFile = async (params: CharmmParams): Promise<void> => {
+  logger.info(`Generating input file for: ${params.charmm_inp_file}`)
   const templateString = await readTemplate(params.charmm_template)
   await writeInputFile(templateString, params)
 }
