@@ -12,7 +12,7 @@ import {
   runOmmMinimize,
   runOmmHeat,
   runOmmMD,
-  prepareOpenMMConfigYamlForJob
+  prepareOpenMMConfig
 } from '../functions/openmm-functions.js'
 import {
   extractPDBFilesFromDCD,
@@ -26,7 +26,9 @@ import { runSingleFoXS } from '../functions/foxs-analysis.js'
 const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)
 
-  const foundJob = await BilboMdAutoJob.findOne({ _id: MQjob.data.jobid }).populate('user').exec()
+  const foundJob = await BilboMdAutoJob.findOne({ _id: MQjob.data.jobid })
+    .populate('user')
+    .exec()
   if (!foundJob) {
     throw new Error(`No job found for: ${MQjob.data.jobid}`)
   }
@@ -111,7 +113,7 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   } else {
     // Prepare OpenMM config YAML
     await MQjob.log('start openmm-config')
-    await prepareOpenMMConfigYamlForJob(foundJob)
+    await prepareOpenMMConfig(foundJob)
     await MQjob.log('end openmm-config')
 
     // OpenMM minimization

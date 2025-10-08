@@ -7,7 +7,11 @@ import {
   runMolecularDynamics,
   runMultiFoxs
 } from '../functions/bilbomd-step-functions.js'
-import { runOmmMinimize, runOmmHeat, runOmmMD } from '../functions/openmm-functions.js'
+import {
+  runOmmMinimize,
+  runOmmHeat,
+  runOmmMD
+} from '../functions/openmm-functions.js'
 import {
   extractPDBFilesFromDCD,
   remediatePDBFiles,
@@ -16,7 +20,7 @@ import {
 import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc.js'
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
-import { prepareOpenMMConfigYamlForJob } from '../functions/openmm-functions.js'
+import { prepareOpenMMConfig } from '../functions/openmm-functions.js'
 type StepRunners = {
   minimize: (MQjob: BullMQJob, job: IBilboMDPDBJob) => Promise<void>
   heat: (MQjob: BullMQJob, job: IBilboMDPDBJob) => Promise<void>
@@ -66,7 +70,7 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
   } else {
     // Prepare OpenMM config YAML instead of pdb2crd
     await MQjob.log('start openmm-config')
-    await prepareOpenMMConfigYamlForJob(foundJob)
+    await prepareOpenMMConfig(foundJob)
     await MQjob.log('end openmm-config')
   }
   await MQjob.updateProgress(15)
