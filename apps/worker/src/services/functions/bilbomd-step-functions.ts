@@ -277,14 +277,11 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
     : ['--pdb_file', params.in_pdb as string]
 
   const optionalFlags: string[] = []
-  // if (params.pae_power !== undefined) {
-  //   optionalFlags.push('--pae_power', String(params.pae_power))
-  // }
   if (params.plddt_cutoff !== undefined) {
     optionalFlags.push('--plddt_cutoff', String(params.plddt_cutoff))
   }
   if (params.emit_constraints) {
-    optionalFlags.push('--emit-constraints', params.emit_constraints)
+    optionalFlags.push('--openmm-const-file', 'openmm_const.yml')
   }
   if (params.no_const) {
     optionalFlags.push('--no-const')
@@ -390,9 +387,18 @@ const runPaeToConstInp = async (
   // safe, but I'm going to use type assertion for now.
   const params: PaeParams = {
     in_crd: DBjob.crd_file as string,
+    in_pdb: DBjob.pdb_file as string,
     in_pae: DBjob.pae_file,
     out_dir: outputDir
   }
+
+  // Add extra params for OpenMM md_engine
+  if (DBjob.md_engine === 'OpenMM') {
+    params.plddt_cutoff = 50
+    params.emit_constraints = true
+    params.no_const = true
+  }
+
   try {
     let status: IStepStatus = {
       status: 'Running',
