@@ -415,8 +415,8 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
   }
 
   // Build CLI args per new usage:
-  const fileFlag = hasCRD
-    ? ['--crd_file', params.in_crd as string]
+  const fileFlag = params.in_crd
+    ? ['--crd_file', params.in_crd]
     : ['--pdb_file', params.in_pdb as string]
   logger.debug(`File flag: ${JSON.stringify(fileFlag)}`)
 
