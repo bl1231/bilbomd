@@ -55,19 +55,14 @@ const handleError = async (
   if (error instanceof Error) {
     errorMsg = error.message
     stackTrace = error.stack
-    logger.error(`handleError - Error object details:`, {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      step: step || 'unknown'
-    })
+    logger.error(
+      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}`
+    )
   } else {
     errorMsg = String(error)
-    logger.error(`handleError - Non-Error object:`, {
-      error: error,
-      type: typeof error,
-      step: step || 'unknown'
-    })
+    logger.error(
+      `handleError - Non-Error object: error=${error}, type=${typeof error}, step=${step || 'unknown'}`
+    )
   }
 
   // Log the step and error details
@@ -80,16 +75,9 @@ const handleError = async (
   }
 
   // Log job details for context
-  logger.error(`Job context:`, {
-    jobId: DBjob.id,
-    jobUuid: DBjob.uuid,
-    jobTitle: DBjob.title,
-    jobType: DBjob.__t,
-    currentStatus: DBjob.status,
-    mqJobId: MQjob.id,
-    mqJobName: MQjob.name,
-    attemptsMade: MQjob.attemptsMade
-  })
+  logger.error(
+    `Job context: jobId=${DBjob.id}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}, mqJobId=${MQjob.id}, mqJobName=${MQjob.name}, attemptsMade=${MQjob.attemptsMade}`
+  )
 
   try {
     // Updates primary status in MongoDB
@@ -97,7 +85,7 @@ const handleError = async (
     await updateJobStatus(DBjob, 'Error')
     logger.debug(`Successfully updated job status to 'Error'`)
   } catch (updateError) {
-    logger.error(`Failed to update job status:`, updateError)
+    logger.error(`Failed to update job status: ${updateError}`)
   }
 
   // Update the specific step status
@@ -112,8 +100,7 @@ const handleError = async (
       logger.debug(`Successfully updated step status for step: ${step}`)
     } catch (stepUpdateError) {
       logger.error(
-        `Failed to update step status for step ${step}:`,
-        stepUpdateError
+        `Failed to update step status for step ${step}: ${stepUpdateError}`
       )
     }
   } else {
@@ -128,7 +115,7 @@ const handleError = async (
     }
     logger.debug(`Successfully logged error to MQ job`)
   } catch (mqLogError) {
-    logger.error(`Failed to log to MQ job:`, mqLogError)
+    logger.error(`Failed to log to MQ job: ${mqLogError}`)
   }
 
   // Send job completion email and log the notification
@@ -157,7 +144,7 @@ const handleError = async (
       logger.debug(`Not sending email - attempts (${MQjob.attemptsMade}) < 3`)
     }
   } catch (emailError) {
-    logger.error(`Failed to send email notification:`, emailError)
+    logger.error(`Failed to send email notification: ${emailError}`)
   }
 
   // Create a more descriptive error to throw
@@ -328,17 +315,9 @@ const spawnMultiFoxs = (params: MultiFoxsParams): Promise<void> => {
 }
 
 const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
-  logger.debug(`spawnPaeToConst starting with params:`, {
-    in_crd: params.in_crd,
-    in_pdb: params.in_pdb,
-    in_pae: params.in_pae,
-    out_dir: params.out_dir,
-    plddt_cutoff: params.plddt_cutoff,
-    emit_constraints: params.emit_constraints,
-    no_const: params.no_const,
-    python_bin: params.python_bin,
-    script_path: params.script_path
-  })
+  logger.debug(
+    `spawnPaeToConst starting with params: in_crd=${params.in_crd}, in_pdb=${params.in_pdb}, in_pae=${params.in_pae}, out_dir=${params.out_dir}, plddt_cutoff=${params.plddt_cutoff}, emit_constraints=${params.emit_constraints}, no_const=${params.no_const}, python_bin=${params.python_bin}, script_path=${params.script_path}`
+  )
 
   // Basic validation of mutually exclusive inputs
   const hasCRD = Boolean(params.in_crd)
@@ -357,7 +336,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
     fs.mkdirSync(params.out_dir, { recursive: true })
     logger.debug(`Output directory created/verified successfully`)
   } catch (error) {
-    logger.error(`Failed to create output directory:`, error)
+    logger.error(`Failed to create output directory: ${error}`)
     throw error
   }
 
@@ -373,7 +352,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
     errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
     logger.debug(`Log streams created successfully`)
   } catch (error) {
-    logger.error(`Failed to create log streams:`, error)
+    logger.error(`Failed to create log streams: ${error}`)
     throw error
   }
 
@@ -388,8 +367,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
     logger.debug(`Script file verified: ${af2paeScript}`)
   } catch (error) {
     logger.error(
-      `Script file not found or not accessible: ${af2paeScript}`,
-      error
+      `Script file not found or not accessible: ${af2paeScript} - ${error}`
     )
     throw new Error(`Script file not found: ${af2paeScript}`)
   }
@@ -401,7 +379,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
       await fs.access(crdPath)
       logger.debug(`CRD file verified: ${crdPath}`)
     } catch (error) {
-      logger.error(`CRD file not found: ${crdPath}`, error)
+      logger.error(`CRD file not found: ${crdPath} - ${error}`)
       throw new Error(`CRD file not found: ${crdPath}`)
     }
   }
@@ -412,7 +390,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
       await fs.access(pdbPath)
       logger.debug(`PDB file verified: ${pdbPath}`)
     } catch (error) {
-      logger.error(`PDB file not found: ${pdbPath}`, error)
+      logger.error(`PDB file not found: ${pdbPath} - ${error}`)
       throw new Error(`PDB file not found: ${pdbPath}`)
     }
   }
@@ -422,7 +400,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
     await fs.access(paePath)
     logger.debug(`PAE file verified: ${paePath}`)
   } catch (error) {
-    logger.error(`PAE file not found: ${paePath}`, error)
+    logger.error(`PAE file not found: ${paePath} - ${error}`)
     throw new Error(`PAE file not found: ${paePath}`)
   }
 
@@ -462,7 +440,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
       runPaeToConst = spawn(pythonBin, args, opts)
       logger.debug(`Process spawned successfully, PID: ${runPaeToConst.pid}`)
     } catch (spawnError) {
-      logger.error(`Failed to spawn process:`, spawnError)
+      logger.error(`Failed to spawn process: ${spawnError}`)
       // Close streams before rejecting
       Promise.all([
         new Promise((r) => logStream.end(r)),
@@ -488,7 +466,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
       try {
         logStream.write(s)
       } catch (writeError) {
-        logger.error(`Failed to write to log stream:`, writeError)
+        logger.error(`Failed to write to log stream: ${writeError}`)
       }
     })
 
@@ -501,19 +479,15 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
       try {
         errorStream.write(s)
       } catch (writeError) {
-        logger.error(`Failed to write to error stream:`, writeError)
+        logger.error(`Failed to write to error stream: ${writeError}`)
       }
     })
 
     runPaeToConst.on('error', (error) => {
       clearTimeout(processTimeout)
-      logger.error(`runPaeToConst process error:`, {
-        error: (error as Error).message,
-        code: (error as NodeJS.ErrnoException).code,
-        errno: (error as NodeJS.ErrnoException).errno,
-        syscall: (error as NodeJS.ErrnoException).syscall,
-        path: (error as NodeJS.ErrnoException).path
-      })
+      logger.error(
+        `runPaeToConst process error: error=${(error as Error).message}, code=${(error as NodeJS.ErrnoException).code}, errno=${(error as NodeJS.ErrnoException).errno}, syscall=${(error as NodeJS.ErrnoException).syscall}, path=${(error as NodeJS.ErrnoException).path}`
+      )
 
       // ensure streams are closed before rejecting
       Promise.all([
@@ -521,7 +495,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
           try {
             logStream.end(r)
           } catch (e) {
-            logger.error(`Error closing log stream:`, e)
+            logger.error(`Error closing log stream: ${e}`)
             r(undefined)
           }
         }),
@@ -529,7 +503,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
           try {
             errorStream.end(r)
           } catch (e) {
-            logger.error(`Error closing error stream:`, e)
+            logger.error(`Error closing error stream: ${e}`)
             r(undefined)
           }
         })
@@ -550,7 +524,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
           try {
             logStream.end(r)
           } catch (e) {
-            logger.error(`Error closing log stream on exit:`, e)
+            logger.error(`Error closing log stream on exit: ${e}`)
             r(undefined)
           }
         }),
@@ -558,7 +532,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
           try {
             errorStream.end(r)
           } catch (e) {
-            logger.error(`Error closing error stream on exit:`, e)
+            logger.error(`Error closing error stream on exit: ${e}`)
             r(undefined)
           }
         })
@@ -584,7 +558,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
           }
         })
         .catch((streamError) => {
-          logger.error(`Error closing file streams:`, streamError)
+          logger.error(`Error closing file streams: ${streamError}`)
           reject(streamError)
         })
     })
@@ -647,7 +621,7 @@ const runPdb2Crd = async (
     await updateStepStatus(DBjob, 'pdb2crd', status)
     logger.debug(`runPdb2Crd completed successfully for job ${DBjob.uuid}`)
   } catch (error) {
-    logger.error(`runPdb2Crd failed for job ${DBjob.uuid}:`, error)
+    logger.error(`runPdb2Crd failed for job ${DBjob.uuid}: ${error}`)
     await handleError(error, MQjob, DBjob, 'pdb2crd')
   }
 }
@@ -719,12 +693,9 @@ const runPaeToConstInp = async (
       out_dir: outputDir
     }
 
-    logger.debug(`PAE processing params:`, {
-      in_crd: params.in_crd,
-      in_pdb: params.in_pdb,
-      in_pae: params.in_pae,
-      md_engine: DBjob.md_engine
-    })
+    logger.debug(
+      `PAE processing params: in_crd=${params.in_crd}, in_pdb=${params.in_pdb}, in_pae=${params.in_pae}, md_engine=${DBjob.md_engine}`
+    )
 
     // Add extra params for OpenMM md_engine
     if (DBjob.md_engine === 'OpenMM') {
@@ -768,7 +739,7 @@ const runPaeToConstInp = async (
       `runPaeToConstInp completed successfully for job ${DBjob.uuid}`
     )
   } catch (error) {
-    logger.error(`runPaeToConstInp failed for job ${DBjob.uuid}:`, error)
+    logger.error(`runPaeToConstInp failed for job ${DBjob.uuid}: ${error}`)
     await handleError(error, MQjob, DBjob, 'pae')
   }
 }
@@ -1537,7 +1508,7 @@ Thank you for using BilboMD
     await fs.writeFile(readmePath, readmeContent)
     logger.info('README file created successfully.')
   } catch (error) {
-    logger.error('Failed to create README file:', error)
+    logger.error(`Failed to create README file: ${error}`)
     throw new Error('Failed to create README file')
   }
 }
