@@ -131,6 +131,55 @@ const prepareOpenMMConfig = async (
 
 type OmmStepKey = 'minimize' | 'heat' | 'md'
 
+interface OpenMMConfig {
+  input: {
+    dir: string
+    pdb_file: string
+    forcefield: string[]
+  }
+  output: {
+    output_dir: string
+    min_dir: string
+    heat_dir: string
+    md_dir: string
+  }
+  steps: {
+    minimization: {
+      parameters: { max_iterations: number }
+      output_pdb: string
+    }
+    heating: {
+      parameters: {
+        first_temp: number
+        final_temp: number
+        total_steps: number
+        timestep: number
+      }
+      output_pdb: string
+      output_restart: string
+    }
+    md: {
+      parameters: {
+        temperature: number
+        friction: number
+        nsteps: number
+        timestep: number
+      }
+      rgyr: {
+        rgs: number[]
+        k_rg: number
+        report_interval: number
+        filename: string
+      }
+      output_pdb: string
+      output_restart: string
+      output_dcd: string
+      pdb_report_interval: number
+    }
+  }
+  constraints?: Record<string, unknown>
+}
+
 const runOmmStep = async (
   MQjob: BullMQJob,
   DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
@@ -239,6 +288,7 @@ const runOmmMD = async (
     pythonBin?: string
     timeoutMs?: number
     concurrency?: number // optional: cap parallel md.py processes
+    failureThreshold?: number // percentage of failures to tolerate (0-1, default 0)
   }
 ): Promise<void> => {
   const workDir = path.join(config.uploadDir, DBjob.uuid)
@@ -260,93 +310,167 @@ const runOmmMD = async (
     rgs = [50]
   }
 
-  // Determine concurrency
+  // Determine available GPUs and concurrency
   const envCUDA = process.env.CUDA_VISIBLE_DEVICES
-  const gpuCount = envCUDA
-    ? envCUDA.split(',').filter(Boolean).length
-    : undefined
-  const maxParallel = opts?.concurrency ?? gpuCount ?? 1
+  let availableGpus: number[] = []
+
+  if (envCUDA) {
+    // Parse CUDA_VISIBLE_DEVICES to get actual GPU IDs
+    availableGpus = envCUDA
+      .split(',')
+      .map((id) => parseInt(id.trim()))
+      .filter((id) => !isNaN(id))
+  } else {
+    // Fallback: assume GPU 0 is available
+    availableGpus = [0]
+  }
+
+  const maxParallel = Math.min(
+    opts?.concurrency ?? availableGpus.length,
+    availableGpus.length
+  )
+
+  logger.info(
+    `[runOmmMD] Available GPUs: ${availableGpus.join(', ')}, max parallel: ${maxParallel}`
+  )
+
+  // Prepare job tracking
+  const failureThreshold = opts?.failureThreshold ?? 0 // Default: no failures allowed
+  const results: Array<{
+    rg: number
+    status: 'success' | 'error'
+    error?: Error
+  }> = []
 
   // Light-weight concurrency limiter
-  const queue = rgs.slice()
-  let running = 0
-  let completed = 0
-  let failed = 0
-
   const status: IStepStatus = {
     status: 'Running',
     message: `${stepName} has started for ${rgs.length} Rg values (max ${maxParallel} concurrent)`
   }
   await updateStepStatus(DBjob, stepKey, status)
 
-  const runOne = async (rg: number) => {
+  const runOne = async (rg: number, gpuIndex: number): Promise<void> => {
+    const assignedGpu = availableGpus[gpuIndex % availableGpus.length]
     const scriptPath = path.resolve(process.cwd(), 'scripts/openmm/md.py')
     const env = {
       ...(opts?.platform ? { OPENMM_PLATFORM: opts.platform } : {}),
       ...(opts?.pluginDir ? { OPENMM_PLUGIN_DIR: opts.pluginDir } : {}),
-      OMM_RG: String(rg)
+      OMM_RG: String(rg),
+      OMM_GPU_ID: String(assignedGpu),
+      // Explicitly set CUDA device visibility for this process
+      CUDA_VISIBLE_DEVICES: String(assignedGpu)
     }
-    logger.info(`[md] launching rg=${rg}`)
+
+    logger.info(`[md] launching rg=${rg} on GPU ${assignedGpu}`)
+
     const result = await runPythonStep(scriptPath, configYamlPath, {
       cwd: opts?.cwd,
       pythonBin: opts?.pythonBin,
       env,
       timeoutMs: opts?.timeoutMs ?? 2 * 60 * 60 * 1000, // 2h default per run
-      onStdoutLine: (line) => logger.info(`[md rg=${rg}][stdout] ${line}`),
-      onStderrLine: (line) => logger.error(`[md rg=${rg}][stderr] ${line}`)
+      onStdoutLine: (line) =>
+        logger.info(`[md rg=${rg} GPU=${assignedGpu}][stdout] ${line}`),
+      onStderrLine: (line) =>
+        logger.error(`[md rg=${rg} GPU=${assignedGpu}][stderr] ${line}`)
     })
+
     if (result.code !== 0) {
       throw new Error(
-        `md.py (rg=${rg}) failed (exit ${result.code}${
+        `md.py (rg=${rg}, GPU=${assignedGpu}) failed (exit ${result.code}${
           result.signal ? `, signal ${result.signal}` : ''
         })`
       )
     }
+
+    logger.info(`[md] completed rg=${rg} on GPU ${assignedGpu}`)
   }
 
-  const pump = async (): Promise<void> => {
-    while (running < maxParallel && queue.length > 0) {
-      const rg = queue.shift()
-      if (rg === undefined) break
-      running++
-      runOne(rg)
-        .then(async () => {
-          completed++
-          running--
-          await updateStepStatus(DBjob, stepKey, {
-            status: 'Running',
-            message: `${stepName}: completed ${completed}/${rgs.length} (max ${maxParallel} concurrent)`
-          })
-          await pump()
-        })
-        .catch(async (err) => {
-          failed++
-          running--
-          logger.error(`Error in md (rg=${rg}): ${err}`)
-          await updateStepStatus(DBjob, stepKey, {
-            status: 'Running',
-            message: `${stepName}: ${completed}/${rgs.length} done, ${failed} failed`
-          })
-          await pump()
-        })
+  // Use Promise.allSettled with manual concurrency control via semaphore pattern
+  class Semaphore {
+    private permits: number
+    private waiting: Array<() => void> = []
+
+    constructor(permits: number) {
+      this.permits = permits
+    }
+
+    async acquire(): Promise<void> {
+      if (this.permits > 0) {
+        this.permits--
+        return
+      }
+
+      return new Promise<void>((resolve) => {
+        this.waiting.push(resolve)
+      })
+    }
+
+    release(): void {
+      if (this.waiting.length > 0) {
+        const resolve = this.waiting.shift()!
+        resolve()
+      } else {
+        this.permits++
+      }
     }
   }
 
-  await pump()
-  // Wait for all in-flight to finish
-  while (running > 0) {
-    await new Promise((r) => setTimeout(r, 250))
+  const semaphore = new Semaphore(maxParallel)
+  let completed = 0
+
+  const processRg = async (rg: number, index: number) => {
+    await semaphore.acquire()
+    try {
+      await runOne(rg, index)
+      completed++
+      results.push({ rg, status: 'success' })
+
+      // Update progress
+      await updateStepStatus(DBjob, stepKey, {
+        status: 'Running',
+        message: `${stepName}: completed ${completed}/${rgs.length}`
+      })
+    } catch (error) {
+      const errorObj = error instanceof Error ? error : new Error(String(error))
+      results.push({ rg, status: 'error', error: errorObj })
+      logger.error(`Error in md (rg=${rg}): ${errorObj.message}`)
+
+      // Update progress with error count
+      const failures = results.filter((r) => r.status === 'error').length
+      await updateStepStatus(DBjob, stepKey, {
+        status: 'Running',
+        message: `${stepName}: ${completed}/${rgs.length} completed, ${failures} failed`
+      })
+    } finally {
+      semaphore.release()
+    }
   }
 
-  if (failed > 0) {
+  // Launch all tasks
+  await Promise.allSettled(rgs.map((rg, index) => processRg(rg, index)))
+
+  // Analyze results
+  const failures = results.filter((r) => r.status === 'error')
+  const failureRate = failures.length / results.length
+
+  if (failureRate > failureThreshold) {
+    const errorSummary = failures
+      .map((f) => `rg=${f.rg}: ${f.error?.message}`)
+      .join('; ')
     throw new Error(
-      `${stepName} completed with ${failed} failures out of ${rgs.length}`
+      `${stepName} failed: ${failures.length}/${results.length} failures (${Math.round(failureRate * 100)}% > ${Math.round(failureThreshold * 100)}% threshold). Errors: ${errorSummary}`
+    )
+  }
+
+  if (failures.length > 0) {
+    logger.warn(
+      `${stepName} completed with ${failures.length} non-fatal failures (below threshold)`
     )
   }
 
   await updateStepStatus(DBjob, stepKey, {
     status: 'Success',
-    message: `${stepName} has completed for ${rgs.length} Rg values`
+    message: `${stepName} has completed for ${rgs.length} Rg values (${failures.length} failures tolerated)`
   })
 }
 
