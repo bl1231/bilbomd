@@ -48,48 +48,124 @@ const handleError = async (
   DBjob: IJob,
   step?: keyof IBilboMDSteps
 ) => {
-  const errorMsg =
-    step || (error instanceof Error ? error.message : String(error))
+  // Enhanced error message extraction
+  let errorMsg: string
+  let stackTrace: string | undefined
 
-  // Updates primay status in MongoDB
-  await updateJobStatus(DBjob, 'Error')
+  if (error instanceof Error) {
+    errorMsg = error.message
+    stackTrace = error.stack
+    logger.error(`handleError - Error object details:`, {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      step: step || 'unknown'
+    })
+  } else {
+    errorMsg = String(error)
+    logger.error(`handleError - Non-Error object:`, {
+      error: error,
+      type: typeof error,
+      step: step || 'unknown'
+    })
+  }
+
+  // Log the step and error details
+  logger.error(
+    `handleError called for step: ${step || 'undefined'} with error: ${errorMsg}`
+  )
+
+  if (stackTrace) {
+    logger.error(`Stack trace: ${stackTrace}`)
+  }
+
+  // Log job details for context
+  logger.error(`Job context:`, {
+    jobId: DBjob.id,
+    jobUuid: DBjob.uuid,
+    jobTitle: DBjob.title,
+    jobType: DBjob.__t,
+    currentStatus: DBjob.status,
+    mqJobId: MQjob.id,
+    mqJobName: MQjob.name,
+    attemptsMade: MQjob.attemptsMade
+  })
+
+  try {
+    // Updates primary status in MongoDB
+    logger.debug(`Updating job status to 'Error' for job ${DBjob.id}`)
+    await updateJobStatus(DBjob, 'Error')
+    logger.debug(`Successfully updated job status to 'Error'`)
+  } catch (updateError) {
+    logger.error(`Failed to update job status:`, updateError)
+  }
+
   // Update the specific step status
   if (step) {
-    const status: IStepStatus = {
-      status: 'Error',
-      message: `Error in step ${step}: ${errorMsg}`
+    try {
+      const status: IStepStatus = {
+        status: 'Error',
+        message: `Error in step ${step}: ${errorMsg}`
+      }
+      logger.debug(`Updating step status for step: ${step}`)
+      await updateStepStatus(DBjob, step, status)
+      logger.debug(`Successfully updated step status for step: ${step}`)
+    } catch (stepUpdateError) {
+      logger.error(
+        `Failed to update step status for step ${step}:`,
+        stepUpdateError
+      )
     }
-    await updateStepStatus(DBjob, step, status)
   } else {
-    logger.error(
-      `Step not provided or invalid when handling error: ${errorMsg}`
-    )
+    logger.error(`Step not provided when handling error. Error: ${errorMsg}`)
   }
 
-  MQjob.log(`error ${errorMsg}`)
-
-  logger.error(`handleError errorMsg: ${errorMsg}`)
-
-  MQjob.log(error instanceof Error ? error.message : String(error))
+  // Log to MQ job
+  try {
+    await MQjob.log(`ERROR: ${errorMsg}`)
+    if (stackTrace) {
+      await MQjob.log(`Stack trace: ${stackTrace}`)
+    }
+    logger.debug(`Successfully logged error to MQ job`)
+  } catch (mqLogError) {
+    logger.error(`Failed to log to MQ job:`, mqLogError)
+  }
 
   // Send job completion email and log the notification
-  logger.info(`Failed Attempts --> ${MQjob.attemptsMade}`)
+  logger.info(`Failed Attempts: ${MQjob.attemptsMade}`)
 
-  const recipientEmail = (DBjob.user as IUser).email
-  if (MQjob.attemptsMade >= 3) {
-    if (config.sendEmailNotifications) {
-      sendJobCompleteEmail(
-        recipientEmail,
-        config.bilbomdUrl,
-        DBjob.id,
-        DBjob.title,
-        true
-      )
-      logger.warn(`email notification sent to ${recipientEmail}`)
-      await MQjob.log(`email notification sent to ${recipientEmail}`)
+  try {
+    const recipientEmail = (DBjob.user as IUser).email
+    logger.debug(`Recipient email: ${recipientEmail}`)
+
+    if (MQjob.attemptsMade >= 3) {
+      if (config.sendEmailNotifications) {
+        logger.debug(`Sending failure email notification to ${recipientEmail}`)
+        await sendJobCompleteEmail(
+          recipientEmail,
+          config.bilbomdUrl,
+          DBjob.id,
+          DBjob.title,
+          true
+        )
+        logger.warn(`Email notification sent to ${recipientEmail}`)
+        await MQjob.log(`Email notification sent to ${recipientEmail}`)
+      } else {
+        logger.debug(`Email notifications are disabled`)
+      }
+    } else {
+      logger.debug(`Not sending email - attempts (${MQjob.attemptsMade}) < 3`)
     }
+  } catch (emailError) {
+    logger.error(`Failed to send email notification:`, emailError)
   }
-  throw new Error('BilboMD failed')
+
+  // Create a more descriptive error to throw
+  const finalError = new Error(
+    `BilboMD failed in step '${step || 'unknown'}': ${errorMsg}`
+  )
+  logger.error(`Throwing final error: ${finalError.message}`)
+  throw finalError
 }
 
 const updateJobStatus = async (
@@ -345,6 +421,7 @@ const runPdb2Crd = async (
   MQjob: BullMQJob,
   DBjob: IBilboMDPDBJob | IBilboMDSANSJob
 ): Promise<void> => {
+  logger.debug(`Starting runPdb2Crd for job ${DBjob.uuid}`)
   try {
     let status: IStepStatus = {
       status: 'Running',
@@ -354,17 +431,26 @@ const runPdb2Crd = async (
 
     let charmmInpFiles: string[] = []
 
+    logger.debug(`Creating PDB2CRD CHARMM input files`)
     charmmInpFiles = await createPdb2CrdCharmmInpFiles({
       uuid: DBjob.uuid,
       pdb_file: DBjob.pdb_file
     })
-    // logger.info(`runPdb2Crd: ${charmmInpFiles}`)
+    logger.debug(
+      `Created CHARMM input files: ${JSON.stringify(charmmInpFiles)}`
+    )
+
     // CHARMM pdb2crd convert individual chains
+    logger.debug(`Running CHARMM pdb2crd for individual chains`)
     await spawnPdb2CrdCharmm(MQjob, charmmInpFiles)
+
     // CHARMM pdb2crd meld individual crd files
+    logger.debug(`Running CHARMM pdb2crd meld step`)
     charmmInpFiles = ['pdb2crd_charmm_meld.inp']
     await spawnPdb2CrdCharmm(MQjob, charmmInpFiles)
+
     // Update MongoDB
+    logger.debug(`Updating job files in database`)
     DBjob.psf_file = 'bilbomd_pdb2crd.psf'
     DBjob.crd_file = 'bilbomd_pdb2crd.crd'
     status = {
@@ -372,7 +458,9 @@ const runPdb2Crd = async (
       message: 'PDB2CRD has completed.'
     }
     await updateStepStatus(DBjob, 'pdb2crd', status)
+    logger.debug(`runPdb2Crd completed successfully for job ${DBjob.uuid}`)
   } catch (error) {
+    logger.error(`runPdb2Crd failed for job ${DBjob.uuid}:`, error)
     await handleError(error, MQjob, DBjob, 'pdb2crd')
   }
 }
@@ -381,39 +469,119 @@ const runPaeToConstInp = async (
   MQjob: BullMQJob,
   DBjob: IBilboMDAutoJob
 ): Promise<void> => {
-  const outputDir = path.join(config.uploadDir, DBjob.uuid)
-  // I'm struggling with Typescript here. Since a BilboMDAutoJob will not
-  // have a CRD file when it is first created. I know it's not considered
-  // safe, but I'm going to use type assertion for now.
-  const params: PaeParams = {
-    in_crd: DBjob.crd_file as string,
-    in_pdb: DBjob.pdb_file as string,
-    in_pae: DBjob.pae_file,
-    out_dir: outputDir
-  }
-
-  // Add extra params for OpenMM md_engine
-  if (DBjob.md_engine === 'OpenMM') {
-    params.plddt_cutoff = 50
-    params.emit_constraints = true
-    params.no_const = true
-  }
+  logger.debug(`Starting runPaeToConstInp for job ${DBjob.uuid}`)
 
   try {
+    // Validate required inputs before proceeding
+    if (!DBjob.pae_file) {
+      throw new Error('PAE file is required but not provided')
+    }
+
+    const outputDir = path.join(config.uploadDir, DBjob.uuid)
+    logger.debug(`Output directory: ${outputDir}`)
+
+    // Ensure output directory exists
+    await fs.ensureDir(outputDir)
+
+    // Validate file existence
+    const paeFilePath = path.join(outputDir, DBjob.pae_file)
+    const paeExists = await fs.pathExists(paeFilePath)
+    if (!paeExists) {
+      throw new Error(`PAE file not found: ${paeFilePath}`)
+    }
+    logger.debug(`PAE file verified: ${paeFilePath}`)
+
+    // Handle the TypeScript issue more safely
+    let pdbFilePath: string | undefined
+    let crdFilePath: string | undefined
+
+    if (DBjob.pdb_file) {
+      pdbFilePath = path.join(outputDir, DBjob.pdb_file)
+      const pdbExists = await fs.pathExists(pdbFilePath)
+      if (!pdbExists) {
+        logger.warn(`PDB file specified but not found: ${pdbFilePath}`)
+        pdbFilePath = undefined
+      } else {
+        logger.debug(`PDB file verified: ${pdbFilePath}`)
+      }
+    }
+
+    if (DBjob.crd_file) {
+      crdFilePath = path.join(outputDir, DBjob.crd_file)
+      const crdExists = await fs.pathExists(crdFilePath)
+      if (!crdExists) {
+        logger.warn(`CRD file specified but not found: ${crdFilePath}`)
+        crdFilePath = undefined
+      } else {
+        logger.debug(`CRD file verified: ${crdFilePath}`)
+      }
+    }
+
+    // Ensure we have at least one structure file
+    if (!pdbFilePath && !crdFilePath) {
+      throw new Error(
+        'Neither PDB nor CRD file is available for PAE processing'
+      )
+    }
+
+    // Build params object with proper validation
+    const params: PaeParams = {
+      in_crd: crdFilePath ? DBjob.crd_file : undefined,
+      in_pdb: pdbFilePath ? DBjob.pdb_file : undefined,
+      in_pae: DBjob.pae_file,
+      out_dir: outputDir
+    }
+
+    logger.debug(`PAE processing params:`, {
+      in_crd: params.in_crd,
+      in_pdb: params.in_pdb,
+      in_pae: params.in_pae,
+      md_engine: DBjob.md_engine
+    })
+
+    // Add extra params for OpenMM md_engine
+    if (DBjob.md_engine === 'OpenMM') {
+      params.plddt_cutoff = 50
+      params.emit_constraints = true
+      params.no_const = true
+      logger.debug('Added OpenMM-specific PAE parameters')
+    }
+
     let status: IStepStatus = {
       status: 'Running',
       message: 'Generate const.inp from PAE matrix has started.'
     }
     await updateStepStatus(DBjob, 'pae', status)
+    logger.debug('Updated step status to Running')
+
+    // Execute PAE to const conversion
+    logger.debug('Calling spawnPaeToConst...')
     await spawnPaeToConst(params)
+    logger.debug('spawnPaeToConst completed successfully')
+
+    // Verify the output file was created
+    const constInpPath = path.join(outputDir, 'const.inp')
+    const constInpExists = await fs.pathExists(constInpPath)
+    if (!constInpExists) {
+      throw new Error('const.inp file was not created by PAE processing')
+    }
+    logger.debug(`Verified const.inp file created: ${constInpPath}`)
+
+    // Update job with generated file
     DBjob.const_inp_file = 'const.inp'
     await DBjob.save()
+    logger.debug('Updated DBjob with const_inp_file')
+
     status = {
       status: 'Success',
       message: 'Generate const.inp from PAE matrix has completed.'
     }
     await updateStepStatus(DBjob, 'pae', status)
+    logger.debug(
+      `runPaeToConstInp completed successfully for job ${DBjob.uuid}`
+    )
   } catch (error) {
+    logger.error(`runPaeToConstInp failed for job ${DBjob.uuid}:`, error)
     await handleError(error, MQjob, DBjob, 'pae')
   }
 }
