@@ -707,17 +707,28 @@ const runPaeToConstInp = async (
       `PAE processing params: in_crd=${params.in_crd}, in_pdb=${params.in_pdb}, in_pae=${params.in_pae}, md_engine=${DBjob.md_engine}`
     )
 
-    // Add extra params for OpenMM md_engine
+    // Determine expected output file based on MD engine
+    let expectedOutputFile: string
+
     if (DBjob.md_engine === 'OpenMM') {
+      // OpenMM-specific parameters
       params.plddt_cutoff = 50
       params.emit_constraints = true
       params.no_const = true
+      expectedOutputFile = 'openmm_const.yml'
       logger.debug('Added OpenMM-specific PAE parameters')
+    } else {
+      // CHARMM (default case)
+      expectedOutputFile = 'const.inp'
+      logger.debug('Using CHARMM-specific PAE parameters (default)')
     }
+
+    const expectedOutputPath = path.join(outputDir, expectedOutputFile)
+    logger.debug(`Expected output file: ${expectedOutputFile}`)
 
     let status: IStepStatus = {
       status: 'Running',
-      message: 'Generate const.inp from PAE matrix has started.'
+      message: `Generate ${expectedOutputFile} from PAE matrix has started.`
     }
     await updateStepStatus(DBjob, 'pae', status)
     logger.debug('Updated step status to Running')
@@ -727,22 +738,34 @@ const runPaeToConstInp = async (
     await spawnPaeToConst(params)
     logger.debug('spawnPaeToConst completed successfully')
 
-    // Verify the output file was created
-    const constInpPath = path.join(outputDir, 'const.inp')
-    const constInpExists = await fs.pathExists(constInpPath)
-    if (!constInpExists) {
-      throw new Error('const.inp file was not created by PAE processing')
+    // Verify the expected output file was created
+    const outputExists = await fs.pathExists(expectedOutputPath)
+    if (!outputExists) {
+      throw new Error(
+        `${expectedOutputFile} file was not created by PAE processing`
+      )
     }
-    logger.debug(`Verified const.inp file created: ${constInpPath}`)
+    logger.debug(
+      `Verified ${expectedOutputFile} file created: ${expectedOutputPath}`
+    )
 
-    // Update job with generated file
-    DBjob.const_inp_file = 'const.inp'
-    await DBjob.save()
-    logger.debug('Updated DBjob with const_inp_file')
+    // Update job with generated file based on MD engine
+    if (DBjob.md_engine === 'OpenMM') {
+      // For OpenMM, we might want to store this differently or not at all
+      // since const_inp_file is typically for CHARMM
+      logger.debug(
+        'OpenMM constraints file created - not updating const_inp_file field'
+      )
+    } else {
+      // For CHARMM, update the const_inp_file field
+      DBjob.const_inp_file = expectedOutputFile
+      await DBjob.save()
+      logger.debug('Updated DBjob with const_inp_file')
+    }
 
     status = {
       status: 'Success',
-      message: 'Generate const.inp from PAE matrix has completed.'
+      message: `Generate ${expectedOutputFile} from PAE matrix has completed.`
     }
     await updateStepStatus(DBjob, 'pae', status)
     logger.debug(
