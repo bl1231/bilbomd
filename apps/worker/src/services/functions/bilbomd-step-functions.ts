@@ -414,10 +414,19 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
     throw new Error(`PAE file not found: ${paePath}`)
   }
 
-  // Build CLI args per new usage:
-  const fileFlag = params.in_crd
-    ? ['--crd_file', params.in_crd]
-    : ['--pdb_file', params.in_pdb as string]
+  // Build CLI args per new usage - ensure we have exactly one file after preference logic
+  let fileFlag: string[]
+
+  if (params.in_crd && !params.in_pdb) {
+    fileFlag = ['--crd_file', params.in_crd]
+  } else if (!params.in_crd && params.in_pdb) {
+    fileFlag = ['--pdb_file', params.in_pdb]
+  } else {
+    throw new Error(
+      'Exactly one of in_crd or in_pdb must be provided after preference logic.'
+    )
+  }
+
   logger.debug(`File flag: ${JSON.stringify(fileFlag)}`)
 
   const optionalFlags: string[] = []
@@ -662,43 +671,43 @@ const runPaeToConstInp = async (
     }
     logger.debug(`PAE file verified: ${paeFilePath}`)
 
-    // Handle the TypeScript issue more safely
-    let pdbFilePath: string | undefined
-    let crdFilePath: string | undefined
+    // Validate file existence and determine what to pass
+    let validatedCrdFile: string | undefined
+    let validatedPdbFile: string | undefined
 
-    if (DBjob.pdb_file) {
-      pdbFilePath = path.join(outputDir, DBjob.pdb_file)
-      const pdbExists = await fs.pathExists(pdbFilePath)
-      if (!pdbExists) {
-        logger.warn(`PDB file specified but not found: ${pdbFilePath}`)
-        pdbFilePath = undefined
+    if (DBjob.crd_file) {
+      const crdFilePath = path.join(outputDir, DBjob.crd_file)
+      const crdExists = await fs.pathExists(crdFilePath)
+      if (crdExists) {
+        validatedCrdFile = DBjob.crd_file
+        logger.debug(`CRD file verified: ${crdFilePath}`)
       } else {
-        logger.debug(`PDB file verified: ${pdbFilePath}`)
+        logger.warn(`CRD file specified but not found: ${crdFilePath}`)
       }
     }
 
-    if (DBjob.crd_file) {
-      crdFilePath = path.join(outputDir, DBjob.crd_file)
-      const crdExists = await fs.pathExists(crdFilePath)
-      if (!crdExists) {
-        logger.warn(`CRD file specified but not found: ${crdFilePath}`)
-        crdFilePath = undefined
+    if (DBjob.pdb_file) {
+      const pdbFilePath = path.join(outputDir, DBjob.pdb_file)
+      const pdbExists = await fs.pathExists(pdbFilePath)
+      if (pdbExists) {
+        validatedPdbFile = DBjob.pdb_file
+        logger.debug(`PDB file verified: ${pdbFilePath}`)
       } else {
-        logger.debug(`CRD file verified: ${crdFilePath}`)
+        logger.warn(`PDB file specified but not found: ${pdbFilePath}`)
       }
     }
 
     // Ensure we have at least one structure file
-    if (!pdbFilePath && !crdFilePath) {
+    if (!validatedCrdFile && !validatedPdbFile) {
       throw new Error(
         'Neither PDB nor CRD file is available for PAE processing'
       )
     }
 
-    // Build params object with proper validation
+    // Build params object with validated filenames
     const params: PaeParams = {
-      in_crd: crdFilePath ? DBjob.crd_file : undefined,
-      in_pdb: pdbFilePath ? DBjob.pdb_file : undefined,
+      in_crd: validatedCrdFile,
+      in_pdb: validatedPdbFile,
       in_pae: DBjob.pae_file,
       out_dir: outputDir
     }
