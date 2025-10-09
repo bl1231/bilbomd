@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 1.19.2
+
+### Patch Changes
+
+- d2152d8: Remove `environment.yml` from apps/worker
+- 54283b0: Make sure largest rigid body becomes fixed.
+- 361341d: Fix **BilboMD Auto** pipeline on hyperion when md_engine is `OpenMM`.
+- 1574fa3: Add OpenMM ENV variables for runtime configuration of md settings
+
 ## 1.19.1
 
 ### Patch Changes
