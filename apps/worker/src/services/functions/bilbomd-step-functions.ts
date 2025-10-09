@@ -48,48 +48,111 @@ const handleError = async (
   DBjob: IJob,
   step?: keyof IBilboMDSteps
 ) => {
-  const errorMsg =
-    step || (error instanceof Error ? error.message : String(error))
+  // Enhanced error message extraction
+  let errorMsg: string
+  let stackTrace: string | undefined
 
-  // Updates primay status in MongoDB
-  await updateJobStatus(DBjob, 'Error')
-  // Update the specific step status
-  if (step) {
-    const status: IStepStatus = {
-      status: 'Error',
-      message: `Error in step ${step}: ${errorMsg}`
-    }
-    await updateStepStatus(DBjob, step, status)
-  } else {
+  if (error instanceof Error) {
+    errorMsg = error.message
+    stackTrace = error.stack
     logger.error(
-      `Step not provided or invalid when handling error: ${errorMsg}`
+      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}`
+    )
+  } else {
+    errorMsg = String(error)
+    logger.error(
+      `handleError - Non-Error object: error=${error}, type=${typeof error}, step=${step || 'unknown'}`
     )
   }
 
-  MQjob.log(`error ${errorMsg}`)
+  // Log the step and error details
+  logger.error(
+    `handleError called for step: ${step || 'undefined'} with error: ${errorMsg}`
+  )
 
-  logger.error(`handleError errorMsg: ${errorMsg}`)
+  if (stackTrace) {
+    logger.error(`Stack trace: ${stackTrace}`)
+  }
 
-  MQjob.log(error instanceof Error ? error.message : String(error))
+  // Log job details for context
+  logger.error(
+    `Job context: jobId=${DBjob.id}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}, mqJobId=${MQjob.id}, mqJobName=${MQjob.name}, attemptsMade=${MQjob.attemptsMade}`
+  )
+
+  try {
+    // Updates primary status in MongoDB
+    logger.debug(`Updating job status to 'Error' for job ${DBjob.id}`)
+    await updateJobStatus(DBjob, 'Error')
+    logger.debug(`Successfully updated job status to 'Error'`)
+  } catch (updateError) {
+    logger.error(`Failed to update job status: ${updateError}`)
+  }
+
+  // Update the specific step status
+  if (step) {
+    try {
+      const status: IStepStatus = {
+        status: 'Error',
+        message: `Error in step ${step}: ${errorMsg}`
+      }
+      logger.debug(`Updating step status for step: ${step}`)
+      await updateStepStatus(DBjob, step, status)
+      logger.debug(`Successfully updated step status for step: ${step}`)
+    } catch (stepUpdateError) {
+      logger.error(
+        `Failed to update step status for step ${step}: ${stepUpdateError}`
+      )
+    }
+  } else {
+    logger.error(`Step not provided when handling error. Error: ${errorMsg}`)
+  }
+
+  // Log to MQ job
+  try {
+    await MQjob.log(`ERROR: ${errorMsg}`)
+    if (stackTrace) {
+      await MQjob.log(`Stack trace: ${stackTrace}`)
+    }
+    logger.debug(`Successfully logged error to MQ job`)
+  } catch (mqLogError) {
+    logger.error(`Failed to log to MQ job: ${mqLogError}`)
+  }
 
   // Send job completion email and log the notification
-  logger.info(`Failed Attempts --> ${MQjob.attemptsMade}`)
+  logger.info(`Failed Attempts: ${MQjob.attemptsMade}`)
 
-  const recipientEmail = (DBjob.user as IUser).email
-  if (MQjob.attemptsMade >= 3) {
-    if (config.sendEmailNotifications) {
-      sendJobCompleteEmail(
-        recipientEmail,
-        config.bilbomdUrl,
-        DBjob.id,
-        DBjob.title,
-        true
-      )
-      logger.warn(`email notification sent to ${recipientEmail}`)
-      await MQjob.log(`email notification sent to ${recipientEmail}`)
+  try {
+    const recipientEmail = (DBjob.user as IUser).email
+    logger.debug(`Recipient email: ${recipientEmail}`)
+
+    if (MQjob.attemptsMade >= 3) {
+      if (config.sendEmailNotifications) {
+        logger.debug(`Sending failure email notification to ${recipientEmail}`)
+        await sendJobCompleteEmail(
+          recipientEmail,
+          config.bilbomdUrl,
+          DBjob.id,
+          DBjob.title,
+          true
+        )
+        logger.warn(`Email notification sent to ${recipientEmail}`)
+        await MQjob.log(`Email notification sent to ${recipientEmail}`)
+      } else {
+        logger.debug(`Email notifications are disabled`)
+      }
+    } else {
+      logger.debug(`Not sending email - attempts (${MQjob.attemptsMade}) < 3`)
     }
+  } catch (emailError) {
+    logger.error(`Failed to send email notification: ${emailError}`)
   }
-  throw new Error('BilboMD failed')
+
+  // Create a more descriptive error to throw
+  const finalError = new Error(
+    `BilboMD failed in step '${step || 'unknown'}': ${errorMsg}`
+  )
+  logger.error(`Throwing final error: ${finalError.message}`)
+  throw finalError
 }
 
 const updateJobStatus = async (
@@ -252,87 +315,264 @@ const spawnMultiFoxs = (params: MultiFoxsParams): Promise<void> => {
 }
 
 const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
-  // Basic validation of mutually exclusive inputs
+  logger.debug(
+    `spawnPaeToConst starting with params: in_crd=${params.in_crd}, in_pdb=${params.in_pdb}, in_pae=${params.in_pae}, out_dir=${params.out_dir}, plddt_cutoff=${params.plddt_cutoff}, emit_constraints=${params.emit_constraints}, no_const=${params.no_const}, python_bin=${params.python_bin}, script_path=${params.script_path}`
+  )
+
+  // Basic validation of inputs with preference logic
   const hasCRD = Boolean(params.in_crd)
   const hasPDB = Boolean(params.in_pdb)
-  if ((hasCRD && hasPDB) || (!hasCRD && !hasPDB)) {
-    throw new Error('Exactly one of in_crd or in_pdb must be provided')
+  logger.debug(`Input validation: hasCRD=${hasCRD}, hasPDB=${hasPDB}`)
+
+  // If neither file is provided, throw an error
+  if (!hasCRD && !hasPDB) {
+    const errorMsg = 'At least one of in_crd or in_pdb must be provided'
+    logger.error(`Validation failed: ${errorMsg}`)
+    throw new Error(errorMsg)
+  }
+
+  // If both files are provided, prefer PDB and log the decision
+  if (hasCRD && hasPDB) {
+    logger.debug(
+      `Both CRD and PDB files provided, preferring PDB file: ${params.in_pdb}`
+    )
+    // Clear the CRD parameter to ensure PDB is used
+    params.in_crd = undefined
   }
 
   // Ensure output dir exists (no-op if it already does)
-  fs.mkdirSync(params.out_dir, { recursive: true })
+  try {
+    logger.debug(`Creating output directory: ${params.out_dir}`)
+    fs.mkdirSync(params.out_dir, { recursive: true })
+    logger.debug(`Output directory created/verified successfully`)
+  } catch (error) {
+    logger.error(`Failed to create output directory: ${error}`)
+    throw error
+  }
 
   const logFile = path.join(params.out_dir, 'af2pae.log')
   const errorFile = path.join(params.out_dir, 'af2pae_error.log')
-  const logStream = fs.createWriteStream(logFile, { flags: 'a' })
-  const errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
+  logger.debug(`Log files: stdout=${logFile}, stderr=${errorFile}`)
+
+  let logStream: fs.WriteStream
+  let errorStream: fs.WriteStream
+
+  try {
+    logStream = fs.createWriteStream(logFile, { flags: 'a' })
+    errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
+    logger.debug(`Log streams created successfully`)
+  } catch (error) {
+    logger.error(`Failed to create log streams: ${error}`)
+    throw error
+  }
 
   const pythonBin = params.python_bin ?? '/opt/envs/base/bin/python'
   const af2paeScript = params.script_path ?? '/app/scripts/pae2const.py'
+  logger.debug(`Python binary: ${pythonBin}`)
+  logger.debug(`Script path: ${af2paeScript}`)
 
-  // Build CLI args per new usage:
+  // Verify script exists
+  try {
+    await fs.access(af2paeScript)
+    logger.debug(`Script file verified: ${af2paeScript}`)
+  } catch (error) {
+    logger.error(
+      `Script file not found or not accessible: ${af2paeScript} - ${error}`
+    )
+    throw new Error(`Script file not found: ${af2paeScript}`)
+  }
 
-  const fileFlag = hasCRD
-    ? ['--crd_file', params.in_crd as string]
-    : ['--pdb_file', params.in_pdb as string]
+  // Verify input files exist
+  if (hasCRD && params.in_crd) {
+    const crdPath = path.join(params.out_dir, params.in_crd)
+    try {
+      await fs.access(crdPath)
+      logger.debug(`CRD file verified: ${crdPath}`)
+    } catch (error) {
+      logger.error(`CRD file not found: ${crdPath} - ${error}`)
+      throw new Error(`CRD file not found: ${crdPath}`)
+    }
+  }
+
+  if (hasPDB && params.in_pdb) {
+    const pdbPath = path.join(params.out_dir, params.in_pdb)
+    try {
+      await fs.access(pdbPath)
+      logger.debug(`PDB file verified: ${pdbPath}`)
+    } catch (error) {
+      logger.error(`PDB file not found: ${pdbPath} - ${error}`)
+      throw new Error(`PDB file not found: ${pdbPath}`)
+    }
+  }
+
+  const paePath = path.join(params.out_dir, params.in_pae)
+  try {
+    await fs.access(paePath)
+    logger.debug(`PAE file verified: ${paePath}`)
+  } catch (error) {
+    logger.error(`PAE file not found: ${paePath} - ${error}`)
+    throw new Error(`PAE file not found: ${paePath}`)
+  }
+
+  // Build CLI args per new usage - ensure we have exactly one file after preference logic
+  let fileFlag: string[]
+
+  if (params.in_crd && !params.in_pdb) {
+    fileFlag = ['--crd_file', params.in_crd]
+  } else if (!params.in_crd && params.in_pdb) {
+    fileFlag = ['--pdb_file', params.in_pdb]
+  } else {
+    throw new Error(
+      'Exactly one of in_crd or in_pdb must be provided after preference logic.'
+    )
+  }
+
+  logger.debug(`File flag: ${JSON.stringify(fileFlag)}`)
 
   const optionalFlags: string[] = []
-  // if (params.pae_power !== undefined) {
-  //   optionalFlags.push('--pae_power', String(params.pae_power))
-  // }
   if (params.plddt_cutoff !== undefined) {
     optionalFlags.push('--plddt_cutoff', String(params.plddt_cutoff))
   }
   if (params.emit_constraints) {
-    optionalFlags.push('--emit-constraints', params.emit_constraints)
+    optionalFlags.push('--openmm-const-file', 'openmm_const.yml')
   }
   if (params.no_const) {
     optionalFlags.push('--no-const')
   }
+  logger.debug(`Optional flags: ${JSON.stringify(optionalFlags)}`)
 
   const args = [af2paeScript, ...fileFlag, ...optionalFlags, params.in_pae]
+  logger.debug(`Full command args: ${JSON.stringify(args)}`)
 
   const opts = { cwd: params.out_dir }
+  logger.debug(`Spawn options: ${JSON.stringify(opts)}`)
+
+  // Log the full command that would be executed
+  logger.debug(`Full command: ${pythonBin} ${args.join(' ')}`)
+  logger.debug(`Working directory: ${opts.cwd}`)
 
   return new Promise((resolve, reject) => {
-    const runPaeToConst: ChildProcess = spawn(pythonBin, args, opts)
+    logger.debug(`Starting spawn process...`)
+
+    let runPaeToConst: ChildProcess
+    try {
+      runPaeToConst = spawn(pythonBin, args, opts)
+      logger.debug(`Process spawned successfully, PID: ${runPaeToConst.pid}`)
+    } catch (spawnError) {
+      logger.error(`Failed to spawn process: ${spawnError}`)
+      // Close streams before rejecting
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).finally(() => reject(spawnError))
+      return
+    }
+
+    // Set up timeout to detect hanging processes
+    const processTimeout = setTimeout(
+      () => {
+        logger.error(`Process timeout after 5 minutes, killing process`)
+        runPaeToConst.kill('SIGKILL')
+      },
+      5 * 60 * 1000
+    ) // 5 minutes
 
     runPaeToConst.stdout?.on('data', (data) => {
       const s = data.toString()
-      logger.info(`runPaeToConst stdout: ${s}`)
-      logStream.write(s)
+      logger.debug(
+        `runPaeToConst stdout chunk (${s.length} chars): ${s.substring(0, 200)}${s.length > 200 ? '...' : ''}`
+      )
+      try {
+        logStream.write(s)
+      } catch (writeError) {
+        logger.error(`Failed to write to log stream: ${writeError}`)
+      }
     })
 
     runPaeToConst.stderr?.on('data', (data) => {
       const s = data.toString()
+      logger.debug(
+        `runPaeToConst stderr chunk (${s.length} chars): ${s.substring(0, 200)}${s.length > 200 ? '...' : ''}`
+      )
       logger.error(`runPaeToConst stderr: ${s}`)
-      errorStream.write(s)
+      try {
+        errorStream.write(s)
+      } catch (writeError) {
+        logger.error(`Failed to write to error stream: ${writeError}`)
+      }
     })
 
     runPaeToConst.on('error', (error) => {
-      logger.error(`runPaeToConst error: ${error}`)
+      clearTimeout(processTimeout)
+      logger.error(
+        `runPaeToConst process error: error=${(error as Error).message}, code=${(error as NodeJS.ErrnoException).code}, errno=${(error as NodeJS.ErrnoException).errno}, syscall=${(error as NodeJS.ErrnoException).syscall}, path=${(error as NodeJS.ErrnoException).path}`
+      )
+
       // ensure streams are closed before rejecting
       Promise.all([
-        new Promise((r) => logStream.end(r)),
-        new Promise((r) => errorStream.end(r))
-      ]).finally(() => reject(error))
+        new Promise((r) => {
+          try {
+            logStream.end(r)
+          } catch (e) {
+            logger.error(`Error closing log stream: ${e}`)
+            r(undefined)
+          }
+        }),
+        new Promise((r) => {
+          try {
+            errorStream.end(r)
+          } catch (e) {
+            logger.error(`Error closing error stream: ${e}`)
+            r(undefined)
+          }
+        })
+      ]).finally(() => {
+        logger.debug(`Streams closed, rejecting with error`)
+        reject(error)
+      })
     })
 
-    runPaeToConst.on('exit', (code: number | null) => {
+    runPaeToConst.on('exit', (code: number | null, signal: string | null) => {
+      clearTimeout(processTimeout)
+      logger.debug(
+        `runPaeToConst process exited with code: ${code}, signal: ${signal}`
+      )
+
       const closeStreams = Promise.all([
-        new Promise((r) => logStream.end(r)),
-        new Promise((r) => errorStream.end(r))
+        new Promise((r) => {
+          try {
+            logStream.end(r)
+          } catch (e) {
+            logger.error(`Error closing log stream on exit: ${e}`)
+            r(undefined)
+          }
+        }),
+        new Promise((r) => {
+          try {
+            errorStream.end(r)
+          } catch (e) {
+            logger.error(`Error closing error stream on exit: ${e}`)
+            r(undefined)
+          }
+        })
       ])
 
       closeStreams
         .then(() => {
+          logger.debug(`Streams closed successfully`)
           if (code === 0) {
-            logger.info(`runPaeToConst close success exit code: ${code}`)
+            logger.debug(
+              `runPaeToConst completed successfully with exit code: ${code}`
+            )
             resolve(String(code))
           } else {
-            logger.error(`runPaeToConst close error exit code: ${code}`)
+            logger.error(
+              `runPaeToConst failed with exit code: ${code}, signal: ${signal}`
+            )
             reject(
-              new Error('runPaeToConst failed. Please see the error log file')
+              new Error(
+                `runPaeToConst failed with exit code ${code}${signal ? ` and signal ${signal}` : ''}. Please see the error log file: ${errorFile}`
+              )
             )
           }
         })
@@ -341,6 +581,19 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
           reject(streamError)
         })
     })
+
+    runPaeToConst.on('close', (code: number | null, signal: string | null) => {
+      logger.debug(
+        `runPaeToConst process closed with code: ${code}, signal: ${signal}`
+      )
+    })
+
+    // Additional debugging for process state
+    if (runPaeToConst.pid) {
+      logger.debug(`Process started with PID: ${runPaeToConst.pid}`)
+    } else {
+      logger.warn(`Process started but no PID available`)
+    }
   })
 }
 
@@ -348,6 +601,7 @@ const runPdb2Crd = async (
   MQjob: BullMQJob,
   DBjob: IBilboMDPDBJob | IBilboMDSANSJob
 ): Promise<void> => {
+  logger.debug(`Starting runPdb2Crd for job ${DBjob.uuid}`)
   try {
     let status: IStepStatus = {
       status: 'Running',
@@ -357,17 +611,26 @@ const runPdb2Crd = async (
 
     let charmmInpFiles: string[] = []
 
+    logger.debug(`Creating PDB2CRD CHARMM input files`)
     charmmInpFiles = await createPdb2CrdCharmmInpFiles({
       uuid: DBjob.uuid,
       pdb_file: DBjob.pdb_file
     })
-    // logger.info(`runPdb2Crd: ${charmmInpFiles}`)
+    logger.debug(
+      `Created CHARMM input files: ${JSON.stringify(charmmInpFiles)}`
+    )
+
     // CHARMM pdb2crd convert individual chains
+    logger.debug(`Running CHARMM pdb2crd for individual chains`)
     await spawnPdb2CrdCharmm(MQjob, charmmInpFiles)
+
     // CHARMM pdb2crd meld individual crd files
+    logger.debug(`Running CHARMM pdb2crd meld step`)
     charmmInpFiles = ['pdb2crd_charmm_meld.inp']
     await spawnPdb2CrdCharmm(MQjob, charmmInpFiles)
+
     // Update MongoDB
+    logger.debug(`Updating job files in database`)
     DBjob.psf_file = 'bilbomd_pdb2crd.psf'
     DBjob.crd_file = 'bilbomd_pdb2crd.crd'
     status = {
@@ -375,7 +638,9 @@ const runPdb2Crd = async (
       message: 'PDB2CRD has completed.'
     }
     await updateStepStatus(DBjob, 'pdb2crd', status)
+    logger.debug(`runPdb2Crd completed successfully for job ${DBjob.uuid}`)
   } catch (error) {
+    logger.error(`runPdb2Crd failed for job ${DBjob.uuid}: ${error}`)
     await handleError(error, MQjob, DBjob, 'pdb2crd')
   }
 }
@@ -384,30 +649,139 @@ const runPaeToConstInp = async (
   MQjob: BullMQJob,
   DBjob: IBilboMDAutoJob
 ): Promise<void> => {
-  const outputDir = path.join(config.uploadDir, DBjob.uuid)
-  // I'm struggling with Typescript here. Since a BilboMDAutoJob will not
-  // have a CRD file when it is first created. I know it's not considered
-  // safe, but I'm going to use type assertion for now.
-  const params: PaeParams = {
-    in_crd: DBjob.crd_file as string,
-    in_pae: DBjob.pae_file,
-    out_dir: outputDir
-  }
+  logger.debug(`Starting runPaeToConstInp for job ${DBjob.uuid}`)
+
   try {
+    // Validate required inputs before proceeding
+    if (!DBjob.pae_file) {
+      throw new Error('PAE file is required but not provided')
+    }
+
+    const outputDir = path.join(config.uploadDir, DBjob.uuid)
+    logger.debug(`Output directory: ${outputDir}`)
+
+    // Ensure output directory exists
+    await fs.ensureDir(outputDir)
+
+    // Validate file existence
+    const paeFilePath = path.join(outputDir, DBjob.pae_file)
+    const paeExists = await fs.pathExists(paeFilePath)
+    if (!paeExists) {
+      throw new Error(`PAE file not found: ${paeFilePath}`)
+    }
+    logger.debug(`PAE file verified: ${paeFilePath}`)
+
+    // Validate file existence and determine what to pass
+    let validatedCrdFile: string | undefined
+    let validatedPdbFile: string | undefined
+
+    if (DBjob.crd_file) {
+      const crdFilePath = path.join(outputDir, DBjob.crd_file)
+      const crdExists = await fs.pathExists(crdFilePath)
+      if (crdExists) {
+        validatedCrdFile = DBjob.crd_file
+        logger.debug(`CRD file verified: ${crdFilePath}`)
+      } else {
+        logger.warn(`CRD file specified but not found: ${crdFilePath}`)
+      }
+    }
+
+    if (DBjob.pdb_file) {
+      const pdbFilePath = path.join(outputDir, DBjob.pdb_file)
+      const pdbExists = await fs.pathExists(pdbFilePath)
+      if (pdbExists) {
+        validatedPdbFile = DBjob.pdb_file
+        logger.debug(`PDB file verified: ${pdbFilePath}`)
+      } else {
+        logger.warn(`PDB file specified but not found: ${pdbFilePath}`)
+      }
+    }
+
+    // Ensure we have at least one structure file
+    if (!validatedCrdFile && !validatedPdbFile) {
+      throw new Error(
+        'Neither PDB nor CRD file is available for PAE processing'
+      )
+    }
+
+    // Build params object with validated filenames
+    const params: PaeParams = {
+      in_crd: validatedCrdFile,
+      in_pdb: validatedPdbFile,
+      in_pae: DBjob.pae_file,
+      out_dir: outputDir
+    }
+
+    logger.debug(
+      `PAE processing params: in_crd=${params.in_crd}, in_pdb=${params.in_pdb}, in_pae=${params.in_pae}, md_engine=${DBjob.md_engine}`
+    )
+
+    // Determine expected output file based on MD engine
+    let expectedOutputFile: string
+
+    if (DBjob.md_engine === 'OpenMM') {
+      // OpenMM-specific parameters
+      params.plddt_cutoff = 50
+      params.emit_constraints = true
+      params.no_const = true
+      expectedOutputFile = 'openmm_const.yml'
+      logger.debug('Added OpenMM-specific PAE parameters')
+    } else {
+      // CHARMM (default case)
+      expectedOutputFile = 'const.inp'
+      logger.debug('Using CHARMM-specific PAE parameters (default)')
+    }
+
+    const expectedOutputPath = path.join(outputDir, expectedOutputFile)
+    logger.debug(`Expected output file: ${expectedOutputFile}`)
+
     let status: IStepStatus = {
       status: 'Running',
-      message: 'Generate const.inp from PAE matrix has started.'
+      message: `Generate ${expectedOutputFile} from PAE matrix has started.`
     }
     await updateStepStatus(DBjob, 'pae', status)
+    logger.debug('Updated step status to Running')
+
+    // Execute PAE to const conversion
+    logger.debug('Calling spawnPaeToConst...')
     await spawnPaeToConst(params)
-    DBjob.const_inp_file = 'const.inp'
-    await DBjob.save()
+    logger.debug('spawnPaeToConst completed successfully')
+
+    // Verify the expected output file was created
+    const outputExists = await fs.pathExists(expectedOutputPath)
+    if (!outputExists) {
+      throw new Error(
+        `${expectedOutputFile} file was not created by PAE processing`
+      )
+    }
+    logger.debug(
+      `Verified ${expectedOutputFile} file created: ${expectedOutputPath}`
+    )
+
+    // Update job with generated file based on MD engine
+    if (DBjob.md_engine === 'OpenMM') {
+      // For OpenMM, we might want to store this differently or not at all
+      // since const_inp_file is typically for CHARMM
+      logger.debug(
+        'OpenMM constraints file created - not updating const_inp_file field'
+      )
+    } else {
+      // For CHARMM, update the const_inp_file field
+      DBjob.const_inp_file = expectedOutputFile
+      await DBjob.save()
+      logger.debug('Updated DBjob with const_inp_file')
+    }
+
     status = {
       status: 'Success',
-      message: 'Generate const.inp from PAE matrix has completed.'
+      message: `Generate ${expectedOutputFile} from PAE matrix has completed.`
     }
     await updateStepStatus(DBjob, 'pae', status)
+    logger.debug(
+      `runPaeToConstInp completed successfully for job ${DBjob.uuid}`
+    )
   } catch (error) {
+    logger.error(`runPaeToConstInp failed for job ${DBjob.uuid}: ${error}`)
     await handleError(error, MQjob, DBjob, 'pae')
   }
 }
@@ -1176,7 +1550,7 @@ Thank you for using BilboMD
     await fs.writeFile(readmePath, readmeContent)
     logger.info('README file created successfully.')
   } catch (error) {
-    logger.error('Failed to create README file:', error)
+    logger.error(`Failed to create README file: ${error}`)
     throw new Error('Failed to create README file')
   }
 }

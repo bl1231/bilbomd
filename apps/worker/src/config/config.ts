@@ -9,6 +9,10 @@ const getEnvVar = (name: string): string => {
   return value
 }
 
+const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
+  return process.env[name] || defaultValue
+}
+
 export const config = {
   sendEmailNotifications: process.env.SEND_EMAIL_NOTIFICATIONS === 'true',
   bilbomdUrl: getEnvVar('BILBOMD_URL'),
@@ -23,6 +27,7 @@ export const config = {
   charmmBin: getEnvVar('CHARMM'),
   foxBin: getEnvVar('FOXS'),
   multifoxsBin: getEnvVar('MULTIFOXS'),
+  logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info'),
   scripts: {
     prepareCHARMMSlurmScript: getEnvVar('PREPARE_CHARMM_SLURM_SCRIPT'),
     prepareOMMSlurmScript: getEnvVar('PREPARE_OMM_SLURM_SCRIPT'),

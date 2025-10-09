@@ -25,14 +25,24 @@ import { autoJobSchema } from '../../validation/index.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
-const handleBilboMDAutoJob = async (req: Request, res: Response, user: IUser, UUID: string) => {
+const handleBilboMDAutoJob = async (
+  req: Request,
+  res: Response,
+  user: IUser,
+  UUID: string
+) => {
   try {
-    const isResubmission = Boolean(req.body.resubmit === true || req.body.resubmit === 'true')
+    const isResubmission = Boolean(
+      req.body.resubmit === true || req.body.resubmit === 'true'
+    )
     const originalJobId = req.body.original_job_id || null
-    logger.info(`isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`)
+    logger.info(
+      `isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`
+    )
 
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-    const md_engine: 'CHARMM' | 'OpenMM' = mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+    const md_engine: 'CHARMM' | 'OpenMM' =
+      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
     logger.info(`Selected md_engine: ${md_engine}`)
 
     const { bilbomd_mode: bilbomdMode } = req.body
@@ -59,9 +69,18 @@ const handleBilboMDAutoJob = async (req: Request, res: Response, user: IUser, UU
       paeFileName = originalJob.pae_file
       datFileName = originalJob.data_file
 
-      await fs.copy(path.join(originalDir, pdbFileName), path.join(jobDir, pdbFileName))
-      await fs.copy(path.join(originalDir, paeFileName), path.join(jobDir, paeFileName))
-      await fs.copy(path.join(originalDir, datFileName), path.join(jobDir, datFileName))
+      await fs.copy(
+        path.join(originalDir, pdbFileName),
+        path.join(jobDir, pdbFileName)
+      )
+      await fs.copy(
+        path.join(originalDir, paeFileName),
+        path.join(jobDir, paeFileName)
+      )
+      await fs.copy(
+        path.join(originalDir, datFileName),
+        path.join(jobDir, datFileName)
+      )
       logger.info(
         `Resubmission: Copied files from original job ${originalJobId} to new job ${UUID}`
       )
@@ -94,7 +113,10 @@ const handleBilboMDAutoJob = async (req: Request, res: Response, user: IUser, UU
     logger.info(`PDB File: ${pdbFileName}`)
     logger.info(`PAE File: ${paeFileName}`)
 
-    const autorgResults: AutoRgResults = await spawnAutoRgCalculator(jobDir, datFileName)
+    const autorgResults: AutoRgResults = await spawnAutoRgCalculator(
+      jobDir,
+      datFileName
+    )
 
     // Collect data for validation
     const jobPayload = {
@@ -171,7 +193,9 @@ const handleBilboMDAutoJob = async (req: Request, res: Response, user: IUser, UU
       user: user,
       steps: stepsAdjusted,
       md_engine,
-      ...(isResubmission && originalJobId ? { resubmitted_from: originalJobId } : {})
+      ...(isResubmission && originalJobId
+        ? { resubmitted_from: originalJobId }
+        : {})
     })
 
     // Save the job to the database
@@ -183,6 +207,8 @@ const handleBilboMDAutoJob = async (req: Request, res: Response, user: IUser, UU
 
     // ---------------------------------------------------------- //
     // Convert PDB to PSF and CRD (only if not on NERSC and not OpenMM)
+    logger.info(`md_engine is ${md_engine}`)
+    logger.info(`config.runOnNERSC is ${config.runOnNERSC}`)
     if (!config.runOnNERSC && md_engine !== 'OpenMM') {
       const Pdb2CrdBullId = await queuePdb2CrdJob({
         type: 'Pdb2Crd',
