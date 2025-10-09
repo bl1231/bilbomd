@@ -55,26 +55,26 @@ const buildOpenMMConfigForJob = (
   steps: {
     minimization: {
       parameters: {
-        max_iterations: 1000
+        max_iterations: parseInt(process.env.OMM_MINIMIZE_MAX_ITER || '1000')
       },
       output_pdb: 'minimized.pdb'
     },
     heating: {
       parameters: {
-        first_temp: 300,
-        final_temp: 600,
-        total_steps: 10000,
-        timestep: 0.001
+        first_temp: parseInt(process.env.OMM_HEAT_FIRST_TEMP || '300'),
+        final_temp: parseInt(process.env.OMM_HEAT_FINAL_TEMP || '600'),
+        total_steps: parseInt(process.env.OMM_HEAT_TOTAL_STEPS || '10000'),
+        timestep: parseFloat(process.env.OMM_HEAT_TIMESTEP || '0.001')
       },
       output_pdb: 'heated.pdb',
       output_restart: 'heated.xml'
     },
     md: {
       parameters: {
-        temperature: 600,
-        friction: 0.1,
-        nsteps: 10000,
-        timestep: 0.001
+        temperature: parseInt(process.env.OMM_MD_TEMP || '300'),
+        friction: parseFloat(process.env.OMM_MD_FRICTION || '0.1'),
+        nsteps: parseInt(process.env.OMM_MD_NSTEPS || '10000'),
+        timestep: parseFloat(process.env.OMM_MD_TIMESTEP || '0.001')
       },
       rgyr: {
         rgs: (() => {
@@ -90,14 +90,18 @@ const buildOpenMMConfigForJob = (
             Math.round(rg_min + (i * (rg_max - rg_min)) / 5)
           )
         })(),
-        k_rg: 10,
-        report_interval: 1000,
+        k_rg: parseInt(process.env.OMM_MD_K_RG || '10'),
+        report_interval: parseInt(
+          process.env.OMM_MD_RG_REPORT_INTERVAL || '100'
+        ),
         filename: 'rgyr.csv'
       },
       output_pdb: 'md.pdb',
       output_restart: 'md.xml',
       output_dcd: 'md.dcd',
-      pdb_report_interval: 100
+      pdb_report_interval: parseInt(
+        process.env.OMM_MD_PDB_REPORT_INTERVAL || '1000'
+      )
     }
   }
 })
