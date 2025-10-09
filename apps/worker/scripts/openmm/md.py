@@ -188,6 +188,54 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def get_available_gpu_count():
+    """Get the number of available CUDA GPUs."""
+    try:
+        cuda_platform = Platform.getPlatformByName("CUDA")
+        # Try to get device count from CUDA_VISIBLE_DEVICES if set
+        cvis = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+        if cvis:
+            # Count comma-separated device IDs
+            return len([d.strip() for d in cvis.split(",") if d.strip()])
+        else:
+            # Fall back to querying the platform (this might not work in all cases)
+            return cuda_platform.getPropertyDefaultValue("CudaDeviceIndex") + 1
+    except Exception:
+        # If CUDA is not available or any error occurs, assume 1 GPU or CPU
+        return 1
+
+
+def select_gpu_for_standalone():
+    """Select an appropriate GPU ID for standalone mode."""
+    available_gpus = get_available_gpu_count()
+    if available_gpus <= 1:
+        return 0
+
+    # For multiple GPUs, we could use various strategies:
+    # 1. Round-robin based on process ID
+    # 2. Random selection
+    # 3. Environment variable override
+
+    # Check if user specified a GPU
+    gpu_override = os.environ.get("OMM_GPU_ID")
+    if gpu_override is not None:
+        try:
+            gpu_id = int(gpu_override)
+            if 0 <= gpu_id < available_gpus:
+                return gpu_id
+            else:
+                print(
+                    f"[md.py] Warning: OMM_GPU_ID={gpu_id} out of range (0-{available_gpus - 1}), using 0"
+                )
+                return 0
+        except (ValueError, TypeError):
+            print(f"[md.py] Warning: Invalid OMM_GPU_ID='{gpu_override}', using 0")
+            return 0
+
+    # Default: use GPU 0, but this could be enhanced with load balancing
+    return 0
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -211,10 +259,9 @@ if __name__ == "__main__":
     if omm_rg is not None:
         try:
             rg = float(omm_rg)
-            print(f"[md.py] Standalone mode: running single Rg={rg}")
-            run_md_for_rg(
-                rg, args.config_path, gpu_id=0
-            )  # Use GPU 0 or adjust as needed
+            gpu_id = select_gpu_for_standalone()
+            print(f"[md.py] Standalone mode: running single Rg={rg} on GPU {gpu_id}")
+            run_md_for_rg(rg, args.config_path, gpu_id=gpu_id)
             print(f"[md.py] Standalone mode: completed Rg={rg}")
             sys.exit(0)
         except (ValueError, TypeError) as e:
