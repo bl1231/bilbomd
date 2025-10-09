@@ -353,16 +353,14 @@ const runOmmMD = async (
   }
   await updateStepStatus(DBjob, stepKey, status)
 
-  const runOne = async (rg: number, gpuIndex: number): Promise<void> => {
-    const assignedGpu = availableGpus[gpuIndex % availableGpus.length]
+  const runOne = async (rg: number, assignedGpu: number): Promise<void> => {
     const scriptPath = path.resolve(process.cwd(), 'scripts/openmm/md.py')
     const env = {
       ...(opts?.platform ? { OPENMM_PLATFORM: opts.platform } : {}),
       ...(opts?.pluginDir ? { OPENMM_PLUGIN_DIR: opts.pluginDir } : {}),
       OMM_RG: String(rg),
-      OMM_GPU_ID: String(assignedGpu),
-      // Explicitly set CUDA device visibility for this process
-      CUDA_VISIBLE_DEVICES: String(assignedGpu)
+      OMM_GPU_ID: String(assignedGpu)
+      // Remove CUDA_VISIBLE_DEVICES - let OpenMM handle GPU selection
     }
 
     logger.info(`[md] launching rg=${rg} on GPU ${assignedGpu}`)
@@ -421,11 +419,16 @@ const runOmmMD = async (
 
   const semaphore = new Semaphore(maxParallel)
   let completed = 0
+  let gpuCounter = 0 // Counter for proper GPU load balancing
 
-  const processRg = async (rg: number, index: number) => {
+  const processRg = async (rg: number) => {
     await semaphore.acquire()
     try {
-      await runOne(rg, index)
+      // Assign GPU when task actually starts, not when queued
+      const assignedGpu = availableGpus[gpuCounter % availableGpus.length]
+      gpuCounter++
+
+      await runOne(rg, assignedGpu)
       completed++
       results.push({ rg, status: 'success' })
 
@@ -451,7 +454,7 @@ const runOmmMD = async (
   }
 
   // Launch all tasks
-  await Promise.allSettled(rgs.map((rg, index) => processRg(rg, index)))
+  await Promise.allSettled(rgs.map((rg) => processRg(rg)))
 
   // Analyze results
   const failures = results.filter((r) => r.status === 'error')
