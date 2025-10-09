@@ -44,6 +44,7 @@ jobs:
           filters: |
             backend:
               - 'apps/backend/**'
+              - 'tools/python/**'
               - 'packages/mongodb-schema/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
@@ -58,6 +59,7 @@ jobs:
               - 'apps/ui/bilbomd-ui.dockerfile'
             worker:
               - 'apps/worker/**'
+              - 'tools/python/**'
               - 'packages/mongodb-schema/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
