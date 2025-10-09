@@ -71,7 +71,7 @@ const buildOpenMMConfigForJob = (
     },
     md: {
       parameters: {
-        temperature: parseInt(process.env.OMM_MD_TEMP || '300'),
+        temperature: parseInt(process.env.OMM_MD_TEMP || '600'),
         friction: parseFloat(process.env.OMM_MD_FRICTION || '0.1'),
         nsteps: parseInt(process.env.OMM_MD_NSTEPS || '10000'),
         timestep: parseFloat(process.env.OMM_MD_TIMESTEP || '0.001')
