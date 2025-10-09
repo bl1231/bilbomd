@@ -328,29 +328,109 @@ const spawnMultiFoxs = (params: MultiFoxsParams): Promise<void> => {
 }
 
 const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
+  logger.debug(`spawnPaeToConst starting with params:`, {
+    in_crd: params.in_crd,
+    in_pdb: params.in_pdb,
+    in_pae: params.in_pae,
+    out_dir: params.out_dir,
+    plddt_cutoff: params.plddt_cutoff,
+    emit_constraints: params.emit_constraints,
+    no_const: params.no_const,
+    python_bin: params.python_bin,
+    script_path: params.script_path
+  })
+
   // Basic validation of mutually exclusive inputs
   const hasCRD = Boolean(params.in_crd)
   const hasPDB = Boolean(params.in_pdb)
+  logger.debug(`Input validation: hasCRD=${hasCRD}, hasPDB=${hasPDB}`)
+
   if ((hasCRD && hasPDB) || (!hasCRD && !hasPDB)) {
-    throw new Error('Exactly one of in_crd or in_pdb must be provided')
+    const errorMsg = 'Exactly one of in_crd or in_pdb must be provided'
+    logger.error(`Validation failed: ${errorMsg}`)
+    throw new Error(errorMsg)
   }
 
   // Ensure output dir exists (no-op if it already does)
-  fs.mkdirSync(params.out_dir, { recursive: true })
+  try {
+    logger.debug(`Creating output directory: ${params.out_dir}`)
+    fs.mkdirSync(params.out_dir, { recursive: true })
+    logger.debug(`Output directory created/verified successfully`)
+  } catch (error) {
+    logger.error(`Failed to create output directory:`, error)
+    throw error
+  }
 
   const logFile = path.join(params.out_dir, 'af2pae.log')
   const errorFile = path.join(params.out_dir, 'af2pae_error.log')
-  const logStream = fs.createWriteStream(logFile, { flags: 'a' })
-  const errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
+  logger.debug(`Log files: stdout=${logFile}, stderr=${errorFile}`)
+
+  let logStream: fs.WriteStream
+  let errorStream: fs.WriteStream
+
+  try {
+    logStream = fs.createWriteStream(logFile, { flags: 'a' })
+    errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
+    logger.debug(`Log streams created successfully`)
+  } catch (error) {
+    logger.error(`Failed to create log streams:`, error)
+    throw error
+  }
 
   const pythonBin = params.python_bin ?? '/opt/envs/base/bin/python'
   const af2paeScript = params.script_path ?? '/app/scripts/pae2const.py'
+  logger.debug(`Python binary: ${pythonBin}`)
+  logger.debug(`Script path: ${af2paeScript}`)
+
+  // Verify script exists
+  try {
+    await fs.access(af2paeScript)
+    logger.debug(`Script file verified: ${af2paeScript}`)
+  } catch (error) {
+    logger.error(
+      `Script file not found or not accessible: ${af2paeScript}`,
+      error
+    )
+    throw new Error(`Script file not found: ${af2paeScript}`)
+  }
+
+  // Verify input files exist
+  if (hasCRD && params.in_crd) {
+    const crdPath = path.join(params.out_dir, params.in_crd)
+    try {
+      await fs.access(crdPath)
+      logger.debug(`CRD file verified: ${crdPath}`)
+    } catch (error) {
+      logger.error(`CRD file not found: ${crdPath}`, error)
+      throw new Error(`CRD file not found: ${crdPath}`)
+    }
+  }
+
+  if (hasPDB && params.in_pdb) {
+    const pdbPath = path.join(params.out_dir, params.in_pdb)
+    try {
+      await fs.access(pdbPath)
+      logger.debug(`PDB file verified: ${pdbPath}`)
+    } catch (error) {
+      logger.error(`PDB file not found: ${pdbPath}`, error)
+      throw new Error(`PDB file not found: ${pdbPath}`)
+    }
+  }
+
+  const paePath = path.join(params.out_dir, params.in_pae)
+  try {
+    await fs.access(paePath)
+    logger.debug(`PAE file verified: ${paePath}`)
+  } catch (error) {
+    logger.error(`PAE file not found: ${paePath}`, error)
+    throw new Error(`PAE file not found: ${paePath}`)
+  }
 
   // Build CLI args per new usage:
-
   const fileFlag = hasCRD
     ? ['--crd_file', params.in_crd as string]
     : ['--pdb_file', params.in_pdb as string]
+  logger.debug(`File flag: ${JSON.stringify(fileFlag)}`)
 
   const optionalFlags: string[] = []
   if (params.plddt_cutoff !== undefined) {
@@ -362,58 +442,165 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
   if (params.no_const) {
     optionalFlags.push('--no-const')
   }
+  logger.debug(`Optional flags: ${JSON.stringify(optionalFlags)}`)
 
   const args = [af2paeScript, ...fileFlag, ...optionalFlags, params.in_pae]
+  logger.debug(`Full command args: ${JSON.stringify(args)}`)
 
   const opts = { cwd: params.out_dir }
+  logger.debug(`Spawn options: ${JSON.stringify(opts)}`)
+
+  // Log the full command that would be executed
+  logger.debug(`Full command: ${pythonBin} ${args.join(' ')}`)
+  logger.debug(`Working directory: ${opts.cwd}`)
 
   return new Promise((resolve, reject) => {
-    const runPaeToConst: ChildProcess = spawn(pythonBin, args, opts)
+    logger.debug(`Starting spawn process...`)
+
+    let runPaeToConst: ChildProcess
+    try {
+      runPaeToConst = spawn(pythonBin, args, opts)
+      logger.debug(`Process spawned successfully, PID: ${runPaeToConst.pid}`)
+    } catch (spawnError) {
+      logger.error(`Failed to spawn process:`, spawnError)
+      // Close streams before rejecting
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).finally(() => reject(spawnError))
+      return
+    }
+
+    // Set up timeout to detect hanging processes
+    const processTimeout = setTimeout(
+      () => {
+        logger.error(`Process timeout after 5 minutes, killing process`)
+        runPaeToConst.kill('SIGKILL')
+      },
+      5 * 60 * 1000
+    ) // 5 minutes
 
     runPaeToConst.stdout?.on('data', (data) => {
       const s = data.toString()
-      logger.info(`runPaeToConst stdout: ${s}`)
-      logStream.write(s)
+      logger.debug(
+        `runPaeToConst stdout chunk (${s.length} chars): ${s.substring(0, 200)}${s.length > 200 ? '...' : ''}`
+      )
+      try {
+        logStream.write(s)
+      } catch (writeError) {
+        logger.error(`Failed to write to log stream:`, writeError)
+      }
     })
 
     runPaeToConst.stderr?.on('data', (data) => {
       const s = data.toString()
+      logger.debug(
+        `runPaeToConst stderr chunk (${s.length} chars): ${s.substring(0, 200)}${s.length > 200 ? '...' : ''}`
+      )
       logger.error(`runPaeToConst stderr: ${s}`)
-      errorStream.write(s)
+      try {
+        errorStream.write(s)
+      } catch (writeError) {
+        logger.error(`Failed to write to error stream:`, writeError)
+      }
     })
 
     runPaeToConst.on('error', (error) => {
-      logger.error(`runPaeToConst error: ${error}`)
+      clearTimeout(processTimeout)
+      logger.error(`runPaeToConst process error:`, {
+        error: (error as Error).message,
+        code: (error as NodeJS.ErrnoException).code,
+        errno: (error as NodeJS.ErrnoException).errno,
+        syscall: (error as NodeJS.ErrnoException).syscall,
+        path: (error as NodeJS.ErrnoException).path
+      })
+
       // ensure streams are closed before rejecting
       Promise.all([
-        new Promise((r) => logStream.end(r)),
-        new Promise((r) => errorStream.end(r))
-      ]).finally(() => reject(error))
+        new Promise((r) => {
+          try {
+            logStream.end(r)
+          } catch (e) {
+            logger.error(`Error closing log stream:`, e)
+            r(undefined)
+          }
+        }),
+        new Promise((r) => {
+          try {
+            errorStream.end(r)
+          } catch (e) {
+            logger.error(`Error closing error stream:`, e)
+            r(undefined)
+          }
+        })
+      ]).finally(() => {
+        logger.debug(`Streams closed, rejecting with error`)
+        reject(error)
+      })
     })
 
-    runPaeToConst.on('exit', (code: number | null) => {
+    runPaeToConst.on('exit', (code: number | null, signal: string | null) => {
+      clearTimeout(processTimeout)
+      logger.debug(
+        `runPaeToConst process exited with code: ${code}, signal: ${signal}`
+      )
+
       const closeStreams = Promise.all([
-        new Promise((r) => logStream.end(r)),
-        new Promise((r) => errorStream.end(r))
+        new Promise((r) => {
+          try {
+            logStream.end(r)
+          } catch (e) {
+            logger.error(`Error closing log stream on exit:`, e)
+            r(undefined)
+          }
+        }),
+        new Promise((r) => {
+          try {
+            errorStream.end(r)
+          } catch (e) {
+            logger.error(`Error closing error stream on exit:`, e)
+            r(undefined)
+          }
+        })
       ])
 
       closeStreams
         .then(() => {
+          logger.debug(`Streams closed successfully`)
           if (code === 0) {
-            logger.info(`runPaeToConst close success exit code: ${code}`)
+            logger.debug(
+              `runPaeToConst completed successfully with exit code: ${code}`
+            )
             resolve(String(code))
           } else {
-            logger.error(`runPaeToConst close error exit code: ${code}`)
+            logger.error(
+              `runPaeToConst failed with exit code: ${code}, signal: ${signal}`
+            )
             reject(
-              new Error('runPaeToConst failed. Please see the error log file')
+              new Error(
+                `runPaeToConst failed with exit code ${code}${signal ? ` and signal ${signal}` : ''}. Please see the error log file: ${errorFile}`
+              )
             )
           }
         })
         .catch((streamError) => {
-          logger.error(`Error closing file streams: ${streamError}`)
+          logger.error(`Error closing file streams:`, streamError)
           reject(streamError)
         })
     })
+
+    runPaeToConst.on('close', (code: number | null, signal: string | null) => {
+      logger.debug(
+        `runPaeToConst process closed with code: ${code}, signal: ${signal}`
+      )
+    })
+
+    // Additional debugging for process state
+    if (runPaeToConst.pid) {
+      logger.debug(`Process started with PID: ${runPaeToConst.pid}`)
+    } else {
+      logger.warn(`Process started but no PID available`)
+    }
   })
 }
 
