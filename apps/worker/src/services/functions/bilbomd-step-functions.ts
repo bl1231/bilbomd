@@ -319,15 +319,25 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
     `spawnPaeToConst starting with params: in_crd=${params.in_crd}, in_pdb=${params.in_pdb}, in_pae=${params.in_pae}, out_dir=${params.out_dir}, plddt_cutoff=${params.plddt_cutoff}, emit_constraints=${params.emit_constraints}, no_const=${params.no_const}, python_bin=${params.python_bin}, script_path=${params.script_path}`
   )
 
-  // Basic validation of mutually exclusive inputs
+  // Basic validation of inputs with preference logic
   const hasCRD = Boolean(params.in_crd)
   const hasPDB = Boolean(params.in_pdb)
   logger.debug(`Input validation: hasCRD=${hasCRD}, hasPDB=${hasPDB}`)
 
-  if ((hasCRD && hasPDB) || (!hasCRD && !hasPDB)) {
-    const errorMsg = 'Exactly one of in_crd or in_pdb must be provided'
+  // If neither file is provided, throw an error
+  if (!hasCRD && !hasPDB) {
+    const errorMsg = 'At least one of in_crd or in_pdb must be provided'
     logger.error(`Validation failed: ${errorMsg}`)
     throw new Error(errorMsg)
+  }
+
+  // If both files are provided, prefer PDB and log the decision
+  if (hasCRD && hasPDB) {
+    logger.debug(
+      `Both CRD and PDB files provided, preferring PDB file: ${params.in_pdb}`
+    )
+    // Clear the CRD parameter to ensure PDB is used
+    params.in_crd = undefined
   }
 
   // Ensure output dir exists (no-op if it already does)
