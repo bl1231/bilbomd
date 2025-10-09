@@ -1,5 +1,12 @@
 # @bilbomd/backend
 
+## 1.26.3
+
+### Patch Changes
+
+- 54283b0: Make sure largest rigid body becomes fixed.
+- 361341d: Fix **BilboMD Auto** pipeline on hyperion when md_engine is `OpenMM`.
+
 ## 1.26.2
 
 ### Patch Changes
