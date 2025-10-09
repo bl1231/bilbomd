@@ -31,7 +31,7 @@ const loggerTransports = [
     maxFiles: '30d'
   }),
   new transports.Console({
-    level: 'info', // Only info and above to console
+    level: 'debug',
     format: combine(colorize(), logFormat)
   })
 ]
