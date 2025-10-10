@@ -171,12 +171,14 @@ const handleBilboMDClassicPDB = async (
 
     // Handle constraint file processing AFTER validation
     if (!isResubmission && inpFile) {
-      await processConstraintFile({
+      const standardizedFileName = await processConstraintFile({
         md_engine,
         jobDir,
         inpFile,
         inpFileName
       })
+      // Update inpFileName to reflect the standardized output filename
+      inpFileName = standardizedFileName
     }
 
     // Build default steps, allow minor tweaks based on md_engine
@@ -279,12 +281,16 @@ async function processConstraintFile({
   jobDir: string
   inpFile: Express.Multer.File
   inpFileName: string
-}) {
+}): Promise<string> {
   const filePath = inpFile.path // Use the actual uploaded file path
-  const finalPath = path.join(jobDir, inpFileName) // Where the file should end up
+
+  // Determine standardized output filename based on MD engine
+  const standardizedFileName =
+    md_engine === 'OpenMM' ? 'openmm_const.yml' : 'const.inp'
+  const finalPath = path.join(jobDir, standardizedFileName)
   const originalFilePath = path.join(jobDir, `${inpFileName}.orig`)
 
-  // Always keep original - copy from uploaded location to final location with .orig extension
+  // Always keep original - copy from uploaded location with original name + .orig extension
   await fs.copyFile(filePath, originalFilePath)
 
   // Determine file type by extension or content
@@ -298,15 +304,19 @@ async function processConstraintFile({
       await validateInpConstraints(filePath)
       const yamlContent = await convertInpToYaml(filePath)
 
-      // Write YAML content to final path
+      // Write YAML content to standardized filename
       await fs.writeFile(finalPath, yamlContent)
-      logger.info('INP file converted to YAML for OpenMM')
+      logger.info(
+        `INP file converted to YAML for OpenMM: ${standardizedFileName}`
+      )
     } else {
-      // Validate YAML file and copy to final location
+      // Validate YAML file and copy to standardized filename
       logger.info('Validating YAML constraints file for OpenMM')
       await validateYamlConstraints(filePath)
       await fs.copyFile(filePath, finalPath)
-      logger.info('YAML constraints file validated for OpenMM')
+      logger.info(
+        `YAML constraints file validated for OpenMM: ${standardizedFileName}`
+      )
     }
   } else if (md_engine === 'CHARMM') {
     if (isYamlFile) {
@@ -315,21 +325,25 @@ async function processConstraintFile({
       await validateYamlConstraints(filePath)
       const inpContent = await convertYamlToInp(filePath)
 
-      // Write INP content to final path
+      // Write INP content to standardized filename
       await fs.writeFile(finalPath, inpContent)
       await sanitizeConstInpFile(finalPath)
-      logger.info('YAML file converted to INP for CHARMM')
+      logger.info(
+        `YAML file converted to INP for CHARMM: ${standardizedFileName}`
+      )
     } else {
       // Process INP file for CHARMM
       logger.info('Processing INP file for CHARMM')
       await validateInpConstraints(filePath)
 
-      // Copy to final location and then sanitize
+      // Copy to standardized filename and then sanitize
       await fs.copyFile(filePath, finalPath)
       await sanitizeConstInpFile(finalPath)
-      logger.info('INP file processed for CHARMM')
+      logger.info(`INP file processed for CHARMM: ${standardizedFileName}`)
     }
   }
+
+  return standardizedFileName
 }
 
 export { handleBilboMDClassicPDB }
