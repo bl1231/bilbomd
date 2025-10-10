@@ -357,5 +357,5 @@ function generateInpFromConstraints(constraints: OpenMMConstraints): string {
 
   lines.push('return')
 
-  return lines.join('\n')
+  return lines.join('\n') + '\n' // Add trailing newline
 }

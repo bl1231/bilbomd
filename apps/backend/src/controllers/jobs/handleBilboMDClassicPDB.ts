@@ -123,16 +123,6 @@ const handleBilboMDClassicPDB = async (
       pdbFileName = pdbFile?.originalname.toLowerCase()
       inpFileName = inpFile?.originalname.toLowerCase()
       datFileName = datFile?.originalname.toLowerCase()
-
-      // Handle constraint file processing based on md_engine and available files
-      if (inpFile) {
-        await processConstraintFile({
-          md_engine,
-          jobDir,
-          inpFile,
-          inpFileName
-        })
-      }
     }
 
     // Calculate rg values if not provided
@@ -161,7 +151,7 @@ const handleBilboMDClassicPDB = async (
       md_engine
     }
 
-    // Validate
+    // Validate FIRST (before processing constraint files)
     try {
       await pdbJobSchema.validate(jobPayload, { abortEarly: false })
     } catch (validationErr) {
@@ -177,6 +167,16 @@ const handleBilboMDClassicPDB = async (
       } else {
         throw validationErr
       }
+    }
+
+    // Handle constraint file processing AFTER validation
+    if (!isResubmission && inpFile) {
+      await processConstraintFile({
+        md_engine,
+        jobDir,
+        inpFile,
+        inpFileName
+      })
     }
 
     // Build default steps, allow minor tweaks based on md_engine
