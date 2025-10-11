@@ -248,7 +248,7 @@ const handleBilboMDAutoJob = async (
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
     res.status(200).json({
-      message: `New ${bilbomdMode} Job successfully created`,
+      message: `New BilboMD Auto Job successfully created`,
       jobid: newJob.id,
       uuid: newJob.uuid,
       md_engine

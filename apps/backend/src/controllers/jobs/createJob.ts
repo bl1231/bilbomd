@@ -42,9 +42,10 @@ const createNewJob = async (req: Request, res: Response) => {
       if (err) {
         logger.error(`Multer error during file upload: ${err}`)
         await fs.remove(jobDir)
-        return res
-          .status(400)
-          .json({ message: 'File upload error', error: err.message || String(err) })
+        return res.status(400).json({
+          message: 'File upload error',
+          error: err.message || String(err)
+        })
       }
 
       try {
@@ -109,8 +110,8 @@ const createNewJob = async (req: Request, res: Response) => {
       error instanceof Error
         ? error.message
         : typeof error === 'string'
-        ? error
-        : 'Unknown error occurred'
+          ? error
+          : 'Unknown error occurred'
 
     logger.error(`handleBilboMDJob error: ${error}`)
     res.status(500).json({ message: msg })

@@ -40,7 +40,8 @@ const handleBilboMDAlphaFoldJob = async (
   const jobDir = path.join(uploadFolder, UUID)
 
   const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-  const md_engine: 'CHARMM' | 'OpenMM' = mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+  const md_engine: 'CHARMM' | 'OpenMM' =
+    mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
   logger.info(`Selected md_engine: ${md_engine}`)
 
   const { bilbomd_mode: bilbomdMode } = req.body
@@ -54,8 +55,13 @@ const handleBilboMDAlphaFoldJob = async (
     parsedEntities = parseAlphaFoldEntities(req.body)
     logger.info(`Parsed ${parsedEntities.length} AlphaFold entities`)
   } catch (parseErr) {
-    logger.error('Failed to parse entities_json or reconstruct entities', parseErr)
-    res.status(400).json({ message: 'Invalid entities_json or malformed form data' })
+    logger.error(
+      'Failed to parse entities_json or reconstruct entities',
+      parseErr
+    )
+    res
+      .status(400)
+      .json({ message: 'Invalid entities_json or malformed form data' })
     return
   }
 
@@ -101,22 +107,36 @@ const handleBilboMDAlphaFoldJob = async (
     // If the values calculated by autorg are outside of the limits set in the mongodb
     // schema then the job will not be created in mongodb and things fail in a way that
     // the user has no idea what has gone wrong.
-    const { rg, rg_min, rg_max }: AutoRgResults = await spawnAutoRgCalculator(jobDir, datFileName)
+    const { rg, rg_min, rg_max }: AutoRgResults = await spawnAutoRgCalculator(
+      jobDir,
+      datFileName
+    )
     // Extract limits from schema
-    const rgMinBound = BilboMdAlphaFoldJob.schema.path('rg_min')?.options.min ?? 10
-    const rgMaxBound = BilboMdAlphaFoldJob.schema.path('rg_max')?.options.max ?? 100
+    const rgMinBound =
+      BilboMdAlphaFoldJob.schema.path('rg_min')?.options.min ?? 10
+    const rgMaxBound =
+      BilboMdAlphaFoldJob.schema.path('rg_max')?.options.max ?? 100
 
     // Validate AutoRg values before creating job
-    if (rg <= 0 || rg_min < rgMinBound || rg_max > rgMaxBound || rg_min > rg || rg > rg_max) {
+    if (
+      rg <= 0 ||
+      rg_min < rgMinBound ||
+      rg_max > rgMaxBound ||
+      rg_min > rg ||
+      rg > rg_max
+    ) {
       logger.warn(
-        `Invalid AutoRg values for job ${req.body.title || UUID}: ${JSON.stringify({
-          rg,
-          rg_min,
-          rg_max
-        })}`
+        `Invalid AutoRg values for job ${req.body.title || UUID}: ${JSON.stringify(
+          {
+            rg,
+            rg_min,
+            rg_max
+          }
+        )}`
       )
       res.status(400).json({
-        message: 'Rg values calculated from your SAXS data are outside allowed bounds',
+        message:
+          'Rg values calculated from your SAXS data are outside allowed bounds',
         autorgResults: { rg, rg_min, rg_max },
         schemaLimits: {
           rg_min: rgMinBound,
@@ -196,7 +216,7 @@ const handleBilboMDAlphaFoldJob = async (
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
     res.status(200).json({
-      message: `New ${bilbomdMode} Job ${newJob.title} successfully created`,
+      message: `New BilboMD AF Job successfully created`,
       jobid: newJob.id,
       uuid: newJob.uuid,
       md_engine

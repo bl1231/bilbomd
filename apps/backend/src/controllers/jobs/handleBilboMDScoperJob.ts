@@ -1,17 +1,29 @@
 import { logger } from '../../middleware/loggers.js'
 import { queueScoperJob } from '../../queues/scoper.js'
-import { IUser, BilboMdScoperJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
+import {
+  IUser,
+  BilboMdScoperJob,
+  IBilboMDScoperJob
+} from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 
-const handleBilboMDScoperJob = async (req: Request, res: Response, user: IUser, UUID: string) => {
+const handleBilboMDScoperJob = async (
+  req: Request,
+  res: Response,
+  user: IUser,
+  UUID: string
+) => {
   try {
     const { bilbomd_mode: bilbomdMode, title, fixc1c2 } = req.body
 
     // Extract md_engine and reject OpenMM early
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-    const md_engine: 'CHARMM' | 'OpenMM' = mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+    const md_engine: 'CHARMM' | 'OpenMM' =
+      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
     if (md_engine === 'OpenMM') {
-      logger.warn('handleBilboMDScoperJob: md_engine=OpenMM is not supported for this pipeline')
+      logger.warn(
+        'handleBilboMDScoperJob: md_engine=OpenMM is not supported for this pipeline'
+      )
       return res.status(422).json({
         message:
           'md_engine=OpenMM is not supported for this version of the BilboMD pipeline. Please use CHARMM.'
@@ -20,12 +32,16 @@ const handleBilboMDScoperJob = async (req: Request, res: Response, user: IUser, 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
     logger.info(
       `PDB File: ${
-        files['pdb_file'] ? files['pdb_file'][0].originalname.toLowerCase() : 'Not Found'
+        files['pdb_file']
+          ? files['pdb_file'][0].originalname.toLowerCase()
+          : 'Not Found'
       }`
     )
     logger.info(
       `DAT File: ${
-        files['dat_file'] ? files['dat_file'][0].originalname.toLowerCase() : 'Not Found'
+        files['dat_file']
+          ? files['dat_file'][0].originalname.toLowerCase()
+          : 'Not Found'
       }`
     )
     const now = new Date()
@@ -70,7 +86,7 @@ const handleBilboMDScoperJob = async (req: Request, res: Response, user: IUser, 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
     res.status(200).json({
-      message: `New ${bilbomdMode} Job ${newJob.title} successfully created`,
+      message: `New Scoper Job successfully created`,
       jobid: newJob.id,
       uuid: newJob.uuid
     })
@@ -82,7 +98,9 @@ const handleBilboMDScoperJob = async (req: Request, res: Response, user: IUser, 
     } else {
       logger.error(`Non-standard error object: {error}`)
     }
-    res.status(500).json({ message: 'Failed to create handleBilboMDScoperJob job' })
+    res
+      .status(500)
+      .json({ message: 'Failed to create handleBilboMDScoperJob job' })
   }
 }
 
