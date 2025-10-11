@@ -196,7 +196,7 @@ const handleBilboMDClassicPDB = async (
       email: { status: StepStatus.Waiting, message: '' }
     } as const
 
-    // If using OpenMM, note that pdb2crd is not needed and will be skipped downstream.
+    // If using OpenMM some steps are skipped or not relevant.
     const stepsAdjusted = {
       ...stepsInit,
       pdb2crd: {
