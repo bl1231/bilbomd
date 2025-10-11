@@ -201,7 +201,15 @@ const handleBilboMDClassicPDB = async (
       ...stepsInit,
       pdb2crd: {
         ...stepsInit.pdb2crd,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
+        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM' : ''
+      },
+      dcd2pdb: {
+        ...stepsInit.dcd2pdb,
+        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM' : ''
+      },
+      pdb_remediate: {
+        ...stepsInit.pdb_remediate,
+        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM' : ''
       }
     }
 
