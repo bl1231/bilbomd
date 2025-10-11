@@ -260,7 +260,7 @@ const handleBilboMDClassicPDB = async (
 
     // Respond with job details
     res.status(200).json({
-      message: `New ${bilbomdMode} Job successfully created`,
+      message: `New BilboMD Classic w/PDB Job successfully created`,
       jobid: newJob.id,
       uuid: newJob.uuid,
       md_engine

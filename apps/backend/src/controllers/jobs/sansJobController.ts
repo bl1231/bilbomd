@@ -4,7 +4,12 @@ import fs from 'fs-extra'
 import mongoose from 'mongoose'
 import { logger } from '../../middleware/loggers.js'
 import multer from 'multer'
-import { BilboMdSANSJob, IBilboMDSANSJob, User, IUser } from '@bilbomd/mongodb-schema'
+import {
+  BilboMdSANSJob,
+  IBilboMDSANSJob,
+  User,
+  IUser
+} from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { sanitizeConstInpFile, writeJobParams } from './index.js'
 import { queueJob } from '../../queues/bilbomd.js'
@@ -166,7 +171,9 @@ const handleBilboMDSANSJob = async (
       } else {
         logger.error(`Unknown error: ${error}`)
       }
-      res.status(500).json({ message: 'Failed to save the job to the database' })
+      res
+        .status(500)
+        .json({ message: 'Failed to save the job to the database' })
       return
     }
 
@@ -187,7 +194,7 @@ const handleBilboMDSANSJob = async (
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
     res.status(200).json({
-      message: `New ${bilbomdMode} Job ${newJob.title} successfully created`,
+      message: `New BilboMD SANS Job successfully created`,
       jobid: newJob.id,
       uuid: newJob.uuid
     })

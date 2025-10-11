@@ -12,25 +12,41 @@ import {
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
-import { writeJobParams, sanitizeConstInpFile, getFileStats } from './utils/jobUtils.js'
+import {
+  writeJobParams,
+  sanitizeConstInpFile,
+  getFileStats
+} from './utils/jobUtils.js'
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
-const handleBilboMDClassicCRD = async (req: Request, res: Response, user: IUser, UUID: string) => {
+const handleBilboMDClassicCRD = async (
+  req: Request,
+  res: Response,
+  user: IUser,
+  UUID: string
+) => {
   try {
-    const isResubmission = Boolean(req.body.resubmit === true || req.body.resubmit === 'true')
+    const isResubmission = Boolean(
+      req.body.resubmit === true || req.body.resubmit === 'true'
+    )
     const originalJobId = req.body.original_job_id || null
-    logger.info(`isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`)
+    logger.info(
+      `isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`
+    )
 
     const { bilbomd_mode: bilbomdMode } = req.body
 
     // Extract md_engine and reject OpenMM early
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-    const md_engine: 'CHARMM' | 'OpenMM' = mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+    const md_engine: 'CHARMM' | 'OpenMM' =
+      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
     if (md_engine === 'OpenMM') {
-      logger.warn('handleBilboMDClassicCRD: md_engine=OpenMM is not supported for this pipeline')
+      logger.warn(
+        'handleBilboMDClassicCRD: md_engine=OpenMM is not supported for this pipeline'
+      )
       return res.status(422).json({
         message:
           'md_engine=OpenMM is not supported for this version of the BilboMD pipeline. Please use CHARMM.'
@@ -66,10 +82,22 @@ const handleBilboMDClassicCRD = async (req: Request, res: Response, user: IUser,
       crdFileName = originalJob.crd_file
       psfFileName = originalJob.psf_file
 
-      await fs.copy(path.join(originalDir, inpFileName), path.join(jobDir, inpFileName))
-      await fs.copy(path.join(originalDir, datFileName), path.join(jobDir, datFileName))
-      await fs.copy(path.join(originalDir, crdFileName), path.join(jobDir, crdFileName))
-      await fs.copy(path.join(originalDir, psfFileName), path.join(jobDir, psfFileName))
+      await fs.copy(
+        path.join(originalDir, inpFileName),
+        path.join(jobDir, inpFileName)
+      )
+      await fs.copy(
+        path.join(originalDir, datFileName),
+        path.join(jobDir, datFileName)
+      )
+      await fs.copy(
+        path.join(originalDir, crdFileName),
+        path.join(jobDir, crdFileName)
+      )
+      await fs.copy(
+        path.join(originalDir, psfFileName),
+        path.join(jobDir, psfFileName)
+      )
       logger.info(
         `Resubmission: Copied files from original job ${originalJobId} to new job ${UUID}`
       )
@@ -141,7 +169,10 @@ const handleBilboMDClassicCRD = async (req: Request, res: Response, user: IUser,
       await crdJobSchema.validate(jobPayload, { abortEarly: false })
     } catch (validationErr) {
       if (validationErr instanceof ValidationError) {
-        logger.warn('Classic CRD/PSF job payload validation failed', validationErr)
+        logger.warn(
+          'Classic CRD/PSF job payload validation failed',
+          validationErr
+        )
         return res.status(400).json({
           message: 'Validation failed',
           errors: validationErr.inner?.map((err) => ({
@@ -183,7 +214,9 @@ const handleBilboMDClassicCRD = async (req: Request, res: Response, user: IUser,
         results: { status: StepStatus.Waiting, message: '' },
         email: { status: StepStatus.Waiting, message: '' }
       },
-      ...(isResubmission && originalJobId ? { resubmitted_from: originalJobId } : {})
+      ...(isResubmission && originalJobId
+        ? { resubmitted_from: originalJobId }
+        : {})
     })
 
     // Save the job to the database
@@ -209,7 +242,7 @@ const handleBilboMDClassicCRD = async (req: Request, res: Response, user: IUser,
 
     // Respond with job details
     res.status(200).json({
-      message: `New ${bilbomdMode} Job successfully created`,
+      message: `New BilboMD Classic w/CRD Job successfully created`,
       jobid: newJob.id,
       uuid: newJob.uuid
     })
