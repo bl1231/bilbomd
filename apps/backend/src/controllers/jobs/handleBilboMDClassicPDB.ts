@@ -25,7 +25,7 @@ import {
   convertYamlToInp,
   validateYamlConstraints,
   validateInpConstraints
-} from './utils/constraintUtils.js'
+} from '@bilbomd/md-utils'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -310,7 +310,7 @@ async function processConstraintFile({
       // Convert CHARMM INP to YAML for OpenMM
       logger.info('Converting INP file to YAML for OpenMM')
       await validateInpConstraints(filePath)
-      const yamlContent = await convertInpToYaml(filePath)
+      const yamlContent = await convertInpToYaml(filePath, logger)
 
       // Write YAML content to standardized filename
       await fs.writeFile(finalPath, yamlContent)
