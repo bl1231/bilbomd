@@ -24,9 +24,9 @@ import {
   convertInpToYaml,
   convertYamlToInp,
   validateYamlConstraints,
-  validateInpConstraints
+  validateInpConstraints,
+  extractConstraintsFromYaml
 } from '@bilbomd/md-utils'
-import { parse as parseYaml } from 'yaml'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -259,7 +259,7 @@ const handleBilboMDClassicPDB = async (
         }
 
         // Parse YAML content to structured object
-        const mdConstraints = parseYaml(yamlContent)
+        const mdConstraints = extractConstraintsFromYaml(yamlContent)
 
         // Update the job with MD constraints
         newJob.md_constraints = mdConstraints

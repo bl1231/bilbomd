@@ -2,7 +2,8 @@ export {
   convertInpToYaml,
   convertYamlToInp,
   validateYamlConstraints,
-  validateInpConstraints
+  validateInpConstraints,
+  extractConstraintsFromYaml
 } from './constraintUtils.js'
 
 // Re-export constraint interfaces from mongodb-schema for convenience

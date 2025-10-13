@@ -23,6 +23,26 @@ const defaultLogger: Logger = {
   warn: () => {}
 }
 
+/**
+ * Extracts constraints from YAML content, handling both wrapped and unwrapped formats
+ */
+export function extractConstraintsFromYaml(
+  yamlContent: string
+): IMDConstraints {
+  const parsed = parseYaml(yamlContent)
+
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid YAML format')
+  }
+
+  // Handle both wrapped and unwrapped formats
+  if ('constraints' in parsed && parsed.constraints) {
+    return parsed.constraints as IMDConstraints
+  } else {
+    return parsed as IMDConstraints
+  }
+}
+
 // Mapping from CHARMM segment IDs to chain IDs
 const SEGMENT_TO_CHAIN_MAP: Record<string, string> = {
   PROA: 'A',
@@ -49,7 +69,12 @@ export async function convertInpToYaml(
     const inpContent = await fs.readFile(inpFilePath, 'utf8')
     const constraints = parseInpConstraints(inpContent)
 
-    const yamlContent = stringifyYaml(constraints, {
+    // Wrap constraints under 'constraints' key for OpenMM config compatibility
+    const wrappedConstraints = {
+      constraints
+    }
+
+    const yamlContent = stringifyYaml(wrappedConstraints, {
       indent: 2,
       lineWidth: 0 // No line wrapping
     })
@@ -71,7 +96,20 @@ export async function convertYamlToInp(
 ): Promise<string> {
   try {
     const yamlContent = await fs.readFile(yamlFilePath, 'utf8')
-    const constraints = parseYaml(yamlContent) as IMDConstraints
+    const parsed = parseYaml(yamlContent)
+
+    // Handle both wrapped and unwrapped formats
+    let constraints: IMDConstraints
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'constraints' in parsed &&
+      parsed.constraints
+    ) {
+      constraints = parsed.constraints as IMDConstraints
+    } else {
+      constraints = parsed as IMDConstraints
+    }
 
     const inpContent = generateInpFromConstraints(constraints)
 
@@ -92,10 +130,18 @@ export async function validateYamlConstraints(
 ): Promise<void> {
   try {
     const yamlContent = await fs.readFile(yamlFilePath, 'utf8')
-    const constraints = parseYaml(yamlContent) as IMDConstraints
+    const parsed = parseYaml(yamlContent)
 
-    if (!constraints || typeof constraints !== 'object') {
+    if (!parsed || typeof parsed !== 'object') {
       throw new Error('Invalid YAML constraint format')
+    }
+
+    // Handle both wrapped and unwrapped formats
+    let constraints: IMDConstraints
+    if ('constraints' in parsed && parsed.constraints) {
+      constraints = parsed.constraints as IMDConstraints
+    } else {
+      constraints = parsed as IMDConstraints
     }
 
     // Validate structure
