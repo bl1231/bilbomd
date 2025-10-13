@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'fs-extra'
+import fs from 'fs-extra'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import {
   IMDConstraints,
@@ -46,7 +46,7 @@ export async function convertInpToYaml(
   logger: Logger = defaultLogger
 ): Promise<string> {
   try {
-    const inpContent = await readFile(inpFilePath, 'utf8')
+    const inpContent = await fs.readFile(inpFilePath, 'utf8')
     const constraints = parseInpConstraints(inpContent)
 
     const yamlContent = stringifyYaml(constraints, {
@@ -70,7 +70,7 @@ export async function convertYamlToInp(
   logger: Logger = defaultLogger
 ): Promise<string> {
   try {
-    const yamlContent = await readFile(yamlFilePath, 'utf8')
+    const yamlContent = await fs.readFile(yamlFilePath, 'utf8')
     const constraints = parseYaml(yamlContent) as IMDConstraints
 
     const inpContent = generateInpFromConstraints(constraints)
@@ -91,7 +91,7 @@ export async function validateYamlConstraints(
   logger: Logger = defaultLogger
 ): Promise<void> {
   try {
-    const yamlContent = await readFile(yamlFilePath, 'utf8')
+    const yamlContent = await fs.readFile(yamlFilePath, 'utf8')
     const constraints = parseYaml(yamlContent) as IMDConstraints
 
     if (!constraints || typeof constraints !== 'object') {
@@ -128,7 +128,7 @@ export async function validateInpConstraints(
   logger: Logger = defaultLogger
 ): Promise<void> {
   try {
-    const inpContent = await readFile(inpFilePath, 'utf8')
+    const inpContent = await fs.readFile(inpFilePath, 'utf8')
 
     if (!inpContent.trim()) {
       throw new Error('Empty INP constraint file')
