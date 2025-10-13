@@ -467,7 +467,7 @@ jobs:
             type=local,dest=/scr/buildkit-cache/scoper,mode=max
 
   schema:
-    name: Build schema
+    name: Build mongodb-schema
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: changes
     runs-on: [self-hosted, linux, x64]
