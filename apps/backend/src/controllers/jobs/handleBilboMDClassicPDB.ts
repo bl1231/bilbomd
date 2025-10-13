@@ -24,8 +24,9 @@ import {
   convertInpToYaml,
   convertYamlToInp,
   validateYamlConstraints,
-  validateInpConstraints
-} from './utils/constraintUtils.js'
+  validateInpConstraints,
+  extractConstraintsFromYaml
+} from '@bilbomd/md-utils'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -240,6 +241,39 @@ const handleBilboMDClassicPDB = async (
     await newJob.save()
     logger.info(`BilboMD-${bilbomdMode} Job saved to MongoDB: ${newJob.id}`)
 
+    // Store MD constraints in MongoDB if constraint file was processed
+    if (!isResubmission && inpFile) {
+      try {
+        const constraintFilePath = path.join(jobDir, inpFileName)
+        const isYamlConstraint = inpFileName.endsWith('.yml')
+
+        let yamlContent: string
+        if (isYamlConstraint) {
+          // Read and validate YAML constraint file
+          await validateYamlConstraints(constraintFilePath)
+          yamlContent = await fs.readFile(constraintFilePath, 'utf8')
+        } else {
+          // Convert INP to YAML for consistent storage
+          await validateInpConstraints(constraintFilePath)
+          yamlContent = await convertInpToYaml(constraintFilePath, logger)
+        }
+
+        // Parse YAML content to structured object
+        const mdConstraints = extractConstraintsFromYaml(yamlContent)
+
+        // Update the job with MD constraints
+        newJob.md_constraints = mdConstraints
+        await newJob.save()
+        logger.info(`MD constraints stored in MongoDB for job ${newJob.id}`)
+      } catch (constraintError) {
+        logger.warn(
+          `Failed to store MD constraints for job ${newJob.id}:`,
+          constraintError
+        )
+        // Don't fail the job creation if constraint storage fails
+      }
+    }
+
     // Write Job params for use by NERSC job script.
     await writeJobParams(newJob.id)
 
@@ -310,7 +344,7 @@ async function processConstraintFile({
       // Convert CHARMM INP to YAML for OpenMM
       logger.info('Converting INP file to YAML for OpenMM')
       await validateInpConstraints(filePath)
-      const yamlContent = await convertInpToYaml(filePath)
+      const yamlContent = await convertInpToYaml(filePath, logger)
 
       // Write YAML content to standardized filename
       await fs.writeFile(finalPath, yamlContent)

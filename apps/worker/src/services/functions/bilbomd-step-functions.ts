@@ -6,15 +6,20 @@ import fs from 'fs-extra'
 import os from 'os'
 import readline from 'node:readline'
 import path from 'path'
+import YAML from 'yaml'
+import { convertInpToYaml, validateYamlConstraints } from '@bilbomd/md-utils'
 import { Job as BullMQJob } from 'bullmq'
-import { IBilboMDSteps, IStepStatus, IUser } from '@bilbomd/mongodb-schema'
 import {
+  IBilboMDSteps,
+  IStepStatus,
+  IUser,
   IJob,
   IBilboMDPDBJob,
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
-  IBilboMDSANSJob
+  IBilboMDSANSJob,
+  IMDConstraints
 } from '@bilbomd/mongodb-schema'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { exec } from 'node:child_process'
@@ -597,6 +602,59 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
   })
 }
 
+const storeConstraintsInMongoDB = async (
+  DBjob: IBilboMDAutoJob,
+  filePath: string,
+  fileName: string
+): Promise<void> => {
+  try {
+    logger.debug(`Storing constraints in MongoDB from file: ${filePath}`)
+
+    let constraints: IMDConstraints
+
+    if (fileName.endsWith('.yml') || fileName.endsWith('.yaml')) {
+      // Parse YAML constraints for OpenMM
+      logger.debug('Processing YAML constraints file for OpenMM')
+
+      // Validate the YAML file first
+      await validateYamlConstraints(filePath, logger)
+
+      // Parse and store the YAML constraints
+      const fileContent = await fs.readFile(filePath, 'utf8')
+      constraints = YAML.parse(fileContent) as IMDConstraints
+      logger.debug(
+        `Parsed YAML constraints: ${JSON.stringify(constraints, null, 2)}`
+      )
+    } else if (fileName === 'const.inp') {
+      // For CHARMM const.inp, convert it to YAML format first, then parse
+      logger.debug('Converting CHARMM const.inp to YAML format')
+
+      // Convert INP to YAML using the shared utility
+      const yamlContent = await convertInpToYaml(filePath, logger)
+
+      // Parse the converted YAML into constraints object
+      constraints = YAML.parse(yamlContent) as IMDConstraints
+      logger.debug(
+        `Converted and parsed CHARMM constraints: ${JSON.stringify(constraints, null, 2)}`
+      )
+    } else {
+      throw new Error(`Unsupported constraint file format: ${fileName}`)
+    }
+
+    // Use type assertion to access md_constraints property
+    ;(DBjob as IJob & { md_constraints?: IMDConstraints }).md_constraints =
+      constraints
+
+    await DBjob.save()
+    logger.debug(
+      `Successfully stored constraints in MongoDB for job ${DBjob.uuid}`
+    )
+  } catch (error) {
+    logger.error(`Error storing constraints in MongoDB: ${error}`)
+    throw error
+  }
+}
+
 const runPdb2Crd = async (
   MQjob: BullMQJob,
   DBjob: IBilboMDPDBJob | IBilboMDSANSJob
@@ -757,6 +815,19 @@ const runPaeToConstInp = async (
     logger.debug(
       `Verified ${expectedOutputFile} file created: ${expectedOutputPath}`
     )
+
+    // Store constraints in MongoDB
+    try {
+      await storeConstraintsInMongoDB(
+        DBjob,
+        expectedOutputPath,
+        expectedOutputFile
+      )
+      logger.debug('Constraints stored in MongoDB successfully')
+    } catch (error) {
+      logger.warn(`Failed to store constraints in MongoDB: ${error}`)
+      // Don't fail the job if constraint storage fails
+    }
 
     // Update job with generated file based on MD engine
     if (DBjob.md_engine === 'OpenMM') {
@@ -1572,5 +1643,6 @@ export {
   concatenateAndSaveAsEnsemble,
   spawnFeedbackScript,
   spawnRgyrDmaxScript,
-  createReadmeFile
+  createReadmeFile,
+  storeConstraintsInMongoDB
 }

@@ -4,7 +4,7 @@ import {
   convertYamlToInp,
   validateYamlConstraints,
   validateInpConstraints
-} from '../src/controllers/jobs/utils/constraintUtils.js'
+} from './constraintUtils.js'
 import fs from 'fs-extra'
 import path from 'path'
 import { v4 as uuid } from 'uuid'
@@ -24,39 +24,38 @@ shape desc dock2 rigid sele rigid2 .or. rigid3 end
  
 return`
 
-const testYamlContent = `constraints:
-  fixed_bodies:
-    - name: FixedBody1
-      segments:
-        - chain_id: A
-          residues:
-            start: 1
-            stop: 639
-        - chain_id: B
-          residues:
-            start: 9
-            stop: 236
-        - chain_id: B
-          residues:
-            start: 540
-            stop: 770
-  rigid_bodies:
-    - name: RigidBody1
-      segments:
-        - chain_id: B
-          residues:
-            start: 774
-            stop: 910
-    - name: RigidBody2
-      segments:
-        - chain_id: C
-          residues:
-            start: 1
-            stop: 65
-        - chain_id: B
-          residues:
-            start: 241
-            stop: 535`
+const testYamlContent = `fixed_bodies:
+  - name: FixedBody1
+    segments:
+      - chain_id: A
+        residues:
+          start: 1
+          stop: 639
+      - chain_id: B
+        residues:
+          start: 9
+          stop: 236
+      - chain_id: B
+        residues:
+          start: 540
+          stop: 770
+rigid_bodies:
+  - name: RigidBody1
+    segments:
+      - chain_id: B
+        residues:
+          start: 774
+          stop: 910
+  - name: RigidBody2
+    segments:
+      - chain_id: C
+        residues:
+          start: 1
+          stop: 65
+      - chain_id: B
+        residues:
+          start: 241
+          stop: 535`
 
 let tempDir: string
 
@@ -80,9 +79,9 @@ describe('Constraint Utils', () => {
       const yamlResult = await convertInpToYaml(inpPath)
 
       expect(yamlResult).toBeDefined()
-      expect(yamlResult).toContain('constraints:')
       expect(yamlResult).toContain('fixed_bodies:')
       expect(yamlResult).toContain('rigid_bodies:')
+      expect(yamlResult).toContain('chain_id:')
     })
 
     test('should correctly map CHARMM segments to chain IDs', async () => {
@@ -197,7 +196,7 @@ describe('Constraint Utils', () => {
       await fs.writeFile(yamlPath, 'some_other_field: value')
 
       await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
-        'Missing constraints section'
+        'No constraint bodies found'
       )
     })
   })
@@ -238,9 +237,9 @@ describe('Constraint Utils', () => {
       // Convert back to YAML
       const finalYamlResult = await convertInpToYaml(inpPath)
 
-      expect(finalYamlResult).toContain('constraints:')
       expect(finalYamlResult).toContain('fixed_bodies:')
       expect(finalYamlResult).toContain('rigid_bodies:')
+      expect(finalYamlResult).toContain('chain_id:')
     })
   })
 })

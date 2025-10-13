@@ -120,8 +120,19 @@ const prepareOpenMMConfig = async (
     try {
       const constYamlRaw = await fs.readFile(constYamlPath, 'utf8')
       const constCfg = YAML.parse(constYamlRaw)
+
+      // Handle both wrapped and unwrapped constraint formats
       if (constCfg?.constraints) {
+        // New wrapped format: { constraints: { fixed_bodies: [...], rigid_bodies: [...] } }
         cfg.constraints = constCfg.constraints
+        logger.info('Loaded constraints from wrapped format')
+      } else if (constCfg?.fixed_bodies || constCfg?.rigid_bodies) {
+        // Current flat format: { fixed_bodies: [...], rigid_bodies: [...] }
+        cfg.constraints = {
+          ...(constCfg.fixed_bodies && { fixed_bodies: constCfg.fixed_bodies }),
+          ...(constCfg.rigid_bodies && { rigid_bodies: constCfg.rigid_bodies })
+        }
+        logger.info('Loaded constraints from flat format')
       }
     } catch (error) {
       logger.warn(`Error loading constraints from ${constYamlPath}: ${error}`)

@@ -102,6 +102,31 @@ interface INerscInfo {
   time_completed?: Date
 }
 
+interface IResidueRange {
+  start: number
+  stop: number
+}
+
+interface ISegment {
+  chain_id: string
+  residues: IResidueRange
+}
+
+interface IFixedBody {
+  name: string
+  segments: ISegment[]
+}
+
+interface IRigidBody {
+  name: string
+  segments: ISegment[]
+}
+
+interface IMDConstraints {
+  fixed_bodies?: IFixedBody[]
+  rigid_bodies?: IRigidBody[]
+}
+
 interface IJob extends Document {
   _id: Types.ObjectId
   __t:
@@ -117,6 +142,7 @@ interface IJob extends Document {
   status: JobStatusEnum
   data_file: string
   md_engine?: MDEngineEnum
+  md_constraints?: IMDConstraints
   time_submitted: Date
   time_started?: Date
   time_completed?: Date
@@ -216,6 +242,11 @@ export {
   IAlphaFoldEntity,
   IFeedbackData,
   INerscInfo,
+  IResidueRange,
+  ISegment,
+  IFixedBody,
+  IRigidBody,
+  IMDConstraints,
   IJob,
   IBilboMDPDBJob,
   IBilboMDCRDJob,

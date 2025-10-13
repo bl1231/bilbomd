@@ -22,7 +22,10 @@ import path from 'path'
 import { User } from '@bilbomd/mongodb-schema'
 import crypto from 'crypto'
 
-const expectSuccessfulJobResponse = (res: request.Response, expectedMessage: string) => {
+const expectSuccessfulJobResponse = (
+  res: request.Response,
+  expectedMessage: string
+) => {
   expect(res.status).toBe(200)
 
   expect(res.body).toHaveProperty('message', expectedMessage)
@@ -33,7 +36,9 @@ const expectSuccessfulJobResponse = (res: request.Response, expectedMessage: str
   expect(res.body.jobid).toMatch(/^[a-f0-9]{24}$/)
 
   expect(typeof res.body.uuid).toBe('string')
-  expect(res.body.uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+  expect(res.body.uuid).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+  )
 }
 
 let server: any
@@ -84,9 +89,18 @@ describe('/api/v1/external/jobs', () => {
   test('should submit a BilboMD auto job successfully', async () => {
     const apiToken = generateApiToken()
 
-    const pdbFilePath = path.resolve(__dirname, '../../../test_scripts/data/auto1/auto1.pdb')
-    const datFilePath = path.resolve(__dirname, '../../../test_scripts/data/auto1/saxs-data.dat')
-    const paeFilePath = path.resolve(__dirname, '../../../test_scripts/data/auto1/auto1-pae.json')
+    const pdbFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/auto1/auto1.pdb'
+    )
+    const datFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/auto1/saxs-data.dat'
+    )
+    const paeFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/auto1/auto1-pae.json'
+    )
 
     const res = await request(server)
       .post('/api/v1/external/jobs')
@@ -97,14 +111,26 @@ describe('/api/v1/external/jobs', () => {
       .attach('pdb_file', pdbFilePath)
       .attach('dat_file', datFilePath)
       .attach('pae_file', paeFilePath)
-    expectSuccessfulJobResponse(res, 'New auto Job successfully created')
+    expectSuccessfulJobResponse(
+      res,
+      'New BilboMD Auto Job successfully created'
+    )
   })
   test('should submit a BilboMD classic PDB job successfully', async () => {
     const apiToken = generateApiToken()
 
-    const pdbFilePath = path.resolve(__dirname, '../../../test_scripts/data/pdb/pro_dna.pdb')
-    const datFilePath = path.resolve(__dirname, '../../../test_scripts/data/pdb/saxs-data.dat')
-    const inpFilePath = path.resolve(__dirname, '../../../test_scripts/data/pdb/const.inp')
+    const pdbFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/pdb/pro_dna.pdb'
+    )
+    const datFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/pdb/saxs-data.dat'
+    )
+    const inpFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/pdb/const.inp'
+    )
 
     const res = await request(server)
       .post('/api/v1/external/jobs')
@@ -115,15 +141,30 @@ describe('/api/v1/external/jobs', () => {
       .attach('pdb_file', pdbFilePath)
       .attach('dat_file', datFilePath)
       .attach('inp_file', inpFilePath)
-    expectSuccessfulJobResponse(res, 'New pdb Job successfully created')
+    expectSuccessfulJobResponse(
+      res,
+      'New BilboMD Classic w/PDB Job successfully created'
+    )
   })
   test('should submit a BilboMD classic CRD job successfully', async () => {
     const apiToken = generateApiToken()
 
-    const crdFilePath = path.resolve(__dirname, '../../../test_scripts/data/crd/pro_dna.crd')
-    const psfFilePath = path.resolve(__dirname, '../../../test_scripts/data/crd/pro_dna.psf')
-    const datFilePath = path.resolve(__dirname, '../../../test_scripts/data/crd/saxs-data.dat')
-    const inpFilePath = path.resolve(__dirname, '../../../test_scripts/data/crd/const.inp')
+    const crdFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/crd/pro_dna.crd'
+    )
+    const psfFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/crd/pro_dna.psf'
+    )
+    const datFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/crd/saxs-data.dat'
+    )
+    const inpFilePath = path.resolve(
+      __dirname,
+      '../../../test_scripts/data/crd/const.inp'
+    )
 
     const res = await request(server)
       .post('/api/v1/external/jobs')
@@ -135,7 +176,10 @@ describe('/api/v1/external/jobs', () => {
       .attach('psf_file', psfFilePath)
       .attach('dat_file', datFilePath)
       .attach('inp_file', inpFilePath)
-    expectSuccessfulJobResponse(res, 'New crd_psf Job successfully created')
+    expectSuccessfulJobResponse(
+      res,
+      'New BilboMD Classic w/CRD Job successfully created'
+    )
   })
   test('should inform us that BilboMD alphafold is unavailable on this deployment', async () => {
     const apiToken = generateApiToken()
@@ -162,7 +206,9 @@ describe('/api/v1/external/jobs', () => {
     console.log('Response:', res.body)
 
     expect(res.status).toBe(403)
-    expect(res.body.message).toBe('AlphaFold jobs unavailable on this deployment.')
+    expect(res.body.message).toBe(
+      'AlphaFold jobs unavailable on this deployment.'
+    )
   })
   test('should submit a BilboMD alphafold job successfully', async () => {
     const originalUseNersc = process.env.USE_NERSC
@@ -186,7 +232,7 @@ describe('/api/v1/external/jobs', () => {
       .field('title', 'API Test Job CRD')
       .attach('dat_file', datFilePath)
       .attach('entities_json', entitiesJsonPath)
-    expectSuccessfulJobResponse(res, 'New alphafold Job API Test Job CRD successfully created')
+    expectSuccessfulJobResponse(res, 'New BilboMD AF Job successfully created')
     process.env.USE_NERSC = originalUseNersc
   })
 })

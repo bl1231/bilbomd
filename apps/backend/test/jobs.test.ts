@@ -108,7 +108,10 @@ beforeAll(async () => {
     username: 'testuser1',
     email: 'testuser1@example.com',
     roles: ['User'],
-    confirmationCode: { code: '12345', expiresAt: new Date(Date.now() + 3600000) }
+    confirmationCode: {
+      code: '12345',
+      expiresAt: new Date(Date.now() + 3600000)
+    }
   })
 })
 
@@ -146,7 +149,9 @@ describe('GET /api/v1/jobs', () => {
   test('should return error if no jobs found', async () => {
     expect.assertions(2)
     const token = generateAccessToken()
-    const res = await request(server).get('/api/v1/jobs').set('Authorization', `Bearer ${token}`)
+    const res = await request(server)
+      .get('/api/v1/jobs')
+      .set('Authorization', `Bearer ${token}`)
     console.log('no jobs', res.statusCode, res.body)
     expect(res.statusCode).toBe(204)
     expect(res.body).toEqual({})
@@ -155,7 +160,9 @@ describe('GET /api/v1/jobs', () => {
     expect.assertions(3)
     await createNewJob(testUser1)
     const token = generateAccessToken()
-    const res = await request(server).get('/api/v1/jobs').set('Authorization', `Bearer ${token}`)
+    const res = await request(server)
+      .get('/api/v1/jobs')
+      .set('Authorization', `Bearer ${token}`)
     expect(res.statusCode).toBe(200)
     // console.log(res.body)
     expect(res.body).toBeDefined()
@@ -210,9 +217,18 @@ describe('POST /api/v1/jobs', () => {
     const res = await request(server)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
-      .attach('pdb_file', `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`)
-      .attach('inp_file', `${__dirname}/../../../test_scripts/data/pdb/const.inp`)
-      .attach('dat_file', `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`)
+      .attach(
+        'pdb_file',
+        `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`
+      )
+      .attach(
+        'inp_file',
+        `${__dirname}/../../../test_scripts/data/pdb/const.inp`
+      )
+      .attach(
+        'dat_file',
+        `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`
+      )
       .field('title', 'Test Job')
       .field('bilbomd_mode', 'pdb')
     expect(res.statusCode).toBe(401)
@@ -224,9 +240,18 @@ describe('POST /api/v1/jobs', () => {
     const res = await request(server)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
-      .attach('pdb_file', `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`)
-      .attach('inp_file', `${__dirname}/../../../test_scripts/data/pdb/const.inp`)
-      .attach('dat_file', `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`)
+      .attach(
+        'pdb_file',
+        `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`
+      )
+      .attach(
+        'inp_file',
+        `${__dirname}/../../../test_scripts/data/pdb/const.inp`
+      )
+      .attach(
+        'dat_file',
+        `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`
+      )
       .field('title', 'Test Job')
       .field('rg', 35)
       .field('rg_min', 30)
@@ -241,9 +266,18 @@ describe('POST /api/v1/jobs', () => {
     const res = await request(server)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
-      .attach('pdb_file', `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`)
-      .attach('inp_file', `${__dirname}/../../../test_scripts/data/pdb/const.inp`)
-      .attach('dat_file', `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`)
+      .attach(
+        'pdb_file',
+        `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`
+      )
+      .attach(
+        'inp_file',
+        `${__dirname}/../../../test_scripts/data/pdb/const.inp`
+      )
+      .attach(
+        'dat_file',
+        `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`
+      )
       .field('title', 'Test Job')
       .field('rg', 35)
       .field('rg_min', 30)
@@ -260,9 +294,18 @@ describe('POST /api/v1/jobs', () => {
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'BilboMD Test Job')
-      .attach('pdb_file', `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`)
-      .attach('inp_file', `${__dirname}/../../../test_scripts/data/pdb/const.inp`)
-      .attach('dat_file', `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`)
+      .attach(
+        'pdb_file',
+        `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`
+      )
+      .attach(
+        'inp_file',
+        `${__dirname}/../../../test_scripts/data/pdb/const.inp`
+      )
+      .attach(
+        'dat_file',
+        `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`
+      )
       .field('rg', 35)
       .field('rg_min', 30)
       .field('rg_max', 40)
@@ -271,7 +314,9 @@ describe('POST /api/v1/jobs', () => {
     // console.log('Queue is mocked:', vi.isMockFunction(Queue))
     // console.log('res----->', res.body)
     expect(res.statusCode).toBe(200)
-    expect(res.body.message).toBe('New pdb Job successfully created')
+    expect(res.body.message).toBe(
+      'New BilboMD Classic w/PDB Job successfully created'
+    )
   })
   test('should return success if new BilboMDAuto job created', async () => {
     expect.assertions(2)
@@ -280,13 +325,22 @@ describe('POST /api/v1/jobs', () => {
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'BilboMDAuto Test Job')
-      .attach('pdb_file', `${__dirname}/../../../test_scripts/data/auto1/auto1.pdb`)
-      .attach('pae_file', `${__dirname}/../../../test_scripts/data/auto1/auto1-pae.json`)
-      .attach('dat_file', `${__dirname}/../../../test_scripts/data/auto1/saxs-data.dat`)
+      .attach(
+        'pdb_file',
+        `${__dirname}/../../../test_scripts/data/auto1/auto1.pdb`
+      )
+      .attach(
+        'pae_file',
+        `${__dirname}/../../../test_scripts/data/auto1/auto1-pae.json`
+      )
+      .attach(
+        'dat_file',
+        `${__dirname}/../../../test_scripts/data/auto1/saxs-data.dat`
+      )
       .field('bilbomd_mode', 'auto')
     // console.log('res----->', res.body)
     expect(res.statusCode).toBe(200)
-    expect(res.body.message).toBe('New auto Job successfully created')
+    expect(res.body.message).toBe('New BilboMD Auto Job successfully created')
   })
 })
 
