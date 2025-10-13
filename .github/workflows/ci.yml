@@ -33,6 +33,7 @@ jobs:
       worker: ${{ steps.filter.outputs.worker }}
       scoper: ${{ steps.filter.outputs.scoper }}
       schema: ${{ steps.filter.outputs.schema }}
+      md-utils: ${{ steps.filter.outputs.md-utils }}
     steps:
       - uses: actions/checkout@v4
 
@@ -73,6 +74,12 @@ jobs:
               - 'package.json'
               - 'apps/scoper/bilbomd-scoper.dockerfile'
             schema:
+              - 'packages/mongodb-schema/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+            md-utils:
+              - 'packages/md-utils/**'
               - 'packages/mongodb-schema/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
@@ -515,16 +522,77 @@ jobs:
       - name: Build schema
         run: pnpm -C packages/mongodb-schema run build
 
+  md-utils:
+    name: Build & Test md-utils
+    if: needs.changes.outputs.md-utils == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    needs: changes
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # 1) Setup Node from .nvmrc (NO pnpm cache here)
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      # 2) Activate exact pnpm via Corepack
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Prep local pnpm store (md-utils)
+        run: |
+          sudo mkdir -p /scr/pnpm-store
+          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
+          pnpm config set store-dir /scr/pnpm-store
+
+      # Only cache TS incremental build info for md-utils package (keep pnpm store local)
+      - name: Cache TS incremental (md-utils)
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/md-utils/tsconfig.tsbuildinfo
+          key: md-utils-tsbuild-${{ runner.os }}-${{ hashFiles('packages/md-utils/tsconfig.json', 'packages/md-utils/src/**/*.ts') }}
+          restore-keys: |
+            md-utils-tsbuild-${{ runner.os }}-
+
+      # Debug versions
+      - name: Show tool versions
+        run: |
+          node -v
+          pnpm -v
+          jq -r '.packageManager' package.json
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build md-utils
+        run: pnpm -C packages/md-utils run build
+
+      - name: Test md-utils
+        run: pnpm -C packages/md-utils run test
+
   gate:
     name: Branch Protection Gate
     runs-on: [self-hosted, linux, x64]
-    needs: [backend, ui, worker, scoper, schema]
+    needs: [backend, ui, worker, scoper, schema, md-utils]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     steps:
       - name: Check build results
         run: |
           set -e
-          for job in backend ui worker scoper schema; do
+          for job in backend ui worker scoper schema md-utils; do
             result="${{ needs[job].result }}"
             echo "$job result: $result"
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
