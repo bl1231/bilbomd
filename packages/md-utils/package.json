@@ -1,0 +1,30 @@
+{
+  "name": "@bilbomd/md-utils",
+  "version": "1.0.0",
+  "description": "Molecular dynamics constraint utilities for BilboMD",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "molecular-dynamics",
+    "constraints",
+    "charmm",
+    "openmm"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.8.1",
+    "fs-extra": "^11.1.1"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.1",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@bilbomd/mongodb-schema": "workspace:*"
+  }
+}

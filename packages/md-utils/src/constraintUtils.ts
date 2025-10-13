@@ -1,26 +1,26 @@
-import fs from 'fs-extra'
+import * as fs from 'fs-extra'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
-import { logger } from '../../../middleware/loggers.js'
+import {
+  IMDConstraints,
+  ISegment,
+  IFixedBody,
+  IRigidBody
+} from '@bilbomd/mongodb-schema'
 
-// Interface definitions for constraint structures
-interface ConstraintSegment {
-  chain_id: string
-  residues: {
-    start: number
-    stop: number
-  }
+// Define a minimal logger interface that both apps can satisfy
+interface Logger {
+  info: (message: string, ...args: any[]) => void
+  error: (message: string, ...args: any[]) => void
+  debug?: (message: string, ...args: any[]) => void
+  warn?: (message: string, ...args: any[]) => void
 }
 
-interface ConstraintBody {
-  name: string
-  segments: ConstraintSegment[]
-}
-
-interface OpenMMConstraints {
-  constraints: {
-    fixed_bodies?: ConstraintBody[]
-    rigid_bodies?: ConstraintBody[]
-  }
+// Create a default no-op logger for when none is provided
+const defaultLogger: Logger = {
+  info: () => {},
+  error: () => {},
+  debug: () => {},
+  warn: () => {}
 }
 
 // Mapping from CHARMM segment IDs to chain IDs
@@ -41,7 +41,10 @@ const CHAIN_TO_SEGMENT_MAP: Record<string, string> = Object.fromEntries(
 /**
  * Converts CHARMM INP constraint file to YAML format for OpenMM
  */
-export async function convertInpToYaml(inpFilePath: string): Promise<string> {
+export async function convertInpToYaml(
+  inpFilePath: string,
+  logger: Logger = defaultLogger
+): Promise<string> {
   try {
     const inpContent = await fs.readFile(inpFilePath, 'utf8')
     const constraints = parseInpConstraints(inpContent)
@@ -62,10 +65,13 @@ export async function convertInpToYaml(inpFilePath: string): Promise<string> {
 /**
  * Converts YAML constraint file to CHARMM INP format
  */
-export async function convertYamlToInp(yamlFilePath: string): Promise<string> {
+export async function convertYamlToInp(
+  yamlFilePath: string,
+  logger: Logger = defaultLogger
+): Promise<string> {
   try {
     const yamlContent = await fs.readFile(yamlFilePath, 'utf8')
-    const constraints = parseYaml(yamlContent) as OpenMMConstraints
+    const constraints = parseYaml(yamlContent) as IMDConstraints
 
     const inpContent = generateInpFromConstraints(constraints)
 
@@ -81,22 +87,19 @@ export async function convertYamlToInp(yamlFilePath: string): Promise<string> {
  * Validates YAML constraint file format
  */
 export async function validateYamlConstraints(
-  yamlFilePath: string
+  yamlFilePath: string,
+  logger: Logger = defaultLogger
 ): Promise<void> {
   try {
     const yamlContent = await fs.readFile(yamlFilePath, 'utf8')
-    const constraints = parseYaml(yamlContent) as OpenMMConstraints
+    const constraints = parseYaml(yamlContent) as IMDConstraints
 
     if (!constraints || typeof constraints !== 'object') {
       throw new Error('Invalid YAML constraint format')
     }
 
-    if (!constraints.constraints) {
-      throw new Error('Missing constraints section in YAML file')
-    }
-
     // Validate structure
-    const { fixed_bodies, rigid_bodies } = constraints.constraints
+    const { fixed_bodies, rigid_bodies } = constraints
 
     if (fixed_bodies) {
       validateConstraintBodies(fixed_bodies, 'fixed_bodies')
@@ -121,7 +124,8 @@ export async function validateYamlConstraints(
  * Validates INP constraint file format
  */
 export async function validateInpConstraints(
-  inpFilePath: string
+  inpFilePath: string,
+  logger: Logger = defaultLogger
 ): Promise<void> {
   try {
     const inpContent = await fs.readFile(inpFilePath, 'utf8')
@@ -160,7 +164,7 @@ export async function validateInpConstraints(
 
 // Helper function to validate constraint bodies structure
 function validateConstraintBodies(
-  bodies: ConstraintBody[],
+  bodies: IFixedBody[] | IRigidBody[],
   type: string
 ): void {
   if (!Array.isArray(bodies)) {
@@ -200,17 +204,15 @@ function validateConstraintBodies(
 }
 
 // Helper function to parse INP constraints
-function parseInpConstraints(inpContent: string): OpenMMConstraints {
+function parseInpConstraints(inpContent: string): IMDConstraints {
   const lines = inpContent
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith('!') && line !== 'return')
 
-  const constraints: OpenMMConstraints = {
-    constraints: {
-      fixed_bodies: [],
-      rigid_bodies: []
-    }
+  const constraints: IMDConstraints = {
+    fixed_bodies: [],
+    rigid_bodies: []
   }
 
   const definitions: Record<string, { segid: string; resid: string }[]> = {}
@@ -241,7 +243,7 @@ function parseInpConstraints(inpContent: string): OpenMMConstraints {
       const segments = parseSelectionExpression(selectionExpr, definitions)
 
       if (segments.length > 0) {
-        constraints.constraints.fixed_bodies!.push({
+        constraints.fixed_bodies!.push({
           name: `FixedBody${fixedBodyCounter++}`,
           segments
         })
@@ -259,7 +261,7 @@ function parseInpConstraints(inpContent: string): OpenMMConstraints {
       const segments = parseSelectionExpression(selectionExpr, definitions)
 
       if (segments.length > 0) {
-        constraints.constraints.rigid_bodies!.push({
+        constraints.rigid_bodies!.push({
           name: `RigidBody${rigidBodyCounter++}`,
           segments
         })
@@ -274,8 +276,8 @@ function parseInpConstraints(inpContent: string): OpenMMConstraints {
 function parseSelectionExpression(
   expr: string,
   definitions: Record<string, { segid: string; resid: string }[]>
-): ConstraintSegment[] {
-  const segments: ConstraintSegment[] = []
+): ISegment[] {
+  const segments: ISegment[] = []
 
   // Split by .or. and extract definition names
   const defNames = expr.split(/\s*\.or\.\s*/).map((name) => name.trim())
@@ -299,11 +301,11 @@ function parseSelectionExpression(
 }
 
 // Helper function to generate INP from constraints object
-function generateInpFromConstraints(constraints: OpenMMConstraints): string {
+function generateInpFromConstraints(constraints: IMDConstraints): string {
   const lines: string[] = ['! Generated constraint file']
   let defCounter = 1
 
-  const { fixed_bodies, rigid_bodies } = constraints.constraints
+  const { fixed_bodies, rigid_bodies } = constraints
 
   // Generate definitions and fixed constraints
   if (fixed_bodies && fixed_bodies.length > 0) {
