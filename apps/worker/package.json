@@ -30,6 +30,7 @@
   "license": "ISC",
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
+    "@bilbomd/md-utils": "workspace:*",
     "axios": "^1.12.2",
     "axios-retry": "^4.5.0",
     "bullmq": "^5.61.0",
