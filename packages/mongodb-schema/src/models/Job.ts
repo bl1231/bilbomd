@@ -10,7 +10,12 @@ import {
   IAlphaFoldEntity,
   IFeedbackData,
   INerscInfo,
-  IBilboMDSteps
+  IBilboMDSteps,
+  IResidueRange,
+  ISegment,
+  IFixedBody,
+  IRigidBody,
+  IMDConstraints
 } from '../interfaces'
 
 // Enum for step statuses
@@ -83,6 +88,31 @@ const nerscInfoSchema = new Schema<INerscInfo>({
   time_completed: { type: Date, required: false }
 })
 
+const residueRangeSchema = new Schema<IResidueRange>({
+  start: { type: Number, required: true },
+  stop: { type: Number, required: true }
+})
+
+const segmentSchema = new Schema<ISegment>({
+  chain_id: { type: String, required: true },
+  residues: { type: residueRangeSchema, required: true }
+})
+
+const fixedBodySchema = new Schema<IFixedBody>({
+  name: { type: String, required: true },
+  segments: [{ type: segmentSchema, required: true }]
+})
+
+const rigidBodySchema = new Schema<IRigidBody>({
+  name: { type: String, required: true },
+  segments: [{ type: segmentSchema, required: true }]
+})
+
+const mdConstraintsSchema = new Schema<IMDConstraints>({
+  fixed_bodies: [{ type: fixedBodySchema, required: false }],
+  rigid_bodies: [{ type: rigidBodySchema, required: false }]
+})
+
 const jobSchema = new Schema(
   {
     title: {
@@ -91,7 +121,13 @@ const jobSchema = new Schema(
     },
     uuid: { type: String, required: true },
     data_file: { type: String, required: true },
-    md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
+    md_engine: {
+      type: String,
+      enum: mdEngineEnum,
+      default: 'CHARMM',
+      required: false
+    },
+    md_constraints: { type: mdConstraintsSchema, required: false },
     status: {
       type: String,
       enum: [
@@ -142,7 +178,12 @@ const bilboMdPDBJobSchema = new Schema<IBilboMDPDBJob>({
   psf_file: { type: String, required: false },
   crd_file: { type: String, required: false },
   const_inp_file: { type: String, required: true },
-  md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
+  md_engine: {
+    type: String,
+    enum: mdEngineEnum,
+    default: 'CHARMM',
+    required: false
+  },
   conformational_sampling: {
     type: Number,
     enum: [1, 2, 3, 4],
@@ -158,7 +199,12 @@ const bilboMdCRDJobSchema = new Schema<IBilboMDCRDJob>({
   psf_file: { type: String, required: true },
   crd_file: { type: String, required: true },
   const_inp_file: { type: String, required: true },
-  md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
+  md_engine: {
+    type: String,
+    enum: mdEngineEnum,
+    default: 'CHARMM',
+    required: false
+  },
   conformational_sampling: {
     type: Number,
     enum: [1, 2, 3, 4],
@@ -175,7 +221,12 @@ const bilboMdAutoJobSchema = new Schema<IBilboMDAutoJob>({
   crd_file: { type: String, required: false },
   pae_file: { type: String, required: true },
   const_inp_file: { type: String, required: false },
-  md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
+  md_engine: {
+    type: String,
+    enum: mdEngineEnum,
+    default: 'CHARMM',
+    required: false
+  },
   conformational_sampling: {
     type: Number,
     enum: [1, 2, 3, 4],
@@ -194,7 +245,12 @@ const bilboMdAlphaFoldJobSchema = new Schema<IBilboMDAlphaFoldJob>({
   crd_file: { type: String, required: false },
   pae_file: { type: String, required: false },
   const_inp_file: { type: String, required: false },
-  md_engine: { type: String, enum: mdEngineEnum, default: 'CHARMM', required: false },
+  md_engine: {
+    type: String,
+    enum: mdEngineEnum,
+    default: 'CHARMM',
+    required: false
+  },
   conformational_sampling: {
     type: Number,
     enum: [1, 2, 3, 4],
@@ -242,7 +298,10 @@ const BilboMdAlphaFoldJob = Job.discriminator(
   bilboMdAlphaFoldJobSchema
 )
 const BilboMdSANSJob = Job.discriminator('BilboMdSANS', bilboMdSANSJobSchema)
-const BilboMdScoperJob = Job.discriminator('BilboMdScoper', bilboMdScoperJobSchema)
+const BilboMdScoperJob = Job.discriminator(
+  'BilboMdScoper',
+  bilboMdScoperJobSchema
+)
 
 export {
   Job,
@@ -254,5 +313,10 @@ export {
   BilboMdAlphaFoldJob,
   BilboMdSANSJob,
   stepsSchema,
-  nerscInfoSchema
+  nerscInfoSchema,
+  mdConstraintsSchema,
+  fixedBodySchema,
+  rigidBodySchema,
+  segmentSchema,
+  residueRangeSchema
 }
