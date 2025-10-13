@@ -9,6 +9,7 @@ RUN corepack enable
 # Copy only files needed to resolve workspace dependencies (better cache)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
+COPY packages/md-utils/package.json packages/md-utils/package.json
 COPY apps/worker/package.json apps/worker/package.json
 
 # Prefetch dependencies into pnpm store (no linking yet)
@@ -30,8 +31,9 @@ COPY . .
 # Install using the fetched store and frozen lockfile
 RUN pnpm install --frozen-lockfile
 
-# Build shared package first, then the worker
+# Build shared packages first, then the worker
 RUN pnpm -C packages/mongodb-schema run build
+RUN pnpm -C packages/md-utils run build
 RUN pnpm -C apps/worker run build
 
 # Produce a minimal, deployable output for just the worker (node_modules pruned to prod)
