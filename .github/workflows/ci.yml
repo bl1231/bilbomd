@@ -577,6 +577,9 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
+      - name: Build dependencies
+        run: pnpm -C packages/mongodb-schema run build
+
       - name: Build md-utils
         run: pnpm -C packages/md-utils run build
 
