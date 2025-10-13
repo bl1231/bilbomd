@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    /* Language and Environment */
-    "target": "ESNext" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
-    /* Modules */
+    "target": "ESNext",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "baseUrl": "./src",
@@ -11,15 +9,13 @@
       "*": ["*"],
       "services/*": ["services/*"]
     },
-    "allowJs": true /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */,
-    "checkJs": false /* Enable error reporting in type-checked JavaScript files. */,
-    "outDir": "build" /* Specify an output folder for all emitted files. */,
-    "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
+    "allowJs": true,
+    "checkJs": false,
+    "outDir": "build",
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    /* Type Checking */
-    "strict": true /* Enable all strict type-checking options. */,
-    /* Completeness */
-    "skipLibCheck": true /* Skip type checking all .d.ts files. */
+    "strict": true,
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
