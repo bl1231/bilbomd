@@ -1,5 +1,12 @@
 # @bilbomd/ui
 
+## 1.23.4
+
+### Patch Changes
+
+- Updated dependencies [1cfa2b1]
+  - @bilbomd/mongodb-schema@1.10.0
+
 ## 1.23.3
 
 ### Patch Changes

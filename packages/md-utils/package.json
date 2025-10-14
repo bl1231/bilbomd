@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/md-utils",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Molecular dynamics constraint utilities for BilboMD",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
