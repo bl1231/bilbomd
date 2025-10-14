@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 1.10.0
+
+### Minor Changes
+
+- 1cfa2b1: Store `md_constraints` in mongodb
+
 ## 1.9.4
 
 ### Patch Changes
