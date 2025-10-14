@@ -4,12 +4,19 @@
   "description": "Molecular dynamics constraint utilities for BilboMD",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
+  "homepage": "https://bilbomd.bl1231.als.lbl.gov",
+  "author": {
+    "name": "Scott Classen",
+    "email": "sclassen@lbl.gov"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:coverage": "vitest --run --coverage"
+    "test:coverage": "vitest --run --coverage",
+    "lint": "eslint"
   },
   "keywords": [
     "molecular-dynamics",
@@ -17,21 +24,16 @@
     "charmm",
     "openmm"
   ],
-  "author": "Your Name",
-  "license": "MIT",
   "dependencies": {
-    "yaml": "^2.8.1",
-    "fs-extra": "^11.1.1"
+    "@bilbomd/mongodb-schema": "workspace:*",
+    "fs-extra": "^11.3.2",
+    "yaml": "^2.8.1"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.1",
-    "@types/uuid": "^10.0.0",
-    "typescript": "^5.0.0",
-    "uuid": "^10.0.0",
-    "vitest": "^3.0.0",
-    "@vitest/coverage-v8": "^3.0.0"
-  },
-  "peerDependencies": {
-    "@bilbomd/mongodb-schema": "workspace:*"
+    "@types/fs-extra": "^11.0.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "typescript": "^5.9.3",
+    "uuid": "^13.0.0",
+    "vitest": "^3.2.4"
   }
 }
