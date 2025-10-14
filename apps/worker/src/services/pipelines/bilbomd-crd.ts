@@ -8,9 +8,9 @@ import {
 } from '../functions/bilbomd-step-functions.js'
 import {
   extractPDBFilesFromDCD,
-  remediatePDBFiles,
-  runFoXS
+  remediatePDBFiles
 } from '../functions/bilbomd-functions.js'
+import { runFoXS } from '../functions/foxs-functions.js'
 import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc.js'
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
