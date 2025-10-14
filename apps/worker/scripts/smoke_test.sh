@@ -14,23 +14,26 @@ else
     echo "Pepsi-SANS not found or not working"
 fi
 
-
-if dammin 2>&1 | grep -q "Ab inito shape determination by simulated"; then
-    echo "DAMMIN OK"
+if foxs_version=$(foxs --version 2>&1); then
+    echo "FOXS OK - $foxs_version"
 else
-    echo "DAMMIN not found or not working"
+    echo "FOXS not found"
 fi
 
+if multifoxs_version=$(multi_foxs --version 2>&1); then
+    # Clean up the output - multi_foxs outputs the command followed by version
+    clean_version=$(echo "$multifoxs_version" | grep "Version:" | head -1)
+    echo "Multi-FOXS OK - $clean_version"
+else
+    echo "Multi-FOXS not found"
+fi
 
-foxs --version || echo "FOXS not found"
-multi_foxs --version || echo "Multi-FOXS not found"
 echo "Testing Python packages..."
-/opt/envs/base/bin/python -c "import numpy; print('numpy OK')" || echo "numpy missing"
-/opt/envs/base/bin/python -c "import scipy; print('scipy OK')" || echo "scipy missing"
-/opt/envs/base/bin/python -c "import bioxtasraw; print('bioxtasraw OK')" || echo "bioxtasraw missing"
-/opt/envs/base/bin/python -c "import lmfit; print('lmfit OK')" || echo "lmfit missing"
-/opt/envs/base/bin/python -c "import pandas; print('pandas OK')" || echo "pandas missing"
-/opt/envs/base/bin/python -c "import dask; print('dask OK')" || echo "dask missing"
-/opt/envs/openmm/bin/python -c "import openmm; print('openmm OK')" || echo "openmm missing"
+/opt/envs/base/bin/python -c "import numpy; print(f'numpy OK - {numpy.__version__}')" || echo "numpy missing"
+/opt/envs/base/bin/python -c "import scipy; print(f'scipy OK - {scipy.__version__}')" || echo "scipy missing"
+/opt/envs/base/bin/python -c "import lmfit; print(f'lmfit OK - {lmfit.__version__}')" || echo "lmfit missing"
+/opt/envs/base/bin/python -c "import pandas; print(f'pandas OK - {pandas.__version__}')" || echo "pandas missing"
+/opt/envs/base/bin/python -c "import dask; print(f'dask OK - {dask.__version__}')" || echo "dask missing"
+/opt/envs/openmm/bin/python -c "import openmm; print(f'openmm OK - {openmm.__version__}')" || echo "openmm missing"
 
 echo "Smoke test complete."

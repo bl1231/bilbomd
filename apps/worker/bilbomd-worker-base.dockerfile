@@ -10,7 +10,7 @@ RUN apt-get update && \
 # -----------------------------------------------------------------------------
 # Build CHARMM
 FROM install-dependencies AS build_charmm
-ARG CHARMM_VER=c49b1
+ARG CHARMM_VER=c49b2
 RUN wget https://bl1231.als.lbl.gov/pickup/charmm/${CHARMM_VER}.tar.gz -O /usr/local/src/${CHARMM_VER}.tar.gz
 RUN mkdir -p /usr/local/src/charmm && \
     tar -zxvf /usr/local/src/${CHARMM_VER}.tar.gz -C /usr/local/src && \
@@ -59,7 +59,7 @@ RUN wget https://bl1231.als.lbl.gov/pickup/pepsisans/Pepsi-SANS-Linux.zip -O Pep
     mv Pepsi-SANS /usr/local/bin && \
     rm Pepsi-SANS-Linux.zip && \
     strip /usr/local/bin/Pepsi-SANS || true
-COPY scripts/sans /usr/local/sans
+COPY apps/worker/scripts/sans /usr/local/sans
 
 # -----------------------------------------------------------------------------
 # Build OpenMM from source and install
@@ -160,4 +160,5 @@ ENV OPENMM_LIBRARIES="${OPENMM_PREFIX}/lib"
 ENV OPENMM_PLUGIN_DIR="${OPENMM_PREFIX}/lib/plugins"
 
 # ---- Smoke test OpenMM installation ----
-COPY scripts/smoke_test.sh /usr/local/bin/smoke_test.sh
+COPY apps/worker/scripts/smoke_test.sh /usr/local/bin/smoke_test.sh
+RUN chmod +x /usr/local/bin/smoke_test.sh
