@@ -1,5 +1,19 @@
 # @bilbomd/worker
 
+## 1.20.0
+
+### Minor Changes
+
+- 1cfa2b1: Store `md_constraints` in mongodb
+
+### Patch Changes
+
+- 1bfa7ef: Implement p-limit for faster **FoXS** calculations
+- Updated dependencies [1cfa2b1]
+- Updated dependencies [02969d1]
+  - @bilbomd/mongodb-schema@1.10.0
+  - @bilbomd/md-utils@1.0.1
+
 ## 1.19.2
 
 ### Patch Changes

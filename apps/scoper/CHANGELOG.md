@@ -1,5 +1,13 @@
 # @bilbomd/scoper
 
+## 1.4.4
+
+### Patch Changes
+
+- 1cfa2b1: Store `md_constraints` in mongodb
+- Updated dependencies [1cfa2b1]
+  - @bilbomd/mongodb-schema@1.10.0
+
 ## 1.4.3
 
 ### Patch Changes
