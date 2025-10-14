@@ -371,7 +371,7 @@ srun --ntasks=1 \\
             cd /bilbomd/work
             python /app/scripts/pae2const.py {pae_file} \\
                 --pdb_file {pdb_file} \\
-                --emit-constraints constraints.yaml \\
+                --openmm-const-file constraints.yaml \\
                 --no-const
     "
 PAE2CONS_EXIT=$?
