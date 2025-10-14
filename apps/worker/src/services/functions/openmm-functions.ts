@@ -100,7 +100,7 @@ const buildOpenMMConfigForJob = (
       output_restart: 'md.xml',
       output_dcd: 'md.dcd',
       pdb_report_interval: parseInt(
-        process.env.OMM_MD_PDB_REPORT_INTERVAL || '100'
+        process.env.OMM_MD_PDB_REPORT_INTERVAL || '500'
       )
     }
   }
