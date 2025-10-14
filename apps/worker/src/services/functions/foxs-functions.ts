@@ -15,6 +15,70 @@ import path from 'path'
 import os from 'os'
 import pLimit from 'p-limit'
 
+/**
+ * Get the effective number of CPU cores available to this process.
+ * Considers Docker CPU limits if running in a container.
+ * Can be overridden with FOXS_MAX_CPUS environment variable.
+ */
+const getEffectiveCpuCount = (): number => {
+  // Allow manual override via environment variable
+  const envCpus = process.env.FOXS_MAX_CPUS
+  if (envCpus) {
+    const parsedCpus = parseInt(envCpus, 10)
+    if (parsedCpus > 0) {
+      logger.info(`Using environment-specified CPU count: ${parsedCpus} cores`)
+      return parsedCpus
+    }
+  }
+  try {
+    // Try to read Docker CPU quota (cgroup v1)
+    const quotaPath = '/sys/fs/cgroup/cpu/cpu.cfs_quota_us'
+    const periodPath = '/sys/fs/cgroup/cpu/cpu.cfs_period_us'
+
+    if (fs.existsSync(quotaPath) && fs.existsSync(periodPath)) {
+      const quota = parseInt(fs.readFileSync(quotaPath, 'utf8').trim())
+      const period = parseInt(fs.readFileSync(periodPath, 'utf8').trim())
+
+      if (quota > 0 && period > 0) {
+        const dockerCpus = Math.floor(quota / period)
+        if (dockerCpus > 0) {
+          logger.info(`Detected Docker CPU limit: ${dockerCpus} cores`)
+          return dockerCpus
+        }
+      }
+    }
+
+    // Try cgroup v2
+    const cgroupV2Path = '/sys/fs/cgroup/cpu.max'
+    if (fs.existsSync(cgroupV2Path)) {
+      const content = fs.readFileSync(cgroupV2Path, 'utf8').trim()
+      const [quotaStr, periodStr] = content.split(' ')
+
+      if (quotaStr !== 'max' && periodStr) {
+        const quota = parseInt(quotaStr)
+        const period = parseInt(periodStr)
+
+        if (quota > 0 && period > 0) {
+          const dockerCpus = Math.floor(quota / period)
+          if (dockerCpus > 0) {
+            logger.info(
+              `Detected Docker CPU limit (cgroup v2): ${dockerCpus} cores`
+            )
+            return dockerCpus
+          }
+        }
+      }
+    }
+  } catch (error) {
+    logger.warn(`Could not read Docker CPU limits: ${getErrorMessage(error)}`)
+  }
+
+  // Fall back to host CPU count
+  const hostCpus = os.cpus().length
+  logger.info(`Using host CPU count: ${hostCpus} cores`)
+  return hostCpus
+}
+
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
@@ -31,7 +95,7 @@ interface FoxsTask {
 const spawnFoXSOptimized = async (
   foxsRunDirs: string[],
   MQjob?: BullMQJob,
-  maxConcurrency = os.cpus().length
+  maxConcurrency = getEffectiveCpuCount()
 ): Promise<void> => {
   try {
     // Collect all PDB files from all directories
@@ -282,10 +346,11 @@ const runFoXS = async (
     }
 
     // Determine optimal concurrency
+    const effectiveCpus = getEffectiveCpuCount()
     const actualConcurrency =
-      maxConcurrency || Math.max(1, Math.floor(os.cpus().length * 0.8))
+      maxConcurrency || Math.max(1, Math.floor(effectiveCpus * 0.8))
     logger.info(
-      `Using ${actualConcurrency} concurrent FoXS workers (${os.cpus().length} CPUs available)`
+      `Using ${actualConcurrency} concurrent FoXS workers (${effectiveCpus} effective CPUs available, ${os.cpus().length} host CPUs)`
     )
 
     // Set up the heartbeat for monitoring (reduced frequency since we have more granular progress)
@@ -327,4 +392,4 @@ const runFoXS = async (
   }
 }
 
-export { runFoXS, spawnFoXSOptimized, prepareFoXSInputs }
+export { runFoXS }
