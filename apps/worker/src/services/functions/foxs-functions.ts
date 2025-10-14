@@ -16,6 +16,11 @@ import os from 'os'
 import pLimit from 'p-limit'
 
 /**
+ * Constants
+ */
+const FOXS_HEARTBEAT_INTERVAL_MS = 30_000 // 30 seconds
+
+/**
  * Get the effective number of CPU cores available to this process.
  * Considers Docker CPU limits if running in a container.
  * Can be overridden with FOXS_MAX_CPUS environment variable.
@@ -276,7 +281,22 @@ const prepareFoXSInputs = async (
   const mirroredFoxsDirs: string[] = []
   for (const srcDir of mdSubDirs) {
     const baseName = path.basename(srcDir) // e.g., 'rg_27'
-    const destDir = path.join(foxsDir, baseName.replace('rg_', 'rg')) // normalize 'rg_27' -> 'rg27'
+
+    // Validate and normalize directory name - expect format 'rg_<number>'
+    let normalizedName: string
+    const rgMatch = baseName.match(/^rg_(\d+)$/)
+    if (rgMatch) {
+      // Expected format: 'rg_27' -> 'rg27'
+      normalizedName = `rg${rgMatch[1]}`
+    } else {
+      // Fallback: use original name but log a warning
+      logger.warn(
+        `Unexpected directory name format: ${baseName}. Expected 'rg_<number>'. Using original name.`
+      )
+      normalizedName = baseName
+    }
+
+    const destDir = path.join(foxsDir, normalizedName)
     await fs.ensureDir(destDir)
 
     // Symlink all .pdb files from md/rg_* into foxs/rg*
@@ -363,7 +383,7 @@ const runFoXS = async (
             DBjob.title
           } at ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })}`
         )
-      }, 30_000) // Every 30 seconds instead of 1 second
+      }, FOXS_HEARTBEAT_INTERVAL_MS)
     }
 
     // Run optimized FoXS processing - ALL FILES IN PARALLEL
