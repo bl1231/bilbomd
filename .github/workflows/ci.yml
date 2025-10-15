@@ -48,6 +48,7 @@ jobs:
               - 'tools/python/**'
               - 'packages/mongodb-schema/**'
               - 'packages/md-utils/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
@@ -55,6 +56,7 @@ jobs:
             ui:
               - 'apps/ui/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
@@ -64,6 +66,7 @@ jobs:
               - 'tools/python/**'
               - 'packages/mongodb-schema/**'
               - 'packages/md-utils/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
@@ -71,26 +74,69 @@ jobs:
             scoper:
               - 'apps/scoper/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
               - 'apps/scoper/bilbomd-scoper.dockerfile'
             schema:
               - 'packages/mongodb-schema/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
             md-utils:
               - 'packages/md-utils/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
 
+  lint:
+    name: Lint
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Prep local pnpm store (lint)
+        run: |
+          sudo mkdir -p /scr/pnpm-store
+          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
+          pnpm config set store-dir /scr/pnpm-store
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint packages
+        run: |
+          pnpm -C packages/md-utils run lint
+          pnpm -C apps/worker run lint
+          pnpm -C apps/backend run lint
+          pnpm -C apps/ui run lint
+          pnpm -C apps/scoper run lint
+
   backend:
     name: Build & Push backend
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
+    needs: [changes, lint]
     runs-on: [self-hosted, linux, x64]
     concurrency:
       group: backend-${{ github.ref }}
@@ -187,7 +233,7 @@ jobs:
   ui:
     name: Build & Push ui
     if: needs.changes.outputs.ui == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
+    needs: [changes, lint]
     runs-on: [self-hosted, linux, x64]
     concurrency:
       group: ui-${{ github.ref }}
@@ -281,7 +327,7 @@ jobs:
   worker:
     name: Build & Push worker
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
+    needs: [changes, lint]
     runs-on: [self-hosted, linux, x64]
     concurrency:
       group: worker-${{ github.ref }}
@@ -375,7 +421,7 @@ jobs:
   scoper:
     name: Build & Push scoper
     if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
+    needs: [changes, lint]
     runs-on: [self-hosted, linux, x64]
     concurrency:
       group: scoper-${{ github.ref }}
@@ -469,7 +515,7 @@ jobs:
   schema:
     name: Build mongodb-schema
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
+    needs: [changes, lint]
     runs-on: [self-hosted, linux, x64]
     steps:
       - uses: actions/checkout@v4
@@ -527,7 +573,7 @@ jobs:
   md-utils:
     name: Build & Test md-utils
     if: needs.changes.outputs.md-utils == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
+    needs: [changes, lint]
     runs-on: [self-hosted, linux, x64]
     steps:
       - uses: actions/checkout@v4
@@ -591,13 +637,13 @@ jobs:
   gate:
     name: Branch Protection Gate
     runs-on: [self-hosted, linux, x64]
-    needs: [backend, ui, worker, scoper, schema, md-utils]
+    needs: [lint, backend, ui, worker, scoper, schema, md-utils]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     steps:
       - name: Check build results
         run: |
           set -e
-          for job in backend ui worker scoper schema md-utils; do
+          for job in lint backend ui worker scoper schema md-utils; do
             result="${{ needs[job].result }}"
             echo "$job result: $result"
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
