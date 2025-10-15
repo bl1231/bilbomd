@@ -40,71 +40,70 @@ const writeOpenMMConfigYaml = async (
 const buildOpenMMConfigForJob = (
   DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
   workDir: string
-): OpenMMConfig => ({
-  input: {
-    dir: workDir,
-    pdb_file: DBjob.pdb_file,
-    forcefield: ['charmm36.xml', 'implicit/hct.xml']
-  },
-  output: {
-    output_dir: workDir,
-    min_dir: 'minimize',
-    heat_dir: 'heat',
-    md_dir: 'md'
-  },
-  steps: {
-    minimization: {
-      parameters: {
-        max_iterations: parseInt(process.env.OMM_MINIMIZE_MAX_ITER || '1000')
-      },
-      output_pdb: 'minimized.pdb'
+): OpenMMConfig => {
+  const omm_params = DBjob.openmm_parameters || {}
+  return {
+    input: {
+      dir: workDir,
+      pdb_file: DBjob.pdb_file,
+      forcefield: ['charmm36.xml', 'implicit/hct.xml']
     },
-    heating: {
-      parameters: {
-        first_temp: parseInt(process.env.OMM_HEAT_FIRST_TEMP || '300'),
-        final_temp: parseInt(process.env.OMM_HEAT_FINAL_TEMP || '600'),
-        total_steps: parseInt(process.env.OMM_HEAT_TOTAL_STEPS || '10000'),
-        timestep: parseFloat(process.env.OMM_HEAT_TIMESTEP || '0.001')
-      },
-      output_pdb: 'heated.pdb',
-      output_restart: 'heated.xml'
+    output: {
+      output_dir: workDir,
+      min_dir: 'minimize',
+      heat_dir: 'heat',
+      md_dir: 'md'
     },
-    md: {
-      parameters: {
-        temperature: parseInt(process.env.OMM_MD_TEMP || '600'),
-        friction: parseFloat(process.env.OMM_MD_FRICTION || '0.1'),
-        nsteps: parseInt(process.env.OMM_MD_NSTEPS || '10000'),
-        timestep: parseFloat(process.env.OMM_MD_TIMESTEP || '0.001')
+    steps: {
+      minimization: {
+        parameters: {
+          max_iterations: omm_params.minimize?.max_iterations ?? 1000
+        },
+        output_pdb: 'minimized.pdb'
       },
-      rgyr: {
-        rgs: (() => {
-          if (
-            typeof DBjob.rg_min !== 'number' ||
-            typeof DBjob.rg_max !== 'number'
-          ) {
-            throw new Error('rg_min and rg_max must be defined numbers')
-          }
-          const rg_min = DBjob.rg_min
-          const rg_max = DBjob.rg_max
-          return Array.from({ length: 6 }, (_, i) =>
-            Math.round(rg_min + (i * (rg_max - rg_min)) / 5)
-          )
-        })(),
-        k_rg: parseInt(process.env.OMM_MD_K_RG || '10'),
-        report_interval: parseInt(
-          process.env.OMM_MD_RG_REPORT_INTERVAL || '100'
-        ),
-        filename: 'rgyr.csv'
+      heating: {
+        parameters: {
+          start_temp: omm_params.heating?.start_temp ?? 300,
+          final_temp: omm_params.heating?.final_temp ?? 600,
+          nsteps: omm_params.heating?.nsteps ?? 10000,
+          timestep: omm_params.heating?.timestep ?? 0.001
+        },
+        output_pdb: 'heated.pdb',
+        output_restart: 'heated.xml'
       },
-      output_pdb: 'md.pdb',
-      output_restart: 'md.xml',
-      output_dcd: 'md.dcd',
-      pdb_report_interval: parseInt(
-        process.env.OMM_MD_PDB_REPORT_INTERVAL || '500'
-      )
+      md: {
+        parameters: {
+          temperature: omm_params.md?.temperature ?? 600,
+          friction: omm_params.md?.friction ?? 0.1,
+          nsteps: omm_params.md?.nsteps ?? 300000,
+          timestep: omm_params.md?.timestep ?? 0.001
+        },
+        rgyr: {
+          rgs: (() => {
+            if (
+              typeof DBjob.rg_min !== 'number' ||
+              typeof DBjob.rg_max !== 'number'
+            ) {
+              throw new Error('rg_min and rg_max must be defined numbers')
+            }
+            const rg_min = DBjob.rg_min
+            const rg_max = DBjob.rg_max
+            return Array.from({ length: 6 }, (_, i) =>
+              Math.round(rg_min + (i * (rg_max - rg_min)) / 5)
+            )
+          })(),
+          k_rg: omm_params.md?.k_rg ?? 10,
+          report_interval: omm_params.md?.rg_report_interval ?? 500,
+          filename: 'rgyr.csv'
+        },
+        output_pdb: 'md.pdb',
+        output_restart: 'md.xml',
+        output_dcd: 'md.dcd',
+        pdb_report_interval: omm_params.md?.pdb_report_interval ?? 500
+      }
     }
   }
-})
+}
 
 // Prepare (build + write) a single YAML config for all downstream OpenMM steps.
 // Returns the absolute path to the written config.
@@ -165,9 +164,9 @@ interface OpenMMConfig {
     }
     heating: {
       parameters: {
-        first_temp: number
+        start_temp: number
         final_temp: number
-        total_steps: number
+        nsteps: number
         timestep: number
       }
       output_pdb: string
