@@ -122,16 +122,51 @@ jobs:
           sudo chown -R "$USER":"sibyls" /scr/pnpm-store
           pnpm config set store-dir /scr/pnpm-store
 
+      # Cache node_modules for faster installs
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+            apps/*/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            node-modules-${{ runner.os }}-
+
+      # Cache TypeScript build info for faster type checking
+      - name: Cache TypeScript build info
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/*/tsconfig.tsbuildinfo
+            apps/*/tsconfig.tsbuildinfo
+          key: tsbuild-${{ runner.os }}-${{ hashFiles('**/tsconfig*.json', '**/src/**/*.ts', '**/src/**/*.tsx') }}
+          restore-keys: |
+            tsbuild-${{ runner.os }}-
+
+      # Cache ESLint cache for faster linting
+      - name: Cache ESLint
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/*/.eslintcache
+            apps/*/.eslintcache
+            .eslintcache
+          key: eslint-${{ runner.os }}-${{ hashFiles('**/.eslintrc*', '**/eslint.config.*', '**/src/**/*.ts', '**/src/**/*.tsx', '**/src/**/*.js', '**/src/**/*.jsx') }}
+          restore-keys: |
+            eslint-${{ runner.os }}-
+
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
       - name: Lint packages
         run: |
-          pnpm -C packages/md-utils run lint
-          pnpm -C apps/worker run lint
-          pnpm -C apps/backend run lint
-          pnpm -C apps/ui run lint
-          pnpm -C apps/scoper run lint
+          pnpm -C packages/md-utils run lint --cache
+          pnpm -C apps/worker run lint --cache
+          pnpm -C apps/backend run lint --cache
+          pnpm -C apps/ui run lint --cache
+          pnpm -C apps/scoper run lint --cache
 
   backend:
     name: Build & Push backend
