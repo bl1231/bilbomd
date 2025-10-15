@@ -90,10 +90,10 @@ ARG GROUP_ID
 ENV PATH=/opt/conda/bin:$PATH
 
 # Install PyTorch if not building from pytorch/pytorch:latest
-RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
+# RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Update Conda as per ChatGPT suggestion
-RUN conda install -n base -c defaults conda=24.9.2
+RUN conda install --yes --name base -c defaults python=3.10
 RUN conda config --add channels pyg
 RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
@@ -104,6 +104,7 @@ COPY apps/scoper/environment.yml /tmp/environment.yml
 
 # Update existing base environment from environment.yml
 RUN conda env update -f /tmp/environment.yml && \
+    conda install -y pytorch=2.1.2 cpuonly -c pytorch && \
     conda install -y pyg=2.4.0 -c pyg && \
     conda install -y torchmetrics=0.7.2 -c conda-forge && \
     conda install -y tabulate && \
