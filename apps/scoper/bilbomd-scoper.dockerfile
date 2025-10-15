@@ -39,8 +39,8 @@ RUN unzip rnaview.zip && \
 # -----------------------------------------------------------------------------
 # Build stage 2 - install the build artifacts into a clean image
 # FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
-# FROM python:3.10-slim AS bilbomd-scoper-install-deps
-FROM python:3.13-slim AS bilbomd-scoper-install-deps
+FROM python:3.10-slim AS bilbomd-scoper-install-deps
+# FROM python:3.13-slim AS bilbomd-scoper-install-deps
 # FROM nvidia/cuda:11.8.0-base-ubuntu22.04 AS bilbomd-scoper-install-deps
 
 # Update and install necessary packages
