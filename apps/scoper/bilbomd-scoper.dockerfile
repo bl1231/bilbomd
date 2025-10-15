@@ -161,18 +161,12 @@ RUN pnpm -C apps/scoper run build
 RUN pnpm deploy --filter @bilbomd/scoper --prod /out
 
 # -----------------------------------------------------------------------------
-# Build stage 5c - runtime: include conda/binaries and the pruned Node app
+# Final stage: Use bilbomd-scoper-pyg directly (no copying, keeps all libraries)
 FROM bilbomd-scoper-pyg AS bilbomd-scoper
 ARG USER_ID
 ARG GROUP_ID
 
-# Create runtime user/group (fallbacks if not provided)
-RUN groupadd -g ${GROUP_ID:-1234} scoper || true \
-    && useradd -ms /bin/bash -u ${USER_ID:-1001} -g ${GROUP_ID:-1234} scoper || true \
-    && mkdir -p /home/scoper/app \
-    && chown -R scoper:scoper /home/scoper
-
-# Switch to scoper user
+# Switch to scoper user (already created in bilbomd-scoper-pyg)
 USER scoper:scoper
 
 # Optional: fetch IonNet assets (as in previous image) under the scoper user
