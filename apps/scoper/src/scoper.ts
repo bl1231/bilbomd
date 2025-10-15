@@ -12,9 +12,13 @@ connectDB()
 // let bilboMdScoperWorker: Worker
 
 const workerHandler = async (job: Job<BilboMDScoperJobData>) => {
-  logger.info(`Start BilboMDScoper job Title: ${job.name} UUID: ${job.data.uuid}`)
+  logger.info(
+    `Start BilboMDScoper job Title: ${job.name} UUID: ${job.data.uuid}`
+  )
   await processBilboMDScoperJob(job)
-  logger.info(`Finish BilboMDScoper job Title: ${job.name} UUID: ${job.data.uuid}`)
+  logger.info(
+    `Finish BilboMDScoper job Title: ${job.name} UUID: ${job.data.uuid}`
+  )
 }
 
 const workerOptions: WorkerOptions = {
@@ -27,7 +31,7 @@ const workerOptions: WorkerOptions = {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const bilboMdScoperWorker = new Worker('bilbomd-scoper', workerHandler, workerOptions)
+const bilboMdScoperWorker = new Worker('scoper', workerHandler, workerOptions)
 
 logger.info('Scoper worker started!')
 logger.info(`Concurrency: ${workerOptions.concurrency}`)
