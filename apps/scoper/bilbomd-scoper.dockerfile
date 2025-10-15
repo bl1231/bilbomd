@@ -129,6 +129,7 @@ RUN corepack enable \
 # Copy only manifests for better caching
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
+COPY packages/eslint-config/ packages/eslint-config/
 COPY apps/scoper/package.json apps/scoper/package.json
 
 # Prefetch dependencies into pnpm store
