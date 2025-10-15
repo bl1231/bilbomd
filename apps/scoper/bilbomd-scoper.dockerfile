@@ -74,7 +74,7 @@ COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/BASEPARS /usr/local/RNA
 # Build stage 3 - install NodeJS v22
 FROM bilbomd-scoper-install-deps AS bilbomd-scoper-nodejs
 RUN apt-get update && \
-    apt-get install -y curl && \
+    apt-get install -y curl prelink && \
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && \
