@@ -96,8 +96,11 @@ jobs:
   lint:
     name: Lint
     runs-on: [self-hosted, linux, x64]
+    needs: [changes]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v4
@@ -116,57 +119,46 @@ jobs:
       - name: Activate pnpm
         run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
 
-      - name: Prep local pnpm store (lint)
+      # Use a persistent pnpm store; no actions/cache needed
+      - name: Configure pnpm store on local disk
         run: |
           sudo mkdir -p /scr/pnpm-store
           sudo chown -R "$USER":"sibyls" /scr/pnpm-store
           pnpm config set store-dir /scr/pnpm-store
 
-      # Cache node_modules for faster installs
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-            apps/*/node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            node-modules-${{ runner.os }}-
-
-      # Cache TypeScript build info for faster type checking
-      - name: Cache TypeScript build info
-        uses: actions/cache@v4
-        with:
-          path: |
-            packages/*/tsconfig.tsbuildinfo
-            apps/*/tsconfig.tsbuildinfo
-          key: tsbuild-${{ runner.os }}-${{ hashFiles('**/tsconfig*.json', '**/src/**/*.ts', '**/src/**/*.tsx') }}
-          restore-keys: |
-            tsbuild-${{ runner.os }}-
-
-      # Cache ESLint cache for faster linting
-      - name: Cache ESLint
-        uses: actions/cache@v4
-        with:
-          path: |
-            packages/*/.eslintcache
-            apps/*/.eslintcache
-            .eslintcache
-          key: eslint-${{ runner.os }}-${{ hashFiles('**/.eslintrc*', '**/eslint.config.*', '**/src/**/*.ts', '**/src/**/*.tsx', '**/src/**/*.js', '**/src/**/*.jsx') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
-
-      - name: Install deps
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint packages
+      # Optional: persistent ESLint cache on disk (not actions/cache)
+      - name: Configure ESLint cache dir
         run: |
-          pnpm -C packages/md-utils run lint --cache
-          pnpm -C apps/worker run lint --cache
-          pnpm -C apps/backend run lint --cache
-          pnpm -C apps/ui run lint --cache
-          pnpm -C apps/scoper run lint --cache
+          mkdir -p /scr/eslint-cache
+          echo 'ESLINT_CACHE_DIR=/scr/eslint-cache' >> $GITHUB_ENV
+
+      - name: Install deps (prefer offline)
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      # Lint only what changed (fallback to all if none detected)
+      - name: Lint changed workspaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Build a list based on 'changes' job outputs
+          TARGETS=()
+          [[ "${{ needs.changes.outputs.backend }}" == "true" ]] && TARGETS+=("apps/backend")
+          [[ "${{ needs.changes.outputs.ui }}" == "true" ]] && TARGETS+=("apps/ui")
+          [[ "${{ needs.changes.outputs.worker }}" == "true" ]] && TARGETS+=("apps/worker")
+          [[ "${{ needs.changes.outputs.scoper }}" == "true" ]] && TARGETS+=("apps/scoper")
+          [[ "${{ needs.changes.outputs.schema }}" == "true" ]] && TARGETS+=("packages/mongodb-schema")
+          [[ "${{ needs.changes.outputs.md-utils }}" == "true" ]] && TARGETS+=("packages/md-utils")
+
+          if [ ${#TARGETS[@]} -eq 0 ]; then
+            echo "No targeted changes detected; linting everything (once)."
+            pnpm -r run lint --cache --if-present
+          else
+            echo "Linting changed targets: ${TARGETS[*]}"
+            for t in "${TARGETS[@]}"; do
+              echo "→ Linting $t"
+              pnpm -C "$t" run lint --cache --if-present
+            done
+          fi
 
   backend:
     name: Build & Push backend
