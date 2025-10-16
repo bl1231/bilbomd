@@ -6,14 +6,7 @@ import {
   IFixedBody,
   IRigidBody
 } from '@bilbomd/mongodb-schema'
-
-// Define a minimal logger interface that both apps can satisfy
-interface Logger {
-  info: (message: string, ...args: unknown[]) => void
-  error: (message: string, ...args: unknown[]) => void
-  debug?: (message: string, ...args: unknown[]) => void
-  warn?: (message: string, ...args: unknown[]) => void
-}
+import type { Logger } from './index.js'
 
 // Create a default no-op logger for when none is provided
 const defaultLogger: Logger = {
