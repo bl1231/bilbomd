@@ -1,12 +1,15 @@
 import nodemailer from 'nodemailer'
 import hbs from 'nodemailer-express-handlebars'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import { logger } from './loggers.js'
 
 const user = process.env.SEND_EMAIL_USER
 const name = process.env.BILBOMD_FQDN
-// const viewPath = path.resolve(__dirname, '../templates/mailer/')
-const viewPath = path.resolve('./src/templates/mailer/')
+// Get the directory of the current module file
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const viewPath = path.resolve(__dirname, '../templates/mailer/')
 
 const transporter = nodemailer.createTransport({
   name: name,
