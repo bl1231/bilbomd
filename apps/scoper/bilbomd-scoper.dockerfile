@@ -81,7 +81,7 @@ COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/BASEPARS /usr/local/RNA
 # Build stage 3 - install NodeJS v22
 FROM bilbomd-scoper-install-deps AS bilbomd-scoper-nodejs
 RUN apt-get update && \
-    apt-get install -y curl binutils pax-utils && \
+    apt-get install -y curl && \
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && \
@@ -130,7 +130,7 @@ WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the same version used in the repo
 RUN corepack enable \
-    && corepack prepare pnpm@10.15.1 --activate \
+    && corepack prepare pnpm@10.18.3 --activate \
     && pnpm config set inject-workspace-packages=true
 
 # Copy only manifests for better caching
@@ -147,7 +147,7 @@ FROM bilbomd-scoper-nodejs AS build
 WORKDIR /repo
 
 RUN corepack enable \
-    && corepack prepare pnpm@10.15.1 --activate \
+    && corepack prepare pnpm@10.18.3 --activate \
     && pnpm config set inject-workspace-packages=true
 
 ENV HUSKY=0
