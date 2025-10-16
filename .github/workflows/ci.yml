@@ -135,30 +135,11 @@ jobs:
       - name: Install deps (prefer offline)
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      # Lint only what changed (fallback to all if none detected)
-      - name: Lint changed workspaces
-        shell: bash
+      # Lint
+      - name: Lint all apps and packages
         run: |
-          set -euo pipefail
-          # Build a list based on 'changes' job outputs
-          TARGETS=()
-          [[ "${{ needs.changes.outputs.backend }}" == "true" ]] && TARGETS+=("apps/backend")
-          [[ "${{ needs.changes.outputs.ui }}" == "true" ]] && TARGETS+=("apps/ui")
-          [[ "${{ needs.changes.outputs.worker }}" == "true" ]] && TARGETS+=("apps/worker")
-          [[ "${{ needs.changes.outputs.scoper }}" == "true" ]] && TARGETS+=("apps/scoper")
-          [[ "${{ needs.changes.outputs.schema }}" == "true" ]] && TARGETS+=("packages/mongodb-schema")
-          [[ "${{ needs.changes.outputs.md-utils }}" == "true" ]] && TARGETS+=("packages/md-utils")
-
-          if [ ${#TARGETS[@]} -eq 0 ]; then
-            echo "No targeted changes detected; linting everything (once)."
-            pnpm -r run lint --cache --if-present
-          else
-            echo "Linting changed targets: ${TARGETS[*]}"
-            for t in "${TARGETS[@]}"; do
-              echo "→ Linting $t"
-              pnpm -C "$t" run lint --cache --if-present
-            done
-          fi
+          echo "Running lint across the entire monorepo..."
+          pnpm -r run lint --cache
 
   backend:
     name: Build & Push backend
