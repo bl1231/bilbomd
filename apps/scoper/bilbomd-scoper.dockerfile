@@ -112,6 +112,11 @@ RUN conda env update -f /tmp/environment.yml && \
     pip install wandb && \
     conda clean --all --yes
 
+RUN conda remove -y pytorch || true
+
+# Install PyTorch if not building from pytorch/pytorch:latest
+RUN pip install --no-cache-dir torch==2.1.2+cpu --index-url https://download.pytorch.org/whl/cpu
+
 RUN groupadd -g $GROUP_ID scoper && \
     useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
     mkdir -p /home/scoper/app && \
