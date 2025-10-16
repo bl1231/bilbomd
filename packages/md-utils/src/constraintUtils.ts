@@ -6,14 +6,7 @@ import {
   IFixedBody,
   IRigidBody
 } from '@bilbomd/mongodb-schema'
-
-// Define a minimal logger interface that both apps can satisfy
-interface Logger {
-  info: (message: string, ...args: any[]) => void
-  error: (message: string, ...args: any[]) => void
-  debug?: (message: string, ...args: any[]) => void
-  warn?: (message: string, ...args: any[]) => void
-}
+import type { Logger } from './index.js'
 
 // Create a default no-op logger for when none is provided
 const defaultLogger: Logger = {
@@ -82,8 +75,9 @@ export async function convertInpToYaml(
     logger.info('Successfully converted INP to YAML')
     return yamlContent
   } catch (error) {
-    logger.error('Error converting INP to YAML:', error)
-    throw new Error(`Failed to convert INP to YAML: ${error}`)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`Error converting INP to YAML: ${error}`)
+    throw new Error(`Failed to convert INP to YAML: ${errorMessage}`)
   }
 }
 
@@ -116,8 +110,9 @@ export async function convertYamlToInp(
     logger.info('Successfully converted YAML to INP')
     return inpContent
   } catch (error) {
-    logger.error('Error converting YAML to INP:', error)
-    throw new Error(`Failed to convert YAML to INP: ${error}`)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`Error converting YAML to INP: ${error}`)
+    throw new Error(`Failed to convert YAML to INP: ${errorMessage}`)
   }
 }
 
@@ -161,8 +156,9 @@ export async function validateYamlConstraints(
 
     logger.info('YAML constraints file validated successfully')
   } catch (error) {
-    logger.error('Error validating YAML constraints:', error)
-    throw new Error(`Invalid YAML constraints file: ${error}`)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`Error validating YAML constraints: ${error}`)
+    throw new Error(`Invalid YAML constraints file: ${errorMessage}`)
   }
 }
 
@@ -203,8 +199,9 @@ export async function validateInpConstraints(
 
     logger.info('INP constraints file validated successfully')
   } catch (error) {
-    logger.error('Error validating INP constraints:', error)
-    throw new Error(`Invalid INP constraints file: ${error}`)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`Error validating INP constraints: ${error}`)
+    throw new Error(`Invalid INP constraints file: ${errorMessage}`)
   }
 }
 

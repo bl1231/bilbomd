@@ -22,6 +22,7 @@ import { writeJobParams, getFileStats } from './utils/jobUtils.js'
 import { spawnAutoRgCalculator } from './utils/autoRg.js'
 import fs from 'fs-extra'
 import { autoJobSchema } from '../../validation/index.js'
+import { buildOpenMMParameters } from './utils/openmmParams.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -193,6 +194,9 @@ const handleBilboMDAutoJob = async (
       user: user,
       steps: stepsAdjusted,
       md_engine,
+      ...(md_engine === 'OpenMM' && {
+        openmm_parameters: buildOpenMMParameters(req.body)
+      }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
         : {})

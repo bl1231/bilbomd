@@ -38,6 +38,7 @@ RUN corepack enable \
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
 COPY packages/md-utils/package.json packages/md-utils/package.json
+COPY packages/eslint-config/ packages/eslint-config/
 COPY apps/backend/package.json apps/backend/package.json
 
 # Prefetch dependencies into pnpm store (no linking yet)

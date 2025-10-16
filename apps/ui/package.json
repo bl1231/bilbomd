@@ -25,7 +25,8 @@
     "prebuild": "tsc",
     "vite-build": "vite build",
     "lint": "eslint",
-    "build": "npm-run-all clean lint vite-build",
+    "build": "npm-run-all clean vite-build",
+    "build:ci": "npm-run-all clean lint vite-build",
     "preview": "vite preview",
     "optimize": "vite optimize",
     "test": "vitest --run --coverage",
@@ -87,5 +88,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "sass-embedded": "^1.93.2"
   }
 }

@@ -6,6 +6,8 @@ RUN corepack enable
 
 # Copy only files needed to resolve workspace dependencies (better cache)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
+COPY packages/eslint-config/ packages/eslint-config/
 COPY apps/ui/package.json apps/ui/package.json
 
 # Prefetch dependencies into pnpm store (no linking yet)
