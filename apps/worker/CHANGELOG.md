@@ -1,5 +1,23 @@
 # @bilbomd/worker
 
+## 1.21.0
+
+### Minor Changes
+
+- 9d755b6: Add OpenMM params to MongoDB Job Schema
+  Remove all `OMM_*` env variables from `.env.example`
+  Remove all `OMM_*` env variables from `infra/helm/templates/bilbomd-configmaps.yaml`
+
+### Patch Changes
+
+- ef6ace8: Fix CLI arg for `pae2const.py` in the NERSC slurm prep script `apps/worker/scripts/nersc/gen-openmm-slurm-file.py`.
+  Add a new `README.md` with instructions on building `bilbomd-worker-base` Docker image
+  Bump CHARMM to `c49b2`
+- 5abfc4f: bump `bilbomd-worker-base` to `v0.0.3`
+- Updated dependencies [9d755b6]
+  - @bilbomd/mongodb-schema@1.11.0
+  - @bilbomd/md-utils@1.0.2
+
 ## 1.20.0
 
 ### Minor Changes
