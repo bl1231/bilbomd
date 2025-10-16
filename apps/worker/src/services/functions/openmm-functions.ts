@@ -105,11 +105,9 @@ const buildOpenMMConfigForJob = (
   }
 }
 
-// Prepare (build + write) a single YAML config for all downstream OpenMM steps.
-// Returns the absolute path to the written config.
 const prepareOpenMMConfig = async (
   DBjob: IBilboMDPDBJob | IBilboMDAutoJob
-): Promise<string> => {
+): Promise<void> => {
   const workDir = path.join(config.uploadDir, DBjob.uuid)
   const cfg = buildOpenMMConfigForJob(DBjob, workDir)
 
@@ -140,7 +138,6 @@ const prepareOpenMMConfig = async (
 
   const yamlPath = await writeOpenMMConfigYaml(workDir, cfg)
   logger.info(`OpenMM config YAML written: ${yamlPath}`)
-  return yamlPath
 }
 
 type OmmStepKey = 'minimize' | 'heat' | 'md'
