@@ -3,8 +3,11 @@
 # FROM pytorch/pytorch:latest AS bilbomd-scoper-build-deps
 # FROM nvidia/cuda:11.8.0-base-ubuntu22.04 AS bilbomd-scoper-build-deps
 # FROM python:3.10-slim AS bilbomd-scoper-build-deps
-FROM python:3.13-slim AS bilbomd-scoper-build-deps
-ENV DEBIAN_FRONTEND=noninteractive
+# FROM python:3.11-slim AS bilbomd-scoper-build-deps
+# FROM python:3.12-slim AS bilbomd-scoper-build-deps
+# FROM python:3.13-slim AS bilbomd-scoper-build-deps
+FROM ubuntu:22.04 AS bilbomd-scoper-build-deps
+# ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Los_Angeles
 
 # Install dependencies
@@ -14,6 +17,7 @@ RUN apt-get update && \
     cmake \
     unzip \
     curl \
+    ca-certificates \
     libgsl-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -40,8 +44,11 @@ RUN unzip rnaview.zip && \
 # Build stage 2 - install the build artifacts into a clean image
 # FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
 # FROM python:3.10-slim AS bilbomd-scoper-install-deps
-FROM python:3.13-slim AS bilbomd-scoper-install-deps
-# FROM nvidia/cuda:11.8.0-base-ubuntu22.04 AS bilbomd-scoper-install-deps
+# FROM python:3.11-slim AS bilbomd-scoper-install-deps
+# FROM python:3.12-slim AS bilbomd-scoper-install-deps
+# FROM python:3.13-slim AS bilbomd-scoper-install-deps
+FROM ubuntu:22.04 AS bilbomd-scoper-install-deps
+
 
 # Update and install necessary packages
 RUN apt-get update && \
@@ -93,7 +100,7 @@ ENV PATH=/opt/conda/bin:$PATH
 RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Update Conda as per ChatGPT suggestion
-RUN conda install -n base -c defaults conda=24.9.2
+RUN conda install --yes --name base -c defaults python=3.10
 RUN conda config --add channels pyg
 RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
@@ -123,7 +130,7 @@ WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the same version used in the repo
 RUN corepack enable \
-    && corepack prepare pnpm@10.15.1 --activate \
+    && corepack prepare pnpm@10.18.3 --activate \
     && pnpm config set inject-workspace-packages=true
 
 # Copy only manifests for better caching
@@ -141,7 +148,7 @@ FROM bilbomd-scoper-nodejs AS build
 WORKDIR /repo
 
 RUN corepack enable \
-    && corepack prepare pnpm@10.15.1 --activate \
+    && corepack prepare pnpm@10.18.3 --activate \
     && pnpm config set inject-workspace-packages=true
 
 ENV HUSKY=0
@@ -161,18 +168,12 @@ RUN pnpm -C apps/scoper run build
 RUN pnpm deploy --filter @bilbomd/scoper --prod /out
 
 # -----------------------------------------------------------------------------
-# Build stage 5c - runtime: include conda/binaries and the pruned Node app
+# Final stage: Use bilbomd-scoper-pyg directly (no copying, keeps all libraries)
 FROM bilbomd-scoper-pyg AS bilbomd-scoper
 ARG USER_ID
 ARG GROUP_ID
 
-# Create runtime user/group (fallbacks if not provided)
-RUN groupadd -g ${GROUP_ID:-1234} scoper || true \
-    && useradd -ms /bin/bash -u ${USER_ID:-1001} -g ${GROUP_ID:-1234} scoper || true \
-    && mkdir -p /home/scoper/app \
-    && chown -R scoper:scoper /home/scoper
-
-# Switch to scoper user
+# Switch to scoper user (already created in bilbomd-scoper-pyg)
 USER scoper:scoper
 
 # Optional: fetch IonNet assets (as in previous image) under the scoper user
