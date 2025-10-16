@@ -15,6 +15,7 @@ import { writeJobParams, spawnAutoRgCalculator } from './index.js'
 import { queueJob } from '../../queues/bilbomd.js'
 import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
+import { buildOpenMMParameters } from './utils/openmmParams.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -190,7 +191,10 @@ const handleBilboMDAlphaFoldJob = async (
       time_submitted: new Date(),
       user,
       steps: stepsAdjusted,
-      md_engine
+      md_engine,
+      ...(md_engine === 'OpenMM' && {
+        openmm_parameters: buildOpenMMParameters(req.body)
+      })
     })
 
     // Save the job to the database
