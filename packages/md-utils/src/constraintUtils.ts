@@ -83,7 +83,7 @@ export async function convertInpToYaml(
     return yamlContent
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error('Error converting INP to YAML:', errorMessage)
+    logger.error(`Error converting INP to YAML: ${error}`)
     throw new Error(`Failed to convert INP to YAML: ${errorMessage}`)
   }
 }
@@ -118,7 +118,7 @@ export async function convertYamlToInp(
     return inpContent
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error('Error converting YAML to INP:', errorMessage)
+    logger.error(`Error converting YAML to INP: ${error}`)
     throw new Error(`Failed to convert YAML to INP: ${errorMessage}`)
   }
 }
@@ -164,7 +164,7 @@ export async function validateYamlConstraints(
     logger.info('YAML constraints file validated successfully')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error('Error validating YAML constraints:', errorMessage)
+    logger.error(`Error validating YAML constraints: ${error}`)
     throw new Error(`Invalid YAML constraints file: ${errorMessage}`)
   }
 }
@@ -207,7 +207,7 @@ export async function validateInpConstraints(
     logger.info('INP constraints file validated successfully')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error('Error validating INP constraints:', errorMessage)
+    logger.error(`Error validating INP constraints: ${error}`)
     throw new Error(`Invalid INP constraints file: ${errorMessage}`)
   }
 }
