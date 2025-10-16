@@ -129,7 +129,7 @@ jobs:
       # Optional: persistent ESLint cache on disk (not actions/cache)
       - name: Configure ESLint cache dir
         run: |
-          mkdir -p /scr/eslint-cache
+          sudo mkdir -p /scr/eslint-cache
           echo 'ESLINT_CACHE_DIR=/scr/eslint-cache' >> $GITHUB_ENV
 
       - name: Install deps (prefer offline)
