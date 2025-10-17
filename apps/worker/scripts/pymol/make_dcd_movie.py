@@ -92,6 +92,11 @@ def parse_args():
         action="store_true",
         help="Auto set slab clipping to object span to maximize on-screen occupancy",
     )
+    p.add_argument(
+        "--pingpong",
+        action="store_true",
+        help="Create ping-pong effect (play forward then backward continuously)",
+    )
     return p.parse_args()
 
 
@@ -184,6 +189,44 @@ def main():
             except Exception as e:
                 print(f"[orient] clip slab failed: {e}")
 
+    def _create_pingpong_frames(frames_dir: str) -> str:
+        """
+        Create a ping-pong effect by duplicating frames in reverse order.
+        Returns the new frames directory with ping-pong frames.
+        """
+        pingpong_dir = frames_dir + "_pingpong"
+        os.makedirs(pingpong_dir, exist_ok=True)
+
+        # Get all frame files in order
+        frame_files = sorted([f for f in os.listdir(frames_dir) if f.endswith(".png")])
+
+        if not frame_files:
+            return frames_dir
+
+        print(f"[pingpong] Creating ping-pong effect with {len(frame_files)} frames")
+
+        # Copy forward frames
+        for i, frame_file in enumerate(frame_files):
+            src = os.path.join(frames_dir, frame_file)
+            dst = os.path.join(pingpong_dir, f"frame_{i + 1:05d}.png")
+            shutil.copy2(src, dst)
+
+        # Copy reverse frames (excluding first and last to avoid duplication)
+        reverse_frames = frame_files[1:-1]  # Skip first and last frame
+        reverse_frames.reverse()
+
+        for i, frame_file in enumerate(reverse_frames):
+            src = os.path.join(frames_dir, frame_file)
+            dst = os.path.join(
+                pingpong_dir, f"frame_{len(frame_files) + i + 1:05d}.png"
+            )
+            shutil.copy2(src, dst)
+
+        total_frames = len(frame_files) + len(reverse_frames)
+        print(f"[pingpong] Created {total_frames} total frames (forward + reverse)")
+
+        return pingpong_dir
+
     # Debug: Check if input files exist
     print(f"[debug] PDB file: {pdb} (exists: {os.path.exists(pdb)})")
     print(f"[debug] DCD file: {dcd} (exists: {os.path.exists(dcd)})")
@@ -273,6 +316,12 @@ def main():
             )
             return
 
+        # Optionally create ping-pong effect
+        if args.pingpong:
+            final_frames_dir = _create_pingpong_frames(frames_dir)
+        else:
+            final_frames_dir = frames_dir
+
         # encode with ffmpeg
         os.makedirs(os.path.dirname(os.path.abspath(outmovie)), exist_ok=True)
         ffmpeg_cmd = [
@@ -281,7 +330,7 @@ def main():
             "-framerate",
             str(fps),
             "-i",
-            os.path.join(frames_dir, "frame_%05d.png"),
+            os.path.join(final_frames_dir, "frame_%05d.png"),
             "-c:v",
             "libx264",
             "-pix_fmt",
@@ -319,9 +368,14 @@ def main():
         # cleanup
         if args.keep_frames:
             print(f"[cleanup] keeping frames in {frames_dir}")
+            if args.pingpong and os.path.exists(frames_dir + "_pingpong"):
+                print(f"[cleanup] keeping ping-pong frames in {frames_dir}_pingpong")
         else:
             shutil.rmtree(frames_dir, ignore_errors=True)
             print(f"[cleanup] removed {frames_dir}")
+            if args.pingpong and os.path.exists(frames_dir + "_pingpong"):
+                shutil.rmtree(frames_dir + "_pingpong", ignore_errors=True)
+                print(f"[cleanup] removed {frames_dir}_pingpong")
 
     # Check if output file was created
     if os.path.exists(outmovie):
