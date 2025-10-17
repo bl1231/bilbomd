@@ -35,5 +35,6 @@ echo "Testing Python packages..."
 /opt/envs/base/bin/python -c "import pandas; print(f'pandas OK - {pandas.__version__}')" || echo "pandas missing"
 /opt/envs/base/bin/python -c "import dask; print(f'dask OK - {dask.__version__}')" || echo "dask missing"
 /opt/envs/openmm/bin/python -c "import openmm; print(f'openmm OK - {openmm.__version__}')" || echo "openmm missing"
+/opt/envs/openmm/bin/python -c "import pymol; print(f'pymol OK - {pymol.get_version_message().strip()}')" || echo "pymol missing"
 
 echo "Smoke test complete."
