@@ -153,9 +153,6 @@ RUN conda install -y -n base  -c conda-forge conda-pack && \
 RUN conda run -n openmm conda-pack -n openmm -o /tmp/openmm-env.tar.gz
 RUN conda run -n base   conda-pack -p /miniforge3 -o /tmp/base-env.tar.gz
 
-# copy in our dcd to movie script
-COPY apps/worker/scripts/pymol/make_dcd_movie.py /usr/local/bin/make_dcd_movie.py
-
 # -----------------------------------------------------------------------------
 # Slim final runtime image (CUDA runtime only)
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS bilbomd-worker-base
@@ -195,7 +192,6 @@ COPY --from=install-sans-tools /usr/local/sans /usr/local/sans
 COPY --from=openmm-build ${OPENMM_PREFIX} ${OPENMM_PREFIX}
 COPY --from=pack-openmm-env /tmp/openmm-env.tar.gz /tmp/openmm-env.tar.gz
 COPY --from=pack-openmm-env /tmp/base-env.tar.gz   /tmp/base-env.tar.gz
-COPY --from=pack-openmm-env /usr/local/bin/make_dcd_movie.py /usr/local/bin/make_dcd_movie.py
 RUN mkdir -p /opt/envs/openmm /opt/envs/base && \
     cd /opt/envs/openmm && tar -xzf /tmp/openmm-env.tar.gz && ./bin/conda-unpack || true && \
     cd /opt/envs/base   && tar -xzf /tmp/base-env.tar.gz   && ./bin/conda-unpack || true && \
