@@ -178,17 +178,18 @@ const generateMovieFromDCD = async (
 
   return new Promise((resolve, reject) => {
     // Create a bash command that activates conda environment and runs PyMOL
-    const bashCommand = `source /opt/conda/etc/profile.d/conda.sh && conda activate openmm && pymol ${pymolArgs.join(' ')}`
+    const pythonBinary = '/opt/envs/openmm/bin/python'
+    const pymolCommand = ['-m', 'pymol'].concat(pymolArgs)
 
-    logger.debug(`Running command: ${bashCommand}`)
+    logger.debug(`Running command: ${pythonBinary} ${pymolCommand.join(' ')}`)
     logger.debug(`Working directory: ${outputDir}`)
 
-    const movieProcess = spawn('bash', ['-c', bashCommand], {
+    const movieProcess = spawn(pythonBinary, pymolCommand, {
       cwd: outputDir,
       env: {
         ...process.env,
-        // Ensure conda is available
-        PATH: '/opt/conda/bin:' + process.env.PATH
+        // Ensure the conda environment's bin directory is in PATH
+        PATH: '/opt/envs/openmm/bin:' + process.env.PATH
       }
     })
 
