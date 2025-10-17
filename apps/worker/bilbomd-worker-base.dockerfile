@@ -168,9 +168,17 @@ RUN apt-get update && \
     ca-certificates curl software-properties-common \
     libgfortran5 libstdc++6 libxml2 libtiff5 liblzma5 libicu70 libharfbuzz0b \
     parallel binutils \
-    libglew2.2 libpng16-16 libfreetype6 libxml2 libmsgpack-c2 \
-    libnetcdf19 freeglut3 libxmu6 libxi6 libgl1-mesa-glx \
-    libglu1-mesa ffmpeg && \
+    libglew-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    libxml2-dev \
+    libmsgpack-dev \
+    libglm-dev \
+    libnetcdf-dev \
+    freeglut3-dev \
+    libxmu-dev \
+    libxi-dev \
+    ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository -y ppa:salilab/ppa && \
