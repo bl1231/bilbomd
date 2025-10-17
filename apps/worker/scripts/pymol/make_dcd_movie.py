@@ -197,7 +197,7 @@ def main():
         # --- PyMOL scene setup ---
         print("[debug] Setting up PyMOL scene...")
         cmd.reinitialize()
-        cmd.bg_color("white")
+        cmd.bg_color("black")
         cmd.set("orthoscopic", 1)
         cmd.set("antialias", 2)
         cmd.set("specular", 0.25)
