@@ -177,29 +177,41 @@ const generateMovieFromDCD = async (
   const errorStream = fs.createWriteStream(errorFile)
 
   return new Promise((resolve, reject) => {
-    // Use the PyMOL binary from the openmm conda environment
-    const pymolPath = '/opt/envs/openmm/bin/pymol'
+    // Create a bash command that activates conda environment and runs PyMOL
+    const bashCommand = `source /opt/conda/etc/profile.d/conda.sh && conda activate openmm && pymol ${pymolArgs.join(' ')}`
 
-    const movieProcess = spawn(pymolPath, pymolArgs, {
-      cwd: outputDir
+    logger.debug(`Running command: ${bashCommand}`)
+    logger.debug(`Working directory: ${outputDir}`)
+
+    const movieProcess = spawn('bash', ['-c', bashCommand], {
+      cwd: outputDir,
+      env: {
+        ...process.env,
+        // Ensure conda is available
+        PATH: '/opt/conda/bin:' + process.env.PATH
+      }
     })
 
     movieProcess.stdout?.on('data', (data: Buffer) => {
-      logStream.write(data.toString())
+      const output = data.toString()
+      logger.debug(`PyMOL stdout (${rgDir}): ${output.trim()}`)
+      logStream.write(output)
     })
 
     movieProcess.stderr?.on('data', (data: Buffer) => {
-      errorStream.write(data.toString())
+      const output = data.toString()
+      logger.debug(`PyMOL stderr (${rgDir}): ${output.trim()}`)
+      errorStream.write(output)
     })
 
     movieProcess.on('error', (error: Error) => {
-      logger.error(`Movie generation error for ${dcdFile}: ${error}`)
+      logger.error(`Movie generation spawn error for ${dcdFile}: ${error}`)
       logStream.end()
       errorStream.end()
       reject(error)
     })
 
-    movieProcess.on('exit', (code: number | null) => {
+    movieProcess.on('exit', (code: number | null, signal: string | null) => {
       logStream.end()
       errorStream.end()
 
@@ -208,8 +220,21 @@ const generateMovieFromDCD = async (
         resolve()
       } else {
         logger.error(
-          `Movie generation failed for ${dcdFile} with exit code ${code}`
+          `Movie generation failed for ${dcdFile} with exit code ${code}, signal: ${signal}`
         )
+
+        // Try to read error log for more details
+        if (fs.existsSync(errorFile)) {
+          try {
+            const errorContent = fs.readFileSync(errorFile, 'utf8')
+            if (errorContent.trim()) {
+              logger.error(`Error log content for ${rgDir}: ${errorContent}`)
+            }
+          } catch (readError) {
+            logger.error(`Could not read error log: ${readError}`)
+          }
+        }
+
         reject(new Error(`Movie generation failed with exit code ${code}`))
       }
     })
