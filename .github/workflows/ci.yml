@@ -631,7 +631,7 @@ jobs:
           jq -r '.packageManager' package.json
 
       - name: Install deps
-        run: pnpm install --frozen-lockfilev --prefer-offline
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Build dependencies
         run: pnpm -C packages/mongodb-schema run build
