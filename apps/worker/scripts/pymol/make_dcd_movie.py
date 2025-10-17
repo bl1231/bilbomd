@@ -13,6 +13,8 @@ import subprocess
 import sys
 import tempfile
 
+import yaml
+
 # IMPORTANT: this script is meant to be executed by PyMOL:
 #   pymol -cqr make_dcd_movie.py -- [ARGS...]
 from pymol import cmd  # type: ignore
@@ -64,12 +66,12 @@ def parse_args():
         action="store_true",
         help="Align all trajectory states to state 1 using CA atoms (removes drift)",
     )
-    p.add_argument(
-        "--fov",
-        type=float,
-        default=20.0,
-        help="Field of view in degrees (default: 20.0)",
-    )
+    # p.add_argument(
+    #     "--fov",
+    #     type=float,
+    #     default=20.0,
+    #     help="Field of view in degrees (default: 20.0)",
+    # )
     p.add_argument(
         "--orient",
         choices=["principal", "none"],
@@ -97,7 +99,129 @@ def parse_args():
         action="store_true",
         help="Create ping-pong effect (play forward then backward continuously)",
     )
+    p.add_argument(
+        "--config",
+        help="YAML config file for domain coloring (e.g., openmm_config.yaml)",
+    )
+    p.add_argument(
+        "--color-scheme",
+        default="default",
+        choices=["default", "constraints", "custom"],
+        help="Coloring scheme: 'default' (bychain/spectrum), 'constraints' (based on config), 'custom' (user-defined)",
+    )
     return p.parse_args()
+
+
+def _parse_constraints_config(config_path: str):
+    """
+    Parse the YAML config file and extract constraint information.
+    Returns a dict with 'fixed_bodies' and 'rigid_bodies' lists.
+    """
+    try:
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        constraints = config.get("constraints", {})
+        fixed_bodies = constraints.get("fixed_bodies", [])
+        rigid_bodies = constraints.get("rigid_bodies", [])
+
+        print(
+            f"[config] Found {len(fixed_bodies)} fixed bodies and {len(rigid_bodies)} rigid bodies"
+        )
+        return {"fixed_bodies": fixed_bodies, "rigid_bodies": rigid_bodies}
+    except Exception as e:
+        print(f"[config] Error parsing config file: {e}")
+        return {"fixed_bodies": [], "rigid_bodies": []}
+
+
+def _apply_constraint_coloring(obj_name: str, constraints_config: dict):
+    """
+    Apply coloring based on constraints configuration.
+    """
+    print("[coloring] Applying constraint-based coloring scheme")
+
+    # Default color for unconstrained regions
+    cmd.color("bluewhite", obj_name)
+
+    # Color fixed bodies (darker blue)
+    for fixed_body in constraints_config["fixed_bodies"]:
+        name = fixed_body.get("name", "UnnamedFixedBody")
+        segments = fixed_body.get("segments", [])
+
+        # Build selection string for all segments in this fixed body
+        segment_selections = []
+        for segment in segments:
+            chain_id = segment.get("chain_id", "A")
+            residues = segment.get("residues", {})
+            start_res = residues.get("start")
+            stop_res = residues.get("stop")
+
+            if start_res is not None and stop_res is not None:
+                segment_selection = f"chain {chain_id} and resi {start_res}-{stop_res}"
+                segment_selections.append(segment_selection)
+                print(
+                    f"[coloring] {name}: chain {chain_id} residues {start_res}-{stop_res}"
+                )
+
+        # Apply coloring to all segments of this fixed body
+        if segment_selections:
+            full_selection = " or ".join([f"({sel})" for sel in segment_selections])
+            cmd.color("tv_blue", f"({obj_name}) and ({full_selection})")
+            print(f"[coloring] {name} -> blue")
+
+    # Color rigid bodies (orange)
+    for rigid_body in constraints_config["rigid_bodies"]:
+        name = rigid_body.get("name", "UnnamedRigidBody")
+        segments = rigid_body.get("segments", [])
+
+        # Build selection string for all segments in this rigid body
+        segment_selections = []
+        for segment in segments:
+            chain_id = segment.get("chain_id", "A")
+            residues = segment.get("residues", {})
+            start_res = residues.get("start")
+            stop_res = residues.get("stop")
+
+            if start_res is not None and stop_res is not None:
+                segment_selection = f"chain {chain_id} and resi {start_res}-{stop_res}"
+                segment_selections.append(segment_selection)
+                print(
+                    f"[coloring] {name}: chain {chain_id} residues {start_res}-{stop_res}"
+                )
+
+        # Apply coloring to all segments of this rigid body
+        if segment_selections:
+            full_selection = " or ".join([f"({sel})" for sel in segment_selections])
+            cmd.color("orange", f"({obj_name}) and ({full_selection})")
+            print(f"[coloring] {name} -> orange")
+
+
+def _apply_coloring_scheme(obj_name: str, args, constraints_config=None):
+    """
+    Apply the requested coloring scheme to the object.
+    """
+    if args.color_scheme == "constraints" and constraints_config:
+        _apply_constraint_coloring(obj_name, constraints_config)
+    elif args.color_scheme == "custom":
+        # You can extend this for user-defined coloring schemes
+        print("[coloring] Custom coloring not implemented yet, using default")
+        _apply_default_coloring(obj_name)
+    else:
+        # Default coloring
+        _apply_default_coloring(obj_name)
+
+
+def _apply_default_coloring(obj_name: str):
+    """
+    Apply default coloring (bychain or spectrum).
+    """
+    print("[coloring] Applying default coloring scheme")
+    try:
+        cmd.color("bychain", obj_name)
+        print("[coloring] Applied bychain coloring")
+    except Exception:
+        cmd.spectrum("count", "rainbow", obj_name)
+        print("[coloring] Applied spectrum coloring")
 
 
 def main():
@@ -106,6 +230,13 @@ def main():
     width, height = args.width, args.height
     fps, crf = args.fps, args.crf
     stride = max(1, args.stride)
+
+    # Parse constraints config if provided
+    constraints_config = None
+    if args.config and os.path.exists(args.config):
+        constraints_config = _parse_constraints_config(args.config)
+    elif args.config:
+        print(f"[config] Warning: Config file not found: {args.config}")
 
     def _aggregate_extent(obj_name: str, nstates: int, step: int = 10):
         """
@@ -159,14 +290,14 @@ def main():
             cmd.viewport(width, height)
 
         # Field of view
-        print(f"[orient] Setting field_of_view to {args.fov} degrees")
-        cmd.set("field_of_view", float(args.fov))
+        # print(f"[orient] Setting field_of_view to {args.fov} degrees")
+        # cmd.set("field_of_view", float(args.fov))
 
         # Compute aggregate extent across the trajectory to choose a good zoom and clip
         mn, mx = _aggregate_extent(obj_name, nstates, step=max(1, stride * 5))
         span = [mx[i] - mn[i] for i in range(3)]
         max_span = max(span)
-        center = [(mn[i] + mx[i]) / 2.0 for i in range(3)]
+        # center = [(mn[i] + mx[i]) / 2.0 for i in range(3)]  # computed but not used
 
         # Center and zoom with a small buffer
         cmd.center(obj_name)
@@ -238,33 +369,49 @@ def main():
 
     try:
         # --- PyMOL scene setup ---
-        print("[debug] Setting up PyMOL scene...")
+        print("[debug] Setting up PyMOL scene in the style of David Goodsell...")
         cmd.reinitialize()
-        cmd.bg_color("black")
-        cmd.set("orthoscopic", 1)
-        cmd.set("antialias", 2)
-        cmd.set("specular", 0.25)
-        cmd.set("ambient", 0.5)
-        cmd.set("ray_opaque_background", 1)
-        if args.ray:
-            cmd.set("ray_trace_mode", 1)
 
-        # load data
+        # load pdb
         print("[debug] Loading PDB...")
         cmd.load(pdb, "mol")
+        # cmd.bg_color("black")
+        # cmd.set("orthoscopic", 1)
+        # cmd.set("antialias", 2)
+        # cmd.set("specular", 0.25)
+        # cmd.set("ambient", 0.3)
+        # cmd.set("ray_opaque_background", 1)
+        # if args.ray:
+        #     cmd.set("ray_trace_frames", 1)
+
+        # David Goodsell style settings
+        # Background settings (flat look)
+        cmd.bg_color("white")
+        cmd.set("ambient", 1.0)
+        cmd.set("specular", 0.0)
+        cmd.set("direct", 0.0)
+        cmd.set("shininess", 0.0)
+        cmd.set("ray_shadows", 0)
+        cmd.set("depth_cue", 0)
+        cmd.set("antialias", 2)
+
+        # Frame-tracking outline: use PyMOL's toon-style ray edges when ray-tracing
+        # This draws object-space silhouettes every frame and follows the trajectory.
+        if args.ray:
+            cmd.set("ray_trace_mode", 1)  # toon/edge outlines during ray
+            cmd.set("ray_shadows", 0)  # keep the flat Goodsell look
+
+        # load dcd trajectory
         print("[debug] Loading DCD...")
-        # interval=stride here would *skip loading* frames; we prefer to load all and stride on render
         cmd.load_traj(dcd, "mol")
 
         # style
         print("[debug] Setting up visualization...")
         cmd.hide("everything", "mol")
         cmd.show("cartoon", "mol")
-        # color each chain differently; fall back to spectrum if single chain
-        try:
-            cmd.color("bychain", "mol")
-        except Exception:
-            cmd.spectrum("count", "rainbow", "mol")
+
+        # apply coloring scheme
+        _apply_coloring_scheme("mol", args, constraints_config)
 
         # automatic orientation / zoom / clipping based on options
         nstates = int(cmd.count_states("mol"))
@@ -276,23 +423,35 @@ def main():
 
         _auto_orient_and_zoom("mol", nstates)
 
+        # Supersampling for antialiasing
+        supersample_scale = 2.0
+        render_width = int(width * supersample_scale)
+        render_height = int(height * supersample_scale)
+        print(
+            f"[render] Supersampling 2x -> render size {render_width}x{render_height}"
+        )
+
         # render frames
         print(f"[pymol] rendering {nstates} frames (stride={stride}) to {frames_dir}")
         frame_idx = 0
+        total_frames = len(range(1, nstates + 1, stride))
         for state in range(1, nstates + 1, stride):
             cmd.frame(state)
             frame_idx += 1
             outpng = os.path.join(frames_dir, f"frame_{frame_idx:05d}.png")
-            print(f"[debug] Rendering frame {frame_idx} (state {state}) -> {outpng}")
-            cmd.png(outpng, width=width, height=height, ray=1 if args.ray else 0)
+            cmd.png(
+                outpng,
+                width=render_width,
+                height=render_height,
+                ray=1 if args.ray else 0,
+            )
 
-            # Check if PNG was actually created
-            if os.path.exists(outpng):
+            # Progress update every 10 frames
+            if frame_idx % 10 == 0 or frame_idx == total_frames:
+                progress_pct = (frame_idx / total_frames) * 100
                 print(
-                    f"[debug] Frame {frame_idx} created successfully ({os.path.getsize(outpng)} bytes)"
+                    f"[progress] Rendered {frame_idx}/{total_frames} frames ({progress_pct:.1f}%)"
                 )
-            else:
-                print(f"[debug] WARNING: Frame {frame_idx} was not created!")
 
         # Check if we have any frames before encoding
         frame_files = [f for f in os.listdir(frames_dir) if f.endswith(".png")]
@@ -324,6 +483,7 @@ def main():
 
         # encode with ffmpeg
         os.makedirs(os.path.dirname(os.path.abspath(outmovie)), exist_ok=True)
+        scale_filter = f"scale={width}:{height}"
         ffmpeg_cmd = [
             "ffmpeg",
             "-y",
@@ -331,6 +491,8 @@ def main():
             str(fps),
             "-i",
             os.path.join(final_frames_dir, "frame_%05d.png"),
+            "-vf",
+            scale_filter,
             "-c:v",
             "libx264",
             "-pix_fmt",
