@@ -39,6 +39,7 @@ RUN conda install --yes --name base -c conda-forge \
     setuptools \
     pip \
     numpy \
+    pyyaml \
     && conda clean -afy
 
 # Install build dependencies via pip
