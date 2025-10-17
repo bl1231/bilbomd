@@ -101,13 +101,60 @@ RUN git clone https://github.com/openmm/pdbfixer.git && \
     python setup.py install
 
 # -----------------------------------------------------------------------------
+# install PyMOL
+FROM pdbfixer-build AS install-pymol
+# Install build dependencies for PyMOL
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    wget \
+    build-essential \
+    cmake \
+    libglew-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    libxml2-dev \
+    libmsgpack-dev \
+    libglm-dev \
+    libnetcdf-dev \
+    freeglut3-dev \
+    libxmu-dev \
+    libxi-dev \
+    ffmpeg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install MMTF C++ library
+RUN git clone https://github.com/rcsb/mmtf-cpp.git /tmp/mmtf-cpp && \
+    cd /tmp/mmtf-cpp && \
+    cmake . && \
+    make install && \
+    rm -rf /tmp/mmtf-cpp
+# Clone PyMOL source code
+RUN git clone https://github.com/schrodinger/pymol-open-source.git /tmp/pymol-open-source
+
+# Build and install PyMOL
+WORKDIR /tmp/pymol-open-source
+RUN pip install .
+
+# Verify PyMOL installation
+RUN python -c "import pymol; print('PyMOL installed successfully')"
+
+# Set working directory back to root
+WORKDIR /
+
+# Clean up build artifacts
+RUN rm -rf /tmp/pymol-open-source
+
+# -----------------------------------------------------------------------------
 # Pack conda envs (base + openmm) to copy only runtime artifacts
-FROM pdbfixer-build AS pack-openmm-env
+FROM install-pymol AS pack-openmm-env
 RUN conda install -y -n base  -c conda-forge conda-pack && \
     conda install -y -n openmm -c conda-forge conda-pack && \
     conda clean -afy
 RUN conda run -n openmm conda-pack -n openmm -o /tmp/openmm-env.tar.gz
 RUN conda run -n base   conda-pack -p /miniforge3 -o /tmp/base-env.tar.gz
+
+# copy in our dcd to movie script
+COPY apps/worker/scripts/pymol/make_dcd_movie.py /usr/local/bin/make_dcd_movie.py
 
 # -----------------------------------------------------------------------------
 # Slim final runtime image (CUDA runtime only)
@@ -120,7 +167,10 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ca-certificates curl software-properties-common \
     libgfortran5 libstdc++6 libxml2 libtiff5 liblzma5 libicu70 libharfbuzz0b \
-    parallel binutils && \
+    parallel binutils \
+    libglew2.2 libpng16-16 libfreetype6 libxml2 libmsgpack-c2 \
+    libnetcdf19 freeglut3 libxmu6 libxi6 libgl1-mesa-glx \
+    libglu1-mesa ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository -y ppa:salilab/ppa && \
@@ -137,6 +187,7 @@ COPY --from=install-sans-tools /usr/local/sans /usr/local/sans
 COPY --from=openmm-build ${OPENMM_PREFIX} ${OPENMM_PREFIX}
 COPY --from=pack-openmm-env /tmp/openmm-env.tar.gz /tmp/openmm-env.tar.gz
 COPY --from=pack-openmm-env /tmp/base-env.tar.gz   /tmp/base-env.tar.gz
+COPY --from=pack-openmm-env /usr/local/bin/make_dcd_movie.py /usr/local/bin/make_dcd_movie.py
 RUN mkdir -p /opt/envs/openmm /opt/envs/base && \
     cd /opt/envs/openmm && tar -xzf /tmp/openmm-env.tar.gz && ./bin/conda-unpack || true && \
     cd /opt/envs/base   && tar -xzf /tmp/base-env.tar.gz   && ./bin/conda-unpack || true && \
