@@ -132,7 +132,7 @@ jobs:
           sudo mkdir -p /scr/eslint-cache
           echo 'ESLINT_CACHE_DIR=/scr/eslint-cache' >> $GITHUB_ENV
 
-      - name: Install deps (prefer offline)
+      - name: Install deps
         run: pnpm install --frozen-lockfile --prefer-offline
 
       # Lint
@@ -573,7 +573,7 @@ jobs:
           jq -r '.packageManager' package.json
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Build schema
         run: pnpm -C packages/mongodb-schema run build
@@ -631,7 +631,7 @@ jobs:
           jq -r '.packageManager' package.json
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfilev --prefer-offline
 
       - name: Build dependencies
         run: pnpm -C packages/mongodb-schema run build
