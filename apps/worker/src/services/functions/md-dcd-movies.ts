@@ -119,7 +119,7 @@ const generateMovieFromDCD = async (
   const logFile = path.join(outputDir, `movie_${rgDir}.log`)
   const errorFile = path.join(outputDir, `movie_${rgDir}_error.log`)
 
-  const movieScript = '/app/scripts/make_dcd_movie.py'
+  const movieScript = '/app/scripts/pymol/make_dcd_movie.py'
 
   // The corresponding PDB file should be in the same directory as the DCD
   const pdbFile = path.join(path.dirname(dcdFile), 'md.pdb')
@@ -134,24 +134,11 @@ const generateMovieFromDCD = async (
   const moviesDir = path.join(outputDir, 'movies')
   await fs.ensureDir(moviesDir)
 
-  // Guard around constraints file - only use if it exists
-  let mdConstraintsFile: string | undefined
-  if (DBjob.const_inp_file) {
-    const constraintsPath = path.join(outputDir, DBjob.const_inp_file)
-    if (fs.existsSync(constraintsPath)) {
-      mdConstraintsFile = constraintsPath
-      logger.debug(`Using constraints file: ${mdConstraintsFile}`)
-    } else {
-      logger.warn(
-        `Constraints file specified but not found: ${constraintsPath}`
-      )
-    }
-  }
-
-  const movieScriptArgs = [
-    '-cqr',
+  // Build PyMOL command arguments
+  const pymolArgs = [
+    '-cqr', // command-line, quiet, no GUI
     movieScript,
-    '--',
+    '--', // separator between PyMOL args and script args
     '--pdb',
     pdbFile,
     '--dcd',
@@ -169,20 +156,31 @@ const generateMovieFromDCD = async (
   ]
 
   // Add constraints file and color scheme if available
-  if (mdConstraintsFile) {
-    movieScriptArgs.push(
-      '--color-scheme',
-      'constraints',
-      '--config',
-      mdConstraintsFile
-    )
+  if (DBjob.const_inp_file) {
+    const constraintsPath = path.join(outputDir, DBjob.const_inp_file)
+    if (fs.existsSync(constraintsPath)) {
+      pymolArgs.push(
+        '--color-scheme',
+        'constraints',
+        '--config',
+        DBjob.const_inp_file
+      )
+      logger.debug(`Using constraints file: ${constraintsPath}`)
+    } else {
+      logger.warn(
+        `Constraints file specified but not found: ${constraintsPath}`
+      )
+    }
   }
 
   const logStream = fs.createWriteStream(logFile)
   const errorStream = fs.createWriteStream(errorFile)
 
   return new Promise((resolve, reject) => {
-    const movieProcess = spawn('pymol', movieScriptArgs, {
+    // Use the PyMOL binary from the openmm conda environment
+    const pymolPath = '/opt/envs/openmm/bin/pymol'
+
+    const movieProcess = spawn(pymolPath, pymolArgs, {
       cwd: outputDir
     })
 
