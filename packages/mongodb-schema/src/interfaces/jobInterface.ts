@@ -55,6 +55,7 @@ interface IBilboMDSteps {
   md?: IStepStatus
   dcd2pdb?: IStepStatus
   pdb_remediate?: IStepStatus
+  movies?: IStepStatus
   foxs?: IStepStatus
   pepsisans?: IStepStatus
   multifoxs?: IStepStatus
