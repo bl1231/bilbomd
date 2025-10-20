@@ -10,6 +10,7 @@ import { createMovieWorker } from './workers/movieWorker.js'
 import { createMultiMDWorker } from './workers/multiMdWorker.js'
 import { checkNERSC } from './workers/workerControl.js'
 import { monitorAndCleanupJobs } from './workers/bilboMdNerscJobMonitor.js'
+import { redis } from './queues/redisConn.js'
 
 dotenv.config()
 
@@ -33,14 +34,14 @@ let pdb2CrdWorker: Worker | null = null
 let movieWorker: Worker | null = null
 let multimdWorker: Worker | null = null
 
-const redisConn = {
-  host: 'redis',
-  port: 6379
-}
+// const redis = {
+//   host: 'redis',
+//   port: 6379
+// }
 
 // 9000000 is 2 hours and 30 minutes
 const workerOptions: WorkerOptions = {
-  connection: redisConn,
+  connection: redis,
   concurrency: config.runOnNERSC ? 50 : 1,
   // lockDuration: config.runOnNERSC ? 9000000 : 9000000
   lockDuration: 60_000,
@@ -48,22 +49,22 @@ const workerOptions: WorkerOptions = {
 }
 
 const pdb2crdWorkerOptions: WorkerOptions = {
-  connection: redisConn,
+  connection: redis,
   concurrency: 20
 }
 
 const movieWorkerOptions: WorkerOptions = {
-  connection: redisConn,
+  connection: redis,
   concurrency: 1
 }
 
 const multimdWorkerOptions: WorkerOptions = {
-  connection: redisConn,
+  connection: redis,
   concurrency: 1
 }
 
 const startWorkers = async () => {
-  const systemName = config.runOnNERSC ? 'NERSC' : 'Hyperion'
+  const systemName = config.runOnNERSC ? 'NERSC' : 'Hyperion/Epyc'
   logger.info(`Attempting to start workers on ${systemName}...`)
 
   // Create workers only if they are not already initialized

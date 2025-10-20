@@ -22,7 +22,7 @@ import { runFoXS } from '../functions/foxs-functions.js'
 import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc.js'
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
-import { runGenerateMovies } from '../functions/md-dcd-movies.js'
+import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 
 const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)
@@ -150,12 +150,14 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
     await foundJob.save()
 
     // Generate MP4 movies from DCD files (OpenMM only)
-    await MQjob.log('start movies')
-    await runGenerateMovies(MQjob, foundJob)
-    await MQjob.log('end movies')
-    await MQjob.updateProgress(55)
-    foundJob.progress = 55
-    await foundJob.save()
+    // I don't want to await this. I want to enqueue it to the "movie" queue once MD is done.
+    // await MQjob.log('start movies')
+    // await runGenerateMovies(MQjob, foundJob)
+    // await MQjob.log('end movies')
+    // await MQjob.updateProgress(55)
+    // foundJob.progress = 55
+    // await foundJob.save()
+    enqueueMakeMovie(MQjob, foundJob)
   }
 
   // Calculate FoXS profiles
