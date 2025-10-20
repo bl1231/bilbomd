@@ -19,7 +19,8 @@ export const movieAssetSchema = new Schema({
 
   source: {
     pdb: String,
-    dcd: String
+    dcd: String,
+    constYaml: String
   },
 
   meta: {

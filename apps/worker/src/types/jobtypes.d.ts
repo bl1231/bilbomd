@@ -35,11 +35,6 @@ interface Pdb2CrdJob extends Job {
   data: { title: string; uuid: string }
   id: string
 }
-interface MovieJob extends Job {
-  type: 'dcd-to-mp4'
-  data: { title: string; uuid: string }
-  id: string
-}
 
 type WorkerJob =
   | BilboMDPDBJob
@@ -48,5 +43,4 @@ type WorkerJob =
   | BilboMDAlphaFoldJob
   | BilboMDSANSJob
   | Pdb2CrdJob
-  | MovieJob
   | BilboMDMultiJob

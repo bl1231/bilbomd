@@ -12,6 +12,7 @@ const upsertMovieAsset = async (
   data: {
     pdb: string
     dcd: string
+    constYaml?: string
     width: number
     height: number
     stride: number
@@ -28,6 +29,7 @@ const upsertMovieAsset = async (
         'assets.movies.$.status': 'queued',
         'assets.movies.$.source.pdb': data.pdb,
         'assets.movies.$.source.dcd': data.dcd,
+        'assets.movies.$.source.constYaml': data.constYaml,
         'assets.movies.$.meta.width': data.width,
         'assets.movies.$.meta.height': data.height,
         'assets.movies.$.meta.stride': data.stride,
@@ -48,7 +50,7 @@ const upsertMovieAsset = async (
           'assets.movies': {
             label,
             status: 'queued',
-            source: { pdb: data.pdb, dcd: data.dcd },
+            source: { pdb: data.pdb, dcd: data.dcd, constYaml: data.constYaml },
             meta: {
               width: data.width,
               height: data.height,
@@ -83,6 +85,7 @@ const enqueueMakeMovie = async (
     label: string
     pdb: string
     dcd: string
+    constYaml: string
     outDir: string
   }> = []
 
@@ -101,19 +104,29 @@ const enqueueMakeMovie = async (
     const runDir = path.join(mdDir, label)
     const pdbPath = path.join(runDir, 'md.pdb')
     const dcdPath = path.join(runDir, 'md.dcd')
+    const constYamlPath = path.join(workDir, 'openmm_const.yml')
 
     const hasPdb = await fs.pathExists(pdbPath)
     const hasDcd = await fs.pathExists(dcdPath)
+    const hasConstYaml = await fs.pathExists(constYamlPath)
 
-    if (!hasPdb || !hasDcd) {
+    if (!hasPdb || !hasDcd || !hasConstYaml) {
       await MQjob.log(
-        `[movie] skipping ${label}: missing ${!hasPdb ? 'md.pdb' : ''}${!hasPdb && !hasDcd ? ' and ' : ''}${!hasDcd ? 'md.dcd' : ''}`
+        `[movie] skipping ${label}: missing ${!hasPdb ? 'md.pdb' : ''}${!hasPdb && !hasDcd ? ' and ' : ''}${!hasDcd ? 'md.dcd' : ''}${!hasConstYaml ? 'openmm_const.yml' : ''}`
       )
+      logger.warn(`[movie-enqueuer] skipping ${label}: missing files`)
       continue
     }
 
     const outDir = path.join(outDirBase, label)
-    foundPairs.push({ label, pdb: pdbPath, dcd: dcdPath, outDir })
+
+    foundPairs.push({
+      label,
+      pdb: pdbPath,
+      dcd: dcdPath,
+      outDir,
+      constYaml: constYamlPath
+    })
   }
 
   if (foundPairs.length === 0) {
@@ -130,7 +143,7 @@ const enqueueMakeMovie = async (
   >
 
   const defaults: MovieTunables = {
-    stride: 10,
+    stride: 5,
     width: 1280,
     height: 720,
     crf: 22,
@@ -143,6 +156,7 @@ const enqueueMakeMovie = async (
     await upsertMovieAsset(String(DBJob._id), pair.label, {
       pdb: pair.pdb,
       dcd: pair.dcd,
+      constYaml: pair.constYaml,
       width: defaults.width,
       height: defaults.height,
       stride: defaults.stride,
@@ -156,6 +170,7 @@ const enqueueMakeMovie = async (
       label: pair.label,
       pdb: pair.pdb,
       dcd: pair.dcd,
+      constYaml: pair.constYaml,
       outDir: pair.outDir,
       ...defaults,
       ...(opts || {})

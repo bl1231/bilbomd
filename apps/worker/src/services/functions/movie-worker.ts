@@ -12,6 +12,7 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
     pdb,
     dcd,
     outDir,
+    constYaml,
     stride,
     width,
     height,
@@ -23,8 +24,8 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
   await fs.ensureDir(outDir)
 
   const outMp4 = path.join(outDir, 'movie.mp4')
-  const poster = path.join(outDir, 'poster.jpg')
-  const thumb = path.join(outDir, 'thumb.gif')
+  // const poster = path.join(outDir, 'poster.jpg')
+  // const thumb = path.join(outDir, 'thumb.gif')
 
   // Idempotency: skip if mp4 already exists
   if (await fs.pathExists(outMp4)) {
@@ -38,6 +39,7 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
     pdb,
     dcd,
     outDir,
+    constYaml,
     stride,
     width,
     height,
@@ -46,44 +48,54 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
   })
 
   // Optionally generate poster/thumbnail here after success
-  try {
-    // poster from first frame of video
-    await fs.remove(poster).catch(() => {})
-    await fs.remove(thumb).catch(() => {})
-    await spawnPromise(
-      'ffmpeg',
-      ['-y', '-i', outMp4, '-vf', `scale=${width}:-1`, poster],
-      outDir
-    )
+  // try {
+  //   // poster from first frame of video
+  //   await fs.remove(poster).catch(() => {})
+  //   await fs.remove(thumb).catch(() => {})
+  //   await spawnPromise(
+  //     'ffmpeg',
+  //     ['-y', '-i', outMp4, '-vf', `scale=${width}:-1`, poster],
+  //     outDir
+  //   )
 
-    await spawnPromise(
-      'ffmpeg',
-      [
-        '-y',
-        '-i',
-        outMp4,
-        '-vf',
-        'fps=10,scale=480:-1:flags=lanczos',
-        '-t',
-        '4',
-        thumb
-      ],
-      outDir
-    )
+  //   await spawnPromise(
+  //     'ffmpeg',
+  //     [
+  //       '-y',
+  //       '-i',
+  //       outMp4,
+  //       '-vf',
+  //       'fps=10,scale=480:-1:flags=lanczos',
+  //       '-t',
+  //       '4',
+  //       thumb
+  //     ],
+  //     outDir
+  //   )
 
-    logger.info(`[movie-worker] poster/thumb generated for ${label}`)
-  } catch (e) {
-    logger.warn(
-      `[movie-worker] poster/thumb generation failed for ${label}: ${e}`
-    )
-  }
+  //   logger.info(`[movie-worker] poster/thumb generated for ${label}`)
+  // } catch (e) {
+  //   logger.warn(
+  //     `[movie-worker] poster/thumb generation failed for ${label}: ${e}`
+  //   )
+  // }
 
   logger.debug(`[movie-worker] done jobId=${jobId} label=${label}`)
 }
 
 const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
-  const { label, pdb, dcd, outDir, width, height, stride, crf, rayEnabled } =
-    payload
+  const {
+    label,
+    pdb,
+    dcd,
+    outDir,
+    constYaml,
+    width,
+    height,
+    stride,
+    crf,
+    rayEnabled
+  } = payload
 
   // Validate inputs exist
   if (!(await fs.pathExists(pdb))) {
@@ -117,7 +129,11 @@ const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
     '--align-ca',
     '--orient',
     'principal',
-    '--clip'
+    '--clip',
+    '--color-scheme',
+    'constraints',
+    '--config',
+    constYaml
   ]
   if (rayEnabled) {
     pymolArgs.push('--ray')
@@ -186,15 +202,15 @@ const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
   })
 }
 
-function spawnPromise(cmd: string, args: string[], cwd: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd, env: process.env })
-    child.on('error', reject)
-    child.on('exit', (code) => {
-      if (code === 0) resolve()
-      else reject(new Error(`${cmd} exited with code ${code}`))
-    })
-  })
-}
+// function spawnPromise(cmd: string, args: string[], cwd: string): Promise<void> {
+//   return new Promise((resolve, reject) => {
+//     const child = spawn(cmd, args, { cwd, env: process.env })
+//     child.on('error', reject)
+//     child.on('exit', (code) => {
+//       if (code === 0) resolve()
+//       else reject(new Error(`${cmd} exited with code ${code}`))
+//     })
+//   })
+// }
 
 export { runGenerateMovies }

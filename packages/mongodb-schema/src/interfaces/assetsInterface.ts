@@ -5,7 +5,7 @@ export interface IMovieAsset {
   mp4?: string
   poster?: string
   thumb?: string
-  source?: { pdb?: string; dcd?: string }
+  source?: { pdb?: string; dcd?: string; constYaml?: string }
   meta?: {
     width?: number
     height?: number
