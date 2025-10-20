@@ -4,6 +4,7 @@ import { IJob, Job } from '@bilbomd/mongodb-schema'
 import path from 'path'
 import { config } from '../../config/config.js'
 import fs from 'fs-extra'
+import { logger } from '../../helpers/loggers.js'
 
 const upsertMovieAsset = async (
   jobId: string,
@@ -138,7 +139,7 @@ const enqueueMakeMovie = async (
 
   // 3) enqueue one BullMQ job per DCD
   for (const pair of foundPairs) {
-    // Upsert asset entry in Job.assets.movies
+    // Upsert asset entry in MongoDB at Job.assets.movies
     await upsertMovieAsset(String(DBJob._id), pair.label, {
       pdb: pair.pdb,
       dcd: pair.dcd,
@@ -149,7 +150,7 @@ const enqueueMakeMovie = async (
       ray: defaults.rayEnabled,
       supersample: 2 // you hard-coded 2x in the PyMOL script
     })
-
+    // Prepare MovieJobData payload
     const data: MovieJobData = {
       jobId: String(DBJob._id),
       label: pair.label,
@@ -176,10 +177,14 @@ const enqueueMakeMovie = async (
         MQjob.log(
           `[movie] enqueued ${bullJobId} (pdb=${path.basename(pair.pdb)}, dcd=${path.basename(pair.dcd)})`
         )
+        logger.info(`[movie-enqueuer] enqueued movie job ${bullJobId}`)
       })
-      .catch((err) => {
+      .catch((error) => {
         MQjob.log(
-          `[movie] enqueue failed for ${bullJobId}: ${err?.message || err}`
+          `[movie] enqueue failed for ${bullJobId}: ${error?.message || error}`
+        )
+        logger.error(
+          `[movie-enqueuer] failed to enqueue movie job ${bullJobId}: ${error?.message || error}`
         )
       })
   }

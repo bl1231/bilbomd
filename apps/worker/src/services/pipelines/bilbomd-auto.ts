@@ -149,14 +149,9 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
     foundJob.progress = 50
     await foundJob.save()
 
-    // Generate MP4 movies from DCD files (OpenMM only)
-    // I don't want to await this. I want to enqueue it to the "movie" queue once MD is done.
-    // await MQjob.log('start movies')
-    // await runGenerateMovies(MQjob, foundJob)
-    // await MQjob.log('end movies')
-    // await MQjob.updateProgress(55)
-    // foundJob.progress = 55
-    // await foundJob.save()
+    // Generate MP4 movies from DCD files
+    // We don't want to await this.
+    // Just fire and forget.
     enqueueMakeMovie(MQjob, foundJob)
   }
 
