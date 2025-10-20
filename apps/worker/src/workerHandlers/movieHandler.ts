@@ -5,9 +5,9 @@ import { WorkerJob } from '../types/jobtypes.js'
 
 export const movieHandler = async (job: Job<WorkerJob>) => {
   try {
-    logger.info(`webhooksHandler JOB.DATA: ${JSON.stringify(job.data)}`)
-    switch (job.data.type) {
-      case 'dcd-to-mp4':
+    logger.info(`workerHandler job.data: ${JSON.stringify(job.data)}`)
+    switch (job.name) {
+      case 'render-movie':
         logger.info(`Start DCD to MP4 job: ${job.name}`)
         await renderMovieJob(job)
         logger.info(`Finish DCD to MP4 job: ${job.name}`)
