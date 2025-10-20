@@ -35,9 +35,9 @@ interface Pdb2CrdJob extends Job {
   data: { title: string; uuid: string }
   id: string
 }
-interface WebhooksJob extends Job {
-  type: 'docker-build'
-  data: { type: string; title: string; uuid: string }
+interface MovieJob extends Job {
+  type: 'dcd-to-mp4'
+  data: { title: string; uuid: string }
   id: string
 }
 
@@ -48,5 +48,5 @@ type WorkerJob =
   | BilboMDAlphaFoldJob
   | BilboMDSANSJob
   | Pdb2CrdJob
-  | WebhooksJob
+  | MovieJob
   | BilboMDMultiJob
