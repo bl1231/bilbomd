@@ -5,6 +5,30 @@ import { BilboMDJob } from 'types/interfaces'
 import { FileCheckResult } from 'types/jobCheckResults'
 import { RootState } from 'app/store'
 
+// Define movie asset interface locally since it's not exported from the schema package
+interface IMovieAsset {
+  label: string
+  status: 'queued' | 'running' | 'ready' | 'failed'
+  mp4?: string
+  poster?: string
+  thumb?: string
+  source?: {
+    pdb?: string
+    dcd?: string
+    constYaml?: string
+  }
+  meta?: {
+    width?: number
+    height?: number
+    stride?: number
+    fps?: number
+    ray?: boolean
+  }
+  error?: string
+  createdAt?: Date
+  updatedAt?: Date
+}
+
 const jobsAdapter = createEntityAdapter<BilboMDJob>()
 
 const initialState = jobsAdapter.getInitialState()

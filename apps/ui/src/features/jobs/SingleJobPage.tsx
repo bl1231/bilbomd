@@ -103,7 +103,16 @@ const SingleJobPage = () => {
     isLoading: configIsLoading
   } = useGetConfigsQuery('configData')
 
-  const { data: moviesData } = useGetMDMoviesQuery(id ?? skipToken)
+  const {
+    data: moviesData,
+    error: moviesError,
+    isLoading: moviesLoading
+  } = useGetMDMoviesQuery(id ?? skipToken)
+
+  // Debug logging
+  console.log('moviesData:', moviesData)
+  console.log('moviesError:', moviesError)
+  console.log('moviesLoading:', moviesLoading)
 
   const getProgressValue = () => {
     if (!job) return 0
@@ -418,7 +427,13 @@ const SingleJobPage = () => {
                   >
                     MD Movies Data
                   </Typography>
-                  {moviesData ? (
+                  {moviesLoading ? (
+                    <CircularProgress />
+                  ) : moviesError ? (
+                    <Alert severity="error">
+                      Error loading movies: {JSON.stringify(moviesError)}
+                    </Alert>
+                  ) : moviesData ? (
                     <Box
                       component="pre"
                       sx={{

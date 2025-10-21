@@ -16,7 +16,7 @@ interface BilboMDMongoStepsProps {
 }
 
 const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
-  console.log('BilboMDMongoSteps: steps:', steps)
+  // console.log('BilboMDMongoSteps: steps:', steps)
   let stepsToHide: string[] = []
   stepsToHide = ['_id']
 

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { Job as JobModel } from '@bilbomd/mongodb-schema'
 import type { IJob } from '@bilbomd/mongodb-schema'
+import { logger } from '../../middleware/loggers.js'
 
 // Movie asset interface (matching the schema)
 interface MovieAsset {
@@ -83,21 +84,35 @@ const getMovies = async (
   req: Request,
   res: Response
 ): Promise<Response<MoviesResponse>> => {
+  logger.info('getMovies controller called')
+
   try {
     const { id } = req.params
+    logger.info(`Extracting job ID from params: ${id}`)
+
     if (!id) {
+      logger.warn('Missing job id in request params')
       return res.status(400).json({ error: 'Missing job id' })
     }
+
+    logger.info(`Attempting to find job with ID: ${id}`)
 
     // Only fetch the movies array to keep payload small
     const job = (await JobModel.findById(id, {
       'assets.movies': 1
     }).lean()) as JobWithAssets | null
+
+    logger.info(`Job query result: ${job ? 'found' : 'not found'}`)
+
     if (!job) {
+      logger.warn(`Job not found for ID: ${id}`)
       return res.status(404).json({ error: 'Job not found' })
     }
 
     const movies: MovieAsset[] = job.assets?.movies ?? []
+    logger.info(`Found ${movies.length} movies in job assets`)
+    logger.debug(`Job assets structure:`, job.assets)
+    logger.debug(`Movies array:`, movies)
 
     const normalized: NormalizedMovieAsset[] = movies.map(
       (movie: MovieAsset) => ({
@@ -120,9 +135,15 @@ const getMovies = async (
       })
     )
 
-    return res.json({ movies: normalized })
+    logger.info(`Normalized ${normalized.length} movies for response`)
+    logger.debug(`Normalized movies:`, normalized)
+
+    const response = { movies: normalized }
+    logger.info('Sending successful response with movies data')
+    return res.json(response)
   } catch (err: unknown) {
     // Avoid leaking internal errors; provide a minimal message
+    logger.error('Error fetching movies:', err)
     console.error('Error fetching movies:', err)
     return res.status(500).json({ error: 'Failed to fetch movies' })
   }
