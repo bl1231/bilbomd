@@ -10,11 +10,13 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Chip
+  Chip,
+  Alert
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import MoviePlayer from './MoviePlayer'
+import Item from 'themes/components/Item'
 
 interface MovieAsset {
   label: string
@@ -75,15 +77,11 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
   )
 
   if (movies.length === 0) {
-    return (
-      <Typography color="text.secondary">
-        No movies available for this job.
-      </Typography>
-    )
+    return <Alert severity="info">No movies available for this job.</Alert>
   }
 
   return (
-    <>
+    <Item>
       <Box>
         {/* Ready Movies Grid */}
         {readyMovies.length > 0 && (
@@ -140,7 +138,11 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
                           color: 'white',
                           backgroundColor: 'rgba(0,0,0,0.6)',
                           borderRadius: '50%',
-                          padding: 1
+                          width: 48,
+                          height: 48,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
                       >
                         <PlayCircleOutlineIcon fontSize="large" />
@@ -238,7 +240,7 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </Item>
   )
 }
 

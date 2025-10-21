@@ -422,10 +422,7 @@ const SingleJobPage = () => {
                     '& .MuiTab-root': {
                       backgroundColor: '#e0e0e0', // Default tab background
                       color: '#666',
-                      '&.Mui-selected': {
-                        backgroundColor: '#1976d2', // Active tab background
-                        color: 'white'
-                      },
+
                       '&:hover': {
                         backgroundColor: '#d0d0d0' // Hover state
                       }
@@ -439,13 +436,7 @@ const SingleJobPage = () => {
               </Box>
 
               {tabValue === 0 && (
-                <Box sx={{ p: 3 }}>
-                  <Typography
-                    variant="h6"
-                    gutterBottom
-                  >
-                    MD Movies
-                  </Typography>
+                <Box sx={{ p: 0 }}>
                   {moviesLoading ? (
                     <CircularProgress />
                   ) : moviesError ? (
@@ -455,9 +446,7 @@ const SingleJobPage = () => {
                   ) : moviesData?.movies ? (
                     <MovieGallery movies={moviesData.movies} />
                   ) : (
-                    <Typography color="text.secondary">
-                      No movie data available.
-                    </Typography>
+                    <Alert severity="warning">No movie data available.</Alert>
                   )}
                 </Box>
               )}
