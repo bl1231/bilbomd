@@ -110,6 +110,8 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
       'ffmpeg',
       [
         '-y',
+        '-sseof',
+        '-1',
         '-i',
         outMp4,
         '-vf',
