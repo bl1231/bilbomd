@@ -17,10 +17,22 @@ import getMovies from '../controllers/jobs/getMovies.js'
 import streamVideo from '../controllers/movies/streamVideo.js'
 import { checkFiles } from '../controllers/resubmitController.js'
 import { verifyJWT } from '../middleware/verifyJWT.js'
+import { setVideoSession, verifyVideoSession } from '../middleware/videoAuth.js'
 
 const router = express.Router()
 
-router.use(verifyJWT)
+// Most routes use JWT authentication + set video session
+router.use((req, res, next) => {
+  // Skip JWT for video streaming route, use session auth instead
+  if (req.path.match(/\/[^/]+\/movies\/[^/]+$/)) {
+    return next()
+  }
+  // All other routes use JWT + set video session
+  verifyJWT(req, res, (err) => {
+    if (err) return next(err)
+    setVideoSession(req, res, next)
+  })
+})
 
 router.route('/').get(getAllJobs).post(createNewJob).patch(updateJobStatus)
 
@@ -32,7 +44,7 @@ router.route('/:id/results/:pdb').get(downloadPDB)
 router.route('/:id/logs').get(getLogForStep)
 router.route('/:id/check-files').get(checkFiles)
 router.route('/:id/movies').get(getMovies)
-router.route('/:id/movies/:filename').get(streamVideo)
+router.route('/:id/movies/:filename').get(verifyVideoSession, streamVideo)
 router.route('/:id/:filename').get(getFile)
 router.route('/bilbomd-auto').post(createNewJob)
 router.route('/bilbomd-scoper').post(createNewJob)
