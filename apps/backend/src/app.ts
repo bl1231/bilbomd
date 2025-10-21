@@ -75,6 +75,7 @@ app.use(cookieParser())
 // Session management
 app.use(
   session({
+    name: 'bilbomd-session',
     secret: process.env.SESSION_SECRET || 'bilbomd-session-secret',
     resave: false,
     saveUninitialized: false,
