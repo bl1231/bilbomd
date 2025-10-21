@@ -29,7 +29,11 @@ router.use((req, res, next) => {
   }
   // All other routes use JWT + set video session
   verifyJWT(req, res, (err) => {
-    if (err) return next(err)
+    if (err) {
+      console.log('JWT verification failed:', err)
+      return next(err)
+    }
+    console.log('JWT verified, req.user:', req.user)
     setVideoSession(req, res, next)
   })
 })
