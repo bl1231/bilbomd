@@ -8,7 +8,6 @@ import {
   downloadJobResults,
   getLogForStep
 } from '../controllers/jobs/index.js'
-// import { createNewAlphaFoldJob } from '../controllers/alphafoldJobsController.js'
 import { createNewSANSJob } from '../controllers/jobs/sansJobController.js'
 import { createNewMultiJob } from '../controllers/jobs/multiMdController.js'
 import { downloadPDB, getFoxsData } from '../controllers/downloadController.js'
@@ -18,7 +17,7 @@ import streamVideo from '../controllers/movies/streamVideo.js'
 import { checkFiles } from '../controllers/resubmitController.js'
 import { verifyJWT } from '../middleware/verifyJWT.js'
 import { setVideoSession, verifyVideoSession } from '../middleware/videoAuth.js'
-
+import { logger } from '../middleware/loggers.js'
 const router = express.Router()
 
 // Most routes use JWT authentication + set video session
@@ -30,10 +29,10 @@ router.use((req, res, next) => {
   // All other routes use JWT + set video session
   verifyJWT(req, res, (err) => {
     if (err) {
-      console.log('JWT verification failed:', err)
+      logger.error(`JWT verification failed: ${err}`)
       return next(err)
     }
-    console.log('JWT verified, req.user:', req.user)
+    logger.debug(`JWT verified, req.user: ${req.user}`)
     setVideoSession(req, res, next)
   })
 })

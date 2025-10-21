@@ -1,5 +1,4 @@
-// in src/interfaces/assetInterface.ts
-export interface IMovieAsset {
+interface IMovieAsset {
   label: string
   status: 'queued' | 'running' | 'ready' | 'failed'
   mp4?: string
@@ -18,6 +17,8 @@ export interface IMovieAsset {
   updatedAt?: Date
 }
 
-export interface IAssets {
+interface IAssets {
   movies: IMovieAsset[]
 }
+
+export { IMovieAsset, IAssets }
