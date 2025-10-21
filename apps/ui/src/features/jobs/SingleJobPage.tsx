@@ -8,7 +8,9 @@ import {
   Alert,
   AlertTitle,
   Box,
-  CircularProgress
+  CircularProgress,
+  Tabs,
+  Tab
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import {
@@ -38,7 +40,11 @@ import { BilboMDScoperTable } from '../scoperjob/BilboMDScoperTable'
 import ScoperFoXSAnalysis from 'features/scoperjob/ScoperFoXSAnalysis'
 import FoXSAnalysis from './FoXSAnalysis'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
-import { useGetJobByIdQuery, useDeleteJobMutation } from 'slices/jobsApiSlice'
+import {
+  useGetJobByIdQuery,
+  useDeleteJobMutation,
+  useGetMDMoviesQuery
+} from 'slices/jobsApiSlice'
 import { skipToken } from '@reduxjs/toolkit/query'
 import BilboMdFeedback from 'features/analysis/BilboMdFeedback'
 import { BilboMDJob, BilboMDMultiJob } from 'types/interfaces'
@@ -64,7 +70,12 @@ const SingleJobPage = () => {
   const returnParams = location.state?.returnParams ?? ''
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
+  const [tabValue, setTabValue] = useState(0)
   const [deleteJob] = useDeleteJobMutation()
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue)
+  }
 
   const handleDeleteJob = async () => {
     // console.log('Deleting job with ID:', id)
@@ -91,6 +102,8 @@ const SingleJobPage = () => {
     error: configError,
     isLoading: configIsLoading
   } = useGetConfigsQuery('configData')
+
+  const { data: moviesData } = useGetMDMoviesQuery(id ?? skipToken)
 
   const getProgressValue = () => {
     if (!job) return 0
@@ -363,6 +376,102 @@ const SingleJobPage = () => {
           )}
         </Grid>
 
+        {/* Analysis Tabs */}
+        {job.mongo.status === 'Completed' && id && (
+          <>
+            <Grid size={{ xs: 12 }}>
+              <HeaderBox sx={{ py: '6px' }}>
+                <Typography>Analysis</Typography>
+              </HeaderBox>
+
+              <Box sx={{ borderBottom: 0, borderColor: 'divider' }}>
+                <Tabs
+                  value={tabValue}
+                  onChange={handleTabChange}
+                  aria-label="analysis tabs"
+                  sx={{
+                    backgroundColor: '#e4e4e4ff', // Light gray background for the entire tabs container
+                    '& .MuiTab-root': {
+                      backgroundColor: '#e0e0e0', // Default tab background
+                      color: '#666',
+                      '&.Mui-selected': {
+                        backgroundColor: '#1976d2', // Active tab background
+                        color: 'white'
+                      },
+                      '&:hover': {
+                        backgroundColor: '#d0d0d0' // Hover state
+                      }
+                    }
+                  }}
+                >
+                  <Tab label="MD Movies" />
+                  <Tab label="FoXS Analysis" />
+                  <Tab label="Feedback" />
+                </Tabs>
+              </Box>
+
+              {tabValue === 0 && (
+                <Box sx={{ p: 3 }}>
+                  <Typography
+                    variant="h6"
+                    gutterBottom
+                  >
+                    MD Movies Data
+                  </Typography>
+                  {moviesData ? (
+                    <Box
+                      component="pre"
+                      sx={{
+                        backgroundColor: '#f5f5f5',
+                        padding: 2,
+                        borderRadius: 1,
+                        overflow: 'auto',
+                        maxHeight: '400px',
+                        fontSize: '0.875rem',
+                        fontFamily: 'monospace'
+                      }}
+                    >
+                      {JSON.stringify(moviesData, null, 2)}
+                    </Box>
+                  ) : (
+                    <Typography color="text.secondary">
+                      No movie data available or still loading...
+                    </Typography>
+                  )}
+                </Box>
+              )}
+              {tabValue === 1 && (
+                <Box sx={{ p: 0 }}>
+                  {job.mongo.status === 'Completed' &&
+                    (job.mongo.__t === 'BilboMdPDB' ||
+                      job.mongo.__t === 'BilboMdCRD' ||
+                      job.mongo.__t === 'BilboMdAuto' ||
+                      job.mongo.__t === 'BilboMdAlphaFold') &&
+                    id && (
+                      <Grid size={{ xs: 12 }}>
+                        <FoXSAnalysis id={id} />
+                      </Grid>
+                    )}
+                </Box>
+              )}
+              {tabValue === 2 && (
+                <Box sx={{ p: 0 }}>
+                  {job.mongo.status === 'Completed' &&
+                    (job.mongo.__t === 'BilboMdPDB' ||
+                      job.mongo.__t === 'BilboMdCRD' ||
+                      job.mongo.__t === 'BilboMdAuto' ||
+                      job.mongo.__t === 'BilboMdAlphaFold') &&
+                    job.mongo.feedback && (
+                      <Grid size={{ xs: 12 }}>
+                        <BilboMdFeedback feedback={job.mongo.feedback} />
+                      </Grid>
+                    )}
+                </Box>
+              )}
+            </Grid>
+          </>
+        )}
+
         {/* Scoper FoXS Analysis */}
         {job.mongo.status === 'Completed' && job.scoper && id && (
           <Grid size={{ xs: 12 }}>
@@ -372,36 +481,6 @@ const SingleJobPage = () => {
             <ScoperFoXSAnalysis id={id} />
           </Grid>
         )}
-
-        {/* FoXS Analysis */}
-        {job.mongo.status === 'Completed' &&
-          (job.mongo.__t === 'BilboMdPDB' ||
-            job.mongo.__t === 'BilboMdCRD' ||
-            job.mongo.__t === 'BilboMdAuto' ||
-            job.mongo.__t === 'BilboMdAlphaFold') &&
-          id && (
-            <Grid size={{ xs: 12 }}>
-              <HeaderBox sx={{ py: '6px' }}>
-                <Typography>BilboMD FoXS Analysis</Typography>
-              </HeaderBox>
-              <FoXSAnalysis id={id} />
-            </Grid>
-          )}
-
-        {/* Feedback */}
-        {job.mongo.status === 'Completed' &&
-          (job.mongo.__t === 'BilboMdPDB' ||
-            job.mongo.__t === 'BilboMdCRD' ||
-            job.mongo.__t === 'BilboMdAuto' ||
-            job.mongo.__t === 'BilboMdAlphaFold') &&
-          job.mongo.feedback && (
-            <Grid size={{ xs: 12 }}>
-              <HeaderBox sx={{ py: '6px' }}>
-                <Typography>Feedback</Typography>
-              </HeaderBox>
-              <BilboMdFeedback feedback={job.mongo.feedback} />
-            </Grid>
-          )}
 
         {/* Molstar Viewer */}
         {job.mongo.status === 'Completed' &&
