@@ -1,3 +1,4 @@
+// import { IMovieAsset } from './../../../../packages/mongodb-schema/dist/interfaces/assetsInterface.d'
 import { createEntityAdapter, createSelector, EntityId } from '@reduxjs/toolkit'
 import { apiSlice } from 'app/api/apiSlice'
 import { BilboMDJob } from 'types/interfaces'
@@ -189,7 +190,11 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
           return text
         }
       }
-    )
+    ),
+    getMDMovies: builder.query<{ movies: IMovieAsset[] }, string>({
+      query: (id) => ({ url: `/jobs/${id}/movies`, method: 'GET' }),
+      providesTags: (_, __, id) => [{ type: 'MovieAsset', id }]
+    })
   })
 })
 
@@ -211,7 +216,8 @@ export const {
   useGetAf2PaeConstFileQuery,
   useGetAf2PaeStatusQuery,
   useGetFileByIdAndNameQuery,
-  useLazyGetFileByIdAndNameQuery
+  useLazyGetFileByIdAndNameQuery,
+  useGetMDMoviesQuery
 } = jobsApiSlice
 
 // Select the query result object from the cache
