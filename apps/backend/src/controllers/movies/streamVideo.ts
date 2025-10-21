@@ -95,13 +95,14 @@ const streamVideo = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(403).json({ message: 'Invalid file path' })
     }
 
-    // Check if file exists
-    if (!fs.existsSync(resolvedPath)) {
+    // Check if file exists and get stats (async, non-blocking)
+    let stat: fs.Stats
+    try {
+      stat = await fs.promises.stat(resolvedPath)
+    } catch {
       logger.warn(`Media file not found: ${resolvedPath}`)
       return res.status(404).json({ message: 'Media file not found' })
     }
-
-    const stat = fs.statSync(resolvedPath)
     const fileSize = stat.size
     const range = req.headers.range
     const contentType = getContentType(filename)
