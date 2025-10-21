@@ -12,7 +12,7 @@ import { createNewSANSJob } from '../controllers/jobs/sansJobController.js'
 import { createNewMultiJob } from '../controllers/jobs/multiMdController.js'
 import { downloadPDB, getFoxsData } from '../controllers/downloadController.js'
 import { getFile } from '../controllers/fileDownloadController.js'
-import getMovies from '../controllers/jobs/getMovies.js'
+import getMovies from '../controllers/movies/getMovies.js'
 import streamVideo from '../controllers/movies/streamVideo.js'
 import { checkFiles } from '../controllers/resubmitController.js'
 import { verifyJWT } from '../middleware/verifyJWT.js'
@@ -47,7 +47,9 @@ router.route('/:id/results/:pdb').get(downloadPDB)
 router.route('/:id/logs').get(getLogForStep)
 router.route('/:id/check-files').get(checkFiles)
 router.route('/:id/movies').get(getMovies)
-router.route('/:id/movies/:filename').get(verifyVideoSession, streamVideo)
+router
+  .route('/:id/movies/:label/:filename')
+  .get(verifyVideoSession, streamVideo)
 router.route('/:id/:filename').get(getFile)
 router.route('/bilbomd-auto').post(createNewJob)
 router.route('/bilbomd-scoper').post(createNewJob)

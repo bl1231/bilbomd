@@ -70,15 +70,16 @@ interface JobWithAssets extends IJob {
 // Update the toPublicUrl function to use the new streaming endpoint
 function toPublicUrl(
   absPath?: string | null,
-  jobId?: string
+  jobId?: string,
+  label?: string
 ): string | undefined {
-  if (!absPath || !jobId) return undefined
+  if (!absPath || !jobId || !label) return undefined
 
   // Extract filename from absolute path
   const filename = path.basename(absPath)
 
-  // Return the streaming endpoint URL
-  return `/api/v1/jobs/${jobId}/movies/${filename}`
+  // Return the streaming endpoint URL including the label/subfolder
+  return `/api/v1/jobs/${jobId}/movies/${label}/${filename}`
 }
 
 const getMovies = async (
@@ -119,14 +120,14 @@ const getMovies = async (
       (movie: MovieAsset) => ({
         label: movie.label,
         status: movie.status,
-        mp4: toPublicUrl(movie.mp4, id),
-        poster: toPublicUrl(movie.poster, id),
-        thumb: toPublicUrl(movie.thumb, id),
+        mp4: toPublicUrl(movie.mp4, id, movie.label),
+        poster: toPublicUrl(movie.poster, id, movie.label),
+        thumb: toPublicUrl(movie.thumb, id, movie.label),
         source: movie.source
           ? {
-              pdb: toPublicUrl(movie.source.pdb, id),
-              dcd: toPublicUrl(movie.source.dcd, id),
-              constYaml: toPublicUrl(movie.source.constYaml, id)
+              pdb: toPublicUrl(movie.source.pdb, id, movie.label),
+              dcd: toPublicUrl(movie.source.dcd, id, movie.label),
+              constYaml: toPublicUrl(movie.source.constYaml, id, movie.label)
             }
           : undefined,
         meta: movie.meta,

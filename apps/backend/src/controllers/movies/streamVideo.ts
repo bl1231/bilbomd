@@ -33,7 +33,7 @@ const getContentType = (filename: string): string => {
 
 const streamVideo = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { id, filename } = req.params
+    const { id, label, filename } = req.params
     const username = req.user // From session middleware
 
     logger.info(
@@ -59,9 +59,10 @@ const streamVideo = async (req: AuthenticatedRequest, res: Response) => {
     const movies = assets?.movies ?? []
     const movieAsset = movies.find(
       (movie: IMovieAsset) =>
-        (movie.mp4 && path.basename(movie.mp4) === filename) ||
-        (movie.poster && path.basename(movie.poster) === filename) ||
-        (movie.thumb && path.basename(movie.thumb) === filename)
+        movie.label === label &&
+        ((movie.mp4 && path.basename(movie.mp4) === filename) ||
+          (movie.poster && path.basename(movie.poster) === filename) ||
+          (movie.thumb && path.basename(movie.thumb) === filename))
     )
     if (!movieAsset) {
       logger.warn(`Movie asset not found for file: ${filename}`)

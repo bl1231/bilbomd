@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router'
 import PulseLoader from 'react-spinners/PulseLoader'
 import useTitle from 'hooks/useTitle'
@@ -32,7 +32,6 @@ import BilboMDNerscSteps from './BilboMDNerscSteps'
 import BilboMDMongoSteps from './BilboMDMongoSteps'
 import { BilboMDScoperSteps } from './BilboMDScoperSteps'
 import HeaderBox from 'components/HeaderBox'
-// import JobError from './JobError'
 import JobDBDetails from './JobDBDetails'
 import MultiMDJobDBDetails from 'features/multimd/MultiMDJobDBDetails'
 import MolstarViewer from 'features/molstar/Viewer'
@@ -110,8 +109,27 @@ const SingleJobPage = () => {
     isLoading: moviesLoading
   } = useGetMDMoviesQuery(id ?? skipToken)
 
+  const allMoviesReady =
+    Array.isArray(moviesData?.movies) &&
+    moviesData.movies.length > 0 &&
+    moviesData.movies.every((m) => m.status === 'ready')
+
+  // Optionally, use a refetch or polling effect:
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined
+    if (!allMoviesReady && id) {
+      interval = setInterval(() => {
+        // You may need to use refetch from RTK Query if available
+        // refetchMovies()
+      }, 15000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [allMoviesReady, id])
+
   // Debug logging
-  // console.log('moviesData:', moviesData)
+  console.log('moviesData:', moviesData)
   // console.log('moviesError:', moviesError)
   // console.log('moviesLoading:', moviesLoading)
 
