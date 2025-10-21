@@ -50,6 +50,7 @@ import BilboMdFeedback from 'features/analysis/BilboMdFeedback'
 import { BilboMDJob, BilboMDMultiJob } from 'types/interfaces'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
+import MovieGallery from 'features/analysis/MovieGallery'
 
 const jobTypeToRoute: Record<string, string> = {
   BilboMdPDB: 'classic',
@@ -110,9 +111,9 @@ const SingleJobPage = () => {
   } = useGetMDMoviesQuery(id ?? skipToken)
 
   // Debug logging
-  console.log('moviesData:', moviesData)
-  console.log('moviesError:', moviesError)
-  console.log('moviesLoading:', moviesLoading)
+  // console.log('moviesData:', moviesData)
+  // console.log('moviesError:', moviesError)
+  // console.log('moviesLoading:', moviesLoading)
 
   const getProgressValue = () => {
     if (!job) return 0
@@ -425,7 +426,7 @@ const SingleJobPage = () => {
                     variant="h6"
                     gutterBottom
                   >
-                    MD Movies Data
+                    MD Movies
                   </Typography>
                   {moviesLoading ? (
                     <CircularProgress />
@@ -433,24 +434,11 @@ const SingleJobPage = () => {
                     <Alert severity="error">
                       Error loading movies: {JSON.stringify(moviesError)}
                     </Alert>
-                  ) : moviesData ? (
-                    <Box
-                      component="pre"
-                      sx={{
-                        backgroundColor: '#f5f5f5',
-                        padding: 2,
-                        borderRadius: 1,
-                        overflow: 'auto',
-                        maxHeight: '400px',
-                        fontSize: '0.875rem',
-                        fontFamily: 'monospace'
-                      }}
-                    >
-                      {JSON.stringify(moviesData, null, 2)}
-                    </Box>
+                  ) : moviesData?.movies ? (
+                    <MovieGallery movies={moviesData.movies} />
                   ) : (
                     <Typography color="text.secondary">
-                      No movie data available or still loading...
+                      No movie data available.
                     </Typography>
                   )}
                 </Box>
