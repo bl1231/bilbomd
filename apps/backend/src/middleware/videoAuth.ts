@@ -26,6 +26,7 @@ const setVideoSession = async (
   res: Response,
   next: NextFunction
 ) => {
+  logger.debug('Setting video session middleware called')
   try {
     // If user is authenticated via JWT, store their info in session
     if (req.userId) {

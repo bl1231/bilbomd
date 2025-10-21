@@ -9,10 +9,15 @@ const getEnvVar = (name: string): string => {
   }
   return value
 }
-
+const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
+  return process.env[name] || defaultValue
+}
 export const config = {
   sendEmailNotifications: process.env.SEND_EMAIL_NOTIFICATIONS === 'true', // Explicit boolean conversion
   runOnNERSC: process.env.USE_NERSC === 'true', // Explicit boolean conversion
-  bullmqAttempts: process.env.BULLMQ_ATTEMPTS ? parseInt(process.env.BULLMQ_ATTEMPTS) : 3,
-  uploadDir: getEnvVar('DATA_VOL')
+  bullmqAttempts: process.env.BULLMQ_ATTEMPTS
+    ? parseInt(process.env.BULLMQ_ATTEMPTS)
+    : 3,
+  uploadDir: getEnvVar('DATA_VOL'),
+  logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info')
 }
