@@ -23,7 +23,7 @@ const router = express.Router()
 // Most routes use JWT authentication + set video session
 router.use((req, res, next) => {
   // Skip JWT for video streaming route, use session auth instead
-  if (req.path.match(/\/[^/]+\/movies\/[^/]+$/)) {
+  if (req.path.match(/\/[^/]+\/movies\/[^/]+\/[^/]+$/)) {
     return next()
   }
   // All other routes use JWT + set video session
