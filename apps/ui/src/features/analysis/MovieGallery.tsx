@@ -120,8 +120,8 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
                         component="img"
                         height="140"
                         image={
-                          movie.thumb ||
                           movie.poster ||
+                          movie.thumb ||
                           '/placeholder-video.png'
                         }
                         alt={movie.label}
