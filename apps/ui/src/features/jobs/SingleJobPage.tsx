@@ -460,7 +460,10 @@ const SingleJobPage = () => {
                     id && (
                       <Grid size={{ xs: 12 }}>
                         <Suspense fallback={<CircularProgress />}>
-                          <FoXSAnalysis id={id} />
+                          <FoXSAnalysis
+                            id={id}
+                            active={tabValue === 1}
+                          />
                         </Suspense>
                       </Grid>
                     )}
