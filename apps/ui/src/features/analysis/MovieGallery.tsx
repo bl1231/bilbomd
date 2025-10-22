@@ -7,9 +7,11 @@ import {
   CardContent,
   Typography,
   Chip,
-  Alert
+  Alert,
+  Button
 } from '@mui/material'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
+import DownloadIcon from '@mui/icons-material/Download'
 import MoviePlayer from './MoviePlayer'
 import Item from 'themes/components/Item'
 
@@ -167,32 +169,59 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
                         </>
                       )}
                     </Box>
-                    <CardContent sx={{ pb: 2 }}>
-                      <Typography
-                        variant="subtitle2"
-                        noWrap
-                      >
-                        {(() => {
-                          const match = movie.label.match(/rg_(\d+)/i)
-                          return match ? (
-                            <>
-                              Radius of Gyration constraints - <b>{match[1]}</b>{' '}
-                              Å
-                            </>
-                          ) : (
-                            movie.label
-                          )
-                        })()}
-                      </Typography>
-                      {movie.meta && (
+                    <CardContent
+                      sx={{
+                        pb: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      <Box>
                         <Typography
-                          variant="caption"
-                          color="text.secondary"
+                          variant="subtitle2"
+                          noWrap
                         >
-                          {movie.meta.width}×{movie.meta.height}
-                          {movie.meta.fps && ` • ${movie.meta.fps}fps`}
+                          {(() => {
+                            const match = movie.label.match(/rg_(\d+)/i)
+                            return match ? (
+                              <>
+                                Radius of Gyration constraints -{' '}
+                                <b>{match[1]}</b> Å
+                              </>
+                            ) : (
+                              movie.label
+                            )
+                          })()}
                         </Typography>
-                      )}
+                        {movie.meta && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            {movie.meta.width}×{movie.meta.height}
+                            {movie.meta.fps && ` • ${movie.meta.fps}fps`}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<DownloadIcon />}
+                        sx={{ ml: 2, whiteSpace: 'nowrap' }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const link = document.createElement('a')
+                          link.href = movie.mp4!
+                          link.download =
+                            movie.label.replace(/\s+/g, '_') + '.mp4'
+                          document.body.appendChild(link)
+                          link.click()
+                          document.body.removeChild(link)
+                        }}
+                      >
+                        Download
+                      </Button>
                     </CardContent>
                   </Card>
                 </Grid>
