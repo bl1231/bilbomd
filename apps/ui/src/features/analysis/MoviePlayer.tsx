@@ -1,5 +1,5 @@
 // MoviePlayer.tsx
-import { useRef, useState, useEffect } from 'react'
+import { useRef } from 'react'
 
 type Props = {
   src: string
@@ -9,13 +9,6 @@ type Props = {
 
 const MoviePlayer = ({ src, poster, className }: Props) => {
   const ref = useRef<HTMLVideoElement | null>(null)
-  const [ready, setReady] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setReady(false)
-    setError(null)
-  }, [src])
 
   return (
     <div
@@ -40,8 +33,7 @@ const MoviePlayer = ({ src, poster, className }: Props) => {
           display: 'block',
           zIndex: 2
         }}
-        onLoadedMetadata={() => setReady(true)}
-        onError={() => setError('Failed to load video')}
+        // ...existing code...
       />
     </div>
   )
