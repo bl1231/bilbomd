@@ -73,7 +73,7 @@ const SingleJobPage = () => {
   const [tabValue, setTabValue] = useState(0)
   const [deleteJob] = useDeleteJobMutation()
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
   }
 
@@ -423,13 +423,32 @@ const SingleJobPage = () => {
                     }
                   }}
                 >
-                  <Tab label="MD Movies" />
                   <Tab label="FoXS Analysis" />
+                  <Tab label="MD Movies" />
                   <Tab label="Feedback" />
                 </Tabs>
               </Box>
 
               {tabValue === 0 && (
+                <Box sx={{ p: 0 }}>
+                  {job.mongo.status === 'Completed' &&
+                    (job.mongo.__t === 'BilboMdPDB' ||
+                      job.mongo.__t === 'BilboMdCRD' ||
+                      job.mongo.__t === 'BilboMdAuto' ||
+                      job.mongo.__t === 'BilboMdAlphaFold') &&
+                    id && (
+                      <Grid size={{ xs: 12 }}>
+                        <Suspense fallback={<CircularProgress />}>
+                          <FoXSAnalysis
+                            id={id}
+                            active={tabValue === 0}
+                          />
+                        </Suspense>
+                      </Grid>
+                    )}
+                </Box>
+              )}
+              {tabValue === 1 && (
                 <Box sx={{ p: 0 }}>
                   {moviesLoading ? (
                     <CircularProgress />
@@ -442,25 +461,6 @@ const SingleJobPage = () => {
                   ) : (
                     <Alert severity="warning">No movie data available.</Alert>
                   )}
-                </Box>
-              )}
-              {tabValue === 1 && (
-                <Box sx={{ p: 0 }}>
-                  {job.mongo.status === 'Completed' &&
-                    (job.mongo.__t === 'BilboMdPDB' ||
-                      job.mongo.__t === 'BilboMdCRD' ||
-                      job.mongo.__t === 'BilboMdAuto' ||
-                      job.mongo.__t === 'BilboMdAlphaFold') &&
-                    id && (
-                      <Grid size={{ xs: 12 }}>
-                        <Suspense fallback={<CircularProgress />}>
-                          <FoXSAnalysis
-                            id={id}
-                            active={tabValue === 1}
-                          />
-                        </Suspense>
-                      </Grid>
-                    )}
                 </Box>
               )}
               {tabValue === 2 && (
