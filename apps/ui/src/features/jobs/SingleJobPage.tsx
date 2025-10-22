@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router'
 import PulseLoader from 'react-spinners/PulseLoader'
 import useTitle from 'hooks/useTitle'
@@ -37,7 +37,7 @@ import MultiMDJobDBDetails from 'features/multimd/MultiMDJobDBDetails'
 import MolstarViewer from 'features/molstar/Viewer'
 import { BilboMDScoperTable } from '../scoperjob/BilboMDScoperTable'
 import ScoperFoXSAnalysis from 'features/scoperjob/ScoperFoXSAnalysis'
-import FoXSAnalysis from './FoXSAnalysis'
+const FoXSAnalysis = lazy(() => import('./FoXSAnalysis'))
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import {
   useGetJobByIdQuery,
@@ -459,7 +459,9 @@ const SingleJobPage = () => {
                       job.mongo.__t === 'BilboMdAlphaFold') &&
                     id && (
                       <Grid size={{ xs: 12 }}>
-                        <FoXSAnalysis id={id} />
+                        <Suspense fallback={<CircularProgress />}>
+                          <FoXSAnalysis id={id} />
+                        </Suspense>
                       </Grid>
                     )}
                 </Box>
