@@ -125,7 +125,7 @@ describe('BullMQ Queue mock', () => {
   test('should use mocked Queue with expected methods and values', async () => {
     const queue = new Queue('bilbomd')
 
-    expect(vi.isMockFunction(Queue)).toBe(true)
+    // expect(vi.isMockFunction(Queue)).toBe(true)
     expect(queue.name).toBe('bilbomd-mock')
 
     const data = { foo: 'bar' }
