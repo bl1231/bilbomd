@@ -87,7 +87,7 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
             >
               {readyMovies.map((movie, index) => (
                 <Grid
-                  size={{ xs: 12, sm: 6, md: 4, lg: 4 }}
+                  size={{ xs: 12, sm: 12, md: 6, lg: 4 }}
                   key={index}
                 >
                   <Card
@@ -179,7 +179,7 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
                     >
                       <Box>
                         <Typography
-                          variant="subtitle2"
+                          variant="subtitle1"
                           noWrap
                         >
                           {(() => {
@@ -199,7 +199,7 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
                             variant="caption"
                             color="text.secondary"
                           >
-                            {movie.meta.width}×{movie.meta.height}
+                            {movie.meta.width}px ×{movie.meta.height}px
                             {movie.meta.fps && ` • ${movie.meta.fps}fps`}
                           </Typography>
                         )}
