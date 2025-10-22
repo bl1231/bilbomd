@@ -611,7 +611,8 @@ const storeConstraintsInMongoDB = async (
   try {
     logger.debug(`Storing constraints in MongoDB from file: ${filePath}`)
 
-    let constraints: IMDConstraints
+    type ParsedConstraints = IMDConstraints | { constraints: IMDConstraints }
+    let parsed: ParsedConstraints
 
     if (fileName.endsWith('.yml') || fileName.endsWith('.yaml')) {
       // Parse YAML constraints for OpenMM
@@ -622,9 +623,9 @@ const storeConstraintsInMongoDB = async (
 
       // Parse and store the YAML constraints
       const fileContent = await fs.readFile(filePath, 'utf8')
-      constraints = YAML.parse(fileContent) as IMDConstraints
+      parsed = YAML.parse(fileContent) as ParsedConstraints
       logger.debug(
-        `Parsed YAML constraints: ${JSON.stringify(constraints, null, 2)}`
+        `Parsed YAML constraints: ${JSON.stringify(parsed, null, 2)}`
       )
     } else if (fileName === 'const.inp') {
       // For CHARMM const.inp, convert it to YAML format first, then parse
@@ -634,17 +635,20 @@ const storeConstraintsInMongoDB = async (
       const yamlContent = await convertInpToYaml(filePath, logger)
 
       // Parse the converted YAML into constraints object
-      constraints = YAML.parse(yamlContent) as IMDConstraints
+      parsed = YAML.parse(yamlContent) as ParsedConstraints
       logger.debug(
-        `Converted and parsed CHARMM constraints: ${JSON.stringify(constraints, null, 2)}`
+        `Converted and parsed CHARMM constraints: ${JSON.stringify(parsed, null, 2)}`
       )
     } else {
       throw new Error(`Unsupported constraint file format: ${fileName}`)
     }
 
+    // Unwrap if needed
+    const constraintsObj = 'constraints' in parsed ? parsed.constraints : parsed
+
     DBjob.set('md_constraints', {
-      fixed_bodies: constraints.fixed_bodies ?? [],
-      rigid_bodies: constraints.rigid_bodies ?? []
+      fixed_bodies: constraintsObj.fixed_bodies ?? [],
+      rigid_bodies: constraintsObj.rigid_bodies ?? []
     })
 
     await DBjob.save()
