@@ -40,6 +40,7 @@ type MongoDBProperty = {
 }
 
 const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
+  // console.log('JobDBDetails: job:', job)
   const [open, setOpen] = useState(false)
   const { enqueueSnackbar } = useSnackbar()
   const [triggerGetFile, { data: fileContents, isLoading, error }] =
@@ -55,7 +56,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
     ) {
       void triggerGetFile({
         id: job.mongo.id,
-        filename: job.mongo.const_inp_file || '' // Ensure filename is a string
+        filename: job.mongo.const_inp_file || ''
       })
     }
   }
@@ -133,30 +134,33 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
               label={
                 <Box style={{ display: 'flex', alignItems: 'center' }}>
                   <span style={{ marginRight: '6px' }}>
-                    {specificJob.const_inp_file}
+                    {specificJob.const_inp_file || 'No constraint file'}
                   </span>
-                  <Tooltip title={`Open ${specificJob.const_inp_file}`}>
+                  <Tooltip
+                    title={`Open ${specificJob.const_inp_file || 'constraint file'}`}
+                  >
                     <IconButton
-                      size='small'
+                      size="small"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleOpenModal()
                       }}
                       sx={{ padding: 0 }}
+                      disabled={!specificJob.const_inp_file}
                     >
-                      <VisibilityIcon fontSize='small' />
+                      <VisibilityIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                 </Box>
               }
-              variant='outlined'
+              variant="outlined"
               sx={{
                 fontSize: '0.875rem',
                 borderColor: 'primary.main',
                 backgroundColor: green[100],
-                cursor: 'pointer'
+                cursor: specificJob.const_inp_file ? 'pointer' : 'default'
               }}
-              onClick={handleOpenModal}
+              onClick={specificJob.const_inp_file ? handleOpenModal : undefined}
             />
           )
         },
@@ -201,30 +205,33 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
               label={
                 <Box style={{ display: 'flex', alignItems: 'center' }}>
                   <span style={{ marginRight: '6px' }}>
-                    {specificJob.const_inp_file}
+                    {specificJob.const_inp_file || 'No constraint file'}
                   </span>
-                  <Tooltip title={`Open ${specificJob.const_inp_file}`}>
+                  <Tooltip
+                    title={`Open ${specificJob.const_inp_file || 'constraint file'}`}
+                  >
                     <IconButton
-                      size='small'
+                      size="small"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleOpenModal()
                       }}
                       sx={{ padding: 0 }}
+                      disabled={!specificJob.const_inp_file}
                     >
-                      <VisibilityIcon fontSize='small' />
+                      <VisibilityIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                 </Box>
               }
-              variant='outlined'
+              variant="outlined"
               sx={{
                 fontSize: '0.875rem',
                 borderColor: 'primary.main',
                 backgroundColor: green[100],
-                cursor: 'pointer'
+                cursor: specificJob.const_inp_file ? 'pointer' : 'default'
               }}
-              onClick={handleOpenModal}
+              onClick={specificJob.const_inp_file ? handleOpenModal : undefined}
             />
           )
         },
@@ -265,8 +272,11 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
           alignItems: 'center'
         }}
       >
-        <Typography fontWeight='bold'>UUID:</Typography>
-        <CopyableChip label='UUID' value={job.mongo.uuid} />
+        <Typography fontWeight="bold">UUID:</Typography>
+        <CopyableChip
+          label="UUID"
+          value={job.mongo.uuid}
+        />
       </Box>
 
       {props.map(({ label, value, render, suffix = '' }) =>
@@ -275,7 +285,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
             key={label}
             sx={{ display: 'flex', justifyContent: 'space-between' }}
           >
-            <Typography fontWeight='bold'>{label}:</Typography>
+            <Typography fontWeight="bold">{label}:</Typography>
             {render()}
           </Box>
         ) : (
@@ -284,7 +294,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
               key={label}
               sx={{ display: 'flex', justifyContent: 'space-between' }}
             >
-              <Typography fontWeight='bold'>{label}:</Typography>
+              <Typography fontWeight="bold">{label}:</Typography>
               <Typography>
                 {(() => {
                   if (value instanceof Date) {
@@ -306,7 +316,9 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
 
   return (
     <Box sx={{ flexGrow: 1, width: '100%' }}>
-      <Accordion defaultExpanded>
+      <Accordion
+        defaultExpanded={job.mongo.status === 'Completed' ? false : true}
+      >
         <AccordionSummary
           expandIcon={<ExpandMoreIcon sx={{ color: '#fff' }} />}
           sx={{
@@ -322,7 +334,10 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
         </AccordionSummary>
 
         <AccordionDetails>
-          <Grid container spacing={2}>
+          <Grid
+            container
+            spacing={2}
+          >
             <Grid size={{ xs: 12 }}>
               {renderProperties(filteredProperties)}
             </Grid>
@@ -333,7 +348,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
         open={open}
         onClose={handleCloseModal}
         fullWidth
-        maxWidth='md'
+        maxWidth="md"
         sx={{
           '& .MuiPaper-root': {
             backgroundColor: green[100],
@@ -343,9 +358,9 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
       >
         <DialogTitle>
           CHARMM Constraint File
-          <Tooltip title='Copy to clipboard'>
+          <Tooltip title="Copy to clipboard">
             <IconButton
-              aria-label='copy-constraint-file'
+              aria-label="copy-constraint-file"
               onClick={handleCopyToClipboard}
               sx={{
                 position: 'absolute',
@@ -358,7 +373,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
           </Tooltip>
         </DialogTitle>
         <IconButton
-          aria-label='close'
+          aria-label="close"
           onClick={handleCloseModal}
           sx={(theme) => ({
             position: 'absolute',
@@ -382,10 +397,10 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
               <CircularProgress />
             </Box>
           ) : error ? (
-            <Typography color='error'>Failed to load file contents.</Typography>
+            <Typography color="error">Failed to load file contents.</Typography>
           ) : (
             <Typography
-              component='pre'
+              component="pre"
               sx={{
                 whiteSpace: 'pre-wrap',
                 wordWrap: 'break-word',

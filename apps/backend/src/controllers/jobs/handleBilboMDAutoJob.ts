@@ -150,31 +150,32 @@ const handleBilboMDAutoJob = async (
       }
     }
 
-    // Build default steps, allow minor tweaks based on md_engine
-    const stepsInit: IBilboMDSteps = {
-      pdb2crd: { status: StepStatus.Waiting, message: '' },
-      minimize: { status: StepStatus.Waiting, message: '' },
-      initfoxs: { status: StepStatus.Waiting, message: '' },
-      heat: { status: StepStatus.Waiting, message: '' },
-      md: { status: StepStatus.Waiting, message: '' },
-      dcd2pdb: { status: StepStatus.Waiting, message: '' },
-      pdb_remediate: { status: StepStatus.Waiting, message: '' },
-      foxs: { status: StepStatus.Waiting, message: '' },
-      multifoxs: { status: StepStatus.Waiting, message: '' },
-      results: { status: StepStatus.Waiting, message: '' },
-      email: { status: StepStatus.Waiting, message: '' }
-    } as const
+    let stepsInit: IBilboMDSteps
 
-    // If using OpenMM, note that pdb2crd is not needed and will be skipped downstream.
-    const stepsAdjusted = {
-      ...stepsInit,
-      pdb2crd: {
-        ...stepsInit.pdb2crd,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
-      },
-      pdb_remediate: {
-        ...stepsInit.pdb_remediate,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
+    if (md_engine === 'OpenMM') {
+      stepsInit = {
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        email: { status: StepStatus.Waiting, message: '' }
+      }
+    } else {
+      stepsInit = {
+        pdb2crd: { status: StepStatus.Waiting, message: '' },
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        dcd2pdb: { status: StepStatus.Waiting, message: '' },
+        pdb_remediate: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        email: { status: StepStatus.Waiting, message: '' }
       }
     }
 
@@ -192,7 +193,7 @@ const handleBilboMDAutoJob = async (
       conformational_sampling: 3,
       time_submitted: new Date(),
       user: user,
-      steps: stepsAdjusted,
+      steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
         openmm_parameters: buildOpenMMParameters(req.body)

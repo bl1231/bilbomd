@@ -6,10 +6,11 @@ import { logger } from './helpers/loggers.js'
 import { config } from './config/config.js'
 import { createBilboMdWorker } from './workers/bilboMdWorker.js'
 import { createPdb2CrdWorker } from './workers/pdb2CrdWorker.js'
-import { createWebhooksWorker } from './workers/webhooksWorker.js'
+import { createMovieWorker } from './workers/movieWorker.js'
 import { createMultiMDWorker } from './workers/multiMdWorker.js'
 import { checkNERSC } from './workers/workerControl.js'
 import { monitorAndCleanupJobs } from './workers/bilboMdNerscJobMonitor.js'
+import { redis } from './queues/redisConn.js'
 
 dotenv.config()
 
@@ -30,17 +31,17 @@ connectDB()
 
 let bilboMdWorker: Worker | null = null
 let pdb2CrdWorker: Worker | null = null
-let webhooksWorker: Worker | null = null
+let movieWorker: Worker | null = null
 let multimdWorker: Worker | null = null
 
-const redisConn = {
-  host: 'redis',
-  port: 6379
-}
+// const redis = {
+//   host: 'redis',
+//   port: 6379
+// }
 
 // 9000000 is 2 hours and 30 minutes
 const workerOptions: WorkerOptions = {
-  connection: redisConn,
+  connection: redis,
   concurrency: config.runOnNERSC ? 50 : 1,
   // lockDuration: config.runOnNERSC ? 9000000 : 9000000
   lockDuration: 60_000,
@@ -48,26 +49,26 @@ const workerOptions: WorkerOptions = {
 }
 
 const pdb2crdWorkerOptions: WorkerOptions = {
-  connection: redisConn,
+  connection: redis,
   concurrency: 20
 }
 
-const webhooksWorkerOptions: WorkerOptions = {
-  connection: redisConn,
+const movieWorkerOptions: WorkerOptions = {
+  connection: redis,
   concurrency: 1
 }
 
 const multimdWorkerOptions: WorkerOptions = {
-  connection: redisConn,
+  connection: redis,
   concurrency: 1
 }
 
 const startWorkers = async () => {
-  const systemName = config.runOnNERSC ? 'NERSC' : 'Hyperion'
+  const systemName = config.runOnNERSC ? 'NERSC' : 'Hyperion/Epyc'
   logger.info(`Attempting to start workers on ${systemName}...`)
 
   // Create workers only if they are not already initialized
-  if (!bilboMdWorker || !pdb2CrdWorker || !webhooksWorker || !multimdWorker) {
+  if (!bilboMdWorker || !pdb2CrdWorker || !movieWorker || !multimdWorker) {
     // If running on NERSC, check credentials before starting workers
     if (config.runOnNERSC) {
       logger.info('Checking NERSC credentials...')
@@ -86,11 +87,11 @@ const startWorkers = async () => {
     pdb2CrdWorker = createPdb2CrdWorker(pdb2crdWorkerOptions)
     logger.info(`PDB2CRD Worker started on ${systemName}`)
 
-    webhooksWorker = createWebhooksWorker(webhooksWorkerOptions)
-    logger.info(`Webhooks Worker started on ${systemName}`)
+    movieWorker = createMovieWorker(movieWorkerOptions)
+    logger.info(`Movie Worker started on ${systemName}`)
 
     multimdWorker = createMultiMDWorker(multimdWorkerOptions)
-    logger.info(`Webhooks Worker started on ${systemName}`)
+    logger.info(`MultiMD Worker started on ${systemName}`)
   } else {
     logger.info('Workers are already initialized')
   }
@@ -100,7 +101,7 @@ const startWorkers = async () => {
 const workers = [
   { getWorker: () => bilboMdWorker, name: 'BilboMD Worker' },
   { getWorker: () => pdb2CrdWorker, name: 'PDB2CRD Worker' },
-  { getWorker: () => webhooksWorker, name: 'Webhooks Worker' }
+  { getWorker: () => movieWorker, name: 'Movie Worker' }
 ]
 
 if (config.runOnNERSC) {
@@ -108,7 +109,7 @@ if (config.runOnNERSC) {
   setInterval(async () => {
     if (await checkNERSC()) {
       // Start workers if they are not initialized
-      if (!bilboMdWorker || !pdb2CrdWorker || !webhooksWorker) {
+      if (!bilboMdWorker || !pdb2CrdWorker || !movieWorker) {
         await startWorkers()
       } else {
         // Resume workers if they are paused

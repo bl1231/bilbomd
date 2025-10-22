@@ -1,0 +1,64 @@
+constraints:
+  fixed_bodies:
+    - name: FixedBody1
+      segments:
+        - chain_id: A
+          residues:
+            start: 9
+            stop: 108
+        - chain_id: A
+          residues:
+            start: 263
+            stop: 516
+  rigid_bodies:
+    - name: RigidBody1
+      segments:
+        - chain_id: A
+          residues:
+            start: 209
+            stop: 231
+input:
+  dir: /bilbomd/uploads/178dceeb-4e8e-4129-a2a7-bf663acfc5f8
+  forcefield:
+    - charmm36.xml
+    - implicit/hct.xml
+  pdb_file: auto1.pdb
+output:
+  heat_dir: heat
+  md_dir: md
+  min_dir: minimize
+  output_dir: /bilbomd/uploads/178dceeb-4e8e-4129-a2a7-bf663acfc5f8
+steps:
+  heating:
+    output_pdb: heated.pdb
+    output_restart: heated.xml
+    parameters:
+      final_temp: 600
+      nsteps: 10000
+      start_temp: 300
+      timestep: 0.001
+  md:
+    output_dcd: md.dcd
+    output_pdb: md.pdb
+    output_restart: md.xml
+    parameters:
+      friction: 0.1
+      nsteps: 300000
+      temperature: 600
+      timestep: 0.001
+    pdb_report_interval: 500
+    rgyr:
+      filename: rgyr.csv
+      k_rg: 10
+      report_interval: 500
+      rgs:
+        - 26
+        - 29
+        - 32
+        - 36
+        - 39
+        - 42
+  minimization:
+    output_pdb: minimized.pdb
+    parameters:
+      max_iterations: 1000

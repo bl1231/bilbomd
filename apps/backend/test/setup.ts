@@ -1,3 +1,4 @@
+process.env.BILBOMD_URL = process.env.BILBOMD_URL || 'http://localhost:3000'
 import dotenv from 'dotenv'
 dotenv.config({ path: './test/.env.test' })
 import { logger } from '../src/middleware/loggers.js'
