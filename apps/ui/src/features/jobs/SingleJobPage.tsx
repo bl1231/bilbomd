@@ -116,7 +116,7 @@ const SingleJobPage = () => {
 
   // Optionally, use a refetch or polling effect:
   useEffect(() => {
-    let interval: NodeJS.Timeout | undefined
+    let interval: ReturnType<typeof setInterval> | undefined
     if (!allMoviesReady && id) {
       interval = setInterval(() => {
         // You may need to use refetch from RTK Query if available
@@ -129,7 +129,7 @@ const SingleJobPage = () => {
   }, [allMoviesReady, id])
 
   // Debug logging
-  console.log('moviesData:', moviesData)
+  // console.log('moviesData:', moviesData)
   // console.log('moviesError:', moviesError)
   // console.log('moviesLoading:', moviesLoading)
 
@@ -283,7 +283,7 @@ const SingleJobPage = () => {
         spacing={2}
         rowSpacing={2}
       >
-        <Grid size={{ xs: 1 }}>
+        <Grid size={{ xs: 3, sm: 2, md: 2, lg: 1, xl: 1 }}>
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Nav</Typography>
           </HeaderBox>
@@ -299,7 +299,7 @@ const SingleJobPage = () => {
           </Item>
         </Grid>
 
-        <Grid size={{ xs: 5 }}>
+        <Grid size={{ xs: 9, sm: 10, md: 7, lg: 4, xl: 3 }}>
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Job Title</Typography>
           </HeaderBox>
@@ -308,10 +308,7 @@ const SingleJobPage = () => {
           </Item>
         </Grid>
 
-        <Grid
-          size={{ xs: 3 }}
-          sx={{ minWidth: '160px' }}
-        >
+        <Grid size={{ xs: 6, sm: 4, md: 3, lg: 2, xl: 2 }}>
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Status</Typography>
           </HeaderBox>
@@ -330,7 +327,7 @@ const SingleJobPage = () => {
           </Item>
         </Grid>
 
-        <Grid size={{ xs: 3 }}>
+        <Grid size={{ xs: 6, sm: 8, md: 12, lg: 5, xl: 6 }}>
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Progress</Typography>
           </HeaderBox>
@@ -352,11 +349,10 @@ const SingleJobPage = () => {
         {/* New BilboMD Steps that uses mongo.steps object */}
         {job.mongo.steps && !useNersc && !job.scoper && (
           <Grid
-            size={{ xs: 12, sm: 6 }}
+            size={{ xs: 12, sm: 12, md: 6 }}
             sx={{
-              flexGrow: 1, // Allows this component to grow or shrink
-              overflow: 'hidden', // Prevents content from breaking layout
-              minWidth: '550px'
+              flexGrow: 1,
+              overflow: 'hidden'
             }}
           >
             <BilboMDMongoSteps steps={job.mongo.steps} />
@@ -366,11 +362,10 @@ const SingleJobPage = () => {
         {/* New BilboMD Steps that uses mongo.steps object for NERSC jobs */}
         {job.mongo.steps && useNersc && (
           <Grid
-            size={{ xs: 4 }}
+            size={{ xs: 12, sm: 12, md: 6 }}
             sx={{
-              flexGrow: 1, // Allows this component to grow or shrink
-              overflow: 'hidden', // Prevents content from breaking layout
-              minWidth: '550px'
+              flexGrow: 1,
+              overflow: 'hidden'
             }}
           >
             <BilboMDNerscSteps job={job} />
@@ -379,7 +374,7 @@ const SingleJobPage = () => {
 
         {/* Scoper steps */}
         {job.scoper && (
-          <Grid size={{ xs: 6 }}>
+          <Grid size={{ xs: 12, sm: 12, md: 6 }}>
             <HeaderBox sx={{ py: '6px' }}>
               <Typography>Scoper Steps</Typography>
             </HeaderBox>
@@ -392,7 +387,6 @@ const SingleJobPage = () => {
         <Grid
           size={{ xs: 4 }}
           sx={{
-            minWidth: '450px',
             flexGrow: 1,
             overflow: 'hidden'
           }}
