@@ -1,4 +1,4 @@
-import './mocks/mockRedis.js'
+import '../test/mocks/mockRedis.js'
 import express, { Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 import registerRoutes from '../src/routes/register.js'

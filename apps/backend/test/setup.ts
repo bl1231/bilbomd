@@ -43,23 +43,35 @@ const uri = mongoServer.getUri()
 
 await mongoose.connect(uri)
 
-// Mock bullmq queues
-const mockQueue = {
-  name: 'bilbomd-mock',
-  add: vi.fn().mockResolvedValue({
+// Mock bullmq queues with real classes for Vitest v4 compatibility
+class MockQueue {
+  name = 'bilbomd-mock'
+  add = vi.fn().mockResolvedValue({
     id: 'mock-job-id',
     name: 'mock-job',
     data: { foo: 'bar' }
-  }),
-  close: vi.fn()
+  })
+  close = vi.fn()
+}
+
+class MockWorker {
+  close = vi.fn()
+}
+class MockQueueScheduler {
+  close = vi.fn()
+}
+class MockQueueEvents {
+  close = vi.fn()
+  on = vi.fn()
+  off = vi.fn()
 }
 
 vi.mock('bullmq', () => {
   return {
-    Queue: vi.fn(() => mockQueue),
-    Worker: vi.fn(() => ({ close: vi.fn() })),
-    QueueScheduler: vi.fn(() => ({ close: vi.fn() })),
-    QueueEvents: vi.fn(() => ({ close: vi.fn(), on: vi.fn(), off: vi.fn() }))
+    Queue: MockQueue,
+    Worker: MockWorker,
+    QueueScheduler: MockQueueScheduler,
+    QueueEvents: MockQueueEvents
   }
 })
 
