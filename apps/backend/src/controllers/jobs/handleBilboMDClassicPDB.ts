@@ -183,35 +183,32 @@ const handleBilboMDClassicPDB = async (
       inpFileName = standardizedFileName
     }
 
-    // Build default steps, allow minor tweaks based on md_engine
-    const stepsInit: IBilboMDSteps = {
-      pdb2crd: { status: StepStatus.Waiting, message: '' },
-      minimize: { status: StepStatus.Waiting, message: '' },
-      initfoxs: { status: StepStatus.Waiting, message: '' },
-      heat: { status: StepStatus.Waiting, message: '' },
-      md: { status: StepStatus.Waiting, message: '' },
-      dcd2pdb: { status: StepStatus.Waiting, message: '' },
-      pdb_remediate: { status: StepStatus.Waiting, message: '' },
-      foxs: { status: StepStatus.Waiting, message: '' },
-      multifoxs: { status: StepStatus.Waiting, message: '' },
-      results: { status: StepStatus.Waiting, message: '' },
-      email: { status: StepStatus.Waiting, message: '' }
-    } as const
+    let stepsInit: IBilboMDSteps
 
-    // If using OpenMM some steps are skipped or not relevant.
-    const stepsAdjusted = {
-      ...stepsInit,
-      pdb2crd: {
-        ...stepsInit.pdb2crd,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM' : ''
-      },
-      dcd2pdb: {
-        ...stepsInit.dcd2pdb,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM' : ''
-      },
-      pdb_remediate: {
-        ...stepsInit.pdb_remediate,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM' : ''
+    if (md_engine === 'OpenMM') {
+      stepsInit = {
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        email: { status: StepStatus.Waiting, message: '' }
+      }
+    } else {
+      stepsInit = {
+        pdb2crd: { status: StepStatus.Waiting, message: '' },
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        dcd2pdb: { status: StepStatus.Waiting, message: '' },
+        pdb_remediate: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        email: { status: StepStatus.Waiting, message: '' }
       }
     }
 
@@ -231,7 +228,7 @@ const handleBilboMDClassicPDB = async (
       user,
       progress: 0,
       cleanup_in_progress: false,
-      steps: stepsAdjusted,
+      steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
         openmm_parameters: buildOpenMMParameters(req.body)
