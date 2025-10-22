@@ -18,30 +18,31 @@ const MoviePlayer = ({ src, poster, className }: Props) => {
   }, [src])
 
   return (
-    <div className={`relative w-full ${className ?? ''}`}>
-      {/* 16:9 responsive box; swap to aspect-[4/3] if you prefer */}
-      <div className="aspect-video w-full overflow-hidden rounded-lg bg-slate-100">
-        <video
-          ref={ref}
-          src={src}
-          poster={poster}
-          controls
-          preload="metadata"
-          playsInline
-          // You can hide download in most chromium browsers; it’s not a guarantee:
-          controlsList="nodownload noplaybackrate"
-          className="h-full w-full object-contain"
-          onLoadedMetadata={() => setReady(true)}
-          onError={() => setError('Failed to load video')}
-        />
-      </div>
-
-      {/* lightweight status row */}
-      <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
-        <span>{ready ? 'Ready' : error ? error : 'Loading…'}</span>
-        {/* Example manual API usage: */}
-        {/* <button onClick={() => ref.current?.requestFullscreen()} className="underline">Fullscreen</button> */}
-      </div>
+    <div
+      className={`relative w-full h-full ${className ?? ''}`}
+      style={{ background: '#111' }}
+    >
+      <video
+        ref={ref}
+        src={src}
+        poster={poster}
+        controls
+        preload="metadata"
+        playsInline
+        autoPlay
+        loop
+        controlsList="nodownload noplaybackrate"
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+          background: '#111',
+          display: 'block',
+          zIndex: 2
+        }}
+        onLoadedMetadata={() => setReady(true)}
+        onError={() => setError('Failed to load video')}
+      />
     </div>
   )
 }

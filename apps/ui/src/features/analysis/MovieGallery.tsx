@@ -6,14 +6,9 @@ import {
   CardMedia,
   CardContent,
   Typography,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
   Chip,
   Alert
 } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import MoviePlayer from './MoviePlayer'
 import Item from 'themes/components/Item'
@@ -39,19 +34,10 @@ interface MovieGalleryProps {
 }
 
 const MovieGallery = ({ movies }: MovieGalleryProps) => {
-  const [selectedMovie, setSelectedMovie] = useState<MovieAsset | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null)
 
-  const handleMovieClick = (movie: MovieAsset) => {
-    if (movie.status === 'ready' && movie.mp4) {
-      setSelectedMovie(movie)
-      setDialogOpen(true)
-    }
-  }
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false)
-    setSelectedMovie(null)
+  const handleMovieClick = (index: number) => {
+    setPlayingIndex(index === playingIndex ? null : index)
   }
 
   const getStatusColor = (status: string) => {
@@ -99,7 +85,7 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
             >
               {readyMovies.map((movie, index) => (
                 <Grid
-                  size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
+                  size={{ xs: 12, sm: 6, md: 4, lg: 4 }}
                   key={index}
                 >
                   <Card
@@ -111,49 +97,92 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
                         boxShadow: 4
                       }
                     }}
-                    onClick={() => handleMovieClick(movie)}
+                    onClick={() => handleMovieClick(index)}
                   >
-                    <Box sx={{ position: 'relative' }}>
-                      <CardMedia
-                        component="img"
-                        height="140"
-                        image={
-                          movie.poster ||
-                          movie.thumb ||
-                          '/placeholder-video.png'
-                        }
-                        alt={movie.label}
-                        sx={{
-                          objectFit: 'cover',
-                          backgroundColor: '#f5f5f5'
-                        }}
-                      />
-                      {/* Play overlay */}
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          color: 'white',
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          borderRadius: '50%',
-                          width: 48,
-                          height: 48,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <PlayCircleOutlineIcon fontSize="large" />
-                      </Box>
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        height: 0,
+                        paddingTop: '56.25%'
+                      }}
+                    >
+                      {playingIndex === index ? (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <MoviePlayer
+                            src={movie.mp4!}
+                            poster={movie.poster}
+                            className="w-full h-full"
+                          />
+                        </Box>
+                      ) : (
+                        <>
+                          <CardMedia
+                            component="img"
+                            image={
+                              movie.poster ||
+                              movie.thumb ||
+                              '/placeholder-video.png'
+                            }
+                            alt={movie.label}
+                            sx={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              backgroundColor: '#f5f5f5'
+                            }}
+                          />
+                          {/* Play overlay */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              color: 'white',
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              borderRadius: '50%',
+                              width: 48,
+                              height: 48,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <PlayCircleOutlineIcon fontSize="large" />
+                          </Box>
+                        </>
+                      )}
                     </Box>
                     <CardContent sx={{ pb: 2 }}>
                       <Typography
                         variant="subtitle2"
                         noWrap
                       >
-                        {movie.label}
+                        {(() => {
+                          const match = movie.label.match(/rg_(\d+)/i)
+                          return match ? (
+                            <>
+                              Radius of Gyration constraints - <b>{match[1]}</b>{' '}
+                              Å
+                            </>
+                          ) : (
+                            movie.label
+                          )
+                        })()}
                       </Typography>
                       {movie.meta && (
                         <Typography
@@ -203,43 +232,7 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
         )}
       </Box>
 
-      {/* Movie Dialog */}
-      <Dialog
-        open={dialogOpen}
-        onClose={handleCloseDialog}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: { backgroundColor: '#000' }
-        }}
-      >
-        <DialogTitle sx={{ color: 'white', pb: 1 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <Typography variant="h6">{selectedMovie?.label}</Typography>
-            <IconButton
-              onClick={handleCloseDialog}
-              sx={{ color: 'white' }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          {selectedMovie?.mp4 && (
-            <MoviePlayer
-              src={selectedMovie.mp4}
-              poster={selectedMovie.poster}
-              className="w-full"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Dialog removed: now plays inline in tile */}
     </Item>
   )
 }
