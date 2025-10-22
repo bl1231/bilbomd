@@ -19,7 +19,8 @@ import {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDSANSJob,
-  IMDConstraints
+  IMDConstraints,
+  Job
 } from '@bilbomd/mongodb-schema'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { exec } from 'node:child_process'
@@ -641,11 +642,22 @@ const storeConstraintsInMongoDB = async (
       throw new Error(`Unsupported constraint file format: ${fileName}`)
     }
 
-    // Use type assertion to access md_constraints property
-    ;(DBjob as IJob & { md_constraints?: IMDConstraints }).md_constraints =
-      constraints
+    DBjob.set('md_constraints', {
+      fixed_bodies: constraints.fixed_bodies ?? [],
+      rigid_bodies: constraints.rigid_bodies ?? []
+    })
 
     await DBjob.save()
+    const fresh = await Job.findById(DBjob._id)
+    if (fresh) {
+      logger.debug(
+        `Reloaded md_constraints: ${JSON.stringify(fresh.md_constraints)}`
+      )
+    } else {
+      logger.warn(
+        'Could not reload job from database after saving constraints.'
+      )
+    }
     logger.debug(
       `Successfully stored constraints in MongoDB for job ${DBjob.uuid}`
     )
