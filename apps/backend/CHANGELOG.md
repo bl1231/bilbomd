@@ -1,5 +1,13 @@
 # @bilbomd/backend
 
+## 1.27.2
+
+### Patch Changes
+
+- Updated dependencies [e110840]
+  - @bilbomd/mongodb-schema@1.12.0
+  - @bilbomd/md-utils@1.0.3
+
 ## 1.27.1
 
 ### Patch Changes
