@@ -28,7 +28,7 @@ services:
           cpus: "6"
     restart: no
     env_file:
-      - .env.dev
+      - .env-hyperion.dev
     networks:
       - app-network-dev
     volumes:

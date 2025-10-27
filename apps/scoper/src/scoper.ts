@@ -4,12 +4,11 @@ import { connectDB } from './helpers/db.js'
 import { Job, Worker, WorkerOptions } from 'bullmq'
 import { BilboMDScoperJobData } from './bullmq.jobs.js'
 import { processBilboMDScoperJob } from './process.bilbomdscoper.js'
+import { redis } from './helpers/redis.js'
 
 dotenv.config()
 
 connectDB()
-
-// let bilboMdScoperWorker: Worker
 
 const workerHandler = async (job: Job<BilboMDScoperJobData>) => {
   logger.info(
@@ -22,10 +21,7 @@ const workerHandler = async (job: Job<BilboMDScoperJobData>) => {
 }
 
 const workerOptions: WorkerOptions = {
-  connection: {
-    host: 'redis',
-    port: 6379
-  },
+  connection: redis,
   concurrency: 1,
   lockDuration: 90000
 }
