@@ -19,7 +19,7 @@ networks:
 
 services:
   scoper:
-    image: ghcr.io/bl1231/bilbomd-scoper:1.4.5
+    image: ghcr.io/bl1231/bilbomd-scoper:pr-169-8eef62e3
     pull_policy: always
     deploy:
       replicas: 1
@@ -28,7 +28,7 @@ services:
           cpus: "6"
     restart: no
     env_file:
-      - .env-hyperion.dev
+      - .env.hyperion.dev
     networks:
       - app-network-dev
     volumes:
