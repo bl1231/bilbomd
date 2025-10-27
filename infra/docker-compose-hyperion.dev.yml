@@ -32,5 +32,5 @@ services:
     networks:
       - app-network-dev
     volumes:
-      - uploads:/bilbomd/uploads
-      - logs:/bilbomd/logs
+      - /bilbomd/dev/uploads:/bilbomd/uploads
+      - /bilbomd/dev/logs:/bilbomd/logs
