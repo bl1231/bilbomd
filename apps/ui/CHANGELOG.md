@@ -1,5 +1,20 @@
 # @bilbomd/ui
 
+## 1.24.0
+
+### Minor Changes
+
+- e110840: Add ability to make mp4 movies from Molecular Dynamics trajectory file (`*.dcd` files)
+  Creates one mp4 moview per DCD file. Only implemented for OpenMM.
+  Add movie gallery and viewer to Jobs result page in UI.
+  Add PyMOL to the `bilbomd-worker-base` image
+
+### Patch Changes
+
+- dc30f9c: Make BilboMD Job step names more generic in order to support **CHARMM** and **OpenMM** equally
+- Updated dependencies [e110840]
+  - @bilbomd/mongodb-schema@1.12.0
+
 ## 1.23.5
 
 ### Patch Changes
