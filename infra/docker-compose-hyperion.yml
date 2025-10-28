@@ -1,0 +1,25 @@
+# --------------------------------------------------------------------------------------
+# Use this Docker compose file for production deployment on Hyperion
+# --------------------------------------------------------------------------------------
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  scoper:
+    image: ghcr.io/bl1231/bilbomd-scoper:pr-169-8eef62e3
+    pull_policy: always
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "6"
+    restart: no
+    env_file:
+      - .env.hyperion.prod
+    networks:
+      - app-network
+    volumes:
+      - /bilbomd/prod/uploads:/bilbomd/uploads
+      - /bilbomd/prod/logs:/bilbomd/logs
