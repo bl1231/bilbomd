@@ -2,11 +2,7 @@ import { logger } from '../../middleware/loggers.js'
 import { config } from '../../config/config.js'
 import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
-import {
-  queueJob as queuePdb2CrdJob,
-  waitForJobCompletion,
-  pdb2crdQueueEvents
-} from '../../queues/pdb2crd.js'
+import { queueJob as queuePdb2CrdJob } from '../../queues/pdb2crd.js'
 import {
   IUser,
   BilboMdAutoJob,
@@ -225,15 +221,7 @@ const handleBilboMDAutoJob = async (
       })
       logger.info(`Pdb2Crd Job assigned UUID: ${UUID}`)
       logger.info(`Pdb2Crd Job assigned BullMQ ID: ${Pdb2CrdBullId}`)
-
-      // Need to wait here until the BullMQ job is finished
-      await waitForJobCompletion(Pdb2CrdBullId, pdb2crdQueueEvents)
-      logger.info('Pdb2Crd completed.')
-
-      // Add PSF and CRD files to Mongo entry
-      newJob.psf_file = 'bilbomd_pdb2crd.psf'
-      newJob.crd_file = 'bilbomd_pdb2crd.crd'
-      await newJob.save()
+      // Conversion will be handled asynchronously by the worker. If it fails, log and handle elsewhere.
     }
     // ---------------------------------------------------------- //
 
