@@ -24,7 +24,7 @@ import { exec } from 'node:child_process'
 import {
   createPdb2CrdCharmmInpFiles,
   spawnPdb2CrdCharmm
-} from '../pipelines/pdb-to-crd.js'
+} from './pdb-to-crd.js'
 import {
   CharmmParams,
   MultiFoxsParams,
