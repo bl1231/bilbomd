@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.5.1
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+
 ## 1.5.0
 
 ### Minor Changes

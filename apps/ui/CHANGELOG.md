@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 1.24.1
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+
 ## 1.24.0
 
 ### Minor Changes
