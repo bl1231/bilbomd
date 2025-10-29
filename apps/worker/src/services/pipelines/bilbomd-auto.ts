@@ -6,7 +6,8 @@ import {
   runMolecularDynamics,
   runMultiFoxs,
   runPaeToConstInp,
-  runAutoRg
+  runAutoRg,
+  runPdb2Crd
 } from '../functions/bilbomd-step-functions.js'
 import {
   runOmmMinimize,
@@ -20,11 +21,7 @@ import {
 } from '../functions/bilbomd-functions.js'
 import { runFoXS } from '../functions/foxs-functions.js'
 import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc.js'
-import {
-  initializeJob,
-  cleanupJob,
-  awaitCrdsReady
-} from '../functions/job-utils.js'
+import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
 import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 
@@ -68,10 +65,10 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   await foundJob.save()
 
   if (engine === 'CHARMM') {
-    // Wait for CRD/PSF files before minimization
-    await MQjob.log('waiting for CRD/PSF files...')
-    await awaitCrdsReady(foundJob)
-    await MQjob.log('CRD/PSF files ready')
+    // Make sure CRD/PSF files are ready
+    await MQjob.log('start pdb2crd')
+    await runPdb2Crd(MQjob, foundJob)
+    await MQjob.log('end pdb2crd')
 
     // CHARMM minimization
     await MQjob.log('start minimize')

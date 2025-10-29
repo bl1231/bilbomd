@@ -1,8 +1,8 @@
 import { logger } from '../../middleware/loggers.js'
-import { config } from '../../config/config.js'
+// import { config } from '../../config/config.js'
 import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
-import { queueJob as queuePdb2CrdJob } from '../../queues/pdb2crd.js'
+// import { queueJob as queuePdb2CrdJob } from '../../queues/pdb2crd.js'
 import {
   IUser,
   BilboMdAutoJob,
@@ -205,25 +205,6 @@ const handleBilboMDAutoJob = async (
 
     // Write Job params for use by NERSC job script.
     await writeJobParams(newJob.id)
-
-    // ---------------------------------------------------------- //
-    // Convert PDB to PSF and CRD (only if not on NERSC and not OpenMM)
-    logger.info(`md_engine is ${md_engine}`)
-    logger.info(`config.runOnNERSC is ${config.runOnNERSC}`)
-    if (!config.runOnNERSC && md_engine !== 'OpenMM') {
-      const Pdb2CrdBullId = await queuePdb2CrdJob({
-        type: 'Pdb2Crd',
-        title: 'convert PDB to CRD',
-        uuid: UUID,
-        pdb_file: pdbFileName,
-        pae_power: '2.0',
-        plddt_cutoff: '50'
-      })
-      logger.info(`Pdb2Crd Job assigned UUID: ${UUID}`)
-      logger.info(`Pdb2Crd Job assigned BullMQ ID: ${Pdb2CrdBullId}`)
-      // Conversion will be handled asynchronously by the worker. If it fails, log and handle elsewhere.
-    }
-    // ---------------------------------------------------------- //
 
     // Create BullMQ Job object
     const jobData = {

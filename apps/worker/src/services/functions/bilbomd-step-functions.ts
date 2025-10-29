@@ -481,7 +481,7 @@ const storeConstraintsInMongoDB = async (
 
 const runPdb2Crd = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDSANSJob
+  DBjob: IBilboMDPDBJob | IBilboMDSANSJob | IBilboMDAutoJob
 ): Promise<void> => {
   logger.debug(`Starting runPdb2Crd for job ${DBjob.uuid}`)
   try {
