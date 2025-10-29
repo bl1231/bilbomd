@@ -18,7 +18,7 @@ import {
   monitorTaskAtNERSC,
   monitorJobAtNERSC
 } from './nersc-api-functions.js'
-import { prepareResults } from './bilbomd-step-functions.js'
+import { prepareResults } from './prepare-results.js'
 import { cleanupJob } from './job-utils.js'
 
 interface INerscTaskResult {

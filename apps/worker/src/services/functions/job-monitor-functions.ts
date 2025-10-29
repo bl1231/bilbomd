@@ -25,11 +25,11 @@ import {
 import {
   getNumEnsembles,
   extractPdbPaths,
-  concatenateAndSaveAsEnsemble,
-  spawnFeedbackScript,
-  spawnRgyrDmaxScript,
-  createReadmeFile
-} from './bilbomd-step-functions.js'
+  concatenateAndSaveAsEnsemble
+} from './prepare-results.js'
+import { spawnFeedbackScript } from './feedback.js'
+import { spawnRgyrDmaxScript } from './analysis.js'
+import { createReadmeFile } from './create-readme-file.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import path from 'path'
 import { exec } from 'node:child_process'
