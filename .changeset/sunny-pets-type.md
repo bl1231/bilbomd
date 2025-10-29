@@ -1,6 +1,7 @@
 ---
 '@bilbomd/backend': minor
+'@bilbomd/worker': minor
 ---
 
-Remove the await waitForJobCompletion and the code that sets newJob.psf_file/crd_file and saves.
-Just fire off queuePdb2CrdJob and log the BullMQ ID.
+Remove dedicated BullMQ queue to process PDB to CRD conversion.
+Add extra step in the worker to do conversion instead.
