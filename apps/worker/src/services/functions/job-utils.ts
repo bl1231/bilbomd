@@ -3,7 +3,8 @@ import {
   IUser,
   IJob,
   IStepStatus,
-  IBilboMDSteps
+  IBilboMDSteps,
+  BilboMdAutoJob
 } from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
 import { logger } from '../../helpers/loggers.js'
@@ -387,6 +388,34 @@ const handleError = async (
   throw finalError
 }
 
+const awaitCrdsReady = async (
+  DBjob: IJob,
+  maxWaitMs = 60000,
+  pollIntervalMs = 2000
+): Promise<void> => {
+  const start = Date.now()
+  let attempt = 0
+  while (true) {
+    attempt++
+    logger.info(
+      `awaitCrdsReady poll #${attempt} for job ${DBjob._id}: checking for CRD/PSF files...`
+    )
+    // Re-fetch the job from the database to get updated fields
+    const freshJob = await BilboMdAutoJob.findOne({ _id: DBjob._id }).exec()
+    if (freshJob && typeof freshJob.populate === 'function')
+      await freshJob.populate('user')
+    if (freshJob && freshJob.crd_file && freshJob.psf_file) {
+      logger.info(
+        `CRD/PSF files found for job ${DBjob._id} after ${attempt} poll(s)`
+      )
+      return
+    }
+    if (Date.now() - start > maxWaitMs)
+      throw new Error('Timed out waiting for CRD/PSF files')
+    await new Promise((res) => setTimeout(res, pollIntervalMs))
+  }
+}
+
 export {
   initializeJob,
   cleanupJob,
@@ -396,5 +425,6 @@ export {
   generateInputFile,
   spawnCharmm,
   spawnFoXS,
-  handleError
+  handleError,
+  awaitCrdsReady
 }
