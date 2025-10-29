@@ -299,7 +299,7 @@ const SingleJobPage = () => {
           </Item>
         </Grid>
 
-        <Grid size={{ xs: 9, sm: 10, md: 7, lg: 4, xl: 3 }}>
+        <Grid size={{ xs: 9, sm: 10, md: 7, lg: 5, xl: 3 }}>
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Job Title</Typography>
           </HeaderBox>
@@ -327,7 +327,7 @@ const SingleJobPage = () => {
           </Item>
         </Grid>
 
-        <Grid size={{ xs: 6, sm: 8, md: 12, lg: 5, xl: 6 }}>
+        <Grid size={{ xs: 6, sm: 8, md: 12, lg: 4, xl: 6 }}>
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Progress</Typography>
           </HeaderBox>
