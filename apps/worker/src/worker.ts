@@ -5,7 +5,6 @@ import { Worker, WorkerOptions } from 'bullmq'
 import { logger } from './helpers/loggers.js'
 import { config } from './config/config.js'
 import { createBilboMdWorker } from './workers/bilboMdWorker.js'
-import { createPdb2CrdWorker } from './workers/pdb2CrdWorker.js'
 import { createMovieWorker } from './workers/movieWorker.js'
 import { createMultiMDWorker } from './workers/multiMdWorker.js'
 import { checkNERSC } from './workers/workerControl.js'
@@ -30,14 +29,8 @@ if (environment === 'production') {
 connectDB()
 
 let bilboMdWorker: Worker | null = null
-let pdb2CrdWorker: Worker | null = null
 let movieWorker: Worker | null = null
 let multimdWorker: Worker | null = null
-
-// const redis = {
-//   host: 'redis',
-//   port: 6379
-// }
 
 // 9000000 is 2 hours and 30 minutes
 const workerOptions: WorkerOptions = {
@@ -46,11 +39,6 @@ const workerOptions: WorkerOptions = {
   // lockDuration: config.runOnNERSC ? 9000000 : 9000000
   lockDuration: 60_000,
   lockRenewTime: 30_000
-}
-
-const pdb2crdWorkerOptions: WorkerOptions = {
-  connection: redis,
-  concurrency: 20
 }
 
 const movieWorkerOptions: WorkerOptions = {
@@ -68,7 +56,7 @@ const startWorkers = async () => {
   logger.info(`Attempting to start workers on ${systemName}...`)
 
   // Create workers only if they are not already initialized
-  if (!bilboMdWorker || !pdb2CrdWorker || !movieWorker || !multimdWorker) {
+  if (!bilboMdWorker || !movieWorker || !multimdWorker) {
     // If running on NERSC, check credentials before starting workers
     if (config.runOnNERSC) {
       logger.info('Checking NERSC credentials...')
@@ -84,9 +72,6 @@ const startWorkers = async () => {
     bilboMdWorker = createBilboMdWorker(workerOptions)
     logger.info(`BilboMD Worker started on ${systemName}`)
 
-    pdb2CrdWorker = createPdb2CrdWorker(pdb2crdWorkerOptions)
-    logger.info(`PDB2CRD Worker started on ${systemName}`)
-
     movieWorker = createMovieWorker(movieWorkerOptions)
     logger.info(`Movie Worker started on ${systemName}`)
 
@@ -100,7 +85,6 @@ const startWorkers = async () => {
 // Define the workers array
 const workers = [
   { getWorker: () => bilboMdWorker, name: 'BilboMD Worker' },
-  { getWorker: () => pdb2CrdWorker, name: 'PDB2CRD Worker' },
   { getWorker: () => movieWorker, name: 'Movie Worker' }
 ]
 
@@ -109,7 +93,7 @@ if (config.runOnNERSC) {
   setInterval(async () => {
     if (await checkNERSC()) {
       // Start workers if they are not initialized
-      if (!bilboMdWorker || !pdb2CrdWorker || !movieWorker) {
+      if (!bilboMdWorker || !movieWorker) {
         await startWorkers()
       } else {
         // Resume workers if they are paused

@@ -24,7 +24,7 @@ import { exec } from 'node:child_process'
 import {
   createPdb2CrdCharmmInpFiles,
   spawnPdb2CrdCharmm
-} from '../pipelines/pdb-to-crd.js'
+} from './pdb-to-crd.js'
 import {
   CharmmParams,
   MultiFoxsParams,
@@ -481,7 +481,7 @@ const storeConstraintsInMongoDB = async (
 
 const runPdb2Crd = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDSANSJob
+  DBjob: IBilboMDPDBJob | IBilboMDSANSJob | IBilboMDAutoJob
 ): Promise<void> => {
   logger.debug(`Starting runPdb2Crd for job ${DBjob.uuid}`)
   try {

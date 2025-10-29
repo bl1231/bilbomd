@@ -1,12 +1,6 @@
 import { logger } from '../../middleware/loggers.js'
-import { config } from '../../config/config.js'
 import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
-import {
-  queueJob as queuePdb2CrdJob,
-  waitForJobCompletion,
-  pdb2crdQueueEvents
-} from '../../queues/pdb2crd.js'
 import {
   IUser,
   BilboMdAutoJob,
@@ -209,33 +203,6 @@ const handleBilboMDAutoJob = async (
 
     // Write Job params for use by NERSC job script.
     await writeJobParams(newJob.id)
-
-    // ---------------------------------------------------------- //
-    // Convert PDB to PSF and CRD (only if not on NERSC and not OpenMM)
-    logger.info(`md_engine is ${md_engine}`)
-    logger.info(`config.runOnNERSC is ${config.runOnNERSC}`)
-    if (!config.runOnNERSC && md_engine !== 'OpenMM') {
-      const Pdb2CrdBullId = await queuePdb2CrdJob({
-        type: 'Pdb2Crd',
-        title: 'convert PDB to CRD',
-        uuid: UUID,
-        pdb_file: pdbFileName,
-        pae_power: '2.0',
-        plddt_cutoff: '50'
-      })
-      logger.info(`Pdb2Crd Job assigned UUID: ${UUID}`)
-      logger.info(`Pdb2Crd Job assigned BullMQ ID: ${Pdb2CrdBullId}`)
-
-      // Need to wait here until the BullMQ job is finished
-      await waitForJobCompletion(Pdb2CrdBullId, pdb2crdQueueEvents)
-      logger.info('Pdb2Crd completed.')
-
-      // Add PSF and CRD files to Mongo entry
-      newJob.psf_file = 'bilbomd_pdb2crd.psf'
-      newJob.crd_file = 'bilbomd_pdb2crd.crd'
-      await newJob.save()
-    }
-    // ---------------------------------------------------------- //
 
     // Create BullMQ Job object
     const jobData = {
