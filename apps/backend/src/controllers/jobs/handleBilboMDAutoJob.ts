@@ -1,8 +1,6 @@
 import { logger } from '../../middleware/loggers.js'
-// import { config } from '../../config/config.js'
 import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
-// import { queueJob as queuePdb2CrdJob } from '../../queues/pdb2crd.js'
 import {
   IUser,
   BilboMdAutoJob,
