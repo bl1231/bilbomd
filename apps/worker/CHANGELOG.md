@@ -1,5 +1,18 @@
 # @bilbomd/worker
 
+## 1.23.0
+
+### Minor Changes
+
+- 6c1e84e: Add OpenMM config and constraint files to results dir
+  Reorganize pipeline functions
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+- Updated dependencies [3e2f5b4]
+  - @bilbomd/md-utils@1.0.4
+
 ## 1.22.1
 
 ### Patch Changes
