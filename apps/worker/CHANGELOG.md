@@ -1,5 +1,12 @@
 # @bilbomd/worker
 
+## 1.22.1
+
+### Patch Changes
+
+- 267faf5: Adjust alpha factor for MW estimation in `mw_bayes.py`
+- d51af33: Make sure we reserve GPUs for our workers on machines with GPUs.
+
 ## 1.22.0
 
 ### Minor Changes
