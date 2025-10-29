@@ -1,7 +1,7 @@
 {
   "name": "@bilbomd/scoper",
   "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "main": "build/scoper.js",
   "files": [
     "build",
@@ -25,7 +25,8 @@
   ],
   "scripts": {
     "clean": "rimraf build/*",
-    "build": "npm-run-all clean copy-assets lint tsc",
+    "build": "npm-run-all clean copy-assets tsc",
+    "build:ci": "npm-run-all clean copy-assets lint tsc",
     "copy-assets": "copyfiles --all --up 1 --exclude \"./**/*.{ts,tsx}\" \"./src/**/*\" ./build",
     "start": "npm run build && node build/scoper.js",
     "dev": "nodemon --watch src --ext ts,ejs --verbose --exec npm run start",

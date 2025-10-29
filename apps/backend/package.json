@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/backend",
-  "version": "1.27.0",
+  "version": "1.27.1",
   "description": "Backend server for BilboMD webapp",
   "main": "dist/server.js",
   "files": [
@@ -15,7 +15,8 @@
     "copy-assets": "copyfiles --all --up 1 --exclude \"./**/*.{ts,tsx}\" \"./src/**/*\" ./dist",
     "lint": "eslint",
     "tsc": "tsc",
-    "build": "npm-run-all clean copy-assets lint tsc",
+    "build": "npm-run-all clean copy-assets tsc",
+    "build:ci": "npm-run-all clean copy-assets lint tsc",
     "dev": "concurrently \"npm run watch-ts\" \"nodemon dist/server.js\"",
     "watch-ts": "tsc -w",
     "start": "npm run build && node dist/server.js",
@@ -24,10 +25,10 @@
     "server": "nodemon ."
   },
   "dependencies": {
-    "@bilbomd/mongodb-schema": "workspace:*",
     "@bilbomd/md-utils": "workspace:*",
-    "@bull-board/api": "^6.13.0",
-    "@bull-board/express": "^6.13.0",
+    "@bilbomd/mongodb-schema": "workspace:*",
+    "@bull-board/api": "^6.13.1",
+    "@bull-board/express": "^6.13.1",
     "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.12.2",
     "bullmq": "^5.61.0",

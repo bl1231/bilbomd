@@ -27,6 +27,7 @@ import {
   validateInpConstraints,
   extractConstraintsFromYaml
 } from '@bilbomd/md-utils'
+import { buildOpenMMParameters } from './utils/openmmParams.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -232,6 +233,9 @@ const handleBilboMDClassicPDB = async (
       cleanup_in_progress: false,
       steps: stepsAdjusted,
       md_engine,
+      ...(md_engine === 'OpenMM' && {
+        openmm_parameters: buildOpenMMParameters(req.body)
+      }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
         : {})

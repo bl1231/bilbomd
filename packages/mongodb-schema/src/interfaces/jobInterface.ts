@@ -1,5 +1,6 @@
 import { Document, Types } from 'mongoose'
 import { IUser } from './userInterface'
+import { IOpenMMParameters } from './openmmInterface'
 
 export const StepStatus = {
   Waiting: 'Waiting',
@@ -142,6 +143,7 @@ interface IJob extends Document {
   status: JobStatusEnum
   data_file: string
   md_engine?: MDEngineEnum
+  openmm_parameters?: IOpenMMParameters
   md_constraints?: IMDConstraints
   time_submitted: Date
   time_started?: Date
