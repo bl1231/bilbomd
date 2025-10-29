@@ -118,6 +118,11 @@ services:
         limits:
           cpus: "16"
           memory: "32g"
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     restart: no
     env_file:
       - .env.prod
