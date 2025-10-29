@@ -1,0 +1,36 @@
+# --------------------------------------------------------------------------------------
+# Use this Docker compose file for development deployment on Hyperion
+# You may need to create the following volumes before running this file:
+# --------------------------------------------------------------------------------------
+# volumes:
+#   mongodb:
+#     name: bilbomd-mongodb-dev
+#     external: true
+#   redis-cache:
+#     name: bilbomd-redis-cache-dev
+#     external: true
+#   scratch:
+#     name: bilbomd-scratch-dev
+#     external: true
+
+networks:
+  app-network-dev:
+    driver: bridge
+
+services:
+  scoper:
+    image: ghcr.io/bl1231/bilbomd-scoper:pr-169-8eef62e3
+    pull_policy: always
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "6"
+    restart: no
+    env_file:
+      - .env.hyperion.dev
+    networks:
+      - app-network-dev
+    volumes:
+      - /bilbomd/dev/uploads:/bilbomd/uploads
+      - /bilbomd/dev/logs:/bilbomd/logs

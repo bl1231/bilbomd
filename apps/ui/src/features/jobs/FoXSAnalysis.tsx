@@ -23,7 +23,9 @@ const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
 
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
   if (!Array.isArray(foxsDataArray) || foxsDataArray.length < 2) {
-    console.warn('FoXSAnalysis: Not enough data to process ensemble comparison.')
+    console.warn(
+      'FoXSAnalysis: Not enough data to process ensemble comparison.'
+    )
     return []
   }
 
@@ -37,8 +39,11 @@ const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
   let baseData: CombinedFoxsData[] = base.data.map((point, index) => {
     const q = point?.q != null ? parseFloat(point.q.toFixed(4)) : 0
     const exp_intensity =
-      point?.exp_intensity != null ? parseFloat(point.exp_intensity.toFixed(4)) : 0
-    const error = point?.error != null ? Math.max(parseFloat(point.error.toFixed(4)), 0) : 1
+      point?.exp_intensity != null
+        ? parseFloat(point.exp_intensity.toFixed(4))
+        : 0
+    const error =
+      point?.error != null ? Math.max(parseFloat(point.error.toFixed(4)), 0) : 1
 
     const combinedData: CombinedFoxsDataDynamic = {
       q,
@@ -58,7 +63,9 @@ const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
             : 0
         combinedData[modelIntensityKey] = model_intensity
         combinedData[residualKey] =
-          error !== 0 ? parseFloat(((exp_intensity - model_intensity) / error).toFixed(4)) : 0
+          error !== 0
+            ? parseFloat(((exp_intensity - model_intensity) / error).toFixed(4))
+            : 0
       }
     })
 
@@ -82,17 +89,32 @@ const calculateResiduals = (dataPoints: FoxsDataPoint[]) => {
   })
 }
 
-const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
+/**
+ * FoXSAnalysis component
+ * @param id - Job ID
+ * @param active - (optional) If false, data fetching is skipped. Defaults to true for backwards compatibility.
+ */
+const FoXSAnalysis = ({
+  id,
+  active = true
+}: ScoperFoXSAnalysisProps & { active?: boolean }) => {
   const { data, isLoading, isError } = useGetFoxsAnalysisByIdQuery(id, {
     pollingInterval: 0,
     refetchOnFocus: true,
-    refetchOnMountOrArgChange: true
+    refetchOnMountOrArgChange: true,
+    skip: !active
   })
 
-  const foxsData = useMemo(() => (Array.isArray(data) ? (data as FoxsData[]) : []), [data])
+  const foxsData = useMemo(
+    () => (Array.isArray(data) ? (data as FoxsData[]) : []),
+    [data]
+  )
 
   const hasBase = useMemo(
-    () => foxsData.length > 0 && Array.isArray(foxsData[0]?.data) && foxsData[0]!.data.length > 0,
+    () =>
+      foxsData.length > 0 &&
+      Array.isArray(foxsData[0]?.data) &&
+      foxsData[0]!.data.length > 0,
     [foxsData]
   )
 
@@ -197,7 +219,8 @@ const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
               variant="outlined"
             >
               <AlertTitle>No ensemble data</AlertTitle>
-              Only a single FoXS dataset is available; ensemble comparison charts are hidden.
+              Only a single FoXS dataset is available; ensemble comparison
+              charts are hidden.
             </Alert>
           )}
         </Grid>

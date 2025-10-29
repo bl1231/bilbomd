@@ -69,7 +69,9 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
   )
 
   return (
-    <Accordion defaultExpanded>
+    <Accordion
+      defaultExpanded={steps.email?.status === 'Success' ? false : true}
+    >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon sx={{ color: '#fff' }} />}
         sx={{
@@ -84,13 +86,16 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
         </HeaderBox>
       </AccordionSummary>
       <AccordionDetails>
-        <Grid container sx={{ flexDirection: 'column' }}>
+        <Grid
+          container
+          sx={{ flexDirection: 'column' }}
+        >
           {bilboMdSteps}
 
           {latestStepMessage && (
             <Chip
               label={latestStepMessage}
-              variant='filled'
+              variant="filled"
               sx={{
                 mt: 2,
                 fontSize: '1.5em',

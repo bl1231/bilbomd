@@ -101,8 +101,52 @@ RUN git clone https://github.com/openmm/pdbfixer.git && \
     python setup.py install
 
 # -----------------------------------------------------------------------------
+# install PyMOL
+FROM pdbfixer-build AS install-pymol
+# Install build dependencies for PyMOL
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    wget \
+    build-essential \
+    cmake \
+    libglew-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    libxml2-dev \
+    libmsgpack-dev \
+    libglm-dev \
+    libnetcdf-dev \
+    freeglut3-dev \
+    libxmu-dev \
+    libxi-dev \
+    ffmpeg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install MMTF C++ library
+RUN git clone https://github.com/rcsb/mmtf-cpp.git /tmp/mmtf-cpp && \
+    cd /tmp/mmtf-cpp && \
+    cmake . && \
+    make install && \
+    rm -rf /tmp/mmtf-cpp
+# Clone PyMOL source code
+RUN git clone https://github.com/schrodinger/pymol-open-source.git /tmp/pymol-open-source
+
+# Build and install PyMOL
+WORKDIR /tmp/pymol-open-source
+RUN pip install .
+
+# Verify PyMOL installation
+RUN python -c "import pymol; print('PyMOL installed successfully')"
+
+# Set working directory back to root
+WORKDIR /
+
+# Clean up build artifacts
+RUN rm -rf /tmp/pymol-open-source
+
+# -----------------------------------------------------------------------------
 # Pack conda envs (base + openmm) to copy only runtime artifacts
-FROM pdbfixer-build AS pack-openmm-env
+FROM install-pymol AS pack-openmm-env
 RUN conda install -y -n base  -c conda-forge conda-pack && \
     conda install -y -n openmm -c conda-forge conda-pack && \
     conda clean -afy
@@ -120,7 +164,18 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ca-certificates curl software-properties-common \
     libgfortran5 libstdc++6 libxml2 libtiff5 liblzma5 libicu70 libharfbuzz0b \
-    parallel binutils && \
+    parallel binutils \
+    libglew-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    libxml2-dev \
+    libmsgpack-dev \
+    libglm-dev \
+    libnetcdf-dev \
+    freeglut3-dev \
+    libxmu-dev \
+    libxi-dev \
+    ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository -y ppa:salilab/ppa && \

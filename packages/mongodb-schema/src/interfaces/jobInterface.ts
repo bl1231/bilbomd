@@ -1,6 +1,7 @@
 import { Document, Types } from 'mongoose'
 import { IUser } from './userInterface'
 import { IOpenMMParameters } from './openmmInterface'
+import { IAssets } from './assetsInterface'
 
 export const StepStatus = {
   Waiting: 'Waiting',
@@ -55,6 +56,7 @@ interface IBilboMDSteps {
   md?: IStepStatus
   dcd2pdb?: IStepStatus
   pdb_remediate?: IStepStatus
+  movies?: IStepStatus
   foxs?: IStepStatus
   pepsisans?: IStepStatus
   multifoxs?: IStepStatus
@@ -153,6 +155,7 @@ interface IJob extends Document {
   steps?: IBilboMDSteps
   progress: number
   feedback?: IFeedbackData
+  assets?: IAssets
   nersc?: INerscInfo
   cleanup_in_progress: boolean
 }

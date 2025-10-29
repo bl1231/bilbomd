@@ -1,3 +1,4 @@
+process.env.BILBOMD_URL = process.env.BILBOMD_URL || 'http://localhost:3000'
 import dotenv from 'dotenv'
 dotenv.config({ path: './test/.env.test' })
 import { logger } from '../src/middleware/loggers.js'
@@ -16,13 +17,22 @@ beforeAll(() => {
   vi.spyOn(console, 'info').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
-  vi.spyOn(logger, 'info').mockImplementation(function (this: typeof logger, ..._args: any[]) {
+  vi.spyOn(logger, 'info').mockImplementation(function (
+    this: typeof logger,
+    ..._args: any[]
+  ) {
     return this
   })
-  vi.spyOn(logger, 'warn').mockImplementation(function (this: typeof logger, ..._args: any[]) {
+  vi.spyOn(logger, 'warn').mockImplementation(function (
+    this: typeof logger,
+    ..._args: any[]
+  ) {
     return this
   })
-  vi.spyOn(logger, 'error').mockImplementation(function (this: typeof logger, ..._args: any[]) {
+  vi.spyOn(logger, 'error').mockImplementation(function (
+    this: typeof logger,
+    ..._args: any[]
+  ) {
     return this
   })
 })
@@ -33,23 +43,35 @@ const uri = mongoServer.getUri()
 
 await mongoose.connect(uri)
 
-// Mock bullmq queues
-const mockQueue = {
-  name: 'bilbomd-mock',
-  add: vi.fn().mockResolvedValue({
+// Mock bullmq queues with real classes for Vitest v4 compatibility
+class MockQueue {
+  name = 'bilbomd-mock'
+  add = vi.fn().mockResolvedValue({
     id: 'mock-job-id',
     name: 'mock-job',
     data: { foo: 'bar' }
-  }),
-  close: vi.fn()
+  })
+  close = vi.fn()
+}
+
+class MockWorker {
+  close = vi.fn()
+}
+class MockQueueScheduler {
+  close = vi.fn()
+}
+class MockQueueEvents {
+  close = vi.fn()
+  on = vi.fn()
+  off = vi.fn()
 }
 
 vi.mock('bullmq', () => {
   return {
-    Queue: vi.fn(() => mockQueue),
-    Worker: vi.fn(() => ({ close: vi.fn() })),
-    QueueScheduler: vi.fn(() => ({ close: vi.fn() })),
-    QueueEvents: vi.fn(() => ({ close: vi.fn(), on: vi.fn(), off: vi.fn() }))
+    Queue: MockQueue,
+    Worker: MockWorker,
+    QueueScheduler: MockQueueScheduler,
+    QueueEvents: MockQueueEvents
   }
 })
 

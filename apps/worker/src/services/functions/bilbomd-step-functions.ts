@@ -19,7 +19,8 @@ import {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDSANSJob,
-  IMDConstraints
+  IMDConstraints,
+  Job
 } from '@bilbomd/mongodb-schema'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { exec } from 'node:child_process'
@@ -610,7 +611,8 @@ const storeConstraintsInMongoDB = async (
   try {
     logger.debug(`Storing constraints in MongoDB from file: ${filePath}`)
 
-    let constraints: IMDConstraints
+    type ParsedConstraints = IMDConstraints | { constraints: IMDConstraints }
+    let parsed: ParsedConstraints
 
     if (fileName.endsWith('.yml') || fileName.endsWith('.yaml')) {
       // Parse YAML constraints for OpenMM
@@ -621,9 +623,9 @@ const storeConstraintsInMongoDB = async (
 
       // Parse and store the YAML constraints
       const fileContent = await fs.readFile(filePath, 'utf8')
-      constraints = YAML.parse(fileContent) as IMDConstraints
+      parsed = YAML.parse(fileContent) as ParsedConstraints
       logger.debug(
-        `Parsed YAML constraints: ${JSON.stringify(constraints, null, 2)}`
+        `Parsed YAML constraints: ${JSON.stringify(parsed, null, 2)}`
       )
     } else if (fileName === 'const.inp') {
       // For CHARMM const.inp, convert it to YAML format first, then parse
@@ -633,19 +635,33 @@ const storeConstraintsInMongoDB = async (
       const yamlContent = await convertInpToYaml(filePath, logger)
 
       // Parse the converted YAML into constraints object
-      constraints = YAML.parse(yamlContent) as IMDConstraints
+      parsed = YAML.parse(yamlContent) as ParsedConstraints
       logger.debug(
-        `Converted and parsed CHARMM constraints: ${JSON.stringify(constraints, null, 2)}`
+        `Converted and parsed CHARMM constraints: ${JSON.stringify(parsed, null, 2)}`
       )
     } else {
       throw new Error(`Unsupported constraint file format: ${fileName}`)
     }
 
-    // Use type assertion to access md_constraints property
-    ;(DBjob as IJob & { md_constraints?: IMDConstraints }).md_constraints =
-      constraints
+    // Unwrap if needed
+    const constraintsObj = 'constraints' in parsed ? parsed.constraints : parsed
+
+    DBjob.set('md_constraints', {
+      fixed_bodies: constraintsObj.fixed_bodies ?? [],
+      rigid_bodies: constraintsObj.rigid_bodies ?? []
+    })
 
     await DBjob.save()
+    const fresh = await Job.findById(DBjob._id)
+    if (fresh) {
+      logger.debug(
+        `Reloaded md_constraints: ${JSON.stringify(fresh.md_constraints)}`
+      )
+    } else {
+      logger.warn(
+        'Could not reload job from database after saving constraints.'
+      )
+    }
     logger.debug(
       `Successfully stored constraints in MongoDB for job ${DBjob.uuid}`
     )

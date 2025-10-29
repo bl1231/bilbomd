@@ -147,33 +147,38 @@ const handleBilboMDAlphaFoldJob = async (
       return
     }
 
-    const stepsInit: IBilboMDSteps = {
-      alphafold: { status: StepStatus.Waiting, message: '' },
-      pdb2crd: { status: StepStatus.Waiting, message: '' },
-      pae: { status: StepStatus.Waiting, message: '' },
-      autorg: { status: StepStatus.Waiting, message: '' },
-      minimize: { status: StepStatus.Waiting, message: '' },
-      initfoxs: { status: StepStatus.Waiting, message: '' },
-      heat: { status: StepStatus.Waiting, message: '' },
-      md: { status: StepStatus.Waiting, message: '' },
-      dcd2pdb: { status: StepStatus.Waiting, message: '' },
-      foxs: { status: StepStatus.Waiting, message: '' },
-      multifoxs: { status: StepStatus.Waiting, message: '' },
-      copy_results_to_cfs: { status: StepStatus.Waiting, message: '' },
-      results: { status: StepStatus.Waiting, message: '' },
-      email: { status: StepStatus.Waiting, message: '' }
-    }
+    let stepsInit: IBilboMDSteps
 
-    // If using OpenMM, note that pdb2crd is not needed and will be skipped downstream.
-    const stepsAdjusted = {
-      ...stepsInit,
-      pdb2crd: {
-        ...stepsInit.pdb2crd,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
-      },
-      dcd2pdb: {
-        ...stepsInit.dcd2pdb,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
+    if (md_engine === 'OpenMM') {
+      stepsInit = {
+        alphafold: { status: StepStatus.Waiting, message: '' },
+        pae: { status: StepStatus.Waiting, message: '' },
+        autorg: { status: StepStatus.Waiting, message: '' },
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        email: { status: StepStatus.Waiting, message: '' }
+      }
+    } else {
+      stepsInit = {
+        alphafold: { status: StepStatus.Waiting, message: '' },
+        pdb2crd: { status: StepStatus.Waiting, message: '' },
+        pae: { status: StepStatus.Waiting, message: '' },
+        autorg: { status: StepStatus.Waiting, message: '' },
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        dcd2pdb: { status: StepStatus.Waiting, message: '' },
+        pdb_remediate: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        email: { status: StepStatus.Waiting, message: '' }
       }
     }
 
@@ -190,7 +195,7 @@ const handleBilboMDAlphaFoldJob = async (
       status: 'Submitted',
       time_submitted: new Date(),
       user,
-      steps: stepsAdjusted,
+      steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
         openmm_parameters: buildOpenMMParameters(req.body)

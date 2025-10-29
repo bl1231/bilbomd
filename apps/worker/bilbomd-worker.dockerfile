@@ -43,7 +43,7 @@ RUN pnpm deploy --filter @bilbomd/worker --prod /out
 ########################################
 # Stage 3: runtime (your existing base image)
 ########################################
-FROM ghcr.io/bl1231/bilbomd-worker-base:0.0.3 AS runtime
+FROM ghcr.io/bl1231/bilbomd-worker-base:0.0.4 AS runtime
 WORKDIR /app
 
 # Install Node.js (if your base image doesn't already have it)

@@ -1,5 +1,28 @@
 # @bilbomd/worker
 
+## 1.22.1
+
+### Patch Changes
+
+- 267faf5: Adjust alpha factor for MW estimation in `mw_bayes.py`
+- d51af33: Make sure we reserve GPUs for our workers on machines with GPUs.
+
+## 1.22.0
+
+### Minor Changes
+
+- e110840: Add ability to make mp4 movies from Molecular Dynamics trajectory file (`*.dcd` files)
+  Creates one mp4 moview per DCD file. Only implemented for OpenMM.
+  Add movie gallery and viewer to Jobs result page in UI.
+  Add PyMOL to the `bilbomd-worker-base` image
+
+### Patch Changes
+
+- 258ac41: Use `set` to update `md_constraints` in mongo ratehr than direct assignment of YAML values.
+- Updated dependencies [e110840]
+  - @bilbomd/mongodb-schema@1.12.0
+  - @bilbomd/md-utils@1.0.3
+
 ## 1.21.0
 
 ### Minor Changes
