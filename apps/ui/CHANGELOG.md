@@ -1,5 +1,13 @@
 # @bilbomd/ui
 
+## 1.24.2
+
+### Patch Changes
+
+- ef1f18f: Add simple component to display `md_constraints` if present
+  Adjust CSS FlexBox for SingleJobPage
+  Adjust CSS for cluster checkboxes in PAE Jiffy
+
 ## 1.24.1
 
 ### Patch Changes
