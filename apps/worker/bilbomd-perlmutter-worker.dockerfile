@@ -31,6 +31,7 @@ RUN conda update -y -n base -c defaults conda && \
     python-igraph==0.11.9 \
     pyyaml \
     pandas \
+    biopython \
     && conda clean -afy
 
 # -----------------------------------------------------------------------------
