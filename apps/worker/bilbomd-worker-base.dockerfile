@@ -64,33 +64,33 @@ COPY apps/worker/scripts/sans /usr/local/sans
 # -----------------------------------------------------------------------------
 # Build OpenMM from source and install
 FROM install-sans-tools AS openmm-build
-ARG OPENMM_BRANCH=master
-ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_BRANCH}
+# ARG OPENMM_BRANCH=master
+# ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_BRANCH}
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential cmake gfortran make wget ca-certificates bzip2 tar swig && \
     rm -rf /var/lib/apt/lists/*
 RUN conda update -y -n base -c defaults conda && \
-    conda create -y -n openmm python=3.12 numpy doxygen pip cython pyyaml && \
+    conda create -y -n openmm python=3.12 openmm=8.4.0 numpy doxygen pip cython pyyaml && \
     conda clean -afy
 ENV PATH=/miniforge3/envs/openmm/bin:/miniforge3/bin:${PATH}
-WORKDIR /tmp
-RUN git clone https://github.com/openmm/openmm.git && \
-    cd openmm && \
-    git checkout ${OPENMM_BRANCH} && \
-    mkdir build && cd build && \
-    cmake .. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=${OPENMM_PREFIX} \
-    -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
-    -DPYTHON_EXECUTABLE=/miniforge3/envs/openmm/bin/python \
-    -DSWIG_EXECUTABLE=/usr/bin/swig \
-    -DOPENMM_BUILD_CUDA_LIB=ON \
-    -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda && \
-    make -j"$(nproc)" && \
-    make install && \
-    make PythonInstall && \
-    ldconfig
+# WORKDIR /tmp
+# RUN git clone https://github.com/openmm/openmm.git && \
+#     cd openmm && \
+#     git checkout ${OPENMM_BRANCH} && \
+#     mkdir build && cd build && \
+#     cmake .. \
+#     -DCMAKE_BUILD_TYPE=Release \
+#     -DCMAKE_INSTALL_PREFIX=${OPENMM_PREFIX} \
+#     -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
+#     -DPYTHON_EXECUTABLE=/miniforge3/envs/openmm/bin/python \
+#     -DSWIG_EXECUTABLE=/usr/bin/swig \
+#     -DOPENMM_BUILD_CUDA_LIB=ON \
+#     -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda && \
+#     make -j"$(nproc)" && \
+#     make install && \
+#     make PythonInstall && \
+#     ldconfig
 
 # -----------------------------------------------------------------------------
 # Build & install PDBFixer into the openmm env
@@ -214,6 +214,6 @@ ENV OPENMM_LIBRARY="${OPENMM_PREFIX}/lib"
 ENV OPENMM_LIBRARIES="${OPENMM_PREFIX}/lib"
 ENV OPENMM_PLUGIN_DIR="${OPENMM_PREFIX}/lib/plugins"
 
-# ---- Smoke test OpenMM installation ----
+# ---- Smoke test script installation ----
 COPY apps/worker/scripts/smoke_test.sh /usr/local/bin/smoke_test.sh
 RUN chmod +x /usr/local/bin/smoke_test.sh
