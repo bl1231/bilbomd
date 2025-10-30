@@ -6,7 +6,8 @@ import {
   runMolecularDynamics,
   runMultiFoxs,
   runPaeToConstInp,
-  runAutoRg
+  runAutoRg,
+  runPdb2Crd
 } from '../functions/bilbomd-step-functions.js'
 import {
   runOmmMinimize,
@@ -64,6 +65,11 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   await foundJob.save()
 
   if (engine === 'CHARMM') {
+    // Make sure CRD/PSF files are ready
+    await MQjob.log('start pdb2crd')
+    await runPdb2Crd(MQjob, foundJob)
+    await MQjob.log('end pdb2crd')
+
     // CHARMM minimization
     await MQjob.log('start minimize')
     await runMinimize(MQjob, foundJob)

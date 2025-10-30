@@ -47,15 +47,6 @@ export type BullMQData = {
   jobid: string
 }
 
-export type BullMQPdb2Crd = {
-  type: string
-  title: string
-  uuid: string
-  pdb_file: string
-  pae_power: string
-  plddt_cutoff: string
-}
-
 export type BilboMDBullMQ = {
   position: number | string
   queuePosition: string

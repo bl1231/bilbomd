@@ -1,5 +1,32 @@
 # @bilbomd/worker
 
+## 1.24.0
+
+### Minor Changes
+
+- 3091aeb: Remove dedicated BullMQ queue to process PDB to CRD conversion.
+  Add extra step in the worker to do conversion instead.
+
+## 1.23.0
+
+### Minor Changes
+
+- 6c1e84e: Add OpenMM config and constraint files to results dir
+  Reorganize pipeline functions
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+- Updated dependencies [3e2f5b4]
+  - @bilbomd/md-utils@1.0.4
+
+## 1.22.1
+
+### Patch Changes
+
+- 267faf5: Adjust alpha factor for MW estimation in `mw_bayes.py`
+- d51af33: Make sure we reserve GPUs for our workers on machines with GPUs.
+
 ## 1.22.0
 
 ### Minor Changes

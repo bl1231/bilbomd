@@ -1,4 +1,10 @@
-import { User, IUser, IJob, IStepStatus } from '@bilbomd/mongodb-schema'
+import {
+  User,
+  IUser,
+  IJob,
+  IStepStatus,
+  IBilboMDSteps
+} from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
 import { logger } from '../../helpers/loggers.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
@@ -8,7 +14,7 @@ import { CharmmDCD2PDBParams, CharmmParams } from '../../types/index.js'
 import path from 'path'
 import { spawn, ChildProcess } from 'node:child_process'
 import Handlebars from 'handlebars'
-import { updateStepStatus } from './mongo-utils.js'
+import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
 
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
@@ -268,6 +274,119 @@ const spawnFoXS = async (
   }
 }
 
+const handleError = async (
+  error: Error | unknown,
+  MQjob: BullMQJob,
+  DBjob: IJob,
+  step?: keyof IBilboMDSteps
+) => {
+  // Enhanced error message extraction
+  let errorMsg: string
+  let stackTrace: string | undefined
+
+  if (error instanceof Error) {
+    errorMsg = error.message
+    stackTrace = error.stack
+    logger.error(
+      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}`
+    )
+  } else {
+    errorMsg = String(error)
+    logger.error(
+      `handleError - Non-Error object: error=${error}, type=${typeof error}, step=${step || 'unknown'}`
+    )
+  }
+
+  // Log the step and error details
+  logger.error(
+    `handleError called for step: ${step || 'undefined'} with error: ${errorMsg}`
+  )
+
+  if (stackTrace) {
+    logger.error(`Stack trace: ${stackTrace}`)
+  }
+
+  // Log job details for context
+  logger.error(
+    `Job context: jobId=${DBjob.id}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}, mqJobId=${MQjob.id}, mqJobName=${MQjob.name}, attemptsMade=${MQjob.attemptsMade}`
+  )
+
+  try {
+    // Updates primary status in MongoDB
+    logger.debug(`Updating job status to 'Error' for job ${DBjob.id}`)
+    await updateJobStatus(DBjob, 'Error')
+    logger.debug(`Successfully updated job status to 'Error'`)
+  } catch (updateError) {
+    logger.error(`Failed to update job status: ${updateError}`)
+  }
+
+  // Update the specific step status
+  if (step) {
+    try {
+      const status: IStepStatus = {
+        status: 'Error',
+        message: `Error in step ${step}: ${errorMsg}`
+      }
+      logger.debug(`Updating step status for step: ${step}`)
+      await updateStepStatus(DBjob, step, status)
+      logger.debug(`Successfully updated step status for step: ${step}`)
+    } catch (stepUpdateError) {
+      logger.error(
+        `Failed to update step status for step ${step}: ${stepUpdateError}`
+      )
+    }
+  } else {
+    logger.error(`Step not provided when handling error. Error: ${errorMsg}`)
+  }
+
+  // Log to MQ job
+  try {
+    await MQjob.log(`ERROR: ${errorMsg}`)
+    if (stackTrace) {
+      await MQjob.log(`Stack trace: ${stackTrace}`)
+    }
+    logger.debug(`Successfully logged error to MQ job`)
+  } catch (mqLogError) {
+    logger.error(`Failed to log to MQ job: ${mqLogError}`)
+  }
+
+  // Send job completion email and log the notification
+  logger.info(`Failed Attempts: ${MQjob.attemptsMade}`)
+
+  try {
+    const recipientEmail = (DBjob.user as IUser).email
+    logger.debug(`Recipient email: ${recipientEmail}`)
+
+    if (MQjob.attemptsMade >= 3) {
+      if (config.sendEmailNotifications) {
+        logger.debug(`Sending failure email notification to ${recipientEmail}`)
+        await sendJobCompleteEmail(
+          recipientEmail,
+          config.bilbomdUrl,
+          DBjob.id,
+          DBjob.title,
+          true
+        )
+        logger.warn(`Email notification sent to ${recipientEmail}`)
+        await MQjob.log(`Email notification sent to ${recipientEmail}`)
+      } else {
+        logger.debug(`Email notifications are disabled`)
+      }
+    } else {
+      logger.debug(`Not sending email - attempts (${MQjob.attemptsMade}) < 3`)
+    }
+  } catch (emailError) {
+    logger.error(`Failed to send email notification: ${emailError}`)
+  }
+
+  // Create a more descriptive error to throw
+  const finalError = new Error(
+    `BilboMD failed in step '${step || 'unknown'}': ${errorMsg}`
+  )
+  logger.error(`Throwing final error: ${finalError.message}`)
+  throw finalError
+}
+
 export {
   initializeJob,
   cleanupJob,
@@ -276,5 +395,6 @@ export {
   generateDCD2PDBInpFile,
   generateInputFile,
   spawnCharmm,
-  spawnFoXS
+  spawnFoXS,
+  handleError
 }

@@ -1,5 +1,17 @@
 # @bilbomd/scoper
 
+## 1.5.1
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+
+## 1.5.0
+
+### Minor Changes
+
+- 3a0f787: Changes needed to run Scoper on separate hardware from the rest of BilboMD
+
 ## 1.4.6
 
 ### Patch Changes

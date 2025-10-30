@@ -1,5 +1,21 @@
 # @bilbomd/backend
 
+## 1.28.0
+
+### Minor Changes
+
+- 3091aeb: Remove dedicated BullMQ queue to process PDB to CRD conversion.
+  Add extra step in the worker to do conversion instead.
+
+## 1.27.3
+
+### Patch Changes
+
+- 06d26e3: Purge old BilboMD Multi jobs
+- 3e2f5b4: Update pnpm and dependencies
+- Updated dependencies [3e2f5b4]
+  - @bilbomd/md-utils@1.0.4
+
 ## 1.27.2
 
 ### Patch Changes

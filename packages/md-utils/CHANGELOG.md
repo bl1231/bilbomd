@@ -1,5 +1,11 @@
 # @bilbomd/md-utils
 
+## 1.0.4
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+
 ## 1.0.3
 
 ### Patch Changes

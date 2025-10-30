@@ -13,7 +13,7 @@ import {
   getNumEnsembles,
   extractPdbPaths,
   concatenateAndSaveAsEnsemble
-} from './bilbomd-step-functions.js'
+} from './prepare-results.js'
 
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
