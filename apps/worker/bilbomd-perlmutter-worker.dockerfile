@@ -86,3 +86,7 @@ ENV PATH="/miniforge3/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
 
 WORKDIR /app
+
+# ---- Smoke test script installation ----
+COPY apps/worker/scripts/smoke_test.sh /usr/local/bin/smoke_test.sh
+RUN chmod +x /usr/local/bin/smoke_test.sh
