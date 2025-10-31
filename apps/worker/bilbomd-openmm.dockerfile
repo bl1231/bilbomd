@@ -22,7 +22,14 @@ ENV PATH=/miniforge3/bin:${PATH}
 RUN conda clean -a -y
 
 RUN conda update -y -n base -c defaults conda && \
-    conda create -y -n openmm python=3.12 openmm=8.4.0 pyyaml numpy doxygen pip cython && \
+    conda create -y -n openmm python=3.12 \
+    openmm=8.4.0 \
+    cuda-version=12 \
+    pyyaml \
+    numpy \
+    doxygen \
+    pip \
+    cython && \
     conda clean -afy
 
 # Ensure the env is first on PATH for CMake to find the intended Python
