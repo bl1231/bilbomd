@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 1.12.1
+
+### Patch Changes
+
+- 578d870: Add LBL license
+
 ## 1.12.0
 
 ### Minor Changes
