@@ -1,5 +1,15 @@
 # @bilbomd/worker
 
+## 1.24.2
+
+### Patch Changes
+
+- 3bad4a2: Use versioned OpenMM (v8.4.0) instead of `master` branch
+  Pin CUDA to v12 for NERSC `bilbomd-openmm-worker` Docker image
+- fce115a: Update nodejs and dependencies
+- Updated dependencies [fce115a]
+  - @bilbomd/md-utils@1.0.6
+
 ## 1.24.1
 
 ### Patch Changes

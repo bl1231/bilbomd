@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.5.3
+
+### Patch Changes
+
+- fce115a: Update nodejs and dependencies
+
 ## 1.5.2
 
 ### Patch Changes
