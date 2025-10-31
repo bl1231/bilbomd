@@ -141,9 +141,9 @@ def prepare_openmm_config(config, params):
             },
             "heating": {
                 "parameters": {
-                    "first_temp": 300,
-                    "final_temp": 1500,
-                    "total_steps": 15000,
+                    "start_temp": 300,
+                    "final_temp": 600,
+                    "nsteps": 10000,
                     "timestep": 0.001,
                 },
                 "output_pdb": "heated.pdb",
@@ -151,9 +151,9 @@ def prepare_openmm_config(config, params):
             },
             "md": {
                 "parameters": {
-                    "temperature": 1500,
+                    "temperature": 600,
                     "friction": 0.1,
-                    "nsteps": 1000000,
+                    "nsteps": 300000,
                     "timestep": 0.001,
                 },
                 "rgyr": {
@@ -169,6 +169,35 @@ def prepare_openmm_config(config, params):
             },
         },
     }
+    
+    # merge in the minimization, heating, and md parameters from params if they exist
+    openmm_config["steps"]["minimization"]["parameters"]["max_iterations"] = int(
+        params.get("openmm_parameters", {}).get("minimize", {}).get("max_iterations", 1000)
+    )
+    openmm_config["steps"]["heating"]["parameters"]["start_temp"] = int(
+        params.get("openmm_parameters", {}).get("heating", {}).get("start_temp", 300)
+    )
+    openmm_config["steps"]["heating"]["parameters"]["final_temp"] = int(
+        params.get("openmm_parameters", {}).get("heating", {}).get("final_temp", 600)
+    )
+    openmm_config["steps"]["heating"]["parameters"]["nsteps"] = int(
+        params.get("openmm_parameters", {}).get("heating", {}).get("nsteps", 10000)
+    )
+    openmm_config["steps"]["heating"]["parameters"]["timestep"] = float(
+        params.get("openmm_parameters", {}).get("heating", {}).get("timestep", 0.001)
+    )
+    openmm_config["steps"]["md"]["parameters"]["temperature"] = int(
+        params.get("openmm_parameters", {}).get("md", {}).get("temperature", 600)
+    )
+    openmm_config["steps"]["md"]["parameters"]["friction"] = float(
+        params.get("openmm_parameters", {}).get("md", {}).get("friction", 0.1)
+    )
+    openmm_config["steps"]["md"]["parameters"]["nsteps"] = int(
+        params.get("openmm_parameters", {}).get("md", {}).get("nsteps", 300000)
+    )
+    openmm_config["steps"]["md"]["parameters"]["timestep"] = float(
+        params.get("openmm_parameters", {}).get("md", {}).get("timestep", 0.001)
+    )
 
     fixed_bodies = []
     rigid_bodies_dict = {}
@@ -560,10 +589,10 @@ update_status md Running
          --env CUDA_VISIBLE_DEVICES \\
          -v $WORKDIR:/bilbomd/work \\
          {config["openmm_worker"]} /bin/bash -c "
-             set -e
-             export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-             cd /bilbomd/work/ &&
-             python /app/scripts/openmm/md.py openmm_config.yaml --rg-set {i}
+            set -e
+            export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+            cd /bilbomd/work/ &&
+            python /app/scripts/openmm/md.py openmm_config.yaml --rg-set {i}
          "
 """
         section += "MD_EXIT=$?\ncheck_exit_code $MD_EXIT md\n"
