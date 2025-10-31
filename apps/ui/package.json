@@ -50,7 +50,7 @@
     "@mui/material": "^7.3.4",
     "@mui/system": "^7.3.3",
     "@mui/utils": "^7.3.3",
-    "@mui/x-data-grid": "^8.15.0",
+    "@mui/x-data-grid": "^8.16.0",
     "@reduxjs/toolkit": "^2.9.2",
     "axios": "^1.13.1",
     "axios-retry": "^4.5.0",
@@ -59,7 +59,7 @@
     "form-data": "^4.0.4",
     "formik": "^2.4.6",
     "jwt-decode": "^4.0.0",
-    "molstar": "^5.1.2",
+    "molstar": "^5.2.0",
     "notistack": "^3.0.2",
     "prop-types": "^15.8.1",
     "react": "19.2.0",
@@ -90,6 +90,6 @@
     ]
   },
   "devDependencies": {
-    "sass-embedded": "^1.93.2"
+    "sass-embedded": "^1.93.3"
   }
 }

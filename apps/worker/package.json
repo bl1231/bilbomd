@@ -33,7 +33,7 @@
     "@bilbomd/mongodb-schema": "workspace:*",
     "axios": "^1.13.1",
     "axios-retry": "^4.5.0",
-    "bullmq": "^5.62.0",
+    "bullmq": "^5.63.0",
     "csv-parser": "^3.2.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
