@@ -3,6 +3,10 @@ FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Pick the OpenMM version and install prefix at build-time
+ARG OPENMM_TAG=8.4.0
+ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_TAG}
+
 # Basic build deps + SWIG for Python wrappers + Python headers
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -23,17 +27,33 @@ RUN conda clean -a -y
 
 RUN conda update -y -n base -c defaults conda && \
     conda create -y -n openmm python=3.12 \
-    openmm=8.4.0 \
-    cuda-version=12 \
-    pyyaml \
     numpy \
     doxygen \
-    pip \
-    cython && \
+    cython \
+    pyyaml && \
     conda clean -afy
 
 # Ensure the env is first on PATH for CMake to find the intended Python
 ENV PATH=/miniforge3/envs/openmm/bin:/miniforge3/bin:${PATH}
+
+# --- Build & install OpenMM ---
+WORKDIR /tmp
+RUN git clone https://github.com/openmm/openmm.git && \
+    cd openmm && \
+    git checkout ${OPENMM_TAG} && \
+    mkdir build && cd build && \
+    cmake .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=${OPENMM_PREFIX} \
+    -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
+    -DPYTHON_EXECUTABLE=/miniforge3/envs/openmm/bin/python \
+    -DSWIG_EXECUTABLE=/usr/bin/swig \
+    -DOPENMM_BUILD_CUDA_LIB=ON \
+    -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda && \
+    make -j"$(nproc)" && \
+    make install && \
+    make PythonInstall && \
+    ldconfig
 
 # --- Build & install PDBFixer ---
 WORKDIR /tmp
@@ -41,15 +61,30 @@ RUN git clone https://github.com/openmm/pdbfixer.git && \
     cd pdbfixer && \
     python setup.py install
 
-
 # --- Runtime stage: slim image with CUDA runtime + OpenMM + conda env ---
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
+ARG OPENMM_TAG=8.4.0
+ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_TAG}
+
 # Copy the conda env and the compiled OpenMM install from the builder
 COPY --from=builder /miniforge3 /miniforge3
+COPY --from=builder ${OPENMM_PREFIX} ${OPENMM_PREFIX}
+RUN /miniforge3/envs/openmm/bin/python -m pip install --no-deps --no-build-isolation pdbfixer
 
 # Runtime environment
 ENV PATH=/miniforge3/envs/openmm/bin:/miniforge3/bin:${PATH}
+ENV OPENMM_HOME=${OPENMM_PREFIX}
+ENV OPENMM_PLUGIN_DIR=${OPENMM_PREFIX}/lib/plugins
+ENV LD_LIBRARY_PATH=${OPENMM_PREFIX}/lib:${LD_LIBRARY_PATH}
+
+# Make sure the dynamic linker can find the OpenMM libs without setting LD_LIBRARY_PATH
+RUN echo "${OPENMM_PREFIX}/lib" > /etc/ld.so.conf.d/openmm.conf && ldconfig
 
 # copy in the bilbomd worker code
 COPY apps/worker/scripts/openmm /app/scripts/openmm
+
+# (Optional) verify python import during build
+RUN python -c "import openmm, sys; print('OpenMM', openmm.__version__, 'Python', sys.version)"
+
+
