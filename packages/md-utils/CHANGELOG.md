@@ -1,5 +1,13 @@
 # @bilbomd/md-utils
 
+## 1.0.5
+
+### Patch Changes
+
+- 578d870: Add LBL license
+- Updated dependencies [578d870]
+  - @bilbomd/mongodb-schema@1.12.1
+
 ## 1.0.4
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @bilbomd/ui
 
+## 1.24.3
+
+### Patch Changes
+
+- 578d870: Add LBL license
+- Updated dependencies [578d870]
+  - @bilbomd/mongodb-schema@1.12.1
+
 ## 1.24.2
 
 ### Patch Changes

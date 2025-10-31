@@ -1,5 +1,15 @@
 # @bilbomd/worker
 
+## 1.24.1
+
+### Patch Changes
+
+- 93da9d9: Use versioned OpenMM (v8.4.0) instead of `master` branch
+- 578d870: Add LBL license
+- Updated dependencies [578d870]
+  - @bilbomd/md-utils@1.0.5
+  - @bilbomd/mongodb-schema@1.12.1
+
 ## 1.24.0
 
 ### Minor Changes
