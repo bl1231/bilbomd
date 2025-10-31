@@ -8,7 +8,7 @@ networks:
 
 services:
   scoper:
-    image: ghcr.io/bl1231/bilbomd-scoper:pr-169-8eef62e3
+    image: ghcr.io/bl1231/bilbomd-scoper:1.5.1
     pull_policy: always
     deploy:
       replicas: 1

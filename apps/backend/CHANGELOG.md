@@ -1,5 +1,14 @@
 # @bilbomd/backend
 
+## 1.28.1
+
+### Patch Changes
+
+- 578d870: Add LBL license
+- Updated dependencies [578d870]
+  - @bilbomd/md-utils@1.0.5
+  - @bilbomd/mongodb-schema@1.12.1
+
 ## 1.28.0
 
 ### Minor Changes
