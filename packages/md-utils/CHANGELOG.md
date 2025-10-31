@@ -1,5 +1,11 @@
 # @bilbomd/md-utils
 
+## 1.0.6
+
+### Patch Changes
+
+- fce115a: Update nodejs and dependencies
+
 ## 1.0.5
 
 ### Patch Changes

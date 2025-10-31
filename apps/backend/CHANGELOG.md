@@ -1,5 +1,13 @@
 # @bilbomd/backend
 
+## 1.28.2
+
+### Patch Changes
+
+- fce115a: Update nodejs and dependencies
+- Updated dependencies [fce115a]
+  - @bilbomd/md-utils@1.0.6
+
 ## 1.28.1
 
 ### Patch Changes

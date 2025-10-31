@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 1.24.4
+
+### Patch Changes
+
+- fce115a: Update nodejs and dependencies
+
 ## 1.24.3
 
 ### Patch Changes
