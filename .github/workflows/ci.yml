@@ -26,7 +26,7 @@ permissions:
 jobs:
   changes:
     name: Detect changes
-    runs-on: [linux, x64]
+    runs-on: [ubuntu-22.04]
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       ui: ${{ steps.filter.outputs.ui }}
@@ -95,7 +95,7 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: [linux, x64]
+    runs-on: [ubuntu-22.04]
     needs: [changes]
     steps:
       - uses: actions/checkout@v4
@@ -132,7 +132,7 @@ jobs:
     name: Build & Push backend
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [linux, x64]
+    runs-on: [ubuntu-22.04]
     concurrency:
       group: backend-${{ github.ref }}
       cancel-in-progress: true
@@ -221,7 +221,7 @@ jobs:
     name: Build & Push ui
     if: needs.changes.outputs.ui == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [linux, x64]
+    runs-on: [ubuntu-22.04]
     concurrency:
       group: ui-${{ github.ref }}
       cancel-in-progress: true
@@ -309,7 +309,7 @@ jobs:
     name: Build & Push worker
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [linux, x64]
+    runs-on: [ubuntu-22.04]
     concurrency:
       group: worker-${{ github.ref }}
       cancel-in-progress: true
@@ -397,7 +397,7 @@ jobs:
     name: Build & Push scoper
     if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [linux, x64]
+    runs-on: [ubuntu-22.04]
     concurrency:
       group: scoper-${{ github.ref }}
       cancel-in-progress: true
@@ -485,7 +485,7 @@ jobs:
     name: Build mongodb-schema
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [linux, x64]
+    runs-on: [ubuntu-22.04]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -539,7 +539,7 @@ jobs:
     name: Build & Test md-utils
     if: needs.changes.outputs.md-utils == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [linux, x64]
+    runs-on: [ubuntu-22.04]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -597,7 +597,7 @@ jobs:
 
   gate:
     name: Branch Protection Gate
-    runs-on: [linux, x64]
+    runs-on: [ubuntu-22.04]
     needs: [lint, backend, ui, worker, scoper, schema, md-utils]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     steps:
