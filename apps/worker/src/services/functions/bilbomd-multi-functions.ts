@@ -7,13 +7,9 @@ import { updateStepStatus } from './mongo-utils.js'
 import { makeDir } from './job-utils.js'
 import { spawn, ChildProcess, exec } from 'node:child_process'
 import { promisify } from 'util'
-import { FileCopyParamsNew } from '../../types/index.js'
+import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
-import {
-  getNumEnsembles,
-  extractPdbPaths,
-  concatenateAndSaveAsEnsemble
-} from './prepare-results.js'
+import { getNumEnsembles } from './prepare-results.js'
 
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
@@ -284,26 +280,13 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
     const numEnsembles = await getNumEnsembles(multifoxsLogFile)
     logger.info(`prepareResults numEnsembles: ${numEnsembles}`)
 
-    if (numEnsembles > 0) {
-      const ensemblePromises = Array.from(
-        { length: numEnsembles },
-        (_, i) => i + 1
-      ).map(async (i) => {
-        const ensembleFile = path.join(multiFoxsDir, `ensembles_size_${i}.txt`)
-        const ensembleContent = await fs.readFile(ensembleFile, 'utf8')
-        const pdbFiles = extractPdbPaths(ensembleContent)
-
-        if (pdbFiles.length > 0) {
-          const numToCopy = Math.min(pdbFiles.length, i)
-          const filesToConcatenate = pdbFiles.slice(0, numToCopy)
-          await concatenateAndSaveAsEnsemble(
-            filesToConcatenate,
-            filesToConcatenate.length,
-            resultsDir
-          )
-        }
+    if (numEnsembles) {
+      await assembleEnsemblePdbFiles({
+        numEnsembles,
+        multiFoxsDir,
+        jobDir,
+        resultsDir
       })
-      await Promise.all(ensemblePromises)
     }
 
     // Create README file
