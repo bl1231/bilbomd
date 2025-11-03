@@ -119,19 +119,6 @@ jobs:
       - name: Activate pnpm
         run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
 
-      # Use a persistent pnpm store; no actions/cache needed
-      - name: Configure pnpm store on local disk
-        run: |
-          sudo mkdir -p /scr/pnpm-store
-          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
-          pnpm config set store-dir /scr/pnpm-store
-
-      # Optional: persistent ESLint cache on disk (not actions/cache)
-      - name: Configure ESLint cache dir
-        run: |
-          sudo mkdir -p /scr/eslint-cache
-          echo 'ESLINT_CACHE_DIR=/scr/eslint-cache' >> $GITHUB_ENV
-
       - name: Install deps
         run: pnpm install --frozen-lockfile --prefer-offline
 
@@ -213,11 +200,6 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
-      - name: Prep local buildx cache (backend)
-        run: |
-          sudo mkdir -p /scr/buildkit-cache/backend
-          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/backend
-
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -233,10 +215,7 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             BACKEND_GIT_HASH=${{ github.sha }}
             BACKEND_VERSION=${{ env.VERSION }}
-          cache-from: |
-            type=local,src=/scr/buildkit-cache/backend
-          cache-to: |
-            type=local,dest=/scr/buildkit-cache/backend,mode=max
+          # Removed local cache-from/cache-to for GitHub-hosted runners
 
   ui:
     name: Build & Push ui
@@ -307,10 +286,7 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
-      - name: Prep local buildx cache (ui)
-        run: |
-          sudo mkdir -p /scr/buildkit-cache/ui
-          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/ui
+      # Removed local buildx cache setup for GitHub-hosted runners
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -327,10 +303,7 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             UI_GIT_HASH=${{ env.SHORT_SHA }}
             UI_VERSION=${{ env.VERSION }}
-          cache-from: |
-            type=local,src=/scr/buildkit-cache/ui
-          cache-to: |
-            type=local,dest=/scr/buildkit-cache/ui,mode=max
+          # Removed local cache-from/cache-to for GitHub-hosted runners
 
   worker:
     name: Build & Push worker
@@ -401,10 +374,7 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
-      - name: Prep local buildx cache (worker)
-        run: |
-          sudo mkdir -p /scr/buildkit-cache/worker
-          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/worker
+      # Removed local buildx cache setup for GitHub-hosted runners
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -421,10 +391,7 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             WORKER_GIT_HASH=${{ github.sha }}
             WORKER_VERSION=${{ env.VERSION }}
-          cache-from: |
-            type=local,src=/scr/buildkit-cache/worker
-          cache-to: |
-            type=local,dest=/scr/buildkit-cache/worker,mode=max
+          # Removed local cache-from/cache-to for GitHub-hosted runners
 
   scoper:
     name: Build & Push scoper
@@ -495,10 +462,7 @@ jobs:
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
 
-      - name: Prep local buildx cache (scoper)
-        run: |
-          sudo mkdir -p /scr/buildkit-cache/scoper
-          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/scoper
+      # Removed local buildx cache setup for GitHub-hosted runners
 
       - name: Build & Push
         uses: docker/build-push-action@v6
@@ -515,10 +479,7 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             SCOPER_GIT_HASH=${{ github.sha }}
             SCOPER_VERSION=${{ env.VERSION }}
-          cache-from: |
-            type=local,src=/scr/buildkit-cache/scoper
-          cache-to: |
-            type=local,dest=/scr/buildkit-cache/scoper,mode=max
+          # Removed local cache-from/cache-to for GitHub-hosted runners
 
   schema:
     name: Build mongodb-schema
@@ -549,11 +510,7 @@ jobs:
       - name: Activate pnpm
         run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
 
-      - name: Prep local pnpm store (schema)
-        run: |
-          sudo mkdir -p /scr/pnpm-store
-          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
-          pnpm config set store-dir /scr/pnpm-store
+      # Removed local pnpm store setup for GitHub-hosted runners
 
       # Only cache TS incremental build info for schema package (keep pnpm store local)
       - name: Cache TS incremental (schema)
@@ -607,11 +564,7 @@ jobs:
       - name: Activate pnpm
         run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
 
-      - name: Prep local pnpm store (md-utils)
-        run: |
-          sudo mkdir -p /scr/pnpm-store
-          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
-          pnpm config set store-dir /scr/pnpm-store
+      # Removed local pnpm store setup for GitHub-hosted runners
 
       # Only cache TS incremental build info for md-utils package (keep pnpm store local)
       - name: Cache TS incremental (md-utils)
