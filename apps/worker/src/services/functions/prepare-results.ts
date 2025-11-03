@@ -201,7 +201,7 @@ const prepareResults = async (
         const pdbFilesRelative = extractPdbPaths(ensembleFileContent)
 
         const pdbFilesFullPath = pdbFilesRelative.map((item) =>
-          path.join(jobDir, item)
+          path.isAbsolute(item) ? item : path.join(jobDir, item)
         )
         // Extract the first N PDB files to string[]
         const numToCopy = Math.min(pdbFilesFullPath.length, i)
@@ -315,9 +315,6 @@ const extractPdbPaths = (content: string): string[] => {
       }
       return ''
     })
-  // Extracts all PDBs
-  //
-  // logger.info(`extractPdbPaths pdbPaths: ${pdbPaths}`)
   return pdbPaths
 }
 
