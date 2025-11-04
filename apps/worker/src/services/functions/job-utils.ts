@@ -10,7 +10,7 @@ import { logger } from '../../helpers/loggers.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { config } from '../../config/config.js'
 import fs from 'fs-extra'
-import { CharmmDCD2PDBParams, CharmmParams } from '../../types/index.js'
+// import { CharmmDCD2PDBParams, CharmmParams } from '../../types/index.js'
 import path from 'path'
 import { spawn, ChildProcess } from 'node:child_process'
 import Handlebars from 'handlebars'
@@ -276,7 +276,6 @@ const spawnFoXS = async (
 
 const handleError = async (
   error: Error | unknown,
-  MQjob: BullMQJob,
   DBjob: IJob,
   step?: keyof IBilboMDSteps
 ) => {
@@ -308,7 +307,7 @@ const handleError = async (
 
   // Log job details for context
   logger.error(
-    `Job context: jobId=${DBjob.id}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}, mqJobId=${MQjob.id}, mqJobName=${MQjob.name}, attemptsMade=${MQjob.attemptsMade}`
+    `Job context: jobId=${DBjob.id}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}`
   )
 
   try {
@@ -340,44 +339,44 @@ const handleError = async (
   }
 
   // Log to MQ job
-  try {
-    await MQjob.log(`ERROR: ${errorMsg}`)
-    if (stackTrace) {
-      await MQjob.log(`Stack trace: ${stackTrace}`)
-    }
-    logger.debug(`Successfully logged error to MQ job`)
-  } catch (mqLogError) {
-    logger.error(`Failed to log to MQ job: ${mqLogError}`)
-  }
+  // try {
+  //   await MQjob.log(`ERROR: ${errorMsg}`)
+  //   if (stackTrace) {
+  //     await MQjob.log(`Stack trace: ${stackTrace}`)
+  //   }
+  //   logger.debug(`Successfully logged error to MQ job`)
+  // } catch (mqLogError) {
+  //   logger.error(`Failed to log to MQ job: ${mqLogError}`)
+  // }
 
   // Send job completion email and log the notification
-  logger.info(`Failed Attempts: ${MQjob.attemptsMade}`)
+  // logger.info(`Failed Attempts: ${MQjob.attemptsMade}`)
 
-  try {
-    const recipientEmail = (DBjob.user as IUser).email
-    logger.debug(`Recipient email: ${recipientEmail}`)
+  // try {
+  //   const recipientEmail = (DBjob.user as IUser).email
+  //   logger.debug(`Recipient email: ${recipientEmail}`)
 
-    if (MQjob.attemptsMade >= 3) {
-      if (config.sendEmailNotifications) {
-        logger.debug(`Sending failure email notification to ${recipientEmail}`)
-        await sendJobCompleteEmail(
-          recipientEmail,
-          config.bilbomdUrl,
-          DBjob.id,
-          DBjob.title,
-          true
-        )
-        logger.warn(`Email notification sent to ${recipientEmail}`)
-        await MQjob.log(`Email notification sent to ${recipientEmail}`)
-      } else {
-        logger.debug(`Email notifications are disabled`)
-      }
-    } else {
-      logger.debug(`Not sending email - attempts (${MQjob.attemptsMade}) < 3`)
-    }
-  } catch (emailError) {
-    logger.error(`Failed to send email notification: ${emailError}`)
-  }
+  //   if (MQjob.attemptsMade >= 3) {
+  //     if (config.sendEmailNotifications) {
+  //       logger.debug(`Sending failure email notification to ${recipientEmail}`)
+  //       await sendJobCompleteEmail(
+  //         recipientEmail,
+  //         config.bilbomdUrl,
+  //         DBjob.id,
+  //         DBjob.title,
+  //         true
+  //       )
+  //       logger.warn(`Email notification sent to ${recipientEmail}`)
+  //       await MQjob.log(`Email notification sent to ${recipientEmail}`)
+  //     } else {
+  //       logger.debug(`Email notifications are disabled`)
+  //     }
+  //   } else {
+  //     logger.debug(`Not sending email - attempts (${MQjob.attemptsMade}) < 3`)
+  //   }
+  // } catch (emailError) {
+  //   logger.error(`Failed to send email notification: ${emailError}`)
+  // }
 
   // Create a more descriptive error to throw
   const finalError = new Error(

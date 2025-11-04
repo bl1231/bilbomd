@@ -287,7 +287,7 @@ const prepareBilboMDResults = async (
       isBilboMDAutoJob(DBjob) ||
       isBilboMDAlphaFoldJob(DBjob)
     ) {
-      await prepareResults(MQjob, DBjob)
+      await prepareResults(DBjob)
       await updateJobStatus(
         DBjob,
         'results',

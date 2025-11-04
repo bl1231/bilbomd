@@ -25,13 +25,13 @@ import {
   createPdb2CrdCharmmInpFiles,
   spawnPdb2CrdCharmm
 } from './pdb-to-crd.js'
-import {
-  CharmmParams,
-  MultiFoxsParams,
-  PaeParams,
-  CharmmHeatParams,
-  CharmmMDParams
-} from '../../types/index.js'
+// import {
+//   CharmmParams,
+//   MultiFoxsParams,
+//   PaeParams,
+//   CharmmHeatParams,
+//   CharmmMDParams
+// } from '../../types/index.js'
 import { updateStepStatus } from './mongo-utils.js'
 import {
   makeDir,
@@ -523,7 +523,7 @@ const runPdb2Crd = async (
     logger.debug(`runPdb2Crd completed successfully for job ${DBjob.uuid}`)
   } catch (error) {
     logger.error(`runPdb2Crd failed for job ${DBjob.uuid}: ${error}`)
-    await handleError(error, MQjob, DBjob, 'pdb2crd')
+    await handleError(error, DBjob, 'pdb2crd')
   }
 }
 
@@ -677,7 +677,7 @@ const runPaeToConstInp = async (
     )
   } catch (error) {
     logger.error(`runPaeToConstInp failed for job ${DBjob.uuid}: ${error}`)
-    await handleError(error, MQjob, DBjob, 'pae')
+    await handleError(error, DBjob, 'pae')
   }
 }
 
@@ -791,7 +791,7 @@ const runMinimize = async (
     }
     await updateStepStatus(DBjob, 'minimize', status)
   } catch (error: unknown) {
-    await handleError(error, MQjob, DBjob, 'minimize')
+    await handleError(error, DBjob, 'minimize')
   }
 }
 
@@ -829,7 +829,7 @@ const runHeat = async (
     }
     await updateStepStatus(DBjob, 'heat', status)
   } catch (error) {
-    await handleError(error, MQjob, DBjob, 'heat')
+    await handleError(error, DBjob, 'heat')
   }
 }
 
@@ -883,7 +883,7 @@ const runMolecularDynamics = async (
     }
     await updateStepStatus(DBjob, 'md', status)
   } catch (error) {
-    await handleError(error, MQjob, DBjob, 'md')
+    await handleError(error, DBjob, 'md')
   }
 }
 
@@ -909,7 +909,7 @@ const runMultiFoxs = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
     }
     await updateStepStatus(DBjob, 'multifoxs', status)
   } catch (error) {
-    await handleError(error, MQjob, DBjob, 'multifoxs')
+    await handleError(error, DBjob, 'multifoxs')
   }
 }
 
