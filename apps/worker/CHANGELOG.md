@@ -1,5 +1,16 @@
 # @bilbomd/worker
 
+## 1.24.3
+
+### Patch Changes
+
+- 2335ee6: Update license as per IPO
+- 9f102df: fix the path logic when parsing `ensemble_size_N.txt` files (bug #199)
+  consolodate `prepareResults` functions for several workflows
+- Updated dependencies [2335ee6]
+  - @bilbomd/md-utils@1.0.7
+  - @bilbomd/mongodb-schema@1.12.2
+
 ## 1.24.2
 
 ### Patch Changes
