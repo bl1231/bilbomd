@@ -19,7 +19,11 @@ const Footer = () => {
   const gitHash = config.uiGitHash || ''
 
   return (
-    <Paper className='footer-paper' square variant='outlined'>
+    <Paper
+      className="footer-paper"
+      square
+      variant="outlined"
+    >
       <Container fixed>
         <Box
           sx={{
@@ -30,7 +34,7 @@ const Footer = () => {
           }}
         >
           <Typography
-            variant='caption'
+            variant="caption"
             sx={{ wordBreak: 'break-all', fontSize: '0.875rem' }}
           >
             &quot;dynamicity... the essence of BilboMD&quot;
@@ -48,9 +52,9 @@ const Footer = () => {
           <Typography sx={{ wordBreak: 'break-all' }}>
             Copyright ©{currentYear}.{' '}
             <Link
-              href='https://bl1231.als.lbl.gov'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://bl1231.als.lbl.gov"
+              target="_blank"
+              rel="noopener noreferrer"
               sx={{ fontWeight: 'bold' }}
             >
               SIBYLS Beamline
@@ -59,9 +63,9 @@ const Footer = () => {
           </Typography>
           <Typography sx={{ wordBreak: 'break-all' }}>
             <Link
-              href='https://github.com/bl1231/bilbomd-ui'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://github.com/bl1231/bilbomd"
+              target="_blank"
+              rel="noopener noreferrer"
               sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -70,10 +74,10 @@ const Footer = () => {
               }}
             >
               <img
-                src='/github-mark.svg'
-                alt='GitHub Repository'
-                width='20'
-                height='20'
+                src="/github-mark.svg"
+                alt="GitHub Repository"
+                width="20"
+                height="20"
                 style={{
                   backgroundColor: blue[500],
                   borderRadius: '10px',
