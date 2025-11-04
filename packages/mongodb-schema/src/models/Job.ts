@@ -144,6 +144,18 @@ const jobSchema = new Schema(
       required: true
     },
     uuid: { type: String, required: true },
+    accessMode: {
+      type: String,
+      enum: ['user', 'anonymous'],
+      default: 'user',
+      required: true
+    },
+    publicId: {
+      type: String,
+      required: function (this: any) {
+        return this.accessMode === 'anonymous'
+      }
+    },
     data_file: { type: String, required: true },
     md_engine: {
       type: String,
@@ -172,7 +184,7 @@ const jobSchema = new Schema(
     user: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: false
     },
     resubmitted_from: {
       type: Schema.Types.ObjectId,
