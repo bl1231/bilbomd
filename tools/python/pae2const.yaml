@@ -1,0 +1,30 @@
+input_file: /home/jdelmundo/alphafold/BILBOMD_pipeline/SASbdb/057_SASDUV2/model_1_seed_000.pdb
+mode: pdb
+first_residue: 1
+last_residue: 974
+chain_segments:
+- 486
+config:
+  plddt_cutoff: 50
+  graph_sim: exp
+  sigma: 10.0
+  linear_T: 30.0
+  knn: 0
+  knn_mode: union
+  pae_cutoff: 10.0
+  min_seq_sep: 4
+  interchain_cutoff: 5.0
+  leiden_resolution: 0.65
+  leiden_iters: 10
+  merge_tau: 7.0
+  merge_coverage: 0.6
+  cross_merge_tau: 15.0
+  cross_merge_coverage: 0.6
+  cross_merge_mode: any
+  min_segment_len: 10
+  openmm_const_file: null
+  charmm_const_file: const.inp
+  no_const: false
+summary:
+  num_clusters: 24
+  num_rigid_bodies: 7

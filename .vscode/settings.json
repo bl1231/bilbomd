@@ -1,21 +1,33 @@
 {
   // Use workspace TypeScript
   "typescript.tsdk": "node_modules/typescript/lib",
-
   // Make ESLint aware of each workspace (so tsconfigRootDir resolves correctly)
   "eslint.workingDirectories": [
-    { "directory": "apps/ui", "changeProcessCWD": true },
-    { "directory": "apps/backend", "changeProcessCWD": true },
-    { "directory": "apps/worker", "changeProcessCWD": true },
-    { "directory": "apps/scoper", "changeProcessCWD": true },
-    { "directory": "packages/mongodb-schema", "changeProcessCWD": true }
+    {
+      "directory": "apps/ui",
+      "changeProcessCWD": true
+    },
+    {
+      "directory": "apps/backend",
+      "changeProcessCWD": true
+    },
+    {
+      "directory": "apps/worker",
+      "changeProcessCWD": true
+    },
+    {
+      "directory": "apps/scoper",
+      "changeProcessCWD": true
+    },
+    {
+      "directory": "packages/mongodb-schema",
+      "changeProcessCWD": true
+    }
   ],
-
   // General editor hygiene
   "editor.showUnused": true,
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
-
   // Default formatters per language
   "[typescript]": {
     "editor.tabSize": 2,
@@ -53,12 +65,10 @@
   },
   // Prettier global options (kept from backend)
   "prettier.semi": false,
-
   // Python testing (enable pytest, but avoid app-specific args here)
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "python.analysis.inlayHints.pytestParameters": true,
-
   // Exclusions for performance
   "files.exclude": {
     "**/node_modules": true,
@@ -71,5 +81,12 @@
     "**/dist": true,
     "**/build": true
   },
-  "ruff.lineLength": 88
+  "ruff.lineLength": 88,
+  "python-envs.pythonProjects": [
+    {
+      "path": "",
+      "envManager": "ms-python.python:conda",
+      "packageManager": "ms-python.python:conda"
+    }
+  ]
 }
