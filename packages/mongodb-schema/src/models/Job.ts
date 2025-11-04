@@ -144,16 +144,16 @@ const jobSchema = new Schema(
       required: true
     },
     uuid: { type: String, required: true },
-    accessMode: {
+    access_mode: {
       type: String,
       enum: ['user', 'anonymous'],
       default: 'user',
       required: true
     },
-    publicId: {
+    public_id: {
       type: String,
       required: function (this: any) {
-        return this.accessMode === 'anonymous'
+        return this.access_mode === 'anonymous'
       }
     },
     data_file: { type: String, required: true },
