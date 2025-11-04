@@ -1,5 +1,14 @@
 # @bilbomd/ui
 
+## 1.24.5
+
+### Patch Changes
+
+- dcad9a1: Update GitHub link in footer of UI
+- 2335ee6: Update license as per IPO
+- Updated dependencies [2335ee6]
+  - @bilbomd/mongodb-schema@1.12.2
+
 ## 1.24.4
 
 ### Patch Changes
