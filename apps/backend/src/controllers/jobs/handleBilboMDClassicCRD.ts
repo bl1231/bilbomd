@@ -4,7 +4,6 @@ import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
 import {
   IBilboMDCRDJob,
-  IUser,
   JobStatus,
   StepStatus,
   BilboMdCRDJob,
@@ -19,14 +18,16 @@ import {
 } from './utils/jobUtils.js'
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
+import { DispatchUser } from 'types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDClassicCRD = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
+  user: DispatchUser | undefined,
+  UUID: string,
+  ctx: { accessMode: 'user' | 'anonymous'; publicId?: string }
 ) => {
   try {
     const isResubmission = Boolean(
@@ -199,7 +200,6 @@ const handleBilboMDClassicCRD = async (
       rg_min,
       rg_max,
       time_submitted: new Date(),
-      user,
       progress: 0,
       cleanup_in_progress: false,
       steps: {
@@ -216,6 +216,11 @@ const handleBilboMDClassicCRD = async (
       },
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
+        : {}),
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
         : {})
     })
 
@@ -227,7 +232,7 @@ const handleBilboMDClassicCRD = async (
     await writeJobParams(newJob.id)
 
     // Create BullMQ Job object
-    const jobData = {
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
@@ -235,17 +240,33 @@ const handleBilboMDClassicCRD = async (
     }
 
     // Queue the job
-    const BullId = await queueJob(jobData)
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
     // Respond with job details
-    res.status(200).json({
-      message: `New BilboMD Classic w/CRD Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid
-    })
+    if (ctx.accessMode === 'anonymous') {
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ?? `${req.protocol}://${req.get('host')}`
+      const resultUrl = `${baseUrl}/results/${ctx.publicId}`
+
+      res.status(200).json({
+        message: `New BilboMD Classic w/CRD Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine,
+        public_id: ctx.publicId,
+        resultUrl
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD Classic w/CRD Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     const msg =
       error instanceof Error

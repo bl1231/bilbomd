@@ -2,7 +2,6 @@ import { logger } from '../../middleware/loggers.js'
 import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
 import {
-  IUser,
   BilboMdAutoJob,
   IBilboMDAutoJob,
   IBilboMDSteps,
@@ -17,14 +16,15 @@ import { spawnAutoRgCalculator } from './utils/autoRg.js'
 import fs from 'fs-extra'
 import { autoJobSchema } from '../../validation/index.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
-
+import { DispatchUser } from 'types/bilbomd.js'
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDAutoJob = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
+  user: DispatchUser | undefined,
+  UUID: string,
+  ctx: { accessMode: 'user' | 'anonymous'; publicId?: string }
 ) => {
   try {
     const isResubmission = Boolean(
@@ -174,7 +174,7 @@ const handleBilboMDAutoJob = async (
     }
 
     // Initialize BilboMdAuto Job Data
-    const newJob: IBilboMDAutoJob = new BilboMdAutoJob({
+    const jobData = {
       title: req.body.title,
       uuid: UUID,
       status: JobStatus.Submitted,
@@ -186,7 +186,6 @@ const handleBilboMDAutoJob = async (
       rg_max: autorgResults.rg_max,
       conformational_sampling: 3,
       time_submitted: new Date(),
-      user: user,
       steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
@@ -194,8 +193,15 @@ const handleBilboMDAutoJob = async (
       }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
+        : {}),
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
         : {})
-    })
+    }
+
+    const newJob: IBilboMDAutoJob = new BilboMdAutoJob(jobData)
 
     // Save the job to the database
     await newJob.save()
@@ -205,7 +211,7 @@ const handleBilboMDAutoJob = async (
     await writeJobParams(newJob.id)
 
     // Create BullMQ Job object
-    const jobData = {
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
@@ -214,17 +220,33 @@ const handleBilboMDAutoJob = async (
     }
 
     // Queue the job
-    const BullId = await queueJob(jobData)
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
-    res.status(200).json({
-      message: `New BilboMD Auto Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid,
-      md_engine
-    })
+    // Respond with job details
+    if (ctx.accessMode === 'anonymous') {
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ?? `${req.protocol}://${req.get('host')}`
+      const resultUrl = `${baseUrl}/results/${ctx.publicId}`
+
+      res.status(200).json({
+        message: `New BilboMD Auto Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD Auto Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     const msg =
       error instanceof Error

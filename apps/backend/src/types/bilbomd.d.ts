@@ -1,5 +1,6 @@
 import { Job as BullMQJob } from 'bullmq'
 import { Job as MongoDBJob } from '@bilbomd/mongodb-schema'
+import { Request, Response } from 'express'
 
 export type BilboMDSteps = {
   pae?: string
@@ -70,4 +71,20 @@ export type AutoRgResults = {
   rg: number
   rg_min: number
   rg_max: number
+}
+
+export type DispatchUser = {
+  _id: string
+  username: string
+  email: string
+}
+
+export type BilboMDDispatchContext = {
+  req: Request
+  res: Response
+  bilbomd_mode: string
+  UUID: string
+  user?: DispatchUser
+  accessMode: 'user' | 'anonymous'
+  publicId?: string
 }

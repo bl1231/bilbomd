@@ -1,17 +1,15 @@
 import { logger } from '../../middleware/loggers.js'
 import { queueScoperJob } from '../../queues/scoper.js'
-import {
-  IUser,
-  BilboMdScoperJob,
-  IBilboMDScoperJob
-} from '@bilbomd/mongodb-schema'
+import { BilboMdScoperJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
+import { DispatchUser } from 'types/bilbomd.js'
 
 const handleBilboMDScoperJob = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
+  user: DispatchUser | undefined,
+  UUID: string,
+  ctx: { accessMode: 'user' | 'anonymous'; publicId?: string }
 ) => {
   try {
     const { bilbomd_mode: bilbomdMode, title, fixc1c2 } = req.body
@@ -44,17 +42,17 @@ const handleBilboMDScoperJob = async (
           : 'Not Found'
       }`
     )
-    const now = new Date()
+
     logger.info(`fixc1c2: ${fixc1c2}`)
-    const newJob: IBilboMDScoperJob = new BilboMdScoperJob({
+
+    const jobData = {
       title,
       uuid: UUID,
       pdb_file: files['pdb_file'][0].originalname.toLowerCase(),
       data_file: files['dat_file'][0].originalname.toLowerCase(),
       fixc1c2,
       status: 'Submitted',
-      time_submitted: now,
-      user: user,
+      time_submitted: new Date(),
       steps: {
         pdb2crd: {},
         pae: {},
@@ -68,23 +66,35 @@ const handleBilboMDScoperJob = async (
         multifoxs: {},
         results: {},
         email: {}
-      }
-    })
-    // logger.info(`in handleBilboMDScoperJob: ${newJob}`)
+      },
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
+        : {})
+    }
+
+    const newJob: IBilboMDScoperJob = new BilboMdScoperJob(jobData)
+
     // Save the job to the database
     await newJob.save()
     logger.info(`${bilbomdMode} Job saved to MongoDB: ${newJob.id}`)
 
-    // Queue the job
-    const BullId = await queueScoperJob({
+    // Create BullMQ Job object
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
       jobid: newJob.id
-    })
+    }
+
+    // Queue the job
+    const BullId = await queueScoperJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
+
+    // Respond with job details
     res.status(200).json({
       message: `New Scoper Job successfully created`,
       jobid: newJob.id,
