@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 1.12.2
+
+### Patch Changes
+
+- 2335ee6: Update license as per IPO
+
 ## 1.12.1
 
 ### Patch Changes

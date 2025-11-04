@@ -1,5 +1,13 @@
 # @bilbomd/md-utils
 
+## 1.0.7
+
+### Patch Changes
+
+- 2335ee6: Update license as per IPO
+- Updated dependencies [2335ee6]
+  - @bilbomd/mongodb-schema@1.12.2
+
 ## 1.0.6
 
 ### Patch Changes
