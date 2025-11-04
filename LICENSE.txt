@@ -1,7 +1,7 @@
 *** License Agreement ***
 
 Lawrence Berkeley National Laboratory
-RESEARCH & DEVELOPMENT, NON-COMMERCIAL USE ONLY, LICENSE
+NON-COMMERCIAL USE ONLY, LICENSE
 
 BilboMD Copyright (c) 2025, The Regents of the University of California, through Lawrence
 Berkeley National Laboratory (“Berkeley Lab”) subject to receipt of any required approvals from
