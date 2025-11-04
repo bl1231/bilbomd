@@ -24,9 +24,18 @@ export const getApiJobStatus = async (req: Request, res: Response) => {
       return
     }
 
+    if (!job.user) {
+      res
+        .status(403)
+        .json({ message: 'Forbidden: job does not belong to user' })
+      return
+    }
+
     // Check that the job belongs to the requesting API user
     if (job.user.toString() !== user._id.toString()) {
-      res.status(403).json({ message: 'Forbidden: job does not belong to user' })
+      res
+        .status(403)
+        .json({ message: 'Forbidden: job does not belong to user' })
       return
     }
 
