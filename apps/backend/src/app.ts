@@ -29,6 +29,7 @@ import configsRoutes from './routes/configs.js'
 import statsRoutes from './routes/stats.js'
 import externalRoutes from './routes/external.js'
 import adminApiRoutes from './routes/admin-api.js'
+import publicJobsRoutes from './routes/public.js'
 import './workers/deleteBilboMDJobsWorker.js'
 import swaggerUi from 'swagger-ui-express'
 import swaggerSpec from './openapi/swagger.js'
@@ -119,6 +120,7 @@ v1Router.use(
   externalRoutes
 )
 v1Router.use('/admin', adminApiRoutes)
+v1Router.use('/public', publicJobsRoutes)
 
 // Apply v1Router under /api/v1
 app.use('/api/v1', v1Router)
