@@ -147,8 +147,8 @@ interface IJob extends Document {
     | 'BilboMdSANS'
   title: string
   uuid: string
-  accessMode: AccessModeEnum
-  publicId?: string
+  access_mode: AccessModeEnum
+  public_id?: string
   status: JobStatusEnum
   data_file: string
   md_engine?: MDEngineEnum
