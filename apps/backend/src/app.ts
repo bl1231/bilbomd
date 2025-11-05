@@ -120,7 +120,7 @@ v1Router.use(
   externalRoutes
 )
 v1Router.use('/admin', adminApiRoutes)
-v1Router.use('/public', publicJobsRoutes)
+v1Router.use('/public/jobs', publicJobsRoutes)
 
 // Apply v1Router under /api/v1
 app.use('/api/v1', v1Router)
