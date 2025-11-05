@@ -1,5 +1,5 @@
 import express from 'express'
-import { createPublicJob } from '../controllers/jobs/index.js'
+import { createPublicJob, getPublicJobById } from '../controllers/jobs/index.js'
 // import { createNewSANSJob } from '../controllers/jobs/sansJobController.js'
 // import { createNewMultiJob } from '../controllers/jobs/multiMdController.js'
 // import { downloadPDB, getFoxsData } from '../controllers/downloadController.js'
@@ -12,7 +12,7 @@ import { createPublicJob } from '../controllers/jobs/index.js'
 const router = express.Router()
 
 router.route('/').post(createPublicJob)
-// router.route('/:publicId').get(getPublicJobById)
+router.route('/:publicId').get(getPublicJobById)
 
 // router.route('/:publicId/results').get(downloadJobResults)
 // router.route('/:publicId/results/foxs').get(getFoxsData)

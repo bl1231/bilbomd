@@ -4,7 +4,6 @@ import {
   getJobById,
   createNewJob,
   deleteJob,
-  updateJobStatus,
   downloadJobResults,
   getLogForStep
 } from '../controllers/jobs/index.js'
@@ -37,7 +36,7 @@ router.use((req, res, next) => {
   })
 })
 
-router.route('/').get(getAllJobs).post(createNewJob).patch(updateJobStatus)
+router.route('/').get(getAllJobs).post(createNewJob)
 
 router.route('/:id').get(getJobById)
 router.route('/:id').delete(deleteJob)
