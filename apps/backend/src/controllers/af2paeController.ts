@@ -4,7 +4,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { Request, Response } from 'express'
 import { v4 as uuid } from 'uuid'
-import { User } from '@bilbomd/mongodb-schema'
+// import { User } from '@bilbomd/mongodb-schema'
 import { spawn } from 'node:child_process'
 
 const uploadFolder: string = process.env.DATA_VOL ?? '/bilbomd/uploads'
@@ -129,13 +129,13 @@ const createNewConstFile = async (req: Request, res: Response) => {
 
       try {
         const { plddt_cutoff, pae_cutoff, leiden_resolution } = req.body
-        const email = req.email
-        const user = await User.findOne({ email }).exec()
-        if (!user) {
-          return res
-            .status(401)
-            .json({ message: 'No user found with that email' })
-        }
+        // const email = req.email
+        // const user = await User.findOne({ email }).exec()
+        // if (!user) {
+        //   return res
+        //     .status(401)
+        //     .json({ message: 'No user found with that email' })
+        // }
 
         const files = req.files as {
           [fieldname: string]: Express.Multer.File[]

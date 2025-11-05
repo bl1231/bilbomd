@@ -9,10 +9,11 @@ import {
   Typography
 } from '@mui/material'
 import NightModeToggle from 'components/NightModeToggle'
-import { useEffect, useState } from 'react'
+// import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import nerscLogo from 'assets/nersc-logo.png'
+import useAuth from 'hooks/useAuth'
 
 const linkStyles = {
   display: 'flex-grow',
@@ -95,27 +96,13 @@ const ModeDisplay = ({ useNersc, mode }: NerscLogoProps) =>
   )
 
 const Header = () => {
-  const [time, setTime] = useState('')
+  const { isAuthenticated } = useAuth()
 
   const {
     data: config,
     isLoading: configIsLoading,
     error: configError
   } = useGetConfigsQuery('configData')
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const date = new Date()
-      const today = new Intl.DateTimeFormat('en-US', {
-        dateStyle: 'full',
-        timeStyle: 'short'
-      }).format(date)
-      setTime(today)
-    }, 1000)
-    return () => {
-      clearInterval(interval)
-    }
-  }, [])
 
   if (configIsLoading) return <CircularProgress />
   if (configError)
@@ -137,7 +124,7 @@ const Header = () => {
         >
           <Toolbar sx={{ m: 0 }}>
             <Link
-              to="/"
+              to="/welcome"
               style={linkStyles}
             >
               BilboMD
@@ -150,11 +137,12 @@ const Header = () => {
               useNersc={useNersc}
               mode={mode}
             />
+            {isAuthenticated ? null : 'anon'}
             <Typography
               variant="h5"
               sx={{ display: { xs: 'none', sm: 'flex' }, ml: 8 }}
             >
-              {time}
+              {/* {time} */}
             </Typography>
             <Box
               sx={{

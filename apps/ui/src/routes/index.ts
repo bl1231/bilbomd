@@ -5,5 +5,5 @@ import { ProtectedMainRoutes } from './MainRoutes'
 import { AnonRoutes } from './AnonRoutes'
 
 export default function ThemeRoutes() {
-  return useRoutes([LoginRoutes, ProtectedMainRoutes, AnonRoutes])
+  return useRoutes([AnonRoutes, LoginRoutes, ProtectedMainRoutes])
 }

@@ -10,7 +10,6 @@ import ListItemButton from '@mui/material/ListItemButton'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
 import { useTheme, Divider } from '@mui/material'
-
 import {
   AddCircleOutlineOutlined,
   AutoAwesome,
@@ -20,7 +19,6 @@ import { Outlet, useLocation, useNavigate } from 'react-router'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import useAuth from 'hooks/useAuth'
 import Header from './Header'
-import Breadcrumbs from './Breadcrumbs'
 import Footer from './Footer'
 
 const drawerWidth = 190
@@ -37,7 +35,6 @@ export default function ClippedDrawer() {
   const location = useLocation()
   const theme = useTheme()
   const isSettingsPage = location.pathname.startsWith('/settings')
-  const showBreadcrumbs = config?.showBreadcrumbs?.toLowerCase() === 'true'
 
   if (configIsLoading) return <CircularProgress />
   if (configError)
@@ -47,78 +44,69 @@ export default function ClippedDrawer() {
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
   const enableBilboMdSANS = config.enableBilboMdSANS?.toLowerCase() === 'true'
-  const enableBilboMdMulti = config.enableBilboMdMulti?.toLowerCase() === 'true'
 
   let menuItems = [
     {
       text: 'BilboMD Classic',
       icon: <AddCircleOutlineOutlined />,
-      path: '/dashboard/jobs/classic',
-      onclick: () => navigate('dashboard/jobs/classic'),
+      path: '/jobs/classic/new',
+      onclick: () => navigate('jobs/classic/new'),
       roles: ['user', 'manager'],
       divider: false
     },
     {
       text: 'BilboMD Auto',
       icon: <AddCircleOutlineOutlined />,
-      path: '/dashboard/jobs/auto',
-      onclick: () => navigate('dashboard/jobs/auto'),
+      path: '/jobs/auto/new',
+      onclick: () => navigate('jobs/auto/new'),
       roles: ['user', 'manager'],
       divider: false
     },
     {
       text: 'BilboMD AF',
       icon: <AddCircleOutlineOutlined />,
-      path: '/dashboard/jobs/alphafold',
-      onclick: () => navigate('dashboard/jobs/alphafold'),
-      roles: ['user', 'manager'],
-      divider: false
-    },
-    {
-      text: 'BilboMD Multi',
-      icon: <AddCircleOutlineOutlined />,
-      path: '/dashboard/jobs/multimd',
-      onclick: () => navigate('dashboard/jobs/multimd'),
+      path: '/jobs/alphafold/new',
+      onclick: () => navigate('jobs/alphafold/new'),
       roles: ['user', 'manager'],
       divider: false
     },
     {
       text: 'BilboMD SANS',
       icon: <AddCircleOutlineOutlined />,
-      path: '/dashboard/jobs/sans',
-      onclick: () => navigate('dashboard/jobs/sans'),
+      path: '/jobs/sans/new',
+      onclick: () => navigate('jobs/sans/new'),
       roles: ['user', 'manager'],
       divider: false
     },
     {
       text: 'Scoper',
       icon: <AddCircleOutlineOutlined />,
-      path: '/dashboard/jobs/scoper',
-      onclick: () => navigate('dashboard/jobs/scoper'),
+      path: '/jobs/scoper/new',
+      onclick: () => navigate('jobs/scoper/new'),
       roles: ['user', 'manager'],
       divider: true
     },
     {
       text: 'inp Jiffy™',
       icon: <AutoAwesome />,
-      path: '/dashboard/jobs/constinp',
-      onclick: () => navigate('dashboard/jobs/constinp'),
+      path: '/jiffy/inp',
+      onclick: () => navigate('jiffy/inp'),
       roles: ['user', 'manager'],
       divider: false
     },
     {
       text: 'PAE Jiffy™',
       icon: <AutoAwesome />,
-      path: '/dashboard/af2pae',
-      onclick: () => navigate('dashboard/af2pae'),
+      path: '/jiffy/pae',
+      onclick: () => navigate('jiffy/pae'),
       roles: ['user'],
       divider: false
     },
     {
-      text: 'About',
+      text: 'Help',
       icon: <InfoOutlined />,
-      path: '/dashboard/about',
-      onclick: () => navigate('/dashboard/about'),
+      path: '/help',
+      onclick: () => navigate('/help'),
       roles: ['user'],
       divider: false
     }
@@ -130,10 +118,6 @@ export default function ClippedDrawer() {
 
   if (!enableBilboMdSANS) {
     menuItems = menuItems.filter((item) => item.text !== 'BilboMD SANS')
-  }
-
-  if (!enableBilboMdMulti) {
-    menuItems = menuItems.filter((item) => item.text !== 'BilboMD Multi')
   }
 
   const buttonContent = (
@@ -200,7 +184,6 @@ export default function ClippedDrawer() {
           component="main"
           sx={{ flexGrow: 1, p: 3 }}
         >
-          {showBreadcrumbs && <Breadcrumbs />}
           <Outlet />
         </Box>
       </Box>

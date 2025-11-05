@@ -30,10 +30,26 @@ const useAuth = () => {
     if (isManager) status = 'Manager'
     if (isAdmin) status = 'Admin'
 
-    return { username, roles, status, isManager, isAdmin, email }
+    return {
+      username,
+      roles,
+      status,
+      isManager,
+      isAdmin,
+      email,
+      isAuthenticated: true
+    }
   }
   // Returned if we do not have a token
-  return { username: '', roles: [], email: '', isManager, isAdmin, status }
+  return {
+    username: '',
+    roles: [],
+    status,
+    email: '',
+    isManager,
+    isAdmin,
+    isAuthenticated: false
+  }
 }
 
 export default useAuth

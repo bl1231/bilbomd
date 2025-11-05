@@ -1,24 +1,23 @@
 import { lazy } from 'react'
 
-// project import
 import Loadable from 'components/Loadable'
-import MainLayout from 'layout/MainLayout'
-
-// settings-related components
-const SettingsLayout = Loadable(lazy(() => import('features/users/Settings')))
-const Preferences = Loadable(lazy(() => import('features/users/Preferences')))
-const Security = Loadable(lazy(() => import('features/users/Security')))
-const SafetyZone = Loadable(lazy(() => import('features/users/SafetyZone')))
-const APITokenManager = Loadable(
-  lazy(() => import('features/users/ApiTokenManagement'))
-)
-
-// render - dashboard
+// import MainLayout from 'layout/MainLayout'
+import AnonLayout from 'layout/AnonLayout'
+const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
 const NewJobForm = Loadable(lazy(() => import('features/jobs/NewJobForm')))
+const SingleJobPage = Loadable(
+  lazy(() => import('features/jobs/SingleJobPage'))
+)
+const ResubmitJob = Loadable(
+  lazy(() => import('features/jobs/ResubmitJobForm'))
+)
 const NewAutoJob = Loadable(
   lazy(() => import('features/autojob/NewAutoJobForm'))
 )
-const About = Loadable(lazy(() => import('features/about/About')))
+const ResubmitAutoJob = Loadable(
+  lazy(() => import('features/autojob/ResubmitAutoJobForm'))
+)
+
 const NewAlphaFoldJob = Loadable(
   lazy(() => import('features/alphafoldjob/NewAlphaFoldJobForm'))
 )
@@ -35,73 +34,75 @@ const ConstInpStepper = Loadable(
   lazy(() => import('components/ConstInpForm/ConstInpStepper'))
 )
 const AF2PAEJiffy = Loadable(lazy(() => import('features/af2pae/PAEJiffy')))
-const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
-const Missing = Loadable(lazy(() => import('components/Missing')))
-
-// ===========================|| ANON ROUTING ||============================ //
+const Help = Loadable(lazy(() => import('features/help/Help')))
+const SampleData = Loadable(
+  lazy(() => import('features/sample-data/SampleData'))
+)
+// ===========================|| PUBLIC ANON ROUTING ||============================ //
 
 const AnonRoutes = {
-  element: <MainLayout />,
+  element: <AnonLayout />,
   path: '/',
   children: [
     {
-      index: true,
-      element: <Welcome />
-    },
-    {
       path: 'welcome',
-      element: <Welcome />
+      element: <Welcome mode="anonymous" />
     },
     {
-      path: 'about',
-      element: <About title="BilboMD: About" />
+      index: true,
+      element: <Welcome mode="anonymous" />
     },
     {
-      path: 'jobs/classic',
+      path: 'jobs/classic/new',
       element: <NewJobForm />
     },
     {
-      path: 'jobs/auto',
+      path: 'jobs/classic/new/resubmit/:id',
+      element: <ResubmitJob />
+    },
+    {
+      path: 'jobs/auto/new',
       element: <NewAutoJob />
     },
     {
-      path: 'jobs/alphafold',
+      path: 'jobs/auto/new/resubmit/:id',
+      element: <ResubmitAutoJob />
+    },
+    {
+      path: 'jobs/alphafold/new',
       element: <NewAlphaFoldJob />
     },
     {
-      path: 'jobs/sans',
+      path: 'jobs/sans/new',
       element: <NewSANSJob />
     },
     {
-      path: 'jobs/scoper',
+      path: 'jobs/scoper/new',
       element: <NewScoperJob />
     },
     {
-      path: 'jobs/multimd',
+      path: 'jobs/multimd/new',
       element: <NewMultiJob />
     },
     {
-      path: 'jobs/constinp',
+      path: 'jiffy/inp',
       element: <ConstInpStepper />
     },
     {
-      path: 'af2pae',
+      path: 'jiffy/pae',
       element: <AF2PAEJiffy />
     },
     {
-      path: 'settings',
-      element: <SettingsLayout />,
-      children: [
-        { index: true, element: <APITokenManager /> },
-        { path: 'preferences', element: <Preferences /> },
-        { path: 'security', element: <Security /> },
-        { path: 'safety', element: <SafetyZone /> },
-        { path: 'api-tokens', element: <APITokenManager /> }
-      ]
+      path: 'results/:publicId',
+      element: <SingleJobPage />
     },
     {
-      path: '*',
-      element: <Missing />
+      path: 'help',
+      element: <Help />
+    },
+    {
+      path: 'sample-data',
+      element: <SampleData />
     }
   ]
 }

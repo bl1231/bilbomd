@@ -74,11 +74,11 @@ const ProtectedMainRoutes = {
       children: [
         {
           index: true,
-          element: <Welcome />
+          element: <Welcome mode="authenticated" />
         },
         {
           path: 'welcome',
-          element: <Welcome />
+          element: <Welcome mode="authenticated" />
         },
         {
           element: <RequireAuth allowedRoles={[ROLES.Admin]} />,
@@ -111,10 +111,10 @@ const ProtectedMainRoutes = {
                 {
                   path: 'dashboard',
                   children: [
-                    { path: '', element: <Welcome /> },
+                    { path: '', element: <Welcome mode="authenticated" /> },
                     {
                       path: 'about',
-                      element: <About title='BilboMD: About' />
+                      element: <About title="BilboMD: About" />
                     },
                     {
                       element: (
