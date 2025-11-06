@@ -28,6 +28,7 @@ import {
   useAddNewJobMutation,
   useCalculateAutoRgMutation
 } from 'slices/jobsApiSlice'
+import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import { expdataSchema } from 'schemas/ExpdataSchema'
 import { BilboMDClassicJobSchema } from 'schemas/BilboMDClassicJobSchema'
@@ -42,16 +43,29 @@ import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
 
-const NewJobForm = () => {
-  useTitle('BilboMD: New Classic Job')
+type NewJobFormProps = {
+  mode?: 'authenticated' | 'anonymous'
+}
+
+const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
+  useTitle(
+    mode === 'anonymous'
+      ? 'BilboMD: New Classic Job (anonymous)'
+      : 'BilboMD: New Classic Job'
+  )
 
   // Theme and routing
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
 
   // State, RTK mutations and queries
-  const [addNewJob, { isSuccess }] = useAddNewJobMutation()
+  const [addNewJob, { isSuccess: isAuthSuccess, data: authJobResponse }] =
+    useAddNewJobMutation()
+  const [addNewPublicJob, { isSuccess: isAnonSuccess, data: anonJobResponse }] =
+    useAddNewPublicJobMutation()
   const [calculateAutoRg, { isLoading }] = useCalculateAutoRgMutation()
+  const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
+  const jobResponse = mode === 'anonymous' ? anonJobResponse : authJobResponse
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
@@ -69,7 +83,7 @@ const NewJobForm = () => {
   // Early return and Error handling
   if (configIsLoading) return <LinearProgress />
   if (configError)
-    return <Alert severity='error'>Error loading configuration</Alert>
+    return <Alert severity="error">Error loading configuration</Alert>
 
   // Are we running on NERSC?
   const useNersc = config.useNersc?.toLowerCase() === 'true'
@@ -83,7 +97,7 @@ const NewJobForm = () => {
     inp_file: '',
     dat_file: '',
     num_conf: '',
-    rg: '',
+    rg: '10',
     rg_min: '',
     rg_max: ''
   }
@@ -106,7 +120,10 @@ const NewJobForm = () => {
     form.append('inp_file', values.inp_file)
 
     try {
-      const newJob = await addNewJob(form).unwrap()
+      const newJob =
+        mode === 'anonymous'
+          ? await addNewPublicJob(form).unwrap()
+          : await addNewJob(form).unwrap()
       setStatus(newJob)
     } catch (error) {
       console.error('rejected', error)
@@ -170,12 +187,18 @@ const NewJobForm = () => {
   }
 
   const content = (
-    <Grid container spacing={2}>
+    <Grid
+      container
+      spacing={2}
+    >
       <Grid size={{ xs: 12 }}>
         <NewJobFormInstructions />
       </Grid>
 
-      <PipelineSchematic isDarkMode={isDarkMode} pipeline={selectedMode} />
+      <PipelineSchematic
+        isDarkMode={isDarkMode}
+        pipeline={selectedMode}
+      />
 
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
@@ -184,13 +207,40 @@ const NewJobForm = () => {
 
         <Paper sx={{ p: 2 }}>
           {isSuccess ? (
-            <Alert severity='success'>
-              <AlertTitle>Woot!</AlertTitle>
-              <Typography>
-                Your job has been submitted. Check out the{' '}
-                <RouterLink to='../jobs'>details</RouterLink>.
-              </Typography>
-            </Alert>
+            mode === 'anonymous' ? (
+              <Alert severity="success">
+                <AlertTitle>Job submitted!</AlertTitle>
+                <Typography>
+                  Your anonymous BilboMD job has been submitted.
+                </Typography>
+                {jobResponse && jobResponse.resultUrl && (
+                  <Typography>
+                    Please bookmark or save this link to access your results
+                    later:
+                  </Typography>
+                )}
+                {jobResponse && jobResponse.resultUrl && (
+                  <Typography sx={{ wordBreak: 'break-all' }}>
+                    <a href={jobResponse.resultUrl}>{jobResponse.resultUrl}</a>
+                  </Typography>
+                )}
+                {jobResponse &&
+                  jobResponse.publicId &&
+                  !jobResponse.resultUrl && (
+                    <Typography sx={{ wordBreak: 'break-all' }}>
+                      Results ID: {jobResponse.publicId}
+                    </Typography>
+                  )}
+              </Alert>
+            ) : (
+              <Alert severity="success">
+                <AlertTitle>Woot!</AlertTitle>
+                <Typography>
+                  Your job has been submitted. Check out the{' '}
+                  <RouterLink to="../jobs">details</RouterLink>.
+                </Typography>
+              </Alert>
+            )
           ) : (
             <Formik
               initialValues={initialValues}
@@ -205,7 +255,6 @@ const NewJobForm = () => {
                 isSubmitting,
                 handleChange,
                 handleBlur,
-                status,
                 setFieldValue,
                 setFieldTouched,
                 resetForm,
@@ -215,22 +264,25 @@ const NewJobForm = () => {
                   <Grid
                     container
                     columns={12}
-                    direction='column'
+                    direction="column"
                     sx={{ display: 'flex' }}
                   >
                     {useNersc && (
                       <NerscStatusChecker
-                        systemName='perlmutter'
+                        systemName="perlmutter"
                         onStatusCheck={handleStatusCheck}
                       />
                     )}
-                    <Divider textAlign='left' sx={{ my: 1 }}>
+                    <Divider
+                      textAlign="left"
+                      sx={{ my: 1 }}
+                    >
                       Model Inputs
                     </Divider>
                     <Grid
                       container
-                      direction='row'
-                      alignItems='center'
+                      direction="row"
+                      alignItems="center"
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -249,10 +301,10 @@ const NewJobForm = () => {
                                   validateForm,
                                   touched
                                 )}
-                                name='pdb_inputs'
+                                name="pdb_inputs"
                               />
                             }
-                            label='PDB file'
+                            label="PDB file"
                           />
                           <FormControlLabel
                             control={
@@ -264,30 +316,33 @@ const NewJobForm = () => {
                                   validateForm,
                                   touched
                                 )}
-                                name='crd_psf_inputs'
+                                name="crd_psf_inputs"
                               />
                             }
-                            label='CRD/PSF files'
+                            label="CRD/PSF files"
                           />
                         </FormGroup>
                       </Grid>
                       <Grid size={{ xs: 6 }}>
-                        <Alert severity='info'>
+                        <Alert severity="info">
                           If you used CHARMM-GUI to parameterize your inputs
                           then please select the CRD/PSF option
                         </Alert>
                       </Grid>
                     </Grid>
-                    <Divider textAlign='left' sx={{ my: 1 }}>
+                    <Divider
+                      textAlign="left"
+                      sx={{ my: 1 }}
+                    >
                       Job Form
                     </Divider>
                     <Grid sx={{ my: 2, width: '520px' }}>
                       <Field
                         fullWidth
-                        label='Title'
-                        name='title'
-                        id='title'
-                        type='text'
+                        label="Title"
+                        name="title"
+                        id="title"
+                        type="text"
                         disabled={isSubmitting}
                         as={TextField}
                         onChange={handleChange}
@@ -303,7 +358,7 @@ const NewJobForm = () => {
                       <>
                         <Grid
                           container
-                          direction='row'
+                          direction="row"
                           sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -312,10 +367,10 @@ const NewJobForm = () => {
                         >
                           <Grid>
                             <Field
-                              name='crd_file'
-                              id='crd-file-upload'
+                              name="crd_file"
+                              id="crd-file-upload"
                               as={FileSelect}
-                              title='Select File'
+                              title="Select File"
                               disabled={isSubmitting}
                               setFieldValue={setFieldValue}
                               setFieldTouched={setFieldTouched}
@@ -323,14 +378,14 @@ const NewJobForm = () => {
                               errorMessage={
                                 errors.crd_file ? errors.crd_file : ''
                               }
-                              fileType='CHARMM-GUI *.crd'
-                              fileExt='.crd'
+                              fileType="CHARMM-GUI *.crd"
+                              fileExt=".crd"
                             />
                           </Grid>
                         </Grid>
                         <Grid
                           container
-                          direction='row'
+                          direction="row"
                           sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -339,10 +394,10 @@ const NewJobForm = () => {
                         >
                           <Grid>
                             <Field
-                              name='psf_file'
-                              id='psf-file-upload'
+                              name="psf_file"
+                              id="psf-file-upload"
                               as={FileSelect}
-                              title='Select File'
+                              title="Select File"
                               disabled={isSubmitting}
                               setFieldValue={setFieldValue}
                               setFieldTouched={setFieldTouched}
@@ -350,8 +405,8 @@ const NewJobForm = () => {
                               errorMessage={
                                 errors.psf_file ? errors.psf_file : ''
                               }
-                              fileType='CHARMM-GUI *.psf'
-                              fileExt='.psf'
+                              fileType="CHARMM-GUI *.psf"
+                              fileExt=".psf"
                             />
                           </Grid>
                         </Grid>
@@ -361,7 +416,7 @@ const NewJobForm = () => {
                       <>
                         <Grid
                           container
-                          direction='row'
+                          direction="row"
                           sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -370,10 +425,10 @@ const NewJobForm = () => {
                         >
                           <Grid>
                             <Field
-                              name='pdb_file'
-                              id='pdb-file-upload'
+                              name="pdb_file"
+                              id="pdb-file-upload"
                               as={FileSelect}
-                              title='Select File'
+                              title="Select File"
                               disabled={isSubmitting}
                               setFieldValue={setFieldValue}
                               setFieldTouched={setFieldTouched}
@@ -381,8 +436,8 @@ const NewJobForm = () => {
                               errorMessage={
                                 errors.pdb_file ? errors.pdb_file : ''
                               }
-                              fileType=' *.pdb'
-                              fileExt='.pdb'
+                              fileType=" *.pdb"
+                              fileExt=".pdb"
                             />
                           </Grid>
                         </Grid>
@@ -390,7 +445,7 @@ const NewJobForm = () => {
                     )}
                     <Grid
                       container
-                      direction='row'
+                      direction="row"
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -399,32 +454,32 @@ const NewJobForm = () => {
                     >
                       <Grid>
                         <Field
-                          name='inp_file'
-                          id='inp_file-file-upload'
+                          name="inp_file"
+                          id="inp_file-file-upload"
                           as={FileSelect}
-                          title='Select File'
+                          title="Select File"
                           disabled={isSubmitting}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           onBlur={handleBlur}
                           error={errors.inp_file && touched.inp_file}
                           errorMessage={errors.inp_file ? errors.inp_file : ''}
-                          fileType='const.inp'
-                          fileExt='.inp'
+                          fileType="const.inp"
+                          fileExt=".inp"
                         />
                       </Grid>
                     </Grid>
                     <Grid
                       container
-                      direction='row'
+                      direction="row"
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         width: '520px'
                       }}
                     >
-                      <Alert severity='info'>
-                        <Typography component='div'>
+                      <Alert severity="info">
+                        <Typography component="div">
                           Be sure to verify that the chain identifiers (
                           <b>segid</b>) and residue numbering in your{' '}
                           <b>const.inp</b> are consistent with your{' '}
@@ -451,7 +506,7 @@ const NewJobForm = () => {
                     </Grid>
                     <Grid
                       container
-                      direction='row'
+                      direction="row"
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -460,17 +515,17 @@ const NewJobForm = () => {
                     >
                       <Grid>
                         <Field
-                          name='dat_file'
-                          id='dat_file-file-upload'
+                          name="dat_file"
+                          id="dat_file-file-upload"
                           as={FileSelect}
-                          title='Select File'
+                          title="Select File"
                           disabled={isSubmitting || isLoading}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.dat_file && touched.dat_file}
                           errorMessage={errors.dat_file ? errors.dat_file : ''}
-                          fileType='experimental SAXS data'
-                          fileExt='.dat'
+                          fileType="experimental SAXS data"
+                          fileExt=".dat"
                           isLoading={isLoading}
                           onFileChange={async (selectedFile: File) => {
                             setAutoRgError(null)
@@ -517,16 +572,16 @@ const NewJobForm = () => {
                     )}
                     {autoRgError && (
                       <Box sx={{ my: 1, width: '520px' }}>
-                        <Alert severity='error'>{autoRgError}</Alert>
+                        <Alert severity="error">{autoRgError}</Alert>
                       </Box>
                     )}
                     <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
                       <Field
-                        label='Rg Min'
+                        label="Rg Min"
                         fullWidth
-                        id='rg_min'
-                        name='rg_min'
-                        type='text'
+                        id="rg_min"
+                        name="rg_min"
+                        type="text"
                         disabled={isSubmitting || isLoading}
                         as={TextField}
                         onChange={handleChange}
@@ -541,11 +596,11 @@ const NewJobForm = () => {
                     </Grid>
                     <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
                       <Field
-                        label='Rg Max'
+                        label="Rg Max"
                         fullWidth
-                        id='rg_max'
-                        name='rg_max'
-                        type='text'
+                        id="rg_max"
+                        name="rg_max"
+                        type="text"
                         disabled={isSubmitting || isLoading}
                         as={TextField}
                         error={errors.rg_max && touched.rg_max}
@@ -560,12 +615,12 @@ const NewJobForm = () => {
                     </Grid>
                     <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
                       <TextField
-                        label='Conformations per Rg'
-                        variant='outlined'
-                        id='num_conf'
-                        name='num_conf'
+                        label="Conformations per Rg"
+                        variant="outlined"
+                        id="num_conf"
+                        name="num_conf"
                         select
-                        defaultValue=''
+                        defaultValue=""
                         sx={{ width: '520px' }}
                         onChange={handleChange}
                         onBlur={handleBlur}
@@ -576,16 +631,28 @@ const NewJobForm = () => {
                             : 'Number of conformations to sample per Rg'
                         }
                       >
-                        <MenuItem key={1} value={1}>
+                        <MenuItem
+                          key={1}
+                          value={1}
+                        >
                           200
                         </MenuItem>
-                        <MenuItem key={2} value={2}>
+                        <MenuItem
+                          key={2}
+                          value={2}
+                        >
                           400
                         </MenuItem>
-                        <MenuItem key={3} value={3}>
+                        <MenuItem
+                          key={3}
+                          value={3}
+                        >
                           600
                         </MenuItem>
-                        <MenuItem key={4} value={4}>
+                        <MenuItem
+                          key={4}
+                          value={4}
+                        >
                           800
                         </MenuItem>
                       </TextField>
@@ -595,26 +662,23 @@ const NewJobForm = () => {
                         <LinearProgress />
                       </Box>
                     )}
-                    <Grid size={{ xs: 6 }} sx={{ my: 2 }}>
+                    <Grid
+                      size={{ xs: 6 }}
+                      sx={{ my: 2 }}
+                    >
                       <Button
-                        type='submit'
+                        type="submit"
                         disabled={
                           !isValid || isSubmitting || !isFormValid(values)
                         }
                         loading={isSubmitting}
                         endIcon={<SendIcon />}
-                        loadingPosition='end'
-                        variant='contained'
+                        loadingPosition="end"
+                        variant="contained"
                         sx={{ width: '110px' }}
                       >
                         Submit
                       </Button>
-
-                      {isSuccess ? (
-                        <Alert severity='success'>{status}</Alert>
-                      ) : (
-                        ''
-                      )}
                     </Grid>
                   </Grid>
                   {process.env.NODE_ENV === 'development' ? <Debug /> : ''}

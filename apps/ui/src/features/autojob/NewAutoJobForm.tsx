@@ -13,6 +13,7 @@ import { Link as RouterLink } from 'react-router'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
 import { useAddNewAutoJobMutation } from '../../slices/jobsApiSlice'
+import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import NewAutoJobFormInstructions from './AutoJobFormInstructions'
 import { BilboMDAutoJobSchema } from 'schemas/BilboMDAutoJobSchema'
@@ -26,15 +27,28 @@ import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
 
-const NewAutoJobForm = () => {
-  useTitle('BilboMD: New Auto Job')
+type NewJobFormProps = {
+  mode?: 'authenticated' | 'anonymous'
+}
+
+const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
+  useTitle(
+    mode === 'anonymous'
+      ? 'BilboMD: New Auto Job (anon)'
+      : 'BilboMD: New Auto Job'
+  )
 
   // Theme and routing
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
 
   // State, RTK mutations and queries
-  const [addNewAutoJob, { isSuccess }] = useAddNewAutoJobMutation()
+  const [addNewJob, { isSuccess: isAuthSuccess, data: authJobResponse }] =
+    useAddNewAutoJobMutation()
+  const [addNewPublicJob, { isSuccess: isAnonSuccess, data: anonJobResponse }] =
+    useAddNewPublicJobMutation()
+  const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
+  const jobResponse = mode === 'anonymous' ? anonJobResponse : authJobResponse
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
@@ -49,7 +63,7 @@ const NewAutoJobForm = () => {
 
   if (configIsLoading) return <LinearProgress />
   if (configError)
-    return <Alert severity='error'>Error loading configuration</Alert>
+    return <Alert severity="error">Error loading configuration</Alert>
 
   // Are we running on NERSC?
   const useNersc = config.useNersc?.toLowerCase() === 'true'
@@ -74,7 +88,10 @@ const NewAutoJobForm = () => {
     form.append('bilbomd_mode', 'auto')
 
     try {
-      const newJob = await addNewAutoJob(form).unwrap()
+      const newJob =
+        mode === 'anonymous'
+          ? await addNewPublicJob(form).unwrap()
+          : await addNewJob(form).unwrap()
       setStatus(newJob)
     } catch (error) {
       console.error('rejected', error)
@@ -93,7 +110,10 @@ const NewAutoJobForm = () => {
 
   const content = (
     <>
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         <Grid size={{ xs: 12 }}>
           <NewAutoJobFormInstructions />
         </Grid>
@@ -104,15 +124,45 @@ const NewAutoJobForm = () => {
           <HeaderBox>
             <Typography>BilboMD Auto Job Form</Typography>
           </HeaderBox>
+
           <Paper sx={{ p: 2 }}>
             {isSuccess ? (
-              <Alert severity='success'>
-                <AlertTitle>Woot!</AlertTitle>
-                <Typography>
-                  Your job has been submitted. Check out the{' '}
-                  <RouterLink to='../jobs'>details</RouterLink>.
-                </Typography>
-              </Alert>
+              mode === 'anonymous' ? (
+                <Alert severity="success">
+                  <AlertTitle>Job submitted!</AlertTitle>
+                  <Typography>
+                    Your anonymous BilboMD Auto job has been submitted.
+                  </Typography>
+                  {jobResponse && jobResponse.resultUrl && (
+                    <Typography>
+                      Please bookmark or save this link to access your results
+                      later:
+                    </Typography>
+                  )}
+                  {jobResponse && jobResponse.resultUrl && (
+                    <Typography sx={{ wordBreak: 'break-all' }}>
+                      <a href={jobResponse.resultUrl}>
+                        {jobResponse.resultUrl}
+                      </a>
+                    </Typography>
+                  )}
+                  {jobResponse &&
+                    jobResponse.publicId &&
+                    !jobResponse.resultUrl && (
+                      <Typography sx={{ wordBreak: 'break-all' }}>
+                        Results ID: {jobResponse.publicId}
+                      </Typography>
+                    )}
+                </Alert>
+              ) : (
+                <Alert severity="success">
+                  <AlertTitle>Woot!</AlertTitle>
+                  <Typography>
+                    Your job has been submitted. Check out the{' '}
+                    <RouterLink to="../jobs">details</RouterLink>.
+                  </Typography>
+                </Alert>
+              )
             ) : (
               <Formik
                 initialValues={initialValues}
@@ -127,25 +177,27 @@ const NewAutoJobForm = () => {
                   isSubmitting,
                   handleChange,
                   handleBlur,
-                  status,
                   setFieldValue,
                   setFieldTouched
                 }) => (
                   <Form>
-                    <Grid container direction='column'>
+                    <Grid
+                      container
+                      direction="column"
+                    >
                       {useNersc && (
                         <NerscStatusChecker
-                          systemName='perlmutter'
+                          systemName="perlmutter"
                           onStatusCheck={handleStatusCheck}
                         />
                       )}
                       <Grid sx={{ my: 2, width: '520px' }}>
                         <Field
                           fullWidth
-                          label='Title'
-                          name='title'
-                          id='title'
-                          type='text'
+                          label="Title"
+                          name="title"
+                          id="title"
+                          type="text"
                           disabled={isSubmitting}
                           as={TextField}
                           onChange={handleChange}
@@ -160,48 +212,48 @@ const NewAutoJobForm = () => {
 
                       <Grid>
                         <Field
-                          name='pdb_file'
-                          id='pdb-file-upload'
+                          name="pdb_file"
+                          id="pdb-file-upload"
                           as={FileSelect}
-                          title='Select File'
+                          title="Select File"
                           disabled={isSubmitting}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.pdb_file && touched.pdb_file}
                           errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                          fileType='AlphaFold2 *.pdb'
-                          fileExt='.pdb'
+                          fileType="AlphaFold2 *.pdb"
+                          fileExt=".pdb"
                         />
                       </Grid>
 
                       <Grid>
                         <Field
-                          name='pae_file'
-                          id='pae-file-upload'
+                          name="pae_file"
+                          id="pae-file-upload"
                           as={FileSelect}
-                          title='Select File'
+                          title="Select File"
                           disabled={isSubmitting}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.pae_file && touched.pae_file}
                           errorMessage={errors.pae_file ? errors.pae_file : ''}
-                          fileType='AlphaFold2 PAE *.json'
-                          fileExt='.json'
+                          fileType="AlphaFold2 PAE *.json"
+                          fileExt=".json"
                         />
                       </Grid>
                       <Grid>
                         <Field
-                          name='dat_file'
-                          id='dat-file-upload'
+                          name="dat_file"
+                          id="dat-file-upload"
                           as={FileSelect}
-                          title='Select File'
+                          title="Select File"
                           disabled={isSubmitting}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.dat_file && touched.dat_file}
                           errorMessage={errors.dat_file ? errors.dat_file : ''}
-                          fileType='experimental SAXS data *.dat'
-                          fileExt='.dat'
+                          fileType="experimental SAXS data *.dat"
+                          fileExt=".dat"
                         />
                       </Grid>
 
@@ -212,24 +264,18 @@ const NewAutoJobForm = () => {
                       )}
                       <Grid sx={{ mt: 2 }}>
                         <Button
-                          type='submit'
+                          type="submit"
                           disabled={
                             !isValid || isSubmitting || !isFormValid(values)
                           }
                           loading={isSubmitting}
                           endIcon={<SendIcon />}
-                          loadingPosition='end'
-                          variant='contained'
+                          loadingPosition="end"
+                          variant="contained"
                           sx={{ width: '110px' }}
                         >
                           <span>Submit</span>
                         </Button>
-
-                        {isSuccess ? (
-                          <Alert severity='success'>{status}</Alert>
-                        ) : (
-                          ''
-                        )}
                       </Grid>
                     </Grid>
                     {process.env.NODE_ENV === 'development' ? <Debug /> : ''}
