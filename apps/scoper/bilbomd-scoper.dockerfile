@@ -103,14 +103,19 @@ RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
 RUN conda config --add channels default
 
+# ChatGPT suggests we might try this
+# RUN conda config --set channel_priority strict
+
 # Copy the environment.yml file into the image
 COPY apps/scoper/environment.yml /tmp/environment.yml
 
 # Update existing base environment from environment.yml
-RUN conda env update -f /tmp/environment.yml
-RUN conda install -y pyg=2.4.0 -c pyg
-RUN conda install -y torchmetrics=0.7.2 -c conda-forge
-RUN conda install -y tabulate
+RUN conda env update -n base -f /tmp/environment.yml && \
+    conda install -n base -y \
+    pyg=2.4.0 \
+    torchmetrics=0.7.2 \
+    tabulate \
+    -c pyg -c conda-forge
 RUN conda install -y imp
 RUN pip install wandb && conda clean --all --yes
 
