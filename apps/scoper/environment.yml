@@ -4,6 +4,7 @@ dependencies:
   - numpy
   - scipy
   - matplotlib
+  - h5py
   - pandas
   - biopython
   - seaborn
