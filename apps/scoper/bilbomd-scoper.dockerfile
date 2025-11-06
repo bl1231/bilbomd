@@ -130,7 +130,7 @@ WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the same version used in the repo
 RUN corepack enable \
-    && corepack prepare pnpm@10.18.3 --activate \
+    && corepack prepare pnpm@latest --activate \
     && pnpm config set inject-workspace-packages=true
 
 # Copy only manifests for better caching
@@ -148,7 +148,7 @@ FROM bilbomd-scoper-nodejs AS build
 WORKDIR /repo
 
 RUN corepack enable \
-    && corepack prepare pnpm@10.18.3 --activate \
+    && corepack prepare pnpm@latest --activate \
     && pnpm config set inject-workspace-packages=true
 
 ENV HUSKY=0
