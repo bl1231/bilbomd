@@ -95,7 +95,7 @@ ENV PATH=/opt/conda/bin:$PATH
 RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Update Conda as per ChatGPT suggestion
-RUN conda install --yes --name base -c defaults python=3.10
+RUN conda install --yes --name base -c defaults python=3.9
 RUN conda config --add channels pyg
 RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
