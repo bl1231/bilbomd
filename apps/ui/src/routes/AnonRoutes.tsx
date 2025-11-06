@@ -1,23 +1,15 @@
 import { lazy } from 'react'
-
 import Loadable from 'components/Loadable'
-// import MainLayout from 'layout/MainLayout'
 import AnonLayout from 'layout/AnonLayout'
+
 const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
 const NewJobForm = Loadable(lazy(() => import('features/jobs/NewJobForm')))
-const SingleJobPage = Loadable(
-  lazy(() => import('features/jobs/SingleJobPage'))
-)
-const ResubmitJob = Loadable(
-  lazy(() => import('features/jobs/ResubmitJobForm'))
+const PublicJobPage = Loadable(
+  lazy(() => import('features/public/PublicJobPage'))
 )
 const NewAutoJob = Loadable(
   lazy(() => import('features/autojob/NewAutoJobForm'))
 )
-const ResubmitAutoJob = Loadable(
-  lazy(() => import('features/autojob/ResubmitAutoJobForm'))
-)
-
 const NewAlphaFoldJob = Loadable(
   lazy(() => import('features/alphafoldjob/NewAlphaFoldJobForm'))
 )
@@ -38,6 +30,7 @@ const Help = Loadable(lazy(() => import('features/help/Help')))
 const SampleData = Loadable(
   lazy(() => import('features/sample-data/SampleData'))
 )
+
 // ===========================|| PUBLIC ANON ROUTING ||============================ //
 
 const AnonRoutes = {
@@ -54,35 +47,27 @@ const AnonRoutes = {
     },
     {
       path: 'jobs/classic/new',
-      element: <NewJobForm />
-    },
-    {
-      path: 'jobs/classic/new/resubmit/:id',
-      element: <ResubmitJob />
+      element: <NewJobForm mode="anonymous" />
     },
     {
       path: 'jobs/auto/new',
-      element: <NewAutoJob />
-    },
-    {
-      path: 'jobs/auto/new/resubmit/:id',
-      element: <ResubmitAutoJob />
+      element: <NewAutoJob mode="anonymous" />
     },
     {
       path: 'jobs/alphafold/new',
-      element: <NewAlphaFoldJob />
+      element: <NewAlphaFoldJob mode="anonymous" />
     },
     {
       path: 'jobs/sans/new',
-      element: <NewSANSJob />
+      element: <NewSANSJob mode="anonymous" />
     },
     {
       path: 'jobs/scoper/new',
-      element: <NewScoperJob />
+      element: <NewScoperJob mode="anonymous" />
     },
     {
       path: 'jobs/multimd/new',
-      element: <NewMultiJob />
+      element: <NewMultiJob mode="anonymous" />
     },
     {
       path: 'jiffy/inp',
@@ -94,7 +79,7 @@ const AnonRoutes = {
     },
     {
       path: 'results/:publicId',
-      element: <SingleJobPage />
+      element: <PublicJobPage />
     },
     {
       path: 'help',
