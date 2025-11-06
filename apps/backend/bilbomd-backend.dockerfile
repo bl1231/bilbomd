@@ -31,7 +31,7 @@ WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the same version you use locally
 RUN corepack enable \
-    && corepack prepare pnpm@10.16.1 --activate \
+    && corepack prepare pnpm@latest --activate \
     && pnpm config set inject-workspace-packages=true
 
 # Only copy what's needed to resolve workspaces (good cache behavior)
@@ -50,7 +50,7 @@ FROM bilbomd-backend-step1 AS build
 WORKDIR /repo
 
 RUN corepack enable \
-    && corepack prepare pnpm@10.15.1 --activate \
+    && corepack prepare pnpm@latest --activate \
     && pnpm config set inject-workspace-packages=true
 
 ENV HUSKY=0
@@ -69,6 +69,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm -C packages/mongodb-schema run build
 RUN pnpm -C packages/md-utils run build
+RUN pnpm -C packages/bilbomd-types run build
 RUN pnpm -C apps/backend run build
 
 # Produce a minimal deployable bundle for just the backend
