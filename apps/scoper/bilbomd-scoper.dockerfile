@@ -1,11 +1,5 @@
 # -----------------------------------------------------------------------------
 # Build stage 1 - build external dependencies of Scoper
-# FROM pytorch/pytorch:latest AS bilbomd-scoper-build-deps
-# FROM nvidia/cuda:11.8.0-base-ubuntu22.04 AS bilbomd-scoper-build-deps
-# FROM python:3.10-slim AS bilbomd-scoper-build-deps
-# FROM python:3.11-slim AS bilbomd-scoper-build-deps
-# FROM python:3.12-slim AS bilbomd-scoper-build-deps
-# FROM python:3.13-slim AS bilbomd-scoper-build-deps
 FROM ubuntu:22.04 AS bilbomd-scoper-build-deps
 # ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Los_Angeles
@@ -42,11 +36,6 @@ RUN unzip rnaview.zip && \
 
 # -----------------------------------------------------------------------------
 # Build stage 2 - install the build artifacts into a clean image
-# FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
-# FROM python:3.10-slim AS bilbomd-scoper-install-deps
-# FROM python:3.11-slim AS bilbomd-scoper-install-deps
-# FROM python:3.12-slim AS bilbomd-scoper-install-deps
-# FROM python:3.13-slim AS bilbomd-scoper-install-deps
 FROM ubuntu:22.04 AS bilbomd-scoper-install-deps
 
 
@@ -100,7 +89,7 @@ ENV PATH=/opt/conda/bin:$PATH
 RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Update Conda as per ChatGPT suggestion
-RUN conda install --yes --name base -c defaults python=3.10
+RUN conda install --yes --name base -c defaults python=3.9
 RUN conda config --add channels pyg
 RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
