@@ -18,13 +18,16 @@ import HeaderBox from 'components/HeaderBox'
 import Item from 'themes/components/Item'
 import { getStatusColors } from 'features/shared/StatusColors'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
+import PublicJobAnalysisSection from 'features/public/PublicJobAnalysisSection'
+import PublicDownloadResultsSection from 'features/public/PublicDownloadResultsSection'
 
 const PublicJobPage = () => {
+  useTitle('BilboMD: Job Status')
   const theme = useTheme()
   const { publicId } = useParams<{ publicId: string }>()
   const [shouldPoll, setShouldPoll] = useState(true)
+
   console.log('PublicJobPage publicId:', publicId)
-  useTitle('BilboMD: Job Status')
 
   const { data, isLoading, isError } = useGetPublicJobByIdQuery(publicId!, {
     skip: !publicId,
@@ -75,6 +78,7 @@ const PublicJobPage = () => {
         spacing={2}
         mb={2}
       >
+        {/* TOP LEVEL STATUS */}
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
             <Typography>BilboMD Job Status</Typography>
@@ -95,6 +99,7 @@ const PublicJobPage = () => {
           </Item>
         </Grid>
 
+        {/* PROGRESS */}
         <Grid size={{ xs: 12 }}>
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Progress</Typography>
@@ -102,6 +107,7 @@ const PublicJobPage = () => {
           <Item sx={{ display: 'flex', alignItems: 'center' }}>
             <Chip
               label={job.status}
+              variant="outlined"
               sx={{
                 backgroundColor: statusColors.background,
                 color: statusColors.text,
@@ -121,6 +127,12 @@ const PublicJobPage = () => {
             </Typography>
           </Item>
         </Grid>
+        {job.status === 'Completed' && (
+          <>
+            <PublicJobAnalysisSection job={job} />
+            <PublicDownloadResultsSection job={job} />
+          </>
+        )}
       </Grid>
     </Box>
   )
