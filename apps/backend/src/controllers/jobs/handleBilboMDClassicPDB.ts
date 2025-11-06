@@ -302,9 +302,16 @@ const handleBilboMDClassicPDB = async (
 
     // Respond with job details
     if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
       const baseUrl =
-        process.env.PUBLIC_BASE_URL ?? `${req.protocol}://${req.get('host')}`
-      const resultUrl = `${baseUrl}/results/${ctx.publicId}`
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
 
       res.status(200).json({
         message: `New BilboMD Classic w/PDB Job successfully created`,
@@ -312,7 +319,8 @@ const handleBilboMDClassicPDB = async (
         uuid: newJob.uuid,
         md_engine,
         publicId: ctx.publicId,
-        resultUrl
+        resultUrl,
+        resultPath
       })
     } else {
       res.status(200).json({
