@@ -95,7 +95,7 @@ ENV PATH=/opt/conda/bin:$PATH
 RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Update Conda as per ChatGPT suggestion
-RUN conda install --yes --name base -c defaults python=3.9
+RUN conda install --yes --name base -c defaults python=3.10
 RUN conda config --add channels pyg
 RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
@@ -105,13 +105,12 @@ RUN conda config --add channels default
 COPY apps/scoper/environment.yml /tmp/environment.yml
 
 # Update existing base environment from environment.yml
-RUN conda env update -f /tmp/environment.yml && \
-    conda install -y pyg=2.4.0 -c pyg && \
-    conda install -y torchmetrics=0.7.2 -c conda-forge && \
-    conda install -y tabulate && \
-    conda install -y imp=2.19.0 && \
-    pip install wandb && \
-    conda clean --all --yes
+RUN conda env update -f /tmp/environment.yml -vvv
+RUN conda install -y pyg=2.4.0 -c pyg -vvv
+RUN conda install -y torchmetrics=0.7.2 -c conda-forge -vvv
+RUN conda install -y tabulate -vvv
+RUN conda install -y imp=2.19.0 -vvv
+RUN pip install wandb && conda clean --all --yes
 
 RUN groupadd -g $GROUP_ID scoper && \
     useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
