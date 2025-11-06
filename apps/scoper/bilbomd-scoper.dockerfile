@@ -45,7 +45,14 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install Miniforge (lightweight Conda) for Conda or Mamba
-RUN curl -L -o /tmp/miniforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh && \
+# Use TARGETARCH to determine the correct architecture for the platform
+ARG TARGETARCH
+RUN case ${TARGETARCH} in \
+    "amd64") MINIFORGE_ARCH="x86_64" ;; \
+    "arm64") MINIFORGE_ARCH="aarch64" ;; \
+    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    curl -L -o /tmp/miniforge.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${MINIFORGE_ARCH}.sh" && \
     bash /tmp/miniforge.sh -b -p /opt/conda && \
     rm /tmp/miniforge.sh && \
     /opt/conda/bin/conda clean --all --yes
@@ -90,6 +97,7 @@ RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cp
 
 # Update Conda as per ChatGPT suggestion
 RUN conda install --yes --name base -c defaults python=3.9
+# RUN conda install --yes --name base -c defaults
 RUN conda config --add channels pyg
 RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
