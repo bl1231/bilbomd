@@ -105,11 +105,11 @@ RUN conda config --add channels default
 COPY apps/scoper/environment.yml /tmp/environment.yml
 
 # Update existing base environment from environment.yml
-RUN conda env update -f /tmp/environment.yml -vvv
-RUN conda install -y pyg=2.4.0 -c pyg -vvv
-RUN conda install -y torchmetrics=0.7.2 -c conda-forge -vvv
-RUN conda install -y tabulate -vvv
-RUN conda install -y imp=2.19.0 -vvv
+RUN conda env update -f /tmp/environment.yml
+RUN conda install -y pyg=2.4.0 -c pyg
+RUN conda install -y torchmetrics=0.7.2 -c conda-forge
+RUN conda install -y tabulate
+RUN conda install -y imp=2.20.0 -vvv
 RUN pip install wandb && conda clean --all --yes
 
 RUN groupadd -g $GROUP_ID scoper && \
