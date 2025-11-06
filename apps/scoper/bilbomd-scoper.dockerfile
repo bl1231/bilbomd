@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Build stage 1 - build external dependencies of Scoper
+# FROM python:3.10-slim AS bilbomd-scoper-build-deps
 FROM ubuntu:22.04 AS bilbomd-scoper-build-deps
 # ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Los_Angeles
@@ -92,7 +93,9 @@ ARG GROUP_ID
 # Add Conda/Mamba to PATH
 ENV PATH=/opt/conda/bin:$PATH
 
-# Install PyTorch if not building from pytorch/pytorch:latest
+# Install PyTorch
+# This is a big red flag: pyg and torchmetrics (below)
+# from conda are usually built against conda’s pytorch, not a random pip wheel.
 RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Update Conda as per ChatGPT suggestion
@@ -103,17 +106,21 @@ RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
 RUN conda config --add channels default
 
+# ChatGPT suggests we might try this
+# RUN conda config --set channel_priority strict
+
 # Copy the environment.yml file into the image
 COPY apps/scoper/environment.yml /tmp/environment.yml
 
 # Update existing base environment from environment.yml
-RUN conda env update -f /tmp/environment.yml && \
-    conda install -y pyg=2.4.0 -c pyg && \
-    conda install -y torchmetrics=0.7.2 -c conda-forge && \
-    conda install -y tabulate && \
-    conda install -y imp=2.19.0 && \
-    pip install wandb && \
-    conda clean --all --yes
+RUN conda env update -n base -f /tmp/environment.yml && \
+    conda install -n base -y \
+    pyg=2.4.0 \
+    torchmetrics=0.7.2 \
+    tabulate \
+    -c pyg -c conda-forge
+RUN conda install -y imp
+RUN pip install wandb && conda clean --all --yes
 
 RUN groupadd -g $GROUP_ID scoper && \
     useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
