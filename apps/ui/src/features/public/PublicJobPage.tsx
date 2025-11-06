@@ -1,25 +1,49 @@
 import { useParams } from 'react-router'
+import { useState, useEffect } from 'react'
 import {
   Alert,
   AlertTitle,
   Box,
+  Chip,
   CircularProgress,
+  Grid,
   Typography,
-  LinearProgress
+  LinearProgress,
+  useTheme
 } from '@mui/material'
 import useTitle from 'hooks/useTitle'
 import { useGetPublicJobByIdQuery } from 'slices/publicJobsApiSlice'
 import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
+import HeaderBox from 'components/HeaderBox'
+import Item from 'themes/components/Item'
+import { getStatusColors } from 'features/shared/StatusColors'
+import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 
 const PublicJobPage = () => {
+  const theme = useTheme()
   const { publicId } = useParams<{ publicId: string }>()
+  const [shouldPoll, setShouldPoll] = useState(true)
   console.log('PublicJobPage publicId:', publicId)
   useTitle('BilboMD: Job Status')
 
   const { data, isLoading, isError } = useGetPublicJobByIdQuery(publicId!, {
-    skip: !publicId
+    skip: !publicId,
+    pollingInterval: shouldPoll ? 10000 : 0
   })
   console.log('PublicJobPage data:', data)
+
+  useEffect(() => {
+    if (data?.status) {
+      const finalStates = ['completed', 'failed', 'error', 'cancelled']
+      const isFinished = finalStates.includes(data.status.toLowerCase())
+      setShouldPoll(!isFinished)
+    }
+  }, [data?.status])
+
+  const statusColors = getStatusColors(
+    (data?.status as JobStatusEnum) || 'Pending',
+    theme
+  )
 
   if (!publicId) {
     return (
@@ -46,49 +70,58 @@ const PublicJobPage = () => {
 
   return (
     <Box>
-      <Typography
-        variant="h4"
-        gutterBottom
+      <Grid
+        container
+        spacing={2}
+        mb={2}
       >
-        BilboMD Job Status
-      </Typography>
-      <Typography
-        variant="subtitle1"
-        gutterBottom
-      >
-        Job type: {job.jobType} | Engine: {job.md_engine ?? 'n/a'}
-      </Typography>
-      <Typography
-        variant="subtitle2"
-        gutterBottom
-      >
-        Public ID: {job.publicId}
-      </Typography>
+        <Grid size={{ xs: 12 }}>
+          <HeaderBox>
+            <Typography>BilboMD Job Status</Typography>
+          </HeaderBox>
+          <Item>
+            <Typography
+              variant="subtitle1"
+              gutterBottom
+            >
+              Job type: {job.jobType} | Engine: {job.md_engine ?? 'n/a'}
+            </Typography>
+            <Typography
+              variant="subtitle2"
+              gutterBottom
+            >
+              Public ID: {job.publicId}
+            </Typography>
+          </Item>
+        </Grid>
 
-      <Box mt={3}>
-        <Typography variant="h6">Status: {job.status}</Typography>
-        <Box
-          display="flex"
-          alignItems="center"
-          mt={1}
-        >
-          <LinearProgress
-            variant="determinate"
-            value={progress}
-            sx={{ flexGrow: 1, mr: 2 }}
-          />
-          <Typography>{progress.toFixed(0)}%</Typography>
-        </Box>
-      </Box>
-
-      {/* Optionally: show ensemble counts if present */}
-      {job.classic && (
-        <Box mt={3}>
-          <Typography>
-            Ensembles generated: {job.classic.numEnsembles}
-          </Typography>
-        </Box>
-      )}
+        <Grid size={{ xs: 12 }}>
+          <HeaderBox sx={{ py: '6px' }}>
+            <Typography>Progress</Typography>
+          </HeaderBox>
+          <Item sx={{ display: 'flex', alignItems: 'center' }}>
+            <Chip
+              label={job.status}
+              sx={{
+                backgroundColor: statusColors.background,
+                color: statusColors.text,
+                mr: 2
+              }}
+            />
+            <LinearProgress
+              variant="determinate"
+              value={progress}
+              sx={{ flexGrow: 1, mr: 2 }}
+            />
+            <Typography
+              variant="h3"
+              sx={{ ml: 1 }}
+            >
+              {progress.toFixed(0)}%
+            </Typography>
+          </Item>
+        </Grid>
+      </Grid>
     </Box>
   )
 }
