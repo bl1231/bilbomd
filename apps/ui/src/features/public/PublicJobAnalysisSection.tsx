@@ -11,6 +11,7 @@ import {
 import HeaderBox from 'components/HeaderBox'
 import FoXSAnalysis from 'features/jobs/FoXSAnalysis'
 import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
+import BilboMdFeedback from 'features/analysis/BilboMdFeedback'
 
 interface JobAnalysisSectionProps {
   job: PublicJobStatus
@@ -79,7 +80,7 @@ const JobAnalysisSection = ({ job }: JobAnalysisSectionProps) => {
         <Box sx={{ p: 0 }}>
           <Grid size={{ xs: 12 }}>
             <Suspense fallback={<CircularProgress />}>
-              <Alert severity="info">Feedback Content</Alert>
+              <BilboMdFeedback publicId={job.publicId} />
             </Suspense>
           </Grid>
         </Box>

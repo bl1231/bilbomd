@@ -1,4 +1,4 @@
-interface FoxsDataPoint {
+export interface FoxsDataPoint {
   q: number
   exp_intensity: number
   model_intensity: number
@@ -10,7 +10,7 @@ interface FoxsDataPoint {
 //   [key: `res_${number}`]: number
 // }
 
-interface FoxsData {
+export interface FoxsData {
   filename: string
   chisq: number
   c1: string
@@ -18,7 +18,7 @@ interface FoxsData {
   data: FoxsDataPoint[]
 }
 
-interface CombinedFoxsData {
+export interface CombinedFoxsData {
   q: number
   exp_intensity: number
   error: number
@@ -26,6 +26,6 @@ interface CombinedFoxsData {
   [key: `residual_${number}`]: number
 }
 
-interface ScoperFoXSAnalysisProps {
+export interface ScoperFoXSAnalysisProps {
   id: string
 }

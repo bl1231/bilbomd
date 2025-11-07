@@ -1,5 +1,7 @@
 import { apiSlice } from 'app/api/apiSlice'
 import type { PublicJobStatus, AnonJobResponse } from '@bilbomd/bilbomd-types'
+import type { IFeedbackData } from '@bilbomd/mongodb-schema/frontend'
+import type { FoxsData } from 'types/foxs'
 
 export const publicJobsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -15,6 +17,9 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
     }),
     getPublicFoxsData: builder.query<FoxsData[], string>({
       query: (publicId) => `/public/jobs/${publicId}/results/foxs`
+    }),
+    getPublicFeedbackData: builder.query<IFeedbackData, string>({
+      query: (publicId) => `/public/jobs/${publicId}/results/feedback`
     })
   })
 })
@@ -22,5 +27,6 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
 export const {
   useAddNewPublicJobMutation,
   useGetPublicJobByIdQuery,
-  useGetPublicFoxsDataQuery
+  useGetPublicFoxsDataQuery,
+  useGetPublicFeedbackDataQuery
 } = publicJobsApiSlice
