@@ -37,6 +37,11 @@ RUN unzip rnaview.zip && \
 
 # -----------------------------------------------------------------------------
 # Build stage 2 - install the build artifacts into a clean image
+# FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
+# FROM python:3.10-slim AS bilbomd-scoper-install-deps
+# FROM python:3.11-slim AS bilbomd-scoper-install-deps
+# FROM python:3.12-slim AS bilbomd-scoper-install-deps
+# FROM python:3.13-slim AS bilbomd-scoper-install-deps
 FROM ubuntu:22.04 AS bilbomd-scoper-install-deps
 
 
@@ -46,14 +51,7 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install Miniforge (lightweight Conda) for Conda or Mamba
-# Use TARGETARCH to determine the correct architecture for the platform
-ARG TARGETARCH
-RUN case ${TARGETARCH} in \
-    "amd64") MINIFORGE_ARCH="x86_64" ;; \
-    "arm64") MINIFORGE_ARCH="aarch64" ;; \
-    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
-    esac && \
-    curl -L -o /tmp/miniforge.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${MINIFORGE_ARCH}.sh" && \
+RUN curl -L -o /tmp/miniforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh && \
     bash /tmp/miniforge.sh -b -p /opt/conda && \
     rm /tmp/miniforge.sh && \
     /opt/conda/bin/conda clean --all --yes
@@ -99,8 +97,7 @@ ENV PATH=/opt/conda/bin:$PATH
 RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Update Conda as per ChatGPT suggestion
-RUN conda install --yes --name base -c defaults python=3.9
-# RUN conda install --yes --name base -c defaults
+RUN conda install --yes --name base -c defaults python=3.10
 RUN conda config --add channels pyg
 RUN conda config --add channels pytorch
 RUN conda config --add channels conda-forge
@@ -134,7 +131,7 @@ WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the same version used in the repo
 RUN corepack enable \
-    && corepack prepare pnpm@latest --activate \
+    && corepack prepare pnpm@10.18.3 --activate \
     && pnpm config set inject-workspace-packages=true
 
 # Copy only manifests for better caching
@@ -152,7 +149,7 @@ FROM bilbomd-scoper-nodejs AS build
 WORKDIR /repo
 
 RUN corepack enable \
-    && corepack prepare pnpm@latest --activate \
+    && corepack prepare pnpm@10.18.3 --activate \
     && pnpm config set inject-workspace-packages=true
 
 ENV HUSKY=0
