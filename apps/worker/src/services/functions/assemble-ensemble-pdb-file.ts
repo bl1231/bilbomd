@@ -27,6 +27,9 @@ const assembleEnsemblePdbFiles = async ({
     const numToCopy = Math.min(pdbFilesFullPath.length, i)
     const ensembleModelFiles = pdbFilesFullPath.slice(0, numToCopy)
     const ensembleSize = ensembleModelFiles.length
+    logger.info(
+      `Ensemble model files for size ${i}: ${ensembleModelFiles.join(', ')}`
+    )
     await concatenateAndSaveAsEnsemble(
       ensembleModelFiles,
       ensembleSize,
