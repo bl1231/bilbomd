@@ -45,7 +45,8 @@ const extractPdbPaths = (content: string): string[] => {
     .map((line) => {
       const match = line.match(/([^|]*\.pdb\.dat)/)
       if (match) {
-        const fullPath = match[1]
+        // Trim whitespace from the captured path
+        const fullPath = match[1].trim()
         // Strip leading slashes and ../ to treat as relative path
         const relativePath = fullPath.replace(/^(\.\.\/|\/)+/, '')
         // Remove the .dat extension from the filename
