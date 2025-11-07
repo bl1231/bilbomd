@@ -17,7 +17,7 @@ interface JobAnalysisSectionProps {
 }
 
 const JobAnalysisSection = ({ job }: JobAnalysisSectionProps) => {
-  console.log('JobAnalysisSection job:', job)
+  // console.log('JobAnalysisSection job:', job)
   const [tabValue, setTabValue] = useState(0)
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -68,7 +68,9 @@ const JobAnalysisSection = ({ job }: JobAnalysisSectionProps) => {
         <Box sx={{ p: 0 }}>
           <Grid size={{ xs: 12 }}>
             <Suspense fallback={<CircularProgress />}>
-              <Alert severity="info">MD Movie Content</Alert>
+              <Alert severity="info">
+                No MD Movies available for this job.
+              </Alert>
             </Suspense>
           </Grid>
         </Box>

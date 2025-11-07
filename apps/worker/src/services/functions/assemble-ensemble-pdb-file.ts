@@ -20,11 +20,10 @@ const assembleEnsemblePdbFiles = async ({
     logger.info(`prepareResults ensembleFile: ${ensembleFile}`)
     const ensembleFileContent = await fs.readFile(ensembleFile, 'utf8')
     const pdbFilesRelative = extractPdbPaths(ensembleFileContent)
-
     const pdbFilesFullPath = pdbFilesRelative.map((item) =>
-      path.isAbsolute(item) ? item : path.join(jobDir, item)
+      path.join(jobDir, item)
     )
-    // Extract the first N PDB files to string[]
+    // Extract the first N lines/PDB files to string[]
     const numToCopy = Math.min(pdbFilesFullPath.length, i)
     const ensembleModelFiles = pdbFilesFullPath.slice(0, numToCopy)
     const ensembleSize = ensembleModelFiles.length
@@ -41,11 +40,13 @@ const extractPdbPaths = (content: string): string[] => {
   const pdbPaths = lines
     .filter((line) => line.includes('.pdb.dat'))
     .map((line) => {
-      const match = line.match(/(\/[^|]+\.pdb.dat)/)
+      const match = line.match(/([^|]*\.pdb\.dat)/)
       if (match) {
         const fullPath = match[1]
+        // Strip leading slashes and ../ to treat as relative path
+        const relativePath = fullPath.replace(/^(\.\.\/|\/)+/, '')
         // Remove the .dat extension from the filename
-        const filename = fullPath.replace(/\.dat$/, '')
+        const filename = relativePath.replace(/\.dat$/, '')
         return filename
       }
       return ''
