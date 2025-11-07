@@ -42,7 +42,7 @@ const assembleEnsemblePdbFiles = async ({
     ensemblePdbFiles.push(ensembleFileName)
   }
 
-  const manifestPath = path.join(resultsDir, 'ensemble_pdb_files.json')
+  const manifestPath = path.join(jobDir, 'ensemble_pdb_files.json')
   await fs.writeJson(manifestPath, { ensemblePdbFiles }, { spaces: 2 })
   logger.info(`Ensemble manifest written: ${manifestPath}`)
 }

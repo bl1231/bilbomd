@@ -19,6 +19,7 @@ import Item from 'themes/components/Item'
 import { getStatusColors } from 'features/shared/StatusColors'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import PublicJobAnalysisSection from 'features/public/PublicJobAnalysisSection'
+import PublicMolstarViewer from './PublicMolstarViewer'
 import PublicDownloadResultsSection from 'features/public/PublicDownloadResultsSection'
 
 import CopyableChip from 'components/CopyableChip'
@@ -156,6 +157,7 @@ const PublicJobPage = () => {
           <>
             <PublicJobAnalysisSection job={job} />
             <PublicDownloadResultsSection job={job} />
+            <PublicMolstarViewer job={job} />
           </>
         )}
       </Grid>

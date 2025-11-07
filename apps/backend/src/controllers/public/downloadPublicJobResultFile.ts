@@ -29,12 +29,25 @@ const downloadPublicJobResultFile = async (req: Request, res: Response) => {
 
     // Prevent path traversal
     const safeFileName = path.basename(filename)
+    const jobDir = path.join(uploadFolder, job.uuid)
 
-    const filePath = path.join(uploadFolder, job.uuid, safeFileName)
+    const possibleDirs = [
+      jobDir,
+      path.join(jobDir, 'results'),
+      path.join(jobDir, 'analysis')
+    ]
+    let filePath = null
+    for (const dir of possibleDirs) {
+      const candidate = path.join(dir, safeFileName)
+      if (fs.existsSync(candidate)) {
+        filePath = candidate
+        break
+      }
+    }
 
-    if (!fs.existsSync(filePath)) {
+    if (!filePath) {
       logger.warn(
-        `downloadPublicJobResultFile: file not found at ${filePath} for publicId=${publicId}`
+        `downloadPublicJobResultFile: file not found in any directory for publicId=${publicId}, filename=${filename}`
       )
       return res
         .status(404)

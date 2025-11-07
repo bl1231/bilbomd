@@ -3,6 +3,9 @@ import type { PublicJobStatus, AnonJobResponse } from '@bilbomd/bilbomd-types'
 import type { IFeedbackData } from '@bilbomd/mongodb-schema/frontend'
 import type { FoxsData } from 'types/foxs'
 
+type PublicResultFileParams = { publicId: string; filename: string }
+type EnsemblePdbFilesResponse = { ensemblePdbFiles: string[] }
+
 export const publicJobsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     addNewPublicJob: builder.mutation<AnonJobResponse, FormData>({
@@ -21,13 +24,25 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
     getPublicFeedbackData: builder.query<IFeedbackData, string>({
       query: (publicId) => `/public/jobs/${publicId}/results/feedback`
     }),
-    getPublicResultFile: builder.query<
-      Blob,
-      { publicId: string; filename: string }
-    >({
+    getPublicResultFile: builder.query<Blob, PublicResultFileParams>({
       query: ({ publicId, filename }) => ({
         url: `/public/jobs/${publicId}/results/${filename}`,
         responseHandler: (response) => response.blob()
+      })
+    }),
+    getPublicResultFileJson: builder.query<
+      EnsemblePdbFilesResponse,
+      PublicResultFileParams
+    >({
+      query: ({ publicId, filename }) => ({
+        url: `/public/jobs/${publicId}/results/${filename}`,
+        responseHandler: (response) => response.json()
+      })
+    }),
+    getPublicResultFileText: builder.query<string, PublicResultFileParams>({
+      query: ({ publicId, filename }) => ({
+        url: `/public/jobs/${publicId}/results/${filename}`,
+        responseHandler: (response) => response.text()
       })
     })
   })
@@ -38,5 +53,7 @@ export const {
   useGetPublicJobByIdQuery,
   useGetPublicFoxsDataQuery,
   useGetPublicFeedbackDataQuery,
-  useGetPublicResultFileQuery
+  useGetPublicResultFileQuery,
+  useGetPublicResultFileJsonQuery,
+  useGetPublicResultFileTextQuery
 } = publicJobsApiSlice

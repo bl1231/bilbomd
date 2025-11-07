@@ -1,6 +1,10 @@
-import { useEffect, useRef, createRef } from 'react'
-import Grid from '@mui/material/Grid'
-import { axiosInstance } from 'app/api/axios'
+import { useEffect, useRef } from 'react'
+
+import { useStore } from 'react-redux'
+import { AppDispatch } from 'app/store'
+import { publicJobsApiSlice } from 'slices/publicJobsApiSlice'
+import Item from 'themes/components/Item'
+import { Grid } from '@mui/material'
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui'
 import {
   DefaultPluginUISpec,
@@ -16,7 +20,6 @@ import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context'
 import { ShowButtons, ViewportComponent } from 'features/molstar/Viewport'
 import { BuiltInTrajectoryFormat } from 'molstar/lib/mol-plugin-state/formats/trajectory'
 import 'molstar/lib/mol-plugin-ui/skin/light.scss'
-import Item from 'themes/components/Item'
 import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
 
 declare global {
@@ -26,14 +29,11 @@ declare global {
 }
 
 type LoadParams = {
-  url: string
   format: BuiltInTrajectoryFormat
   fileName: string
   isBinary?: boolean
   assemblyId: number
 }
-
-type PDBsToLoad = LoadParams[]
 
 const DefaultViewerOptions = {
   extensions: ObjectKeys({}),
@@ -63,75 +63,10 @@ interface PublicMolstarViewerProps {
 }
 
 const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
-  const parent = createRef<HTMLDivElement>()
   const hasRun = useRef(false)
-
-  const createLoadParamsArray = async (
-    job: PublicJobStatus
-  ): Promise<PDBsToLoad[]> => {
-    const loadParamsMap = new Map<string, LoadParams[]>()
-
-    const addFilesToLoadParams = (fileName: string, numModels: number) => {
-      let paramsArray = loadParamsMap.get(fileName)
-
-      if (!paramsArray) {
-        paramsArray = []
-        loadParamsMap.set(fileName, paramsArray)
-      }
-
-      for (let assemblyId = 1; assemblyId <= numModels; assemblyId++) {
-        paramsArray.push({
-          url: `/public/jobs/${job.publicId}/results/${fileName}`,
-          format: 'pdb',
-          fileName,
-          assemblyId
-        })
-      }
-    }
-
-    // Classic BilboMD jobs (PDB/CRD flavors)
-    if (
-      (job.jobType === 'BilboMd' ||
-        job.jobType === 'BilboMdPDB' ||
-        job.jobType === 'BilboMdCRD') &&
-      job.classic?.numEnsembles
-    ) {
-      for (let i = 1; i <= job.classic.numEnsembles; i++) {
-        const fileName = `ensemble_size_${i}_model.pdb`
-        addFilesToLoadParams(fileName, i)
-      }
-    } else if (job.jobType === 'BilboMdAuto' && job.auto?.numEnsembles) {
-      for (let i = 1; i <= job.auto.numEnsembles; i++) {
-        const fileName = `ensemble_size_${i}_model.pdb`
-        addFilesToLoadParams(fileName, i)
-      }
-    } else if (
-      job.jobType === 'BilboMdAlphaFold' &&
-      job.alphafold?.numEnsembles
-    ) {
-      for (let i = 1; i <= job.alphafold.numEnsembles; i++) {
-        const fileName = `ensemble_size_${i}_model.pdb`
-        addFilesToLoadParams(fileName, i)
-      }
-    }
-
-    // NOTE: For now, we skip special Scoper handling here because PublicJobStatus.scoper
-    // is typed as unknown. This can be revisited once we define a public scoper DTO.
-
-    return Array.from(loadParamsMap.values())
-  }
-
-  const fetchPdbData = async (url: string) => {
-    try {
-      const response = await axiosInstance.get(url, {
-        responseType: 'text'
-      })
-      return response.data
-    } catch (error) {
-      console.error('Error fetching PDB data:', error)
-      return null
-    }
-  }
+  const parent = useRef<HTMLDivElement>(null)
+  const store = useStore()
+  const dispatch = store.dispatch as AppDispatch
 
   useEffect(() => {
     if (hasRun.current) {
@@ -219,11 +154,56 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
         render: renderReact18
       })
 
-      const loadParamsArray = await createLoadParamsArray(job)
+      const manifestResult = await dispatch(
+        publicJobsApiSlice.endpoints.getPublicResultFileJson.initiate({
+          publicId: job.publicId,
+          filename: 'ensemble_pdb_files.json'
+        })
+      )
+      const manifest = manifestResult.data as { ensemblePdbFiles: string[] }
+      if (!manifest || !manifest.ensemblePdbFiles.length) {
+        console.warn(
+          `PublicMolstarViewer: no ensemblePdbFiles in manifest for publicId=${job.publicId}`
+        )
+        return
+      }
+
+      const pdbDataMap = new Map<string, string>()
+      for (const fileName of manifest.ensemblePdbFiles) {
+        const pdbResult = await dispatch(
+          publicJobsApiSlice.endpoints.getPublicResultFileText.initiate({
+            publicId: job.publicId,
+            filename: fileName
+          })
+        )
+        pdbDataMap.set(fileName, pdbResult.data || '')
+      }
+
+      const loadParamsMap = new Map<string, LoadParams[]>()
+      for (const fileName of manifest.ensemblePdbFiles) {
+        const match = fileName.match(/ensemble_size_(\d+)_model\.pdb$/)
+        const ensembleSize = match ? parseInt(match[1], 10) : 1
+
+        let paramsArray = loadParamsMap.get(fileName)
+        if (!paramsArray) {
+          paramsArray = []
+          loadParamsMap.set(fileName, paramsArray)
+        }
+
+        for (let assemblyId = 1; assemblyId <= ensembleSize; assemblyId++) {
+          paramsArray.push({
+            format: 'pdb',
+            fileName,
+            assemblyId
+          })
+        }
+      }
+
+      const loadParamsArray = Array.from(loadParamsMap.values())
 
       for (const loadParamsGroup of loadParamsArray) {
-        const { url, format, fileName } = loadParamsGroup[0]
-        const pdbData = await fetchPdbData(url)
+        const { fileName } = loadParamsGroup[0]
+        const pdbData = pdbDataMap.get(fileName)
         if (!pdbData) continue
 
         for (const { assemblyId } of loadParamsGroup) {
@@ -232,10 +212,7 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
             label: fileName
           })
           const trajectory =
-            await window.molstar.builders.structure.parseTrajectory(
-              data,
-              format
-            )
+            await window.molstar.builders.structure.parseTrajectory(data, 'pdb')
           const model = await window.molstar.builders.structure.createModel(
             trajectory,
             {
@@ -264,8 +241,7 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
       window.molstar = undefined
       hasRun.current = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [job, dispatch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Item>
