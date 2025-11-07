@@ -7,4 +7,4 @@
 '@bilbomd/ui': minor
 ---
 
-Allow public unauthenticated job submission
+Allow public unauthenticated BilboMD job submission

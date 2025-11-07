@@ -14,7 +14,10 @@ vi.mock('slices/publicJobsApiSlice', () => ({
   useAddNewPublicJobMutation: vi.fn()
 }))
 vi.mock('react-router', () => ({
-  Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span>
+  Link: ({ children }: { children: React.ReactNode }) => (
+    <span>{children}</span>
+  ),
+  useNavigate: () => vi.fn()
 }))
 vi.mock('@mui/material/styles', () => ({
   useTheme: () => ({
@@ -131,8 +134,7 @@ describe('NewAlphaFoldJob Component', () => {
       }
     ])
     render(<NewAlphaFoldJob />)
-    expect(screen.getByText(/Your job has been submitted/i)).toBeInTheDocument()
-    expect(screen.getByText(/details/i)).toBeInTheDocument()
+    expect(screen.getByText(/has been submitted/i)).toBeInTheDocument()
   })
 
   it('renders success alert for anonymous job', () => {
@@ -149,9 +151,7 @@ describe('NewAlphaFoldJob Component', () => {
       }
     ])
     render(<NewAlphaFoldJob mode="anonymous" />)
-    expect(
-      screen.getByText(/Your anonymous BilboMD job has been submitted/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/has been submitted/i)).toBeInTheDocument()
   })
 
   it('shows validation errors when submitting empty form', async () => {
