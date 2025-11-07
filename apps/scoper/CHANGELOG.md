@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.5.5
+
+### Patch Changes
+
+- 895cff4: unpin IMP so that `bilbomd-scoper` Docker build will complete without errors
+
 ## 1.5.4
 
 ### Patch Changes
