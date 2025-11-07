@@ -47,7 +47,7 @@ except Exception:
 
 
 # Global constants
-MW_ERR_CUTOFF = 0.10
+MW_ERR_CUTOFF = 0.20
 CHI2_CUTOFF_EXCELLENT = 1.0
 CHI2_CUTOFF_MODERATE = 2.0
 PRINT_FLAG = True
