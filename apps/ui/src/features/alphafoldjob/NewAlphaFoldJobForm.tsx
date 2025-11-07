@@ -5,7 +5,6 @@ import {
   TextField,
   Typography,
   Alert,
-  AlertTitle,
   Paper,
   IconButton,
   Button,
@@ -16,7 +15,6 @@ import { Add, Delete } from '@mui/icons-material'
 import Grid from '@mui/material/Grid'
 import { grey } from '@mui/material/colors'
 import { Theme } from '@mui/material/styles'
-import { Link as RouterLink } from 'react-router'
 import {
   Form,
   Formik,
@@ -39,6 +37,8 @@ import NewAlphaFoldJobFormInstructions from './NewAlphaFoldJobFormInstructions'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
+import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
+import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -548,38 +548,15 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
             </Alert>
           ) : isSuccess ? (
             mode === 'anonymous' ? (
-              <Alert severity="success">
-                <AlertTitle>Job submitted!</AlertTitle>
-                <Typography>
-                  Your anonymous BilboMD job has been submitted.
-                </Typography>
-                {jobResponse && jobResponse.resultUrl && (
-                  <Typography>
-                    Please bookmark or save this link to access your results
-                    later:
-                  </Typography>
-                )}
-                {jobResponse && jobResponse.resultUrl && (
-                  <Typography sx={{ wordBreak: 'break-all' }}>
-                    <a href={jobResponse.resultUrl}>{jobResponse.resultUrl}</a>
-                  </Typography>
-                )}
-                {jobResponse &&
-                  jobResponse.publicId &&
-                  !jobResponse.resultUrl && (
-                    <Typography sx={{ wordBreak: 'break-all' }}>
-                      Results ID: {jobResponse.publicId}
-                    </Typography>
-                  )}
-              </Alert>
+              <PublicJobSuccessAlert
+                jobResponse={jobResponse}
+                jobType="AF"
+              />
             ) : (
-              <Alert severity="success">
-                <AlertTitle>Woot!</AlertTitle>
-                <Typography>
-                  Your job has been submitted. Check out the{' '}
-                  <RouterLink to="../jobs">details</RouterLink>.
-                </Typography>
-              </Alert>
+              <JobSuccessAlert
+                jobResponse={jobResponse}
+                jobType="AF"
+              />
             )
           ) : (
             <Formik<NewAlphaFoldJobFormValues>
@@ -703,7 +680,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       status={status}
                     />
                   </Grid>
-                  {process.env.NODE_ENV === 'development' ? <Debug /> : ''}
+                  {import.meta.env.MODE === 'development' ? <Debug /> : ''}
                 </Form>
               )}
             </Formik>

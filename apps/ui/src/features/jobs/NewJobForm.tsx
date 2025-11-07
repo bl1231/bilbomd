@@ -7,7 +7,6 @@ import {
   MenuItem,
   Typography,
   Alert,
-  AlertTitle,
   Paper,
   FormGroup,
   FormControlLabel,
@@ -15,7 +14,6 @@ import {
   LinearProgress
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import { Link as RouterLink } from 'react-router'
 import {
   Form,
   Formik,
@@ -42,6 +40,8 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
+import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
+import JobSuccessAlert from './JobSuccessAlert'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -208,38 +208,19 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
         <Paper sx={{ p: 2 }}>
           {isSuccess ? (
             mode === 'anonymous' ? (
-              <Alert severity="success">
-                <AlertTitle>Job submitted!</AlertTitle>
-                <Typography>
-                  Your anonymous BilboMD job has been submitted.
-                </Typography>
-                {jobResponse && jobResponse.resultUrl && (
-                  <Typography>
-                    Please bookmark or save this link to access your results
-                    later:
-                  </Typography>
-                )}
-                {jobResponse && jobResponse.resultUrl && (
-                  <Typography sx={{ wordBreak: 'break-all' }}>
-                    <a href={jobResponse.resultUrl}>{jobResponse.resultUrl}</a>
-                  </Typography>
-                )}
-                {jobResponse &&
-                  jobResponse.publicId &&
-                  !jobResponse.resultUrl && (
-                    <Typography sx={{ wordBreak: 'break-all' }}>
-                      Results ID: {jobResponse.publicId}
-                    </Typography>
-                  )}
-              </Alert>
+              <PublicJobSuccessAlert
+                jobResponse={jobResponse}
+                jobType={
+                  selectedMode === 'pdb' ? 'Classic w/PDB' : 'Classic w/CRD/PSF'
+                }
+              />
             ) : (
-              <Alert severity="success">
-                <AlertTitle>Woot!</AlertTitle>
-                <Typography>
-                  Your job has been submitted. Check out the{' '}
-                  <RouterLink to="../jobs">details</RouterLink>.
-                </Typography>
-              </Alert>
+              <JobSuccessAlert
+                jobResponse={jobResponse}
+                jobType={
+                  selectedMode === 'pdb' ? 'Classic w/PDB' : 'Classic w/CRD/PSF'
+                }
+              />
             )
           ) : (
             <Formik
@@ -681,7 +662,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Button>
                     </Grid>
                   </Grid>
-                  {process.env.NODE_ENV === 'development' ? <Debug /> : ''}
+                  {import.meta.env.MODE === 'development' ? <Debug /> : ''}
                 </Form>
               )}
             </Formik>

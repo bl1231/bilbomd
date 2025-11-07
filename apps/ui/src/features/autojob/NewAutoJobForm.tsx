@@ -1,15 +1,6 @@
 import { useState } from 'react'
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Alert,
-  AlertTitle,
-  Paper
-} from '@mui/material'
+import { Box, Button, TextField, Typography, Alert, Paper } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import { Link as RouterLink } from 'react-router'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
 import { useAddNewAutoJobMutation } from '../../slices/jobsApiSlice'
@@ -26,6 +17,8 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
+import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
+import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -128,40 +121,15 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
           <Paper sx={{ p: 2 }}>
             {isSuccess ? (
               mode === 'anonymous' ? (
-                <Alert severity="success">
-                  <AlertTitle>Job submitted!</AlertTitle>
-                  <Typography>
-                    Your anonymous BilboMD Auto job has been submitted.
-                  </Typography>
-                  {jobResponse && jobResponse.resultUrl && (
-                    <Typography>
-                      Please bookmark or save this link to access your results
-                      later:
-                    </Typography>
-                  )}
-                  {jobResponse && jobResponse.resultUrl && (
-                    <Typography sx={{ wordBreak: 'break-all' }}>
-                      <a href={jobResponse.resultUrl}>
-                        {jobResponse.resultUrl}
-                      </a>
-                    </Typography>
-                  )}
-                  {jobResponse &&
-                    jobResponse.publicId &&
-                    !jobResponse.resultUrl && (
-                      <Typography sx={{ wordBreak: 'break-all' }}>
-                        Results ID: {jobResponse.publicId}
-                      </Typography>
-                    )}
-                </Alert>
+                <PublicJobSuccessAlert
+                  jobResponse={jobResponse}
+                  jobType="Auto"
+                />
               ) : (
-                <Alert severity="success">
-                  <AlertTitle>Woot!</AlertTitle>
-                  <Typography>
-                    Your job has been submitted. Check out the{' '}
-                    <RouterLink to="../jobs">details</RouterLink>.
-                  </Typography>
-                </Alert>
+                <JobSuccessAlert
+                  jobResponse={jobResponse}
+                  jobType="Auto"
+                />
               )
             ) : (
               <Formik
@@ -278,7 +246,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Button>
                       </Grid>
                     </Grid>
-                    {process.env.NODE_ENV === 'development' ? <Debug /> : ''}
+                    {import.meta.env.MODE === 'development' ? <Debug /> : ''}
                   </Form>
                 )}
               </Formik>
