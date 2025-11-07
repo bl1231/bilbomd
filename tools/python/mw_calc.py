@@ -104,7 +104,6 @@ def volume_of_correlation(q: np.ndarray, I: np.ndarray, I0: float, Rg: float, qm
 
     return {"vc": Vc, "mmvc": mmvc}
 
-
 # ------------------------- File I/O -------------------------
 
 def load_profile(path: str):
