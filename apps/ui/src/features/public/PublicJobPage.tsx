@@ -21,19 +21,21 @@ import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import PublicJobAnalysisSection from 'features/public/PublicJobAnalysisSection'
 import PublicDownloadResultsSection from 'features/public/PublicDownloadResultsSection'
 
+import CopyableChip from 'components/CopyableChip'
+
 const PublicJobPage = () => {
   useTitle('BilboMD: Job Status')
   const theme = useTheme()
   const { publicId } = useParams<{ publicId: string }>()
   const [shouldPoll, setShouldPoll] = useState(true)
 
-  console.log('PublicJobPage publicId:', publicId)
+  // console.log('PublicJobPage publicId:', publicId)
 
   const { data, isLoading, isError } = useGetPublicJobByIdQuery(publicId!, {
     skip: !publicId,
     pollingInterval: shouldPoll ? 10000 : 0
   })
-  console.log('PublicJobPage data:', data)
+  // console.log('PublicJobPage data:', data)
 
   useEffect(() => {
     if (data?.status) {
@@ -47,6 +49,21 @@ const PublicJobPage = () => {
     (data?.status as JobStatusEnum) || 'Pending',
     theme
   )
+
+  const formatDate = (isoString: string | Date) => {
+    const date = new Date(isoString)
+    const day = date.toLocaleDateString('en-US', { weekday: 'long' })
+    const month = date.toLocaleDateString('en-US', { month: 'long' })
+    const dayNum = date.getDate()
+    const ordinal = (n: number) => {
+      const s = ['th', 'st', 'nd', 'rd']
+      const v = n % 100
+      return n + (s[(v - 20) % 10] || s[v] || s[0])
+    }
+    const year = date.getFullYear()
+    const time = date.toLocaleTimeString('en-US', { hour12: false })
+    return `${day} ${month} ${ordinal(dayNum)} ${year} ${time}`
+  }
 
   if (!publicId) {
     return (
@@ -84,17 +101,25 @@ const PublicJobPage = () => {
             <Typography>BilboMD Job Status</Typography>
           </HeaderBox>
           <Item>
-            <Typography
-              variant="subtitle1"
-              gutterBottom
-            >
-              Job type: {job.jobType} | Engine: {job.md_engine ?? 'n/a'}
+            <Typography variant="subtitle1">
+              Job type: {job.jobType} | MD Engine: {job.md_engine ?? 'n/a'}
             </Typography>
-            <Typography
-              variant="subtitle2"
-              gutterBottom
-            >
-              Public ID: {job.publicId}
+            <Typography variant="subtitle1">
+              Submitted: {job.submittedAt ? formatDate(job.submittedAt) : 'N/A'}
+            </Typography>
+            <Typography sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
+              <span style={{ width: '140px' }}>Public Job ID:</span>
+              <CopyableChip
+                label="Public ID"
+                value={job.publicId}
+              />
+            </Typography>
+            <Typography sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
+              <span style={{ width: '140px' }}>Results Permalink:</span>
+              <CopyableChip
+                label="Permalink"
+                value={`${window.location.origin}/results/${job.publicId}`}
+              />
             </Typography>
           </Item>
         </Grid>
