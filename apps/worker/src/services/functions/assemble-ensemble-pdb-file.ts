@@ -15,6 +15,8 @@ const assembleEnsemblePdbFiles = async ({
   jobDir,
   resultsDir
 }: AssembleEnsemblePdbFilesParams) => {
+  const ensemblePdbFiles: string[] = []
+
   for (let i = 1; i <= numEnsembles; i++) {
     const ensembleFile = path.join(multiFoxsDir, `ensembles_size_${i}.txt`)
     logger.info(`prepareResults ensembleFile: ${ensembleFile}`)
@@ -35,7 +37,14 @@ const assembleEnsemblePdbFiles = async ({
       ensembleSize,
       resultsDir
     )
+
+    const ensembleFileName = `ensemble_size_${ensembleSize}_model.pdb`
+    ensemblePdbFiles.push(ensembleFileName)
   }
+
+  const manifestPath = path.join(resultsDir, 'ensemble_pdb_files.json')
+  await fs.writeJson(manifestPath, { ensemblePdbFiles }, { spaces: 2 })
+  logger.info(`Ensemble manifest written: ${manifestPath}`)
 }
 
 const extractPdbPaths = (content: string): string[] => {
