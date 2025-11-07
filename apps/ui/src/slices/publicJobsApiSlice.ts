@@ -20,6 +20,15 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
     }),
     getPublicFeedbackData: builder.query<IFeedbackData, string>({
       query: (publicId) => `/public/jobs/${publicId}/results/feedback`
+    }),
+    getPublicResultFile: builder.query<
+      Blob,
+      { publicId: string; filename: string }
+    >({
+      query: ({ publicId, filename }) => ({
+        url: `/public/jobs/${publicId}/results/${filename}`,
+        responseHandler: (response) => response.blob()
+      })
     })
   })
 })
@@ -28,5 +37,6 @@ export const {
   useAddNewPublicJobMutation,
   useGetPublicJobByIdQuery,
   useGetPublicFoxsDataQuery,
-  useGetPublicFeedbackDataQuery
+  useGetPublicFeedbackDataQuery,
+  useGetPublicResultFileQuery
 } = publicJobsApiSlice
