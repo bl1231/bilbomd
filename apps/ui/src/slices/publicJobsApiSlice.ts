@@ -12,9 +12,15 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
     }),
     getPublicJobById: builder.query<PublicJobStatus, string>({
       query: (publicId) => `/public/jobs/${publicId}`
+    }),
+    getPublicFoxsData: builder.query<FoxsData[], string>({
+      query: (publicId) => `/public/jobs/${publicId}/results/foxs`
     })
   })
 })
 
-export const { useAddNewPublicJobMutation, useGetPublicJobByIdQuery } =
-  publicJobsApiSlice
+export const {
+  useAddNewPublicJobMutation,
+  useGetPublicJobByIdQuery,
+  useGetPublicFoxsDataQuery
+} = publicJobsApiSlice

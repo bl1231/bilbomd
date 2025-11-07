@@ -55,7 +55,9 @@ const JobAnalysisSection = ({ job }: JobAnalysisSectionProps) => {
           <Grid size={{ xs: 12 }}>
             <Suspense fallback={<CircularProgress />}>
               <FoXSAnalysis
-                id={job.jobId}
+                id=""
+                publicId={job.publicId}
+                isPublic={true}
                 active={tabValue === 0}
               />
             </Suspense>

@@ -13,8 +13,8 @@ interface FoxsDataPoint {
 interface FoxsData {
   filename: string
   chisq: number
-  c1: number
-  c2: number
+  c1: string
+  c2: string
   data: FoxsDataPoint[]
 }
 
