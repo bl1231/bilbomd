@@ -20,6 +20,7 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import useAuth from 'hooks/useAuth'
 import Header from './Header'
 import Footer from './Footer'
+import CookieConsent from 'components/CookieConsent'
 
 const drawerWidth = 190
 
@@ -190,6 +191,7 @@ export default function ClippedDrawer() {
 
       <Box sx={{ width: '100vw' }}>
         <Footer />
+        <CookieConsent />
       </Box>
     </Box>
   )
