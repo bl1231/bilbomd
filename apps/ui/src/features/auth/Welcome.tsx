@@ -103,7 +103,8 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
                 <Box mt={2}>
                   <Typography variant="body2">
                     Already have an account?{' '}
-                    <RouterLink to="/login">Log in here</RouterLink>
+                    {/* <RouterLink to="/login">Log in here</RouterLink> */}
+                    <RouterLink to="/magicklink">Log in here</RouterLink>
                   </Typography>
                 </Box>
               </Box>
