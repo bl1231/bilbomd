@@ -1,10 +1,9 @@
 import { useEffect, useRef } from 'react'
-
 import { useStore } from 'react-redux'
 import { AppDispatch } from 'app/store'
 import { publicJobsApiSlice } from 'slices/publicJobsApiSlice'
 import Item from 'themes/components/Item'
-import { Grid } from '@mui/material'
+import { Grid, Typography, Box } from '@mui/material'
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui'
 import {
   DefaultPluginUISpec,
@@ -21,6 +20,7 @@ import { ShowButtons, ViewportComponent } from 'features/molstar/Viewport'
 import { BuiltInTrajectoryFormat } from 'molstar/lib/mol-plugin-state/formats/trajectory'
 import 'molstar/lib/mol-plugin-ui/skin/light.scss'
 import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
+import HeaderBox from 'components/HeaderBox'
 
 declare global {
   interface Window {
@@ -63,6 +63,7 @@ interface PublicMolstarViewerProps {
 }
 
 const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
+  console.log('PublicMolstarViewer job:', job)
   const hasRun = useRef(false)
   const parent = useRef<HTMLDivElement>(null)
   const store = useStore()
@@ -191,6 +192,11 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
         }
 
         for (let assemblyId = 1; assemblyId <= ensembleSize; assemblyId++) {
+          console.log('Adding load params:', {
+            format: 'pdb',
+            fileName,
+            assemblyId
+          })
           paramsArray.push({
             format: 'pdb',
             fileName,
@@ -241,21 +247,34 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
       window.molstar = undefined
       hasRun.current = false
     }
-  }, [job, dispatch]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [job, dispatch])
 
   return (
-    <Item>
-      <Grid container>
-        <div
-          ref={parent}
-          style={{
-            width: '100%',
-            height: '600px',
-            position: 'relative'
-          }}
-        />
+    <>
+      <Grid size={{ xs: 12 }}>
+        <HeaderBox sx={{ py: '6px' }}>
+          <Typography>
+            Molstar Viewer
+            <Box
+              component="span"
+              sx={{ color: 'yellow', fontSize: '0.75em' }}
+            >
+              experimental
+            </Box>
+          </Typography>
+        </HeaderBox>
+        <Item>
+          <div
+            ref={parent}
+            style={{
+              width: '100%',
+              height: '600px',
+              position: 'relative'
+            }}
+          />
+        </Item>
       </Grid>
-    </Item>
+    </>
   )
 }
 

@@ -156,8 +156,8 @@ const PublicJobPage = () => {
         {job.status === 'Completed' && (
           <>
             <PublicJobAnalysisSection job={job} />
-            <PublicDownloadResultsSection job={job} />
             <PublicMolstarViewer job={job} />
+            <PublicDownloadResultsSection job={job} />
           </>
         )}
       </Grid>
