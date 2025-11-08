@@ -131,10 +131,13 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                 minWidth: 200,
                 minHeight: 200,
                 backgroundColor: grey[300],
-                ml: 2
+                ml: 2,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
               }}
             >
-              {/* Placeholder for figure */}
+              <Typography variant="caption">[Workflow Figure]</Typography>
             </Box>
           </Box>
 

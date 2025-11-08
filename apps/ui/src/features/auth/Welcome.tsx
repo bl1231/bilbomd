@@ -6,6 +6,7 @@ import Grid from '@mui/material/Grid'
 import NerscSystemStatuses from 'features/nersc/SystemStatuses'
 import { Box } from '@mui/system'
 import { Link as RouterLink } from 'react-router'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 
 type WelcomeProps = {
   mode: 'authenticated' | 'anonymous'
@@ -83,15 +84,12 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
               >
                 Welcome to BilboMD
               </Typography>
-              <Typography
-                variant="body1"
-                paragraph
-              >
+              <Typography variant="body1">
                 You can run BilboMD anonymously without logging in. Submitted
                 jobs will be accessible via a unique results link — please
                 bookmark it.
               </Typography>
-              <Box mt={3}>
+              <Box sx={{ my: 2 }}>
                 <Button
                   variant="contained"
                   color="primary"
@@ -100,13 +98,35 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
                 >
                   Run a BilboMD Job
                 </Button>
-                <Box mt={2}>
-                  <Typography variant="body2">
-                    Already have an account?{' '}
-                    {/* <RouterLink to="/login">Log in here</RouterLink> */}
-                    <RouterLink to="/magicklink">Log in here</RouterLink>
-                  </Typography>
-                </Box>
+              </Box>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Already have an account?{' '}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    component={RouterLink}
+                    to="/magicklink"
+                    startIcon={<AutoFixHighIcon />}
+                  >
+                    Get a MagickLink&#8482;
+                  </Button>
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2">
+                  Need an account?{' '}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    component={RouterLink}
+                    to="/register"
+                  >
+                    Register
+                  </Button>
+                </Typography>
               </Box>
             </>
           ) : (
