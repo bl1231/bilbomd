@@ -110,6 +110,14 @@ export default function ClippedDrawer() {
       onclick: () => navigate('/help'),
       roles: ['user'],
       divider: false
+    },
+    {
+      text: 'About',
+      icon: <InfoOutlined />,
+      path: '/about',
+      onclick: () => navigate('/about'),
+      roles: ['user'],
+      divider: false
     }
   ]
 
