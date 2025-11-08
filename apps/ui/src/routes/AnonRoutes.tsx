@@ -1,6 +1,7 @@
 import { lazy } from 'react'
 import Loadable from 'components/Loadable'
 import AnonLayout from 'layout/AnonLayout'
+import About from 'features/about/About'
 
 const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
 const NewJobForm = Loadable(lazy(() => import('features/jobs/NewJobForm')))
@@ -87,6 +88,10 @@ const AnonRoutes = {
     {
       path: 'help',
       element: <Help />
+    },
+    {
+      path: 'about',
+      element: <About title="BilboMD: About" />
     },
     {
       path: 'sample-data',
