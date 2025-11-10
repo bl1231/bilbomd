@@ -4,7 +4,13 @@ import fs from 'fs-extra'
 import mongoose from 'mongoose'
 import { logger } from '../../middleware/loggers.js'
 import multer from 'multer'
-import { BilboMdSANSJob, IBilboMDSANSJob, User } from '@bilbomd/mongodb-schema'
+import {
+  BilboMdSANSJob,
+  IBilboMDSANSJob,
+  IBilboMDSteps,
+  User,
+  StepStatus
+} from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { sanitizeConstInpFile, writeJobParams } from './index.js'
 import { queueJob } from '../../queues/bilbomd.js'
@@ -185,6 +191,10 @@ const handleBilboMDSANSJob = async (
 ) => {
   const jobDir = path.join(uploadFolder, UUID)
   try {
+    const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
+    const md_engine: 'CHARMM' | 'OpenMM' =
+      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+    logger.info(`Selected md_engine: ${md_engine}`)
     const { bilbomd_mode: bilbomdMode } = req.body
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
     logger.info(`bilbomdMode: ${bilbomdMode}`)
@@ -221,8 +231,33 @@ const handleBilboMDSANSJob = async (
       }
     }
 
-    const now = new Date()
-    // logger.info(`now ${now}`)
+    let stepsInit: IBilboMDSteps
+
+    if (md_engine === 'OpenMM') {
+      stepsInit = {
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        pepsisans: { status: StepStatus.Waiting, message: '' },
+        gasans: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' }
+      }
+    } else {
+      stepsInit = {
+        pdb2crd: { status: StepStatus.Waiting, message: '' },
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        dcd2pdb: { status: StepStatus.Waiting, message: '' },
+        pdb_remediate: { status: StepStatus.Waiting, message: '' },
+        pepsisans: { status: StepStatus.Waiting, message: '' },
+        gasans: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' }
+      }
+    }
+
     const jobData = {
       title: req.body.title,
       uuid: UUID,
@@ -236,23 +271,17 @@ const handleBilboMDSANSJob = async (
       rg_min: req.body.rg_min,
       rg_max: req.body.rg_max,
       status: 'Submitted',
-      time_submitted: now,
+      time_submitted: new Date(),
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
         ? { public_id: ctx.publicId }
         : {}),
       steps: {
-        pdb2crd: {},
-        minimize: {},
-        heat: {},
-        md: {},
-        dcd2pdb: {},
-        pdb_remediate: {},
-        pepsisans: {},
-        gasans: {},
-        results: {},
-        ...(ctx.accessMode === 'user' ? { email: {} } : {})
+        ...stepsInit,
+        ...(ctx.accessMode === 'user'
+          ? { email: { status: StepStatus.Waiting, message: '' } }
+          : {})
       }
     }
 
@@ -280,26 +309,61 @@ const handleBilboMDSANSJob = async (
     // Write Job params for use by NERSC job script.
     await writeJobParams(newJob.id)
 
-    // Queue the job
-    const BullId = await queueJob({
+    // Create BullMQ Job object
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id
-    })
+      jobid: newJob.id,
+      md_engine
+    }
+
+    // Queue the job
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
-    res.status(200).json({
-      message: `New BilboMD SANS Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid
-    })
+    // Respond with job details
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New BilboMD SANS Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD SANS Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
-    logger.error(`Failed to create BilboMD SANS Job: ${error}`)
-    await fs.remove(jobDir)
-    res.status(500).json({ message: 'Failed to create BilboMD SANS Job' })
+    const msg =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : 'Unknown error occurred'
+
+    logger.error('handleBilboMDSANSJob error:', error)
+    res.status(500).json({ message: msg })
   }
 }
 
