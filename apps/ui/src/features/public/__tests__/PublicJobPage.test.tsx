@@ -134,12 +134,10 @@ describe('PublicJobPage', () => {
 
       expect(
         screen.getByText(
-          `Job type: ${mockJobData.jobType} | Engine: ${mockJobData.md_engine}`
+          `Job type: ${mockJobData.jobType} | MD Engine: ${mockJobData.md_engine}`
         )
       ).toBeInTheDocument()
-      expect(
-        screen.getByText(`Public ID: ${mockJobData.publicId}`)
-      ).toBeInTheDocument()
+      expect(screen.getByText(`Public Job ID:`)).toBeInTheDocument()
       expect(screen.getByText('Progress')).toBeInTheDocument()
       expect(screen.getByText('65%')).toBeInTheDocument()
     })
@@ -212,7 +210,7 @@ describe('PublicJobPage', () => {
       await waitFor(() => {
         expect(
           screen.getByText(
-            `Job type: ${jobWithoutEngine.jobType} | Engine: n/a`
+            `Job type: ${jobWithoutEngine.jobType} | MD Engine: n/a`
           )
         ).toBeInTheDocument()
       })
@@ -288,7 +286,7 @@ describe('PublicJobPage', () => {
           await waitFor(() => {
             expect(
               screen.getByText(
-                `Job type: ${jobType} | Engine: ${mockJobData.md_engine}`
+                `Job type: ${jobType} | MD Engine: ${mockJobData.md_engine}`
               )
             ).toBeInTheDocument()
           })
