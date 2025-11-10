@@ -110,7 +110,7 @@ def load_file(path):
             shutil.rmtree(temp_dir)
 
 
-def mw_bayes(eprof):
+def mw_kDa(eprof):
     mw_res = calc_exp_mw(eprof['q'], eprof['I'], eprof['err'])
     return float(mw_res['mmvc'] / 1000)  # MW in kDa
 
@@ -411,8 +411,8 @@ def calculate_chi_squares(models):
 
 
 def evaluate_model_fit(eprof, mprof, q_ranges, mw_model):
-    """Perform MW Bayesian calculation, chi-square analysis, and gather feedback."""
-    mw_exp = mw_bayes(eprof)
+    """Perform Vc MW calculation, chi-square analysis, and gather feedback."""
+    mw_exp = mw_kDa(eprof)
     mw_err = abs((mw_exp - mw_model) / mw_model)
     overall_chi_square = calculate_chi_square(eprof, mprof)
     print_debug(f"Overall chi-square: {round(overall_chi_square, 2)} MW: {mw_exp}")

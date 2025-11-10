@@ -1,6 +1,17 @@
 """
+Calculates MW from SAXS profile using Vc method, qmax = 0.25 Å⁻¹
 Inputs: 3-column dat file (q, I(q), Error), q in Å⁻¹
-Outputs: JSON file if--out
+Outputs: 
+{
+    "Rg": float,       # radius of gyration from Guinier fit
+    "I0": float,       # intensity at q=0 from Guinier fit
+    "qmin": float,     # lower q-bound of Guinier region
+    "qmax": float,     # upper q-bound of Guinier region
+    "r2": float,       # R² goodness-of-fit for Guinier region
+    "vc": float,       # volume-of-correlation value
+    "mmvc": float      # molecular weight estimated from Vc
+}
+saves as JSON file if--out
 """
 
 import argparse
