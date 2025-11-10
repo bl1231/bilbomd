@@ -149,6 +149,7 @@ interface IJob extends Document {
   uuid: string
   access_mode: AccessModeEnum
   public_id?: string
+  client_ip_hash?: string
   status: JobStatusEnum
   data_file: string
   md_engine?: MDEngineEnum
