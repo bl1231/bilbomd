@@ -11,6 +11,7 @@ import { alphafoldJobSchema } from '../../validation/index.js'
 import { ValidationError } from 'yup'
 import { Request, Response } from 'express'
 import { writeJobParams, spawnAutoRgCalculator } from './index.js'
+import { getFileStats } from './utils/jobUtils.js'
 import { queueJob } from '../../queues/bilbomd.js'
 import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
@@ -56,6 +57,16 @@ const handleBilboMDAlphaFoldJob = async (
   logger.info(`bilbomdMode: ${bilbomdMode}`)
   logger.info(`title: ${req.body.title}`)
 
+  // Handle example data files if no uploaded files
+  let datFile = files['dat_file']?.[0]
+  if (!datFile && req.body.dat_file) {
+    datFile = {
+      originalname: req.body.dat_file,
+      path: path.join(jobDir, req.body.dat_file),
+      size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+    } as Express.Multer.File
+  }
+
   let parsedEntities: IAlphaFoldEntity[] = []
 
   try {
@@ -73,7 +84,6 @@ const handleBilboMDAlphaFoldJob = async (
   }
 
   // Collect data for validation
-  const datFile = files['dat_file']?.[0]
   logger.info(`datFile = ${datFile?.originalname}, path = ${datFile?.path}`)
   const jobPayload = {
     title: req.body.title,
@@ -106,10 +116,9 @@ const handleBilboMDAlphaFoldJob = async (
   await createFastaFile(parsedEntities, jobDir)
 
   try {
-    const datFileName =
-      files['dat_file'] && files['dat_file'][0]
-        ? files['dat_file'][0].originalname.toLowerCase()
-        : 'missing.dat'
+    const datFileName = datFile
+      ? datFile.originalname.toLowerCase()
+      : 'missing.dat'
 
     // If the values calculated by autorg are outside of the limits set in the mongodb
     // schema then the job will not be created in mongodb and things fail in a way that

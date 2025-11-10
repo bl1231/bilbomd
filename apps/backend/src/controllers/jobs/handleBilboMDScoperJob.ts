@@ -4,6 +4,8 @@ import { BilboMdScoperJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { DispatchUser } from '../../types/bilbomd.js'
 import { hashClientIp } from '../../controllers/public/utils/hashClientIp.js'
+import path from 'path'
+import { getFileStats } from './utils/jobUtils.js'
 
 const handleBilboMDScoperJob = async (
   req: Request,
@@ -33,19 +35,50 @@ const handleBilboMDScoperJob = async (
       })
     }
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
+
+    // Handle example data files if no uploaded files
+    let pdbFile = files['pdb_file']?.[0]
+    let datFile = files['dat_file']?.[0]
+    if (!pdbFile && req.body.pdb_file) {
+      pdbFile = {
+        originalname: req.body.pdb_file,
+        path: path.join(
+          path.join(process.env.DATA_VOL ?? ''),
+          UUID,
+          req.body.pdb_file
+        ),
+        size: getFileStats(
+          path.join(
+            path.join(process.env.DATA_VOL ?? ''),
+            UUID,
+            req.body.pdb_file
+          )
+        ).size
+      } as Express.Multer.File
+    }
+    if (!datFile && req.body.dat_file) {
+      datFile = {
+        originalname: req.body.dat_file,
+        path: path.join(
+          path.join(process.env.DATA_VOL ?? ''),
+          UUID,
+          req.body.dat_file
+        ),
+        size: getFileStats(
+          path.join(
+            path.join(process.env.DATA_VOL ?? ''),
+            UUID,
+            req.body.dat_file
+          )
+        ).size
+      } as Express.Multer.File
+    }
+
     logger.info(
-      `PDB File: ${
-        files['pdb_file']
-          ? files['pdb_file'][0].originalname.toLowerCase()
-          : 'Not Found'
-      }`
+      `PDB File: ${pdbFile ? pdbFile.originalname.toLowerCase() : 'Not Found'}`
     )
     logger.info(
-      `DAT File: ${
-        files['dat_file']
-          ? files['dat_file'][0].originalname.toLowerCase()
-          : 'Not Found'
-      }`
+      `DAT File: ${datFile ? datFile.originalname.toLowerCase() : 'Not Found'}`
     )
 
     logger.info(`fixc1c2: ${fixc1c2}`)
@@ -53,8 +86,8 @@ const handleBilboMDScoperJob = async (
     const jobData = {
       title,
       uuid: UUID,
-      pdb_file: files['pdb_file'][0].originalname.toLowerCase(),
-      data_file: files['dat_file'][0].originalname.toLowerCase(),
+      pdb_file: pdbFile.originalname.toLowerCase(),
+      data_file: datFile.originalname.toLowerCase(),
       fixc1c2,
       status: 'Submitted',
       time_submitted: new Date(),

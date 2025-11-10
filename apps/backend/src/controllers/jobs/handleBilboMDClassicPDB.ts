@@ -128,6 +128,29 @@ const handleBilboMDClassicPDB = async (
       inpFile = files['inp_file']?.[0] || files['omm_const_file']?.[0] // Accept either file type
       datFile = files['dat_file']?.[0]
 
+      // Handle example data files if no uploaded files
+      if (!pdbFile && req.body.pdb_file) {
+        pdbFile = {
+          originalname: req.body.pdb_file,
+          path: path.join(jobDir, req.body.pdb_file),
+          size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
+        } as Express.Multer.File
+      }
+      if (!inpFile && req.body.inp_file) {
+        inpFile = {
+          originalname: req.body.inp_file,
+          path: path.join(jobDir, req.body.inp_file),
+          size: getFileStats(path.join(jobDir, req.body.inp_file)).size
+        } as Express.Multer.File
+      }
+      if (!datFile && req.body.dat_file) {
+        datFile = {
+          originalname: req.body.dat_file,
+          path: path.join(jobDir, req.body.dat_file),
+          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+        } as Express.Multer.File
+      }
+
       pdbFileName = pdbFile?.originalname.toLowerCase()
       inpFileName = inpFile?.originalname.toLowerCase()
       datFileName = datFile?.originalname.toLowerCase()

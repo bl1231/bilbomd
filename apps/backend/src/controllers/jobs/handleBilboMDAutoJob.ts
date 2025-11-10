@@ -106,9 +106,33 @@ const handleBilboMDAutoJob = async (
       pdbFile = files['pdb_file']?.[0]
       paeFile = files['pae_file']?.[0]
       datFile = files['dat_file']?.[0]
-      pdbFileName = files['pdb_file']?.[0]?.originalname.toLowerCase()
-      paeFileName = files['pae_file']?.[0]?.originalname.toLowerCase()
-      datFileName = files['dat_file']?.[0]?.originalname.toLowerCase()
+
+      // Handle example data files if no uploaded files
+      if (!pdbFile && req.body.pdb_file) {
+        pdbFile = {
+          originalname: req.body.pdb_file,
+          path: path.join(jobDir, req.body.pdb_file),
+          size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
+        } as Express.Multer.File
+      }
+      if (!paeFile && req.body.pae_file) {
+        paeFile = {
+          originalname: req.body.pae_file,
+          path: path.join(jobDir, req.body.pae_file),
+          size: getFileStats(path.join(jobDir, req.body.pae_file)).size
+        } as Express.Multer.File
+      }
+      if (!datFile && req.body.dat_file) {
+        datFile = {
+          originalname: req.body.dat_file,
+          path: path.join(jobDir, req.body.dat_file),
+          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+        } as Express.Multer.File
+      }
+
+      pdbFileName = pdbFile?.originalname.toLowerCase()
+      paeFileName = paeFile?.originalname.toLowerCase()
+      datFileName = datFile?.originalname.toLowerCase()
     }
 
     logger.info(`PDB File: ${pdbFileName}`)

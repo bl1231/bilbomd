@@ -134,10 +134,41 @@ const handleBilboMDClassicCRD = async (
       psfFile = files['psf_file']?.[0]
       inpFile = files['inp_file']?.[0]
       datFile = files['dat_file']?.[0]
-      crdFileName = files['crd_file']?.[0]?.originalname.toLowerCase()
-      psfFileName = files['psf_file']?.[0]?.originalname.toLowerCase()
-      inpFileName = files['inp_file']?.[0]?.originalname.toLowerCase()
-      datFileName = files['dat_file']?.[0]?.originalname.toLowerCase()
+
+      // Handle example data files if no uploaded files
+      if (!crdFile && req.body.crd_file) {
+        crdFile = {
+          originalname: req.body.crd_file,
+          path: path.join(jobDir, req.body.crd_file),
+          size: getFileStats(path.join(jobDir, req.body.crd_file)).size
+        } as Express.Multer.File
+      }
+      if (!psfFile && req.body.psf_file) {
+        psfFile = {
+          originalname: req.body.psf_file,
+          path: path.join(jobDir, req.body.psf_file),
+          size: getFileStats(path.join(jobDir, req.body.psf_file)).size
+        } as Express.Multer.File
+      }
+      if (!inpFile && req.body.inp_file) {
+        inpFile = {
+          originalname: req.body.inp_file,
+          path: path.join(jobDir, req.body.inp_file),
+          size: getFileStats(path.join(jobDir, req.body.inp_file)).size
+        } as Express.Multer.File
+      }
+      if (!datFile && req.body.dat_file) {
+        datFile = {
+          originalname: req.body.dat_file,
+          path: path.join(jobDir, req.body.dat_file),
+          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+        } as Express.Multer.File
+      }
+
+      crdFileName = crdFile?.originalname.toLowerCase()
+      psfFileName = psfFile?.originalname.toLowerCase()
+      inpFileName = inpFile?.originalname.toLowerCase()
+      datFileName = datFile?.originalname.toLowerCase()
 
       const constInpFilePath = path.join(jobDir, inpFileName)
       const constInpOrigFilePath = path.join(jobDir, `${inpFileName}.orig`)
