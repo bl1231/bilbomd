@@ -72,6 +72,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   }
   const [selectedMode, setSelectedMode] = useState('pdb')
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
+  const [useExampleData, setUseExampleData] = useState(false)
 
   // RTK Query to fetch the configuration
   const {
@@ -118,6 +119,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('rg_max', values.rg_max)
     form.append('dat_file', values.dat_file)
     form.append('inp_file', values.inp_file)
+    if (useExampleData) {
+      form.append('useExampleData', 'true')
+    }
 
     try {
       const newJob =
@@ -175,14 +179,15 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     return (
       !isPerlmutterUnavailable &&
       values.title !== '' &&
-      values.inp_file !== '' &&
-      values.dat_file !== '' &&
       values.rg_max !== '' &&
       values.rg_min !== '' &&
       values.num_conf !== '' &&
-      (values.bilbomd_mode === 'pdb'
-        ? values.pdb_file !== ''
-        : values.psf_file !== '' && values.crd_file !== '')
+      (useExampleData ||
+        (values.inp_file !== '' &&
+          values.dat_file !== '' &&
+          (values.bilbomd_mode === 'pdb'
+            ? values.pdb_file !== ''
+            : values.psf_file !== '' && values.crd_file !== '')))
     )
   }
 
@@ -225,7 +230,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
           ) : (
             <Formik
               initialValues={initialValues}
-              validationSchema={BilboMDClassicJobSchema}
+              validationSchema={
+                useExampleData ? undefined : BilboMDClassicJobSchema
+              }
               onSubmit={onSubmit}
             >
               {({
@@ -311,6 +318,57 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Alert>
                       </Grid>
                     </Grid>
+                    <Grid
+                      container
+                      direction="row"
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        width: '520px',
+                        my: 2
+                      }}
+                    >
+                      <Button
+                        variant={useExampleData ? 'outlined' : 'contained'}
+                        onClick={() => {
+                          setUseExampleData(!useExampleData)
+                          if (!useExampleData) {
+                            // Switching to example data: reset file fields
+                            void setFieldValue('psf_file', '')
+                            void setFieldValue('crd_file', '')
+                            void setFieldValue('pdb_file', '')
+                            void setFieldValue('inp_file', '')
+                            void setFieldValue('dat_file', '')
+                            // Add defaults for other fields
+                            void setFieldValue(
+                              'title',
+                              'Example BilboMD PDB Job'
+                            )
+                            void setFieldValue('rg_min', '26')
+                            void setFieldValue('rg_max', '42')
+                            void setFieldValue('num_conf', 1)
+                          }
+                          // Delay validation to ensure form state has been updated
+                          setTimeout(() => {
+                            void validateForm()
+                          }, 0)
+                        }}
+                      >
+                        {useExampleData
+                          ? 'Use Custom Data'
+                          : 'Load Example Data'}
+                      </Button>
+                      {useExampleData && (
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                        >
+                          Using example data for{' '}
+                          {values.bilbomd_mode === 'pdb' ? 'PDB' : 'CRD/PSF'}{' '}
+                          mode
+                        </Typography>
+                      )}
+                    </Grid>
                     <Divider
                       textAlign="left"
                       sx={{ my: 1 }}
@@ -352,7 +410,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               id="crd-file-upload"
                               as={FileSelect}
                               title="Select File"
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || useExampleData}
                               setFieldValue={setFieldValue}
                               setFieldTouched={setFieldTouched}
                               error={errors.crd_file && touched.crd_file}
@@ -379,7 +437,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               id="psf-file-upload"
                               as={FileSelect}
                               title="Select File"
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || useExampleData}
                               setFieldValue={setFieldValue}
                               setFieldTouched={setFieldTouched}
                               error={errors.psf_file && touched.psf_file}
@@ -410,7 +468,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               id="pdb-file-upload"
                               as={FileSelect}
                               title="Select File"
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || useExampleData}
                               setFieldValue={setFieldValue}
                               setFieldTouched={setFieldTouched}
                               error={errors.pdb_file && touched.pdb_file}
@@ -439,7 +497,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           id="inp_file-file-upload"
                           as={FileSelect}
                           title="Select File"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || useExampleData}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           onBlur={handleBlur}
@@ -500,7 +558,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           id="dat_file-file-upload"
                           as={FileSelect}
                           title="Select File"
-                          disabled={isSubmitting || isLoading}
+                          disabled={isSubmitting || isLoading || useExampleData}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.dat_file && touched.dat_file}
@@ -595,13 +653,13 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       />
                     </Grid>
                     <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
-                      <TextField
+                      <Field
+                        name="num_conf"
+                        as={TextField}
                         label="Conformations per Rg"
                         variant="outlined"
                         id="num_conf"
-                        name="num_conf"
                         select
-                        defaultValue=""
                         sx={{ width: '520px' }}
                         onChange={handleChange}
                         onBlur={handleBlur}
@@ -636,7 +694,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         >
                           800
                         </MenuItem>
-                      </TextField>
+                      </Field>
                     </Grid>
                     {isSubmitting && (
                       <Box sx={{ width: '520px' }}>
