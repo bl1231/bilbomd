@@ -46,6 +46,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
+  const [useExampleData, setUseExampleData] = useState(false)
 
   // RTK Query to fetch the configuration
   const {
@@ -79,6 +80,9 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('dat_file', values.dat_file)
     form.append('pae_file', values.pae_file)
     form.append('bilbomd_mode', 'auto')
+    if (useExampleData) {
+      form.append('useExampleData', 'true')
+    }
 
     try {
       const newJob =
@@ -95,9 +99,10 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     return (
       !isPerlmutterUnavailable &&
       values.title !== '' &&
-      values.pdb_file !== '' &&
-      values.pae_file !== '' &&
-      values.dat_file !== ''
+      (useExampleData ||
+        (values.pdb_file !== '' &&
+          values.pae_file !== '' &&
+          values.dat_file !== ''))
     )
   }
 
@@ -146,7 +151,8 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                   handleChange,
                   handleBlur,
                   setFieldValue,
-                  setFieldTouched
+                  setFieldTouched,
+                  validateForm
                 }) => (
                   <Form>
                     <Grid
@@ -178,13 +184,53 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         />
                       </Grid>
 
+                      <Grid sx={{ my: 2, width: '520px' }}>
+                        <Button
+                          variant={useExampleData ? 'outlined' : 'contained'}
+                          onClick={() => {
+                            setUseExampleData(!useExampleData)
+                            if (!useExampleData) {
+                              // Switching to example data: reset file fields
+                              void setFieldValue('pdb_file', '')
+                              void setFieldValue('pae_file', '')
+                              void setFieldValue('dat_file', '')
+                              // Add default for title
+                              void setFieldValue(
+                                'title',
+                                'Example BilboMD Auto Job'
+                              )
+                            } else {
+                              // Switching to custom data: clear example defaults
+                              void setFieldValue('title', '')
+                            }
+                            // Delay validation to ensure form state has been updated
+                            setTimeout(() => {
+                              void validateForm()
+                            }, 0)
+                          }}
+                        >
+                          {useExampleData
+                            ? 'Use Custom Data'
+                            : 'Load Example Data'}
+                        </Button>
+                        {useExampleData && (
+                          <Typography
+                            variant="body2"
+                            color="textSecondary"
+                            sx={{ mt: 1 }}
+                          >
+                            Using example data for Auto mode
+                          </Typography>
+                        )}
+                      </Grid>
+
                       <Grid>
                         <Field
                           name="pdb_file"
                           id="pdb-file-upload"
                           as={FileSelect}
                           title="Select File"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || useExampleData}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.pdb_file && touched.pdb_file}
@@ -200,7 +246,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           id="pae-file-upload"
                           as={FileSelect}
                           title="Select File"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || useExampleData}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.pae_file && touched.pae_file}
@@ -215,7 +261,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           id="dat-file-upload"
                           as={FileSelect}
                           title="Select File"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || useExampleData}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.dat_file && touched.dat_file}
@@ -234,7 +280,8 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         <Button
                           type="submit"
                           disabled={
-                            !isValid || isSubmitting || !isFormValid(values)
+                            (!isValid && !useExampleData) ||
+                            !isFormValid(values)
                           }
                           loading={isSubmitting}
                           endIcon={<SendIcon />}
@@ -244,6 +291,33 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         >
                           <span>Submit</span>
                         </Button>
+                        {((!isValid && !useExampleData) ||
+                          !isFormValid(values)) && (
+                          <Typography
+                            variant="body2"
+                            color="error"
+                            sx={{
+                              mt: 1,
+                              fontSize: '0.75rem',
+                              whiteSpace: 'pre-line'
+                            }}
+                          >
+                            {Object.entries(errors)
+                              .filter(
+                                ([key, value]) =>
+                                  value &&
+                                  (useExampleData
+                                    ? ![
+                                        'pdb_file',
+                                        'pae_file',
+                                        'dat_file'
+                                      ].includes(key)
+                                    : true)
+                              )
+                              .map(([, value]) => value)
+                              .join('\n')}
+                          </Typography>
+                        )}
                       </Grid>
                     </Grid>
                     {import.meta.env.MODE === 'development' ? <Debug /> : ''}
