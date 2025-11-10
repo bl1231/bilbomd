@@ -2,7 +2,7 @@ import { logger } from '../../middleware/loggers.js'
 import { queueScoperJob } from '../../queues/scoper.js'
 import { BilboMdScoperJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
-import { DispatchUser } from 'types/bilbomd.js'
+import { DispatchUser } from '../../types/bilbomd.js'
 import { hashClientIp } from '../../controllers/public/utils/hashClientIp.js'
 
 const handleBilboMDScoperJob = async (

@@ -20,9 +20,6 @@ const NewSANSJob = Loadable(
 const NewScoperJob = Loadable(
   lazy(() => import('features/scoperjob/NewScoperJobForm'))
 )
-const NewMultiJob = Loadable(
-  lazy(() => import('features/multimd/NewMultiMDJobForm'))
-)
 const ConstInpStepper = Loadable(
   lazy(() => import('components/ConstInpForm/ConstInpStepper'))
 )

@@ -14,8 +14,7 @@ import {
 import { Request, Response } from 'express'
 import { sanitizeConstInpFile, writeJobParams } from './index.js'
 import { queueJob } from '../../queues/bilbomd.js'
-import { DispatchUser } from 'types/bilbomd.js'
-import { BilboMDDispatchContext } from 'types/bilbomd.js'
+import { DispatchUser, BilboMDDispatchContext } from '../../types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 

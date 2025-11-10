@@ -16,7 +16,7 @@ import { spawnAutoRgCalculator } from './utils/autoRg.js'
 import fs from 'fs-extra'
 import { autoJobSchema } from '../../validation/index.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
-import { DispatchUser } from 'types/bilbomd.js'
+import { DispatchUser } from '../../types/bilbomd.js'
 import { hashClientIp } from '../../controllers/public/utils/hashClientIp.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
