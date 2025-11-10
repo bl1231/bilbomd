@@ -4,7 +4,6 @@ import path from 'path'
 import cors from 'cors'
 import { corsOptions } from './config/corsOptions.js'
 import { corsOptionsPublic } from './config/corsOptionsPublic.js'
-// import { loginLimiter } from './middleware/loginLimiter.js'
 import { externalApiLimiter } from './middleware/externalApiLimiter.js'
 import { logger, requestLogger, assignRequestId } from './middleware/loggers.js'
 import cookieParser from 'cookie-parser'
@@ -44,8 +43,7 @@ const viewsPath = '/app/views'
 logger.info(`Starting in ${environment} mode`)
 
 // Trust the first proxy in front of the app
-// ChatGPT suggested this
-app.set('trust proxy', 1)
+app.set('trust proxy', true)
 
 // Connect to MongoDB
 connectDB()
@@ -57,8 +55,13 @@ await initOrcidClient()
 app.use(assignRequestId)
 app.use(requestLogger)
 
-// Rate limiting middleware
-// app.use(loginLimiter)
+// Log IP addresses for debugging trust proxy
+// app.use((req, res, next) => {
+//   logger.info(
+//     `Client IP: ${req.ip}, IPs: ${req.ips}, X-Forwarded-For: ${req.headers['x-forwarded-for']}`
+//   )
+//   next()
+// })
 
 // Cross Origin Resource Sharing
 // prevents unwanted clients from accessing our backend API.
@@ -90,9 +93,6 @@ app.use(
 
 // Serve static files
 app.use('/', express.static('public'))
-
-// Root routes (no version)
-// app.use('/', rootRoutes)
 
 app.use('/admin/bullmq', adminRoutes)
 
