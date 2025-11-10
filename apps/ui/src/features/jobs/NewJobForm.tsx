@@ -137,36 +137,37 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const handleCheckboxChange =
     (
       resetForm: FormikHelpers<BilboMDClassicJobFormValues>['resetForm'],
-      values: BilboMDClassicJobFormValues,
       validateForm: (
         values?: Partial<BilboMDClassicJobFormValues>
       ) => Promise<FormikErrors<BilboMDClassicJobFormValues>>,
-      touched: FormikTouched<BilboMDClassicJobFormValues>
+      setUseExampleData: (value: boolean) => void
     ) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const newBilboMDMode =
         event.target.name === 'pdb_inputs' ? 'pdb' : 'crd_psf'
 
       setSelectedMode(newBilboMDMode)
+      setUseExampleData(false) // Switch to custom data mode when changing modes
 
       if (newBilboMDMode === 'pdb') {
         console.log('reset to PDB mode')
         resetForm({
           values: {
-            ...values,
-            crd_file: '',
-            psf_file: '',
+            ...initialValues,
             bilbomd_mode: 'pdb'
           },
           errors: {},
-          touched: { ...touched }
+          touched: {}
         })
       } else {
         console.log('reset to CRD/PSF mode')
         resetForm({
-          values: { ...values, pdb_file: '', bilbomd_mode: 'crd_psf' },
+          values: {
+            ...initialValues,
+            bilbomd_mode: 'crd_psf'
+          },
           errors: {},
-          touched: { ...touched }
+          touched: {}
         })
       }
       // Delay validation to ensure form state has been updated
@@ -285,9 +286,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 checked={values.bilbomd_mode === 'pdb'}
                                 onChange={handleCheckboxChange(
                                   resetForm,
-                                  values,
                                   validateForm,
-                                  touched
+                                  setUseExampleData
                                 )}
                                 name="pdb_inputs"
                               />
@@ -300,9 +300,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 checked={values.bilbomd_mode === 'crd_psf'}
                                 onChange={handleCheckboxChange(
                                   resetForm,
-                                  values,
                                   validateForm,
-                                  touched
+                                  setUseExampleData
                                 )}
                                 name="crd_psf_inputs"
                               />
@@ -339,14 +338,24 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             void setFieldValue('pdb_file', '')
                             void setFieldValue('inp_file', '')
                             void setFieldValue('dat_file', '')
-                            // Add defaults for other fields
-                            void setFieldValue(
-                              'title',
-                              'Example BilboMD PDB Job'
-                            )
-                            void setFieldValue('rg_min', '26')
-                            void setFieldValue('rg_max', '42')
-                            void setFieldValue('num_conf', 1)
+                            // Add defaults for other fields based on mode
+                            if (values.bilbomd_mode === 'pdb') {
+                              void setFieldValue(
+                                'title',
+                                'Example BilboMD PDB Job'
+                              )
+                              void setFieldValue('rg_min', '26')
+                              void setFieldValue('rg_max', '42')
+                              void setFieldValue('num_conf', 1)
+                            } else {
+                              void setFieldValue(
+                                'title',
+                                'Example BilboMD CRD/PSF Job'
+                              )
+                              void setFieldValue('rg_min', '20')
+                              void setFieldValue('rg_max', '50')
+                              void setFieldValue('num_conf', 2)
+                            }
                           }
                           // Delay validation to ensure form state has been updated
                           setTimeout(() => {
