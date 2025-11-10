@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { Response } from 'express'
 import { IUser } from '@bilbomd/mongodb-schema'
-// import { logger } from '../../middleware/loggers.js'
 
 const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET ?? ''
 const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET ?? ''
@@ -10,8 +9,6 @@ export async function issueTokensAndSetCookie(
   user: IUser,
   res: Response
 ): Promise<string> {
-  // logger.info(`Issuing tokens for user: ${user.username}`)
-  // logger.info(`User roles : ${user.roles.join(', ')}`)
   const accessToken = jwt.sign(
     {
       UserInfo: {
