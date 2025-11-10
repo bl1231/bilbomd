@@ -1,6 +1,6 @@
 """
 Inputs: 3-column dat file (q, I(q), Error), q in Å⁻¹
-Outputs: JSON file
+Outputs: JSON file if--out
 """
 
 import argparse
@@ -116,6 +116,22 @@ def load_profile(path: str):
     return q, I, sigma
 
 
+def calc_exp_mw(q: np.ndarray, I: np.ndarray, sigma: Optional[np.ndarray] = None) -> Dict[str, float]:
+    """
+    Run Guinier analysis + volume of correlation on numpy arrays.
+    Outputs mmvc
+    """
+    result = guinier_scan(q, I, sigma)
+    I0 = result["I0"]
+    Rg = result["Rg"]
+    qmin = result["qmin"]
+
+    vc_res = volume_of_correlation(q, I, I0, Rg, qmin)
+    result.update(vc_res)
+    return result
+
+
+
 # ------------------------- Main -------------------------
 
 def main():
@@ -125,23 +141,16 @@ def main():
     args = parser.parse_args()
 
     q, I, sigma = load_profile(args.data_path)
-
-    result = guinier_scan(q, I, sigma)
-    I0 = result["I0"]
-    Rg = result["Rg"]
-    qmin = result["qmin"]
-
-    # vc + mmvc
-    vc_res = volume_of_correlation(q, I, I0, Rg, qmin)
-    result.update(vc_res)
+    result = calc_exp_mw(q, I, sigma)
 
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)
 
     print(
-        f"Saved Rg={Rg:.2f}, I0={I0:.4g}"
-        f"Vc={vc_res['vc']:.4g}, mmvc={vc_res['mmvc']:.4g} to {args.out}"
+        f"Saved Rg={result['Rg']:.2f}, I0={result['I0']:.4g}, "
+        f"Vc={result['vc']:.4g}, mmvc={result['mmvc']:.4g} to {args.out}"
     )
+
 
 
 if __name__ == "__main__":

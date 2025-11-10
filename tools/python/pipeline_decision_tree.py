@@ -25,26 +25,7 @@ from typing import List
 import numpy as np
 
 from pdb_utils import calculate_molecular_weight
-
-try:
-    from mw_bayes import EstimationConfig, estimate_mw
-except Exception:
-    # Try common repo locations relative to this file
-    _this = Path(__file__).resolve()
-    _repo_root = _this.parents[3]  # <repo>/ (scripts -> worker -> apps -> <repo>)
-    _candidates = [
-        _this.parent / "mw_bayes.py",  # same dir as this script
-        _repo_root / "tools" / "python" / "mw_bayes.py",  # <repo>/tools/python/
-        _repo_root / "apps" / "backend" / "scripts" / "mw_bayes.py",
-    ]
-    for _p in _candidates:
-        if _p.exists():
-            import sys
-
-            sys.path.insert(0, str(_p.parent))
-            break
-    from mw_bayes import EstimationConfig, estimate_mw
-
+from mw_calc import calc_exp_mw
 
 # Global constants
 MW_ERR_CUTOFF = 0.20
@@ -130,44 +111,8 @@ def load_file(path):
 
 
 def mw_bayes(eprof):
-    """
-    RAW-free MW estimate using local my_bayes module (no subprocess).
-    Expects eprof as a dict with keys {"q","I","err"}.
-
-    We call my_bayes.estimate_mw() in a temp-file mode but within Python:
-    we save a temporary q/I/err file and pass its path to estimate_mw so
-    the logic stays in-module (not via shell), honoring calibration env vars.
-    """
-    # Prepare a minimal config from env vars
-    calib = os.getenv("BILBOMD_MW_CALIB_JSON")
-    conc = os.getenv("BILBOMD_SAMPLE_CONC_G_PER_CM3")
-    alpha = os.getenv("BILBOMD_MW_ALPHA", "0.14")
-    beta = os.getenv("BILBOMD_MW_BETA", "1.0")
-
-    # Build EstimationConfig consistent with my_bayes
-    use_i0 = bool(calib and conc)
-    cfg = EstimationConfig(
-        use_i0=use_i0,
-        use_vc=True,
-        use_vp=bool(calib),
-        qmax=None,
-        conc=float(conc) if conc else None,
-        alpha=float(alpha),
-        beta=float(beta),
-    )
-
-    # Write a temporary 3-column file and call estimate_mw(sample_path=...)
-    with tempfile.TemporaryDirectory() as td:
-        tmp_dat = Path(td) / "exp_qIerr.dat"
-        arr = np.column_stack([eprof["q"], eprof["I"], eprof["err"]])
-        np.savetxt(tmp_dat, arr)
-        # estimate_mw writes JSON to disk; we can ignore writing by passing a temp path
-        tmp_json = Path(td) / "mw.json"
-        res = estimate_mw(str(tmp_dat), str(tmp_json), cfg, calibration_json=calib)
-        mw_kDa = res.get("mw_kDa")
-        if mw_kDa is None:
-            raise RuntimeError("my_bayes.estimate_mw() did not return mw_kDa")
-        return float(mw_kDa)
+    mw_res = calc_exp_mw(eprof['q'], eprof['I'], eprof['err'])
+    return float(mw_res['mmvc'] / 1000)  # MW in kDa
 
 
 def extract_q_region(prof, q_lower_bound, q_upper_bound):
