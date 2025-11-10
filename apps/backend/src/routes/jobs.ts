@@ -7,7 +7,7 @@ import {
   downloadJobResults,
   getLogForStep
 } from '../controllers/jobs/index.js'
-import { createNewSANSJob } from '../controllers/jobs/sansJobController.js'
+import { createSANSJob } from '../controllers/jobs/sansJobController.js'
 import { createNewMultiJob } from '../controllers/jobs/multiMdController.js'
 import { downloadPDB, getFoxsData } from '../controllers/downloadController.js'
 import { getFile } from '../controllers/fileDownloadController.js'
@@ -53,7 +53,7 @@ router.route('/:id/:filename').get(getFile)
 router.route('/bilbomd-auto').post(createNewJob)
 router.route('/bilbomd-scoper').post(createNewJob)
 router.route('/bilbomd-alphafold').post(createNewJob)
-router.route('/bilbomd-sans').post(createNewSANSJob)
+router.route('/bilbomd-sans').post(createSANSJob)
 router.route('/bilbomd-multi').post(createNewMultiJob)
 
 export default router

@@ -15,6 +15,13 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
         body: formData
       })
     }),
+    addNewPublicSANSJob: builder.mutation<AnonJobResponse, FormData>({
+      query: (formData) => ({
+        url: '/public/jobs/sans',
+        method: 'POST',
+        body: formData
+      })
+    }),
     getPublicJobById: builder.query<PublicJobStatus, string>({
       query: (publicId) => `/public/jobs/${publicId}`
     }),
@@ -50,6 +57,7 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
 
 export const {
   useAddNewPublicJobMutation,
+  useAddNewPublicSANSJobMutation,
   useGetPublicJobByIdQuery,
   useGetPublicFoxsDataQuery,
   useGetPublicFeedbackDataQuery,

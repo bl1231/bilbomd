@@ -11,11 +11,13 @@ import {
   Chip
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import { Link as RouterLink } from 'react-router'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
-import { useAddNewSANSJobMutation } from 'slices/jobsApiSlice'
-import { useCalculateAutoRgMutation } from 'slices/jobsApiSlice'
+import {
+  useAddNewSANSJobMutation,
+  useCalculateAutoRgMutation
+} from 'slices/jobsApiSlice'
+import { useAddNewPublicSANSJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import { BilboMDSANSJobSchema } from 'schemas/BilboMDSANSJobSchema'
 import { expdataSchema } from 'schemas/ExpdataSchema'
@@ -30,6 +32,12 @@ import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import ChainDeuterationSlider from './ChainDeuterationSlider'
 import { useTheme } from '@mui/material/styles'
+import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
+import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+
+type NewJobFormProps = {
+  mode?: 'authenticated' | 'anonymous'
+}
 
 const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
   <Grid size={{ xs: 12 }}>
@@ -43,23 +51,35 @@ const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
             ? '/images/bilbomd-sans-schematic-dark.png'
             : '/images/bilbomd-sans-schematic.png'
         }
-        alt='Overview of BilboMD AF pipeline'
+        alt="Overview of BilboMD AF pipeline"
         style={{ maxWidth: '100%', height: 'auto' }}
       />
     </Paper>
   </Grid>
 )
 
-const NewSANSJob = () => {
-  useTitle('BilboMD: New SANS Job')
-  const [addNewSANSJob, { isSuccess, isError, error }] =
+const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
+  useTitle(
+    mode === 'anonymous'
+      ? 'BilboMD: New SANS Job (anonymous)'
+      : 'BilboMD: New SANS Job'
+  )
+
+  const theme = useTheme()
+  const isDarkMode = theme.palette.mode === 'dark'
+
+  const [addNewSANSJob, { isSuccess: isAuthSuccess, data: authJobResponse }] =
     useAddNewSANSJobMutation()
+  const [
+    addNewPublicSANSJob,
+    { isSuccess: isAnonSuccess, data: anonJobResponse }
+  ] = useAddNewPublicSANSJobMutation()
+  const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
+  const jobResponse = mode === 'anonymous' ? anonJobResponse : authJobResponse
   const [calculateAutoRg, { isLoading }] = useCalculateAutoRgMutation()
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const [chainIds, setChainIds] = useState<string[]>([])
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
-  const theme = useTheme()
-  const isDarkMode = theme.palette.mode === 'dark'
 
   // Fetch the configuration object
   const {
@@ -71,7 +91,7 @@ const NewSANSJob = () => {
   if (configIsLoading) return <LinearProgress />
 
   if (configError)
-    return <Alert severity='error'>Error loading configuration</Alert>
+    return <Alert severity="error">Error loading configuration</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
 
@@ -116,7 +136,10 @@ const NewSANSJob = () => {
     })
 
     try {
-      const newJob = await addNewSANSJob(form).unwrap()
+      const newJob =
+        mode === 'anonymous'
+          ? await addNewPublicSANSJob(form).unwrap()
+          : await addNewSANSJob(form).unwrap()
       setStatus(newJob)
     } catch (error) {
       console.error('rejected', error)
@@ -159,29 +182,42 @@ const NewSANSJob = () => {
   }
 
   const content = (
-    <Grid container spacing={2}>
+    <Grid
+      container
+      spacing={2}
+    >
       <NewSANSJobFormInstructions />
 
       <PipelineSchematic isDarkMode={isDarkMode} />
 
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
-          <Box display='flex' alignItems='center'>
+          <Box
+            display="flex"
+            alignItems="center"
+          >
             <Typography>BilboMD SANS Job Form</Typography>
-            <Typography component='span' sx={{ color: 'yellow', ml: 1 }}>
+            <Typography
+              component="span"
+              sx={{ color: 'yellow', ml: 1 }}
+            >
               *Experimental - Please report problems to Scott
             </Typography>
           </Box>
         </HeaderBox>
         <Paper sx={{ p: 2 }}>
           {isSuccess ? (
-            <Alert severity='success'>
-              <AlertTitle>Woot!</AlertTitle>
-              <Typography>
-                Your job has been submitted. Check out the{' '}
-                <RouterLink to='../jobs'>details</RouterLink>.
-              </Typography>
-            </Alert>
+            mode === 'anonymous' ? (
+              <PublicJobSuccessAlert
+                jobResponse={jobResponse}
+                jobType="Auto"
+              />
+            ) : (
+              <JobSuccessAlert
+                jobResponse={jobResponse}
+                jobType="Auto"
+              />
+            )
           ) : (
             <Formik<NewSANSJobFormValues>
               initialValues={initialValues}
@@ -196,15 +232,17 @@ const NewSANSJob = () => {
                 isSubmitting,
                 handleChange,
                 handleBlur,
-                status,
                 setFieldValue,
                 setFieldTouched
               }) => (
                 <Form>
-                  <Grid container direction='column'>
+                  <Grid
+                    container
+                    direction="column"
+                  >
                     {useNersc && (
                       <NerscStatusChecker
-                        systemName='perlmutter'
+                        systemName="perlmutter"
                         onStatusCheck={handleStatusCheck}
                       />
                     )}
@@ -213,10 +251,10 @@ const NewSANSJob = () => {
                     <Grid sx={{ my: 2, width: '520px' }}>
                       <Field
                         fullWidth
-                        label='Title'
-                        name='title'
-                        id='title'
-                        type='text'
+                        label="Title"
+                        name="title"
+                        id="title"
+                        type="text"
                         disabled={isSubmitting}
                         as={TextField}
                         onChange={handleChange}
@@ -232,17 +270,17 @@ const NewSANSJob = () => {
                     {/* PDB file */}
                     <Grid>
                       <Field
-                        name='pdb_file'
-                        id='pdb-file-upload'
+                        name="pdb_file"
+                        id="pdb-file-upload"
                         as={FileSelect}
-                        title='Select File'
+                        title="Select File"
                         disabled={isSubmitting}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.pdb_file && touched.pdb_file}
                         errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                        fileType='Starting PDB file *.pdb'
-                        fileExt='.pdb'
+                        fileType="Starting PDB file *.pdb"
+                        fileExt=".pdb"
                         onFileChange={async (selectedFile: File) => {
                           const isPDBValid =
                             await pdbFileSchema.isValid(selectedFile)
@@ -264,17 +302,17 @@ const NewSANSJob = () => {
                     {/* SANS dat file */}
                     <Grid>
                       <Field
-                        name='dat_file'
-                        id='dat-file-upload'
+                        name="dat_file"
+                        id="dat-file-upload"
                         as={FileSelect}
-                        title='Select File'
+                        title="Select File"
                         disabled={isSubmitting || isLoading}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.dat_file && touched.dat_file}
                         errorMessage={errors.dat_file ? errors.dat_file : ''}
-                        fileType='experimental SANS data'
-                        fileExt='.dat'
+                        fileType="experimental SANS data"
+                        fileExt=".dat"
                         onFileChange={async (selectedFile: File) => {
                           setAutoRgError(null)
                           const isExpdataValid =
@@ -306,7 +344,7 @@ const NewSANSJob = () => {
                       />
                     </Grid>
                     <Grid sx={{ display: 'flex', width: '520px' }}>
-                      <Alert severity='info'>
+                      <Alert severity="info">
                         <Typography>
                           <b>Rg Min</b> and <b>Rg Max</b> will be calculated
                           automatically from the selected SANS data file. Feel
@@ -321,17 +359,17 @@ const NewSANSJob = () => {
                     )}
                     {autoRgError && (
                       <Box sx={{ my: 1, width: '520px' }}>
-                        <Alert severity='error'>{autoRgError}</Alert>
+                        <Alert severity="error">{autoRgError}</Alert>
                       </Box>
                     )}
                     {/* Rg Min */}
                     <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
                       <Field
-                        label='Rg Min'
+                        label="Rg Min"
                         fullWidth
-                        id='rg_min'
-                        name='rg_min'
-                        type='number'
+                        id="rg_min"
+                        name="rg_min"
+                        type="number"
                         disabled={isSubmitting || isLoading}
                         as={TextField}
                         onChange={handleChange}
@@ -349,11 +387,11 @@ const NewSANSJob = () => {
                     {/* rRg Max */}
                     <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
                       <Field
-                        label='Rg Max'
+                        label="Rg Max"
                         fullWidth
-                        id='rg_max'
-                        name='rg_max'
-                        type='number'
+                        id="rg_max"
+                        name="rg_max"
+                        type="number"
                         disabled={isSubmitting || isLoading}
                         as={TextField}
                         error={errors.rg_max && touched.rg_max}
@@ -371,31 +409,38 @@ const NewSANSJob = () => {
                     {/* const.inp file */}
                     <Grid>
                       <Field
-                        name='inp_file'
-                        id='const-inp-file-upload'
+                        name="inp_file"
+                        id="const-inp-file-upload"
                         as={FileSelect}
-                        title='Select File'
+                        title="Select File"
                         disabled={isSubmitting}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.inp_file && touched.inp_file}
                         errorMessage={errors.inp_file ? errors.inp_file : ''}
-                        fileType='CHARMM const.inp file'
-                        fileExt='.inp'
+                        fileType="CHARMM const.inp file"
+                        fileExt=".inp"
                       />
                     </Grid>
 
                     {/* D2O Fraction Slider */}
                     <Grid sx={{ my: 2, width: '520px' }}>
-                      <Typography id='d2o-fraction-slider' gutterBottom>
+                      <Typography
+                        id="d2o-fraction-slider"
+                        gutterBottom
+                      >
                         Solvent D<sub>2</sub>O Fraction
                       </Typography>
-                      <Grid container spacing={2} alignItems='center'>
+                      <Grid
+                        container
+                        spacing={2}
+                        alignItems="center"
+                      >
                         <Grid>
                           <Chip
                             label={`${values.d2o_fraction}%`}
-                            variant='outlined'
-                            color='success'
+                            variant="outlined"
+                            color="success"
                             sx={{
                               width: 60, // Set a fixed width
                               justifyContent: 'center' // Center the label
@@ -404,8 +449,8 @@ const NewSANSJob = () => {
                         </Grid>
                         <Grid sx={{ flex: 1 }}>
                           <Slider
-                            aria-labelledby='d2o-fraction-slider'
-                            name='d2o_fraction'
+                            aria-labelledby="d2o-fraction-slider"
+                            name="d2o_fraction"
                             value={values.d2o_fraction}
                             onChange={(_event, value) => {
                               void setFieldValue('d2o_fraction', value)
@@ -413,13 +458,13 @@ const NewSANSJob = () => {
                             min={0}
                             max={100}
                             step={1}
-                            valueLabelDisplay='off'
+                            valueLabelDisplay="off"
                             disabled={isSubmitting}
                             track={false}
                           />
                         </Grid>
                         {errors.d2o_fraction && touched.d2o_fraction ? (
-                          <Typography color='error'>
+                          <Typography color="error">
                             {errors.d2o_fraction}
                           </Typography>
                         ) : null}
@@ -450,54 +495,21 @@ const NewSANSJob = () => {
                     {/* Submit Button */}
                     <Grid sx={{ mt: 2 }}>
                       <Button
-                        type='submit'
+                        type="submit"
                         disabled={
                           !isValid || isSubmitting || !isFormValid(values)
                         }
                         loading={isSubmitting}
                         endIcon={<SendIcon />}
-                        loadingPosition='end'
-                        variant='contained'
+                        loadingPosition="end"
+                        variant="contained"
                         sx={{ width: '110px' }}
                       >
                         Submit
                       </Button>
-
-                      {isSuccess ? (
-                        <Alert severity='success'>{status}</Alert>
-                      ) : (
-                        ''
-                      )}
-                      {isError && (
-                        <Alert severity='error' sx={{ my: 2 }}>
-                          <AlertTitle>Error</AlertTitle>
-                          {(() => {
-                            if (!error) return 'An unknown error occurred.'
-                            if (typeof error === 'string') return error
-                            if (
-                              'data' in error &&
-                              typeof error.data === 'object' &&
-                              error.data !== null &&
-                              'message' in error.data
-                            ) {
-                              return (
-                                (error.data as { message?: string }).message ||
-                                'An error occurred.'
-                              )
-                            }
-                            if ('message' in error) {
-                              return (
-                                (error as { message?: string }).message ||
-                                'An error occurred.'
-                              )
-                            }
-                            return 'An unknown error occurred.'
-                          })()}
-                        </Alert>
-                      )}
                     </Grid>
                   </Grid>
-                  {process.env.NODE_ENV === 'development' ? <Debug /> : ''}
+                  {import.meta.env.MODE === 'development' ? <Debug /> : ''}
                 </Form>
               )}
             </Formik>

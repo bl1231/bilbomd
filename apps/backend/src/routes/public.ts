@@ -4,10 +4,12 @@ import { downloadPublicJobResults } from '../controllers/public/downloadPublicJo
 import getPublicFoxsData from '../controllers/public/getPublicFoxsData.js'
 import { getPublicFeedbackData } from '../controllers/public/getPublicFeedbackData.js'
 import { downloadPublicJobResultFile } from '../controllers/public/downloadPublicJobResultFile.js'
+import { createPublicSANSJob } from '../controllers/jobs/sansJobController.js'
 
 const router = express.Router()
 
 router.route('/').post(createPublicJob)
+router.route('/sans').post(createPublicSANSJob)
 router.route('/:publicId').get(getPublicJobById)
 router.route('/:publicId/results').get(downloadPublicJobResults)
 router.route('/:publicId/results/foxs').get(getPublicFoxsData)
