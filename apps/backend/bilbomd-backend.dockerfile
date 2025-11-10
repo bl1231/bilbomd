@@ -98,6 +98,7 @@ WORKDIR /app
 COPY --chown=bilbo:bilbomd --from=build /out/ .
 
 COPY --chown=bilbo:bilbomd ./tools/python/ /app/scripts/
+COPY --chown=bilbo:bilbomd ./test_scripts/data/ /app/examples/
 
 # Optional metadata/env from build args
 ARG BILBOMD_BACKEND_GIT_HASH

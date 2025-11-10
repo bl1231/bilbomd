@@ -19,6 +19,7 @@
 !packages/tsconfig/**
 !packages/eslint-config/**
 !tools/python/**
+!test_scripts/data/**
 
 # Keep these ignored even if matched above
 .git/
