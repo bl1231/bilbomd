@@ -11,7 +11,7 @@ import {
 import mongoose from 'mongoose'
 import jwt from 'jsonwebtoken'
 import { v4 as uuid } from 'uuid'
-import app from './appMock'
+import app from './appMock.js'
 import { User, IUser, Job } from '@bilbomd/mongodb-schema'
 
 const accessTokenSecret: string = process.env.ACCESS_TOKEN_SECRET ?? ''
@@ -114,13 +114,19 @@ describe('GET /api/v1/users', () => {
       username: 'testuser1',
       email: 'testuser1@example.com',
       roles: ['User'],
-      confirmationCode: { code: '12345', expiresAt: new Date(Date.now() + 3600000) }
+      confirmationCode: {
+        code: '12345',
+        expiresAt: new Date(Date.now() + 3600000)
+      }
     })
     testUser2 = await User.create({
       username: 'testuser2',
       email: 'testuser2@example.com',
       roles: ['User'],
-      confirmationCode: { code: '54321', expiresAt: new Date(Date.now() + 3600000) }
+      confirmationCode: {
+        code: '54321',
+        expiresAt: new Date(Date.now() + 3600000)
+      }
     })
   })
   afterEach(async () => {
@@ -169,7 +175,10 @@ describe('PATCH /api/v1/users', () => {
       username: 'testuser1',
       email: 'testuser1@example.com',
       roles: ['User'],
-      confirmationCode: { code: '12345', expiresAt: new Date(Date.now() + 3600000) }
+      confirmationCode: {
+        code: '12345',
+        expiresAt: new Date(Date.now() + 3600000)
+      }
     })
   })
   afterEach(async () => {
@@ -243,7 +252,10 @@ describe('DELETE /api/v1/users', () => {
       username: 'testuser1',
       email: 'testuser1@example.com',
       roles: ['User'],
-      confirmationCode: { code: '12345', expiresAt: new Date(Date.now() + 3600000) }
+      confirmationCode: {
+        code: '12345',
+        expiresAt: new Date(Date.now() + 3600000)
+      }
     })
   })
   afterEach(async () => {
