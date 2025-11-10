@@ -231,9 +231,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
           ) : (
             <Formik
               initialValues={initialValues}
-              validationSchema={
-                useExampleData ? undefined : BilboMDClassicJobSchema
-              }
+              validationSchema={BilboMDClassicJobSchema}
               onSubmit={onSubmit}
             >
               {({
@@ -717,7 +715,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       <Button
                         type="submit"
                         disabled={
-                          !isValid || isSubmitting || !isFormValid(values)
+                          (!isValid && !useExampleData) || !isFormValid(values)
                         }
                         loading={isSubmitting}
                         endIcon={<SendIcon />}
@@ -727,6 +725,35 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       >
                         Submit
                       </Button>
+                      {((!isValid && !useExampleData) ||
+                        !isFormValid(values)) && (
+                        <Typography
+                          variant="body2"
+                          color="error"
+                          sx={{
+                            mt: 1,
+                            fontSize: '0.75rem',
+                            whiteSpace: 'pre-line'
+                          }}
+                        >
+                          {Object.entries(errors)
+                            .filter(
+                              ([key, value]) =>
+                                value &&
+                                (useExampleData
+                                  ? ![
+                                      'psf_file',
+                                      'crd_file',
+                                      'pdb_file',
+                                      'inp_file',
+                                      'dat_file'
+                                    ].includes(key)
+                                  : true)
+                            )
+                            .map(([, value]) => value)
+                            .join('\n')}
+                        </Typography>
+                      )}
                     </Grid>
                   </Grid>
                   {import.meta.env.MODE === 'development' ? <Debug /> : ''}
