@@ -19,6 +19,7 @@ import {
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
 import { DispatchUser } from 'types/bilbomd.js'
+import { hashClientIp } from 'controllers/public/utils/hashClientIp.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -39,6 +40,10 @@ const handleBilboMDClassicCRD = async (
     )
 
     const { bilbomd_mode: bilbomdMode } = req.body
+
+    // Hash the client IP address for privacy and for implementing a quota system
+    const clientIp = req.ip ?? 'unknown'
+    const client_ip_hash = hashClientIp(clientIp)
 
     // Extract md_engine and reject OpenMM early
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
@@ -187,7 +192,7 @@ const handleBilboMDClassicCRD = async (
     }
 
     // Initialize BilboMdCRDJob Job Data
-    const newJob: IBilboMDCRDJob = new BilboMdCRDJob({
+    const jobData = {
       title: req.body.title,
       uuid: UUID,
       status: JobStatus.Submitted,
@@ -221,8 +226,13 @@ const handleBilboMDClassicCRD = async (
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
         ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash }
         : {})
-    })
+    }
+
+    const newJob: IBilboMDCRDJob = new BilboMdCRDJob(jobData)
 
     // Save the job to the database
     await newJob.save()

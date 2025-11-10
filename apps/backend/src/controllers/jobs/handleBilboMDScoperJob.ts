@@ -3,6 +3,7 @@ import { queueScoperJob } from '../../queues/scoper.js'
 import { BilboMdScoperJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { DispatchUser } from 'types/bilbomd.js'
+import { hashClientIp } from 'controllers/public/utils/hashClientIp.js'
 
 const handleBilboMDScoperJob = async (
   req: Request,
@@ -13,6 +14,10 @@ const handleBilboMDScoperJob = async (
 ) => {
   try {
     const { bilbomd_mode: bilbomdMode, title, fixc1c2 } = req.body
+
+    // Hash the client IP address for privacy and for implementing a quota system
+    const clientIp = req.ip ?? 'unknown'
+    const client_ip_hash = hashClientIp(clientIp)
 
     // Extract md_engine and reject OpenMM early
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
@@ -71,6 +76,9 @@ const handleBilboMDScoperJob = async (
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
         ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash }
         : {})
     }
 
@@ -95,11 +103,35 @@ const handleBilboMDScoperJob = async (
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
     // Respond with job details
-    res.status(200).json({
-      message: `New Scoper Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid
-    })
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New Scoper Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New Scoper Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     // Log more detailed information about the error
     if (error instanceof Error) {

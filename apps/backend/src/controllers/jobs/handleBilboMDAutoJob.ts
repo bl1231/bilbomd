@@ -17,6 +17,8 @@ import fs from 'fs-extra'
 import { autoJobSchema } from '../../validation/index.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { DispatchUser } from 'types/bilbomd.js'
+import { hashClientIp } from 'controllers/public/utils/hashClientIp.js'
+
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDAutoJob = async (
@@ -41,6 +43,10 @@ const handleBilboMDAutoJob = async (
     logger.info(`Selected md_engine: ${md_engine}`)
 
     const { bilbomd_mode: bilbomdMode } = req.body
+
+    // Hash the client IP address for privacy and for implementing a quota system
+    const clientIp = req.ip ?? 'unknown'
+    const client_ip_hash = hashClientIp(clientIp)
 
     let pdbFileName = ''
     let paeFileName = ''
@@ -198,6 +204,9 @@ const handleBilboMDAutoJob = async (
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
         ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash }
         : {})
     }
 
