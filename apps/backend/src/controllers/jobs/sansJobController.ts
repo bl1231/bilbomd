@@ -236,7 +236,6 @@ const handleBilboMDSANSJob = async (
     if (md_engine === 'OpenMM') {
       stepsInit = {
         minimize: { status: StepStatus.Waiting, message: '' },
-        initfoxs: { status: StepStatus.Waiting, message: '' },
         heat: { status: StepStatus.Waiting, message: '' },
         md: { status: StepStatus.Waiting, message: '' },
         pepsisans: { status: StepStatus.Waiting, message: '' },
@@ -247,7 +246,6 @@ const handleBilboMDSANSJob = async (
       stepsInit = {
         pdb2crd: { status: StepStatus.Waiting, message: '' },
         minimize: { status: StepStatus.Waiting, message: '' },
-        initfoxs: { status: StepStatus.Waiting, message: '' },
         heat: { status: StepStatus.Waiting, message: '' },
         md: { status: StepStatus.Waiting, message: '' },
         dcd2pdb: { status: StepStatus.Waiting, message: '' },
