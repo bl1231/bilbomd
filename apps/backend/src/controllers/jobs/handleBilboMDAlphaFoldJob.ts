@@ -16,7 +16,7 @@ import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { DispatchUser } from 'types/bilbomd.js'
-import { hashClientIp } from 'controllers/public/utils/hashClientIp.js'
+import { hashClientIp } from '../../controllers/public/utils/hashClientIp.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 

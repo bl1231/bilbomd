@@ -70,10 +70,6 @@ const AnonRoutes = {
       element: <NewScoperJob mode="anonymous" />
     },
     {
-      path: 'jobs/multimd/new',
-      element: <NewMultiJob mode="anonymous" />
-    },
-    {
       path: 'jiffy/inp',
       element: <ConstInpStepper />
     },
