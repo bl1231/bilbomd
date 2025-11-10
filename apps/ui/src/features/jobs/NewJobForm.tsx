@@ -354,6 +354,12 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               void setFieldValue('rg_max', '50')
                               void setFieldValue('num_conf', 2)
                             }
+                          } else {
+                            // Switching to custom data: clear example defaults
+                            void setFieldValue('title', '')
+                            void setFieldValue('rg_min', '')
+                            void setFieldValue('rg_max', '')
+                            void setFieldValue('num_conf', '')
                           }
                           // Delay validation to ensure form state has been updated
                           setTimeout(() => {
