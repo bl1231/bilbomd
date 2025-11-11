@@ -227,6 +227,7 @@ const createPublicJob = async (req: Request, res: Response) => {
 
         if (activeJobsCount >= 3) {
           await fs.remove(jobDir) // Clean up created directory
+          logger.warn(`Quota exceeded for IP hash ${client_ip_hash}`)
           return res.status(429).json({
             message:
               'Quota exceeded: You can have at most 3 active jobs at a time. Please wait for some jobs to complete.'
