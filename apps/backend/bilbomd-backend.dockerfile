@@ -98,7 +98,17 @@ WORKDIR /app
 COPY --chown=bilbo:bilbomd --from=build /out/ .
 
 COPY --chown=bilbo:bilbomd ./tools/python/ /app/scripts/
-COPY --chown=bilbo:bilbomd ./test_scripts/data/ /app/examples/
+COPY --chown=bilbo:bilbomd ./example-data/ /app/examples/
+
+# Create tarballs for example datasets
+RUN set -eux; \
+    cd /app/examples; \
+    tar czf bilbomd_classic_pdb_example.tar.gz pdb/; \
+    tar czf bilbomd_classic_crd_example.tar.gz crd/; \
+    tar czf bilbomd_auto_example.tar.gz auto/; \
+    tar czf bilbomd_af_example.tar.gz af/; \
+    tar czf bilbomd_sans_example.tar.gz sans/; \
+    tar czf scoper_example.tar.gz scoper/
 
 # Optional metadata/env from build args
 ARG BILBOMD_BACKEND_GIT_HASH
