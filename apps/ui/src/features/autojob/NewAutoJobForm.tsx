@@ -167,67 +167,74 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           onStatusCheck={handleStatusCheck}
                         />
                       )}
-                      <Grid sx={{ my: 2, width: '520px' }}>
-                        <Field
-                          fullWidth
-                          label="Title"
-                          name="title"
-                          id="title"
-                          type="text"
-                          disabled={isSubmitting}
-                          as={TextField}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          error={errors.title && touched.title}
-                          helperText={
-                            errors.title && touched.title ? errors.title : ''
-                          }
-                          value={values.title || ''}
-                        />
-                      </Grid>
-
-                      <Grid sx={{ my: 2, width: '520px' }}>
-                        <Button
-                          variant={useExampleData ? 'outlined' : 'contained'}
-                          onClick={() => {
-                            setUseExampleData(!useExampleData)
-                            if (!useExampleData) {
-                              // Switching to example data: reset file fields
-                              void setFieldValue('pdb_file', '')
-                              void setFieldValue('pae_file', '')
-                              void setFieldValue('dat_file', '')
-                              // Add default for title
-                              void setFieldValue(
-                                'title',
-                                'Example BilboMD Auto Job'
-                              )
-                            } else {
-                              // Switching to custom data: clear example defaults
-                              void setFieldValue('title', '')
-                              void setFieldValue('pdb_file', '')
-                              void setFieldValue('pae_file', '')
-                              void setFieldValue('dat_file', '')
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          my: 1
+                        }}
+                      >
+                        <Box sx={{ minWidth: '520px' }}>
+                          <Field
+                            label="Title"
+                            name="title"
+                            id="title"
+                            type="text"
+                            disabled={isSubmitting}
+                            as={TextField}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            error={errors.title && touched.title}
+                            helperText={
+                              errors.title && touched.title ? errors.title : ''
                             }
-                            // Delay validation to ensure form state has been updated
-                            setTimeout(() => {
-                              void validateForm()
-                            }, 0)
-                          }}
-                        >
-                          {useExampleData
-                            ? 'Use Custom Data'
-                            : 'Load Example Data'}
-                        </Button>
-                        {useExampleData && (
-                          <Typography
-                            variant="body2"
-                            color="textSecondary"
-                            sx={{ mt: 1 }}
+                            value={values.title || ''}
+                            sx={{ width: '100%' }}
+                          />
+                        </Box>
+                        <Box sx={{ ml: 'auto', minWidth: '200px' }}>
+                          <Button
+                            variant={useExampleData ? 'outlined' : 'contained'}
+                            onClick={() => {
+                              setUseExampleData(!useExampleData)
+                              if (!useExampleData) {
+                                // Switching to example data: reset file fields
+                                void setFieldValue('pdb_file', '')
+                                void setFieldValue('pae_file', '')
+                                void setFieldValue('dat_file', '')
+                                // Add default for title
+                                void setFieldValue(
+                                  'title',
+                                  'Example BilboMD Auto Job'
+                                )
+                              } else {
+                                // Switching to custom data: clear example defaults
+                                void setFieldValue('title', '')
+                                void setFieldValue('pdb_file', '')
+                                void setFieldValue('pae_file', '')
+                                void setFieldValue('dat_file', '')
+                              }
+                              // Delay validation to ensure form state has been updated
+                              setTimeout(() => {
+                                void validateForm()
+                              }, 0)
+                            }}
                           >
-                            Using example data for Auto mode
-                          </Typography>
-                        )}
-                      </Grid>
+                            {useExampleData
+                              ? 'Use Custom Data'
+                              : 'Load Example Data'}
+                          </Button>
+                        </Box>
+                      </Box>
+
+                      {useExampleData && (
+                        <Alert
+                          severity="warning"
+                          sx={{ my: 1 }}
+                        >
+                          Using example data for Auto mode
+                        </Alert>
+                      )}
 
                       <Grid>
                         <Field
@@ -266,6 +273,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           }
                         />
                       </Grid>
+
                       <Grid>
                         <Field
                           name="dat_file"

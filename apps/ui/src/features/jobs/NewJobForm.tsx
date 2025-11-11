@@ -14,14 +14,7 @@ import {
   LinearProgress
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import {
-  Form,
-  Formik,
-  Field,
-  FormikHelpers,
-  FormikErrors,
-  FormikTouched
-} from 'formik'
+import { Form, Formik, Field, FormikHelpers, FormikErrors } from 'formik'
 import {
   useAddNewJobMutation,
   useCalculateAutoRgMutation
@@ -271,14 +264,13 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     <Grid
                       container
                       direction="row"
-                      alignItems="center"
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        width: '520px'
+                        minWidth: '520px'
                       }}
                     >
-                      <Grid size={{ xs: 6 }}>
+                      <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 2 }}>
                         <FormGroup sx={{ ml: 1 }}>
                           <FormControlLabel
                             control={
@@ -310,90 +302,85 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           />
                         </FormGroup>
                       </Grid>
-                      <Grid size={{ xs: 6 }}>
+                      <Grid sx={{ width: '260px' }}>
                         <Alert severity="info">
                           If you used CHARMM-GUI to parameterize your inputs
                           then please select the CRD/PSF option
                         </Alert>
                       </Grid>
-                    </Grid>
-                    <Grid
-                      container
-                      direction="row"
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        width: '520px',
-                        my: 2
-                      }}
-                    >
-                      <Button
-                        variant={useExampleData ? 'outlined' : 'contained'}
-                        onClick={() => {
-                          setUseExampleData(!useExampleData)
-                          if (!useExampleData) {
-                            // Switching to example data: reset file fields
-                            if (values.bilbomd_mode === 'pdb') {
+                      <Grid
+                        size={{ xs: 12, sm: 6, md: 4, lg: 4, xl: 2 }}
+                        sx={{ minWidth: '200px' }}
+                      >
+                        <Button
+                          variant={useExampleData ? 'outlined' : 'contained'}
+                          onClick={() => {
+                            setUseExampleData(!useExampleData)
+                            if (!useExampleData) {
+                              // Switching to example data: reset file fields
+                              if (values.bilbomd_mode === 'pdb') {
+                                void setFieldValue('pdb_file', '')
+                                void setFieldValue('inp_file', '')
+                                void setFieldValue('dat_file', '')
+                              } else {
+                                void setFieldValue('crd_file', '')
+                                void setFieldValue('psf_file', '')
+                                void setFieldValue('inp_file', '')
+                                void setFieldValue('dat_file', '')
+                              }
+                              // Add defaults for other fields
+                              if (values.bilbomd_mode === 'pdb') {
+                                void setFieldValue(
+                                  'title',
+                                  'Example BilboMD PDB Job'
+                                )
+                                void setFieldValue('rg_min', '26')
+                                void setFieldValue('rg_max', '42')
+                                void setFieldValue('num_conf', 1)
+                              } else {
+                                void setFieldValue(
+                                  'title',
+                                  'Example BilboMD CRD/PSF Job'
+                                )
+                                void setFieldValue('rg_min', '20')
+                                void setFieldValue('rg_max', '50')
+                                void setFieldValue('num_conf', 2)
+                              }
+                            } else {
+                              // Switching to custom data: clear example defaults
+                              void setFieldValue('psf_file', '')
+                              void setFieldValue('crd_file', '')
                               void setFieldValue('pdb_file', '')
                               void setFieldValue('inp_file', '')
                               void setFieldValue('dat_file', '')
-                            } else {
-                              void setFieldValue('crd_file', '')
-                              void setFieldValue('psf_file', '')
-                              void setFieldValue('inp_file', '')
-                              void setFieldValue('dat_file', '')
+                              void setFieldValue('title', '')
+                              void setFieldValue('rg_min', '')
+                              void setFieldValue('rg_max', '')
+                              void setFieldValue('num_conf', '')
                             }
-                            // Add defaults for other fields
-                            if (values.bilbomd_mode === 'pdb') {
-                              void setFieldValue(
-                                'title',
-                                'Example BilboMD PDB Job'
-                              )
-                              void setFieldValue('rg_min', '26')
-                              void setFieldValue('rg_max', '42')
-                              void setFieldValue('num_conf', 1)
-                            } else {
-                              void setFieldValue(
-                                'title',
-                                'Example BilboMD CRD/PSF Job'
-                              )
-                              void setFieldValue('rg_min', '20')
-                              void setFieldValue('rg_max', '50')
-                              void setFieldValue('num_conf', 2)
-                            }
-                          } else {
-                            // Switching to custom data: clear example defaults
-                            void setFieldValue('psf_file', '')
-                            void setFieldValue('crd_file', '')
-                            void setFieldValue('pdb_file', '')
-                            void setFieldValue('inp_file', '')
-                            void setFieldValue('dat_file', '')
-                            void setFieldValue('title', '')
-                            void setFieldValue('rg_min', '')
-                            void setFieldValue('rg_max', '')
-                            void setFieldValue('num_conf', '')
-                          }
-                          // Delay validation to ensure form state has been updated
-                          setTimeout(() => {
-                            void validateForm()
-                          }, 0)
-                        }}
-                      >
-                        {useExampleData
-                          ? 'Use Custom Data'
-                          : 'Load Example Data'}
-                      </Button>
-                      {useExampleData && (
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
+                            // Delay validation to ensure form state has been updated
+                            setTimeout(() => {
+                              void validateForm()
+                            }, 0)
+                          }}
                         >
-                          Using example data for{' '}
-                          {values.bilbomd_mode === 'pdb' ? 'PDB' : 'CRD/PSF'}{' '}
-                          mode
-                        </Typography>
-                      )}
+                          {useExampleData
+                            ? 'Use Custom Data'
+                            : 'Load Example Data'}
+                        </Button>
+                      </Grid>
                     </Grid>
+
+                    {useExampleData && (
+                      <Alert
+                        severity="warning"
+                        sx={{ my: 1 }}
+                      >
+                        Using example data for{' '}
+                        {values.bilbomd_mode === 'pdb' ? 'PDB' : 'CRD/PSF'} mode
+                      </Alert>
+                    )}
+
                     <Divider
                       textAlign="left"
                       sx={{ my: 1 }}
