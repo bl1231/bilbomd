@@ -1,10 +1,10 @@
 ---
-'@bilbomd/mongodb-schema': minor
+'@bilbomd/mongodb-schema': major
 '@bilbomd/bilbomd-types': minor
-'@bilbomd/backend': minor
-'@bilbomd/scoper': minor
-'@bilbomd/worker': minor
-'@bilbomd/ui': minor
+'@bilbomd/backend': major
+'@bilbomd/scoper': patch
+'@bilbomd/worker': major
+'@bilbomd/ui': major
 ---
 
 Allow public unauthenticated BilboMD job submission
