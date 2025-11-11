@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
+import { logger } from './loggers.js'
 
 const logPublicJobIPs = (req: Request, res: Response, next: NextFunction) => {
   logger.info(

@@ -3,7 +3,6 @@ import multer from 'multer'
 import fs from 'fs-extra'
 import path from 'path'
 import { v4 as uuid } from 'uuid'
-import { User, JobStatusEnum } from '@bilbomd/mongodb-schema'
 import { BilboMDDispatchContext } from '../../types/bilbomd.js'
 import { Request, Response } from 'express'
 import { handleBilboMDClassicPDB } from './handleBilboMDClassicPDB.js'
@@ -14,13 +13,15 @@ import { handleBilboMDAlphaFoldJob } from './handleBilboMDAlphaFoldJob.js'
 import applyExampleDataIfRequested from './utils/exampleData.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
 import {
+  User,
   BilboMdPDBJob,
   BilboMdCRDJob,
-  BilboMDAutoJob,
-  BilboMDSANSJob,
-  BilboMDAlphaFoldJob,
-  BilboMDScoperJob,
-  MultiJob
+  BilboMdAutoJob,
+  BilboMdAlphaFoldJob,
+  BilboMdSANSJob,
+  BilboMdScoperJob,
+  MultiJob,
+  JobStatus
 } from '@bilbomd/mongodb-schema'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
@@ -200,9 +201,9 @@ const createPublicJob = async (req: Request, res: Response) => {
 
         // Quota check: Count active jobs for this client IP hash
         const activeStatuses = [
-          JobStatusEnum.Submitted,
-          JobStatusEnum.Pending,
-          JobStatusEnum.Running
+          JobStatus.Submitted,
+          JobStatus.Pending,
+          JobStatus.Running
         ]
         const quotaQuery = {
           client_ip_hash,
@@ -212,10 +213,10 @@ const createPublicJob = async (req: Request, res: Response) => {
         const activeJobsCount = await Promise.all([
           BilboMdPDBJob.countDocuments(quotaQuery),
           BilboMdCRDJob.countDocuments(quotaQuery),
-          BilboMDAutoJob.countDocuments(quotaQuery),
-          BilboMDSANSJob.countDocuments(quotaQuery),
-          BilboMDAlphaFoldJob.countDocuments(quotaQuery),
-          BilboMDScoperJob.countDocuments(quotaQuery),
+          BilboMdAutoJob.countDocuments(quotaQuery),
+          BilboMdSANSJob.countDocuments(quotaQuery),
+          BilboMdAlphaFoldJob.countDocuments(quotaQuery),
+          BilboMdScoperJob.countDocuments(quotaQuery),
           MultiJob.countDocuments(quotaQuery)
         ]).then((counts) => counts.reduce((sum, count) => sum + count, 0))
 
