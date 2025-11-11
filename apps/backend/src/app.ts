@@ -33,6 +33,7 @@ import exampleData from './routes/examples.js'
 import './workers/deleteBilboMDJobsWorker.js'
 import swaggerUi from 'swagger-ui-express'
 import swaggerSpec from './openapi/swagger.js'
+import logPublicJobIPs from './middleware/logPublicJobIPs.js'
 
 // Instantiate the app
 const app: Express = express()
@@ -55,14 +56,6 @@ await initOrcidClient()
 // custom middleware logger
 app.use(assignRequestId)
 app.use(requestLogger)
-
-// Log IP addresses for debugging trust proxy
-// app.use((req, res, next) => {
-//   logger.info(
-//     `Client IP: ${req.ip}, IPs: ${req.ips}, X-Forwarded-For: ${req.headers['x-forwarded-for']}`
-//   )
-//   next()
-// })
 
 // Cross Origin Resource Sharing
 // prevents unwanted clients from accessing our backend API.
@@ -121,7 +114,7 @@ v1Router.use(
   externalRoutes
 )
 v1Router.use('/admin', adminApiRoutes)
-v1Router.use('/public/jobs', publicJobsRoutes)
+v1Router.use('/public/jobs', logPublicJobIPs, publicJobsRoutes)
 v1Router.use('/public/examples', exampleData)
 
 // Apply v1Router under /api/v1
