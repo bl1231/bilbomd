@@ -108,6 +108,14 @@ const Footer = () => {
             </Link>
             {' • '}
             <Link
+              component={RouterLink}
+              to="/funding"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Funding
+            </Link>
+            {' • '}
+            <Link
               href="https://www.lbl.gov/terms-and-conditions/"
               target="_blank"
               rel="noopener noreferrer"

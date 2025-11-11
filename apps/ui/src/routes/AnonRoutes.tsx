@@ -31,6 +31,7 @@ const SampleData = Loadable(
 const PrivacyPolicy = Loadable(
   lazy(() => import('features/privacy/PrivacyPolicy'))
 )
+const Funding = Loadable(lazy(() => import('features/about/Funding')))
 
 // ===========================|| PUBLIC ANON ROUTING ||============================ //
 
@@ -93,6 +94,10 @@ const AnonRoutes = {
     {
       path: 'privacy',
       element: <PrivacyPolicy />
+    },
+    {
+      path: 'funding',
+      element: <Funding />
     }
   ]
 }
