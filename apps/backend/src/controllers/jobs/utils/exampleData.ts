@@ -12,9 +12,10 @@ const exampleDataFolder = exampleRoot
 const modeToDataset: Record<string, string> = {
   pdb: 'pdb',
   crd_psf: 'crd',
-  auto: 'auto1',
+  auto: 'auto',
   sans: 'sans',
-  alphafold: 'af-monomer'
+  alphafold: 'af',
+  scoper: 'scoper'
 }
 
 type ExampleDataResult =
@@ -37,70 +38,34 @@ const exampleConfigs: Record<
     files: string[]
   }
 > = {
-  'af-complex': {
-    folder: 'af-complex',
-    files: ['entities.json', 'rad51c_xrcc3.afasta', 'rad51cxrcc3mod.dat']
+  af: {
+    folder: 'af',
+    files: ['example-saxs.dat', 'example-af.fasta']
   },
-  'af-dimer': {
-    folder: 'af-dimer',
-    files: ['entities.json', 'xrcc4_dimer.dat', 'xrcc4_dimer.fasta']
-  },
-  'af-monomer': {
-    folder: 'af-mono',
-    files: ['entities.json', 'A_S_USP16-FL_1.dat', 'USP16-FL.fasta']
-  },
-  auto1: {
-    folder: 'auto1',
-    files: [
-      'auto1-pae.json',
-      'auto1.crd',
-      'auto1.pdb',
-      'const.inp',
-      'saxs-data.dat'
-    ]
-  },
-  auto2: {
-    folder: 'auto2',
-    files: [
-      'auto2-pae.json',
-      'auto2.crd',
-      'auto2.pdb',
-      'const.inp',
-      'saxs-data.dat'
-    ]
-  },
-  bigc3: {
-    folder: 'big-c3befbc',
-    files: [
-      'c3befbc-pae.json',
-      'c3befbc.dat',
-      'c3befbc.pdb',
-      'const_c3befbc.inp'
-    ]
+  auto: {
+    folder: 'auto',
+    files: ['example-auto-pae.json', 'example-auto.pdb', 'example-saxs.dat']
   },
   crd: {
     folder: 'crd',
-    files: ['const.inp', 'pro_dna.crd', 'pro_dna.psf', 'saxs-data.dat']
+    files: [
+      'example-const.inp',
+      'example.crd',
+      'example.psf',
+      'example-saxs.dat'
+    ]
   },
   pdb: {
     folder: 'pdb',
-    files: ['const.inp', 'pro_dna.pdb', 'saxs-data.dat']
-  },
-  phos: {
-    folder: 'phos',
-    files: ['const.inp', 'phos.pdb', 'saxs-data.dat']
+    files: ['example-const.inp', 'example.pdb', 'example-saxs.dat']
   },
   sans: {
     folder: 'sans',
-    files: ['const.inp', 'sans-data.dat', 'sans.pdb']
+    files: ['example-const.inp', 'example-sans.dat', 'example-sans.pdb']
   },
-  sasdnf2: {
-    folder: 'sasdnf2',
-    files: ['const_2.inp', 'sasdnf2-pae.json', 'sasdnf2.dat', 'sasdnf2.pdb']
-  },
-  sca2: {
-    folder: 'sca2',
-    files: ['sca2-pae.json', 'sca2.pdb']
+  scoper: {
+    folder: 'scoper',
+    files: ['example-saxs.dat', 'example-rna.pdb']
   }
 }
 

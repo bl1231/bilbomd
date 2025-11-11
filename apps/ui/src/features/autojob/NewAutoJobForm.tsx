@@ -192,7 +192,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             sx={{ width: '100%' }}
                           />
                         </Box>
-                        <Box sx={{ ml: 'auto', minWidth: '200px' }}>
+                        <Box sx={{ ml: 8, minWidth: 'fit-content' }}>
                           <Button
                             variant={useExampleData ? 'outlined' : 'contained'}
                             onClick={() => {
@@ -203,10 +203,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 void setFieldValue('pae_file', '')
                                 void setFieldValue('dat_file', '')
                                 // Add default for title
-                                void setFieldValue(
-                                  'title',
-                                  'Example BilboMD Auto Job'
-                                )
+                                void setFieldValue('title', 'example-auto-job')
                               } else {
                                 // Switching to custom data: clear example defaults
                                 void setFieldValue('title', '')
@@ -223,6 +220,14 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             {useExampleData
                               ? 'Use Custom Data'
                               : 'Load Example Data'}
+                          </Button>
+                        </Box>
+                        <Box sx={{ ml: 2, minWidth: 'fit-content' }}>
+                          <Button
+                            variant="contained"
+                            href={'/api/v1/public/examples/auto'}
+                          >
+                            Download Example Data
                           </Button>
                         </Box>
                       </Box>
@@ -269,7 +274,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           fileType="AlphaFold2 PAE *.json"
                           fileExt=".json"
                           existingFileName={
-                            useExampleData ? 'example-pae.json' : undefined
+                            useExampleData ? 'example-auto-pae.json' : undefined
                           }
                         />
                       </Grid>

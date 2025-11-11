@@ -266,11 +266,10 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       direction="row"
                       sx={{
                         display: 'flex',
-                        justifyContent: 'space-between',
                         minWidth: '520px'
                       }}
                     >
-                      <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 2 }}>
+                      <Grid>
                         <FormGroup sx={{ ml: 1 }}>
                           <FormControlLabel
                             control={
@@ -308,10 +307,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           then please select the CRD/PSF option
                         </Alert>
                       </Grid>
-                      <Grid
-                        size={{ xs: 12, sm: 6, md: 4, lg: 4, xl: 2 }}
-                        sx={{ minWidth: '200px' }}
-                      >
+                      <Grid sx={{ ml: 4 }}>
                         <Button
                           variant={useExampleData ? 'outlined' : 'contained'}
                           onClick={() => {
@@ -367,6 +363,19 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           {useExampleData
                             ? 'Use Custom Data'
                             : 'Load Example Data'}
+                        </Button>
+                      </Grid>
+                      <Grid sx={{ ml: 0 }}>
+                        <Button
+                          variant="contained"
+                          href={
+                            selectedMode === 'pdb'
+                              ? '/api/v1/public/examples/classic/pdb'
+                              : '/api/v1/public/examples/classic/crd'
+                          }
+                          sx={{ ml: 1 }}
+                        >
+                          Download Example Data
                         </Button>
                       </Grid>
                     </Grid>
@@ -527,7 +536,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           fileType="const.inp"
                           fileExt=".inp"
                           existingFileName={
-                            useExampleData ? 'const.inp' : undefined
+                            useExampleData ? 'example-const.inp' : undefined
                           }
                         />
                       </Grid>
@@ -619,7 +628,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             }
                           }}
                           existingFileName={
-                            useExampleData ? 'example.dat' : undefined
+                            useExampleData ? 'example-saxs.dat' : undefined
                           }
                         />
                       </Grid>

@@ -31,7 +31,6 @@ const exampleConfigMap: Record<ExampleKey, ExampleConfig> = {
   'bilbomd-classic-pdb': {
     filePath: path.join(
       EXAMPLE_DATA_ROOT,
-      'pdb',
       'bilbomd_classic_pdb_example.tar.gz'
     ),
     downloadName: 'bilbomd_classic_pdb_example.tar.gz'
@@ -39,33 +38,24 @@ const exampleConfigMap: Record<ExampleKey, ExampleConfig> = {
   'bilbomd-classic-crd': {
     filePath: path.join(
       EXAMPLE_DATA_ROOT,
-      'crd',
       'bilbomd_classic_crd_example.tar.gz'
     ),
     downloadName: 'bilbomd_classic_crd_example.tar.gz'
   },
   'bilbomd-auto': {
-    filePath: path.join(
-      EXAMPLE_DATA_ROOT,
-      'auto',
-      'bilbomd_auto_example.tar.gz'
-    ),
+    filePath: path.join(EXAMPLE_DATA_ROOT, 'bilbomd_auto_example.tar.gz'),
     downloadName: 'bilbomd_auto_example.tar.gz'
   },
   'bilbomd-af': {
-    filePath: path.join(EXAMPLE_DATA_ROOT, 'af', 'bilbomd_af_example.tar.gz'),
+    filePath: path.join(EXAMPLE_DATA_ROOT, 'bilbomd_af_example.tar.gz'),
     downloadName: 'bilbomd_af_example.tar.gz'
   },
   'bilbomd-sans': {
-    filePath: path.join(
-      EXAMPLE_DATA_ROOT,
-      'sans',
-      'bilbomd_sans_example.tar.gz'
-    ),
+    filePath: path.join(EXAMPLE_DATA_ROOT, 'bilbomd_sans_example.tar.gz'),
     downloadName: 'bilbomd_sans_example.tar.gz'
   },
   scoper: {
-    filePath: path.join(EXAMPLE_DATA_ROOT, 'scoper', 'scoper_example.tar.gz'),
+    filePath: path.join(EXAMPLE_DATA_ROOT, 'scoper_example.tar.gz'),
     downloadName: 'scoper_example.tar.gz'
   }
 }
