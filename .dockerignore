@@ -5,6 +5,7 @@
 !pnpm-workspace.yaml
 !pnpm-lock.yaml
 !package.json
+!LICENSE.txt
 
 # Unignore dirs so we can include subpaths
 !apps
