@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/ui",
-  "version": "1.24.5",
+  "version": "2.0.0",
   "description": "Frontend Single Page Web Application for BilboMD",
   "private": true,
   "type": "module",
