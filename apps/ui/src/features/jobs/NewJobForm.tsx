@@ -66,6 +66,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [selectedMode, setSelectedMode] = useState('pdb')
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // RTK Query to fetch the configuration
   const {
@@ -100,6 +101,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     values: BilboMDClassicJobFormValues,
     { setStatus }: { setStatus: (status: string) => void }
   ) => {
+    setSubmitError(null)
     const form = new FormData()
     form.append('bilbomd_mode', values.bilbomd_mode)
     form.append('title', values.title)
@@ -124,6 +126,10 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
       setStatus(newJob)
     } catch (error) {
       console.error('rejected', error)
+      setSubmitError(
+        (error as { data?: { message?: string } }).data?.message ||
+          'An error occurred during submission.'
+      )
     }
   }
 
@@ -387,6 +393,15 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       >
                         Using example data for{' '}
                         {values.bilbomd_mode === 'pdb' ? 'PDB' : 'CRD/PSF'} mode
+                      </Alert>
+                    )}
+
+                    {submitError && (
+                      <Alert
+                        severity="error"
+                        sx={{ my: 1 }}
+                      >
+                        {submitError}
                       </Alert>
                     )}
 

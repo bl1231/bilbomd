@@ -47,6 +47,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
   const [useExampleData, setUseExampleData] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // RTK Query to fetch the configuration
   const {
@@ -74,6 +75,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     values: BilboMDAutoJobFormValues,
     { setStatus }: { setStatus: (status: string) => void }
   ) => {
+    setSubmitError(null)
     const form = new FormData()
     form.append('title', values.title)
     form.append('pdb_file', values.pdb_file)
@@ -92,6 +94,10 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
       setStatus(newJob)
     } catch (error) {
       console.error('rejected', error)
+      setSubmitError(
+        (error as { data?: { message?: string } }).data?.message ||
+          'An error occurred during submission.'
+      )
     }
   }
 
@@ -238,6 +244,15 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           sx={{ my: 1 }}
                         >
                           Using example data for Auto mode
+                        </Alert>
+                      )}
+
+                      {submitError && (
+                        <Alert
+                          severity="error"
+                          sx={{ my: 1 }}
+                        >
+                          {submitError}
                         </Alert>
                       )}
 
