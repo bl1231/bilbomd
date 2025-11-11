@@ -332,7 +332,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               if (values.bilbomd_mode === 'pdb') {
                                 void setFieldValue(
                                   'title',
-                                  'Example BilboMD PDB Job'
+                                  'example-bilbomd-pdb-job'
                                 )
                                 void setFieldValue('rg_min', '26')
                                 void setFieldValue('rg_max', '42')
@@ -340,7 +340,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               } else {
                                 void setFieldValue(
                                   'title',
-                                  'Example BilboMD CRD/PSF Job'
+                                  'example-bilbomd-crd-psf-job'
                                 )
                                 void setFieldValue('rg_min', '20')
                                 void setFieldValue('rg_max', '50')
