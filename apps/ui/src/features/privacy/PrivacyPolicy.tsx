@@ -18,8 +18,9 @@ export default function PrivacyPolicy() {
       </Typography>
 
       <Typography
-        variant="h6"
+        variant="h5"
         gutterBottom
+        sx={{ mt: 2 }}
       >
         Cookies
       </Typography>
@@ -35,8 +36,9 @@ export default function PrivacyPolicy() {
       </Typography>
 
       <Typography
-        variant="h6"
+        variant="h5"
         gutterBottom
+        sx={{ mt: 2 }}
       >
         Personal Data
       </Typography>
@@ -52,8 +54,9 @@ export default function PrivacyPolicy() {
       </Typography>
 
       <Typography
-        variant="h6"
+        variant="h5"
         gutterBottom
+        sx={{ mt: 2 }}
       >
         Data Privacy
       </Typography>
@@ -65,8 +68,9 @@ export default function PrivacyPolicy() {
       </Typography>
 
       <Typography
-        variant="h6"
+        variant="h5"
         gutterBottom
+        sx={{ mt: 2 }}
       >
         Contact
       </Typography>
