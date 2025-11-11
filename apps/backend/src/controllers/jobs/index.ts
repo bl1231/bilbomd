@@ -1,6 +1,7 @@
 export * from './createJob.js'
 export * from './deleteJob.js'
 export * from './getJobs.js'
+export * from '../public/getPublicJobStatus.js'
 export * from './utils/jobUtils.js'
 export * from './utils/autoRg.js'
 export * from './scoperStatus.js'

@@ -3,6 +3,7 @@ import { Box, Container } from '@mui/system'
 import { version } from '../../../../package.json'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { blue } from '@mui/material/colors'
+import { Link as RouterLink } from 'react-router'
 
 const Footer = () => {
   const currentYear = new Date().getFullYear()
@@ -91,6 +92,36 @@ const Footer = () => {
                 }}
               />
               GitHub
+            </Link>
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{ ml: 2 }}
+          >
+            <Link
+              component={RouterLink}
+              to="/privacy"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Privacy Policy
+            </Link>
+            {' • '}
+            <Link
+              component={RouterLink}
+              to="/funding"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Funding
+            </Link>
+            {' • '}
+            <Link
+              href="https://www.lbl.gov/terms-and-conditions/"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Terms and Conditions
             </Link>
           </Typography>
         </Box>

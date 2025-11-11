@@ -4,7 +4,6 @@ import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
 import {
   IBilboMDPDBJob,
-  IUser,
   JobStatus,
   StepStatus,
   BilboMdPDBJob,
@@ -28,14 +27,20 @@ import {
   extractConstraintsFromYaml
 } from '@bilbomd/md-utils'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { DispatchUser } from '../../types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDClassicPDB = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
+  user: DispatchUser | undefined,
+  UUID: string,
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ) => {
   try {
     const isResubmission = Boolean(
@@ -121,6 +126,29 @@ const handleBilboMDClassicPDB = async (
       pdbFile = files['pdb_file']?.[0]
       inpFile = files['inp_file']?.[0] || files['omm_const_file']?.[0] // Accept either file type
       datFile = files['dat_file']?.[0]
+
+      // Handle example data files if no uploaded files
+      if (!pdbFile && req.body.pdb_file) {
+        pdbFile = {
+          originalname: req.body.pdb_file,
+          path: path.join(jobDir, req.body.pdb_file),
+          size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
+        } as Express.Multer.File
+      }
+      if (!inpFile && req.body.inp_file) {
+        inpFile = {
+          originalname: req.body.inp_file,
+          path: path.join(jobDir, req.body.inp_file),
+          size: getFileStats(path.join(jobDir, req.body.inp_file)).size
+        } as Express.Multer.File
+      }
+      if (!datFile && req.body.dat_file) {
+        datFile = {
+          originalname: req.body.dat_file,
+          path: path.join(jobDir, req.body.dat_file),
+          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+        } as Express.Multer.File
+      }
 
       pdbFileName = pdbFile?.originalname.toLowerCase()
       inpFileName = inpFile?.originalname.toLowerCase()
@@ -213,7 +241,7 @@ const handleBilboMDClassicPDB = async (
     }
 
     // Initialize BilboMdPDBJob Job Data
-    const newJob: IBilboMDPDBJob = new BilboMdPDBJob({
+    const jobData = {
       title: req.body.title,
       uuid: UUID,
       status: JobStatus.Submitted,
@@ -225,7 +253,6 @@ const handleBilboMDClassicPDB = async (
       rg_min,
       rg_max,
       time_submitted: new Date(),
-      user,
       progress: 0,
       cleanup_in_progress: false,
       steps: stepsInit,
@@ -235,8 +262,18 @@ const handleBilboMDClassicPDB = async (
       }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
+        : {}),
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash: ctx.client_ip_hash }
         : {})
-    })
+    }
+
+    const newJob: IBilboMDPDBJob = new BilboMdPDBJob(jobData)
 
     // Save the job to the database
     await newJob.save()
@@ -279,7 +316,7 @@ const handleBilboMDClassicPDB = async (
     await writeJobParams(newJob.id)
 
     // Create BullMQ Job object
-    const jobData = {
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
@@ -288,18 +325,41 @@ const handleBilboMDClassicPDB = async (
     }
 
     // Queue the job
-    const BullId = await queueJob(jobData)
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
     // Respond with job details
-    res.status(200).json({
-      message: `New BilboMD Classic w/PDB Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid,
-      md_engine
-    })
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New BilboMD Classic w/PDB Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD Classic w/PDB Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     const msg =
       error instanceof Error

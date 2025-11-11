@@ -1,17 +1,21 @@
 import { logger } from '../../middleware/loggers.js'
 import { queueScoperJob } from '../../queues/scoper.js'
-import {
-  IUser,
-  BilboMdScoperJob,
-  IBilboMDScoperJob
-} from '@bilbomd/mongodb-schema'
+import { BilboMdScoperJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
+import { DispatchUser } from '../../types/bilbomd.js'
+import path from 'path'
+import { getFileStats } from './utils/jobUtils.js'
 
 const handleBilboMDScoperJob = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
+  user: DispatchUser | undefined,
+  UUID: string,
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ) => {
   try {
     const { bilbomd_mode: bilbomdMode, title, fixc1c2 } = req.body
@@ -30,31 +34,62 @@ const handleBilboMDScoperJob = async (
       })
     }
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
+
+    // Handle example data files if no uploaded files
+    let pdbFile = files['pdb_file']?.[0]
+    let datFile = files['dat_file']?.[0]
+    if (!pdbFile && req.body.pdb_file) {
+      pdbFile = {
+        originalname: req.body.pdb_file,
+        path: path.join(
+          path.join(process.env.DATA_VOL ?? ''),
+          UUID,
+          req.body.pdb_file
+        ),
+        size: getFileStats(
+          path.join(
+            path.join(process.env.DATA_VOL ?? ''),
+            UUID,
+            req.body.pdb_file
+          )
+        ).size
+      } as Express.Multer.File
+    }
+    if (!datFile && req.body.dat_file) {
+      datFile = {
+        originalname: req.body.dat_file,
+        path: path.join(
+          path.join(process.env.DATA_VOL ?? ''),
+          UUID,
+          req.body.dat_file
+        ),
+        size: getFileStats(
+          path.join(
+            path.join(process.env.DATA_VOL ?? ''),
+            UUID,
+            req.body.dat_file
+          )
+        ).size
+      } as Express.Multer.File
+    }
+
     logger.info(
-      `PDB File: ${
-        files['pdb_file']
-          ? files['pdb_file'][0].originalname.toLowerCase()
-          : 'Not Found'
-      }`
+      `PDB File: ${pdbFile ? pdbFile.originalname.toLowerCase() : 'Not Found'}`
     )
     logger.info(
-      `DAT File: ${
-        files['dat_file']
-          ? files['dat_file'][0].originalname.toLowerCase()
-          : 'Not Found'
-      }`
+      `DAT File: ${datFile ? datFile.originalname.toLowerCase() : 'Not Found'}`
     )
-    const now = new Date()
+
     logger.info(`fixc1c2: ${fixc1c2}`)
-    const newJob: IBilboMDScoperJob = new BilboMdScoperJob({
+
+    const jobData = {
       title,
       uuid: UUID,
-      pdb_file: files['pdb_file'][0].originalname.toLowerCase(),
-      data_file: files['dat_file'][0].originalname.toLowerCase(),
+      pdb_file: pdbFile.originalname.toLowerCase(),
+      data_file: datFile.originalname.toLowerCase(),
       fixc1c2,
       status: 'Submitted',
-      time_submitted: now,
-      user: user,
+      time_submitted: new Date(),
       steps: {
         pdb2crd: {},
         pae: {},
@@ -68,28 +103,67 @@ const handleBilboMDScoperJob = async (
         multifoxs: {},
         results: {},
         email: {}
-      }
-    })
-    // logger.info(`in handleBilboMDScoperJob: ${newJob}`)
+      },
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash: ctx.client_ip_hash }
+        : {})
+    }
+
+    const newJob: IBilboMDScoperJob = new BilboMdScoperJob(jobData)
+
     // Save the job to the database
     await newJob.save()
     logger.info(`${bilbomdMode} Job saved to MongoDB: ${newJob.id}`)
 
-    // Queue the job
-    const BullId = await queueScoperJob({
+    // Create BullMQ Job object
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
       jobid: newJob.id
-    })
+    }
+
+    // Queue the job
+    const BullId = await queueScoperJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
-    res.status(200).json({
-      message: `New Scoper Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid
-    })
+
+    // Respond with job details
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New Scoper Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New Scoper Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     // Log more detailed information about the error
     if (error instanceof Error) {

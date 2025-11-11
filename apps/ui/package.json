@@ -22,7 +22,7 @@
   "scripts": {
     "clean": "rimraf build/*",
     "dev": "GIT_HASH=$(git rev-parse --short HEAD) vite",
-    "prebuild": "tsc",
+    "prebuild": "tsc && cp ../../LICENSE.txt public/LICENSE.txt",
     "vite-build": "vite build",
     "lint": "eslint",
     "build": "npm-run-all clean vite-build",
@@ -43,6 +43,7 @@
   "dependencies": {
     "@ant-design/colors": "^8.0.0",
     "@bilbomd/mongodb-schema": "workspace:*",
+    "@bilbomd/bilbomd-types": "workspace:*",
     "@emotion/core": "^11.0.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",

@@ -23,7 +23,7 @@ import {
 import Grid from '@mui/material/Grid'
 import LinearProgress from '@mui/material/LinearProgress'
 import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace'
-import { useTheme, Theme } from '@mui/material/styles'
+import { useTheme } from '@mui/material/styles'
 import { axiosInstance } from 'app/api/axios'
 import MissingJob from 'components/MissingJob'
 import { useSelector } from 'react-redux'
@@ -50,6 +50,7 @@ import { BilboMDJob, BilboMDMultiJob } from 'types/interfaces'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import MovieGallery from 'features/analysis/MovieGallery'
+import { getStatusColors } from 'features/shared/StatusColors'
 
 const jobTypeToRoute: Record<string, string> = {
   BilboMdPDB: 'classic',
@@ -209,53 +210,6 @@ const SingleJobPage = () => {
       }
     } catch (error) {
       console.error('Download results error:', error)
-    }
-  }
-
-  const getStatusColors = (status: JobStatusEnum, theme: Theme) => {
-    const statusColors: Record<
-      JobStatusEnum,
-      { background: string; text: string }
-    > = {
-      Submitted: {
-        background: '#d6e4ff',
-        text: theme.palette.mode === 'light' ? 'black' : 'white'
-      },
-      Pending: {
-        background: '#d6e4ff',
-        text: theme.palette.mode === 'light' ? 'black' : 'white'
-      },
-      Running: {
-        background: '#fff566',
-        text: theme.palette.mode === 'light' ? 'black' : 'black'
-      },
-      Completed: {
-        background: '#73d13d',
-        text: theme.palette.mode === 'light' ? 'black' : 'black'
-      },
-      Error: {
-        background: 'red',
-        text: 'white'
-      },
-      Failed: {
-        background: 'red',
-        text: 'white'
-      },
-      Cancelled: {
-        background: '#d6e4ff',
-        text: theme.palette.mode === 'light' ? 'black' : 'white'
-      }
-    }
-
-    // Check if status is defined and exists in the statusColors object.
-    if (status in statusColors) {
-      return statusColors[status]
-    }
-
-    // Default background and text colors
-    return {
-      background: '#d6e4ff',
-      text: theme.palette.mode === 'light' ? 'black' : 'white'
     }
   }
 

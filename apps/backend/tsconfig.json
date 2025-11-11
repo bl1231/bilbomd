@@ -4,9 +4,6 @@
     "module": "NodeNext",
     "rootDir": "src",
     "moduleResolution": "NodeNext",
-    "paths": {
-      "*": ["./src/*"]
-    },
     "types": [
       "node",
       "vitest"

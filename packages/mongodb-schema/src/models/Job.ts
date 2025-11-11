@@ -144,6 +144,25 @@ const jobSchema = new Schema(
       required: true
     },
     uuid: { type: String, required: true },
+    access_mode: {
+      type: String,
+      enum: ['user', 'anonymous'],
+      default: 'user',
+      required: true
+    },
+    public_id: {
+      type: String,
+      required: function (this: any) {
+        return this.access_mode === 'anonymous'
+      }
+    },
+    client_ip_hash: {
+      type: String,
+      required: function (this: any) {
+        return this.access_mode === 'anonymous'
+      },
+      index: true
+    },
     data_file: { type: String, required: true },
     md_engine: {
       type: String,
@@ -172,7 +191,7 @@ const jobSchema = new Schema(
     user: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: false
     },
     resubmitted_from: {
       type: Schema.Types.ObjectId,
@@ -313,6 +332,7 @@ const bilboMdScoperJobSchema = new Schema<IBilboMDScoperJob>({
 })
 
 jobSchema.index({ uuid: 1 })
+jobSchema.index({ client_ip_hash: 1, access_mode: 1, status: 1 })
 
 const Job = model<IJob>('Job', jobSchema)
 const BilboMdPDBJob = Job.discriminator('BilboMdPDB', bilboMdPDBJobSchema)

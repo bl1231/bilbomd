@@ -19,10 +19,11 @@ describe('useAuth', () => {
     expect(result.current).toEqual({
       username: '',
       roles: [],
+      status: 'User',
       email: '',
       isManager: false,
       isAdmin: false,
-      status: 'User'
+      isAuthenticated: false
     })
   })
 
@@ -46,7 +47,8 @@ describe('useAuth', () => {
       email: 'testuser@example.com',
       isManager: false,
       isAdmin: true,
-      status: 'Admin'
+      status: 'Admin',
+      isAuthenticated: true
     })
   })
 
@@ -70,7 +72,8 @@ describe('useAuth', () => {
       email: 'manageradmin@example.com',
       isManager: true,
       isAdmin: true,
-      status: 'Admin' // Admin takes precedence over Manager
+      status: 'Admin',
+      isAuthenticated: true
     })
   })
 })

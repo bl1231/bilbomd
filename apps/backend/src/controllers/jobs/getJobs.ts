@@ -14,7 +14,10 @@ import {
 import { Request, Response } from 'express'
 import { BilboMDSteps } from '../../types/bilbomd.js'
 import { BilboMDJob, BilboMDBullMQ } from '../../types/bilbomd.js'
-import { calculateNumEnsembles, calculateNumEnsembles2 } from './utils/jobUtils.js'
+import {
+  calculateNumEnsembles,
+  calculateNumEnsembles2
+} from './utils/jobUtils.js'
 import { getScoperStatus } from './scoperStatus.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
@@ -30,7 +33,9 @@ const getAllJobs = async (req: Request, res: Response) => {
 
     let jobFilter = {}
     if (!isAdmin && !isManager) {
-      logger.info(`User ${username} is not an Admin or Manager - filtering by username`)
+      logger.info(
+        `User ${username} is not an Admin or Manager - filtering by username`
+      )
       const user = await User.findOne({ username }).lean()
 
       if (!user) {
@@ -68,7 +73,11 @@ const getAllJobs = async (req: Request, res: Response) => {
         }
 
         let username = 'unknown'
-        if (mongo.user && typeof mongo.user === 'object' && 'username' in mongo.user) {
+        if (
+          mongo.user &&
+          typeof mongo.user === 'object' &&
+          'username' in mongo.user
+        ) {
           const user = mongo.user as IUser
           user.id = user._id.toString()
           username = user.username
@@ -119,7 +128,6 @@ const getJobById = async (req: Request, res: Response) => {
       if (
         job.__t === 'BilboMdPDB' ||
         job.__t === 'BilboMdCRD' ||
-        job.__t === 'BilboMd' ||
         job.__t === 'BilboMdSANS'
       ) {
         bullmq = await getBullMQJob(job.uuid)
@@ -149,7 +157,9 @@ const getJobById = async (req: Request, res: Response) => {
         bullmq = await getBullMQScoperJob(job.uuid)
         if (bullmq) {
           bilbomdJob.bullmq = bullmq
-          bilbomdJob.scoper = await getScoperStatus(job as unknown as IBilboMDScoperJob)
+          bilbomdJob.scoper = await getScoperStatus(
+            job as unknown as IBilboMDScoperJob
+          )
         }
       }
 

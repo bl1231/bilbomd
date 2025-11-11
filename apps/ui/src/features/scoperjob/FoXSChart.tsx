@@ -28,16 +28,16 @@ interface FoXSChartProps {
   data: DataPoint[]
   residualsData: ResidualDataPoint[]
   chisq: number
-  c1: number
-  c2: number
+  c1: string
+  c2: string
   minYAxis: number
   maxYAxis: number
 }
 
 interface CustomChartLabelProps {
   chisq: number
-  c1: number
-  c2: number
+  c1: string
+  c2: string
   x: number
   y: number
 }
@@ -51,24 +51,51 @@ const ChiSquaredChartLabel = ({
 }: CustomChartLabelProps) => {
   return (
     <>
-      <text x={x} y={y} fill='black' fontSize={16}>
+      <text
+        x={x}
+        y={y}
+        fill="black"
+        fontSize={16}
+      >
         Chi²: {chisq.toFixed(2)}
       </text>
-      <text x={x + 80} y={y} fill='black' fontSize={16}>
+      <text
+        x={x + 80}
+        y={y}
+        fill="black"
+        fontSize={16}
+      >
         C
-        <tspan dy='3' fontSize={10}>
+        <tspan
+          dy="3"
+          fontSize={10}
+        >
           1
         </tspan>
-        <tspan dy='-3' fontSize={14}>
+        <tspan
+          dy="-3"
+          fontSize={14}
+        >
           : {c1}
         </tspan>
       </text>
-      <text x={x + 140} y={y} fill='black' fontSize={16}>
+      <text
+        x={x + 140}
+        y={y}
+        fill="black"
+        fontSize={16}
+      >
         C
-        <tspan dy='3' fontSize={10}>
+        <tspan
+          dy="3"
+          fontSize={10}
+        >
           2
         </tspan>
-        <tspan dy='-3' fontSize={14}>
+        <tspan
+          dy="-3"
+          fontSize={14}
+        >
           : {c2}
         </tspan>
       </text>
@@ -91,67 +118,87 @@ const FoXSChart = ({
 
   return (
     <>
-      <Typography variant='h5' sx={{ pl: 2, m: 1 }}>
+      <Typography
+        variant="h5"
+        sx={{ pl: 2, m: 1 }}
+      >
         {title} - I vs. q
       </Typography>
-      <ResponsiveContainer width='100%' height={300}>
+      <ResponsiveContainer
+        width="100%"
+        height={300}
+      >
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray='3 3' />
-          <XAxis dataKey='q' scale='linear' type='number' />
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis
+            dataKey="q"
+            scale="linear"
+            type="number"
+          />
           <YAxis
-            yAxisId='left'
-            scale='log'
-            type='number'
+            yAxisId="left"
+            scale="log"
+            type="number"
             domain={['auto', 'auto']}
           />
           <Tooltip />
           <Legend
-            iconType='line'
-            verticalAlign='bottom'
+            iconType="line"
+            verticalAlign="bottom"
             height={30}
-            layout='horizontal'
+            layout="horizontal"
           />
           <Line
-            yAxisId='left'
-            type='monotone'
-            dataKey='exp_intensity'
-            name='Exp Intensity'
-            stroke='#8884d8'
+            yAxisId="left"
+            type="monotone"
+            dataKey="exp_intensity"
+            name="Exp Intensity"
+            stroke="#8884d8"
             activeDot={{ r: 8 }}
           />
           <Line
-            yAxisId='left'
-            type='monotone'
-            dataKey='model_intensity'
-            name='Model Intensity'
-            stroke='#82ca9d'
+            yAxisId="left"
+            type="monotone"
+            dataKey="model_intensity"
+            name="Model Intensity"
+            stroke="#82ca9d"
           />
         </LineChart>
       </ResponsiveContainer>
-      <Typography variant='h5' sx={{ pl: 2, m: 1, mt: 3 }}>
+      <Typography
+        variant="h5"
+        sx={{ pl: 2, m: 1, mt: 3 }}
+      >
         {title} - Chi&sup2; residuals
       </Typography>
-      <ResponsiveContainer width='100%' height={200}>
+      <ResponsiveContainer
+        width="100%"
+        height={200}
+      >
         <LineChart data={residualsData}>
-          <XAxis dataKey='q' scale='linear' type='number' />
+          <XAxis
+            dataKey="q"
+            scale="linear"
+            type="number"
+          />
           <YAxis domain={[minYAxis, maxYAxis]} />
           <Tooltip />
           <Legend
-            iconType='line'
-            verticalAlign='bottom'
+            iconType="line"
+            verticalAlign="bottom"
             height={30}
-            layout='horizontal'
-            align='center'
+            layout="horizontal"
+            align="center"
           />
           <Line
-            type='monotone'
-            dataKey='res'
-            name='Residuals'
-            stroke='#82ca9d'
+            type="monotone"
+            dataKey="res"
+            name="Residuals"
+            stroke="#82ca9d"
           />
           <ReferenceLine
             y={0}
-            stroke='black'
+            stroke="black"
             label={
               <ChiSquaredChartLabel
                 chisq={chisq}

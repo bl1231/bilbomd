@@ -1,14 +1,38 @@
 import useAuth from 'hooks/useAuth'
 import useTitle from 'hooks/useTitle'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
-import { Alert, Typography, Link } from '@mui/material'
+import {
+  Alert,
+  Button,
+  Typography,
+  Link,
+  Paper,
+  List,
+  ListItem
+} from '@mui/material'
 import Grid from '@mui/material/Grid'
 import NerscSystemStatuses from 'features/nersc/SystemStatuses'
 import { Box } from '@mui/system'
+import { Link as RouterLink } from 'react-router'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import HistoryIcon from '@mui/icons-material/History'
+import ReplayIcon from '@mui/icons-material/Replay'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
+import HelpIcon from '@mui/icons-material/Help'
+import { grey } from '@mui/material/colors'
+import Acknowledgments from '../about/Acknowledgments'
+type WelcomeProps = {
+  mode: 'authenticated' | 'anonymous'
+}
 
-const Welcome = () => {
+const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
+  console.log(`Welcome mode: ${mode}`)
   const { username } = useAuth()
-  useTitle(`BilboMD: Welcome ${username}`)
+  const isAnonymous = mode === 'anonymous'
+  useTitle(
+    isAnonymous ? 'BilboMD: Welcome' : `BilboMD: Welcome ${username ?? ''}`
+  )
   const {
     data: config,
     error: configError,
@@ -16,7 +40,7 @@ const Welcome = () => {
   } = useGetConfigsQuery('configData')
 
   const content = (
-    <Box>
+    <>
       <Grid
         container
         spacing={2}
@@ -58,229 +82,165 @@ const Welcome = () => {
         </Grid>
         <Grid size={12}>
           <Typography sx={{ mb: 2 }}>
-            Web implementation: <Link href="mailto:sclassen@lbl.gov">Scott Classen</Link>
+            Web implementation:{' '}
+            <Link href="mailto:sclassen@lbl.gov">Scott Classen</Link>
             <br />
-            BilboMD-specific Questions: <Link href="mailto:mhammel@lbl.gov">Michal Hammel</Link>
+            BilboMD-specific Questions:{' '}
+            <Link href="mailto:mhammel@lbl.gov">Michal Hammel</Link>
           </Typography>
         </Grid>
-        <Grid>
-          {' '}
-          <Typography
-            variant="h4"
-            sx={{ my: 3 }}
-          >
-            Acknowledgements:
-          </Typography>
-          <Typography>
-            Please Acknowledge the following manuscripts if you use <b>BilboMD</b>:
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mx: 2, my: 2 }}
-          >
-            Pelikan M, Hura GL, Hammel M.{' '}
-            <b>
-              Structure and flexibility within proteins as identified through small angle X-ray
-              scattering.
-            </b>{' '}
-            Gen Physiol Biophys. 2009 Jun;28(2):174-89. doi: 10.4149/gpb_2009_02_174. PMID:{' '}
-            <Link
-              href="https://pubmed.ncbi.nlm.nih.gov/19592714/"
-              target="_blank"
-              rel="noopener noreferrer"
+        <Grid size={12}>
+          {isAnonymous ? (
+            <>
+              <Grid size={8}>
+                <Typography
+                  variant="h4"
+                  gutterBottom
+                >
+                  Welcome to BilboMD
+                </Typography>
+                <Typography variant="body1">
+                  You can run BilboMD anonymously without logging in. Submitted
+                  jobs will be accessible via a unique results link — please
+                  bookmark it.
+                </Typography>
+                <Box sx={{ my: 2 }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    component={RouterLink}
+                    to="/jobs/classic/new"
+                  >
+                    Run a BilboMD Job
+                  </Button>
+                </Box>
+              </Grid>
+              {/* BENEFITS OF ACCOUNT */}
+              <Paper
+                elevation={1}
+                sx={{
+                  p: 2,
+                  my: 2,
+                  backgroundColor: grey[300],
+                  width: { xs: '100%', sm: '80%', md: '80%', lg: '80%' },
+                  maxWidth: '700px'
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 2
+                  }}
+                >
+                  <Typography
+                    variant="h5"
+                    sx={{ fontWeight: 'bold' }}
+                  >
+                    Benefits of Creating an Account:
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    component={RouterLink}
+                    to="/privacy"
+                  >
+                    Privacy Policy
+                  </Button>
+                </Box>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon sx={{ mr: 1 }}>
+                      <HistoryIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Job History: Track and review all your past BilboMD jobs." />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon sx={{ mr: 1 }}>
+                      <ReplayIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Ability to Resubmit: Easily rerun or modify previous jobs." />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon sx={{ mr: 1 }}>
+                      <HelpIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Staff Support: Get personalized help, feedback, and troubleshooting from our team." />
+                  </ListItem>
+                </List>
+              </Paper>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body1">
+                  Already have an account?{' '}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    component={RouterLink}
+                    to="/magicklink"
+                    startIcon={<AutoFixHighIcon />}
+                  >
+                    Get a MagickLink&#8482;
+                  </Button>
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body1">
+                  Need an account?{' '}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    component={RouterLink}
+                    to="/register"
+                  >
+                    Register
+                  </Button>
+                </Typography>
+              </Box>
+            </>
+          ) : (
+            <Box
+              display="flex"
+              flexDirection="column"
+              width="100%"
             >
-              19592714
-            </Link>
-            ; PMCID: PMC3773563.
-          </Typography>
+              <Typography
+                variant="h4"
+                gutterBottom
+              >
+                Welcome back, {username || 'user'}!
+              </Typography>
+              <Typography variant="body1">
+                Ready to submit a new BilboMD job or review your previous
+                analyses?
+              </Typography>
+              <Box mt={3}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  component={RouterLink}
+                  to="/dashboard/jobs/classic"
+                >
+                  Submit New Job
+                </Button>
+                <Box mt={2}>
+                  <Button
+                    variant="outlined"
+                    component={RouterLink}
+                    to="/dashboard/jobs"
+                  >
+                    View My Jobs
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          )}
         </Grid>
-        <Grid>
-          <Typography>
-            <b>BilboMD</b> makes use of{' '}
-            <Link
-              href="https://academiccharmm.org/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              CHARMM
-            </Link>
-            ,{' '}
-            <Link
-              href="https://www.charmm-gui.org/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              CHARMM-GUI
-            </Link>
-            ,{' '}
-            <Link
-              href="https://modbase.compbio.ucsf.edu/foxs/about"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              FoXS
-            </Link>
-            , and{' '}
-            <Link
-              href="https://modbase.compbio.ucsf.edu/multifoxs/about"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              MultiFoXS
-            </Link>
-            . Please also consider citing them:
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mx: 2, my: 2 }}
-          >
-            Brooks BR, Brooks CL 3rd, Mackerell AD Jr, Nilsson L, Petrella RJ, Roux B, Won Y,
-            Archontis G, Bartels C, Boresch S, Caflisch A, Caves L, Cui Q, Dinner AR, Feig M,
-            Fischer S, Gao J, Hodoscek M, Im W, Kuczera K, Lazaridis T, Ma J, Ovchinnikov V, Paci E,
-            Pastor RW, Post CB, Pu JZ, Schaefer M, Tidor B, Venable RM, Woodcock HL, Wu X, Yang W,
-            York DM, Karplus M. <b>CHARMM: the biomolecular simulation program.</b> J Comput Chem.
-            2009 Jul 30;30(10):1545-614. doi: 10.1002/jcc.21287. PMID:{' '}
-            <Link
-              href="https://pubmed.ncbi.nlm.nih.gov/19444816/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              19444816
-            </Link>
-            ; PMCID: PMC2810661.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mx: 2, my: 2 }}
-          >
-            Schneidman-Duhovny D, Hammel M, Tainer JA, Sali A.{' '}
-            <b>
-              Accurate SAXS profile computation and its assessment by contrast variation
-              experiments.
-            </b>{' '}
-            Biophys J. 2013 Aug 20;105(4):962-74. doi: 10.1016/j.bpj.2013.07.020. PMID:{' '}
-            <Link
-              href="https://pubmed.ncbi.nlm.nih.gov/23972848/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              23972848
-            </Link>
-            ; PMCID: PMC3752106.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mx: 2, my: 2 }}
-          >
-            Schneidman-Duhovny D, Hammel M, Tainer JA, Sali A.{' '}
-            <b>
-              FoXS, FoXSDock and MultiFoXS: Single-state and multi-state structural modeling of
-              proteins and their complexes based on SAXS profiles.
-            </b>{' '}
-            Nucleic Acids Res. 2016 Jul 8;44(W1):W424-9. doi: 10.1093/nar/gkw389. Epub 2016 May 5.
-            PMID:{' '}
-            <Link
-              href="https://pubmed.ncbi.nlm.nih.gov/27151198/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              27151198
-            </Link>
-            ; PMCID: PMC4987932.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mx: 2, my: 2 }}
-          >
-            Jo S, Kim T, Iyer VG, Im W.{' '}
-            <b>CHARMM-GUI: a web-based graphical user interface for CHARMM.</b> J Comput Chem. 2008
-            Aug;29(11):1859-65. doi: 10.1002/jcc.20945. PMID:{' '}
-            <Link
-              href="https://pubmed.ncbi.nlm.nih.gov/18351591/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              18351591
-            </Link>
-            .
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mx: 2, my: 2 }}
-          >
-            Jo S, Cheng X, Islam SM, Huang L, Rui H, Zhu A, Lee HS, Qi Y, Han W, Vanommeslaeghe K,
-            MacKerell AD Jr, Roux B, Im W.{' '}
-            <b>
-              CHARMM-GUI PDB manipulator for advanced modeling and simulations of proteins
-              containing nonstandard residues.
-            </b>{' '}
-            Adv Protein Chem Struct Biol. 2014;96:235-65. doi: 10.1016/bs.apcsb.2014.06.002. Epub
-            2014 Aug 24. PMID:{' '}
-            <Link
-              href="https://pubmed.ncbi.nlm.nih.gov/25443960/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              25443960
-            </Link>
-            ; PMCID: PMC4739825.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mx: 2, my: 2 }}
-          >
-            Park SJ, Kern N, Brown T, Lee J, Im W.{' '}
-            <b>
-              CHARMM-GUI PDB Manipulator: Various PDB Structural Modifications for Biomolecular
-              Modeling and Simulation.
-            </b>{' '}
-            J Mol Biol. 2023 Jul 15;435(14):167995. doi: 10.1016/j.jmb.2023.167995. Epub 2023 Feb 2.
-            PMID:{' '}
-            <Link
-              href="https://pubmed.ncbi.nlm.nih.gov/37356910/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              37356910
-            </Link>
-            ; PMCID: PMC10291205.
-          </Typography>
-          <Typography>
-            Other projects and code that powers the AlphaFold PAE Jiffy to automatically create a
-            CHARMM <code>const.inp</code> file:
-          </Typography>
-          <ul>
-            <li>
-              <Link
-                href="https://github.com/google-deepmind/alphafold"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                AlphaFold
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="https://python.igraph.org/en/stable/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                igraph
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="https://numpy.org/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                NumPy
-              </Link>
-            </li>
-          </ul>
-        </Grid>
+        <Acknowledgments />
       </Grid>
-    </Box>
+    </>
   )
 
   return content

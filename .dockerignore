@@ -5,6 +5,7 @@
 !pnpm-workspace.yaml
 !pnpm-lock.yaml
 !package.json
+!LICENSE.txt
 
 # Unignore dirs so we can include subpaths
 !apps
@@ -19,6 +20,7 @@
 !packages/tsconfig/**
 !packages/eslint-config/**
 !tools/python/**
+!example-data/**
 
 # Keep these ignored even if matched above
 .git/

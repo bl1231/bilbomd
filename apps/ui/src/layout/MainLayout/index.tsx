@@ -25,6 +25,7 @@ import useAuth from 'hooks/useAuth'
 import Header from './Header'
 import Breadcrumbs from './Breadcrumbs'
 import Footer from './Footer'
+import CookieConsent from 'components/CookieConsent'
 
 const drawerWidth = 190
 
@@ -44,9 +45,9 @@ export default function ClippedDrawer() {
 
   if (configIsLoading) return <CircularProgress />
   if (configError)
-    return <Alert severity='error'>Error loading configuration data</Alert>
+    return <Alert severity="error">Error loading configuration data</Alert>
   if (!config)
-    return <Alert severity='warning'>No configuration data available</Alert>
+    return <Alert severity="warning">No configuration data available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
   const enableBilboMdSANS = config.enableBilboMdSANS?.toLowerCase() === 'true'
@@ -214,7 +215,7 @@ export default function ClippedDrawer() {
       <Box sx={{ display: 'flex', flexGrow: 1 }}>
         {!isSettingsPage && (
           <Drawer
-            variant='permanent'
+            variant="permanent"
             sx={{
               width: drawerWidth,
               flexShrink: 0,
@@ -231,7 +232,10 @@ export default function ClippedDrawer() {
             </Box>
           </Drawer>
         )}
-        <Box component='main' sx={{ flexGrow: 1, p: 3 }}>
+        <Box
+          component="main"
+          sx={{ flexGrow: 1, p: 3 }}
+        >
           {showBreadcrumbs && <Breadcrumbs />}
           <Outlet />
         </Box>
@@ -239,6 +243,7 @@ export default function ClippedDrawer() {
 
       <Box sx={{ width: '100vw' }}>
         <Footer />
+        <CookieConsent />
       </Box>
     </Box>
   )

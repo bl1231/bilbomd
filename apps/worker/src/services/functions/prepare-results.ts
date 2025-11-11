@@ -194,6 +194,7 @@ const prepareResults = async (
     }
 
     // Write the DBjob to a JSON file
+    // We might consider doing this later? since it does not contain feedback data yet?
     try {
       const dbJobJsonPath = path.join(resultsDir, 'bilbomd_job.json')
       await fs.writeFile(dbJobJsonPath, JSON.stringify(DBjob, null, 2), 'utf8')

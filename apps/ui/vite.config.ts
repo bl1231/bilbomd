@@ -38,7 +38,11 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            return id.toString().split('node_modules/')[1].split('/')[0].toString()
+            return id
+              .toString()
+              .split('node_modules/')[1]
+              .split('/')[0]
+              .toString()
           }
         }
       }
@@ -50,6 +54,7 @@ export default defineConfig({
     reporters: ['default'],
     globals: true,
     css: true,
+    pool: 'forks', // Use forks pool for single-threaded execution to avoid IPC issues
     server: {
       deps: {
         inline: ['@mui/x-data-grid']

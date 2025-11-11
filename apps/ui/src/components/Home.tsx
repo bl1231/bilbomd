@@ -72,9 +72,9 @@ const Home = ({ title = 'BilboMD' }) => {
             has already been parameterized for CHARMM as a *.crd and *.psf
             files. This is typically done with{' '}
             <Link
-              href='https://www.charmm-gui.org/'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://www.charmm-gui.org/"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               CHARMM-GUI
             </Link>
@@ -185,36 +185,39 @@ const Home = ({ title = 'BilboMD' }) => {
 
     content = (
       <Container>
-        <Introduction title='Welcome to BilboMD'>
+        <Introduction title="Welcome to BilboMD Home.tsx">
           <b>BilboMD</b> allows you to determine the three-dimensional domain
           structure of proteins based on conformational sampling using a
           Molecular Dynamics (MD) approach. Conformational sampling performed by{' '}
           <Link
-            href='https://academiccharmm.org/documentation'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://academiccharmm.org/documentation"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             CHARMM
           </Link>{' '}
           is followed by structure validation using{' '}
           <Link
-            href='https://modbase.compbio.ucsf.edu/foxs/about'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://modbase.compbio.ucsf.edu/foxs/about"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             FoXS
           </Link>{' '}
           and ensemble analysis using Minimal Ensemble Search (MES) via{' '}
           <Link
-            href='https://modbase.compbio.ucsf.edu/multifoxs/'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://modbase.compbio.ucsf.edu/multifoxs/"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             MultiFoXS
           </Link>
           . Details of the implementation and integration of these tools into{' '}
           <b>BilboMD</b> are described in the following manuscript:
-          <Typography variant='body2' sx={{ mx: 5, my: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{ mx: 5, my: 2 }}
+          >
             Pelikan M, Hura GL, Hammel M.{' '}
             <b>
               Structure and flexibility within proteins as identified through
@@ -223,9 +226,9 @@ const Home = ({ title = 'BilboMD' }) => {
             Gen Physiol Biophys. 2009 Jun;28(2):174-89. doi:
             10.4149/gpb_2009_02_174. PMID:{' '}
             <Link
-              href='https://pubmed.ncbi.nlm.nih.gov/19592714/'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://pubmed.ncbi.nlm.nih.gov/19592714/"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               19592714
             </Link>
@@ -235,26 +238,32 @@ const Home = ({ title = 'BilboMD' }) => {
 
         {/* Config Alert */}
         {config?.useNersc?.toLowerCase() === 'false' ? (
-          <Alert severity='info' variant='outlined'>
+          <Alert
+            severity="info"
+            variant="outlined"
+          >
             You are about to run <b>BilboMD</b> on SIBYLS servers. If you would
             prefer to run on NERSC head over to:{' '}
             <Link
-              href='https://bilbomd-nersc.bl1231.als.lbl.gov'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://bilbomd-nersc.bl1231.als.lbl.gov"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <b>bilbomd-nersc.bl1231.als.lbl.gov</b>
             </Link>
             .
           </Alert>
         ) : (
-          <Alert severity='info' variant='outlined'>
+          <Alert
+            severity="info"
+            variant="outlined"
+          >
             You are about to run <b>BilboMD</b> on NERSC. If you would prefer to
             run on the SIBYLS Beamline servers head over to:{' '}
             <Link
-              href='https://bilbomd.bl1231.als.lbl.gov'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://bilbomd.bl1231.als.lbl.gov"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <b>bilbomd.bl1231.als.lbl.gov</b>
             </Link>
@@ -263,10 +272,16 @@ const Home = ({ title = 'BilboMD' }) => {
         )}
 
         {/* Pipeline Options */}
-        <Typography variant='h2' sx={{ my: 3 }}>
+        <Typography
+          variant="h2"
+          sx={{ my: 3 }}
+        >
           Pipeline Options
         </Typography>
-        <PipelineOptions pipelines={pipelines} isLightMode={isLightMode} />
+        <PipelineOptions
+          pipelines={pipelines}
+          isLightMode={isLightMode}
+        />
 
         {/* Additional Information */}
         <AdditionalInfo />

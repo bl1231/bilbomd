@@ -4,7 +4,6 @@ import path from 'path'
 import cors from 'cors'
 import { corsOptions } from './config/corsOptions.js'
 import { corsOptionsPublic } from './config/corsOptionsPublic.js'
-// import { loginLimiter } from './middleware/loginLimiter.js'
 import { externalApiLimiter } from './middleware/externalApiLimiter.js'
 import { logger, requestLogger, assignRequestId } from './middleware/loggers.js'
 import cookieParser from 'cookie-parser'
@@ -29,9 +28,12 @@ import configsRoutes from './routes/configs.js'
 import statsRoutes from './routes/stats.js'
 import externalRoutes from './routes/external.js'
 import adminApiRoutes from './routes/admin-api.js'
+import publicJobsRoutes from './routes/public.js'
+import exampleData from './routes/examples.js'
 import './workers/deleteBilboMDJobsWorker.js'
 import swaggerUi from 'swagger-ui-express'
 import swaggerSpec from './openapi/swagger.js'
+import logPublicJobIPs from './middleware/logPublicJobIPs.js'
 
 // Instantiate the app
 const app: Express = express()
@@ -42,9 +44,8 @@ const viewsPath = '/app/views'
 
 logger.info(`Starting in ${environment} mode`)
 
-// Trust the first proxy in front of the app
-// ChatGPT suggested this
-app.set('trust proxy', 1)
+// Trust exactly 2 proxies: Cloudflare and Docker host
+app.set('trust proxy', 2)
 
 // Connect to MongoDB
 connectDB()
@@ -55,9 +56,6 @@ await initOrcidClient()
 // custom middleware logger
 app.use(assignRequestId)
 app.use(requestLogger)
-
-// Rate limiting middleware
-// app.use(loginLimiter)
 
 // Cross Origin Resource Sharing
 // prevents unwanted clients from accessing our backend API.
@@ -90,9 +88,6 @@ app.use(
 // Serve static files
 app.use('/', express.static('public'))
 
-// Root routes (no version)
-// app.use('/', rootRoutes)
-
 app.use('/admin/bullmq', adminRoutes)
 
 app.use('/sfapi', sfapiRoutes)
@@ -119,6 +114,8 @@ v1Router.use(
   externalRoutes
 )
 v1Router.use('/admin', adminApiRoutes)
+v1Router.use('/public/jobs', logPublicJobIPs, publicJobsRoutes)
+v1Router.use('/public/examples', exampleData)
 
 // Apply v1Router under /api/v1
 app.use('/api/v1', v1Router)

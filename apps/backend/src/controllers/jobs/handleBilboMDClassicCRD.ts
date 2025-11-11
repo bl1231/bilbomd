@@ -4,7 +4,6 @@ import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
 import {
   IBilboMDCRDJob,
-  IUser,
   JobStatus,
   StepStatus,
   BilboMdCRDJob,
@@ -19,14 +18,20 @@ import {
 } from './utils/jobUtils.js'
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
+import { DispatchUser } from '../../types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDClassicCRD = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
+  user: DispatchUser | undefined,
+  UUID: string,
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ) => {
   try {
     const isResubmission = Boolean(
@@ -128,10 +133,41 @@ const handleBilboMDClassicCRD = async (
       psfFile = files['psf_file']?.[0]
       inpFile = files['inp_file']?.[0]
       datFile = files['dat_file']?.[0]
-      crdFileName = files['crd_file']?.[0]?.originalname.toLowerCase()
-      psfFileName = files['psf_file']?.[0]?.originalname.toLowerCase()
-      inpFileName = files['inp_file']?.[0]?.originalname.toLowerCase()
-      datFileName = files['dat_file']?.[0]?.originalname.toLowerCase()
+
+      // Handle example data files if no uploaded files
+      if (!crdFile && req.body.crd_file) {
+        crdFile = {
+          originalname: req.body.crd_file,
+          path: path.join(jobDir, req.body.crd_file),
+          size: getFileStats(path.join(jobDir, req.body.crd_file)).size
+        } as Express.Multer.File
+      }
+      if (!psfFile && req.body.psf_file) {
+        psfFile = {
+          originalname: req.body.psf_file,
+          path: path.join(jobDir, req.body.psf_file),
+          size: getFileStats(path.join(jobDir, req.body.psf_file)).size
+        } as Express.Multer.File
+      }
+      if (!inpFile && req.body.inp_file) {
+        inpFile = {
+          originalname: req.body.inp_file,
+          path: path.join(jobDir, req.body.inp_file),
+          size: getFileStats(path.join(jobDir, req.body.inp_file)).size
+        } as Express.Multer.File
+      }
+      if (!datFile && req.body.dat_file) {
+        datFile = {
+          originalname: req.body.dat_file,
+          path: path.join(jobDir, req.body.dat_file),
+          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+        } as Express.Multer.File
+      }
+
+      crdFileName = crdFile?.originalname.toLowerCase()
+      psfFileName = psfFile?.originalname.toLowerCase()
+      inpFileName = inpFile?.originalname.toLowerCase()
+      datFileName = datFile?.originalname.toLowerCase()
 
       const constInpFilePath = path.join(jobDir, inpFileName)
       const constInpOrigFilePath = path.join(jobDir, `${inpFileName}.orig`)
@@ -186,7 +222,7 @@ const handleBilboMDClassicCRD = async (
     }
 
     // Initialize BilboMdCRDJob Job Data
-    const newJob: IBilboMDCRDJob = new BilboMdCRDJob({
+    const jobData = {
       title: req.body.title,
       uuid: UUID,
       status: JobStatus.Submitted,
@@ -199,7 +235,6 @@ const handleBilboMDClassicCRD = async (
       rg_min,
       rg_max,
       time_submitted: new Date(),
-      user,
       progress: 0,
       cleanup_in_progress: false,
       steps: {
@@ -216,8 +251,18 @@ const handleBilboMDClassicCRD = async (
       },
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
+        : {}),
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash: ctx.client_ip_hash }
         : {})
-    })
+    }
+
+    const newJob: IBilboMDCRDJob = new BilboMdCRDJob(jobData)
 
     // Save the job to the database
     await newJob.save()
@@ -227,7 +272,7 @@ const handleBilboMDClassicCRD = async (
     await writeJobParams(newJob.id)
 
     // Create BullMQ Job object
-    const jobData = {
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
@@ -235,17 +280,41 @@ const handleBilboMDClassicCRD = async (
     }
 
     // Queue the job
-    const BullId = await queueJob(jobData)
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
     // Respond with job details
-    res.status(200).json({
-      message: `New BilboMD Classic w/CRD Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid
-    })
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New BilboMD Classic w/CRD Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD Classic w/CRD Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     const msg =
       error instanceof Error

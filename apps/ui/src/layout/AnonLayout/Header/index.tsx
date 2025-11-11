@@ -1,0 +1,248 @@
+import {
+  Alert,
+  AppBar,
+  Box,
+  Button,
+  CircularProgress,
+  CssBaseline,
+  Toolbar,
+  Typography
+} from '@mui/material'
+import NightModeToggle from 'components/NightModeToggle'
+// import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
+import { useGetConfigsQuery } from 'slices/configsApiSlice'
+import nerscLogo from 'assets/nersc-logo.png'
+import useAuth from 'hooks/useAuth'
+
+const linkStyles = {
+  display: 'flex-grow',
+  fontFamily: 'monospace',
+  fontWeight: 900,
+  fontSize: '3em',
+  letterSpacing: '.3rem',
+  background: 'linear-gradient(to top, #00c9ff, #92fe9d)', // Blue to Light Green
+  WebkitBackgroundClip: 'text', // Ensures gradient is applied only to the text
+  WebkitTextFillColor: 'transparent', // Makes the text transparent so gradient shows
+  color: 'transparent', // Fallback for other browsers
+  textDecoration: 'none'
+}
+
+// interface NerscLogoProps {
+//   useNersc: boolean
+//   mode: string
+// }
+
+// const NerscLogo = ({ useNersc, mode }: NerscLogoProps) =>
+//   useNersc && (
+//     <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', p: 1 }}>
+//       <img
+//         src={nerscLogo}
+//         alt="NERSC Logo"
+//         style={{ height: '30px' }}
+//       />
+//       {mode === 'development' && (
+//         <Typography
+//           variant="h5"
+//           component="span"
+//           sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
+//         >
+//           DEVELOPMENT
+//         </Typography>
+//       )}
+//     </Box>
+//   )
+
+// const ModeDisplay = ({ useNersc, mode }: NerscLogoProps) =>
+//   !useNersc && (
+//     <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', p: 1 }}>
+//       {mode !== 'local' && (
+//         <Typography
+//           variant="h5"
+//           component="span"
+//           sx={{ ml: 1, pb: 0.2 }}
+//         >
+//           BL12.3.1
+//         </Typography>
+//       )}
+//       {mode === 'development' && (
+//         <Typography
+//           variant="h5"
+//           component="span"
+//           sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
+//         >
+//           DEVELOPMENT
+//         </Typography>
+//       )}
+//       {mode === 'local' && (
+//         <Box>
+//           <Typography
+//             variant="h5"
+//             component="span"
+//             sx={{ ml: 1, pb: 0.2 }}
+//           >
+//             LOCAL
+//           </Typography>
+//           <Typography
+//             variant="h5"
+//             component="span"
+//             sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
+//           >
+//             DEVELOPMENT
+//           </Typography>
+//         </Box>
+//       )}
+//     </Box>
+//   )
+
+interface DeploySiteProps {
+  deploySite: string
+}
+
+const DeploySite = ({ deploySite }: DeploySiteProps) => (
+  <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
+    {deploySite === 'nersc' && (
+      <img
+        src={nerscLogo}
+        alt="NERSC Logo"
+        style={{ height: '30px' }}
+      />
+    )}
+    {deploySite === 'local' && (
+      <Typography
+        variant="h5"
+        component="span"
+        sx={{ ml: 1 }}
+      >
+        LOCAL
+      </Typography>
+    )}
+    {deploySite === 'bl1231' && (
+      <Typography
+        variant="h5"
+        component="span"
+        sx={{ ml: 1, pb: 0 }}
+      >
+        BL12.3.1
+      </Typography>
+    )}
+  </Box>
+)
+
+interface DevModeProps {
+  mode: string
+}
+const DevMode = ({ mode }: DevModeProps) => (
+  <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
+    {mode === 'development' && (
+      <Typography
+        variant="h5"
+        component="span"
+        sx={{ ml: 1, pb: 0, color: 'yellow' }}
+      >
+        DEVELOPMENT
+      </Typography>
+    )}
+  </Box>
+)
+
+const Header = () => {
+  const { isAuthenticated } = useAuth()
+
+  const {
+    data: config,
+    isLoading: configIsLoading,
+    error: configError
+  } = useGetConfigsQuery('configData')
+
+  if (configIsLoading) return <CircularProgress />
+  if (configError)
+    return <Alert severity="error">Error loading configuration data</Alert>
+  if (!config)
+    return <Alert severity="warning">No configuration data available</Alert>
+
+  // const useNersc = config.useNersc?.toLowerCase() === 'true'
+  const mode = config.mode || 'nope'
+  const deploySite = config.deploySite || ''
+
+  return (
+    <>
+      <CssBaseline />
+      <Box sx={{ flexGrow: 1 }}>
+        <AppBar
+          position="fixed"
+          elevation={0}
+          sx={{ height: '70px', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        >
+          <Toolbar sx={{ display: 'flex', alignItems: 'center', m: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 0 }}>
+              <Link
+                to="/welcome"
+                style={linkStyles}
+              >
+                BilboMD
+              </Link>
+            </Box>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                flexGrow: 1,
+                pt: 1.5
+              }}
+            >
+              <DeploySite deploySite={deploySite} />
+              <DevMode mode={mode} />
+              {isAuthenticated ? null : (
+                <Typography sx={{ ml: 1 }}>anonymous</Typography>
+              )}
+            </Box>
+
+            <Typography
+              variant="h5"
+              sx={{ display: { xs: 'none', sm: 'flex' }, ml: 8 }}
+            >
+              {/* {time} */}
+            </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                justifyContent: 'flex-end',
+                flexGrow: 1
+              }}
+            >
+              <Button
+                variant="contained"
+                to="register"
+                component={Link}
+                sx={{ mx: 1, borderRadius: 2 }}
+              >
+                Register
+              </Button>
+              {/* <Button
+                variant='contained'
+                to='login'
+                component={Link}
+                sx={{ mx: 1, borderRadius: 2 }}
+              >
+                Login
+              </Button> */}
+              <Button
+                variant="contained"
+                to="magicklink"
+                component={Link}
+                sx={{ mx: 1, borderRadius: 2 }}
+              >
+                Login
+              </Button>
+              <NightModeToggle />
+            </Box>
+          </Toolbar>
+        </AppBar>
+      </Box>
+    </>
+  )
+}
+
+export default Header

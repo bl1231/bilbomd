@@ -39,6 +39,11 @@ export const MDEngine = {
   OpenMM: 'OpenMM'
 } as const
 
+export const AccessMode = {
+  User: 'user',
+  Anonymous: 'anonymous'
+} as const
+
 interface IStepStatus {
   status: StepStatusEnum
   message: string
@@ -142,6 +147,9 @@ interface IJob extends Document {
     | 'BilboMdSANS'
   title: string
   uuid: string
+  access_mode: AccessModeEnum
+  public_id?: string
+  client_ip_hash?: string
   status: JobStatusEnum
   data_file: string
   md_engine?: MDEngineEnum
@@ -150,7 +158,7 @@ interface IJob extends Document {
   time_submitted: Date
   time_started?: Date
   time_completed?: Date
-  user: IUser | Types.ObjectId
+  user?: IUser | Types.ObjectId
   resubmitted_from?: IJob | Types.ObjectId
   steps?: IBilboMDSteps
   progress: number
@@ -240,6 +248,7 @@ export type JobStatusEnum = (typeof JobStatus)[keyof typeof JobStatus]
 export type NerscStatusEnum = (typeof NerscStatus)[keyof typeof NerscStatus]
 export type StepStatusEnum = (typeof StepStatus)[keyof typeof StepStatus]
 export type MDEngineEnum = (typeof MDEngine)[keyof typeof MDEngine]
+export type AccessModeEnum = (typeof AccessMode)[keyof typeof AccessMode]
 
 export {
   IStepStatus,

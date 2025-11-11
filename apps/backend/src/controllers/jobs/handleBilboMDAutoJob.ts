@@ -2,7 +2,6 @@ import { logger } from '../../middleware/loggers.js'
 import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
 import {
-  IUser,
   BilboMdAutoJob,
   IBilboMDAutoJob,
   IBilboMDSteps,
@@ -17,14 +16,20 @@ import { spawnAutoRgCalculator } from './utils/autoRg.js'
 import fs from 'fs-extra'
 import { autoJobSchema } from '../../validation/index.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { DispatchUser } from '../../types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDAutoJob = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
+  user: DispatchUser | undefined,
+  UUID: string,
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ) => {
   try {
     const isResubmission = Boolean(
@@ -100,9 +105,33 @@ const handleBilboMDAutoJob = async (
       pdbFile = files['pdb_file']?.[0]
       paeFile = files['pae_file']?.[0]
       datFile = files['dat_file']?.[0]
-      pdbFileName = files['pdb_file']?.[0]?.originalname.toLowerCase()
-      paeFileName = files['pae_file']?.[0]?.originalname.toLowerCase()
-      datFileName = files['dat_file']?.[0]?.originalname.toLowerCase()
+
+      // Handle example data files if no uploaded files
+      if (!pdbFile && req.body.pdb_file) {
+        pdbFile = {
+          originalname: req.body.pdb_file,
+          path: path.join(jobDir, req.body.pdb_file),
+          size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
+        } as Express.Multer.File
+      }
+      if (!paeFile && req.body.pae_file) {
+        paeFile = {
+          originalname: req.body.pae_file,
+          path: path.join(jobDir, req.body.pae_file),
+          size: getFileStats(path.join(jobDir, req.body.pae_file)).size
+        } as Express.Multer.File
+      }
+      if (!datFile && req.body.dat_file) {
+        datFile = {
+          originalname: req.body.dat_file,
+          path: path.join(jobDir, req.body.dat_file),
+          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+        } as Express.Multer.File
+      }
+
+      pdbFileName = pdbFile?.originalname.toLowerCase()
+      paeFileName = paeFile?.originalname.toLowerCase()
+      datFileName = datFile?.originalname.toLowerCase()
     }
 
     logger.info(`PDB File: ${pdbFileName}`)
@@ -174,7 +203,7 @@ const handleBilboMDAutoJob = async (
     }
 
     // Initialize BilboMdAuto Job Data
-    const newJob: IBilboMDAutoJob = new BilboMdAutoJob({
+    const jobData = {
       title: req.body.title,
       uuid: UUID,
       status: JobStatus.Submitted,
@@ -186,7 +215,6 @@ const handleBilboMDAutoJob = async (
       rg_max: autorgResults.rg_max,
       conformational_sampling: 3,
       time_submitted: new Date(),
-      user: user,
       steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
@@ -194,8 +222,18 @@ const handleBilboMDAutoJob = async (
       }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
+        : {}),
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash: ctx.client_ip_hash }
         : {})
-    })
+    }
+
+    const newJob: IBilboMDAutoJob = new BilboMdAutoJob(jobData)
 
     // Save the job to the database
     await newJob.save()
@@ -205,7 +243,7 @@ const handleBilboMDAutoJob = async (
     await writeJobParams(newJob.id)
 
     // Create BullMQ Job object
-    const jobData = {
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
@@ -214,17 +252,41 @@ const handleBilboMDAutoJob = async (
     }
 
     // Queue the job
-    const BullId = await queueJob(jobData)
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
-    res.status(200).json({
-      message: `New BilboMD Auto Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid,
-      md_engine
-    })
+    // Respond with job details
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New BilboMD Auto Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD Auto Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     const msg =
       error instanceof Error

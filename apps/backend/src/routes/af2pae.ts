@@ -8,11 +8,8 @@ import {
   getPaePng,
   getVizPng
 } from '../controllers/af2paeController.js'
-import { verifyJWT } from '../middleware/verifyJWT.js'
 
 const router = express.Router()
-
-router.use(verifyJWT)
 
 router.route('/').get(downloadConstFile).post(createNewConstFile)
 

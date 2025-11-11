@@ -10,7 +10,6 @@ import { logger } from '../../helpers/loggers.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { config } from '../../config/config.js'
 import fs from 'fs-extra'
-// import { CharmmDCD2PDBParams, CharmmParams } from '../../types/index.js'
 import path from 'path'
 import { spawn, ChildProcess } from 'node:child_process'
 import Handlebars from 'handlebars'
@@ -21,23 +20,14 @@ const getErrorMessage = (e: unknown): string =>
 
 const initializeJob = async (MQJob: BullMQJob, DBjob: IJob): Promise<void> => {
   try {
-    // Make sure the user exists in MongoDB
-    const foundUser = await User.findById(DBjob.user).lean().exec()
-    if (!foundUser) {
-      throw new Error(`No user found for: ${DBjob.uuid}`)
-    }
-
     // Clear the BullMQ Job logs in the case this job is being re-run
     await MQJob.clearLogs()
 
-    // Set MongoDB status to Running when we are submitting to Slurm at NERSC
-    // Does this need to be set to Running when we are running locally?6
+    // Set MongoDB status to Running when we start processing the job
     DBjob.status = 'Running'
-    // DBjob.time_started = new Date()
     await DBjob.save()
   } catch (error) {
-    // Handle and log the error
-    logger.error(`Error in initializeJob: ${error}`)
+    logger.error(`Error in initializeJob: ${getErrorMessage(error)}`)
     throw error
   }
 }
@@ -47,17 +37,20 @@ const cleanupJob = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
     // Mark job as completed in the database
     await markJobAsCompleted(DBjob)
 
-    // Fetch user associated with the job
+    // Fetch user associated with the job (may be null for anonymous jobs)
     const user = await fetchJobUser(DBjob)
+
     if (!user) {
-      logger.error(`No user found for: ${DBjob.uuid}`)
+      logger.info(
+        `cleanupJob: no user associated with job uuid=${DBjob.uuid}, skipping email notification`
+      )
       return
     }
 
-    // Handle email notifications
+    // Handle email notifications for jobs with a valid user
     await handleJobEmailNotification(MQjob, DBjob, user)
   } catch (error) {
-    logger.error(`Error in cleanupJob: ${error}`)
+    logger.error(`Error in cleanupJob: ${getErrorMessage(error)}`)
     throw error
   }
 }
@@ -114,7 +107,9 @@ const handleJobEmailNotification = async (
       await updateStepStatus(DBjob, 'email', status)
     }
   } else {
-    logger.info(`Skipping email notification for ${user.email}`)
+    logger.info(
+      `Skipping email notification for job uuid=${DBjob.uuid} (email notifications disabled)`
+    )
   }
 }
 
@@ -337,46 +332,6 @@ const handleError = async (
   } else {
     logger.error(`Step not provided when handling error. Error: ${errorMsg}`)
   }
-
-  // Log to MQ job
-  // try {
-  //   await MQjob.log(`ERROR: ${errorMsg}`)
-  //   if (stackTrace) {
-  //     await MQjob.log(`Stack trace: ${stackTrace}`)
-  //   }
-  //   logger.debug(`Successfully logged error to MQ job`)
-  // } catch (mqLogError) {
-  //   logger.error(`Failed to log to MQ job: ${mqLogError}`)
-  // }
-
-  // Send job completion email and log the notification
-  // logger.info(`Failed Attempts: ${MQjob.attemptsMade}`)
-
-  // try {
-  //   const recipientEmail = (DBjob.user as IUser).email
-  //   logger.debug(`Recipient email: ${recipientEmail}`)
-
-  //   if (MQjob.attemptsMade >= 3) {
-  //     if (config.sendEmailNotifications) {
-  //       logger.debug(`Sending failure email notification to ${recipientEmail}`)
-  //       await sendJobCompleteEmail(
-  //         recipientEmail,
-  //         config.bilbomdUrl,
-  //         DBjob.id,
-  //         DBjob.title,
-  //         true
-  //       )
-  //       logger.warn(`Email notification sent to ${recipientEmail}`)
-  //       await MQjob.log(`Email notification sent to ${recipientEmail}`)
-  //     } else {
-  //       logger.debug(`Email notifications are disabled`)
-  //     }
-  //   } else {
-  //     logger.debug(`Not sending email - attempts (${MQjob.attemptsMade}) < 3`)
-  //   }
-  // } catch (emailError) {
-  //   logger.error(`Failed to send email notification: ${emailError}`)
-  // }
 
   // Create a more descriptive error to throw
   const finalError = new Error(

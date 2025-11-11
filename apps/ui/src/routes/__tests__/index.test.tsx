@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { useRoutes } from 'react-router'
 import ThemeRoutes from '../index'
+import { AnonRoutes } from '../AnonRoutes'
 import { LoginRoutes } from '../LoginRoutes'
 import { ProtectedMainRoutes } from '../MainRoutes'
 
@@ -30,7 +31,11 @@ describe('ThemeRoutes', () => {
 
     render(<ThemeRoutes />)
 
-    expect(useRoutes).toHaveBeenCalledWith([LoginRoutes, ProtectedMainRoutes])
+    expect(useRoutes).toHaveBeenCalledWith([
+      AnonRoutes,
+      LoginRoutes,
+      ProtectedMainRoutes
+    ])
     expect(useRoutes).toHaveBeenCalledTimes(1)
   })
 

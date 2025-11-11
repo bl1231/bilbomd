@@ -1,7 +1,7 @@
 import request from 'supertest'
 import { describe, test, expect, beforeAll, afterAll } from 'vitest'
 import mongoose from 'mongoose'
-import app from './appMock'
+import app from './appMock.js'
 import { User } from '@bilbomd/mongodb-schema'
 
 require('dotenv').config()
@@ -24,7 +24,9 @@ describe('POST /api/v1/magicklink', () => {
   })
 
   test('should return error if no user or email provided', async () => {
-    const res = await request(server).post('/api/v1/magicklink').send({ email: '' })
+    const res = await request(server)
+      .post('/api/v1/magicklink')
+      .send({ email: '' })
     expect(res.statusCode).toBe(400)
     expect(res.body.message).toBe('email is required')
   })

@@ -1,6 +1,7 @@
-process.env.BILBOMD_URL = process.env.BILBOMD_URL || 'http://localhost:3000'
 import dotenv from 'dotenv'
-dotenv.config({ path: './test/.env.test' })
+dotenv.config({ path: './.env.test' })
+console.log('*** backend test setup loaded ***')
+
 import { logger } from '../src/middleware/loggers.js'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import mongoose from 'mongoose'
@@ -36,6 +37,8 @@ beforeAll(() => {
     return this
   })
 })
+
+console.log('*** Connecting to in-memory MongoDB for tests ***')
 
 // Setup MongoDB Memory Server
 export const mongoServer = await MongoMemoryServer.create()
