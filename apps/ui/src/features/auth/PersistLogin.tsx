@@ -47,16 +47,20 @@ const PersistLogin = () => {
       <Grid
         container
         columns={12}
-        direction='row'
+        direction="row"
         sx={{ height: '100vh' }}
-        alignItems='center'
-        justifyContent='center'
+        alignItems="center"
+        justifyContent="center"
       >
         <Grid sx={{ width: '300px' }}>
-          <Alert variant='outlined' severity='error' sx={{ mb: 2 }}>
+          <Alert
+            variant="outlined"
+            severity="error"
+            sx={{ mb: 2 }}
+          >
             {error ? 'Session has expired' : ''}
           </Alert>
-          <Button
+          {/* <Button
             fullWidth
             variant='contained'
             color='primary'
@@ -66,15 +70,25 @@ const PersistLogin = () => {
             sx={{ mb: 1 }}
           >
             Continue with ORCID
+          </Button> */}
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            component={Link}
+            to="/magicklink"
+            sx={{ mb: 1 }}
+          >
+            Request A New MagickLink&#8482;
           </Button>
           <Button
             fullWidth
-            variant='outlined'
-            color='secondary'
+            variant="outlined"
+            color="primary"
             component={Link}
-            to='/magicklink'
+            to="/"
           >
-            Request A New MagickLink&#8482;
+            Head over to Main Page
           </Button>
         </Grid>
       </Grid>
