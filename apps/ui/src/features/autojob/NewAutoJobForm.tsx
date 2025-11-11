@@ -139,7 +139,9 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
             ) : (
               <Formik
                 initialValues={initialValues}
-                validationSchema={BilboMDAutoJobSchema}
+                validationSchema={
+                  useExampleData ? undefined : BilboMDAutoJobSchema
+                }
                 onSubmit={onSubmit}
               >
                 {({
@@ -202,6 +204,9 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             } else {
                               // Switching to custom data: clear example defaults
                               void setFieldValue('title', '')
+                              void setFieldValue('pdb_file', '')
+                              void setFieldValue('pae_file', '')
+                              void setFieldValue('dat_file', '')
                             }
                             // Delay validation to ensure form state has been updated
                             setTimeout(() => {
@@ -237,6 +242,9 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           errorMessage={errors.pdb_file ? errors.pdb_file : ''}
                           fileType="AlphaFold2 *.pdb"
                           fileExt=".pdb"
+                          existingFileName={
+                            useExampleData ? 'example-auto.pdb' : undefined
+                          }
                         />
                       </Grid>
 
@@ -253,6 +261,9 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           errorMessage={errors.pae_file ? errors.pae_file : ''}
                           fileType="AlphaFold2 PAE *.json"
                           fileExt=".json"
+                          existingFileName={
+                            useExampleData ? 'example-pae.json' : undefined
+                          }
                         />
                       </Grid>
                       <Grid>
@@ -268,6 +279,9 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           errorMessage={errors.dat_file ? errors.dat_file : ''}
                           fileType="experimental SAXS data *.dat"
                           fileExt=".dat"
+                          existingFileName={
+                            useExampleData ? 'example-saxs.dat' : undefined
+                          }
                         />
                       </Grid>
 

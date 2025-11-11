@@ -231,7 +231,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
           ) : (
             <Formik
               initialValues={initialValues}
-              validationSchema={BilboMDClassicJobSchema}
+              validationSchema={
+                useExampleData ? undefined : BilboMDClassicJobSchema
+              }
               onSubmit={onSubmit}
             >
               {({
@@ -331,12 +333,17 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           setUseExampleData(!useExampleData)
                           if (!useExampleData) {
                             // Switching to example data: reset file fields
-                            void setFieldValue('psf_file', '')
-                            void setFieldValue('crd_file', '')
-                            void setFieldValue('pdb_file', '')
-                            void setFieldValue('inp_file', '')
-                            void setFieldValue('dat_file', '')
-                            // Add defaults for other fields based on mode
+                            if (values.bilbomd_mode === 'pdb') {
+                              void setFieldValue('pdb_file', '')
+                              void setFieldValue('inp_file', '')
+                              void setFieldValue('dat_file', '')
+                            } else {
+                              void setFieldValue('crd_file', '')
+                              void setFieldValue('psf_file', '')
+                              void setFieldValue('inp_file', '')
+                              void setFieldValue('dat_file', '')
+                            }
+                            // Add defaults for other fields
                             if (values.bilbomd_mode === 'pdb') {
                               void setFieldValue(
                                 'title',
@@ -356,6 +363,11 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             }
                           } else {
                             // Switching to custom data: clear example defaults
+                            void setFieldValue('psf_file', '')
+                            void setFieldValue('crd_file', '')
+                            void setFieldValue('pdb_file', '')
+                            void setFieldValue('inp_file', '')
+                            void setFieldValue('dat_file', '')
                             void setFieldValue('title', '')
                             void setFieldValue('rg_min', '')
                             void setFieldValue('rg_max', '')
@@ -432,6 +444,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               }
                               fileType="CHARMM-GUI *.crd"
                               fileExt=".crd"
+                              existingFileName={
+                                useExampleData ? 'example.crd' : undefined
+                              }
                             />
                           </Grid>
                         </Grid>
@@ -459,6 +474,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               }
                               fileType="CHARMM-GUI *.psf"
                               fileExt=".psf"
+                              existingFileName={
+                                useExampleData ? 'example.psf' : undefined
+                              }
                             />
                           </Grid>
                         </Grid>
@@ -490,6 +508,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               }
                               fileType=" *.pdb"
                               fileExt=".pdb"
+                              existingFileName={
+                                useExampleData ? 'example.pdb' : undefined
+                              }
                             />
                           </Grid>
                         </Grid>
@@ -518,6 +539,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           errorMessage={errors.inp_file ? errors.inp_file : ''}
                           fileType="const.inp"
                           fileExt=".inp"
+                          existingFileName={
+                            useExampleData ? 'const.inp' : undefined
+                          }
                         />
                       </Grid>
                     </Grid>
@@ -607,6 +631,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               void setFieldValue('rg_max', '')
                             }
                           }}
+                          existingFileName={
+                            useExampleData ? 'example.dat' : undefined
+                          }
                         />
                       </Grid>
                     </Grid>
