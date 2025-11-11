@@ -87,4 +87,5 @@ export type BilboMDDispatchContext = {
   user?: DispatchUser
   accessMode: 'user' | 'anonymous'
   publicId?: string
+  client_ip_hash?: string
 }

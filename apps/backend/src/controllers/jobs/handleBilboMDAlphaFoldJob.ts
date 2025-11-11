@@ -17,7 +17,6 @@ import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { DispatchUser } from '../../types/bilbomd.js'
-import { hashClientIp } from '../../controllers/public/utils/hashClientIp.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -32,7 +31,11 @@ const handleBilboMDAlphaFoldJob = async (
   res: Response,
   user: DispatchUser | undefined,
   UUID: string,
-  ctx: { accessMode: 'user' | 'anonymous'; publicId?: string }
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ): Promise<void> => {
   if (process.env.USE_NERSC?.toLowerCase() !== 'true') {
     logger.warn('AlphaFold job rejected: NERSC not enabled')
@@ -42,10 +45,6 @@ const handleBilboMDAlphaFoldJob = async (
     return
   }
   const jobDir = path.join(uploadFolder, UUID)
-
-  // Hash the client IP address for privacy and for implementing a quota system
-  const clientIp = req.ip ?? 'unknown'
-  const client_ip_hash = hashClientIp(clientIp)
 
   const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
   const md_engine: 'CHARMM' | 'OpenMM' =
@@ -221,7 +220,7 @@ const handleBilboMDAlphaFoldJob = async (
         ? { public_id: ctx.publicId }
         : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
-        ? { client_ip_hash }
+        ? { client_ip_hash: ctx.client_ip_hash }
         : {})
     }
 

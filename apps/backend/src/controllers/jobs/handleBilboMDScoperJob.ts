@@ -3,7 +3,6 @@ import { queueScoperJob } from '../../queues/scoper.js'
 import { BilboMdScoperJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { DispatchUser } from '../../types/bilbomd.js'
-import { hashClientIp } from '../../controllers/public/utils/hashClientIp.js'
 import path from 'path'
 import { getFileStats } from './utils/jobUtils.js'
 
@@ -12,14 +11,14 @@ const handleBilboMDScoperJob = async (
   res: Response,
   user: DispatchUser | undefined,
   UUID: string,
-  ctx: { accessMode: 'user' | 'anonymous'; publicId?: string }
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ) => {
   try {
     const { bilbomd_mode: bilbomdMode, title, fixc1c2 } = req.body
-
-    // Hash the client IP address for privacy and for implementing a quota system
-    const clientIp = req.ip ?? 'unknown'
-    const client_ip_hash = hashClientIp(clientIp)
 
     // Extract md_engine and reject OpenMM early
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
@@ -111,7 +110,7 @@ const handleBilboMDScoperJob = async (
         ? { public_id: ctx.publicId }
         : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
-        ? { client_ip_hash }
+        ? { client_ip_hash: ctx.client_ip_hash }
         : {})
     }
 

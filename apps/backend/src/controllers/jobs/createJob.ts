@@ -3,7 +3,7 @@ import multer from 'multer'
 import fs from 'fs-extra'
 import path from 'path'
 import { v4 as uuid } from 'uuid'
-import { User } from '@bilbomd/mongodb-schema'
+import { User, JobStatusEnum } from '@bilbomd/mongodb-schema'
 import { BilboMDDispatchContext } from '../../types/bilbomd.js'
 import { Request, Response } from 'express'
 import { handleBilboMDClassicPDB } from './handleBilboMDClassicPDB.js'
@@ -12,6 +12,16 @@ import { handleBilboMDAutoJob } from './handleBilboMDAutoJob.js'
 import { handleBilboMDScoperJob } from './handleBilboMDScoperJob.js'
 import { handleBilboMDAlphaFoldJob } from './handleBilboMDAlphaFoldJob.js'
 import applyExampleDataIfRequested from './utils/exampleData.js'
+import { hashClientIp } from '../public/utils/hashClientIp.js'
+import {
+  BilboMdPDBJob,
+  BilboMdCRDJob,
+  BilboMDAutoJob,
+  BilboMDSANSJob,
+  BilboMDAlphaFoldJob,
+  BilboMDScoperJob,
+  MultiJob
+} from '@bilbomd/mongodb-schema'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -184,6 +194,43 @@ const createPublicJob = async (req: Request, res: Response) => {
 
         logger.info(`Public job submission with ID: ${publicId}`)
 
+        // Compute client IP hash for quota check and job storage
+        const clientIp = req.ip ?? 'unknown'
+        const client_ip_hash = hashClientIp(clientIp)
+
+        // Quota check: Count active jobs for this client IP hash
+        const activeStatuses = [
+          JobStatusEnum.Submitted,
+          JobStatusEnum.Pending,
+          JobStatusEnum.Running
+        ]
+        const quotaQuery = {
+          client_ip_hash,
+          status: { $in: activeStatuses },
+          access_mode: 'anonymous'
+        }
+        const activeJobsCount = await Promise.all([
+          BilboMdPDBJob.countDocuments(quotaQuery),
+          BilboMdCRDJob.countDocuments(quotaQuery),
+          BilboMDAutoJob.countDocuments(quotaQuery),
+          BilboMDSANSJob.countDocuments(quotaQuery),
+          BilboMDAlphaFoldJob.countDocuments(quotaQuery),
+          BilboMDScoperJob.countDocuments(quotaQuery),
+          MultiJob.countDocuments(quotaQuery)
+        ]).then((counts) => counts.reduce((sum, count) => sum + count, 0))
+
+        logger.info(
+          `Active jobs for client IP hash ${client_ip_hash}: ${activeJobsCount}`
+        )
+
+        if (activeJobsCount >= 3) {
+          await fs.remove(jobDir) // Clean up created directory
+          return res.status(429).json({
+            message:
+              'Quota exceeded: You can have at most 3 active jobs at a time. Please wait for some jobs to complete.'
+          })
+        }
+
         await dispatchBilboMDJob({
           req,
           res,
@@ -191,7 +238,8 @@ const createPublicJob = async (req: Request, res: Response) => {
           UUID,
           user: undefined,
           accessMode: 'anonymous',
-          publicId
+          publicId,
+          client_ip_hash // Pass to handlers
         })
       } catch (error) {
         logger.error(`Job handler error: ${error}`)
@@ -216,28 +264,48 @@ const createPublicJob = async (req: Request, res: Response) => {
 }
 
 const dispatchBilboMDJob = async (ctx: BilboMDDispatchContext) => {
-  const { req, res, bilbomd_mode, user, UUID, accessMode, publicId } = ctx
+  const {
+    req,
+    res,
+    bilbomd_mode,
+    user,
+    UUID,
+    accessMode,
+    publicId,
+    client_ip_hash
+  } = ctx
 
   logger.info(`Starting BilboMDJob mode: ${bilbomd_mode} (${accessMode})`)
 
   if (bilbomd_mode === 'pdb') {
     await handleBilboMDClassicPDB(req, res, user, UUID, {
       accessMode,
-      publicId
+      publicId,
+      client_ip_hash // Pass it
     })
   } else if (bilbomd_mode === 'crd_psf') {
     await handleBilboMDClassicCRD(req, res, user, UUID, {
       accessMode,
-      publicId
+      publicId,
+      client_ip_hash
     })
   } else if (bilbomd_mode === 'auto') {
-    await handleBilboMDAutoJob(req, res, user, UUID, { accessMode, publicId })
+    await handleBilboMDAutoJob(req, res, user, UUID, {
+      accessMode,
+      publicId,
+      client_ip_hash
+    })
   } else if (bilbomd_mode === 'scoper') {
-    await handleBilboMDScoperJob(req, res, user, UUID, { accessMode, publicId })
+    await handleBilboMDScoperJob(req, res, user, UUID, {
+      accessMode,
+      publicId,
+      client_ip_hash
+    })
   } else if (bilbomd_mode === 'alphafold') {
     await handleBilboMDAlphaFoldJob(req, res, user, UUID, {
       accessMode,
-      publicId
+      publicId,
+      client_ip_hash
     })
   } else {
     res.status(400).json({ message: 'Invalid job type' })

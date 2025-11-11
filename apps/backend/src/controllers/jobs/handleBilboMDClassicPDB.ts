@@ -28,7 +28,6 @@ import {
 } from '@bilbomd/md-utils'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { DispatchUser } from '../../types/bilbomd.js'
-import { hashClientIp } from '../../controllers/public/utils/hashClientIp.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -37,7 +36,11 @@ const handleBilboMDClassicPDB = async (
   res: Response,
   user: DispatchUser | undefined,
   UUID: string,
-  ctx: { accessMode: 'user' | 'anonymous'; publicId?: string }
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ) => {
   try {
     const isResubmission = Boolean(
@@ -49,10 +52,6 @@ const handleBilboMDClassicPDB = async (
     )
 
     const { bilbomd_mode: bilbomdMode } = req.body
-
-    // Hash the client IP address for privacy and for implementing a quota system
-    const clientIp = req.ip ?? 'unknown'
-    const client_ip_hash = hashClientIp(clientIp)
 
     // Normalize md_engine (default to 'charmm' if not provided/unknown)
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
@@ -270,7 +269,7 @@ const handleBilboMDClassicPDB = async (
         ? { public_id: ctx.publicId }
         : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
-        ? { client_ip_hash }
+        ? { client_ip_hash: ctx.client_ip_hash }
         : {})
     }
 

@@ -19,7 +19,6 @@ import {
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
 import { DispatchUser } from '../../types/bilbomd.js'
-import { hashClientIp } from '../../controllers/public/utils/hashClientIp.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -28,7 +27,11 @@ const handleBilboMDClassicCRD = async (
   res: Response,
   user: DispatchUser | undefined,
   UUID: string,
-  ctx: { accessMode: 'user' | 'anonymous'; publicId?: string }
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ) => {
   try {
     const isResubmission = Boolean(
@@ -40,10 +43,6 @@ const handleBilboMDClassicCRD = async (
     )
 
     const { bilbomd_mode: bilbomdMode } = req.body
-
-    // Hash the client IP address for privacy and for implementing a quota system
-    const clientIp = req.ip ?? 'unknown'
-    const client_ip_hash = hashClientIp(clientIp)
 
     // Extract md_engine and reject OpenMM early
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
@@ -259,7 +258,7 @@ const handleBilboMDClassicCRD = async (
         ? { public_id: ctx.publicId }
         : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
-        ? { client_ip_hash }
+        ? { client_ip_hash: ctx.client_ip_hash }
         : {})
     }
 
