@@ -196,7 +196,8 @@ const createPublicJob = async (req: Request, res: Response) => {
         logger.info(`Public job submission with ID: ${publicId}`)
 
         // Compute client IP hash for quota check and job storage
-        const clientIp = req.ip ?? 'unknown'
+        const clientIp =
+          (req.headers['cf-connecting-ip'] as string) || req.ip || 'unknown'
         const client_ip_hash = hashClientIp(clientIp)
 
         // Quota check: Count active jobs for this client IP hash

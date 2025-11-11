@@ -44,8 +44,8 @@ const viewsPath = '/app/views'
 
 logger.info(`Starting in ${environment} mode`)
 
-// Trust the first proxy in front of the app
-app.set('trust proxy', true)
+// Trust exactly 2 proxies: Cloudflare and Docker host
+app.set('trust proxy', 2)
 
 // Connect to MongoDB
 connectDB()

@@ -4,16 +4,27 @@ import { logger } from './loggers.js'
 const publicJobLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 5, // 5 anon submissions per 10 minutes per IP
+  keyGenerator: (req) => {
+    // Use CF-Connecting-IP for real client IP, fallback to req.ip
+    const clientIp =
+      (req.headers['cf-connecting-ip'] as string) || req.ip || 'unknown'
+    // Strip IPv6 prefix if present (e.g., ::ffff:192.168.1.1)
+    return clientIp.includes('::ffff:')
+      ? clientIp.split('::ffff:')[1]
+      : clientIp
+  },
   message: {
     message:
       'Too many anonymous job submissions from this IP. Please wait a few minutes and try again.'
   },
   handler: (req, res, next, options) => {
-    const clientIp = (req.ip ?? '').includes('::ffff:')
-      ? (req.ip ?? '').split('::ffff:')[1]
-      : (req.ip ?? '')
+    const clientIp =
+      (req.headers['cf-connecting-ip'] as string) || req.ip || 'unknown'
+    const cleanIp = clientIp.includes('::ffff:')
+      ? clientIp.split('::ffff:')[1]
+      : clientIp
     logger.error(
-      `Too Many Public Job Requests: ${options.message.message}\t${req.method}\t${req.url}\t${req.headers.origin}\t${clientIp}`,
+      `Too Many Public Job Requests: ${options.message.message}\t${req.method}\t${req.url}\t${req.headers.origin}\t${cleanIp}`,
       'errLog.log'
     )
     res.status(options.statusCode).send(options.message)
