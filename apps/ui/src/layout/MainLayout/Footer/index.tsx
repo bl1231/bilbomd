@@ -106,6 +106,15 @@ const Footer = () => {
             >
               Privacy Policy
             </Link>
+            {' • '}
+            <Link
+              href="https://www.lbl.gov/terms-and-conditions/"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Terms and Conditions
+            </Link>
           </Typography>
         </Box>
       </Container>

@@ -22,7 +22,7 @@
   "scripts": {
     "clean": "rimraf build/*",
     "dev": "GIT_HASH=$(git rev-parse --short HEAD) vite",
-    "prebuild": "tsc",
+    "prebuild": "tsc && cp ../../../LICENSE.txt public/LICENSE.txt",
     "vite-build": "vite build",
     "lint": "eslint",
     "build": "npm-run-all clean vite-build",

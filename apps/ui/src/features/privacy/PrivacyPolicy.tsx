@@ -1,5 +1,14 @@
 // src/features/privacy/PrivacyPolicy.tsx
-import { Box, Typography, Link } from '@mui/material'
+import {
+  Box,
+  Typography,
+  Link,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
+} from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import License from './License'
 
 export default function PrivacyPolicy() {
   return (
@@ -66,6 +75,26 @@ export default function PrivacyPolicy() {
         when explicitly created for anonymous jobs). All data are automatically
         deleted after a defined retention period.
       </Typography>
+
+      <Typography
+        variant="h5"
+        gutterBottom
+        sx={{ mt: 2 }}
+      >
+        License
+      </Typography>
+      <Typography variant="body1">
+        BilboMD is licensed under a License provided by the IPO office at LBNL.
+      </Typography>
+
+      <Accordion sx={{ mt: 2 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">View Full License</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <License />
+        </AccordionDetails>
+      </Accordion>
 
       <Typography
         variant="h5"
