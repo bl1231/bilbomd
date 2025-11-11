@@ -28,72 +28,123 @@ const linkStyles = {
   textDecoration: 'none'
 }
 
-interface NerscLogoProps {
-  useNersc: boolean
-  mode: string
+// interface NerscLogoProps {
+//   useNersc: boolean
+//   mode: string
+// }
+
+// const NerscLogo = ({ useNersc, mode }: NerscLogoProps) =>
+//   useNersc && (
+//     <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', p: 1 }}>
+//       <img
+//         src={nerscLogo}
+//         alt="NERSC Logo"
+//         style={{ height: '30px' }}
+//       />
+//       {mode === 'development' && (
+//         <Typography
+//           variant="h5"
+//           component="span"
+//           sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
+//         >
+//           DEVELOPMENT
+//         </Typography>
+//       )}
+//     </Box>
+//   )
+
+// const ModeDisplay = ({ useNersc, mode }: NerscLogoProps) =>
+//   !useNersc && (
+//     <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', p: 1 }}>
+//       {mode !== 'local' && (
+//         <Typography
+//           variant="h5"
+//           component="span"
+//           sx={{ ml: 1, pb: 0.2 }}
+//         >
+//           BL12.3.1
+//         </Typography>
+//       )}
+//       {mode === 'development' && (
+//         <Typography
+//           variant="h5"
+//           component="span"
+//           sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
+//         >
+//           DEVELOPMENT
+//         </Typography>
+//       )}
+//       {mode === 'local' && (
+//         <Box>
+//           <Typography
+//             variant="h5"
+//             component="span"
+//             sx={{ ml: 1, pb: 0.2 }}
+//           >
+//             LOCAL
+//           </Typography>
+//           <Typography
+//             variant="h5"
+//             component="span"
+//             sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
+//           >
+//             DEVELOPMENT
+//           </Typography>
+//         </Box>
+//       )}
+//     </Box>
+//   )
+
+interface DeploySiteProps {
+  deploySite: string
 }
 
-const NerscLogo = ({ useNersc, mode }: NerscLogoProps) =>
-  useNersc && (
-    <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', p: 1 }}>
+const DeploySite = ({ deploySite }: DeploySiteProps) => (
+  <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
+    {deploySite === 'nersc' && (
       <img
         src={nerscLogo}
         alt="NERSC Logo"
         style={{ height: '30px' }}
       />
-      {mode === 'development' && (
-        <Typography
-          variant="h5"
-          component="span"
-          sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
-        >
-          DEVELOPMENT
-        </Typography>
-      )}
-    </Box>
-  )
+    )}
+    {deploySite === 'local' && (
+      <Typography
+        variant="h5"
+        component="span"
+        sx={{ ml: 1 }}
+      >
+        LOCAL
+      </Typography>
+    )}
+    {deploySite === 'bl1231' && (
+      <Typography
+        variant="h5"
+        component="span"
+        sx={{ ml: 1, pb: 0 }}
+      >
+        BL12.3.1
+      </Typography>
+    )}
+  </Box>
+)
 
-const ModeDisplay = ({ useNersc, mode }: NerscLogoProps) =>
-  !useNersc && (
-    <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', p: 1 }}>
-      {mode !== 'local' && (
-        <Typography
-          variant="h5"
-          component="span"
-          sx={{ ml: 1, pb: 0.2 }}
-        >
-          BL12.3.1
-        </Typography>
-      )}
-      {mode === 'development' && (
-        <Typography
-          variant="h5"
-          component="span"
-          sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
-        >
-          DEVELOPMENT
-        </Typography>
-      )}
-      {mode === 'local' && (
-        <Box>
-          <Typography
-            variant="h5"
-            component="span"
-            sx={{ ml: 1, pb: 0.2 }}
-          >
-            LOCAL
-          </Typography>
-          <Typography
-            variant="h5"
-            component="span"
-            sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
-          >
-            DEVELOPMENT
-          </Typography>
-        </Box>
-      )}
-    </Box>
-  )
+interface DevModeProps {
+  mode: string
+}
+const DevMode = ({ mode }: DevModeProps) => (
+  <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
+    {mode === 'development' && (
+      <Typography
+        variant="h5"
+        component="span"
+        sx={{ ml: 1, pb: 0, color: 'yellow' }}
+      >
+        DEVELOPMENT
+      </Typography>
+    )}
+  </Box>
+)
 
 const Header = () => {
   const { isAuthenticated } = useAuth()
@@ -110,8 +161,9 @@ const Header = () => {
   if (!config)
     return <Alert severity="warning">No configuration data available</Alert>
 
-  const useNersc = config.useNersc?.toLowerCase() === 'true'
+  // const useNersc = config.useNersc?.toLowerCase() === 'true'
   const mode = config.mode || 'nope'
+  const deploySite = config.deploySite || ''
 
   return (
     <>
@@ -122,22 +174,30 @@ const Header = () => {
           elevation={0}
           sx={{ height: '70px', zIndex: (theme) => theme.zIndex.drawer + 1 }}
         >
-          <Toolbar sx={{ m: 0 }}>
-            <Link
-              to="/welcome"
-              style={linkStyles}
+          <Toolbar sx={{ display: 'flex', alignItems: 'center', m: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 0 }}>
+              <Link
+                to="/welcome"
+                style={linkStyles}
+              >
+                BilboMD
+              </Link>
+            </Box>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                flexGrow: 1,
+                pt: 1.5
+              }}
             >
-              BilboMD
-            </Link>
-            <NerscLogo
-              useNersc={useNersc}
-              mode={mode}
-            />
-            <ModeDisplay
-              useNersc={useNersc}
-              mode={mode}
-            />
-            {isAuthenticated ? null : 'anon'}
+              <DeploySite deploySite={deploySite} />
+              <DevMode mode={mode} />
+              {isAuthenticated ? null : (
+                <Typography sx={{ ml: 1 }}>anonymous</Typography>
+              )}
+            </Box>
+
             <Typography
               variant="h5"
               sx={{ display: { xs: 'none', sm: 'flex' }, ml: 8 }}

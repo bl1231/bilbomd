@@ -22,12 +22,6 @@ import { Link } from 'react-router'
 import nerscLogo from 'assets/nersc-logo.png'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 
-// interface Config {
-//   useNersc?: string
-//   mode?: string
-//   deploySite?: string
-// }
-
 interface UserMenuProps {
   anchorElUser: HTMLElement | null
   handleOpenUserMenu: (event: React.MouseEvent<HTMLElement>) => void
