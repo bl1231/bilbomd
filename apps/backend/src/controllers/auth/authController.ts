@@ -1,8 +1,8 @@
-import { logger } from '../middleware/loggers.js'
+import { logger } from '../../middleware/loggers.js'
 import jwt from 'jsonwebtoken'
 import { User, IUser } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
-import { issueTokensAndSetCookie } from './auth/authTokens.js'
+import { issueTokensAndSetCookie } from './authTokens.js'
 
 const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET ?? ''
 
