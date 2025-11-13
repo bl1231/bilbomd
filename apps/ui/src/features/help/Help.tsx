@@ -4,16 +4,30 @@ import {
   List,
   ListItem,
   ListItemText,
-  Link
+  Link,
+  Tabs,
+  Tab
 } from '@mui/material'
+import { useState } from 'react'
 import useTitle from 'hooks/useTitle'
 import Introduction from '../shared/Introduction'
 import AdditionalInfo from '../shared/AdditionalInfo'
 import { Grid } from '@mui/system'
-import { grey } from '@mui/material/colors'
+import { blue } from '@mui/material/colors'
+import { useTheme } from '@mui/material/styles'
 
 const Help = ({ title = 'BilboMD: Help' }) => {
   useTitle(title)
+
+  const theme = useTheme()
+  const [tabValue, setTabValue] = useState(0)
+
+  const handleTabChange = (
+    _event: React.SyntheticEvent<Element, Event>,
+    newValue: number
+  ) => {
+    setTabValue(newValue)
+  }
 
   const content = (
     <Box>
@@ -99,28 +113,55 @@ const Help = ({ title = 'BilboMD: Help' }) => {
           <Box sx={{ display: 'flex', alignItems: 'stretch' }}>
             <Box sx={{ flex: 1 }}>
               <List dense>
-                <ListItem>
+                <ListItem
+                  sx={{
+                    backgroundColor:
+                      tabValue === 0 || tabValue === 1
+                        ? theme.palette.mode === 'dark'
+                          ? blue[700]
+                          : blue[100]
+                        : 'transparent'
+                  }}
+                >
                   <ListItemText
                     primary="BilboMD Classic (PDB / CRD)"
-                    secondary="Start from an initial atomic model (PDB or CRD/PSF), define rigid and flexible segments, and run coarse-grained MD guided by user-defined restraints (e.g., radius of gyration)."
+                    secondary="This pipeline starts from an initial atomic model (PDB or CRD/PSF), user-defined rigid and flexible segments, and experimental SAXS data - and run coarse-grained MD constrained by user-defined radius of gyration restraints."
                   />
                 </ListItem>
-                <ListItem>
+                <ListItem
+                  sx={{
+                    backgroundColor:
+                      tabValue === 2
+                        ? theme.palette.mode === 'dark'
+                          ? blue[700]
+                          : blue[100]
+                        : 'transparent'
+                  }}
+                >
                   <ListItemText
                     primary="BilboMD Auto"
-                    secondary="Provide a starting molecular model and PAE matrix from Alphafold2/3. The rigid and flexible regions will be defined from the APE matrix automatically, and you can proceed to run MD simulations as in the classic pipeline."
+                    secondary="You provide a starting molecular model and PAE matrix from Alphafold2/3. The rigid and flexible regions will be defined from the PAE matrix automatically using a Leiden clustering algorithm, and then MD simulations are run as in the classic pipeline."
                   />
                 </ListItem>
-                <ListItem>
+                <ListItem
+                  sx={{
+                    backgroundColor:
+                      tabValue === 3
+                        ? theme.palette.mode === 'dark'
+                          ? blue[700]
+                          : blue[100]
+                        : 'transparent'
+                  }}
+                >
                   <ListItemText
                     primary="BilboMD AF (Alphafold)"
-                    secondary="This pipeline runs Alphafold2 on your input sequence. The Alphafold models are used as starting structures and refine flexible regions to better match SAXS data."
+                    secondary='This pipeline runs Alphafold2 on your input sequence. The "best" Alphafold model and PAE matrix are used as starting structures and to define flexible regions for the MD steps.'
                   />
                 </ListItem>
                 <ListItem>
                   <ListItemText
                     primary="Additional tools"
-                    secondary="Jiffy tools for AF2 PAE inspection, SANS-related workflows, and other utilities may be available under the dashboard as needed."
+                    secondary="Input constrain Jiffy tools for AF2 PAE inspection, SANS-related workflows, and other utilities may be available under the dashboard as needed."
                   />
                 </ListItem>
               </List>
@@ -130,14 +171,50 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                 flex: 1,
                 minWidth: 200,
                 minHeight: 200,
-                backgroundColor: grey[300],
-                ml: 2,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
+                ml: 2
               }}
             >
-              <Typography variant="caption">[Workflow Figure]</Typography>
+              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs
+                  value={tabValue}
+                  onChange={handleTabChange}
+                >
+                  <Tab label="Classic PDB" />
+                  <Tab label="Classic CRD" />
+                  <Tab label="Auto" />
+                  <Tab label="AF" />
+                </Tabs>
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                {tabValue === 0 && (
+                  <img
+                    src="/images/bilbomd-classic-pdb-schematic.png"
+                    alt="BilboMD Classic PDB Schematic"
+                    style={{ width: '100%' }}
+                  />
+                )}
+                {tabValue === 1 && (
+                  <img
+                    src="/images/bilbomd-classic-crd-schematic.png"
+                    alt="BilboMD Classic CRD Schematic"
+                    style={{ width: '100%' }}
+                  />
+                )}
+                {tabValue === 2 && (
+                  <img
+                    src="/images/bilbomd-auto-schematic.png"
+                    alt="BilboMD Auto Schematic"
+                    style={{ width: '100%' }}
+                  />
+                )}
+                {tabValue === 3 && (
+                  <img
+                    src="/images/bilbomd-af-schematic.png"
+                    alt="BilboMD AF Schematic"
+                    style={{ width: '100%' }}
+                  />
+                )}
+              </Box>
             </Box>
           </Box>
 
@@ -162,7 +239,14 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             <ListItem>
               <ListItemText
                 primary="Authenticated access"
-                secondary="Register or sign in (e.g., via email or ORCID) to manage your jobs over time, organize multiple projects, and use API-based access. Authenticated jobs are private to you."
+                secondary={
+                  <>
+                    Register or sign in (<em>e.g.</em>, via email or ORCID
+                    (coming soon)) to manage your jobs over time, organize
+                    multiple projects, and use API-based access. Authenticated
+                    jobs are private to you.
+                  </>
+                }
               />
             </ListItem>
           </List>
@@ -203,14 +287,14 @@ const Help = ({ title = 'BilboMD: Help' }) => {
           <List dense>
             <ListItem>
               <ListItemText
-                primary="1. Open the anonymous classic job form."
-                secondary="Navigate to the “Classic BilboMD” page (e.g., “Classic Job (anonymous)” in the header). This displays the web form for submitting a BilboMD job."
+                primary="1. Open the BilboMD Classic job form."
+                secondary="Navigate to the “Bilbo Classic” page. This displays the web form for submitting a BilboMD job."
               />
             </ListItem>
             <ListItem>
               <ListItemText
-                primary="2. Load sample data."
-                secondary="Click the “Load sample data” or “Use example input” button. This will populate the form with a sample PDB structure and a matching SAXS curve, plus reasonable default parameters."
+                primary="2. Load Example Data."
+                secondary="Click the “Load Example Data” button. This will populate the form with a sample PDB structure and a matching SAXS curve, plus additional constraint input files and reasonable default parameters."
               />
             </ListItem>
             <ListItem>
@@ -228,7 +312,7 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             <ListItem>
               <ListItemText
                 primary="5. Monitor status."
-                secondary="On the results page, the job status will progress from “Submitted” to “Running” to “Completed.” You can refresh the page periodically to see updated status and output."
+                secondary="On the results page, the job status will progress from “Submitted” to “Running” to “Completed.” The page will refresh periodically and will report updated status and output."
               />
             </ListItem>
             <ListItem>
@@ -359,8 +443,8 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             BilboMD is freely accessible for academic and non-commercial use.
             Basic functionality, including anonymous job submission and
             retrieval of results, does not require registration. Optional user
-            accounts (e.g., via ORCID or email) are provided to support
-            long-term job management and API-based access.
+            accounts (e.g., via ORCID (coming soon) or email) are provided to
+            support long-term job management and API-based access.
           </Typography>
           <Typography variant="body1">
             For more information about how data and cookies are handled, please
