@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.0.1
+
+### Patch Changes
+
+- 899b5ce: Added pipeline figures to the Help page.
+
 ## 2.0.0
 
 ### Major Changes
