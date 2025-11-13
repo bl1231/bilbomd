@@ -1,5 +1,12 @@
 # @bilbomd/ui
 
+## 2.0.2
+
+### Patch Changes
+
+- 0ccfbb3: Add `Help` to the main layout/routes
+  Added a Back button to User Settings Nav drawer
+
 ## 2.0.1
 
 ### Patch Changes
