@@ -1,5 +1,13 @@
 # @bilbomd/scoper
 
+## 1.5.7
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+
 ## 1.5.6
 
 ### Patch Changes

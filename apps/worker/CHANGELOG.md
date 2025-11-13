@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 2.0.1
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+  - @bilbomd/md-utils@1.0.9
+
 ## 2.0.0
 
 ### Major Changes
