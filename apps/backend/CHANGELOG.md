@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.0.1
+
+### Patch Changes
+
+- be9ac82: Change default prod cookie `sameSite` from `none` to `lax`
+
 ## 2.0.0
 
 ### Major Changes
