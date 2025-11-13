@@ -1,5 +1,13 @@
 # @bilbomd/md-utils
 
+## 1.0.9
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+
 ## 1.0.8
 
 ### Patch Changes

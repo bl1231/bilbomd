@@ -1,5 +1,13 @@
 # @bilbomd/ui
 
+## 2.0.3
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+
 ## 2.0.2
 
 ### Patch Changes

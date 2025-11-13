@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 2.0.1
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+
 ## 2.0.0
 
 ### Major Changes
