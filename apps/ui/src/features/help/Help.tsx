@@ -293,8 +293,8 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             </ListItem>
             <ListItem>
               <ListItemText
-                primary="2. Load sample data."
-                secondary="Click the “Load Example Data” button. This will populate the form with a sample PDB structure and a matching SAXS curve, plus additiona constraint input files and reasonable default parameters."
+                primary="2. Load Example Data."
+                secondary="Click the “Load Example Data” button. This will populate the form with a sample PDB structure and a matching SAXS curve, plus additional constraint input files and reasonable default parameters."
               />
             </ListItem>
             <ListItem>
