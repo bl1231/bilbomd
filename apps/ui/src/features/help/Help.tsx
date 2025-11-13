@@ -14,10 +14,12 @@ import Introduction from '../shared/Introduction'
 import AdditionalInfo from '../shared/AdditionalInfo'
 import { Grid } from '@mui/system'
 import { blue } from '@mui/material/colors'
+import { useTheme } from '@mui/material/styles'
 
 const Help = ({ title = 'BilboMD: Help' }) => {
   useTitle(title)
 
+  const theme = useTheme()
   const [tabValue, setTabValue] = useState(0)
 
   const handleTabChange = (
@@ -115,7 +117,9 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                   sx={{
                     backgroundColor:
                       tabValue === 0 || tabValue === 1
-                        ? blue[100]
+                        ? theme.palette.mode === 'dark'
+                          ? blue[700]
+                          : blue[100]
                         : 'transparent'
                   }}
                 >
@@ -126,7 +130,12 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                 </ListItem>
                 <ListItem
                   sx={{
-                    backgroundColor: tabValue === 2 ? blue[100] : 'transparent'
+                    backgroundColor:
+                      tabValue === 2
+                        ? theme.palette.mode === 'dark'
+                          ? blue[700]
+                          : blue[100]
+                        : 'transparent'
                   }}
                 >
                   <ListItemText
@@ -136,7 +145,12 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                 </ListItem>
                 <ListItem
                   sx={{
-                    backgroundColor: tabValue === 3 ? blue[100] : 'transparent'
+                    backgroundColor:
+                      tabValue === 3
+                        ? theme.palette.mode === 'dark'
+                          ? blue[700]
+                          : blue[100]
+                        : 'transparent'
                   }}
                 >
                   <ListItemText
