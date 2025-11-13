@@ -7,7 +7,8 @@ import {
   ListItemButton,
   ListItemText,
   ListItemIcon,
-  Toolbar
+  Toolbar,
+  Button
 } from '@mui/material'
 import UserAvatar from './UserAvatar'
 import { useNavigate, Outlet, useLocation } from 'react-router'
@@ -16,6 +17,7 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
 import EmailIcon from '@mui/icons-material/Email'
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
 import ApiIcon from '@mui/icons-material/Api'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 
 const drawerWidth = 190
 
@@ -54,7 +56,7 @@ const SettingsLayout = () => {
   return (
     <Box sx={{ display: 'flex' }}>
       <Drawer
-        variant='permanent'
+        variant="permanent"
         sx={{
           width: drawerWidth,
           flexShrink: 0,
@@ -66,6 +68,14 @@ const SettingsLayout = () => {
         }}
       >
         <Toolbar />
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/dashboard')}
+          sx={{ width: 'calc(100% - 16px)', mx: 1, mb: 1 }}
+        >
+          Dashboard
+        </Button>
         <UserAvatar
           username={user.username}
           email={user.email}
@@ -76,7 +86,10 @@ const SettingsLayout = () => {
             .filter(({ visibility }) => visibility)
             .map(({ text, path, icon }) => (
               <React.Fragment key={text}>
-                <ListItem key={text} disablePadding>
+                <ListItem
+                  key={text}
+                  disablePadding
+                >
                   <ListItemButton
                     selected={
                       location.pathname === path ||
@@ -86,7 +99,10 @@ const SettingsLayout = () => {
                     onClick={() => navigate(path)}
                   >
                     <ListItemIcon>{icon}</ListItemIcon>
-                    <ListItemText primary={text} sx={{ ml: 1 }} />
+                    <ListItemText
+                      primary={text}
+                      sx={{ ml: 1 }}
+                    />
                   </ListItemButton>
                 </ListItem>
               </React.Fragment>
@@ -94,7 +110,10 @@ const SettingsLayout = () => {
         </List>
       </Drawer>
 
-      <Box component='main' sx={{ flexGrow: 1, p: 3 }}>
+      <Box
+        component="main"
+        sx={{ flexGrow: 1, p: 3 }}
+      >
         <Outlet />
       </Box>
     </Box>

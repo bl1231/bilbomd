@@ -62,6 +62,7 @@ const QueueDetailsPage = Loadable(
 )
 const Unauthorized = Loadable(lazy(() => import('components/Unauthorized')))
 const Missing = Loadable(lazy(() => import('components/Missing')))
+const Help = Loadable(lazy(() => import('features/help/Help')))
 
 // ===========================|| MAIN ROUTING ||============================ //
 
@@ -115,6 +116,14 @@ const ProtectedMainRoutes = {
                     {
                       path: 'about',
                       element: <About title="BilboMD: About" />
+                    },
+                    {
+                      path: 'about',
+                      element: <About title="BilboMD: About" />
+                    },
+                    {
+                      path: 'help',
+                      element: <Help title="BilboMD: Help" />
                     },
                     {
                       element: (
