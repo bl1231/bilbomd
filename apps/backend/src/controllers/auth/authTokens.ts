@@ -31,7 +31,7 @@ export async function issueTokensAndSetCookie(
     { expiresIn: '7d' }
   )
 
-  const isProduction = process.env.NODE_ENV === 'production'
+  const isProduction = process.env.BILBOMD_ENV === 'production'
   res.cookie('jwt', refreshToken, {
     httpOnly: true,
     sameSite: isProduction ? 'lax' : 'lax',
