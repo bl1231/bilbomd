@@ -1,8 +1,8 @@
-import { logger } from '../middleware/loggers.js'
+import { logger } from '../../middleware/loggers.js'
 import jwt from 'jsonwebtoken'
 import { User, IUser } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
-import { issueTokensAndSetCookie } from './auth/authTokens.js'
+import { issueTokensAndSetCookie } from './authTokens.js'
 
 const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET ?? ''
 
@@ -15,7 +15,7 @@ interface BilboMDJwtPayload {
 const otp = async (req: Request, res: Response) => {
   try {
     const { otp: code } = req.body
-    logger.info(`Received OTP: ${code}`)
+    // logger.info(`Received OTP: ${code}`)
 
     if (!code) {
       res.status(400).json({ message: 'OTP required.' })
@@ -27,18 +27,21 @@ const otp = async (req: Request, res: Response) => {
     if (user) {
       if (!user.active) {
         logger.warn('User is not active')
-        res.status(401).json({ message: 'Unauthorized - User is not active`' })
+        res.status(401).json({ message: 'Unauthorized - User is not active' })
         return
       }
       logger.debug(`User found: ${user.username}`)
-      // logger.info({ level: 'info', message: 'hello' })
       logger.info(`OTP login for user: ${user.username} email: ${user.email}`)
 
       // Check if OTP has expired
       const currentTimestamp = Date.now()
-      if (user.otp?.expiresAt && user.otp.expiresAt.getTime() < currentTimestamp) {
+      if (
+        user.otp?.expiresAt &&
+        user.otp.expiresAt.getTime() < currentTimestamp
+      ) {
         logger.warn('OTP has expired')
         res.status(401).json({ error: 'OTP has expired' })
+        return
       }
 
       const accessToken = await issueTokensAndSetCookie(user, res)
@@ -88,8 +91,17 @@ const refresh = async (req: Request, res: Response) => {
 
 const logout = (req: Request, res: Response) => {
   const cookies = req.cookies
-  if (!cookies?.jwt) res.sendStatus(204) //No content
-  res.clearCookie('jwt', { httpOnly: true, sameSite: 'none', secure: true }) // May need to adjust to match cookie settings from above
+  if (!cookies?.jwt) {
+    res.sendStatus(204)
+    return
+  }
+
+  const isProduction = process.env.BILBOMD_ENV === 'production'
+  res.clearCookie('jwt', {
+    httpOnly: true,
+    sameSite: isProduction ? 'lax' : 'lax',
+    secure: isProduction
+  })
   res.json({ message: 'Cookie cleared' })
 }
 
