@@ -20,7 +20,7 @@ const loginLimiter = rateLimit({
       : (req.ip ?? '')
     logger.error(
       `Too Many Requests: ${options.message.message}\t${req.method}\t${req.url}\t${req.headers.origin}\t${clientIp}`,
-      'errLog.log'
+      { clientIp, method: req.method, url: req.url, origin: req.headers.origin }
     )
     res.status(options.statusCode).send(options.message)
   },
