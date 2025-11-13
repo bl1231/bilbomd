@@ -36,7 +36,10 @@ const otp = async (req: Request, res: Response) => {
 
       // Check if OTP has expired
       const currentTimestamp = Date.now()
-      if (user.otp?.expiresAt && user.otp.expiresAt.getTime() < currentTimestamp) {
+      if (
+        user.otp?.expiresAt &&
+        user.otp.expiresAt.getTime() < currentTimestamp
+      ) {
         logger.warn('OTP has expired')
         res.status(401).json({ error: 'OTP has expired' })
       }
@@ -89,7 +92,13 @@ const refresh = async (req: Request, res: Response) => {
 const logout = (req: Request, res: Response) => {
   const cookies = req.cookies
   if (!cookies?.jwt) res.sendStatus(204) //No content
-  res.clearCookie('jwt', { httpOnly: true, sameSite: 'none', secure: true }) // May need to adjust to match cookie settings from above
+
+  const isProduction = process.env.NODE_ENV === 'production'
+  res.clearCookie('jwt', {
+    httpOnly: true,
+    sameSite: isProduction ? 'lax' : 'lax',
+    secure: isProduction
+  })
   res.json({ message: 'Cookie cleared' })
 }
 

@@ -34,7 +34,7 @@ export async function issueTokensAndSetCookie(
   const isProduction = process.env.NODE_ENV === 'production'
   res.cookie('jwt', refreshToken, {
     httpOnly: true,
-    sameSite: isProduction ? 'none' : 'lax',
+    sameSite: isProduction ? 'lax' : 'lax',
     secure: isProduction,
     maxAge: 7 * 24 * 60 * 60 * 1000
   })
