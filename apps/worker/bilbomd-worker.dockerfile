@@ -50,7 +50,7 @@ WORKDIR /app
 # Keep your original approach here so the base remains unchanged
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get update \
-    && apt-get install -y nodejs \
+    && apt-get install -y nodejs rsync \
     && npm install -g npm@latest \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
