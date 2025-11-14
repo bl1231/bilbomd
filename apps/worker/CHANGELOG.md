@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.0.3
+
+### Patch Changes
+
+- 1d9457e: Add script to automatically sync the NERSC scripts from `bilbomd-worker` to CFS when SPIN image starts.
+
 ## 2.0.2
 
 ### Patch Changes
