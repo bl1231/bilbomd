@@ -38,7 +38,7 @@ const settingsMenu = [
     text: 'Safety Zone',
     path: '/settings/safety',
     icon: <HealthAndSafetyIcon />,
-    visibility: false
+    visibility: true
   },
   {
     text: 'API Tokens',
