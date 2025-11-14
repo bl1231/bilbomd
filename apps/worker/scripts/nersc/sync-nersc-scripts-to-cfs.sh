@@ -1,31 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Determine environment: CLI arg wins, then BILBOMD_ENV, default to "dev"
-ENVIRONMENT="${1:-${BILBOMD_ENV:-dev}}"
+# Source dir which is present in teh docker image
+SRC="/app/scripts/nersc"
 
-# Translate "development" to "dev" and "production" to "prod"
-case "${ENVIRONMENT}" in
-  development) ENVIRONMENT="dev" ;;
-  production) ENVIRONMENT="prod" ;;
-  dev|prod) ;;  # Already correct
-  *) echo "Usage: $0 [development|production|dev|prod]"
-     echo "Or set BILBOMD_ENV=development|production|dev|prod"
-     echo "Got: '${ENVIRONMENT}'"
-     exit 1 ;;
-esac
-
-LOCAL_DIR="/app/scripts/nersc"
-
-# Base CFS root
-BASE_ROOT="/global/cfs/cdirs/m4659/bilbomd"
-
-# If BILBOMD_CFS_SCRIPT_ROOT is set, it wins; otherwise derive from env
-DEST="${BASE_ROOT}/${ENVIRONMENT}/scripts"
+# This is the CFS destination mounted into the SPIN container
+DEST="/bilbomd/scripts"
 
 echo "[sync] Syncing NERSC scripts"
-echo "       env:  ${ENVIRONMENT}"
-echo "       from: ${LOCAL_DIR}"
+echo "       from: ${SRC}"
 echo "       to:   ${DEST}"
 
 # Define the specific files to copy
@@ -38,7 +21,7 @@ FILES_TO_COPY=(
 
 # copy specific files
 for file in "${FILES_TO_COPY[@]}"; do
-  rsync -av "${LOCAL_DIR}/${file}" "${DEST}/"
+  rsync -av "${SRC}/${file}" "${DEST}/"
 done
 
 echo "[sync] Done."

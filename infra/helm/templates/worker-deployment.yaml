@@ -45,7 +45,6 @@ spec:
             exec:
               command:
               - /app/scripts/nersc/sync-nersc-scripts-to-cfs.sh
-              - "{{ .Values.env.BILBOMD_ENV }}"
         name: container-0
         resources: {}
         securityContext:
