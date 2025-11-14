@@ -82,11 +82,7 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
         </Grid>
         <Grid size={12}>
           <Typography sx={{ mb: 2 }}>
-            Web implementation:{' '}
-            <Link href="mailto:sclassen@lbl.gov">Scott Classen</Link>
-            <br />
-            BilboMD-specific Questions:{' '}
-            <Link href="mailto:mhammel@lbl.gov">Michal Hammel</Link>
+            Support: <Link href="mailto:bilbomd@lbl.gov">bilbomd@lbl.gov</Link>
           </Typography>
         </Grid>
         <Grid size={12}>

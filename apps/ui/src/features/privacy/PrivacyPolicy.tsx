@@ -106,7 +106,7 @@ export default function PrivacyPolicy() {
       <Typography variant="body1">
         Questions about this policy or data handling may be directed to the
         BilboMD development team at{' '}
-        <Link href="mailto:sclassen@lbl.gov">bilbomd-support</Link>.
+        <Link href="mailto:bilbomd@lbl.gov">bilbomd-support</Link>.
       </Typography>
 
       <Typography
@@ -114,7 +114,7 @@ export default function PrivacyPolicy() {
         display="block"
         sx={{ mt: 4 }}
       >
-        Last updated: {new Date().toLocaleDateString()}
+        Last updated: 11/13/2025
       </Typography>
     </Box>
   )

@@ -209,8 +209,6 @@ describe('Welcome Component', () => {
 
     renderWithProviders(<Welcome />)
 
-    expect(screen.getByText(/Web implementation/i)).toBeInTheDocument()
-    expect(screen.getByText(/Scott Classen/i)).toBeInTheDocument()
-    expect(screen.getByText(/Michal Hammel/i)).toBeInTheDocument()
+    expect(screen.getByText(/Support:/i)).toBeInTheDocument()
   })
 })
