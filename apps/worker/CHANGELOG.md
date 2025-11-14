@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.0.2
+
+### Patch Changes
+
+- 91ce282: Update the NERSC Slurm generation bash script.
+
 ## 2.0.1
 
 ### Patch Changes

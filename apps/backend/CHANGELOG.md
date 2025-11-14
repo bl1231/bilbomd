@@ -1,5 +1,13 @@
 # @bilbomd/backend
 
+## 2.0.3
+
+### Patch Changes
+
+- a591ec7: Use `bilbomd@lbl.gov` support email.
+  Fix some broken tests
+  Enable a bare bones minimal `/settings/safety` landing page for users to request account deletion.
+
 ## 2.0.2
 
 ### Patch Changes
