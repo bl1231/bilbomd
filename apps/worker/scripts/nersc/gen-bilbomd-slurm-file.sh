@@ -17,7 +17,7 @@ UUID=$1
 
 project="m4659"
 queue="regular"
-constraint="gpu&hbm80g"
+constraint="gpu"
 nodes="1"
 # walltime="00:90:00"
 mailtype="end,fail"
@@ -41,6 +41,7 @@ fi
 
 # Set the environment (default to 'development' if not set)
 ENVIRONMENT=${ENVIRONMENT:-development}
+echo "Environment: $ENVIRONMENT"
 
 # Map 'development' to 'dev' and 'production' to 'prod'
 if [ "$ENVIRONMENT" = "production" ]; then
@@ -60,8 +61,8 @@ echo "Work directory: $WORKDIR"
 echo "Template directory: $TEMPLATEDIR"
 
 # Docker images
-WORKER=bilbomd/bilbomd-perlmutter-worker:0.0.19
-AF_WORKER=bilbomd/bilbomd-colabfold:0.0.8
+WORKER=bilbomd/bilbomd-perlmutter-worker:0.0.27
+AF_WORKER=bilbomd/bilbomd-colabfold:0.0.9
 
 
 # -----------------------------------------------------------------------------
@@ -312,6 +313,7 @@ template_md_input_files() {
 }
 
 generate_pdb2crd_input_files() {
+    echo "Generating pdb2crd input files. Using docker image: ${WORKER}"
     local command="cd /bilbomd/work/ && python /app/scripts/pdb2crd.py $pdb_file . > pdb2crd_output.txt"
     docker run --rm --volume ${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "$command"
     if [[ -f "${WORKDIR}/pdb2crd_output.txt" ]]; then
@@ -337,7 +339,7 @@ generate_pdb2crd_input_files_af() {
 # Convert AF PDB to CRD/PSF
 update_status pdb2crd Running
 echo "Generating pdb2crd input files..."
-srun --job-name af-pdb2crd podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${AF_WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pdb2crd.py af-rank1.pdb . > pdb2crd_output.txt"
+srun --job-name af-pdb2crd podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${AF_WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pdb2crd.py af-rank1.pdb . > pdb2crd_output.txt"
 
 # Parse the file "pdb2crd_output.txt"
 # This will also run CHARMM for each chain-specific *.inp file
@@ -356,7 +358,7 @@ while IFS= read -r filename; do
     filename_prefix=\$(basename "\$filename" .inp)
 
     # Generate the srun command
-    srun --ntasks=1 --cpus-per-task=\$cpus --cpu-bind=cores --job-name pdb2crd podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && charmm -o \${filename_prefix}.out -i \${filename}" &
+    srun --ntasks=1 --cpus-per-task=\$cpus --cpu-bind=cores --job-name pdb2crd podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/ && charmm -o \${filename_prefix}.out -i \${filename}" &
      # Capture the PID of the backgrounded srun command
     pids+=(\$!)
 done < \${WORKDIR}/pdb2crd_output.txt
@@ -389,7 +391,7 @@ generate_meld_all_chains_commands() {
 update_status meld Running
 echo "Melding pdb2crd_charmm_meld.inp..."
 
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name meld podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && charmm -o pdb2crd_charmm_meld.out -i pdb2crd_charmm_meld.inp"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name meld podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/ && charmm -o pdb2crd_charmm_meld.out -i pdb2crd_charmm_meld.inp"
 MELD_EXIT=\$?
 check_exit_code \$MELD_EXIT meld
 
@@ -506,7 +508,6 @@ export OMP_PROC_BIND=spread
 # -----------------------------------------------------------------------------
 # Some global ENV variables
 NUM_CORES=${NUM_CORES}
-UPLOAD_DIR="${UPLOAD_DIR}"
 WORKDIR="${WORKDIR}"
 STATUS_FILE="${WORKDIR}/status.txt"
 
@@ -554,7 +555,7 @@ EOF
     local count=1
     for inp in "${g_pdb2crd_inp_files[@]}"; do
         # echo "echo \"Starting $inp\" &" >> $WORKDIR/pdb2crd
-        local command="srun --ntasks=1 --cpus-per-task=$cpus --cpu-bind=cores --job-name pdb2crd podman-hpc run --rm --userns=keep-id -v ${WORKDIR}:/bilbomd/work -v ${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c \"cd /bilbomd/work/ && charmm -o ${inp%.inp}.out -i ${inp}\" &"
+        local command="srun --ntasks=1 --cpus-per-task=$cpus --cpu-bind=cores --job-name pdb2crd podman-hpc run --rm -v ${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c \"cd /bilbomd/work/ && charmm -o ${inp%.inp}.out -i ${inp}\" &"
         echo $command >> $WORKDIR/pdb2crd
         echo "PDB2CRD_PID$count=\$!" >> $WORKDIR/pdb2crd
         echo sleep 10 >> $WORKDIR/pdb2crd
@@ -581,7 +582,7 @@ EOF
     echo "# Meld all individual CRD files" >> $WORKDIR/pdb2crd
     echo "echo \"Melding pdb2crd_charmm_meld.inp\"" >> $WORKDIR/pdb2crd
     # echo "set_error_trap pdb2crd" >> $WORKDIR/pdb2crd
-    local command="srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name meld podman-hpc run --rm --userns=keep-id -v ${WORKDIR}:/bilbomd/work -v ${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c \"cd /bilbomd/work/ && charmm -o pdb2crd_charmm_meld.out -i pdb2crd_charmm_meld.inp\""
+    local command="srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name meld podman-hpc run --rm -v ${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c \"cd /bilbomd/work/ && charmm -o pdb2crd_charmm_meld.out -i pdb2crd_charmm_meld.inp\""
     echo $command >> $WORKDIR/pdb2crd
     echo "MELD_EXIT=\$?" >> $WORKDIR/pdb2crd
     echo "check_exit_code \$MELD_EXIT pdb2crd" >> $WORKDIR/pdb2crd
@@ -597,7 +598,7 @@ generate_pae2const_commands() {
 # Create const.inp from Alphafold PAE Matrix
 update_status pae Running
 echo "Calculate const.inp from PAE matrix..."
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name pae2const podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pae2const.py --crd_file ${in_crd_file} ${pae_file} > pae_ratios.log 2>&1"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name pae2const podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pae2const.py ${pae_file} --crd_file ${in_crd_file} --openmm-const-file constraints.yaml > pae2const.log 2>&1"
 PAE_EXIT=\$?
 check_exit_code \$PAE_EXIT pae
 
@@ -624,7 +625,7 @@ generate_min_heat_commands(){
 # CHARMM Minimize
 echo "Running CHARMM Minimize..."
 update_status minimize Running
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name minimize podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && charmm -o minimize.out -i minimize.inp"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name minimize podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/ && charmm -o minimize.out -i minimize.inp"
 MIN_EXIT=\$?
 check_exit_code \$MIN_EXIT minimize
 
@@ -635,7 +636,7 @@ update_status minimize Success
 # FoXS Analysis of minimized PDB
 echo "Running Initial FoXS Analysis..."
 update_status initfoxs Running
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name initfoxs podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && foxs ${foxs_args[@]} > initial_foxs_analysis.log 2> initial_foxs_analysis_error.log"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name initfoxs podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/ && foxs ${foxs_args[@]} > initial_foxs_analysis.log 2> initial_foxs_analysis_error.log"
 INITFOXS_EXIT=\$?
 check_exit_code \$INITFOXS_EXIT initfoxs
 
@@ -646,7 +647,7 @@ update_status initfoxs Success
 # CHARMM Heat
 echo "Running CHARMM Heat..."
 update_status heat Running
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name heat podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && charmm -o heat.out -i heat.inp"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name heat podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/ && charmm -o heat.out -i heat.inp"
 HEAT_EXIT=\$?
 check_exit_code \$HEAT_EXIT heat
 
@@ -663,7 +664,7 @@ generate_alphafold_commands() {
 # nvidia-smi
 update_status alphafold Running
 echo "Running AlphaFold..."
-srun --gpus=4 --job-name alphafold podman-hpc run --rm --gpu --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${AF_WORKER} /bin/bash -c "cd /bilbomd/work/ && colabfold_batch --num-models=3 --amber --use-gpu-relax --num-recycle=4 af-entities.fasta alphafold"
+srun --gpus=4 --job-name alphafold podman-hpc run --rm --gpu -v \${WORKDIR}:/bilbomd/work ${AF_WORKER} /bin/bash -c "cd /bilbomd/work/ && colabfold_batch --num-models=3 --amber --use-gpu-relax --num-recycle=4 af-entities.fasta alphafold"
 AF_EXIT=\$?
 check_exit_code \$AF_EXIT alphafold
 
@@ -696,7 +697,7 @@ EOF
     echo "echo \"Running CHARMM Molecular Dynamics...\"" >> $WORKDIR/dynamics
     echo "update_status md Running" >> $WORKDIR/dynamics
     for inp in "${g_md_inp_files[@]}"; do
-        local command="srun --ntasks=1 --cpus-per-task=$cpus --cpu-bind=cores --job-name md$count podman-hpc run --gpu --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c \"cd /bilbomd/work/ && charmm -o ${inp%.inp}.out -i ${inp}\" &"
+        local command="srun --ntasks=1 --cpus-per-task=$cpus --cpu-bind=cores --job-name md$count podman-hpc run --gpu --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c \"cd /bilbomd/work/ && charmm -o ${inp%.inp}.out -i ${inp}\" &"
         echo $command >> $WORKDIR/dynamics
         echo "MD_PID$count=\$!" >> $WORKDIR/dynamics
         echo "sleep 5" >> $WORKDIR/dynamics
@@ -730,7 +731,7 @@ generate_dcd2pdb_commands() {
 # CHARMM Extract PDB from DCD Trajectories
 echo "Running CHARMM Extract PDB from DCD Trajectories..."
 update_status dcd2pdb Running
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name dcd2pdb podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && ./run_dcd2pdb.sh"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name dcd2pdb podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/ && ./run_dcd2pdb.sh"
 DCD2PDB_EXIT=\$?
 check_exit_code \$DCD2PDB_EXIT dcd2pdb
 
@@ -756,7 +757,7 @@ generate_foxs_commands() {
 # Run FoXS to calculate SAXS curves
 echo "Run FoXS to calculate SAXS curves..."
 update_status foxs Running
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name foxs podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/foxs && ../run_foxs.sh"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name foxs podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/foxs && ../run_foxs.sh"
 FOXS_EXIT=\$?
 check_exit_code \$FOXS_EXIT foxs
 
@@ -814,26 +815,12 @@ generate_multifoxs_command() {
 # Run MultiFoXS to calculate best ensemble
 echo "Run MultiFoXS to calculate best ensemble..."
 update_status multifoxs Running
-srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name multifoxs podman-hpc run --rm --userns=keep-id -v \${WORKDIR}:/bilbomd/work -v \${UPLOAD_DIR}:/cfs ${WORKER} /bin/bash -c "cd /bilbomd/work/ && ./run_multifoxs.sh"
+srun --ntasks=1 --cpus-per-task=$NUM_CORES --cpu-bind=cores --job-name multifoxs podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/ && ./run_multifoxs.sh"
 MFOXS_EXIT=\$?
 check_exit_code \$MFOXS_EXIT multifoxs
 
 echo "MultiFoXS processing complete."
 update_status multifoxs Success
-
-EOF
-}
-
-generate_copy_commands() {
-    cat << EOF > $WORKDIR/copysection
-# -----------------------------------------------------------------------------
-# Copy results back to CFS
-echo "Copying results back to CFS..."
-update_status copy2cfs Running
-cp -nR $WORKDIR/* $UPLOAD_DIR
-CP_EXIT=\$?
-check_exit_code \$CP_EXIT copy2cfs
-update_status copy2cfs Success
 
 EOF
 }
@@ -927,7 +914,6 @@ generate_foxs_commands
 generate_foxs_scripts
 generate_multifoxs_command
 generate_multifoxs_script
-# generate_copy_commands
 generate_end_matters
 
 echo "CPUS: $cpus"
