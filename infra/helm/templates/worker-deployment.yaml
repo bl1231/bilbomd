@@ -40,6 +40,12 @@ spec:
             optional: false
         image: "{{ .Values.worker.image.registry }}/{{ .Values.worker.image.owner }}/{{ with .Values.worker.image.user }}{{ . }}/{{ end }}{{ with .Values.worker.image.repository }}{{ . }}{{ end }}:{{ .Values.worker.image.tag }}"
         imagePullPolicy: "{{ .Values.worker.image.pullPolicy }}"
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /app/scripts/nersc/sync-nersc-scripts-to-cfs.sh
+              - "{{ .Values.env.BILBOMD_ENV }}"
         name: container-0
         resources: {}
         securityContext:
@@ -61,6 +67,8 @@ spec:
           name: vol-uploads
         - mountPath: /bilbomd/logs
           name: vol-logs
+        - mountPath: /bilbomd/scripts
+          name: vol-scripts
       dnsPolicy: ClusterFirst
       imagePullSecrets:
       - name: {{ .Values.worker.image.secret }}
@@ -82,3 +90,7 @@ spec:
           path: {{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.logs.worker }}
           type: Directory
         name: vol-logs
+      - hostPath:
+          path: {{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}
+          type: Directory
+        name: vol-scripts
