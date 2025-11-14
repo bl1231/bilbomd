@@ -94,6 +94,7 @@ const { __useMock, __sendMailMock } = vi.hoisted(() => ({
 // Attach mocks to the global object for access in all tests
 globalThis.__useMock = __useMock
 globalThis.__sendMailMock = __sendMailMock
+globalThis.__sendMailMock.mockResolvedValue(undefined)
 
 vi.mock('nodemailer', () => {
   const createTransport = vi.fn(() => ({
