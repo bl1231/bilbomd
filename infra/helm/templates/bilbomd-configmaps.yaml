@@ -18,6 +18,7 @@ data:
   SEND_EMAIL_NOTIFICATIONS: 'true'
   SEND_EMAIL_USER: bilbomd@lbl.gov
   DATA_VOL: /bilbomd/uploads
+  EXAMPLE_DATA: /app/examples
   BILBOMD_LOGS: /bilbomd/logs
   NODE_ENV: '{{ .Values.env.NODE_ENV }}'
   BILBOMD_ENV: '{{ .Values.env.BILBOMD_ENV }}'
