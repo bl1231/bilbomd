@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.0.4
+
+### Patch Changes
+
+- 009fac1: Bump `backend` to include tsconfig changes
+
 ## 2.0.3
 
 ### Patch Changes
