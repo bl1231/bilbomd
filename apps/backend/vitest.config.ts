@@ -19,6 +19,7 @@ export default defineConfig({
       UPLOAD_DIR: '/app/uploads',
       WORK_DIR: '/app/work',
       DATA_VOL: '/tmp/bilbomd-data',
+      EXAMPLE_DATA: '/app/example_data',
       BILBOMD_LOGS: '/bilbomd/logs',
       CHARMM_TOPOLOGY: '/app/scripts/bilbomd_top_par_files.str',
       CHARMM_TEMPLATES: '/app/build/templates/bilbomd',
