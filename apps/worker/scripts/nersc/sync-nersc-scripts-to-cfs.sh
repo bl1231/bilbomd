@@ -17,25 +17,20 @@ esac
 
 LOCAL_DIR="/app/scripts/nersc"
 
-# Base CFS root can be overridden if needed
-BASE_ROOT="${BILBOMD_CFS_BASE_ROOT:-/global/cfs/cdirs/m4659/bilbomd}"
+# Base CFS root
+BASE_ROOT="/global/cfs/cdirs/m4659/bilbomd"
 
 # If BILBOMD_CFS_SCRIPT_ROOT is set, it wins; otherwise derive from env
-REMOTE_ROOT="${BILBOMD_CFS_SCRIPT_ROOT:-${BASE_ROOT}/${ENVIRONMENT}/scripts}"
-
-VERSION="${BILBOMD_VERSION:-dev}"
-DEST="${REMOTE_ROOT}/${VERSION}"
+DEST="${BASE_ROOT}/${ENVIRONMENT}/scripts"
 
 echo "[sync] Syncing NERSC scripts"
 echo "       env:  ${ENVIRONMENT}"
 echo "       from: ${LOCAL_DIR}"
 echo "       to:   ${DEST}"
 
-# ensure destination dir
-mkdir -p "${DEST}"
-
 # Define the specific files to copy
 FILES_TO_COPY=(
+  "nersc-test.sh"
   "copy-back-to-cfs.sh"
   "gen-bilbomd-slurm-file.sh"
   "gen-openmm-slurm-file.py"
