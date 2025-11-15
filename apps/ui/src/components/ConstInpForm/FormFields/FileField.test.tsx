@@ -1,10 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import FileField from './FileField'
 
 describe('FileField Component', () => {
-  let mockSetFieldValue: ReturnType<typeof vi.fn>
-  let mockOnChange: ReturnType<typeof vi.fn>
+  let mockSetFieldValue: Mock<(field: string, value: File | null) => void>
+  let mockOnChange: Mock<(event: React.ChangeEvent<HTMLInputElement>) => void>
 
   // here we define the default props for the FileField component
   const defaultProps = {
@@ -14,14 +14,16 @@ describe('FileField Component', () => {
     isError: false,
     errorMessage: '',
     fileExt: '.png,.jpg',
-    setFieldValue: vi.fn(),
-    onChange: vi.fn()
+    setFieldValue: vi.fn() as Mock<(field: string, value: File | null) => void>,
+    onChange: vi.fn() as Mock<
+      (event: React.ChangeEvent<HTMLInputElement>) => void
+    >
   }
 
   beforeEach(() => {
     // Reset mocks before each test
-    mockSetFieldValue = vi.fn()
-    mockOnChange = vi.fn()
+    mockSetFieldValue = vi.fn<(field: string, value: File | null) => void>()
+    mockOnChange = vi.fn<(event: React.ChangeEvent<HTMLInputElement>) => void>()
   })
 
   it('renders the FileField component with the correct title', () => {
