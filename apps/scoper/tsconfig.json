@@ -3,11 +3,10 @@
     "target": "ESNext",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "baseUrl": "./src",
     "rootDir": "src",
     "paths": {
-      "*": ["*"],
-      "services/*": ["services/*"]
+      "*": ["./src/*"],
+      "services/*": ["./src/services/*"]
     },
     "allowJs": true,
     "checkJs": false,
