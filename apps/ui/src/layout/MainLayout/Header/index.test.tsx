@@ -77,7 +77,8 @@ describe('Header Component', () => {
       roles: ['User'],
       isManager: false,
       isAdmin: false,
-      email: ''
+      email: '',
+      isAuthenticated: true
     })
 
     vi.useFakeTimers()

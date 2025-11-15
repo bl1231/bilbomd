@@ -76,11 +76,12 @@ describe('Welcome Component', () => {
   it('displays loading message while fetching config', () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
-      roles: [],
+      roles: [] as string[],
       status: 'active',
       isManager: false,
       isAdmin: false,
-      email: 'testuser@example.com'
+      email: 'testuser@example.com',
+      isAuthenticated: true
     })
     vi.mocked(useGetConfigsQuery).mockReturnValue({
       data: undefined,
@@ -89,7 +90,7 @@ describe('Welcome Component', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<Welcome />)
+    renderWithProviders(<Welcome mode="authenticated" />)
 
     expect(screen.getByText(/Welcome testuser!/i)).toBeInTheDocument()
     expect(
@@ -100,11 +101,12 @@ describe('Welcome Component', () => {
   it('displays error message when config fails to load', () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
-      roles: [],
+      roles: [] as string[],
       status: 'active',
       isManager: false,
       isAdmin: false,
-      email: 'testuser@example.com'
+      email: 'testuser@example.com',
+      isAuthenticated: true
     })
     vi.mocked(useGetConfigsQuery).mockReturnValue({
       data: undefined,
@@ -113,7 +115,7 @@ describe('Welcome Component', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<Welcome />)
+    renderWithProviders(<Welcome mode="authenticated" />)
 
     expect(
       screen.getByText(/Failed to load system configuration/i)
@@ -123,11 +125,12 @@ describe('Welcome Component', () => {
   it('displays Beamline 12.3.1 when not using NERSC', () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
-      roles: [],
+      roles: [] as string[],
       status: 'active',
       isManager: false,
       isAdmin: false,
-      email: 'testuser@example.com'
+      email: 'testuser@example.com',
+      isAuthenticated: true
     })
     vi.mocked(useGetConfigsQuery).mockReturnValue({
       data: { mode: 'production', useNersc: 'false' },
@@ -136,7 +139,7 @@ describe('Welcome Component', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<Welcome />)
+    renderWithProviders(<Welcome mode="authenticated" />)
 
     expect(
       screen.getByText((content, element) => {
@@ -155,11 +158,12 @@ describe('Welcome Component', () => {
   it('displays NERSC status when using NERSC', async () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
-      roles: [],
+      roles: [] as string[],
       status: 'active',
       isManager: false,
       isAdmin: false,
-      email: 'testuser@example.com'
+      email: 'testuser@example.com',
+      isAuthenticated: true
     })
     vi.mocked(useGetConfigsQuery).mockReturnValue({
       data: { mode: 'production', useNersc: 'true' },
@@ -169,7 +173,7 @@ describe('Welcome Component', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<Welcome />)
+      renderWithProviders(<Welcome mode="authenticated" />)
     })
 
     await waitFor(() => {
@@ -194,11 +198,12 @@ describe('Welcome Component', () => {
   it('displays contact information', () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
-      roles: [],
+      roles: [] as string[],
       status: 'active',
       isManager: false,
       isAdmin: false,
-      email: 'testuser@example.com'
+      email: 'testuser@example.com',
+      isAuthenticated: true
     })
     vi.mocked(useGetConfigsQuery).mockReturnValue({
       data: { mode: 'production', useNersc: 'false' },
@@ -207,7 +212,7 @@ describe('Welcome Component', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<Welcome />)
+    renderWithProviders(<Welcome mode="authenticated" />)
 
     expect(screen.getByText(/Support:/i)).toBeInTheDocument()
   })

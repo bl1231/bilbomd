@@ -7,6 +7,17 @@ import { useGetPublicFoxsDataQuery } from 'slices/publicJobsApiSlice'
 import CircularProgress from '@mui/material/CircularProgress'
 import FoXSEnsembleCharts from 'features/foxs/FoXSEnsembleCharts'
 import Item from 'themes/components/Item'
+import { FoxsData, FoxsDataPoint } from '@bilbomd/bilbomd-types'
+
+// Define types
+type CombinedFoxsData = {
+  q: number
+  exp_intensity: number
+} & Record<string, number>
+
+type ScoperFoXSAnalysisProps = {
+  id: string
+}
 
 // Allows dynamic keys like model_intensity_1, residual_1, etc., without using `any`
 type CombinedFoxsDataDynamic = CombinedFoxsData &
