@@ -8,6 +8,7 @@ export const createMockBilboMDJob = (
     username: 'testuser',
     mongo: {
       id: '123',
+      _id: '123',
       __t: 'BilboMdPDB',
       uuid: 'abc-123',
       time_submitted: new Date(),
@@ -22,7 +23,7 @@ export const createMockBilboMDJob = (
       rg_min: 20,
       rg_max: 30,
       conformational_sampling: 1
-    } as any,
+    },
     bullmq: {
       position: 1,
       queuePosition: '1',

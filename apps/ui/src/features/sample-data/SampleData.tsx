@@ -1,6 +1,8 @@
 import { Typography, Container } from '@mui/material'
+import useTitle from 'hooks/useTitle'
 
 const SampleData = ({ title = 'BilboMD: Sample Data' }) => {
+  useTitle(title)
   return (
     <Container>
       <Typography
