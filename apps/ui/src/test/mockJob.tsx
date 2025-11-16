@@ -4,15 +4,14 @@ import type { BilboMDJob } from 'types/interfaces'
 export const createMockBilboMDJob = (
   overrides: PartialDeep<BilboMDJob> = {}
 ): BilboMDJob => {
-  // Note: no `: BilboMDJob` here
   const baseJob = {
     id: '123',
     username: 'testuser',
     mongo: {
       id: '123',
       _id: '123',
-      __t: 'BilboMdAlphaFold',
-      title: 'Mock AlphaFold Job',
+      __t: 'BilboMdPDB',
+      title: 'Mock PDB Job',
       access_mode: 'anonymous',
       public_id: 'public-123',
       status: 'Completed',
@@ -20,11 +19,11 @@ export const createMockBilboMDJob = (
       time_submitted: new Date(),
       time_started: new Date(),
       time_completed: new Date(),
-      data_file: '',
+      data_file: 'example.dat',
       pdb_file: '',
       psf_file: '',
       crd_file: '',
-      const_inp_file: '',
+      const_inp_file: 'const.inp',
       rg: 25,
       rg_min: 20,
       rg_max: 30,
