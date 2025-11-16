@@ -1,28 +1,37 @@
-import { BilboMDJob } from 'types/interfaces'
+import type { PartialDeep } from 'type-fest'
+import type { BilboMDJob } from 'types/interfaces'
 
 export const createMockBilboMDJob = (
-  overrides: Partial<BilboMDJob> = {}
+  overrides: PartialDeep<BilboMDJob> = {}
 ): BilboMDJob => {
-  const baseJob: BilboMDJob = {
+  // Note: no `: BilboMDJob` here
+  const baseJob = {
     id: '123',
     username: 'testuser',
     mongo: {
       id: '123',
       _id: '123',
-      __t: 'BilboMdPDB',
+      __t: 'BilboMdAlphaFold',
+      title: 'Mock AlphaFold Job',
+      access_mode: 'anonymous',
+      public_id: 'public-123',
+      status: 'Completed',
       uuid: 'abc-123',
       time_submitted: new Date(),
       time_started: new Date(),
       time_completed: new Date(),
-      data_file: 'example.dat',
-      pdb_file: 'example.pdb',
-      psf_file: 'example.psf',
-      crd_file: 'example.crd',
-      const_inp_file: 'const.inp',
+      data_file: '',
+      pdb_file: '',
+      psf_file: '',
+      crd_file: '',
+      const_inp_file: '',
       rg: 25,
       rg_min: 20,
       rg_max: 30,
-      conformational_sampling: 1
+      conformational_sampling: 1,
+      md_engine: 'OpenMM',
+      md_constraints: {},
+      openmm_parameters: {}
     },
     bullmq: {
       position: 1,
@@ -42,17 +51,15 @@ export const createMockBilboMDJob = (
         id: 1,
         progress: '100',
         name: 'test',
-        data: {
-          type: 'pdb',
-          title: 'test',
-          uuid: '123'
-        }
+        data: { type: 'pdb', title: 't', uuid: '123' }
       }
     }
-  }
+  } as const
 
   return {
-    mongo: { ...baseJob.mongo, ...(overrides.mongo || {}) },
-    bullmq: { ...baseJob.bullmq, ...(overrides.bullmq || {}) }
+    ...baseJob,
+    ...overrides,
+    mongo: { ...baseJob.mongo, ...(overrides.mongo ?? {}) },
+    bullmq: { ...baseJob.bullmq, ...(overrides.bullmq ?? {}) }
   } as BilboMDJob
 }

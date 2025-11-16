@@ -91,6 +91,7 @@
     ]
   },
   "devDependencies": {
-    "sass-embedded": "^1.93.3"
+    "sass-embedded": "^1.93.3",
+    "type-fest": "^5.2.0"
   }
 }

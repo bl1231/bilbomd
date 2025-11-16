@@ -34,7 +34,7 @@ describe('JobDBDetails', () => {
             | 'BilboMdCRD'
             | 'BilboMdAuto'
             | 'BilboMdSANS'
-        } as any
+        }
       })
       renderWithProviders(<JobDBDetails job={job} />)
       expect(screen.getByText('Details')).toBeInTheDocument()
