@@ -1,6 +1,6 @@
 import React from 'react'
-import { Box, Typography, Link, Grid } from '@mui/material'
-import HeaderBox from 'components/HeaderBox'
+import { Typography, Grid } from '@mui/material'
+
 import useTitle from 'hooks/useTitle'
 
 const Funding: React.FC = () => {

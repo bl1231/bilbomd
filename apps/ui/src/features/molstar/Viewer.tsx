@@ -93,9 +93,7 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
 
     // Adding LoadParams based on job type and number of ensembles
     if (
-      (job.mongo.__t === 'BilboMd' ||
-        job.mongo.__t === 'BilboMdPDB' ||
-        job.mongo.__t === 'BilboMdCRD') &&
+      (job.mongo.__t === 'BilboMdPDB' || job.mongo.__t === 'BilboMdCRD') &&
       job.classic?.numEnsembles
     ) {
       for (let i = 1; i <= job.classic.numEnsembles; i++) {

@@ -128,6 +128,9 @@ export type BilboMDJob = {
     | MongoWithIdString<IBilboMDScoperJob>
   bullmq: BilboMDBullMQ
   scoper?: BilboMDScoperSteps
+  classic?: { numEnsembles: number }
+  auto?: { numEnsembles: number }
+  alphafold?: { numEnsembles: number }
 }
 
 export type AnyBilboJob =

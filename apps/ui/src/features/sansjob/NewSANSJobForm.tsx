@@ -5,7 +5,6 @@ import {
   TextField,
   Typography,
   Alert,
-  AlertTitle,
   Paper,
   Slider,
   Chip

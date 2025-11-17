@@ -17,6 +17,12 @@ interface PLDDTPlotProps {
   chainBoundaries: number[]
 }
 
+type ChainRange = {
+  start: number
+  end: number
+  chainId: number
+}
+
 const PLDDTPlot: React.FC<PLDDTPlotProps> = ({
   plddtData,
   plddtCutoff,
@@ -26,7 +32,7 @@ const PLDDTPlot: React.FC<PLDDTPlotProps> = ({
   const chainColors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc', '#ffccff']
 
   // Compute chain ranges
-  const chainRanges = []
+  const chainRanges: ChainRange[] = []
   let start = 0
   chainBoundaries.forEach((boundary, index) => {
     chainRanges.push({ start, end: boundary - 1, chainId: index + 1 })

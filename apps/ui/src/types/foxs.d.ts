@@ -5,11 +5,6 @@ export interface FoxsDataPoint {
   error: number
 }
 
-// interface ResidualDataPoints {
-//   q: number
-//   [key: `res_${number}`]: number
-// }
-
 export interface FoxsData {
   filename: string
   chisq: number
