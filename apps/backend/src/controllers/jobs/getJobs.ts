@@ -1,26 +1,27 @@
 import { logger } from '../../middleware/loggers.js'
-import path from 'path'
-import { getBullMQJob } from '../../queues/bilbomd.js'
-import { getBullMQScoperJob } from '../../queues/scoper.js'
+// import path from 'path'
+// import { getBullMQJob } from '../../queues/bilbomd.js'
+// import { getBullMQScoperJob } from '../../queues/scoper.js'
 import {
   Job,
   IJob,
   User,
-  IBilboMDScoperJob,
+  IUser,
   MultiJob,
-  IMultiJob,
-  IUser
+  IMultiJob
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
-import { BilboMDSteps } from '../../types/bilbomd.js'
-import { BilboMDJob, BilboMDBullMQ } from '../../types/bilbomd.js'
-import {
-  calculateNumEnsembles,
-  calculateNumEnsembles2
-} from './utils/jobUtils.js'
-import { getScoperStatus } from './scoperStatus.js'
+// import { BilboMDSteps } from '../../types/bilbomd.js'
+// import { BilboMDJob, BilboMDBullMQ } from '../../types/bilbomd.js'
+import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
+import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobMapper.js'
+// import {
+//   calculateNumEnsembles,
+//   calculateNumEnsembles2
+// } from './utils/jobUtils.js'
+// import { getScoperStatus } from './scoperStatus.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+// const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const getAllJobs = async (req: Request, res: Response) => {
   try {
@@ -54,44 +55,53 @@ const getAllJobs = async (req: Request, res: Response) => {
     ])
 
     // Combine both job types
-    const allJobs = [...DBjobs, ...DBmultiJobs]
+    const allJobs: BilboMDJobDTO[] = []
 
-    if (!allJobs?.length) {
+    // Map Job collection docs → DTOs
+    for (const mongoJob of DBjobs) {
+      // let bullmq: BilboMDBullMQ | null = null
+
+      // if (['BilboMd', 'BilboMdAuto'].includes(mongoJob.__t)) {
+      //   bullmq = await getBullMQJob(mongoJob.uuid)
+      // } else if (mongoJob.__t === 'BilboMdScoper') {
+      //   bullmq = await getBullMQScoperJob(mongoJob.uuid)
+      // }
+
+      const userObj =
+        typeof mongoJob.user === 'object' ? (mongoJob.user as IUser) : undefined
+
+      const dto = buildBilboMDJobDTO({
+        jobId: mongoJob._id.toString(),
+        mongo: mongoJob,
+        username: userObj?.username
+      })
+
+      allJobs.push(dto)
+    }
+
+    // Map MultiJob docs → DTOs
+    for (const mongoMulti of DBmultiJobs) {
+      const userObj =
+        typeof mongoMulti.user === 'object'
+          ? (mongoMulti.user as IUser)
+          : undefined
+
+      const dto = buildMultiJobDTO({
+        jobId: mongoMulti._id.toString(),
+        mongo: mongoMulti,
+        username: userObj?.username
+      })
+
+      allJobs.push(dto)
+    }
+
+    if (!allJobs.length) {
       logger.info('No jobs found')
       res.status(204).json({ message: 'No jobs found' })
       return
     }
 
-    // Process and format jobs
-    const formattedJobs = await Promise.all(
-      allJobs.map(async (mongo) => {
-        let bullmq = null
-        if (['BilboMd', 'BilboMdAuto'].includes(mongo.__t)) {
-          bullmq = await getBullMQJob(mongo.uuid)
-        } else if (mongo.__t === 'BilboMdScoper') {
-          bullmq = await getBullMQScoperJob(mongo.uuid)
-        }
-
-        let username = 'unknown'
-        if (
-          mongo.user &&
-          typeof mongo.user === 'object' &&
-          'username' in mongo.user
-        ) {
-          const user = mongo.user as IUser
-          user.id = user._id.toString()
-          username = user.username
-        }
-
-        return {
-          mongo,
-          bullmq,
-          username
-        }
-      })
-    )
-
-    res.status(200).json(formattedJobs)
+    res.status(200).json(allJobs)
   } catch (error) {
     logger.error(error)
     console.log(error)
@@ -107,77 +117,80 @@ const getJobById = async (req: Request, res: Response) => {
   }
 
   try {
-    // Search in both collections
-    const job = await Job.findOne({ _id: jobId }).exec()
-    const multiJob = job ? null : await MultiJob.findOne({ _id: jobId }).exec()
+    const job = await Job.findOne({ _id: jobId }).populate('user').exec()
+    const multiJob = job
+      ? null
+      : await MultiJob.findOne({ _id: jobId }).populate('user').exec()
 
-    // Handle case where job is not found in either collection
     if (!job && !multiJob) {
       res.status(404).json({ message: `No job matches ID ${jobId}.` })
       return
     }
 
-    // Determine job type
     if (job) {
-      // Process Job collection entries
-      const jobDir = path.join(uploadFolder, job.uuid)
-      let bullmq: BilboMDBullMQ | undefined
+      // const jobDir = path.join(uploadFolder, job.uuid)
+      // let bullmq: BilboMDBullMQ | undefined
+      // let classic: unknown
+      // let auto: unknown
+      // let alphafold: unknown
+      // let scoper: unknown
 
-      const bilbomdJob: BilboMDJob = { id: jobId, mongo: job }
+      // if (
+      //   job.__t === 'BilboMdPDB' ||
+      //   job.__t === 'BilboMdCRD' ||
+      //   job.__t === 'BilboMdSANS'
+      // ) {
+      //   bullmq = await getBullMQJob(job.uuid)
+      //   if (bullmq && 'bilbomdStep' in bullmq) {
+      //     classic = await calculateNumEnsembles(
+      //       bullmq.bilbomdStep as BilboMDSteps,
+      //       jobDir
+      //     )
+      //   }
+      // } else if (job.__t === 'BilboMdAuto') {
+      //   bullmq = await getBullMQJob(job.uuid)
+      //   if (bullmq && 'bilbomdStep' in bullmq) {
+      //     auto = await calculateNumEnsembles(
+      //       bullmq.bilbomdStep as BilboMDSteps,
+      //       jobDir
+      //     )
+      //   }
+      // } else if (job.__t === 'BilboMdAlphaFold') {
+      //   bullmq = await getBullMQJob(job.uuid)
+      //   if (bullmq) {
+      //     alphafold = await calculateNumEnsembles2(jobDir)
+      //   }
+      // } else if (job.__t === 'BilboMdScoper') {
+      //   bullmq = await getBullMQScoperJob(job.uuid)
+      //   scoper = await getScoperStatus(job as unknown as IBilboMDScoperJob)
+      // }
 
-      if (
-        job.__t === 'BilboMdPDB' ||
-        job.__t === 'BilboMdCRD' ||
-        job.__t === 'BilboMdSANS'
-      ) {
-        bullmq = await getBullMQJob(job.uuid)
-        if (bullmq && 'bilbomdStep' in bullmq) {
-          bilbomdJob.bullmq = bullmq
-          bilbomdJob.classic = await calculateNumEnsembles(
-            bullmq.bilbomdStep as BilboMDSteps,
-            jobDir
-          )
-        }
-      } else if (job.__t === 'BilboMdAuto') {
-        bullmq = await getBullMQJob(job.uuid)
-        if (bullmq && 'bilbomdStep' in bullmq) {
-          bilbomdJob.bullmq = bullmq
-          bilbomdJob.auto = await calculateNumEnsembles(
-            bullmq.bilbomdStep as BilboMDSteps,
-            jobDir
-          )
-        }
-      } else if (job.__t === 'BilboMdAlphaFold') {
-        bullmq = await getBullMQJob(job.uuid)
-        if (bullmq) {
-          bilbomdJob.bullmq = bullmq
-          bilbomdJob.alphafold = await calculateNumEnsembles2(jobDir)
-        }
-      } else if (job.__t === 'BilboMdScoper') {
-        bullmq = await getBullMQScoperJob(job.uuid)
-        if (bullmq) {
-          bilbomdJob.bullmq = bullmq
-          bilbomdJob.scoper = await getScoperStatus(
-            job as unknown as IBilboMDScoperJob
-          )
-        }
-      }
+      const userObj =
+        typeof job.user === 'object' ? (job.user as IUser) : undefined
 
-      res.status(200).json(bilbomdJob)
+      const dto = buildBilboMDJobDTO({
+        jobId,
+        mongo: job.toObject() as unknown as IJob, // or adjust typing if you use lean
+        // bullmq,
+        username: userObj?.username
+        // classic,
+        // auto,
+        // alphafold,
+        // scoper
+      })
+
+      res.status(200).json(dto)
     } else if (multiJob) {
-      // Process MultiJob collection entries
-      const multiJobDir = path.join(uploadFolder, multiJob.uuid)
+      const userObj =
+        typeof multiJob.user === 'object' ? (multiJob.user as IUser) : undefined
 
-      // Construct a response for MultiJob
-      const multiJobResponse = {
-        id: jobId,
-        mongo: multiJob,
-        jobDir: multiJobDir,
-        status: multiJob.status,
-        progress: multiJob.progress
-      }
+      const dto = buildMultiJobDTO({
+        jobId,
+        mongo: multiJob.toObject() as unknown as IMultiJob,
+        username: userObj?.username
+      })
 
-      res.status(200).json(multiJobResponse)
+      res.status(200).json(dto)
     }
   } catch (error) {
     logger.error(`Error retrieving job: ${error}`)
