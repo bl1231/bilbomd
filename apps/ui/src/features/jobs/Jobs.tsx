@@ -44,10 +44,7 @@ import BullMQSummary from '../bullmq/BullMQSummary'
 import NerscStatus from '../nersc/NerscStatus'
 import HeaderBox from 'components/HeaderBox'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
-import {
-  INerscInfo,
-  IJob
-} from '@bilbomd/mongodb-schema/frontend'
+import { INerscInfo, IJob } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import { useNavigate } from 'react-router'
 import { JobActionsMenu } from './JobActionsMenu'
@@ -178,7 +175,7 @@ const Jobs = () => {
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
-  // console.log('jobs data --->', jobs)
+  console.log('jobs data --->', jobs)
 
   const allJobs = useSelector(selectAllJobs)
 
@@ -253,17 +250,23 @@ const Jobs = () => {
     )
 
     jobTypeFilterDropdown = (
-      <FormControl sx={{ m: 2, minWidth: 200 }} size='small'>
-        <InputLabel id='job-type-select-label'>Job Type</InputLabel>
+      <FormControl
+        sx={{ m: 2, minWidth: 200 }}
+        size="small"
+      >
+        <InputLabel id="job-type-select-label">Job Type</InputLabel>
         <Select
-          labelId='job-type-select-label'
-          id='job-type-select'
+          labelId="job-type-select-label"
+          id="job-type-select"
           value={typeFilter}
-          label='Job Type'
+          label="Job Type"
           onChange={handleTypeChange}
         >
           {jobTypes.map((type) => (
-            <MenuItem key={type} value={type}>
+            <MenuItem
+              key={type}
+              value={type}
+            >
               {type}
             </MenuItem>
           ))}
@@ -272,17 +275,23 @@ const Jobs = () => {
     )
 
     statusFilterDropdown = (
-      <FormControl sx={{ m: 2, minWidth: 200 }} size='small'>
-        <InputLabel id='status-select-label'>Status</InputLabel>
+      <FormControl
+        sx={{ m: 2, minWidth: 200 }}
+        size="small"
+      >
+        <InputLabel id="status-select-label">Status</InputLabel>
         <Select
-          labelId='status-select-label'
-          id='status-select'
+          labelId="status-select-label"
+          id="status-select"
           value={statusFilter}
-          label='Status'
+          label="Status"
           onChange={handleStatusChange}
         >
           {['All', ...availableStatuses].map((status) => (
-            <MenuItem key={status} value={status}>
+            <MenuItem
+              key={status}
+              value={status}
+            >
               {status}
             </MenuItem>
           ))}
@@ -291,17 +300,23 @@ const Jobs = () => {
     )
 
     userFilterDropdown = (isAdmin || isManager) && (
-      <FormControl sx={{ m: 2, minWidth: 200 }} size='small'>
-        <InputLabel id='user-select-label'>User</InputLabel>
+      <FormControl
+        sx={{ m: 2, minWidth: 200 }}
+        size="small"
+      >
+        <InputLabel id="user-select-label">User</InputLabel>
         <Select
-          labelId='user-select-label'
-          id='user-select'
+          labelId="user-select-label"
+          id="user-select"
           value={userFilter}
-          label='User'
+          label="User"
           onChange={handleUserChange}
         >
           {['All', ...availableUsers].map((user) => (
-            <MenuItem key={user} value={user}>
+            <MenuItem
+              key={user}
+              value={user}
+            >
               {user}
             </MenuItem>
           ))}
@@ -429,11 +444,14 @@ const Jobs = () => {
               }}
             >
               <LinearProgress
-                variant='determinate'
+                variant="determinate"
                 value={displayProgress}
                 sx={{ width: '100%', marginRight: 1 }}
               />
-              <Typography variant='body2' sx={{ minWidth: 35 }}>
+              <Typography
+                variant="body2"
+                sx={{ minWidth: 35 }}
+              >
                 {`${displayProgress}%`}
               </Typography>
             </Box>
@@ -471,13 +489,16 @@ const Jobs = () => {
           const isOpen = Boolean(anchorEl) && menuJobId === id
 
           return [
-            <JobDetails key={`${id}-details`} id={id} />,
+            <JobDetails
+              key={`${id}-details`}
+              id={id}
+            />,
             <Button
               key={`${id}-menu-btn`}
-              variant='outlined'
+              variant="outlined"
               disableElevation
-              size='small'
-              className='job-details-button'
+              size="small"
+              className="job-details-button"
               onClick={(e) => handleMenuOpen(e, id)}
               endIcon={<KeyboardArrowDownIcon />}
             >
@@ -501,7 +522,10 @@ const Jobs = () => {
     ]
 
     content = (
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         {!useNersc && (
           <Grid size={{ xs: 12 }}>
             <BullMQSummary />
@@ -521,7 +545,11 @@ const Jobs = () => {
 
           <Item>
             {showStaleWarning && (
-              <Alert severity='error' variant='outlined' sx={{ mb: 2 }}>
+              <Alert
+                severity="error"
+                variant="outlined"
+                sx={{ mb: 2 }}
+              >
                 <AlertTitle>Backend unavailable</AlertTitle>
                 Job data may be stale.
               </Alert>
@@ -530,8 +558,8 @@ const Jobs = () => {
             {statusFilterDropdown}
             {userFilterDropdown}
             <Button
-              variant='contained'
-              color='primary'
+              variant="contained"
+              color="primary"
               onClick={resetFilters}
               sx={{ m: 2, height: '36px' }}
             >
@@ -600,9 +628,9 @@ const Jobs = () => {
                       </Button>
                       <Button
                         onClick={handleDeleteConfirm}
-                        color='error'
+                        color="error"
                         disabled={isDeleting}
-                        variant='contained'
+                        variant="contained"
                       >
                         {isDeleting ? 'Deleting...' : 'Delete'}
                       </Button>
@@ -611,7 +639,11 @@ const Jobs = () => {
                 </Box>
               </Box>
             ) : (
-              <Alert severity='info' variant='outlined' sx={{ mt: 2 }}>
+              <Alert
+                severity="info"
+                variant="outlined"
+                sx={{ mt: 2 }}
+              >
                 <AlertTitle>No Jobs found.</AlertTitle>Try adjusting the filters
                 or running some jobs.
               </Alert>
@@ -647,7 +679,10 @@ const Jobs = () => {
 
     content = (
       <Box>
-        <Alert severity={severity} variant='outlined'>
+        <Alert
+          severity={severity}
+          variant="outlined"
+        >
           <AlertTitle>{errorMessage}</AlertTitle>
         </Alert>
       </Box>
