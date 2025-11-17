@@ -7,14 +7,23 @@ import { JobFeedbackDTO } from './feedback'
 import { JobAssetsDTO } from './mdMovie'
 import { NerscInfoDTO } from './nersc'
 
-export type JobType = 'pdb' | 'crd' | 'auto' | 'alphafold' | 'sans' | 'scoper'
+export type JobType =
+  | 'pdb'
+  | 'crd'
+  | 'auto'
+  | 'alphafold'
+  | 'sans'
+  | 'scoper'
+  | 'multi'
 
 export type MDEngine = 'CHARMM' | 'OpenMM'
 
 export const JOB_STATUSES = [
   'Submitted',
+  'Pending',
   'Running',
   'Completed',
+  'Error',
   'Failed',
   'Cancelled'
 ] as const
@@ -112,6 +121,12 @@ export interface BilboMDScoperDTO extends BaseJobDTO {
   fixc1c2: boolean
 }
 
+export interface BilboMDMultiDTO extends BaseJobDTO {
+  bilbomd_uuids: string[]
+  data_file_from: string
+  bilbomd_jobs?: []
+}
+
 export type BilboMDMongoJobDTO =
   | BilboMDPDBDTO
   | BilboMDCRDDTO
@@ -119,6 +134,7 @@ export type BilboMDMongoJobDTO =
   | BilboMDAlphaFoldDTO
   | BilboMDSANSDTO
   | BilboMDScoperDTO
+  | BilboMDMultiDTO
 
 export interface BilboMDJobDTO {
   id: string
