@@ -22,6 +22,8 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
 
   const actualFeedback = feedback || fetchedFeedback
 
+  // console.log('actualFeedback:', actualFeedback)
+
   if (isLoading) {
     return <CircularProgress />
   }

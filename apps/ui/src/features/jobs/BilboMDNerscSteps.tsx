@@ -1,4 +1,4 @@
-import { BilboMDJob } from 'types/interfaces'
+import type { BilboMDJobDTO, StepStatus } from '@bilbomd/bilbomd-types'
 import BilboMDNerscStep from './BilboMDNerscStep'
 import {
   Accordion,
@@ -14,20 +14,20 @@ import HeaderBox from 'components/HeaderBox'
 import Item from 'themes/components/Item'
 
 interface BilboMDStepsProps {
-  job: BilboMDJob
+  job: BilboMDJobDTO
 }
 
 const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
   // console.log('BilboMDNerscSteps: job:', job)
 
   let stepsToHide: string[] = []
-  if (job.mongo.__t === 'BilboMdCRD') {
+  if (job.mongo.jobType === 'crd') {
     stepsToHide = ['autorg', 'pdb2crd', 'pae', 'alphafold', '_id']
-  } else if (job.mongo.__t === 'BilboMdAuto') {
+  } else if (job.mongo.jobType === 'auto') {
     stepsToHide = ['autorg', 'alphafold', '_id']
-  } else if (job.mongo.__t === 'BilboMdAlphaFold') {
+  } else if (job.mongo.jobType === 'alphafold') {
     stepsToHide = ['autorg', '_id']
-  } else if (job.mongo.__t === 'BilboMdPDB') {
+  } else if (job.mongo.jobType === 'pdb') {
     stepsToHide = ['autorg', 'pae', 'alphafold', '_id']
   }
 
@@ -57,8 +57,10 @@ const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
 
   const { steps } = job.mongo
 
+  type StepRecord = Record<string, StepStatus>
+
   if (steps && typeof steps === 'object') {
-    const nerscSteps = Object.entries(steps)
+    const nerscSteps = Object.entries(steps as StepRecord)
       .filter(
         ([stepName]) =>
           stepName.startsWith('nersc_') && !stepsToHide.includes(stepName)
@@ -67,16 +69,19 @@ const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
         ([a], [b]) =>
           stepOrder.indexOf(a) - stepOrder.indexOf(b) || a.localeCompare(b)
       )
-      .map(([stepName, stepValue]) => (
-        <BilboMDNerscStep
-          key={stepName}
-          stepName={stepName}
-          stepStatus={stepValue.status}
-          stepMessage={stepValue.message}
-        />
-      ))
+      .map(([stepName, stepValue]) => {
+        const value = stepValue as { status?: string; message?: string }
+        return (
+          <BilboMDNerscStep
+            key={stepName}
+            stepName={stepName}
+            stepStatus={value.status}
+            stepMessage={value.message}
+          />
+        )
+      })
 
-    const bilboMdSteps = Object.entries(steps)
+    const bilboMdSteps = Object.entries(steps as StepRecord)
       .filter(
         ([stepName]) =>
           !stepName.startsWith('nersc_') && !stepsToHide.includes(stepName)
@@ -85,14 +90,17 @@ const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
         ([a], [b]) =>
           stepOrder.indexOf(a) - stepOrder.indexOf(b) || a.localeCompare(b)
       )
-      .map(([stepName, stepValue]) => (
-        <BilboMDNerscStep
-          key={stepName}
-          stepName={stepName}
-          stepStatus={stepValue.status}
-          stepMessage={stepValue.message}
-        />
-      ))
+      .map(([stepName, stepValue]) => {
+        const value = stepValue as { status?: string; message?: string }
+        return (
+          <BilboMDNerscStep
+            key={stepName}
+            stepName={stepName}
+            stepStatus={value.status}
+            stepMessage={value.message}
+          />
+        )
+      })
 
     return (
       <Accordion defaultExpanded={job.mongo.status !== 'Completed'}>
@@ -110,7 +118,10 @@ const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
           </HeaderBox>
         </AccordionSummary>
         <AccordionDetails>
-          <Grid container sx={{ flexDirection: 'column' }}>
+          <Grid
+            container
+            sx={{ flexDirection: 'column' }}
+          >
             {nerscSteps}
             <Divider sx={{ my: 1 }} />
             {bilboMdSteps}
@@ -120,9 +131,15 @@ const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
                 <b>INFO: </b>
               </Typography>
               {job.bullmq && job.bullmq.bilbomdLastStep ? (
-                <Chip label={job.bullmq.bilbomdLastStep} size='small' />
+                <Chip
+                  label={job.bullmq.bilbomdLastStep}
+                  size="small"
+                />
               ) : (
-                <Chip label='N/A' size='small' />
+                <Chip
+                  label="N/A"
+                  size="small"
+                />
               )}
             </Grid>
           </Grid>

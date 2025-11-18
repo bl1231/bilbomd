@@ -2,12 +2,11 @@ export const STEP_STATUSES = ['Waiting', 'Running', 'Success', 'Error'] as const
 
 export type StepStatusEnum = (typeof STEP_STATUSES)[number]
 
-interface StepStatus {
+export interface StepStatus {
   status: StepStatusEnum
   message: string
 }
 
-// Interface for steps status
 export interface JobStepsDTO {
   alphafold?: StepStatus
   pdb2crd?: StepStatus

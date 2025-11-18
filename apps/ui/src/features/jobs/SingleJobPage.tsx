@@ -46,19 +46,21 @@ import {
 } from 'slices/jobsApiSlice'
 import { skipToken } from '@reduxjs/toolkit/query'
 import BilboMdFeedback from 'features/analysis/BilboMdFeedback'
-import { BilboMDJob, BilboMDMultiJob } from 'types/interfaces'
+// import { BilboMDJob, BilboMDMultiJob } from 'types/interfaces'
+// import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import MovieGallery from 'features/analysis/MovieGallery'
 import { getStatusColors } from 'features/shared/StatusColors'
 
 const jobTypeToRoute: Record<string, string> = {
-  BilboMdPDB: 'classic',
-  BilboMdCRD: 'classic',
-  BilboMdAuto: 'auto',
-  BilboMdScoper: 'scoper',
-  BilboMdAlphaFold: 'alphafold',
-  BilboMdSANS: 'sans'
+  pdb: 'classic',
+  crd: 'classic',
+  auto: 'auto',
+  scoper: 'scoper',
+  alphafold: 'alphafold',
+  sans: 'sans',
+  multi: 'multi'
 }
 
 const SingleJobPage = () => {
@@ -136,12 +138,9 @@ const SingleJobPage = () => {
 
   const getProgressValue = () => {
     if (!job) return 0
-    const bull = parseFloat(job?.bullmq?.bullmq?.progress ?? '0')
-    if (job?.scoper) return isFinite(bull) ? bull : 0
     const mongoProg =
       typeof job?.mongo?.progress === 'number' ? job.mongo.progress : NaN
-    const v = isFinite(mongoProg) ? mongoProg : bull
-    return isFinite(v) ? v : 0
+    return isFinite(mongoProg) ? mongoProg : 0
   }
 
   if (isLoading) {
@@ -218,16 +217,10 @@ const SingleJobPage = () => {
     theme
   )
 
-  const isMultiMDJob = (
-    job: BilboMDJob | BilboMDMultiJob
-  ): job is BilboMDMultiJob => {
-    return !('__t' in job.mongo) && 'bilbomd_uuids' in job.mongo
-  }
-
-  // console.log('job', job)
+  console.log('job', job)
 
   const jobTypeRouteSegment = job
-    ? jobTypeToRoute[job.mongo.__t] || 'classic'
+    ? jobTypeToRoute[job.mongo.jobType] || 'classic'
     : 'classic'
 
   const content = job ? (
@@ -301,7 +294,7 @@ const SingleJobPage = () => {
         </Grid>
 
         {/* New BilboMD Steps that uses mongo.steps object */}
-        {job.mongo.steps && !useNersc && !job.scoper && (
+        {job.mongo.steps && !useNersc && job.mongo.jobType !== 'scoper' && (
           <Grid
             size={{ xs: 12, sm: 12, md: 6 }}
             sx={{
@@ -322,18 +315,18 @@ const SingleJobPage = () => {
               overflow: 'hidden'
             }}
           >
-            <BilboMDNerscSteps job={job} />
+            <BilboMDNerscSteps job={job as any} />
           </Grid>
         )}
 
         {/* Scoper steps */}
-        {job.scoper && (
+        {job.mongo.jobType === 'scoper' && (
           <Grid size={{ xs: 12, sm: 12, md: 6 }}>
             <HeaderBox sx={{ py: '6px' }}>
               <Typography>Scoper Steps</Typography>
             </HeaderBox>
-            <BilboMDScoperSteps job={job} />
-            <BilboMDScoperTable scoper={job.scoper} />
+            <BilboMDScoperSteps job={job as any} />
+            <BilboMDScoperTable scoper={job.mongo as any} />
           </Grid>
         )}
 
@@ -345,10 +338,10 @@ const SingleJobPage = () => {
             overflow: 'hidden'
           }}
         >
-          {isMultiMDJob(job) ? (
-            <MultiMDJobDBDetails job={job as BilboMDMultiJob} />
+          {job.mongo.jobType === 'multi' || 'bilbomd_uuids' in job.mongo ? (
+            <MultiMDJobDBDetails job={job as any} />
           ) : (
-            <JobDBDetails job={job as BilboMDJob} />
+            <JobDBDetails job={job as any} />
           )}
         </Grid>
 
@@ -386,10 +379,10 @@ const SingleJobPage = () => {
               {tabValue === 0 && (
                 <Box sx={{ p: 0 }}>
                   {job.mongo.status === 'Completed' &&
-                    (job.mongo.__t === 'BilboMdPDB' ||
-                      job.mongo.__t === 'BilboMdCRD' ||
-                      job.mongo.__t === 'BilboMdAuto' ||
-                      job.mongo.__t === 'BilboMdAlphaFold') &&
+                    (job.mongo.jobType === 'pdb' ||
+                      job.mongo.jobType === 'crd' ||
+                      job.mongo.jobType === 'auto' ||
+                      job.mongo.jobType === 'alphafold') &&
                     id && (
                       <Grid size={{ xs: 12 }}>
                         <Suspense fallback={<CircularProgress />}>
@@ -420,10 +413,10 @@ const SingleJobPage = () => {
               {tabValue === 2 && (
                 <Box sx={{ p: 0 }}>
                   {job.mongo.status === 'Completed' &&
-                    (job.mongo.__t === 'BilboMdPDB' ||
-                      job.mongo.__t === 'BilboMdCRD' ||
-                      job.mongo.__t === 'BilboMdAuto' ||
-                      job.mongo.__t === 'BilboMdAlphaFold') &&
+                    (job.mongo.jobType === 'pdb' ||
+                      job.mongo.jobType === 'crd' ||
+                      job.mongo.jobType === 'auto' ||
+                      job.mongo.jobType === 'alphafold') &&
                     job.mongo.feedback && (
                       <Grid size={{ xs: 12 }}>
                         <BilboMdFeedback feedback={job.mongo.feedback} />
@@ -436,22 +429,24 @@ const SingleJobPage = () => {
         )}
 
         {/* Scoper FoXS Analysis */}
-        {job.mongo.status === 'Completed' && job.scoper && id && (
-          <Grid size={{ xs: 12 }}>
-            <HeaderBox sx={{ py: '6px' }}>
-              <Typography>Scoper FoXS Analysis</Typography>
-            </HeaderBox>
-            <ScoperFoXSAnalysis id={id} />
-          </Grid>
-        )}
+        {job.mongo.status === 'Completed' &&
+          job.mongo.jobType === 'scoper' &&
+          id && (
+            <Grid size={{ xs: 12 }}>
+              <HeaderBox sx={{ py: '6px' }}>
+                <Typography>Scoper FoXS Analysis</Typography>
+              </HeaderBox>
+              <ScoperFoXSAnalysis id={id} />
+            </Grid>
+          )}
 
         {/* Molstar Viewer */}
         {job.mongo.status === 'Completed' &&
-          (job.mongo.__t === 'BilboMdPDB' ||
-            job.mongo.__t === 'BilboMdCRD' ||
-            job.mongo.__t === 'BilboMdAuto' ||
-            job.mongo.__t === 'BilboMdAlphaFold' ||
-            job.mongo.__t === 'BilboMdScoper') && (
+          (job.mongo.jobType === 'pdb' ||
+            job.mongo.jobType === 'crd' ||
+            job.mongo.jobType === 'auto' ||
+            job.mongo.jobType === 'alphafold' ||
+            job.mongo.jobType === 'scoper') && (
             <Grid size={{ xs: 12 }}>
               <HeaderBox sx={{ py: '6px' }}>
                 <Typography>
@@ -485,9 +480,9 @@ const SingleJobPage = () => {
                 Download Results
               </Button>
 
-              {(job.mongo.__t === 'BilboMdPDB' ||
-                job.mongo.__t === 'BilboMdCRD' ||
-                job.mongo.__t === 'BilboMdAuto') && (
+              {(job.mongo.jobType === 'pdb' ||
+                job.mongo.jobType === 'crd' ||
+                job.mongo.jobType === 'auto') && (
                 <Button
                   variant="contained"
                   onClick={() =>
@@ -531,7 +526,8 @@ const SingleJobPage = () => {
           <Grid size={{ xs: 12 }}>
             <HeaderBox sx={{ py: '6px' }}>
               <Typography>
-                Error - {job.bullmq?.bullmq?.failedReason ?? 'Unknown error'}
+                {/* Error - {job.bullmq?.bullmq?.failedReason ?? 'Unknown error'} */}
+                Error in SingleJobPage Component
               </Typography>
             </HeaderBox>
 

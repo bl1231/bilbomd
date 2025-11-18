@@ -3,7 +3,7 @@ import Grid from '@mui/material/Grid'
 import { axiosInstance } from 'app/api/axios'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from '../../slices/authSlice'
-import { BilboMDJob } from 'types/interfaces'
+// import { BilboMDJob } from 'types/interfaces'
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui'
 import {
   DefaultPluginUISpec,

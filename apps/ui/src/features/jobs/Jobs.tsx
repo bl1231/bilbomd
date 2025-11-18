@@ -44,7 +44,7 @@ import BullMQSummary from '../bullmq/BullMQSummary'
 import NerscStatus from '../nersc/NerscStatus'
 import HeaderBox from 'components/HeaderBox'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
-import { INerscInfo, IJob } from '@bilbomd/mongodb-schema/frontend'
+import { INerscInfo } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import { useNavigate } from 'react-router'
 import { JobActionsMenu } from './JobActionsMenu'
@@ -96,12 +96,13 @@ const filteredJobCountChip = (count: number) => {
 }
 
 const jobTypeToRoute: Record<string, string> = {
-  BilboMdPDB: 'classic',
-  BilboMdCRD: 'classic',
-  BilboMdAuto: 'auto',
-  BilboMdScoper: 'scoper',
-  BilboMdAlphaFold: 'alphafold',
-  BilboMdSANS: 'sans'
+  pdb: 'classic',
+  crd: 'classic',
+  auto: 'auto',
+  scoper: 'scoper',
+  alphafold: 'alphafold',
+  sans: 'sans',
+  multi: 'multi'
 }
 
 const Jobs = () => {
@@ -236,8 +237,8 @@ const Jobs = () => {
     // console.log('showStaleWarning', showStaleWarning)
 
     const availableJobTypes = Array.from(
-      new Set(allJobs.map((job) => job.mongo?.__t).filter(Boolean))
-    ) as IJob['__t'][]
+      new Set(allJobs.map((job) => job.mongo?.jobType).filter(Boolean))
+    ) as string[]
 
     jobTypes = ['All', ...availableJobTypes]
 
@@ -331,7 +332,9 @@ const Jobs = () => {
     }
 
     if (typeFilter !== 'All') {
-      filteredJobs = filteredJobs.filter((job) => job.mongo?.__t === typeFilter)
+      filteredJobs = filteredJobs.filter(
+        (job) => job.mongo?.jobType === typeFilter
+      )
     }
 
     if (statusFilter !== 'All') {
@@ -352,7 +355,6 @@ const Jobs = () => {
 
       return {
         ...job.mongo,
-        position: job.bullmq?.queuePosition ?? '',
         username: job.username,
         nerscJobid: nerscJobid,
         nerscStatus: nerscStatus,
@@ -471,13 +473,7 @@ const Jobs = () => {
               width: 110
             }
           ]
-        : [
-            {
-              field: 'position',
-              headerName: 'Position',
-              width: 80
-            }
-          ]),
+        : []),
       {
         field: 'actions',
         type: 'actions',
@@ -507,7 +503,7 @@ const Jobs = () => {
             <JobActionsMenu
               key={`${id}-menu`}
               jobId={id}
-              jobType={params.row.__t}
+              jobType={params.row.jobType}
               jobTitle={params.row.title}
               jobStatus={params.row.status}
               anchorEl={anchorEl}
