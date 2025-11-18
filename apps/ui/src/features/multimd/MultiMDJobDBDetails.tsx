@@ -11,11 +11,11 @@ import Grid from '@mui/material/Grid'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import HeaderBox from 'components/HeaderBox'
 import { formatDateSafe } from 'utils/dates'
-import { BilboMDMultiJob } from 'types/interfaces'
+import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import CopyableChip from 'components/CopyableChip'
 
 interface JobDBDetailsProps {
-  job: BilboMDMultiJob
+  job: BilboMDJobDTO
 }
 
 type MongoDBProperty = {
@@ -35,22 +35,34 @@ const MultiMDJobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
       label: 'Combined',
       render: () => (
         <Typography>
-          {job.mongo.bilbomd_uuids.map((uuid, index) => (
-            <Box key={index} sx={{ my: 1 }}>
-              <CopyableChip
-                label='UUID'
-                value={uuid}
-                // Should add something like this   url={job.mongo._id as string} by updating the schema to store the object id
-              />
-            </Box>
-          ))}
+          {'bilbomd_uuids' in job.mongo
+            ? (job.mongo as { bilbomd_uuids: string[] }).bilbomd_uuids.map(
+                (uuid, index) => (
+                  <Box
+                    key={index}
+                    sx={{ my: 1 }}
+                  >
+                    <CopyableChip
+                      label="UUID"
+                      value={uuid}
+                    />
+                  </Box>
+                )
+              )
+            : null}
         </Typography>
       )
     },
     { label: 'Submitted', value: job.mongo.time_submitted },
     { label: 'Started', value: job.mongo.time_started },
     { label: 'Completed', value: job.mongo.time_completed },
-    { label: 'Data file from', value: job.mongo.data_file_from },
+    {
+      label: 'Data file from',
+      value:
+        'data_file_from' in job.mongo
+          ? (job.mongo as { data_file_from: string }).data_file_from
+          : undefined
+    },
     { label: 'ID', value: job.mongo.id }
   ]
 
@@ -63,8 +75,11 @@ const MultiMDJobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
           alignItems: 'center'
         }}
       >
-        <Typography fontWeight='bold'>UUID:</Typography>
-        <CopyableChip label='UUID' value={job.mongo.uuid} />
+        <Typography fontWeight="bold">UUID:</Typography>
+        <CopyableChip
+          label="UUID"
+          value={job.mongo.uuid}
+        />
       </Box>
 
       {props.map(({ label, value, render, suffix = '' }) =>
@@ -73,7 +88,7 @@ const MultiMDJobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
             key={label}
             sx={{ display: 'flex', justifyContent: 'space-between' }}
           >
-            <Typography fontWeight='bold'>{label}:</Typography>
+            <Typography fontWeight="bold">{label}:</Typography>
             {render()}
           </Box>
         ) : (
@@ -82,7 +97,7 @@ const MultiMDJobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
               key={label}
               sx={{ display: 'flex', justifyContent: 'space-between' }}
             >
-              <Typography fontWeight='bold'>{label}:</Typography>
+              <Typography fontWeight="bold">{label}:</Typography>
               <Typography>
                 {formatDateSafe(value) || String(value)}
                 {suffix}
@@ -112,7 +127,10 @@ const MultiMDJobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
         </AccordionSummary>
 
         <AccordionDetails>
-          <Grid container spacing={2}>
+          <Grid
+            container
+            spacing={2}
+          >
             <Grid size={{ xs: 12 }}>{renderProperties(properties)}</Grid>
           </Grid>
         </AccordionDetails>

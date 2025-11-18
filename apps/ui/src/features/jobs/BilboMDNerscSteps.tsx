@@ -70,7 +70,7 @@ const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
           stepOrder.indexOf(a) - stepOrder.indexOf(b) || a.localeCompare(b)
       )
       .map(([stepName, stepValue]) => {
-        const value = stepValue as { status?: string; message?: string }
+        const value = stepValue as { status: string; message: string }
         return (
           <BilboMDNerscStep
             key={stepName}
@@ -91,7 +91,7 @@ const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
           stepOrder.indexOf(a) - stepOrder.indexOf(b) || a.localeCompare(b)
       )
       .map(([stepName, stepValue]) => {
-        const value = stepValue as { status?: string; message?: string }
+        const value = stepValue as { status: string; message: string }
         return (
           <BilboMDNerscStep
             key={stepName}
@@ -130,7 +130,7 @@ const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
               <Typography sx={{ mr: 1 }}>
                 <b>INFO: </b>
               </Typography>
-              {job.bullmq && job.bullmq.bilbomdLastStep ? (
+              {/* {job.bullmq && job.bullmq.bilbomdLastStep ? (
                 <Chip
                   label={job.bullmq.bilbomdLastStep}
                   size="small"
@@ -140,7 +140,7 @@ const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
                   label="N/A"
                   size="small"
                 />
-              )}
+              )} */}
             </Grid>
           </Grid>
         </AccordionDetails>

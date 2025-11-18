@@ -35,7 +35,7 @@ import HeaderBox from 'components/HeaderBox'
 import JobDBDetails from './JobDBDetails'
 import MultiMDJobDBDetails from 'features/multimd/MultiMDJobDBDetails'
 import MolstarViewer from 'features/molstar/Viewer'
-import { BilboMDScoperTable } from '../scoperjob/BilboMDScoperTable'
+// import { BilboMDScoperTable } from '../scoperjob/BilboMDScoperTable'
 import ScoperFoXSAnalysis from 'features/scoperjob/ScoperFoXSAnalysis'
 const FoXSAnalysis = lazy(() => import('./FoXSAnalysis'))
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
@@ -46,8 +46,7 @@ import {
 } from 'slices/jobsApiSlice'
 import { skipToken } from '@reduxjs/toolkit/query'
 import BilboMdFeedback from 'features/analysis/BilboMdFeedback'
-// import { BilboMDJob, BilboMDMultiJob } from 'types/interfaces'
-// import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
+import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import MovieGallery from 'features/analysis/MovieGallery'
@@ -91,7 +90,7 @@ const SingleJobPage = () => {
   }
 
   const {
-    data: job,
+    data: jobData,
     isLoading,
     isError
   } = useGetJobByIdQuery(id ?? skipToken, {
@@ -99,6 +98,8 @@ const SingleJobPage = () => {
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
+
+  const job = jobData as BilboMDJobDTO
 
   const {
     data: config,
@@ -217,7 +218,7 @@ const SingleJobPage = () => {
     theme
   )
 
-  console.log('job', job)
+  // console.log('job', job)
 
   const jobTypeRouteSegment = job
     ? jobTypeToRoute[job.mongo.jobType] || 'classic'
@@ -315,7 +316,7 @@ const SingleJobPage = () => {
               overflow: 'hidden'
             }}
           >
-            <BilboMDNerscSteps job={job as any} />
+            <BilboMDNerscSteps job={job} />
           </Grid>
         )}
 
@@ -325,8 +326,9 @@ const SingleJobPage = () => {
             <HeaderBox sx={{ py: '6px' }}>
               <Typography>Scoper Steps</Typography>
             </HeaderBox>
-            <BilboMDScoperSteps job={job as any} />
-            <BilboMDScoperTable scoper={job.mongo as any} />
+            <BilboMDScoperSteps job={job} />
+            {/* NEED TO REFACTOR */}
+            {/* <BilboMDScoperTable scoper={job} /> */}
           </Grid>
         )}
 
@@ -339,9 +341,9 @@ const SingleJobPage = () => {
           }}
         >
           {job.mongo.jobType === 'multi' || 'bilbomd_uuids' in job.mongo ? (
-            <MultiMDJobDBDetails job={job as any} />
+            <MultiMDJobDBDetails job={job} />
           ) : (
-            <JobDBDetails job={job as any} />
+            <JobDBDetails job={job} />
           )}
         </Grid>
 
