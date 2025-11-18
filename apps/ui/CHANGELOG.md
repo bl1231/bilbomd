@@ -1,5 +1,12 @@
 # @bilbomd/ui
 
+## 2.0.5
+
+### Patch Changes
+
+- 6846821: Remove some deprecated Typescript config settings in prep for Typescript 6.x
+  This required a bit of fiddling with `bilbomd-ui` types and interfaces
+
 ## 2.0.4
 
 ### Patch Changes
