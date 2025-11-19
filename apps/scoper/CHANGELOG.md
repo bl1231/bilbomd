@@ -1,5 +1,13 @@
 # @bilbomd/scoper
 
+## 1.5.9
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+
 ## 1.5.8
 
 ### Patch Changes
