@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 2.0.2
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+
 ## 2.0.1
 
 ### Patch Changes
