@@ -3,7 +3,11 @@ import Grid from '@mui/material/Grid'
 import { axiosInstance } from 'app/api/axios'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from '../../slices/authSlice'
-// import { BilboMDJob } from 'types/interfaces'
+import type {
+  BilboMDJobDTO,
+  BilboMDScoperDTO,
+  JobType
+} from '@bilbomd/bilbomd-types'
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui'
 import {
   DefaultPluginUISpec,
@@ -61,14 +65,14 @@ const DefaultViewerOptions = {
 }
 
 interface MolstarViewerProps {
-  job: BilboMDJob
+  job: BilboMDJobDTO
 }
 
 const MolstarViewer = ({ job }: MolstarViewerProps) => {
   const token = useSelector(selectCurrentToken)
 
   const createLoadParamsArray = async (
-    job: BilboMDJob
+    job: BilboMDJobDTO
   ): Promise<PDBsToLoad[]> => {
     const loadParamsMap = new Map<string, LoadParams[]>()
 
@@ -92,30 +96,21 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
     }
 
     // Adding LoadParams based on job type and number of ensembles
+    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
     if (
-      (job.mongo.__t === 'BilboMdPDB' || job.mongo.__t === 'BilboMdCRD') &&
-      job.classic?.numEnsembles
+      ensembleJobTypes.includes(job.mongo.jobType) &&
+      job.mongo.num_ensembles
     ) {
-      for (let i = 1; i <= job.classic.numEnsembles; i++) {
+      for (let i = 1; i <= job.mongo.num_ensembles; i++) {
         const fileName = `ensemble_size_${i}_model.pdb`
         addFilesToLoadParams(fileName, i)
       }
-    } else if (job.mongo.__t === 'BilboMdAuto' && job.auto?.numEnsembles) {
-      for (let i = 1; i <= job.auto.numEnsembles; i++) {
-        const fileName = `ensemble_size_${i}_model.pdb`
-        addFilesToLoadParams(fileName, i)
+    } else if (job.mongo.jobType === 'scoper') {
+      const scoperJob = job.mongo as BilboMDScoperDTO
+      if (scoperJob.foxs_top_file) {
+        const pdbFilename = `scoper_combined_${scoperJob.foxs_top_file}`
+        addFilesToLoadParams(pdbFilename, 1)
       }
-    } else if (
-      job.mongo.__t === 'BilboMdAlphaFold' &&
-      job.alphafold?.numEnsembles
-    ) {
-      for (let i = 1; i <= job.alphafold.numEnsembles; i++) {
-        const fileName = `ensemble_size_${i}_model.pdb`
-        addFilesToLoadParams(fileName, i)
-      }
-    } else if (job.mongo.__t === 'BilboMdScoper' && job.scoper?.foxsTopFile) {
-      const pdbFilename = `scoper_combined_${job.scoper.foxsTopFile}`
-      addFilesToLoadParams(pdbFilename, 1)
     }
 
     // Convert the Map values to an array of arrays

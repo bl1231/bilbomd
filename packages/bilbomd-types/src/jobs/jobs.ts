@@ -53,6 +53,7 @@ export interface BaseJobDTO {
   assets?: JobAssetsDTO
   nersc?: NerscInfoDTO
   cleanup_in_progress: boolean
+  num_ensembles?: number
 }
 
 export interface BilboMDPDBDTO extends BaseJobDTO {
@@ -119,6 +120,7 @@ export interface BilboMDSANSDTO extends BaseJobDTO {
 export interface BilboMDScoperDTO extends BaseJobDTO {
   pdb_file: string
   fixc1c2: boolean
+  foxs_top_file?: string
 }
 
 export interface BilboMDMultiDTO extends BaseJobDTO {
