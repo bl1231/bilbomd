@@ -1,5 +1,20 @@
 # @bilbomd/scoper
 
+## 1.5.9
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+
+## 1.5.8
+
+### Patch Changes
+
+- 6846821: Remove some deprecated Typescript config settings in prep for Typescript 6.x
+  This required a bit of fiddling with `bilbomd-ui` types and interfaces
+
 ## 1.5.7
 
 ### Patch Changes

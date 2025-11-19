@@ -1,5 +1,20 @@
 # @bilbomd/backend
 
+## 2.0.6
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+  - @bilbomd/md-utils@1.0.10
+
+## 2.0.5
+
+### Patch Changes
+
+- 744b0d5: Fix bug in public SANS jobs where ip_hash not getting added to mongodb entry
+
 ## 2.0.4
 
 ### Patch Changes
