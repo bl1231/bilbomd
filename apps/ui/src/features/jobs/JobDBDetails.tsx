@@ -23,7 +23,14 @@ import CloseIcon from '@mui/icons-material/Close'
 import HeaderBox from 'components/HeaderBox'
 import { displayPropertiesByJobType } from './JobDBDisplayProperties'
 import { formatDateSafe } from 'utils/dates'
-import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
+import type {
+  BilboMDJobDTO,
+  BilboMDPDBDTO,
+  BilboMDCRDDTO,
+  BilboMDAutoDTO,
+  BilboMDSANSDTO,
+  BilboMDScoperDTO
+} from '@bilbomd/bilbomd-types'
 import CopyableChip from 'components/CopyableChip'
 import { useLazyGetFileByIdAndNameQuery } from 'slices/jobsApiSlice'
 import { green } from '@mui/material/colors'
@@ -60,9 +67,14 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
       job.mongo.jobType === 'auto' ||
       job.mongo.jobType === 'sans'
     ) {
+      const specificJob = job.mongo as
+        | BilboMDPDBDTO
+        | BilboMDCRDDTO
+        | BilboMDAutoDTO
+        | BilboMDSANSDTO
       void triggerGetFile({
         id: job.mongo.id,
-        filename: job.mongo.const_inp_file || ''
+        filename: specificJob.const_inp_file || ''
       })
     }
   }
@@ -242,85 +254,89 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
       })
     }
 
-    // if (job.mongo.jobType === 'sans') {
-    //   const specificJob = job.mongo
+    if (job.mongo.jobType === 'sans') {
+      const specificJob = job.mongo as BilboMDSANSDTO
 
-    //   const { stepSize, numSteps, numConformations, rgList } =
-    //     getNumConformations(specificJob)
-    //   dynamicProperties.push(
-    //     { label: 'PDB file', value: specificJob.pdb_file },
-    //     {
-    //       label: 'Solvent D20 Fraction',
-    //       value: specificJob.d2o_fraction,
-    //       suffix: '%'
-    //     },
-    //     {
-    //       label: 'MD constraint file',
-    //       render: () => (
-    //         <Chip
-    //           label={
-    //             <Box style={{ display: 'flex', alignItems: 'center' }}>
-    //               <span style={{ marginRight: '6px' }}>
-    //                 {specificJob.const_inp_file || 'No constraint file'}
-    //               </span>
-    //               <Tooltip
-    //                 title={`Open ${specificJob.const_inp_file || 'constraint file'}`}
-    //               >
-    //                 <IconButton
-    //                   size="small"
-    //                   onClick={(e) => {
-    //                     e.stopPropagation()
-    //                     handleOpenModal()
-    //                   }}
-    //                   sx={{ padding: 0 }}
-    //                   disabled={!specificJob.const_inp_file}
-    //                 >
-    //                   <VisibilityIcon fontSize="small" />
-    //                 </IconButton>
-    //               </Tooltip>
-    //             </Box>
-    //           }
-    //           variant="outlined"
-    //           sx={{
-    //             fontSize: '0.875rem',
-    //             borderColor: 'primary.main',
-    //             backgroundColor: green[100],
-    //             cursor: specificJob.const_inp_file ? 'pointer' : 'default'
-    //           }}
-    //           onClick={specificJob.const_inp_file ? handleOpenModal : undefined}
-    //         />
-    //       )
-    //     },
-    //     { label: 'Rg min', value: specificJob.rg_min, suffix: 'Å' },
-    //     { label: 'Rg max', value: specificJob.rg_max, suffix: 'Å' },
-    //     { label: 'Rg step size', value: stepSize, suffix: 'Å' },
-    //     { label: 'Number of CHARMM MD Runs', value: numSteps },
-    //     { label: 'Number of conformations', value: numConformations },
-    //     {
-    //       label: 'Rg List',
-    //       render: () => (
-    //         <Typography>
-    //           {rgList?.map((rgValue, index) => (
-    //             <span key={index}>
-    //               {rgValue}&#8491; {index < rgList.length - 1 ? ', ' : ''}
-    //             </span>
-    //           ))}
-    //         </Typography>
-    //       )
-    //     }
-    //   )
-    // }
+      const { stepSize, numSteps, numConformations, rgList } =
+        getNumConformations(specificJob)
+      dynamicProperties.push(
+        { label: 'PDB file', value: specificJob.pdb_file },
+        {
+          label: 'Solvent D20 Fraction',
+          value: specificJob.d2o_fraction,
+          suffix: '%'
+        },
+        {
+          label: 'MD constraint file',
+          render: () => (
+            <Chip
+              label={
+                <Box style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{ marginRight: '6px' }}>
+                    {specificJob.const_inp_file || 'No constraint file'}
+                  </span>
+                  <Tooltip
+                    title={`Open ${specificJob.const_inp_file || 'constraint file'}`}
+                  >
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleOpenModal()
+                      }}
+                      sx={{ padding: 0 }}
+                      disabled={!specificJob.const_inp_file}
+                    >
+                      <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              }
+              variant="outlined"
+              sx={{
+                fontSize: '0.875rem',
+                borderColor: 'primary.main',
+                backgroundColor: green[100],
+                cursor: specificJob.const_inp_file ? 'pointer' : 'default'
+              }}
+              onClick={specificJob.const_inp_file ? handleOpenModal : undefined}
+            />
+          )
+        },
+        { label: 'Rg min', value: specificJob.rg_min, suffix: 'Å' },
+        { label: 'Rg max', value: specificJob.rg_max, suffix: 'Å' },
+        { label: 'Rg step size', value: stepSize, suffix: 'Å' },
+        { label: 'Number of CHARMM MD Runs', value: numSteps },
+        { label: 'Number of conformations', value: numConformations },
+        {
+          label: 'Rg List',
+          render: () => (
+            <Typography>
+              {rgList?.map((rgValue, index) => (
+                <span key={index}>
+                  {rgValue}&#8491; {index < rgList.length - 1 ? ', ' : ''}
+                </span>
+              ))}
+            </Typography>
+          )
+        }
+      )
+    }
 
-    // if (job.mongo.jobType === 'scoper') {
-    //   dynamicProperties.push({ label: 'PDB file', value: job.mongo.pdb_file })
-    // }
+    if (job.mongo.jobType === 'scoper') {
+      const specificJob = job.mongo as BilboMDScoperDTO
+      dynamicProperties.push({ label: 'PDB file', value: specificJob.pdb_file })
+    }
 
     if (
       job.mongo.jobType === 'pdb' ||
       job.mongo.jobType === 'crd' ||
       job.mongo.jobType === 'auto'
     ) {
-      const specificJob = job.mongo
+      const specificJob = job.mongo as
+        | BilboMDPDBDTO
+        | BilboMDCRDDTO
+        | BilboMDAutoDTO
       const { stepSize, numSteps, numConformations, rgList } =
         getNumConformations(specificJob)
       dynamicProperties.push(

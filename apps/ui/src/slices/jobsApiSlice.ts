@@ -185,7 +185,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         }
       }
     ),
-    getMDMovies: builder.query<{ movies: JobAssetsDTO }, string>({
+    getMDMovies: builder.query<JobAssetsDTO, string>({
       query: (id) => ({ url: `/jobs/${id}/movies`, method: 'GET' }),
       providesTags: (_, __, id) => [{ type: 'MovieAsset', id }]
     })

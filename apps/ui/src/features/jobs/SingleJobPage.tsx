@@ -114,7 +114,7 @@ const SingleJobPage = () => {
   } = useGetMDMoviesQuery(id ?? skipToken)
 
   const allMoviesReady =
-    Array.isArray(moviesData?.movies) &&
+    moviesData &&
     moviesData.movies.length > 0 &&
     moviesData.movies.every((m) => m.status === 'ready')
 
@@ -405,8 +405,8 @@ const SingleJobPage = () => {
                     <Alert severity="error">
                       Error loading movies: {JSON.stringify(moviesError)}
                     </Alert>
-                  ) : moviesData?.movies ? (
-                    <MovieGallery movies={moviesData.movies} />
+                  ) : moviesData ? (
+                    <MovieGallery data={moviesData} />
                   ) : (
                     <Alert severity="warning">No movie data available.</Alert>
                   )}

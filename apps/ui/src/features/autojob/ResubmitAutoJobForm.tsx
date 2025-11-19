@@ -29,6 +29,7 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
+import type { BilboMDAutoDTO } from '@bilbomd/bilbomd-types'
 
 const ResubmitAutoJobForm = () => {
   useTitle('BilboMD: Resubmit Auto Job')
@@ -62,8 +63,8 @@ const ResubmitAutoJobForm = () => {
   })
 
   // RTK Query to check if the files are still on disk and available for reuse
-  const fileCheckQuery = useCheckJobFilesQuery(jobdata?.id ?? '', {
-    skip: !jobdata?.id
+  const fileCheckQuery = useCheckJobFilesQuery(jobdata?.mongo.id ?? '', {
+    skip: !jobdata?.mongo.id
   })
 
   // Are we running on NERSC?
@@ -83,14 +84,14 @@ const ResubmitAutoJobForm = () => {
     }
     // Error states
     if (configError)
-      return <Alert severity='error'>Error loading configuration</Alert>
+      return <Alert severity="error">Error loading configuration</Alert>
 
     if (jobIsError)
-      return <Alert severity='error'>Error retrieving parent job info</Alert>
+      return <Alert severity="error">Error retrieving parent job info</Alert>
     if (fileCheckQuery.error) {
       const fileCheckError = fileCheckQuery.error
       return (
-        <Alert severity='error'>
+        <Alert severity="error">
           Error checking job files:{' '}
           {'message' in fileCheckError
             ? fileCheckError.message
@@ -100,23 +101,22 @@ const ResubmitAutoJobForm = () => {
     }
   }
 
-  const job = jobdata.mongo
+  const job = jobdata
   const fileCheckData = fileCheckQuery.data
 
-  let initialValues: BilboMDAutoJobFormValues
+  let jobMongo: BilboMDAutoDTO
+  if (job.mongo.jobType === 'auto') {
+    jobMongo = job.mongo as BilboMDAutoDTO
+  } else {
+    throw new Error(`Unsupported job type: ${job.mongo.jobType}`)
+  }
 
-  switch (job.__t) {
-    case 'BilboMdAuto':
-      initialValues = {
-        bilbomd_mode: 'auto',
-        title: 'resubmit-' + job.title,
-        pdb_file: job.pdb_file ?? '',
-        pae_file: job.pae_file ?? '',
-        dat_file: job.data_file ?? ''
-      }
-      break
-    default:
-      throw new Error(`Unsupported job type: ${job.__t}`)
+  const initialValues: BilboMDAutoJobFormValues = {
+    bilbomd_mode: 'auto',
+    title: 'resubmit-' + jobMongo.title,
+    pdb_file: jobMongo.pdb_file ?? '',
+    pae_file: jobMongo.pae_file ?? '',
+    dat_file: jobMongo.data_file ?? ''
   }
 
   const onSubmit = async (
@@ -128,8 +128,8 @@ const ResubmitAutoJobForm = () => {
     form.append('title', values.title)
 
     form.append('resubmit', 'true')
-    if (job?.id) {
-      form.append('original_job_id', job.id)
+    if (job?.mongo.id) {
+      form.append('original_job_id', job.mongo.id)
     }
 
     if (values.pdb_file instanceof File) {
@@ -170,7 +170,10 @@ const ResubmitAutoJobForm = () => {
   }
 
   const content = (
-    <Grid container spacing={2}>
+    <Grid
+      container
+      spacing={2}
+    >
       <Grid size={{ xs: 12 }}>
         <AutoJobFormInstructions />
       </Grid>
@@ -183,11 +186,11 @@ const ResubmitAutoJobForm = () => {
         </HeaderBox>
         <Paper sx={{ p: 2 }}>
           {isSuccess ? (
-            <Alert severity='success'>
+            <Alert severity="success">
               <AlertTitle>Woot!</AlertTitle>
               <Typography>
                 Your job has been submitted. Check out the{' '}
-                <RouterLink to='../jobs'>details</RouterLink>.
+                <RouterLink to="../jobs">details</RouterLink>.
               </Typography>
             </Alert>
           ) : (
@@ -209,20 +212,23 @@ const ResubmitAutoJobForm = () => {
                 setFieldTouched
               }) => (
                 <Form>
-                  <Grid container direction='column'>
+                  <Grid
+                    container
+                    direction="column"
+                  >
                     {useNersc && (
                       <NerscStatusChecker
-                        systemName='perlmutter'
+                        systemName="perlmutter"
                         onStatusCheck={handleStatusCheck}
                       />
                     )}
                     <Grid sx={{ my: 2, width: '520px' }}>
                       <Field
                         fullWidth
-                        label='Title'
-                        name='title'
-                        id='title'
-                        type='text'
+                        label="Title"
+                        name="title"
+                        id="title"
+                        type="text"
                         disabled={isSubmitting}
                         as={TextField}
                         onChange={handleChange}
@@ -237,57 +243,63 @@ const ResubmitAutoJobForm = () => {
 
                     <Grid>
                       <Field
-                        name='pdb_file'
-                        id='pdb-file-upload'
+                        name="pdb_file"
+                        id="pdb-file-upload"
                         as={FileSelect}
-                        title='Select File'
+                        title="Select File"
                         existingFileName={
-                          fileCheckData?.pdb_file ? job?.pdb_file : undefined
+                          fileCheckData?.pdb_file
+                            ? jobMongo.pdb_file
+                            : undefined
                         }
                         disabled={isSubmitting}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.pdb_file && touched.pdb_file}
                         errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                        fileType='AlphaFold2 *.pdb'
-                        fileExt='.pdb'
+                        fileType="AlphaFold2 *.pdb"
+                        fileExt=".pdb"
                       />
                     </Grid>
 
                     <Grid>
                       <Field
-                        name='pae_file'
-                        id='pae-file-upload'
+                        name="pae_file"
+                        id="pae-file-upload"
                         as={FileSelect}
-                        title='Select File'
+                        title="Select File"
                         existingFileName={
-                          fileCheckData?.pae_file ? job?.pae_file : undefined
+                          fileCheckData?.pae_file
+                            ? jobMongo.pae_file
+                            : undefined
                         }
                         disabled={isSubmitting}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.pae_file && touched.pae_file}
                         errorMessage={errors.pae_file ? errors.pae_file : ''}
-                        fileType='AlphaFold2 PAE *.json'
-                        fileExt='.json'
+                        fileType="AlphaFold2 PAE *.json"
+                        fileExt=".json"
                       />
                     </Grid>
                     <Grid>
                       <Field
-                        name='dat_file'
-                        id='dat-file-upload'
+                        name="dat_file"
+                        id="dat-file-upload"
                         as={FileSelect}
-                        title='Select File'
+                        title="Select File"
                         existingFileName={
-                          fileCheckData?.dat_file ? job?.data_file : undefined
+                          fileCheckData?.dat_file
+                            ? jobMongo.data_file
+                            : undefined
                         }
                         disabled={isSubmitting}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.dat_file && touched.dat_file}
                         errorMessage={errors.dat_file ? errors.dat_file : ''}
-                        fileType='experimental SAXS data *.dat'
-                        fileExt='.dat'
+                        fileType="experimental SAXS data *.dat"
+                        fileExt=".dat"
                       />
                     </Grid>
 
@@ -298,7 +310,7 @@ const ResubmitAutoJobForm = () => {
                     )}
                     <Grid sx={{ mt: 2 }}>
                       <Button
-                        type='submit'
+                        type="submit"
                         disabled={
                           !isValid ||
                           isSubmitting ||
@@ -306,15 +318,15 @@ const ResubmitAutoJobForm = () => {
                         }
                         loading={isSubmitting}
                         endIcon={<SendIcon />}
-                        loadingPosition='end'
-                        variant='contained'
+                        loadingPosition="end"
+                        variant="contained"
                         sx={{ width: '110px' }}
                       >
                         <span>Submit</span>
                       </Button>
 
                       {isSuccess ? (
-                        <Alert severity='success'>{status}</Alert>
+                        <Alert severity="success">{status}</Alert>
                       ) : (
                         ''
                       )}

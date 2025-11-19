@@ -4,7 +4,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Chip,
   Divider,
   Typography
 } from '@mui/material'
