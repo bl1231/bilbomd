@@ -32,9 +32,9 @@
   "devDependencies": {
     "@bilbomd/eslint-config": "workspace:*",
     "@types/fs-extra": "^11.0.4",
-    "@vitest/coverage-v8": "^4.0.8",
+    "@vitest/coverage-v8": "^4.0.10",
     "typescript": "^5.9.3",
     "uuid": "^13.0.0",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.10"
   }
 }
