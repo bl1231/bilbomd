@@ -1,8 +1,8 @@
-interface JobSummary {
+export interface JobSummary {
   ensemble_size: number
 }
 
-interface IEnsembleMember {
+export interface IEnsembleMember {
   pdb: string
   weight?: number
   rg?: number
@@ -11,7 +11,7 @@ interface IEnsembleMember {
   fraction?: number // Fraction of good scoring models containing this conformation
 }
 
-interface IEnsembleModel {
+export interface IEnsembleModel {
   rank: number // Rank of the multi-state model
   chi2: number // Chi^2 value for the fit to SAXS profile
   c1: number // c1 value from MultiFoXS optimized fit
@@ -19,12 +19,12 @@ interface IEnsembleModel {
   states: IEnsembleMember[] // Array of states in this multi-state model
 }
 
-interface IEnsemble {
+export interface IEnsemble {
   size: number // The size of the ensemble (e.g., 3 for ensemble_size_3.txt)
   models: IEnsembleModel[] // Array of multi-state models for this ensemble size
 }
 
-interface ClassicJobResults {
+export interface ClassicJobResults {
   total_num_ensembles?: number // Total number of ensembles (N)
   ensembles?: IEnsemble[] // Array of ensembles for each N
 }
