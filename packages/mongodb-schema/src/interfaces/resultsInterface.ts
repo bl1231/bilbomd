@@ -9,25 +9,27 @@ interface IEnsembleMember {
   pdb: string
   weight?: number
   rg?: number
+  weight_avg?: number // Average weight across good scoring models
+  weight_stddev?: number // Standard deviation of the weight
+  fraction?: number // Fraction of good scoring models containing this conformation
+}
+
+interface IEnsemble {
+  size: number // The size of the ensemble (e.g., 3 for ensemble_size_3.txt)
+  models: IEnsembleModel[] // Array of multi-state models for this ensemble size
+}
+
+interface IEnsembleModel {
+  rank: number // Rank of the multi-state model
+  chi2: number // Chi^2 value for the fit to SAXS profile
+  c1: number // c1 value from MultiFoXS optimized fit
+  c2: number // c2 value from MultiFoXS optimized fit
+  states: IEnsembleMember[] // Array of states in this multi-state model
 }
 
 interface IClassicResults {
-  ensemble_size?: number
-  ensemble_members?: IEnsembleMember[]
-  rg_min?: number
-  rg_max?: number
-  rg_mean?: number
-  rg_std?: number
-  dmax_min?: number
-  dmax_max?: number
-  dmax_mean?: number
-  foxs_best_model_dat?: string
-  foxs_chi2_best_model?: number
-  multifoxs_best_ensemble_dat?: string
-  multifoxs_chi2_best_ensemble?: number
-  ensemble_size_file?: string
-  foxs_results_json?: string
-  multifoxs_results_json?: string
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
 }
 
 interface IBilboMDAutoResults {}

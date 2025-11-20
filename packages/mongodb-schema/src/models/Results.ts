@@ -7,45 +7,40 @@ const jobSummarySchema = new Schema({
   version: { type: String, required: false }
 })
 
-// Optional: keep this separate so you can reuse / keep it tidy
 const ensembleMemberSchema = new Schema(
   {
     pdb: { type: String, required: true },
     weight: { type: Number, required: false },
-    rg: { type: Number, required: false }
+    rg: { type: Number, required: false },
+    weight_avg: { type: Number, required: false },
+    weight_stddev: { type: Number, required: false },
+    fraction: { type: Number, required: false }
   },
-  { _id: false } // don’t need separate _id for each member
+  { _id: false }
+)
+
+const ensembleModelSchema = new Schema(
+  {
+    rank: { type: Number, required: true },
+    chi2: { type: Number, required: true },
+    c1: { type: Number, required: true },
+    c2: { type: Number, required: true },
+    states: { type: [ensembleMemberSchema], required: true }
+  },
+  { _id: false } // don’t need separate _id for each model
+)
+
+const ensembleSchema = new Schema(
+  {
+    size: { type: Number, required: true },
+    models: { type: [ensembleModelSchema], required: true }
+  },
+  { _id: false } // don’t need separate _id for each ensemble
 )
 
 const classicResultsSchema = new Schema({
-  // ensemble
-  ensemble_size: { type: Number, required: false },
-  ensemble_members: {
-    type: [ensembleMemberSchema],
-    required: false
-  },
-
-  // Rg statistics across MD
-  rg_min: { type: Number, required: false },
-  rg_max: { type: Number, required: false },
-  rg_mean: { type: Number, required: false },
-  rg_std: { type: Number, required: false },
-
-  // Dmax if you’re computing it
-  dmax_min: { type: Number, required: false },
-  dmax_max: { type: Number, required: false },
-  dmax_mean: { type: Number, required: false },
-
-  // FoXS / MultiFoXS
-  foxs_best_model_dat: { type: String, required: false },
-  foxs_chi2_best_model: { type: Number, required: false },
-  multifoxs_best_ensemble_dat: { type: String, required: false },
-  multifoxs_chi2_best_ensemble: { type: Number, required: false },
-
-  // bookkeeping / filenames
-  ensemble_size_file: { type: String, required: false },
-  foxs_results_json: { type: String, required: false },
-  multifoxs_results_json: { type: String, required: false }
+  total_num_ensembles: { type: Number, required: false },
+  ensembles: { type: [ensembleSchema], required: false }
 })
 
 const scoperResultsSchema = new Schema({
