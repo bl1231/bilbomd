@@ -218,7 +218,7 @@ const SingleJobPage = () => {
     theme
   )
 
-  console.log('job', job)
+  // console.log('job', job)
 
   const jobTypeRouteSegment = job
     ? jobTypeToRoute[job.mongo.jobType] || 'classic'

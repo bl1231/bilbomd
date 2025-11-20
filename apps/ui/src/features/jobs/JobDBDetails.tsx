@@ -425,6 +425,26 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
           value={job.mongo.uuid}
         />
       </Box>
+      {job.mongo.access_mode === 'anonymous' && job.mongo.public_id && (
+        <>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <Typography fontWeight="bold">Public UUID:</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <CopyableChip
+                label="Public UUID"
+                value={job.mongo.public_id}
+                url={`/results/${job.mongo.public_id}`}
+              />
+            </Box>
+          </Box>
+        </>
+      )}
 
       {props.map(({ label, value, render, suffix = '' }) =>
         render ? (
