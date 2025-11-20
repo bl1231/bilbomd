@@ -74,7 +74,14 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
   const createLoadParamsArray = async (
     job: BilboMDJobDTO
   ): Promise<PDBsToLoad[]> => {
-    console.log('Creating LoadParams for job:', job.mongo.id)
+    console.log(
+      'Creating LoadParams for job:',
+      job.mongo.id,
+      'jobType:',
+      job.mongo.jobType
+    )
+    console.log('Results available:', !!job.mongo.results)
+    console.log('MolstarViewer job:', job)
     const loadParamsMap = new Map<string, LoadParams[]>()
 
     // Helper function to add LoadParams to the Map
@@ -96,15 +103,36 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
       }
     }
 
-    // Adding LoadParams based on job type and number of ensembles
+    // Adding LoadParams based on job type and results structure
     const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
-    if (
-      ensembleJobTypes.includes(job.mongo.jobType) &&
-      job.mongo.results.summary?.ensemble_size
-    ) {
-      for (let i = 1; i <= job.mongo.results.summary.ensemble_size; i++) {
-        const fileName = `ensemble_size_${i}_model.pdb`
-        addFilesToLoadParams(fileName, i)
+
+    if (ensembleJobTypes.includes(job.mongo.jobType)) {
+      // Use the new results structure
+      const classicResults = job.mongo.results?.classic as {
+        ensembles?: Array<{
+          size: number
+          models: Array<{ states: Array<{ pdb: string }> }>
+        }>
+      }
+      if (classicResults?.ensembles) {
+        // Process each ensemble size
+        for (const ensemble of classicResults.ensembles) {
+          const fileName = `ensemble_size_${ensemble.size}_model.pdb`
+
+          // Count unique PDB files from all models' states to determine number of assemblies
+          const uniquePdbs = new Set<string>()
+          ensemble.models.forEach((model) => {
+            model.states.forEach((state) => {
+              if (state.pdb) {
+                uniquePdbs.add(state.pdb)
+              }
+            })
+          })
+
+          // Use the ensemble size as the number of models to load
+          // This corresponds to the number of MODEL records in the ensemble PDB file
+          addFilesToLoadParams(fileName, ensemble.size)
+        }
       }
     } else if (job.mongo.jobType === 'scoper') {
       const scoperJob = job.mongo as BilboMDScoperDTO
