@@ -154,5 +154,6 @@ export {
   assembleEnsemblePdbFiles,
   parseStateLine,
   isStateLine,
-  parseEnsembleFile
+  parseEnsembleFile,
+  concatenateAndSaveAsEnsemble
 }
