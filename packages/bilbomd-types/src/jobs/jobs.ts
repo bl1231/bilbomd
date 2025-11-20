@@ -54,7 +54,7 @@ export interface BaseJobDTO {
   assets?: JobAssetsDTO
   nersc?: NerscInfoDTO
   cleanup_in_progress: boolean
-  results: JobResultsDTO
+  results?: JobResultsDTO
 }
 
 export interface BilboMDPDBDTO extends BaseJobDTO {
