@@ -176,7 +176,7 @@ const Jobs = () => {
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
-  console.log('jobs data --->', jobs)
+  // console.log('jobs data --->', jobs)
 
   const allJobs = useSelector(selectAllJobs)
 

@@ -6,6 +6,7 @@ import { JobStepsDTO } from './jobSteps'
 import { JobFeedbackDTO } from './feedback'
 import { JobAssetsDTO } from './mdMovie'
 import { NerscInfoDTO } from './nersc'
+import { JobResultsDTO } from './results'
 
 export type JobType =
   | 'pdb'
@@ -53,7 +54,7 @@ export interface BaseJobDTO {
   assets?: JobAssetsDTO
   nersc?: NerscInfoDTO
   cleanup_in_progress: boolean
-  num_ensembles?: number
+  results: JobResultsDTO
 }
 
 export interface BilboMDPDBDTO extends BaseJobDTO {

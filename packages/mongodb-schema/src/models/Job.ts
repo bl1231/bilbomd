@@ -1,5 +1,6 @@
 import { Schema, model } from 'mongoose'
 import { assetsSchema } from './Assets'
+import { resultsSchema } from './Results'
 import {
   IJob,
   IBilboMDPDBJob,
@@ -208,7 +209,8 @@ const jobSchema = new Schema(
     feedback: { type: feedbackSchema, required: false },
     assets: { type: assetsSchema, required: false },
     nersc: { type: nerscInfoSchema, required: false },
-    cleanup_in_progress: { type: Boolean, default: false }
+    cleanup_in_progress: { type: Boolean, default: false },
+    results: { type: resultsSchema, required: false }
   },
   {
     timestamps: true,

@@ -26,7 +26,7 @@ type MongoDBProperty = {
 }
 
 const MultiMDJobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
-  // console.log('JobDBDetails: job:', job)
+  console.log('MultiMDJobDBDetails: job:', job)
 
   const properties = [
     { label: 'Pipeline', value: 'BilboMD Multi' },

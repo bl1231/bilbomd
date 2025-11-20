@@ -218,7 +218,7 @@ const SingleJobPage = () => {
     theme
   )
 
-  // console.log('job', job)
+  console.log('job', job)
 
   const jobTypeRouteSegment = job
     ? jobTypeToRoute[job.mongo.jobType] || 'classic'
@@ -340,7 +340,7 @@ const SingleJobPage = () => {
             overflow: 'hidden'
           }}
         >
-          {job.mongo.jobType === 'multi' || 'bilbomd_uuids' in job.mongo ? (
+          {job.mongo.jobType === 'multi' ? (
             <MultiMDJobDBDetails job={job} />
           ) : (
             <JobDBDetails job={job} />

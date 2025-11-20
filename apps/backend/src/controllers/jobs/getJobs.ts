@@ -14,7 +14,7 @@ import { Request, Response } from 'express'
 // import { BilboMDSteps } from '../../types/bilbomd.js'
 // import { BilboMDJob, BilboMDBullMQ } from '../../types/bilbomd.js'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
-import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobMapper.js'
+import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobDTOMapper.js'
 // import {
 //   calculateNumEnsembles,
 //   calculateNumEnsembles2

@@ -74,6 +74,7 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
   const createLoadParamsArray = async (
     job: BilboMDJobDTO
   ): Promise<PDBsToLoad[]> => {
+    console.log('Creating LoadParams for job:', job.mongo.id)
     const loadParamsMap = new Map<string, LoadParams[]>()
 
     // Helper function to add LoadParams to the Map
@@ -99,9 +100,9 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
     const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
     if (
       ensembleJobTypes.includes(job.mongo.jobType) &&
-      job.mongo.num_ensembles
+      job.mongo.results.summary?.ensemble_size
     ) {
-      for (let i = 1; i <= job.mongo.num_ensembles; i++) {
+      for (let i = 1; i <= job.mongo.results.summary.ensemble_size; i++) {
         const fileName = `ensemble_size_${i}_model.pdb`
         addFilesToLoadParams(fileName, i)
       }

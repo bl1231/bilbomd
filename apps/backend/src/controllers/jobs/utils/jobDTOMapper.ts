@@ -3,7 +3,8 @@ import type {
   BilboMDMongoJobDTO,
   JobType,
   JobStatusEnum as JobStatus,
-  UserSummaryDTO
+  UserSummaryDTO,
+  JobResultsDTO
 } from '@bilbomd/bilbomd-types'
 import type { IJob, IMultiJob, IUser } from '@bilbomd/mongodb-schema'
 
@@ -27,7 +28,7 @@ function mapDiscriminatorToJobType(__t?: string): JobType {
     case 'MultiJob':
       return 'multi'
     default:
-      return 'pdb'
+      return 'multi'
   }
 }
 
@@ -51,7 +52,7 @@ function mapUserToSummary(user?: IUser | null): UserSummaryDTO | undefined {
  * Map a single IJob (from Job collection) into the DTO's `mongo` portion.
  * This should match your BilboMDMongoJobDTO / specific job DTOs.
  */
-function mapJobMongoToDTO(job: IJob): BilboMDMongoJobDTO {
+function mapJobMongoToDTO(job: IJob) {
   const jobType = mapDiscriminatorToJobType(job.__t)
 
   // Base shape – extend per jobType as needed
@@ -60,6 +61,8 @@ function mapJobMongoToDTO(job: IJob): BilboMDMongoJobDTO {
     jobType,
     title: job.title,
     uuid: job.uuid,
+    bilbomd_uuids: [],
+    data_file_from: '',
     access_mode: job.access_mode,
     public_id: job.public_id,
     status: mapStatus(job.status),
@@ -76,7 +79,8 @@ function mapJobMongoToDTO(job: IJob): BilboMDMongoJobDTO {
     feedback: job.feedback,
     assets: job.assets,
     nersc: job.nersc,
-    data_file: job.data_file
+    data_file: job.data_file,
+    results: job.results as JobResultsDTO
   }
 
   // You can specialize by jobType if needed:
@@ -90,7 +94,7 @@ function mapJobMongoToDTO(job: IJob): BilboMDMongoJobDTO {
  * or into a dedicated MultiJob DTO if you have one.
  */
 function mapMultiJobMongoToDTO(multiJob: IMultiJob): BilboMDMongoJobDTO {
-  const jobType = mapDiscriminatorToJobType(multiJob.__t)
+  const jobType: JobType = 'multi'
   return {
     id: multiJob._id.toString(),
     jobType,

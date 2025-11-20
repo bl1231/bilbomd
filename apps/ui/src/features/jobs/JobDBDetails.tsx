@@ -53,7 +53,7 @@ type MongoDBProperty = {
 }
 
 const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
-  console.log('JobDBDetails: job:', job)
+  // console.log('JobDBDetails: job:', job)
   const [open, setOpen] = useState(false)
   const { enqueueSnackbar } = useSnackbar()
   const [triggerGetFile, { data: fileContents, isLoading, error }] =
