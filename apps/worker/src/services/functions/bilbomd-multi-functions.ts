@@ -285,7 +285,8 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
         numEnsembles,
         multiFoxsDir,
         jobDir,
-        resultsDir
+        resultsDir,
+        DBjob
       })
     }
 
