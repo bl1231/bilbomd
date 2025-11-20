@@ -51,4 +51,12 @@ interface IJobResults {
   scoper?: IScoperResults
 }
 
-export { IJobResults }
+export {
+  IJobResults,
+  IJobResultsSummary,
+  IClassicResults,
+  IEnsemble,
+  IEnsembleModel,
+  IEnsembleMember,
+  IScoperResults
+}

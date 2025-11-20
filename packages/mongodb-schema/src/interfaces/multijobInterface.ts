@@ -8,6 +8,7 @@ import {
   IBilboMDSteps,
   INerscInfo
 } from './jobInterface'
+import { IJobResults } from './resultsInterface'
 
 type JobStatusEnum = 'Submitted' | 'Pending' | 'Running' | 'Completed' | 'Error'
 
@@ -32,6 +33,7 @@ interface IMultiJob extends Document {
   )[]
   steps: IBilboMDSteps
   nersc?: INerscInfo
+  results?: IJobResults
 }
 
 export { IMultiJob }
