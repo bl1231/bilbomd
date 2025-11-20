@@ -1,9 +1,40 @@
-import { describe, it, expect } from 'vitest'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   parseStateLine,
   isStateLine,
-  parseEnsembleFile
+  parseEnsembleFile,
+  assembleEnsemblePdbFiles,
+  concatenateAndSaveAsEnsemble
 } from '../assemble-ensemble-pdb-file.js'
+
+// Mock dependencies
+vi.mock('fs-extra', () => ({
+  default: {
+    readdir: vi.fn(),
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
+    pathExists: vi.fn()
+  }
+}))
+
+vi.mock('../../../config/config.js', () => ({
+  config: {
+    uploadDir: '/mock/upload/dir'
+  }
+}))
+
+vi.mock('../../../helpers/loggers.js', () => ({
+  logger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  }
+}))
+
+// Import the mocked fs after mocking
+import fs from 'fs-extra'
 
 describe('assemble-ensemble-pdb-file', () => {
   describe('isStateLine', () => {
@@ -244,6 +275,272 @@ invalid | model | line`
         expect(result.models[1].c1).toBeCloseTo(1.1)
         expect(result.models[1].c2).toBeCloseTo(-0.35)
       })
+    })
+  })
+
+  describe('concatenateAndSaveAsEnsemble', () => {
+    const mockFs = vi.mocked(fs)
+
+    beforeEach(() => {
+      vi.clearAllMocks()
+    })
+
+    it('should concatenate PDB files and save as ensemble', async () => {
+      const pdbFiles = ['/path/to/file1.pdb', '/path/to/file2.pdb']
+      const ensembleSize = 2
+      const resultsDir = '/results'
+
+      // Mock file contents
+      ;(mockFs.readFile as any)
+        .mockResolvedValueOnce(
+          'ATOM  1  N   ALA A   1      20.154  16.967  23.466  1.00 20.00           N\nEND'
+        )
+        .mockResolvedValueOnce(
+          'ATOM  1  N   GLY A   1      18.324  15.432  22.123  1.00 18.50           N\nEND'
+        )
+      ;(mockFs.writeFile as any).mockResolvedValue(undefined)
+
+      await concatenateAndSaveAsEnsemble(pdbFiles, ensembleSize, resultsDir)
+
+      expect(mockFs.readFile).toHaveBeenCalledTimes(2)
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        '/results/ensemble_size_2_model.pdb',
+        expect.stringContaining('MODEL       1')
+      )
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        '/results/ensemble_size_2_model.pdb',
+        expect.stringContaining('MODEL       2')
+      )
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        '/results/ensemble_size_2_model.pdb',
+        expect.stringContaining('ENDMDL')
+      )
+    })
+
+    it('should handle file read errors', async () => {
+      const pdbFiles = ['/path/to/missing.pdb']
+      const ensembleSize = 1
+      const resultsDir = '/results'
+
+      ;(mockFs.readFile as any).mockRejectedValue(new Error('File not found'))
+
+      await expect(
+        concatenateAndSaveAsEnsemble(pdbFiles, ensembleSize, resultsDir)
+      ).rejects.toThrow('File not found')
+
+      expect(mockFs.writeFile).not.toHaveBeenCalled()
+    })
+
+    it('should replace END with ENDMDL in PDB content', async () => {
+      const pdbFiles = ['/path/to/file1.pdb']
+      const ensembleSize = 1
+      const resultsDir = '/results'
+
+      ;(mockFs.readFile as any).mockResolvedValue(
+        'ATOM line 1\nATOM line 2\nEND'
+      )
+      ;(mockFs.writeFile as any).mockResolvedValue(undefined)
+
+      await concatenateAndSaveAsEnsemble(pdbFiles, ensembleSize, resultsDir)
+
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        '/results/ensemble_size_1_model.pdb',
+        expect.stringMatching(/ENDMDL/)
+      )
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        '/results/ensemble_size_1_model.pdb',
+        expect.not.stringMatching(/\bEND\n?$/)
+      )
+    })
+  })
+
+  describe('assembleEnsemblePdbFiles', () => {
+    const mockFs = vi.mocked(fs)
+    let mockJob: any
+
+    beforeEach(() => {
+      vi.clearAllMocks()
+
+      mockJob = {
+        uuid: 'test-uuid-123',
+        results: {},
+        save: vi.fn().mockResolvedValue(undefined)
+      }
+
+      // Reset all mock implementations
+      ;(mockFs.readdir as any).mockReset()
+      ;(mockFs.readFile as any).mockReset()
+      ;(mockFs.writeFile as any).mockReset()
+      ;(mockFs.pathExists as any).mockReset()
+    })
+
+    it('should process ensemble files and update job results', async () => {
+      // Mock directory listing
+      ;(mockFs.readdir as any).mockResolvedValue([
+        'ensembles_size_1.txt',
+        'ensembles_size_2.txt',
+        'other_file.txt'
+      ])
+
+      // Mock ensemble file contents
+      const ensembleContent1 = `1 |  2.98 | x1 2.98 (1.05, -0.50)
+        1   | 0.290 (0.290, 1.000) | ../foxs/run1/file1.pdb.dat (0.125)`
+      const ensembleContent2 = `1 |  3.15 | x1 3.15 (1.10, -0.45)
+        1   | 0.350 (0.350, 0.900) | ../foxs/run1/file2.pdb.dat (0.200)`
+
+      ;(mockFs.readFile as any)
+        .mockResolvedValueOnce(ensembleContent1)
+        .mockResolvedValueOnce(ensembleContent2)
+
+      // Mock PDB file existence and content
+      ;(mockFs.pathExists as any).mockResolvedValue(true)
+      ;(mockFs.readFile as any)
+        .mockResolvedValueOnce('PDB content 1\nEND')
+        .mockResolvedValueOnce('PDB content 2\nEND')
+      ;(mockFs.writeFile as any).mockResolvedValue(undefined)
+
+      await assembleEnsemblePdbFiles({ DBjob: mockJob })
+
+      expect(mockFs.readdir).toHaveBeenCalledWith(
+        '/mock/upload/dir/test-uuid-123/multifoxs'
+      )
+      expect(mockFs.readFile).toHaveBeenCalledWith(
+        '/mock/upload/dir/test-uuid-123/multifoxs/ensembles_size_1.txt',
+        'utf8'
+      )
+      expect(mockFs.readFile).toHaveBeenCalledWith(
+        '/mock/upload/dir/test-uuid-123/multifoxs/ensembles_size_2.txt',
+        'utf8'
+      )
+
+      expect(mockJob.results.classic).toBeDefined()
+      expect(mockJob.results.classic.total_num_ensembles).toBe(2)
+      expect(mockJob.results.classic.ensembles).toHaveLength(2)
+      expect(mockJob.save).toHaveBeenCalled()
+    })
+
+    it('should handle missing PDB files gracefully', async () => {
+      ;(mockFs.readdir as any).mockResolvedValue(['ensembles_size_1.txt'])
+
+      const ensembleContent = `1 |  2.98 | x1 2.98 (1.05, -0.50)
+        1   | 0.290 (0.290, 1.000) | ../foxs/run1/missing.pdb.dat (0.125)`
+
+      ;(mockFs.readFile as any).mockResolvedValueOnce(ensembleContent)
+      ;(mockFs.pathExists as any).mockResolvedValue(false) // PDB file doesn't exist
+
+      await assembleEnsemblePdbFiles({ DBjob: mockJob })
+
+      // Verify the ensemble was parsed correctly
+      expect(mockJob.results.classic.ensembles).toHaveLength(1)
+      expect(mockJob.results.classic.ensembles[0].models).toHaveLength(1)
+      expect(
+        mockJob.results.classic.ensembles[0].models[0].states
+      ).toHaveLength(1)
+
+      // pathExists should be called for each PDB file in the top model
+      expect(mockFs.pathExists).toHaveBeenCalledWith(
+        expect.stringContaining('missing.pdb')
+      )
+      expect(mockFs.writeFile).not.toHaveBeenCalled() // No ensemble file should be created
+      expect(mockJob.save).toHaveBeenCalled()
+    })
+
+    it('should handle no ensemble files found', async () => {
+      ;(mockFs.readdir as any).mockResolvedValue(['other_file.txt'])
+
+      await assembleEnsemblePdbFiles({ DBjob: mockJob })
+
+      expect(mockJob.results.classic.total_num_ensembles).toBe(0)
+      expect(mockJob.results.classic.ensembles).toHaveLength(0)
+      expect(mockJob.save).toHaveBeenCalled()
+    })
+
+    it('should handle ensemble files with no models', async () => {
+      ;(mockFs.readdir as any).mockResolvedValue(['ensembles_size_1.txt'])
+      ;(mockFs.readFile as any).mockResolvedValueOnce('') // empty ensemble file
+
+      await assembleEnsemblePdbFiles({ DBjob: mockJob })
+
+      expect(mockJob.results.classic.ensembles).toHaveLength(1)
+      expect(mockJob.results.classic.ensembles[0].models).toHaveLength(0)
+      expect(mockJob.save).toHaveBeenCalled()
+    })
+
+    it('should sort ensemble sizes correctly', async () => {
+      ;(mockFs.readdir as any).mockResolvedValue([
+        'ensembles_size_3.txt',
+        'ensembles_size_1.txt',
+        'ensembles_size_2.txt'
+      ])
+
+      const ensembleContent = `1 |  2.98 | x1 2.98 (1.05, -0.50)`
+
+      ;(mockFs.readFile as any)
+        .mockResolvedValue(ensembleContent)
+        .mockResolvedValue(ensembleContent)
+        .mockResolvedValue(ensembleContent)
+
+      await assembleEnsemblePdbFiles({ DBjob: mockJob })
+
+      expect(mockJob.results.classic.ensembles[0].size).toBe(1)
+      expect(mockJob.results.classic.ensembles[1].size).toBe(2)
+      expect(mockJob.results.classic.ensembles[2].size).toBe(3)
+    })
+
+    it('should resolve PDB paths correctly from multifoxs directory', async () => {
+      ;(mockFs.readdir as any).mockResolvedValue(['ensembles_size_1.txt'])
+
+      const ensembleContent = `1 |  2.98 | x1 2.98 (1.05, -0.50)
+        1   | 0.290 (0.290, 1.000) | ../foxs/run1/file.pdb.dat (0.125)`
+
+      ;(mockFs.readFile as any).mockResolvedValueOnce(ensembleContent)
+      ;(mockFs.pathExists as any).mockResolvedValue(true)
+      ;(mockFs.readFile as any).mockResolvedValueOnce('PDB content\nEND')
+      ;(mockFs.writeFile as any).mockResolvedValue(undefined)
+
+      await assembleEnsemblePdbFiles({ DBjob: mockJob })
+
+      // Verify that pathExists was called with the resolved path
+      expect(mockFs.pathExists).toHaveBeenCalledWith(
+        expect.stringContaining('test-uuid-123')
+      )
+      expect(mockFs.pathExists).toHaveBeenCalledWith(
+        expect.stringContaining('foxs/run1/file.pdb')
+      )
+    })
+
+    it('should handle partial PDB file availability', async () => {
+      ;(mockFs.readdir as any).mockResolvedValue(['ensembles_size_1.txt'])
+
+      const ensembleContent = `1 |  2.98 | x1 2.98 (1.05, -0.50)
+        1   | 0.290 (0.290, 1.000) | ../foxs/run1/file1.pdb.dat (0.125)
+        2   | 0.410 (0.410, 0.800) | ../foxs/run1/file2.pdb.dat (0.300)`
+
+      ;(mockFs.readFile as any).mockResolvedValueOnce(ensembleContent)
+      ;(mockFs.pathExists as any)
+        .mockResolvedValueOnce(true) // file1 exists
+        .mockResolvedValueOnce(false) // file2 doesn't exist
+      ;(mockFs.readFile as any).mockResolvedValueOnce('PDB content\nEND')
+      ;(mockFs.writeFile as any).mockResolvedValue(undefined)
+
+      await assembleEnsemblePdbFiles({ DBjob: mockJob })
+
+      expect(mockFs.pathExists).toHaveBeenCalledTimes(2)
+      expect(mockFs.writeFile).toHaveBeenCalled() // Should still create ensemble with available files
+    })
+
+    it('should initialize results object if not present', async () => {
+      const jobWithoutResults: any = {
+        uuid: 'test-uuid-123',
+        save: vi.fn().mockResolvedValue(undefined)
+      }
+
+      ;(mockFs.readdir as any).mockResolvedValue([])
+
+      await assembleEnsemblePdbFiles({ DBjob: jobWithoutResults })
+
+      expect(jobWithoutResults.results).toBeDefined()
+      expect(jobWithoutResults.results.classic).toBeDefined()
     })
   })
 })

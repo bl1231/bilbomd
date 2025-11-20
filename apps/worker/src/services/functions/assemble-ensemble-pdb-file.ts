@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs-extra'
 import { logger } from '../../helpers/loggers.js'
+import { config } from '../../config/config.js'
 import {
   IJob,
   IMultiJob,
@@ -10,36 +11,80 @@ import {
 } from '@bilbomd/mongodb-schema'
 
 interface AssembleEnsemblePdbFilesParams {
-  numEnsembles: number
-  multiFoxsDir: string
-  jobDir: string
-  resultsDir: string
   DBjob: IJob | IMultiJob
 }
 
 const assembleEnsemblePdbFiles = async ({
-  numEnsembles,
-  multiFoxsDir,
-  jobDir,
-  resultsDir,
   DBjob
 }: AssembleEnsemblePdbFilesParams) => {
+  const jobDir = path.join(config.uploadDir, DBjob.uuid)
+  const multiFoxsDir = path.join(jobDir, 'multifoxs')
+  const resultsDir = path.join(jobDir, 'results')
+
+  // Find all ensemble files to determine the number of ensembles
+  const ensembleFiles = await fs.readdir(multiFoxsDir)
+  const ensembleSizes = ensembleFiles
+    .filter((file) => file.match(/^ensembles_size_\d+\.txt$/))
+    .map((file) =>
+      parseInt(file.match(/ensembles_size_(\d+)\.txt$/)?.[1] || '0', 10)
+    )
+    .filter((size) => size > 0)
+    .sort((a, b) => a - b)
+
+  const numEnsembles = ensembleSizes.length > 0 ? Math.max(...ensembleSizes) : 0
+  logger.info(`Found ${numEnsembles} ensemble files in ${multiFoxsDir}`)
+
   const ensembles: IEnsemble[] = []
 
-  for (let i = 1; i <= numEnsembles; i++) {
-    const ensembleFile = path.join(multiFoxsDir, `ensembles_size_${i}.txt`)
+  for (const ensembleSize of ensembleSizes) {
+    const ensembleFile = path.join(
+      multiFoxsDir,
+      `ensembles_size_${ensembleSize}.txt`
+    )
     logger.info(`Processing ensemble file: ${ensembleFile}`)
 
     const ensembleFileContent = await fs.readFile(ensembleFile, 'utf8')
-    const ensemble = parseEnsembleFile(ensembleFileContent, i)
+    const ensemble = parseEnsembleFile(ensembleFileContent, ensembleSize)
     ensembles.push(ensemble)
 
     // Save PDB files for the top-ranked model
     const topModelPdbFiles = ensemble.models[0]?.states.map(
-      (state: IEnsembleMember) => path.join(jobDir, state.pdb)
+      (state: IEnsembleMember) => {
+        // Resolve relative paths correctly from multifoxs directory to job directory
+        // The ensemble file is in multiFoxsDir, so relative paths should resolve from there
+        const resolvedPath = path.resolve(multiFoxsDir, state.pdb)
+        logger.debug(`Resolving PDB path: ${state.pdb} -> ${resolvedPath}`)
+        return resolvedPath
+      }
     )
-    if (topModelPdbFiles) {
-      await concatenateAndSaveAsEnsemble(topModelPdbFiles, i, resultsDir)
+    if (topModelPdbFiles && topModelPdbFiles.length > 0) {
+      logger.info(`Top model has ${topModelPdbFiles.length} PDB files:`)
+      topModelPdbFiles.forEach((pdbFile, idx) => {
+        logger.info(`  [${idx + 1}] ${pdbFile}`)
+      })
+
+      // Check if files exist before trying to concatenate
+      const existingFiles = []
+      for (const pdbFile of topModelPdbFiles) {
+        const exists = await fs.pathExists(pdbFile)
+        if (exists) {
+          existingFiles.push(pdbFile)
+        } else {
+          logger.warn(`PDB file does not exist: ${pdbFile}`)
+        }
+      }
+
+      if (existingFiles.length > 0) {
+        await concatenateAndSaveAsEnsemble(
+          existingFiles,
+          ensembleSize,
+          resultsDir
+        )
+      } else {
+        logger.error(`No PDB files found for ensemble size ${ensembleSize}`)
+      }
+    } else {
+      logger.warn(`No top model found for ensemble size ${ensembleSize}`)
     }
   }
 
@@ -127,16 +172,31 @@ const concatenateAndSaveAsEnsemble = async (
 ) => {
   try {
     const concatenatedContent: string[] = []
+
+    logger.info(
+      `Concatenating ${pdbFiles.length} PDB files for ensemble size ${ensembleSize}`
+    )
+
     for (let i = 0; i < pdbFiles.length; i++) {
-      // Read the content of each PDB file
-      let content = await fs.readFile(pdbFiles[i], 'utf8')
+      try {
+        // Read the content of each PDB file
+        logger.debug(`Reading PDB file: ${pdbFiles[i]}`)
+        let content = await fs.readFile(pdbFiles[i], 'utf8')
 
-      // Replace the word "END" with "ENDMDL"
-      content = content.replace(/\bEND\n?$/, 'ENDMDL')
+        // Replace the word "END" with "ENDMDL"
+        content = content.replace(/\bEND\n?$/, 'ENDMDL')
 
-      // Concatenate the content with MODEL....N
-      concatenatedContent.push(`MODEL       ${i + 1}`)
-      concatenatedContent.push(content)
+        // Concatenate the content with MODEL....N
+        concatenatedContent.push(`MODEL       ${i + 1}`)
+        concatenatedContent.push(content)
+
+        logger.debug(
+          `Successfully processed PDB file ${i + 1}/${pdbFiles.length}`
+        )
+      } catch (fileError) {
+        logger.error(`Error reading PDB file ${pdbFiles[i]}: ${fileError}`)
+        throw fileError // Re-throw to stop the ensemble creation
+      }
     }
 
     // Save the concatenated content to the ensemble file
@@ -144,9 +204,14 @@ const concatenateAndSaveAsEnsemble = async (
     const ensembleFile = path.join(resultsDir, ensembleFileName)
     await fs.writeFile(ensembleFile, concatenatedContent.join('\n'))
 
-    logger.info(`Ensemble file saved: ${ensembleFile}`)
+    logger.info(
+      `Ensemble file saved: ${ensembleFile} (${concatenatedContent.length} lines)`
+    )
   } catch (error) {
-    logger.error(`Error: ${error}`)
+    logger.error(
+      `Error creating ensemble file for size ${ensembleSize}: ${error}`
+    )
+    throw error // Re-throw to let the caller handle it
   }
 }
 
