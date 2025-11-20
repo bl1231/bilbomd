@@ -28,13 +28,19 @@ interface IEnsembleModel {
 }
 
 interface IClassicResults {
-  total_num_ensembles?: number // Total number of ensembles (N)
-  ensembles?: IEnsemble[] // Array of ensembles for each N
+  total_num_ensembles?: number
+  ensembles?: IEnsemble[]
 }
 
-interface IBilboMDAutoResults {}
+interface IAutoResults {
+  total_num_ensembles?: number
+  ensembles?: IEnsemble[]
+}
 
-interface IAlphaFoldResults {}
+interface IAlphaFoldResults {
+  total_num_ensembles?: number
+  ensembles?: IEnsemble[]
+}
 
 interface ISANSResults {}
 
@@ -45,7 +51,7 @@ interface IScoperResults {
 interface IJobResults {
   summary?: IJobResultsSummary
   classic?: IClassicResults
-  auto?: IBilboMDAutoResults
+  auto?: IAutoResults
   alphafold?: IAlphaFoldResults
   sans?: ISANSResults
   scoper?: IScoperResults
