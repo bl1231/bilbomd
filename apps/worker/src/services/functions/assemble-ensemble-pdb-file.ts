@@ -1,70 +1,117 @@
 import path from 'path'
 import fs from 'fs-extra'
 import { logger } from '../../helpers/loggers.js'
+import {
+  IJob,
+  IMultiJob,
+  IEnsemble,
+  IEnsembleModel,
+  IEnsembleMember
+} from '@bilbomd/mongodb-schema'
 
 interface AssembleEnsemblePdbFilesParams {
   numEnsembles: number
   multiFoxsDir: string
   jobDir: string
   resultsDir: string
+  DBjob: IJob | IMultiJob
 }
 
 const assembleEnsemblePdbFiles = async ({
   numEnsembles,
   multiFoxsDir,
   jobDir,
-  resultsDir
+  resultsDir,
+  DBjob
 }: AssembleEnsemblePdbFilesParams) => {
-  const ensemblePdbFiles: string[] = []
+  const ensembles: IEnsemble[] = []
 
   for (let i = 1; i <= numEnsembles; i++) {
     const ensembleFile = path.join(multiFoxsDir, `ensembles_size_${i}.txt`)
-    logger.info(`prepareResults ensembleFile: ${ensembleFile}`)
-    const ensembleFileContent = await fs.readFile(ensembleFile, 'utf8')
-    const pdbFilesRelative = extractPdbPaths(ensembleFileContent)
-    const pdbFilesFullPath = pdbFilesRelative.map((item) =>
-      path.join(jobDir, item)
-    )
-    // Extract the first N lines/PDB files to string[]
-    const numToCopy = Math.min(pdbFilesFullPath.length, i)
-    const ensembleModelFiles = pdbFilesFullPath.slice(0, numToCopy)
-    const ensembleSize = ensembleModelFiles.length
-    logger.info(
-      `Ensemble model files for size ${i}: ${ensembleModelFiles.join(', ')}`
-    )
-    await concatenateAndSaveAsEnsemble(
-      ensembleModelFiles,
-      ensembleSize,
-      resultsDir
-    )
+    logger.info(`Processing ensemble file: ${ensembleFile}`)
 
-    const ensembleFileName = `ensemble_size_${ensembleSize}_model.pdb`
-    ensemblePdbFiles.push(ensembleFileName)
+    const ensembleFileContent = await fs.readFile(ensembleFile, 'utf8')
+    const ensemble = parseEnsembleFile(ensembleFileContent, i)
+    ensembles.push(ensemble)
+
+    // Save PDB files for the top-ranked model
+    const topModelPdbFiles = ensemble.models[0]?.states.map(
+      (state: IEnsembleMember) => path.join(jobDir, state.pdb)
+    )
+    if (topModelPdbFiles) {
+      await concatenateAndSaveAsEnsemble(topModelPdbFiles, i, resultsDir)
+    }
   }
 
-  const manifestPath = path.join(jobDir, 'ensemble_pdb_files.json')
-  await fs.writeJson(manifestPath, { ensemblePdbFiles }, { spaces: 2 })
-  logger.info(`Ensemble manifest written: ${manifestPath}`)
+  // Update the DBjob with the parsed results
+  DBjob.results = DBjob.results || {}
+  DBjob.results.classic = {
+    total_num_ensembles: numEnsembles,
+    ensembles
+  }
+  await DBjob.save()
+  logger.info(`DBjob updated with ensemble results.`)
 }
 
-const extractPdbPaths = (content: string): string[] => {
-  const lines = content.split('\n')
-  const pdbPaths = lines
-    .filter((line) => line.includes('.pdb.dat'))
-    .map((line) => {
-      const match = line.match(/([^|]*\.pdb\.dat)/)
-      if (match) {
-        // Trim whitespace from the captured path
-        const fullPath = match[1].trim()
-        // Strip leading slashes and ../ to treat as relative path
-        const relativePath = fullPath.replace(/^(\.\.\/|\/)+/, '')
-        // Remove the .dat extension from the filename
-        const filename = relativePath.replace(/\.dat$/, '')
-        return filename
+const parseEnsembleFile = (content: string, size: number): IEnsemble => {
+  const lines = content.split('\n').filter((line) => line.trim() !== '')
+  const models: IEnsembleModel[] = []
+
+  let currentModel: IEnsembleModel | null = null
+
+  for (const line of lines) {
+    if (isModelSummaryLine(line)) {
+      if (currentModel) {
+        models.push(currentModel)
       }
-      return ''
-    })
-  return pdbPaths
+      currentModel = parseModelSummaryLine(line)
+    } else if (currentModel && isStateLine(line)) {
+      const state = parseStateLine(line)
+      currentModel.states.push(state)
+    }
+  }
+
+  if (currentModel) {
+    models.push(currentModel)
+  }
+
+  return { size, models }
+}
+
+const isModelSummaryLine = (line: string): boolean => {
+  return /^\d+ \|/.test(line)
+}
+
+const parseModelSummaryLine = (line: string): IEnsembleModel => {
+  const [rankPart, chi2Part, c1c2Part] = line
+    .split('|')
+    .map((part) => part.trim())
+  const rank = parseInt(rankPart, 10)
+  const chi2 = parseFloat(chi2Part)
+  const [c1, c2] = c1c2Part
+    .match(/\(([^)]+)\)/)?.[1]
+    .split(',')
+    .map((val) => parseFloat(val.trim())) || [0, 0]
+
+  return { rank, chi2, c1, c2, states: [] }
+}
+
+const isStateLine = (line: string): boolean => {
+  return /\d+ \|/.test(line) && line.includes('.pdb.dat')
+}
+
+const parseStateLine = (line: string): IEnsembleMember => {
+  const [, weightPart, pdbPart] = line.split('|').map((part) => part.trim())
+  const weight = parseFloat(weightPart.split(' ')[0])
+  const [weight_avg, weight_stddev] = weightPart
+    .match(/\(([^)]+)\)/)?.[1]
+    .split(',')
+    .map((val) => parseFloat(val.trim())) || [0, 0]
+  const pdbMatch = pdbPart.match(/([^"\s]+\.pdb\.dat)/)
+  const pdb = pdbMatch ? pdbMatch[1].replace(/\.dat$/, '') : ''
+  const fraction = parseFloat(pdbPart.match(/\(([^)]+)\)/)?.[1] || '0')
+
+  return { pdb, weight, weight_avg, weight_stddev, fraction }
 }
 
 const concatenateAndSaveAsEnsemble = async (
@@ -97,8 +144,4 @@ const concatenateAndSaveAsEnsemble = async (
   }
 }
 
-export {
-  extractPdbPaths,
-  concatenateAndSaveAsEnsemble,
-  assembleEnsemblePdbFiles
-}
+export { assembleEnsemblePdbFiles }
