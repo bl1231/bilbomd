@@ -1,7 +1,6 @@
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 import readline from 'node:readline'
-// import { FileCopyParams } from '../../types/index.js'
 import {
   IBilboMDPDBJob,
   IBilboMDCRDJob,
@@ -186,10 +185,6 @@ const prepareResults = async (
 
     if (numEnsembles) {
       await assembleEnsemblePdbFiles({
-        numEnsembles,
-        multiFoxsDir,
-        jobDir,
-        resultsDir,
         DBjob
       })
     }

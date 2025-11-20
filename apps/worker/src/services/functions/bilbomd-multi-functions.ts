@@ -282,10 +282,6 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
 
     if (numEnsembles) {
       await assembleEnsemblePdbFiles({
-        numEnsembles,
-        multiFoxsDir,
-        jobDir,
-        resultsDir,
         DBjob
       })
     }
