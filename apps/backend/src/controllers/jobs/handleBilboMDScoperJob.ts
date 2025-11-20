@@ -1,15 +1,18 @@
 import { logger } from '../../middleware/loggers.js'
 import { queueScoperJob } from '../../queues/scoper.js'
-import { BilboMdScoperJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
+import {
+  BilboMdScoperJob,
+  IBilboMDScoperJob,
+  IUser
+} from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
-import { DispatchUser } from '../../types/bilbomd.js'
 import path from 'path'
 import { getFileStats } from './utils/jobUtils.js'
 
 const handleBilboMDScoperJob = async (
   req: Request,
   res: Response,
-  user: DispatchUser | undefined,
+  user: IUser | undefined,
   UUID: string,
   ctx: {
     accessMode: 'user' | 'anonymous'

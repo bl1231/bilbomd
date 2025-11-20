@@ -8,7 +8,8 @@ import {
   StepStatus,
   BilboMdPDBJob,
   BilboMdCRDJob,
-  IBilboMDSteps
+  IBilboMDSteps,
+  IUser
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
@@ -27,14 +28,13 @@ import {
   extractConstraintsFromYaml
 } from '@bilbomd/md-utils'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
-import { DispatchUser } from '../../types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDClassicPDB = async (
   req: Request,
   res: Response,
-  user: DispatchUser | undefined,
+  user: IUser | undefined,
   UUID: string,
   ctx: {
     accessMode: 'user' | 'anonymous'

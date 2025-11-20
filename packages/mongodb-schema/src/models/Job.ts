@@ -190,9 +190,9 @@ const jobSchema = new Schema(
     time_started: Date,
     time_completed: Date,
     user: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: false
+      _id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      username: { type: String, required: true },
+      email: { type: String, required: true }
     },
     resubmitted_from: {
       type: Schema.Types.ObjectId,
@@ -215,7 +215,21 @@ const jobSchema = new Schema(
   {
     timestamps: true,
     id: true,
-    toJSON: { virtuals: true },
+    toJSON: {
+      virtuals: true,
+      transform: (doc, ret) => {
+        // Ensure the `user` field includes only minimal details
+        if (ret.user && typeof ret.user === 'object' && ret.user._id) {
+          ret.user = {
+            _id: ret.user._id,
+            username: ret.user.username,
+            email: ret.user.email
+          }
+        }
+
+        return ret
+      }
+    },
     toObject: { virtuals: true }
   }
 )

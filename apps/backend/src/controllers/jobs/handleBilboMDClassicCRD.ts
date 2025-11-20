@@ -7,7 +7,8 @@ import {
   JobStatus,
   StepStatus,
   BilboMdCRDJob,
-  BilboMdPDBJob
+  BilboMdPDBJob,
+  IUser
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
@@ -18,14 +19,13 @@ import {
 } from './utils/jobUtils.js'
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
-import { DispatchUser } from '../../types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDClassicCRD = async (
   req: Request,
   res: Response,
-  user: DispatchUser | undefined,
+  user: IUser | undefined,
   UUID: string,
   ctx: {
     accessMode: 'user' | 'anonymous'
