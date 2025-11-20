@@ -97,21 +97,27 @@ const parseModelSummaryLine = (line: string): IEnsembleModel => {
 }
 
 const isStateLine = (line: string): boolean => {
-  return /\d+ \|/.test(line) && line.includes('.pdb.dat')
+  return /^\s+\d+\s+\|/.test(line) && line.includes('.pdb.dat')
 }
 
 const parseStateLine = (line: string): IEnsembleMember => {
-  const [, weightPart, pdbPart] = line.split('|').map((part) => part.trim())
-  const weight = parseFloat(weightPart.split(' ')[0])
-  const [weight_avg, weight_stddev] = weightPart
-    .match(/\(([^)]+)\)/)?.[1]
-    .split(',')
-    .map((val) => parseFloat(val.trim())) || [0, 0]
-  const pdbMatch = pdbPart.match(/([^"\s]+\.pdb\.dat)/)
-  const pdb = pdbMatch ? pdbMatch[1].replace(/\.dat$/, '') : ''
-  const fraction = parseFloat(pdbPart.match(/\(([^)]+)\)/)?.[1] || '0')
+  try {
+    const [, weightPart, pdbPart] = line.split('|').map((part) => part.trim())
+    const weight = parseFloat(weightPart.split(' ')[0])
+    const [weight_avg, weight_stddev] = weightPart
+      .match(/\(([^)]+)\)/)?.[1]
+      .split(',')
+      .map((val) => parseFloat(val.trim())) || [0, 0]
+    const pdbMatch = pdbPart.match(/([^"\s]+\.pdb\.dat)/)
+    const pdb = pdbMatch ? pdbMatch[1].replace(/\.dat$/, '') : ''
+    const fraction = parseFloat(pdbPart.match(/\(([^)]+)\)/)?.[1] || '0')
 
-  return { pdb, weight, weight_avg, weight_stddev, fraction }
+    return { pdb, weight, weight_avg, weight_stddev, fraction }
+  } catch (error) {
+    logger.error(`Error parsing state line: ${error}`)
+    logger.error(`Error parsing state line: ${line}`)
+    return { pdb: '', weight: 0, weight_avg: 0, weight_stddev: 0, fraction: 0 }
+  }
 }
 
 const concatenateAndSaveAsEnsemble = async (
@@ -144,4 +150,9 @@ const concatenateAndSaveAsEnsemble = async (
   }
 }
 
-export { assembleEnsemblePdbFiles }
+export {
+  assembleEnsemblePdbFiles,
+  parseStateLine,
+  isStateLine,
+  parseEnsembleFile
+}
