@@ -190,9 +190,25 @@ const jobSchema = new Schema(
     time_started: Date,
     time_completed: Date,
     user: {
-      _id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-      username: { type: String, required: true },
-      email: { type: String, required: true }
+      _id: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: function (this: any) {
+          return this.access_mode === 'user'
+        }
+      },
+      username: {
+        type: String,
+        required: function (this: any) {
+          return this.access_mode === 'user'
+        }
+      },
+      email: {
+        type: String,
+        required: function (this: any) {
+          return this.access_mode === 'user'
+        }
+      }
     },
     resubmitted_from: {
       type: Schema.Types.ObjectId,
