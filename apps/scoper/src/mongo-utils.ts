@@ -15,14 +15,11 @@ const updateStepStatus = async (
   status: IStepStatus
 ) => {
   try {
-    if (!job.steps) {
-      job.steps = {} as IBilboMDSteps
-    }
-    // Update the specific step directly on the Job document
-    job.steps[stepName] = status
-
-    // Save the modified document
-    await job.save()
+    // Use atomic update to avoid ParallelSaveError
+    await Job.updateOne(
+      { _id: job._id },
+      { $set: { [`steps.${stepName}`]: status } }
+    )
     // logger.info(`Successfully updated ${stepName} status for job ${job._id}`)
   } catch (error) {
     logger.error(
@@ -31,11 +28,10 @@ const updateStepStatus = async (
   }
 }
 
-// Update the 'results' field of a Job document and save it to MongoDB
+// Update the 'results' field of a Job document using atomic update
 const updateJobResults = async (job: IJob, results: IJobResults) => {
   try {
-    job.results = results
-    await job.save()
+    await Job.updateOne({ _id: job._id }, { $set: { results } })
     // logger.info(`Successfully updated results for job ${job._id}`)
   } catch (error) {
     logger.error(`Error updating results for job ${job._id}: ${error}`)
