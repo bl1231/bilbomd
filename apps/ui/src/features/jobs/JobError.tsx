@@ -36,11 +36,11 @@ const JobError = ({ job }: JobProps) => {
   )
 
   useEffect(() => {
-    if (Array.isArray(job.mongo.steps)) {
-      const erroredStep = job.mongo.steps.find(
-        (step: StepStatus) => step.status === 'Error'
+    if (job.mongo.steps && typeof job.mongo.steps === 'object') {
+      const erroredEntry = Object.entries(job.mongo.steps).find(
+        ([, stepStatus]) => stepStatus.status === 'Error'
       )
-      setStepWithError(erroredStep ? erroredStep.name : null)
+      setStepWithError(erroredEntry ? erroredEntry[0] : null)
     }
   }, [job])
 
