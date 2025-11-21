@@ -1,26 +1,27 @@
 import { logger } from './helpers/loggers.js'
 import { Job as BullMQJob } from 'bullmq'
 import { IBilboMDScoperJob, BilboMdScoperJob } from '@bilbomd/mongodb-schema'
-import { User } from '@bilbomd/mongodb-schema'
 import { sendJobCompleteEmail } from './helpers/mailer.js'
 import { runScoper, prepareScoperResults } from './scoper.functions.js'
 import { config } from './config/config.js'
 
-const bilbomdUrl: string = process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
+const bilbomdUrl: string =
+  process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
+
+const getErrorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
 const initializeJob = async (MQJob: BullMQJob, DBjob: IBilboMDScoperJob) => {
-  // Make sure the user exists in MongoDB
-  const foundUser = await User.findById(DBjob.user).lean().exec()
-  if (!foundUser) {
-    throw new Error(`No user found for: ${DBjob.uuid}`)
+  try {
+    await MQJob.clearLogs()
+    DBjob.status = 'Running'
+    const now = new Date()
+    DBjob.time_started = now
+    await DBjob.save()
+  } catch (error) {
+    logger.error(`Error in initializeJob: ${getErrorMessage(error)}`)
+    throw error
   }
-  // Clear the BullMQ Job logs
-  await MQJob.clearLogs()
-  // Set MongoDB status to Running
-  DBjob.status = 'Running'
-  const now = new Date()
-  DBjob.time_started = now
-  await DBjob.save()
 }
 
 const cleanupJob = async (MQjob: BullMQJob, DBJob: IBilboMDScoperJob) => {
@@ -33,7 +34,13 @@ const cleanupJob = async (MQjob: BullMQJob, DBJob: IBilboMDScoperJob) => {
     if (typeof DBJob.user !== 'object' || !('email' in DBJob.user)) {
       throw new Error(`User details are not populated for job: ${DBJob.id}`)
     }
-    sendJobCompleteEmail(DBJob.user.email, bilbomdUrl, DBJob.id, DBJob.title, false)
+    sendJobCompleteEmail(
+      DBJob.user.email,
+      bilbomdUrl,
+      DBJob.id,
+      DBJob.title,
+      false
+    )
     logger.info(`email notification sent to ${DBJob.user.email}`)
     await MQjob.log(`email notification sent to ${DBJob.user.email}`)
   } else {
@@ -93,17 +100,13 @@ const processBilboMDScoperJob = async (MQjob: BullMQJob) => {
   await foundJob.save()
 
   // Run the Scoper IonNet pipeline
-  await MQjob.log('start scoper')
   await runScoper(MQjob, foundJob)
-  await MQjob.log('end scoper')
   await MQjob.updateProgress(80)
   foundJob.progress = 80
   await foundJob.save()
 
   // Combine the RNA and Mg PDB files
-  await MQjob.log('start gather results')
   await prepareScoperResults(MQjob, foundJob)
-  await MQjob.log('end gather results')
   await MQjob.updateProgress(90)
   foundJob.progress = 90
   await foundJob.save()
