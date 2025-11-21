@@ -19,7 +19,17 @@ import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context'
 import { ShowButtons, ViewportComponent } from 'features/molstar/Viewport'
 import { BuiltInTrajectoryFormat } from 'molstar/lib/mol-plugin-state/formats/trajectory'
 import 'molstar/lib/mol-plugin-ui/skin/light.scss'
-import type { PublicJobStatus, JobType } from '@bilbomd/bilbomd-types'
+import type {
+  PublicJobStatus,
+  JobType,
+  ClassicJobResults,
+  AutoJobResults,
+  AlphafoldJobResults,
+  SANSJobResults,
+  ScoperJobResults,
+  IEnsembleModel,
+  IEnsembleMember
+} from '@bilbomd/bilbomd-types'
 import HeaderBox from 'components/HeaderBox'
 
 declare global {
@@ -36,6 +46,40 @@ type LoadParams = {
 }
 
 type PDBsToLoad = LoadParams[]
+
+type EnsembleResults =
+  | ClassicJobResults
+  | AutoJobResults
+  | AlphafoldJobResults
+  | SANSJobResults
+  | ScoperJobResults
+
+// type EnsembleState = {
+//   pdb: string
+//   weight?: number
+//   rg?: number
+//   weight_avg?: number
+//   weight_stddev?: number
+//   fraction?: number
+// }
+
+// type EnsembleModel = {
+//   rank: number
+//   chi2: number
+//   c1: number
+//   c2: number
+//   states: EnsembleState[]
+// }
+
+// type Ensemble = {
+//   size: number
+//   models: EnsembleModel[]
+// }
+
+// type EnsembleResults = {
+//   total_num_ensembles?: number
+//   ensembles?: Ensemble[]
+// }
 
 const DefaultViewerOptions = {
   extensions: ObjectKeys({}),
@@ -101,21 +145,65 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
       }
     }
 
+    // Helper function to get the results key based on job type
+    const getResultsKey = (jobType: string): string => {
+      switch (jobType) {
+        case 'pdb':
+        case 'crd':
+          return 'classic'
+        case 'auto':
+          return 'auto'
+        case 'alphafold':
+          return 'alphafold'
+        case 'sans':
+          return 'sans'
+        case 'scoper':
+          return 'scoper'
+        case 'multi':
+          // Multi jobs don't have ensembles
+          return ''
+        default:
+          console.warn(`Unknown job type '${jobType}', defaulting to 'classic'`)
+          return 'classic'
+      }
+    }
+
+    // Helper function to process ensemble results
+    const processEnsembleResults = (results: EnsembleResults) => {
+      if (!results?.ensembles) return
+
+      // Process each ensemble size
+      for (const ensemble of results.ensembles) {
+        const fileName = `ensemble_size_${ensemble.size}_model.pdb`
+
+        // Count unique PDB files from all models' states to determine number of assemblies
+        const uniquePdbs = new Set<string>()
+        ensemble.models.forEach((model: IEnsembleModel) => {
+          model.states.forEach((state: IEnsembleMember) => {
+            if (state.pdb) {
+              uniquePdbs.add(state.pdb)
+            }
+          })
+        })
+
+        // Use the ensemble size as the number of models to load
+        // This corresponds to the number of MODEL records in the ensemble PDB file
+        addFilesToLoadParams(fileName, ensemble.size)
+      }
+    }
+
     // Adding LoadParams based on job type and results structure
     const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
 
     if (ensembleJobTypes.includes(job.jobType as JobType)) {
-      // Use the results structure
-      const classicResults = job.results?.classic
-      if (classicResults?.ensembles) {
-        // Process each ensemble size
-        for (const ensemble of classicResults.ensembles) {
-          const fileName = `ensemble_size_${ensemble.size}_model.pdb`
+      // Use the appropriate results structure based on job type
+      const resultsKey = getResultsKey(job.jobType)
+      const jobResults = job.results?.[
+        resultsKey as keyof typeof job.results
+      ] as EnsembleResults
 
-          // Use the ensemble size as the number of models to load
-          // This corresponds to the number of MODEL records in the ensemble PDB file
-          addFilesToLoadParams(fileName, ensemble.size)
-        }
+      if (jobResults) {
+        processEnsembleResults(jobResults)
       }
     } else if (job.jobType === 'scoper') {
       // For scoper jobs, we might need to handle differently
@@ -123,6 +211,9 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
       console.warn(
         'Scoper job visualization not yet implemented for public viewer'
       )
+    } else if (job.jobType === 'sans') {
+      // SANS jobs might have different file structures - handle if needed
+      console.log('SANS job detected - no ensemble loading implemented yet')
     }
 
     // Convert the Map values to an array of arrays

@@ -6,7 +6,14 @@ import { selectCurrentToken } from '../../slices/authSlice'
 import type {
   BilboMDJobDTO,
   BilboMDScoperDTO,
-  JobType
+  JobType,
+  ClassicJobResults,
+  AutoJobResults,
+  AlphafoldJobResults,
+  SANSJobResults,
+  ScoperJobResults,
+  IEnsembleModel,
+  IEnsembleMember
 } from '@bilbomd/bilbomd-types'
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui'
 import {
@@ -40,6 +47,13 @@ type LoadParams = {
 }
 
 type PDBsToLoad = LoadParams[]
+
+type EnsembleResults =
+  | ClassicJobResults
+  | AutoJobResults
+  | AlphafoldJobResults
+  | SANSJobResults
+  | ScoperJobResults
 
 const DefaultViewerOptions = {
   extensions: ObjectKeys({}),
@@ -103,43 +117,76 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
       }
     }
 
+    // Helper function to get the results key based on job type
+    const getResultsKey = (jobType: JobType): string => {
+      switch (jobType) {
+        case 'pdb':
+        case 'crd':
+          return 'classic'
+        case 'auto':
+          return 'auto'
+        case 'alphafold':
+          return 'alphafold'
+        case 'sans':
+          return 'sans'
+        case 'scoper':
+          return 'scoper'
+        case 'multi':
+          // Multi jobs don't have ensembles
+          return ''
+        default:
+          console.warn(`Unknown job type '${jobType}', defaulting to 'classic'`)
+          return 'classic'
+      }
+    }
+
+    // Helper function to process ensemble results
+    const processEnsembleResults = (results: EnsembleResults) => {
+      if (!results?.ensembles) return
+
+      // Process each ensemble size
+      for (const ensemble of results.ensembles) {
+        const fileName = `ensemble_size_${ensemble.size}_model.pdb`
+
+        // Count unique PDB files from all models' states to determine number of assemblies
+        const uniquePdbs = new Set<string>()
+        ensemble.models.forEach((model: IEnsembleModel) => {
+          model.states.forEach((state: IEnsembleMember) => {
+            if (state.pdb) {
+              uniquePdbs.add(state.pdb)
+            }
+          })
+        })
+
+        // Use the ensemble size as the number of models to load
+        // This corresponds to the number of MODEL records in the ensemble PDB file
+        addFilesToLoadParams(fileName, ensemble.size)
+      }
+    }
+
     // Adding LoadParams based on job type and results structure
     const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
 
     if (ensembleJobTypes.includes(job.mongo.jobType)) {
-      // Use the new results structure
-      const classicResults = job.mongo.results?.classic as {
-        ensembles?: Array<{
-          size: number
-          models: Array<{ states: Array<{ pdb: string }> }>
-        }>
-      }
-      if (classicResults?.ensembles) {
-        // Process each ensemble size
-        for (const ensemble of classicResults.ensembles) {
-          const fileName = `ensemble_size_${ensemble.size}_model.pdb`
+      // Use the appropriate results structure based on job type
+      const resultsKey = getResultsKey(job.mongo.jobType)
+      const jobResults = job.mongo.results?.[
+        resultsKey as keyof typeof job.mongo.results
+      ] as EnsembleResults
 
-          // Count unique PDB files from all models' states to determine number of assemblies
-          const uniquePdbs = new Set<string>()
-          ensemble.models.forEach((model) => {
-            model.states.forEach((state) => {
-              if (state.pdb) {
-                uniquePdbs.add(state.pdb)
-              }
-            })
-          })
-
-          // Use the ensemble size as the number of models to load
-          // This corresponds to the number of MODEL records in the ensemble PDB file
-          addFilesToLoadParams(fileName, ensemble.size)
-        }
+      if (jobResults) {
+        processEnsembleResults(jobResults)
       }
     } else if (job.mongo.jobType === 'scoper') {
       const scoperJob = job.mongo as BilboMDScoperDTO
-      if (scoperJob.foxs_top_file) {
+      const scoperResults = job.mongo.results?.scoper
+      if (scoperResults && scoperJob.foxs_top_file) {
         const pdbFilename = `scoper_combined_${scoperJob.foxs_top_file}`
         addFilesToLoadParams(pdbFilename, 1)
       }
+    } else if (job.mongo.jobType === 'sans') {
+      // SANS jobs might have different file structures - handle if needed
+      console.log('SANS job detected - no ensemble loading implemented yet')
     }
 
     // Convert the Map values to an array of arrays
