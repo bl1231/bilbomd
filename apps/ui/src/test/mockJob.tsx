@@ -1,16 +1,30 @@
 import type { PartialDeep } from 'type-fest'
-import type { BilboMDJob } from 'types/interfaces'
+import type { BilboMDJobDTO, BilboMDPDBDTO } from '@bilbomd/bilbomd-types'
+
+type BilboMDJob = BilboMDJobDTO & {
+  bullmq: {
+    position: number
+    queuePosition: string
+    bilbomdStep: Record<string, string | number>
+    bilbomdLastStep: string
+    bullmq: {
+      id: number
+      progress: string
+      name: string
+      data: Record<string, unknown>
+    }
+  }
+}
 
 export const createMockBilboMDJob = (
   overrides: PartialDeep<BilboMDJob> = {}
 ): BilboMDJob => {
-  const baseJob = {
+  const baseJob: BilboMDJob = {
     id: '123',
     username: 'testuser',
     mongo: {
       id: '123',
-      _id: '123',
-      __t: 'BilboMdPDB',
+      jobType: 'pdb',
       title: 'Mock PDB Job',
       access_mode: 'anonymous',
       public_id: 'public-123',
@@ -31,7 +45,7 @@ export const createMockBilboMDJob = (
       md_engine: 'OpenMM',
       md_constraints: {},
       openmm_parameters: {}
-    },
+    } as BilboMDPDBDTO,
     bullmq: {
       position: 1,
       queuePosition: '1',
@@ -53,12 +67,15 @@ export const createMockBilboMDJob = (
         data: { type: 'pdb', title: 't', uuid: '123' }
       }
     }
-  } as const
+  }
 
   return {
     ...baseJob,
     ...overrides,
-    mongo: { ...baseJob.mongo, ...(overrides.mongo ?? {}) },
-    bullmq: { ...baseJob.bullmq, ...(overrides.bullmq ?? {}) }
-  } as BilboMDJob
+    mongo: { ...baseJob.mongo, ...(overrides.mongo ?? {}) } as BilboMDPDBDTO,
+    bullmq: {
+      ...baseJob.bullmq,
+      ...(overrides.bullmq ?? {})
+    } as BilboMDJob['bullmq']
+  }
 }

@@ -1,7 +1,6 @@
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 import readline from 'node:readline'
-// import { FileCopyParams } from '../../types/index.js'
 import {
   IBilboMDPDBJob,
   IBilboMDCRDJob,
@@ -30,7 +29,7 @@ const prepareResults = async (
   try {
     const jobDir = path.join(config.uploadDir, DBjob.uuid)
     const multiFoxsDir = path.join(jobDir, 'multifoxs')
-    const logFile = path.join(multiFoxsDir, 'multi_foxs.log')
+    const multiFoxsLogFile = path.join(multiFoxsDir, 'multi_foxs.log')
     const resultsDir = path.join(jobDir, 'results')
 
     // Create new empty results directory
@@ -181,15 +180,12 @@ const prepareResults = async (
     }
 
     // Only want to add N best PDBs equal to number_of_states N in logfile.
-    const numEnsembles = await getNumEnsembles(logFile)
+    const numEnsembles = await getNumEnsembles(multiFoxsLogFile)
     logger.info(`prepareResults numEnsembles: ${numEnsembles}`)
 
     if (numEnsembles) {
       await assembleEnsemblePdbFiles({
-        numEnsembles,
-        multiFoxsDir,
-        jobDir,
-        resultsDir
+        DBjob
       })
     }
 

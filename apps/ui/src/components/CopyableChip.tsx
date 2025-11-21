@@ -36,36 +36,36 @@ const CopyableChip: React.FC<CopyableChipProps> = ({ label, value, url }) => {
       <Chip
         label={
           <Box
-            component='span'
+            component="span"
             sx={{ display: 'inline-flex', alignItems: 'center' }}
           >
             <span style={{ marginRight: '6px' }}>{value}</span>
             <Tooltip title={`Copy ${label}`}>
               <IconButton
-                size='small'
+                size="small"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleCopy()
                 }}
-                sx={{ padding: 0 }}
+                sx={{ p: 0 }}
               >
-                <ContentCopyIcon fontSize='small' />
+                <ContentCopyIcon fontSize="small" />
               </IconButton>
             </Tooltip>
             {url && (
               <Tooltip title={`Go to ${url}`}>
                 <IconButton
-                  size='small'
+                  size="small"
                   onClick={handleLaunch}
-                  sx={{ padding: 0 }}
+                  sx={{ p: 0, ml: 1 }}
                 >
-                  <LaunchIcon fontSize='small' />
+                  <LaunchIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
           </Box>
         }
-        variant='outlined'
+        variant="outlined"
         sx={{
           fontSize: '0.80rem',
           fontFamily: 'monospace',

@@ -1,11 +1,11 @@
-import { BilboMDJob } from 'types/interfaces'
 import { Alert, Chip } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import BilboMDScoperStep from './BilboMDScoperStep'
 import Item from 'themes/components/Item'
+import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 
 interface BilboMDStepsProps {
-  job: BilboMDJob
+  job: BilboMDJobDTO
 }
 
 const BilboMDScoperSteps = ({ job }: BilboMDStepsProps) => {
@@ -18,11 +18,11 @@ const BilboMDScoperSteps = ({ job }: BilboMDStepsProps) => {
     'multifoxs'
   ]
 
-  if (job.scoper && typeof job.scoper === 'object') {
+  if (job.mongo.jobType && job.mongo.jobType === 'scoper') {
     return (
       <Item>
         <Grid container>
-          {Object.entries(job.scoper)
+          {Object.entries(job.mongo.jobType)
             .filter(([stepName]) => stepsToShow.includes(stepName))
             .map(([stepName, stepValue]) => (
               <BilboMDScoperStep
@@ -40,16 +40,28 @@ const BilboMDScoperSteps = ({ job }: BilboMDStepsProps) => {
 }
 
 const BilboMDScoperStepsV2 = ({ job }: BilboMDStepsProps) => {
-  if (job.scoper && typeof job.scoper === 'object') {
+  if (job.mongo.jobType && job.mongo.jobType === 'scoper') {
     return (
       <Item>
-        <Alert severity='warning'>Scoper status is a work in progress</Alert>
+        <Alert severity="warning">Scoper status is a work in progress</Alert>
 
-        <Grid container spacing={1}>
+        <Grid
+          container
+          spacing={1}
+        >
           <Grid sx={{ m: 0.5, display: 'flex', alignItems: 'center' }}>
-            <Chip size='small' label='reduce' />
-            <Chip size='small' label='RNAview' />
-            <Chip size='small' label='KGS' />
+            <Chip
+              size="small"
+              label="reduce"
+            />
+            <Chip
+              size="small"
+              label="RNAview"
+            />
+            <Chip
+              size="small"
+              label="KGS"
+            />
           </Grid>
         </Grid>
       </Item>

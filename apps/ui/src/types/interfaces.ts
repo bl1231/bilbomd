@@ -1,13 +1,3 @@
-import {
-  IBilboMDPDBJob,
-  IBilboMDCRDJob,
-  IBilboMDAutoJob,
-  IBilboMDSANSJob,
-  IBilboMDAlphaFoldJob,
-  IMultiJob,
-  IBilboMDScoperJob
-} from '@bilbomd/mongodb-schema'
-
 export interface Chain {
   id: string
   atoms: number
@@ -67,23 +57,6 @@ export interface Queue {
   waiting_count: number
 }
 
-export type BilboMDSteps = {
-  pae?: string
-  autorg?: string
-  minimize: string
-  heat: string
-  md: string
-  foxs: string
-  multifoxs: string
-  results: string
-  email: string
-  numEnsembles: number
-}
-
-export type BilboMDAlphaFoldResults = {
-  numEnsembles: number
-}
-
 export type BilboMDScoperSteps = {
   reduce: string
   rnaview: string
@@ -104,44 +77,4 @@ export type BilboMDScoperSteps = {
   scoper: string
   results: string
   email: string
-}
-
-export type BilboMDBullMQ = {
-  position: number
-  queuePosition: string
-  bilbomdStep: BilboMDSteps | BilboMDScoperSteps
-  bilbomdLastStep: string
-  bullmq: BullMQJob
-}
-
-export type MongoWithIdString<T> = Omit<T, '_id'> & { _id: string }
-
-export type BilboMDJob = {
-  id: string
-  username: string
-  mongo:
-    | MongoWithIdString<IBilboMDPDBJob>
-    | MongoWithIdString<IBilboMDCRDJob>
-    | MongoWithIdString<IBilboMDAutoJob>
-    | MongoWithIdString<IBilboMDSANSJob>
-    | MongoWithIdString<IBilboMDAlphaFoldJob>
-    | MongoWithIdString<IBilboMDScoperJob>
-  bullmq: BilboMDBullMQ
-  scoper?: BilboMDScoperSteps
-  classic?: { numEnsembles: number }
-  auto?: { numEnsembles: number }
-  alphafold?: { numEnsembles: number }
-}
-
-export type AnyBilboJob =
-  | IBilboMDPDBJob
-  | IBilboMDCRDJob
-  | IBilboMDAutoJob
-  | IBilboMDSANSJob
-
-export type BilboMDMultiJob = {
-  id: string
-  username: string
-  mongo: IMultiJob
-  bullmq: BilboMDBullMQ
 }

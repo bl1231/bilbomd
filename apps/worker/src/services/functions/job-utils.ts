@@ -44,6 +44,8 @@ const cleanupJob = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
       logger.info(
         `cleanupJob: no user associated with job uuid=${DBjob.uuid}, skipping email notification`
       )
+      DBjob.progress = 100
+      await DBjob.save()
       return
     }
 

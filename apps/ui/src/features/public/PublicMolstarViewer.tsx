@@ -19,7 +19,17 @@ import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context'
 import { ShowButtons, ViewportComponent } from 'features/molstar/Viewport'
 import { BuiltInTrajectoryFormat } from 'molstar/lib/mol-plugin-state/formats/trajectory'
 import 'molstar/lib/mol-plugin-ui/skin/light.scss'
-import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
+import type {
+  PublicJobStatus,
+  JobType,
+  ClassicJobResults,
+  AutoJobResults,
+  AlphafoldJobResults,
+  SANSJobResults,
+  ScoperJobResults,
+  IEnsembleModel,
+  IEnsembleMember
+} from '@bilbomd/bilbomd-types'
 import HeaderBox from 'components/HeaderBox'
 
 declare global {
@@ -34,6 +44,42 @@ type LoadParams = {
   isBinary?: boolean
   assemblyId: number
 }
+
+type PDBsToLoad = LoadParams[]
+
+type EnsembleResults =
+  | ClassicJobResults
+  | AutoJobResults
+  | AlphafoldJobResults
+  | SANSJobResults
+  | ScoperJobResults
+
+// type EnsembleState = {
+//   pdb: string
+//   weight?: number
+//   rg?: number
+//   weight_avg?: number
+//   weight_stddev?: number
+//   fraction?: number
+// }
+
+// type EnsembleModel = {
+//   rank: number
+//   chi2: number
+//   c1: number
+//   c2: number
+//   states: EnsembleState[]
+// }
+
+// type Ensemble = {
+//   size: number
+//   models: EnsembleModel[]
+// }
+
+// type EnsembleResults = {
+//   total_num_ensembles?: number
+//   ensembles?: Ensemble[]
+// }
 
 const DefaultViewerOptions = {
   extensions: ObjectKeys({}),
@@ -68,6 +114,111 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
   const parent = useRef<HTMLDivElement>(null)
   const store = useStore()
   const dispatch = store.dispatch as AppDispatch
+
+  const createLoadParamsArray = async (
+    job: PublicJobStatus
+  ): Promise<PDBsToLoad[]> => {
+    console.log(
+      'Creating LoadParams for public job:',
+      job.jobId,
+      'jobType:',
+      job.jobType
+    )
+    console.log('Results available:', !!job.results)
+    const loadParamsMap = new Map<string, LoadParams[]>()
+
+    // Helper function to add LoadParams to the Map
+    const addFilesToLoadParams = (fileName: string, numModels: number) => {
+      let paramsArray = loadParamsMap.get(fileName)
+
+      if (!paramsArray) {
+        paramsArray = []
+        loadParamsMap.set(fileName, paramsArray)
+      }
+
+      for (let assemblyId = 1; assemblyId <= numModels; assemblyId++) {
+        paramsArray.push({
+          format: 'pdb',
+          fileName: fileName,
+          assemblyId: assemblyId
+        })
+      }
+    }
+
+    // Helper function to get the results key based on job type
+    const getResultsKey = (jobType: string): string => {
+      switch (jobType) {
+        case 'pdb':
+        case 'crd':
+          return 'classic'
+        case 'auto':
+          return 'auto'
+        case 'alphafold':
+          return 'alphafold'
+        case 'sans':
+          return 'sans'
+        case 'scoper':
+          return 'scoper'
+        case 'multi':
+          // Multi jobs don't have ensembles
+          return ''
+        default:
+          console.warn(`Unknown job type '${jobType}', defaulting to 'classic'`)
+          return 'classic'
+      }
+    }
+
+    // Helper function to process ensemble results
+    const processEnsembleResults = (results: EnsembleResults) => {
+      if (!results?.ensembles) return
+
+      // Process each ensemble size
+      for (const ensemble of results.ensembles) {
+        const fileName = `ensemble_size_${ensemble.size}_model.pdb`
+
+        // Count unique PDB files from all models' states to determine number of assemblies
+        const uniquePdbs = new Set<string>()
+        ensemble.models.forEach((model: IEnsembleModel) => {
+          model.states.forEach((state: IEnsembleMember) => {
+            if (state.pdb) {
+              uniquePdbs.add(state.pdb)
+            }
+          })
+        })
+
+        // Use the ensemble size as the number of models to load
+        // This corresponds to the number of MODEL records in the ensemble PDB file
+        addFilesToLoadParams(fileName, ensemble.size)
+      }
+    }
+
+    // Adding LoadParams based on job type and results structure
+    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
+
+    if (ensembleJobTypes.includes(job.jobType as JobType)) {
+      // Use the appropriate results structure based on job type
+      const resultsKey = getResultsKey(job.jobType)
+      const jobResults = job.results?.[
+        resultsKey as keyof typeof job.results
+      ] as EnsembleResults
+
+      if (jobResults) {
+        processEnsembleResults(jobResults)
+      }
+    } else if (job.jobType === 'scoper') {
+      // For scoper jobs, we might need to handle differently
+      // Since we don't have the foxs_top_file in PublicJobStatus, we'll skip for now
+      console.warn(
+        'Scoper job visualization not yet implemented for public viewer'
+      )
+    } else if (job.jobType === 'sans') {
+      // SANS jobs might have different file structures - handle if needed
+      console.log('SANS job detected - no ensemble loading implemented yet')
+    }
+
+    // Convert the Map values to an array of arrays
+    return Array.from(loadParamsMap.values())
+  }
 
   useEffect(() => {
     if (hasRun.current) {
@@ -155,22 +306,12 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
         render: renderReact18
       })
 
-      const manifestResult = await dispatch(
-        publicJobsApiSlice.endpoints.getPublicResultFileJson.initiate({
-          publicId: job.publicId,
-          filename: 'ensemble_pdb_files.json'
-        })
-      )
-      const manifest = manifestResult.data as { ensemblePdbFiles: string[] }
-      if (!manifest || !manifest.ensemblePdbFiles.length) {
-        console.warn(
-          `PublicMolstarViewer: no ensemblePdbFiles in manifest for publicId=${job.publicId}`
-        )
-        return
-      }
+      const loadParamsArray = await createLoadParamsArray(job)
+      console.log('Load params array:', loadParamsArray)
 
       const pdbDataMap = new Map<string, string>()
-      for (const fileName of manifest.ensemblePdbFiles) {
+      for (const loadParamsGroup of loadParamsArray) {
+        const { fileName } = loadParamsGroup[0] // All items in group have same fileName
         const pdbResult = await dispatch(
           publicJobsApiSlice.endpoints.getPublicResultFileText.initiate({
             publicId: job.publicId,
@@ -180,39 +321,13 @@ const PublicMolstarViewer = ({ job }: PublicMolstarViewerProps) => {
         pdbDataMap.set(fileName, pdbResult.data || '')
       }
 
-      const loadParamsMap = new Map<string, LoadParams[]>()
-      for (const fileName of manifest.ensemblePdbFiles) {
-        const match = fileName.match(/ensemble_size_(\d+)_model\.pdb$/)
-        const ensembleSize = match ? parseInt(match[1], 10) : 1
-
-        let paramsArray = loadParamsMap.get(fileName)
-        if (!paramsArray) {
-          paramsArray = []
-          loadParamsMap.set(fileName, paramsArray)
-        }
-
-        for (let assemblyId = 1; assemblyId <= ensembleSize; assemblyId++) {
-          console.log('Adding load params:', {
-            format: 'pdb',
-            fileName,
-            assemblyId
-          })
-          paramsArray.push({
-            format: 'pdb',
-            fileName,
-            assemblyId
-          })
-        }
-      }
-
-      const loadParamsArray = Array.from(loadParamsMap.values())
-
       for (const loadParamsGroup of loadParamsArray) {
         const { fileName } = loadParamsGroup[0]
         const pdbData = pdbDataMap.get(fileName)
         if (!pdbData) continue
 
         for (const { assemblyId } of loadParamsGroup) {
+          console.log('Loading assembly:', assemblyId, 'from file:', fileName)
           const data = await window.molstar.builders.data.rawData({
             data: pdbData,
             label: fileName

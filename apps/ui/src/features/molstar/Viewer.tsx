@@ -3,7 +3,18 @@ import Grid from '@mui/material/Grid'
 import { axiosInstance } from 'app/api/axios'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from '../../slices/authSlice'
-import { BilboMDJob } from 'types/interfaces'
+import type {
+  BilboMDJobDTO,
+  BilboMDScoperDTO,
+  JobType,
+  ClassicJobResults,
+  AutoJobResults,
+  AlphafoldJobResults,
+  SANSJobResults,
+  ScoperJobResults,
+  IEnsembleModel,
+  IEnsembleMember
+} from '@bilbomd/bilbomd-types'
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui'
 import {
   DefaultPluginUISpec,
@@ -37,6 +48,13 @@ type LoadParams = {
 
 type PDBsToLoad = LoadParams[]
 
+type EnsembleResults =
+  | ClassicJobResults
+  | AutoJobResults
+  | AlphafoldJobResults
+  | SANSJobResults
+  | ScoperJobResults
+
 const DefaultViewerOptions = {
   extensions: ObjectKeys({}),
   layoutIsExpanded: true,
@@ -61,15 +79,23 @@ const DefaultViewerOptions = {
 }
 
 interface MolstarViewerProps {
-  job: BilboMDJob
+  job: BilboMDJobDTO
 }
 
 const MolstarViewer = ({ job }: MolstarViewerProps) => {
   const token = useSelector(selectCurrentToken)
 
   const createLoadParamsArray = async (
-    job: BilboMDJob
+    job: BilboMDJobDTO
   ): Promise<PDBsToLoad[]> => {
+    console.log(
+      'Creating LoadParams for job:',
+      job.mongo.id,
+      'jobType:',
+      job.mongo.jobType
+    )
+    console.log('Results available:', !!job.mongo.results)
+    console.log('MolstarViewer job:', job)
     const loadParamsMap = new Map<string, LoadParams[]>()
 
     // Helper function to add LoadParams to the Map
@@ -91,31 +117,76 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
       }
     }
 
-    // Adding LoadParams based on job type and number of ensembles
-    if (
-      (job.mongo.__t === 'BilboMdPDB' || job.mongo.__t === 'BilboMdCRD') &&
-      job.classic?.numEnsembles
-    ) {
-      for (let i = 1; i <= job.classic.numEnsembles; i++) {
-        const fileName = `ensemble_size_${i}_model.pdb`
-        addFilesToLoadParams(fileName, i)
+    // Helper function to get the results key based on job type
+    const getResultsKey = (jobType: JobType): string => {
+      switch (jobType) {
+        case 'pdb':
+        case 'crd':
+          return 'classic'
+        case 'auto':
+          return 'auto'
+        case 'alphafold':
+          return 'alphafold'
+        case 'sans':
+          return 'sans'
+        case 'scoper':
+          return 'scoper'
+        case 'multi':
+          // Multi jobs don't have ensembles
+          return ''
+        default:
+          console.warn(`Unknown job type '${jobType}', defaulting to 'classic'`)
+          return 'classic'
       }
-    } else if (job.mongo.__t === 'BilboMdAuto' && job.auto?.numEnsembles) {
-      for (let i = 1; i <= job.auto.numEnsembles; i++) {
-        const fileName = `ensemble_size_${i}_model.pdb`
-        addFilesToLoadParams(fileName, i)
+    }
+
+    // Helper function to process ensemble results
+    const processEnsembleResults = (results: EnsembleResults) => {
+      if (!results?.ensembles) return
+
+      // Process each ensemble size
+      for (const ensemble of results.ensembles) {
+        const fileName = `ensemble_size_${ensemble.size}_model.pdb`
+
+        // Count unique PDB files from all models' states to determine number of assemblies
+        const uniquePdbs = new Set<string>()
+        ensemble.models.forEach((model: IEnsembleModel) => {
+          model.states.forEach((state: IEnsembleMember) => {
+            if (state.pdb) {
+              uniquePdbs.add(state.pdb)
+            }
+          })
+        })
+
+        // Use the ensemble size as the number of models to load
+        // This corresponds to the number of MODEL records in the ensemble PDB file
+        addFilesToLoadParams(fileName, ensemble.size)
       }
-    } else if (
-      job.mongo.__t === 'BilboMdAlphaFold' &&
-      job.alphafold?.numEnsembles
-    ) {
-      for (let i = 1; i <= job.alphafold.numEnsembles; i++) {
-        const fileName = `ensemble_size_${i}_model.pdb`
-        addFilesToLoadParams(fileName, i)
+    }
+
+    // Adding LoadParams based on job type and results structure
+    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
+
+    if (ensembleJobTypes.includes(job.mongo.jobType)) {
+      // Use the appropriate results structure based on job type
+      const resultsKey = getResultsKey(job.mongo.jobType)
+      const jobResults = job.mongo.results?.[
+        resultsKey as keyof typeof job.mongo.results
+      ] as EnsembleResults
+
+      if (jobResults) {
+        processEnsembleResults(jobResults)
       }
-    } else if (job.mongo.__t === 'BilboMdScoper' && job.scoper?.foxsTopFile) {
-      const pdbFilename = `scoper_combined_${job.scoper.foxsTopFile}`
-      addFilesToLoadParams(pdbFilename, 1)
+    } else if (job.mongo.jobType === 'scoper') {
+      const scoperJob = job.mongo as BilboMDScoperDTO
+      const scoperResults = job.mongo.results?.scoper
+      if (scoperResults && scoperJob.foxs_top_file) {
+        const pdbFilename = `scoper_combined_${scoperJob.foxs_top_file}`
+        addFilesToLoadParams(pdbFilename, 1)
+      }
+    } else if (job.mongo.jobType === 'sans') {
+      // SANS jobs might have different file structures - handle if needed
+      console.log('SANS job detected - no ensemble loading implemented yet')
     }
 
     // Convert the Map values to an array of arrays

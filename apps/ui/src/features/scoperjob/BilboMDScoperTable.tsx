@@ -7,6 +7,7 @@ import {
   Paper
 } from '@mui/material'
 import { BilboMDScoperSteps } from 'types/interfaces'
+// import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 
 interface BilboMDScoperTableProps {
   scoper: BilboMDScoperSteps
@@ -14,7 +15,10 @@ interface BilboMDScoperTableProps {
 
 const BilboMDScoperTable = ({ scoper }: BilboMDScoperTableProps) => {
   const rows = [
-    { key: 'KGS Number of Conformations to Generate', value: scoper.kgsConformations },
+    {
+      key: 'KGS Number of Conformations to Generate',
+      value: scoper.kgsConformations
+    },
     { key: 'KGS Progress', value: scoper.kgsFiles },
     // { key: 'FoXS Top File', value: scoper.foxsTopFile },
     // { key: 'FoXS Top Score', value: scoper.foxsTopScore },
@@ -25,11 +29,17 @@ const BilboMDScoperTable = ({ scoper }: BilboMDScoperTableProps) => {
 
   return (
     <TableContainer component={Paper}>
-      <Table size="small" aria-label="simple table">
+      <Table
+        size="small"
+        aria-label="simple table"
+      >
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.key}>
-              <TableCell component="th" scope="row">
+              <TableCell
+                component="th"
+                scope="row"
+              >
                 {row.key}
               </TableCell>
               <TableCell align="right">{row.value}</TableCell>

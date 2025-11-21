@@ -6,7 +6,8 @@ import {
   IBilboMDAutoJob,
   IBilboMDSteps,
   JobStatus,
-  StepStatus
+  StepStatus,
+  IUser
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
@@ -16,14 +17,13 @@ import { spawnAutoRgCalculator } from './utils/autoRg.js'
 import fs from 'fs-extra'
 import { autoJobSchema } from '../../validation/index.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
-import { DispatchUser } from '../../types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDAutoJob = async (
   req: Request,
   res: Response,
-  user: DispatchUser | undefined,
+  user: IUser | undefined,
   UUID: string,
   ctx: {
     accessMode: 'user' | 'anonymous'
@@ -184,7 +184,9 @@ const handleBilboMDAutoJob = async (
         foxs: { status: StepStatus.Waiting, message: '' },
         multifoxs: { status: StepStatus.Waiting, message: '' },
         results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     } else {
       stepsInit = {
@@ -198,7 +200,9 @@ const handleBilboMDAutoJob = async (
         foxs: { status: StepStatus.Waiting, message: '' },
         multifoxs: { status: StepStatus.Waiting, message: '' },
         results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     }
 
