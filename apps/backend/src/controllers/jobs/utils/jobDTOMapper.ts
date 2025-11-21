@@ -41,7 +41,7 @@ export const mapStatus = (status: string): JobStatus => {
 export const mapUserToSummary = (
   user?: IUser | null
 ): UserSummaryDTO | undefined => {
-  if (!user) return undefined
+  if (!user || !user._id) return undefined
 
   return {
     id: user._id.toString(),

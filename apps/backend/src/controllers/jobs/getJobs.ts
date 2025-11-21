@@ -16,6 +16,17 @@ const getAllJobs = async (req: Request, res: Response) => {
     const username = req.user as string
     const roles = req.roles as string[]
 
+    // Validate required request properties
+    if (!username) {
+      res.status(400).json({ message: 'Username is required' })
+      return
+    }
+
+    if (!roles || !Array.isArray(roles)) {
+      res.status(400).json({ message: 'User roles are required' })
+      return
+    }
+
     // Determine if the user is an admin or manager based on their roles
     const isAdmin = roles.includes('Admin')
     const isManager = roles.includes('Manager')
@@ -47,32 +58,57 @@ const getAllJobs = async (req: Request, res: Response) => {
 
     // Map Job collection docs → DTOs
     for (const mongoJob of DBjobs) {
-      const userObj =
-        typeof mongoJob.user === 'object' ? (mongoJob.user as IUser) : undefined
+      try {
+        if (!mongoJob || !mongoJob._id) {
+          logger.warn('Skipping invalid job document without ID')
+          continue
+        }
 
-      const dto = buildBilboMDJobDTO({
-        jobId: mongoJob._id.toString(),
-        mongo: mongoJob,
-        username: userObj?.username || 'anonymous'
-      })
+        const userObj =
+          typeof mongoJob.user === 'object'
+            ? (mongoJob.user as IUser)
+            : undefined
 
-      allJobs.push(dto)
+        const dto = buildBilboMDJobDTO({
+          jobId: mongoJob._id.toString(),
+          mongo: mongoJob,
+          username: userObj?.username || 'anonymous'
+        })
+
+        allJobs.push(dto)
+      } catch (dtoError) {
+        logger.error(`Failed to build DTO for job ${mongoJob?._id}:`, dtoError)
+        // Continue processing other jobs instead of failing entirely
+      }
     }
 
     // Map MultiJob docs → DTOs
     for (const mongoMulti of DBmultiJobs) {
-      const userObj =
-        typeof mongoMulti.user === 'object'
-          ? (mongoMulti.user as IUser)
-          : undefined
+      try {
+        if (!mongoMulti || !mongoMulti._id) {
+          logger.warn('Skipping invalid MultiJob document without ID')
+          continue
+        }
 
-      const dto = buildMultiJobDTO({
-        jobId: mongoMulti._id.toString(),
-        mongo: mongoMulti,
-        username: userObj?.username || 'anonymous'
-      })
+        const userObj =
+          typeof mongoMulti.user === 'object'
+            ? (mongoMulti.user as IUser)
+            : undefined
 
-      allJobs.push(dto)
+        const dto = buildMultiJobDTO({
+          jobId: mongoMulti._id.toString(),
+          mongo: mongoMulti,
+          username: userObj?.username || 'anonymous'
+        })
+
+        allJobs.push(dto)
+      } catch (dtoError) {
+        logger.error(
+          `Failed to build DTO for MultiJob ${mongoMulti?._id}:`,
+          dtoError
+        )
+        // Continue processing other jobs instead of failing entirely
+      }
     }
 
     if (!allJobs.length) {
@@ -96,6 +132,12 @@ const getJobById = async (req: Request, res: Response) => {
     return
   }
 
+  // Validate ObjectId format
+  if (!/^[0-9a-fA-F]{24}$/.test(jobId)) {
+    res.status(400).json({ message: 'Invalid Job ID format.' })
+    return
+  }
+
   try {
     const job = await Job.findOne({ _id: jobId }).populate('user').exec()
     const multiJob = job
@@ -108,6 +150,12 @@ const getJobById = async (req: Request, res: Response) => {
     }
 
     if (job) {
+      if (!job._id) {
+        logger.error(`Job found but missing _id for jobId: ${jobId}`)
+        res.status(500).json({ message: 'Job data integrity error.' })
+        return
+      }
+
       const userObj =
         typeof job.user === 'object' ? (job.user as IUser) : undefined
 
@@ -119,6 +167,12 @@ const getJobById = async (req: Request, res: Response) => {
 
       res.status(200).json(dto)
     } else if (multiJob) {
+      if (!multiJob._id) {
+        logger.error(`MultiJob found but missing _id for jobId: ${jobId}`)
+        res.status(500).json({ message: 'Job data integrity error.' })
+        return
+      }
+
       const userObj =
         typeof multiJob.user === 'object' ? (multiJob.user as IUser) : undefined
 
@@ -131,7 +185,10 @@ const getJobById = async (req: Request, res: Response) => {
       res.status(200).json(dto)
     }
   } catch (error) {
-    logger.error(`Error retrieving job: ${error}`)
+    logger.error(`Error retrieving job ${jobId}:`, error)
+    if (error instanceof Error) {
+      logger.error(`Stack trace: ${error.stack}`)
+    }
     res.status(500).json({ message: 'Failed to retrieve job.' })
   }
 }
