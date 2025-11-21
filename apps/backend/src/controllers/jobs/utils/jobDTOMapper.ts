@@ -8,9 +8,6 @@ import type {
 } from '@bilbomd/bilbomd-types'
 import type { IJob, IMultiJob, IUser } from '@bilbomd/mongodb-schema'
 
-/**
- * Map Mongo discriminator (__t) → DTO JobType
- */
 export const mapDiscriminatorToJobType = (__t?: string): JobType => {
   switch (__t) {
     case 'BilboMdPDB':
@@ -50,10 +47,6 @@ export const mapUserToSummary = (
   }
 }
 
-/**
- * Map a single IJob (from Job collection) into the DTO's `mongo` portion.
- * This should match your BilboMDMongoJobDTO / specific job DTOs.
- */
 export const mapJobMongoToDTO = (job: IJob) => {
   const jobType = mapDiscriminatorToJobType(job.__t)
 
@@ -73,7 +66,6 @@ export const mapJobMongoToDTO = (job: IJob) => {
     time_completed: job.time_completed ?? undefined,
     progress: job.progress ?? 0,
     cleanup_in_progress: job.cleanup_in_progress ?? false,
-    // you can fill these more strongly later:
     md_engine: job.md_engine,
     openmm_parameters: job.openmm_parameters,
     md_constraints: job.md_constraints,
@@ -85,16 +77,12 @@ export const mapJobMongoToDTO = (job: IJob) => {
     results: job.results as JobResultsDTO
   }
 
-  // You can specialize by jobType if needed:
+  // Specialize by jobType if needed:
   // if (jobType === 'alphafold') { ... }
 
   return base as BilboMDMongoJobDTO
 }
 
-/**
- * Map a MultiJob document into the same outer BilboMDJobDTO shape,
- * or into a dedicated MultiJob DTO if you have one.
- */
 export const mapMultiJobMongoToDTO = (
   multiJob: IMultiJob
 ): BilboMDMongoJobDTO => {
@@ -116,9 +104,6 @@ export const mapMultiJobMongoToDTO = (
   } as BilboMDMongoJobDTO
 }
 
-/**
- * Full DTO for a single Job (Mongo + username + id)
- */
 export const buildBilboMDJobDTO = (opts: {
   jobId: string
   mongo: IJob
@@ -139,10 +124,6 @@ export const buildBilboMDJobDTO = (opts: {
   }
 }
 
-/**
- * DTO for MultiJob – either reuse BilboMDJobDTO or have a dedicated DTO.
- * Here I show reuse for simplicity.
- */
 export const buildMultiJobDTO = (opts: {
   jobId: string
   mongo: IMultiJob
