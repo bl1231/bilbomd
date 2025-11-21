@@ -4,8 +4,7 @@ import {
   Job,
   IStepStatus,
   IBilboMDSteps,
-  StepStatusEnum,
-  IJobResults
+  StepStatusEnum
 } from '@bilbomd/mongodb-schema'
 import { logger } from './helpers/loggers.js'
 
@@ -28,10 +27,13 @@ const updateStepStatus = async (
   }
 }
 
-// Update the 'results' field of a Job document using atomic update
-const updateJobResults = async (job: IJob, results: IJobResults) => {
+// Update specific result fields using dot notation to avoid clobbering
+const updateJobResults = async (
+  job: IJob,
+  fieldUpdates: Record<string, string | number | boolean>
+) => {
   try {
-    await Job.updateOne({ _id: job._id }, { $set: { results } })
+    await Job.updateOne({ _id: job._id }, { $set: fieldUpdates })
     // logger.info(`Successfully updated results for job ${job._id}`)
   } catch (error) {
     logger.error(`Error updating results for job ${job._id}: ${error}`)
