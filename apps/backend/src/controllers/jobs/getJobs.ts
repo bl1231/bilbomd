@@ -53,7 +53,7 @@ const getAllJobs = async (req: Request, res: Response) => {
       const dto = buildBilboMDJobDTO({
         jobId: mongoJob._id.toString(),
         mongo: mongoJob,
-        username: userObj?.username
+        username: userObj?.username || 'anonymous'
       })
 
       allJobs.push(dto)
@@ -69,7 +69,7 @@ const getAllJobs = async (req: Request, res: Response) => {
       const dto = buildMultiJobDTO({
         jobId: mongoMulti._id.toString(),
         mongo: mongoMulti,
-        username: userObj?.username
+        username: userObj?.username || 'anonymous'
       })
 
       allJobs.push(dto)
@@ -114,7 +114,7 @@ const getJobById = async (req: Request, res: Response) => {
       const dto = buildBilboMDJobDTO({
         jobId,
         mongo: job,
-        username: userObj?.username
+        username: userObj?.username || 'anonymous'
       })
 
       res.status(200).json(dto)
@@ -125,7 +125,7 @@ const getJobById = async (req: Request, res: Response) => {
       const dto = buildMultiJobDTO({
         jobId,
         mongo: multiJob,
-        username: userObj?.username
+        username: userObj?.username || 'anonymous'
       })
 
       res.status(200).json(dto)
