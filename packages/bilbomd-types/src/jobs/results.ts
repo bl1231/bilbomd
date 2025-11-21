@@ -1,5 +1,8 @@
 export interface JobSummary {
   ensemble_size: number
+  warnings?: string[]
+  notes?: string[]
+  version?: string
 }
 
 export interface IEnsembleMember {
