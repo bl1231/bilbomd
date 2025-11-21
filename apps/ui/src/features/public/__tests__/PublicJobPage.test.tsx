@@ -57,7 +57,7 @@ describe('PublicJobPage', () => {
     results: {
       summary: null,
       classic: null,
-      auto: { numEnsembles: 10 },
+      auto: { total_num_ensembles: 10 },
       alphafold: null,
       sans: null,
       scoper: null
