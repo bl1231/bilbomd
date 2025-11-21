@@ -29,11 +29,31 @@ export interface ClassicJobResults {
   ensembles?: IEnsemble[] // Array of ensembles for each N
 }
 
+export interface AutoJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
+export interface AlphafoldJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
+export interface SANSJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
+export interface ScoperJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
 export type JobResultsDTO = {
   summary: JobSummary | null
   classic: ClassicJobResults | null
-  auto: Record<string, unknown> | null
-  alphafold: Record<string, unknown> | null
-  sans: Record<string, unknown> | null
-  scoper: Record<string, unknown> | null
+  auto: AutoJobResults | null
+  alphafold: AlphafoldJobResults | null
+  sans: SANSJobResults | null
+  scoper: ScoperJobResults | null
 }
