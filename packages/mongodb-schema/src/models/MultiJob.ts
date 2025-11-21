@@ -1,7 +1,8 @@
 import { Schema, model } from 'mongoose'
 import { IMultiJob } from '../interfaces'
-import { stepsSchema, nerscInfoSchema } from './Job'
+import { nerscInfoSchema } from './Job'
 import { resultsSchema } from './Results'
+import { stepsSchema } from './JobSteps'
 
 const multiJobSchema = new Schema(
   {
