@@ -1,10 +1,3 @@
-import {
-  IBilboMDPDBJob,
-  IBilboMDCRDJob,
-  IBilboMDAutoJob,
-  IBilboMDSANSJob
-} from '@bilbomd/mongodb-schema'
-
 export interface Chain {
   id: string
   atoms: number
@@ -64,23 +57,6 @@ export interface Queue {
   waiting_count: number
 }
 
-export type BilboMDSteps = {
-  pae?: string
-  autorg?: string
-  minimize: string
-  heat: string
-  md: string
-  foxs: string
-  multifoxs: string
-  results: string
-  email: string
-  numEnsembles: number
-}
-
-export type BilboMDAlphaFoldResults = {
-  numEnsembles: number
-}
-
 export type BilboMDScoperSteps = {
   reduce: string
   rnaview: string
@@ -102,11 +78,3 @@ export type BilboMDScoperSteps = {
   results: string
   email: string
 }
-
-export type MongoWithIdString<T> = Omit<T, '_id'> & { _id: string }
-
-export type AnyBilboJob =
-  | IBilboMDPDBJob
-  | IBilboMDCRDJob
-  | IBilboMDAutoJob
-  | IBilboMDSANSJob
