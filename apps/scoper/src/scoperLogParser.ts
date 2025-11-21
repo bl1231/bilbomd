@@ -1,5 +1,12 @@
-import { updateStepStatus, updateJobResults } from './mongo-utils.js'
+import {
+  updateStepStatus,
+  updateJobResults,
+  updateJobProgress
+} from './mongo-utils.js'
 import { IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
+
+// progress when we enter is 10
+// progress when we exit is 80
 
 export async function parseScoperLogLine(line: string, job: IBilboMDScoperJob) {
   if (line.includes('Starting main application...')) {
@@ -12,16 +19,22 @@ export async function parseScoperLogLine(line: string, job: IBilboMDScoperJob) {
       status: 'Success',
       message: 'Hydrogens added.'
     })
+    // progress to 15
+    await updateJobProgress(job, 15)
   } else if (line.includes('Running rnaview on input pdb')) {
     await updateStepStatus(job, 'rnaview', {
       status: 'Success',
       message: 'RNAView completed'
     })
+    // progress to 20
+    await updateJobProgress(job, 20)
   } else if (line.match(/Running KGS with (\d+) samples/)) {
     await updateStepStatus(job, 'kgs', {
       status: 'Success',
       message: 'KGS completed'
     })
+    // progress to 25
+    await updateJobProgress(job, 25)
   } else if (line.match(/Getting FoXS scores for (\d+) structures/)) {
     await updateStepStatus(job, 'foxs', {
       status: 'Running',
@@ -34,6 +47,8 @@ export async function parseScoperLogLine(line: string, job: IBilboMDScoperJob) {
         status: 'Success',
         message: 'FoXS completed'
       })
+      // progress to 35
+      await updateJobProgress(job, 35)
       await updateJobResults(job, {
         'results.scoper.foxs_top_file': match[1],
         'results.scoper.foxs_top_score': parseFloat(match[2])
@@ -51,6 +66,8 @@ export async function parseScoperLogLine(line: string, job: IBilboMDScoperJob) {
       status: 'Success',
       message: 'IonNet completed'
     })
+    // progress to 60
+    await updateJobProgress(job, 60)
     await updateStepStatus(job, 'multifoxs', {
       status: 'Running',
       message: 'MultiFoXS running'
@@ -62,6 +79,8 @@ export async function parseScoperLogLine(line: string, job: IBilboMDScoperJob) {
         status: 'Success',
         message: 'MultiFoXS completed'
       })
+      // progress to 70
+      await updateJobProgress(job, 70)
       await updateJobResults(job, {
         'results.scoper.multifoxs_ensemble_size': parseInt(match[1], 10)
       })
