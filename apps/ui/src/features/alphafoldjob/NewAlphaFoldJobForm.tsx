@@ -465,6 +465,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   if (configError)
     return <Alert severity="error">Error loading configuration</Alert>
 
+  const useAlphaFold = config.enableBilboMdAlphaFold?.toLowerCase() === 'true'
   const useNersc = config.useNersc?.toLowerCase() === 'true'
 
   const handleStatusCheck = (isUnavailable: boolean) => {
@@ -533,7 +534,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         </HeaderBox>
 
         <Paper sx={{ p: 2 }}>
-          {!useNersc ? (
+          {!useAlphaFold ? (
             <Alert severity="warning">
               If you would like to run <b>BilboMD AF</b> which requires GPU
               compute capabilities, please head over to BilboMD running on{' '}
