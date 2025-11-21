@@ -47,7 +47,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
       : 'BilboMD: New Classic Job'
   )
 
-  // Theme and routing
+  // theme and dark mode detection
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
 
@@ -80,7 +80,6 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   if (configError)
     return <Alert severity="error">Error loading configuration</Alert>
 
-  // Are we running on NERSC?
   const useNersc = config.useNersc?.toLowerCase() === 'true'
 
   const initialValues: BilboMDClassicJobFormValues = {

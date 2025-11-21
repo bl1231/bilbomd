@@ -313,6 +313,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         />
                       </Grid>
 
+                      {/* Progress Bar */}
                       {isSubmitting && (
                         <Box sx={{ my: 1, width: '520px' }}>
                           <LinearProgress />
