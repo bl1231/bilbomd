@@ -2,9 +2,10 @@ import { Request, Response } from 'express'
 import { logger } from '../middleware/loggers.js'
 import axios from 'axios'
 
-export const getConfigsStuff = async (req: Request, res: Response): Promise<void> => {
-  logger.info('--- getConfigsStuff ---')
-
+export const getConfigsStuff = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const workerPromise = axios.get(
       `${process.env.WORKER_SERVICE_URL || 'http://worker'}:${
@@ -20,7 +21,10 @@ export const getConfigsStuff = async (req: Request, res: Response): Promise<void
       { timeout: 3000 }
     )
 
-    const [workerResult, uiResult] = await Promise.allSettled([workerPromise, uiPromise])
+    const [workerResult, uiResult] = await Promise.allSettled([
+      workerPromise,
+      uiPromise
+    ])
 
     const workerInfo =
       workerResult.status === 'fulfilled'
@@ -35,15 +39,15 @@ export const getConfigsStuff = async (req: Request, res: Response): Promise<void
     if (workerResult.status === 'rejected') {
       logger.warn(
         `Worker service unavailable: ${workerResult.reason?.message || workerResult.reason}. ` +
-        `Status: ${workerResult.reason?.response?.status || 'unknown'}. ` +
-        `Stack: ${workerResult.reason?.stack || 'not available'}.`
+          `Status: ${workerResult.reason?.response?.status || 'unknown'}. ` +
+          `Stack: ${workerResult.reason?.stack || 'not available'}.`
       )
     }
     if (uiResult.status === 'rejected') {
       logger.warn(
         `UI service unavailable: ${uiResult.reason?.message || uiResult.reason}. ` +
-        `Status: ${uiResult.reason?.response?.status || 'unknown'}. ` +
-        `Stack: ${uiResult.reason?.stack || 'not available'}.`
+          `Status: ${uiResult.reason?.response?.status || 'unknown'}. ` +
+          `Stack: ${uiResult.reason?.stack || 'not available'}.`
       )
     }
 
@@ -60,11 +64,13 @@ export const getConfigsStuff = async (req: Request, res: Response): Promise<void
       'WORKER_SERVICE_PORT',
       'ENABLE_BILBOMD_SANS',
       'ENABLE_BILBOMD_MULTI',
+      'ENABLE_BILBOMD_ALPHAFOLD',
+      'ENABLE_BILBOMD_SCOPER',
       'ENABLE_HOME_PAGE_ALERT'
     ]
 
     envVars.forEach((envVar) => {
-      logger.info(`${envVar}: ${process.env[envVar]}`)
+      logger.debug(`${envVar}: ${process.env[envVar]}`)
     })
 
     // Construct the response object
@@ -77,6 +83,8 @@ export const getConfigsStuff = async (req: Request, res: Response): Promise<void
       sendMailUser: process.env.SENDMAIL_USER || 'bilbomd@lbl.gov',
       enableBilboMdSANS: process.env.ENABLE_BILBOMD_SANS || 'false',
       enableBilboMdMulti: process.env.ENABLE_BILBOMD_MULTI || 'false',
+      enableBilboMdAlphaFold: process.env.ENABLE_BILBOMD_ALPHAFOLD || 'false',
+      enableBilboMdScoper: process.env.ENABLE_BILBOMD_SCOPER || 'false',
       enableHomePageAlert: process.env.ENABLE_HOME_PAGE_ALERT || 'false',
       backendVersion: process.env.BILBOMD_BACKEND_VERSION || '0.0.0',
       backendGitHash: process.env.BILBOMD_BACKEND_GIT_HASH || 'abc123',
