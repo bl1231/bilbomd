@@ -1,7 +1,4 @@
 import { logger } from '../../middleware/loggers.js'
-// import path from 'path'
-// import { getBullMQJob } from '../../queues/bilbomd.js'
-// import { getBullMQScoperJob } from '../../queues/scoper.js'
 import {
   Job,
   IJob,
@@ -11,17 +8,8 @@ import {
   IMultiJob
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
-// import { BilboMDSteps } from '../../types/bilbomd.js'
-// import { BilboMDJob, BilboMDBullMQ } from '../../types/bilbomd.js'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobDTOMapper.js'
-// import {
-//   calculateNumEnsembles,
-//   calculateNumEnsembles2
-// } from './utils/jobUtils.js'
-// import { getScoperStatus } from './scoperStatus.js'
-
-// const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const getAllJobs = async (req: Request, res: Response) => {
   try {
@@ -59,14 +47,6 @@ const getAllJobs = async (req: Request, res: Response) => {
 
     // Map Job collection docs → DTOs
     for (const mongoJob of DBjobs) {
-      // let bullmq: BilboMDBullMQ | null = null
-
-      // if (['BilboMd', 'BilboMdAuto'].includes(mongoJob.__t)) {
-      //   bullmq = await getBullMQJob(mongoJob.uuid)
-      // } else if (mongoJob.__t === 'BilboMdScoper') {
-      //   bullmq = await getBullMQScoperJob(mongoJob.uuid)
-      // }
-
       const userObj =
         typeof mongoJob.user === 'object' ? (mongoJob.user as IUser) : undefined
 
@@ -128,55 +108,13 @@ const getJobById = async (req: Request, res: Response) => {
     }
 
     if (job) {
-      // const jobDir = path.join(uploadFolder, job.uuid)
-      // let bullmq: BilboMDBullMQ | undefined
-      // let classic: unknown
-      // let auto: unknown
-      // let alphafold: unknown
-      // let scoper: unknown
-
-      // if (
-      //   job.__t === 'BilboMdPDB' ||
-      //   job.__t === 'BilboMdCRD' ||
-      //   job.__t === 'BilboMdSANS'
-      // ) {
-      //   bullmq = await getBullMQJob(job.uuid)
-      //   if (bullmq && 'bilbomdStep' in bullmq) {
-      //     classic = await calculateNumEnsembles(
-      //       bullmq.bilbomdStep as BilboMDSteps,
-      //       jobDir
-      //     )
-      //   }
-      // } else if (job.__t === 'BilboMdAuto') {
-      //   bullmq = await getBullMQJob(job.uuid)
-      //   if (bullmq && 'bilbomdStep' in bullmq) {
-      //     auto = await calculateNumEnsembles(
-      //       bullmq.bilbomdStep as BilboMDSteps,
-      //       jobDir
-      //     )
-      //   }
-      // } else if (job.__t === 'BilboMdAlphaFold') {
-      //   bullmq = await getBullMQJob(job.uuid)
-      //   if (bullmq) {
-      //     alphafold = await calculateNumEnsembles2(jobDir)
-      //   }
-      // } else if (job.__t === 'BilboMdScoper') {
-      //   bullmq = await getBullMQScoperJob(job.uuid)
-      //   scoper = await getScoperStatus(job as unknown as IBilboMDScoperJob)
-      // }
-
       const userObj =
         typeof job.user === 'object' ? (job.user as IUser) : undefined
 
       const dto = buildBilboMDJobDTO({
         jobId,
-        mongo: job.toObject() as unknown as IJob, // or adjust typing if you use lean
-        // bullmq,
+        mongo: job,
         username: userObj?.username
-        // classic,
-        // auto,
-        // alphafold,
-        // scoper
       })
 
       res.status(200).json(dto)
@@ -186,7 +124,7 @@ const getJobById = async (req: Request, res: Response) => {
 
       const dto = buildMultiJobDTO({
         jobId,
-        mongo: multiJob.toObject() as unknown as IMultiJob,
+        mongo: multiJob,
         username: userObj?.username
       })
 
