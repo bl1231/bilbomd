@@ -3,7 +3,9 @@ import { queueScoperJob } from '../../queues/scoper.js'
 import {
   BilboMdScoperJob,
   IBilboMDScoperJob,
-  IUser
+  IUser,
+  IBilboMDSteps,
+  StepStatus
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import path from 'path'
@@ -85,6 +87,23 @@ const handleBilboMDScoperJob = async (
 
     logger.info(`fixc1c2: ${fixc1c2}`)
 
+    const steps: IBilboMDSteps = {
+      pdb2crd: { status: StepStatus.Waiting, message: '' },
+      pae: { status: StepStatus.Waiting, message: '' },
+      autorg: { status: StepStatus.Waiting, message: '' },
+      minimize: { status: StepStatus.Waiting, message: '' },
+      initfoxs: { status: StepStatus.Waiting, message: '' },
+      heat: { status: StepStatus.Waiting, message: '' },
+      md: { status: StepStatus.Waiting, message: '' },
+      dcd2pdb: { status: StepStatus.Waiting, message: '' },
+      foxs: { status: StepStatus.Waiting, message: '' },
+      multifoxs: { status: StepStatus.Waiting, message: '' },
+      results: { status: StepStatus.Waiting, message: '' },
+      ...(ctx.accessMode === 'user' && {
+        email: { status: StepStatus.Waiting, message: '' }
+      })
+    }
+
     const jobData = {
       title,
       uuid: UUID,
@@ -93,20 +112,7 @@ const handleBilboMDScoperJob = async (
       fixc1c2,
       status: 'Submitted',
       time_submitted: new Date(),
-      steps: {
-        pdb2crd: {},
-        pae: {},
-        autorg: {},
-        minimize: {},
-        initfoxs: {},
-        heat: {},
-        md: {},
-        dcd2pdb: {},
-        foxs: {},
-        multifoxs: {},
-        results: {},
-        email: {}
-      },
+      steps,
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId

@@ -77,7 +77,10 @@ const handleBilboMDSANSJob = async (
         md: { status: StepStatus.Waiting, message: '' },
         pepsisans: { status: StepStatus.Waiting, message: '' },
         gasans: { status: StepStatus.Waiting, message: '' },
-        results: { status: StepStatus.Waiting, message: '' }
+        results: { status: StepStatus.Waiting, message: '' },
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     } else {
       stepsInit = {
@@ -89,7 +92,10 @@ const handleBilboMDSANSJob = async (
         pdb_remediate: { status: StepStatus.Waiting, message: '' },
         pepsisans: { status: StepStatus.Waiting, message: '' },
         gasans: { status: StepStatus.Waiting, message: '' },
-        results: { status: StepStatus.Waiting, message: '' }
+        results: { status: StepStatus.Waiting, message: '' },
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     }
 
@@ -107,6 +113,7 @@ const handleBilboMDSANSJob = async (
       rg_max: req.body.rg_max,
       status: 'Submitted',
       time_submitted: new Date(),
+      steps: stepsInit,
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
@@ -114,13 +121,7 @@ const handleBilboMDSANSJob = async (
         : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
         ? { client_ip_hash: ctx.client_ip_hash }
-        : {}),
-      steps: {
-        ...stepsInit,
-        ...(ctx.accessMode === 'user'
-          ? { email: { status: StepStatus.Waiting, message: '' } }
-          : {})
-      }
+        : {})
     }
 
     const newJob: IBilboMDSANSJob = new BilboMdSANSJob(jobData)

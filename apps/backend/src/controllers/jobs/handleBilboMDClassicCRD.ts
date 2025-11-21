@@ -247,7 +247,9 @@ const handleBilboMDClassicCRD = async (
         foxs: { status: StepStatus.Waiting, message: '' },
         multifoxs: { status: StepStatus.Waiting, message: '' },
         results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       },
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
