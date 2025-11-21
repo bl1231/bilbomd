@@ -14,7 +14,7 @@ import { sendJobCompleteEmail } from './helpers/mailer.js'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
-import { parseScoperLogLine } from 'scoperLogParser.js'
+import { parseScoperLogLine } from './scoperLogParser.js'
 
 const execPromise = promisify(exec)
 
