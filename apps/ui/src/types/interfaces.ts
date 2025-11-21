@@ -103,14 +103,6 @@ export type BilboMDScoperSteps = {
   email: string
 }
 
-export type BilboMDBullMQ = {
-  position: number
-  queuePosition: string
-  bilbomdStep: BilboMDSteps | BilboMDScoperSteps
-  bilbomdLastStep: string
-  bullmq: BullMQJob
-}
-
 export type MongoWithIdString<T> = Omit<T, '_id'> & { _id: string }
 
 export type AnyBilboJob =
