@@ -11,7 +11,7 @@ import type { IJob, IMultiJob, IUser } from '@bilbomd/mongodb-schema'
 /**
  * Map Mongo discriminator (__t) → DTO JobType
  */
-function mapDiscriminatorToJobType(__t?: string): JobType {
+export const mapDiscriminatorToJobType = (__t?: string): JobType => {
   switch (__t) {
     case 'BilboMdPDB':
       return 'pdb'
@@ -32,13 +32,15 @@ function mapDiscriminatorToJobType(__t?: string): JobType {
   }
 }
 
-function mapStatus(status: string): JobStatus {
+export const mapStatus = (status: string): JobStatus => {
   // if your DTO union is stricter, normalize here
   // e.g. capitalisation, mapping numeric codes, etc.
   return status as JobStatus
 }
 
-function mapUserToSummary(user?: IUser | null): UserSummaryDTO | undefined {
+export const mapUserToSummary = (
+  user?: IUser | null
+): UserSummaryDTO | undefined => {
   if (!user) return undefined
 
   return {
@@ -52,7 +54,7 @@ function mapUserToSummary(user?: IUser | null): UserSummaryDTO | undefined {
  * Map a single IJob (from Job collection) into the DTO's `mongo` portion.
  * This should match your BilboMDMongoJobDTO / specific job DTOs.
  */
-function mapJobMongoToDTO(job: IJob) {
+export const mapJobMongoToDTO = (job: IJob) => {
   const jobType = mapDiscriminatorToJobType(job.__t)
 
   // Base shape – extend per jobType as needed
@@ -93,7 +95,9 @@ function mapJobMongoToDTO(job: IJob) {
  * Map a MultiJob document into the same outer BilboMDJobDTO shape,
  * or into a dedicated MultiJob DTO if you have one.
  */
-function mapMultiJobMongoToDTO(multiJob: IMultiJob): BilboMDMongoJobDTO {
+export const mapMultiJobMongoToDTO = (
+  multiJob: IMultiJob
+): BilboMDMongoJobDTO => {
   const jobType: JobType = 'multi'
   return {
     id: multiJob._id.toString(),
@@ -115,11 +119,11 @@ function mapMultiJobMongoToDTO(multiJob: IMultiJob): BilboMDMongoJobDTO {
 /**
  * Full DTO for a single Job (Mongo + username + id)
  */
-export function buildBilboMDJobDTO(opts: {
+export const buildBilboMDJobDTO = (opts: {
   jobId: string
   mongo: IJob
   username?: string
-}): BilboMDJobDTO {
+}): BilboMDJobDTO => {
   const { jobId, mongo, username } = opts
 
   const mongoDTO = mapJobMongoToDTO(mongo)
@@ -139,11 +143,11 @@ export function buildBilboMDJobDTO(opts: {
  * DTO for MultiJob – either reuse BilboMDJobDTO or have a dedicated DTO.
  * Here I show reuse for simplicity.
  */
-export function buildMultiJobDTO(opts: {
+export const buildMultiJobDTO = (opts: {
   jobId: string
   mongo: IMultiJob
   username?: string
-}): BilboMDJobDTO {
+}): BilboMDJobDTO => {
   const { jobId, mongo, username } = opts
   const mongoDTO = mapMultiJobMongoToDTO(mongo)
   const userSummary = mapUserToSummary(mongo.user as IUser | undefined)
