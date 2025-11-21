@@ -90,12 +90,52 @@ const assembleEnsemblePdbFiles = async ({
 
   // Update the DBjob with the parsed results
   DBjob.results = DBjob.results || {}
-  DBjob.results.classic = {
+  const resultsKey = getResultsKey(DBjob.__t)
+  const ensembleResults = {
     total_num_ensembles: numEnsembles,
     ensembles
   }
+
+  switch (resultsKey) {
+    case 'classic':
+      DBjob.results.classic = ensembleResults
+      break
+    case 'auto':
+      DBjob.results.auto = ensembleResults
+      break
+    case 'alphafold':
+      DBjob.results.alphafold = ensembleResults
+      break
+    default:
+      logger.error(`Unsupported job type '${DBjob.__t}' for ensemble results`)
+      throw new Error(
+        `Cannot store ensemble results for job type: ${DBjob.__t}`
+      )
+  }
+
   await DBjob.save()
   logger.info(`DBjob updated with ensemble results.`)
+}
+
+const getResultsKey = (discriminator: string): string => {
+  switch (discriminator) {
+    case 'BilboMdPDB':
+    case 'BilboMdCRD':
+      return 'classic'
+    case 'BilboMdAuto':
+      return 'auto'
+    case 'BilboMdAlphaFold':
+      return 'alphafold'
+    case 'BilboMdSANS':
+      return 'sans'
+    case 'BilboMdScoper':
+      return 'scoper'
+    default:
+      logger.warn(
+        `Unknown discriminator '${discriminator}', defaulting to 'classic'`
+      )
+      return 'classic'
+  }
 }
 
 const parseEnsembleFile = (content: string, size: number): IEnsemble => {
