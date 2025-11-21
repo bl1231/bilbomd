@@ -125,11 +125,15 @@ const spawnScoper = async (
     logger.info(`Running Scoper with args: ${['-u', ...args].join(' ')}`)
     const scoper = spawn('python', ['-u', ...args], { cwd: outputDir })
 
-    scoper.stdout?.on('data', (data) => {
+    scoper.stdout?.on('data', async (data) => {
       const text = data.toString()
       logStream.write(text)
       // parse output in order to update job progression.
-      parseScoperLogLine(text, DBjob)
+      try {
+        await parseScoperLogLine(text, DBjob)
+      } catch (error) {
+        logger.error(`Error parsing scoper log line: ${error}`)
+      }
     })
 
     scoper.stderr?.on('data', (data) => {
