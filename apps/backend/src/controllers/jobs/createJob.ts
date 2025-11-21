@@ -86,10 +86,7 @@ const createNewJob = async (req: Request, res: Response) => {
           `Job submission from: ${req.apiUser ? 'API token' : 'JWT session'}: ${email}`
         )
 
-        const foundUser = await User.findOne({ email })
-          .select('_id username email')
-          .lean()
-          .exec()
+        const foundUser = await User.findOne({ email }).exec()
 
         if (!foundUser) {
           res.status(401).json({ message: 'No user found with that email' })
@@ -102,17 +99,11 @@ const createNewJob = async (req: Request, res: Response) => {
           $inc: { jobCount: 1, [jobTypeField]: 1 }
         })
 
-        // Convert _id to string for DispatchUser compatibility
-        const dispatchUser = {
-          ...foundUser,
-          _id: foundUser._id.toString()
-        }
-
         await dispatchBilboMDJob({
           req,
           res,
           bilbomd_mode,
-          user: dispatchUser,
+          user: foundUser,
           UUID,
           accessMode: 'user'
         })

@@ -2,6 +2,7 @@ import { Document, Types } from 'mongoose'
 import { IUser } from './userInterface'
 import { IOpenMMParameters } from './openmmInterface'
 import { IAssets } from './assetsInterface'
+import { IJobResults } from './resultsInterface'
 
 export const StepStatus = {
   Waiting: 'Waiting',
@@ -166,6 +167,7 @@ interface IJob extends Document {
   assets?: IAssets
   nersc?: INerscInfo
   cleanup_in_progress: boolean
+  results?: IJobResults
 }
 
 interface IBilboMDPDBJob extends IJob {

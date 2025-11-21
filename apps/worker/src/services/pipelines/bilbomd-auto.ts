@@ -179,7 +179,7 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
 
   // Prepare results
   await MQjob.log('start results')
-  await prepareBilboMDResults(MQjob, foundJob)
+  await prepareBilboMDResults(foundJob)
   await MQjob.log('end results')
   await MQjob.updateProgress(99)
   foundJob.progress = 99

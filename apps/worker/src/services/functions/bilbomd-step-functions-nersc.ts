@@ -268,10 +268,7 @@ const monitorBilboMDJob = async (
   }
 }
 
-const prepareBilboMDResults = async (
-  MQjob: BullMQJob,
-  DBjob: IJob
-): Promise<void> => {
+const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
   try {
     await updateJobStatus(
       DBjob,

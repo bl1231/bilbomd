@@ -1,5 +1,6 @@
 import { Schema, model } from 'mongoose'
 import { assetsSchema } from './Assets'
+import { resultsSchema } from './Results'
 import {
   IJob,
   IBilboMDPDBJob,
@@ -189,9 +190,25 @@ const jobSchema = new Schema(
     time_started: Date,
     time_completed: Date,
     user: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: false
+      _id: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: function (this: any) {
+          return this.access_mode === 'user'
+        }
+      },
+      username: {
+        type: String,
+        required: function (this: any) {
+          return this.access_mode === 'user'
+        }
+      },
+      email: {
+        type: String,
+        required: function (this: any) {
+          return this.access_mode === 'user'
+        }
+      }
     },
     resubmitted_from: {
       type: Schema.Types.ObjectId,
@@ -208,12 +225,27 @@ const jobSchema = new Schema(
     feedback: { type: feedbackSchema, required: false },
     assets: { type: assetsSchema, required: false },
     nersc: { type: nerscInfoSchema, required: false },
-    cleanup_in_progress: { type: Boolean, default: false }
+    cleanup_in_progress: { type: Boolean, default: false },
+    results: { type: resultsSchema, required: false }
   },
   {
     timestamps: true,
     id: true,
-    toJSON: { virtuals: true },
+    toJSON: {
+      virtuals: true,
+      transform: (doc, ret) => {
+        // Ensure the `user` field includes only minimal details
+        if (ret.user && typeof ret.user === 'object' && ret.user._id) {
+          ret.user = {
+            _id: ret.user._id,
+            username: ret.user.username,
+            email: ret.user.email
+          }
+        }
+
+        return ret
+      }
+    },
     toObject: { virtuals: true }
   }
 )

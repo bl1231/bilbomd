@@ -54,7 +54,14 @@ describe('PublicJobPage', () => {
     md_engine: 'OpenMM',
     submittedAt: new Date('2023-01-01'),
     startedAt: new Date('2023-01-01T01:00:00'),
-    auto: { numEnsembles: 10 }
+    results: {
+      summary: null,
+      classic: null,
+      auto: { total_num_ensembles: 10 },
+      alphafold: null,
+      sans: null,
+      scoper: null
+    }
   }
 
   const completedJobData: PublicJobStatus = {

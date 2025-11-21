@@ -5,7 +5,8 @@ import {
   IBilboMDAlphaFoldJob,
   IAlphaFoldEntity,
   IBilboMDSteps,
-  StepStatus
+  StepStatus,
+  IUser
 } from '@bilbomd/mongodb-schema'
 import { alphafoldJobSchema } from '../../validation/index.js'
 import { ValidationError } from 'yup'
@@ -16,7 +17,6 @@ import { queueJob } from '../../queues/bilbomd.js'
 import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
-import { DispatchUser } from '../../types/bilbomd.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -29,7 +29,7 @@ type AutoRgResults = {
 const handleBilboMDAlphaFoldJob = async (
   req: Request,
   res: Response,
-  user: DispatchUser | undefined,
+  user: IUser | undefined,
   UUID: string,
   ctx: {
     accessMode: 'user' | 'anonymous'
@@ -175,7 +175,9 @@ const handleBilboMDAlphaFoldJob = async (
         foxs: { status: StepStatus.Waiting, message: '' },
         multifoxs: { status: StepStatus.Waiting, message: '' },
         results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     } else {
       stepsInit = {
@@ -192,7 +194,9 @@ const handleBilboMDAlphaFoldJob = async (
         foxs: { status: StepStatus.Waiting, message: '' },
         multifoxs: { status: StepStatus.Waiting, message: '' },
         results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     }
 

@@ -1,7 +1,8 @@
 import { Request, Response } from 'express'
 import { logger } from '../../middleware/loggers.js'
 import { Job, IJob } from '@bilbomd/mongodb-schema'
-import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
+import type { PublicJobStatus, JobResultsDTO } from '@bilbomd/bilbomd-types'
+import { mapDiscriminatorToJobType } from '../jobs/utils/jobDTOMapper.js'
 
 const getPublicJobById = async (req: Request, res: Response) => {
   const { publicId } = req.params
@@ -27,17 +28,20 @@ const getPublicJobById = async (req: Request, res: Response) => {
       return
     }
 
+    const jobType = mapDiscriminatorToJobType(job.__t)
+
     const response: PublicJobStatus = {
       publicId,
       jobId: job._id.toString(),
       uuid: job.uuid,
-      jobType: job.__t,
+      jobType: jobType,
       status: job.status,
       progress: job.progress ?? 0,
       md_engine: job.md_engine,
       submittedAt: job.time_submitted,
       startedAt: job.time_started,
-      completedAt: job.time_completed
+      completedAt: job.time_completed,
+      results: job.results as JobResultsDTO
     }
 
     res.status(200).json(response)

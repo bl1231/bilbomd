@@ -1,18 +1,18 @@
+import { JobResultsDTO } from './results'
+import { JobType, JobStatusEnum } from './jobs'
+
 export type PublicJobStatus = {
   publicId: string
   jobId: string
   uuid: string
-  jobType: string
-  status: string
+  jobType: JobType
+  status: JobStatusEnum
   progress: number
   md_engine?: string
   submittedAt: Date
   startedAt?: Date
   completedAt?: Date
-  classic?: { numEnsembles: number }
-  auto?: { numEnsembles: number }
-  alphafold?: { numEnsembles: number }
-  scoper?: unknown
+  results?: JobResultsDTO
 }
 
 export type AnonJobResponse = {

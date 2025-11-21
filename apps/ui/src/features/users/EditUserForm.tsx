@@ -68,9 +68,7 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
   useGetJobsQuery('jobsList') // To trigger query lifecycle
   const allJobs = useSelector(selectAllJobs)
 
-  const filteredJobs = allJobs.filter(
-    (job) => job.mongo?.user?._id?.toString() === user.id
-  )
+  const filteredJobs = allJobs.filter((job) => job.mongo?.user?.id === user.id)
 
   const handleClickOpen = () => {
     setOpen(true)
@@ -154,14 +152,17 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
               setFieldValue
             }) => (
               <Form>
-                <Grid container direction='column'>
+                <Grid
+                  container
+                  direction="column"
+                >
                   <Grid sx={{ my: 2, width: '300px' }}>
                     <Field
-                      name='username'
-                      id='username'
-                      label='Username'
-                      type='text'
-                      autoComplete='off'
+                      name="username"
+                      id="username"
+                      label="Username"
+                      type="text"
+                      autoComplete="off"
                       disabled={isSubmitting}
                       component={TextField}
                       onChange={handleChange}
@@ -171,11 +172,11 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                   </Grid>
                   <Grid sx={{ my: 2, width: '300px' }}>
                     <Field
-                      name='email'
-                      id='email'
-                      label='Email'
-                      type='email'
-                      autoComplete='off'
+                      name="email"
+                      id="email"
+                      label="Email"
+                      type="email"
+                      autoComplete="off"
                       fullWidth
                       disabled={isSubmitting}
                       component={TextField}
@@ -186,14 +187,14 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                   </Grid>
 
                   <Grid sx={{ my: 2 }}>
-                    <FormLabel component='legend'>
+                    <FormLabel component="legend">
                       Make User active or inactive
                     </FormLabel>
                     <FormGroup>
                       <FormControlLabel
                         control={<Checkbox checked={values.active} />}
-                        label='Active'
-                        name='active'
+                        label="Active"
+                        name="active"
                         onChange={handleChange}
                       />
                     </FormGroup>
@@ -201,23 +202,26 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                   <Grid sx={{ mb: 2 }}>
                     {/* https://github.com/jaredpalmer/formik/issues/2123 */}
 
-                    <FormLabel component='legend'>Assign Roles</FormLabel>
+                    <FormLabel component="legend">Assign Roles</FormLabel>
                     <FormControl sx={{ my: 2, width: 300 }}>
-                      <InputLabel id='roles'>Roles</InputLabel>
+                      <InputLabel id="roles">Roles</InputLabel>
                       <Select
-                        labelId='roles'
-                        id='roles'
+                        labelId="roles"
+                        id="roles"
                         multiple={true}
                         value={values.roles}
                         onChange={(e) =>
                           setFieldValue('roles', e.target.value as string)
                         }
-                        input={<OutlinedInput label='Roles' />}
+                        input={<OutlinedInput label="Roles" />}
                         renderValue={(selected) => selected.join(', ')}
                         MenuProps={MenuProps}
                       >
                         {Object.values(ROLES).map((role) => (
-                          <MenuItem key={role} value={role}>
+                          <MenuItem
+                            key={role}
+                            value={role}
+                          >
                             <Checkbox
                               checked={values.roles.indexOf(role) > -1}
                             />
@@ -229,25 +233,28 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                   </Grid>
                   <Grid>
                     <Button
-                      variant='contained'
+                      variant="contained"
                       startIcon={<EditIcon />}
                       sx={{ mr: 2 }}
-                      type='submit'
+                      type="submit"
                     >
                       Update
                     </Button>
                     <Button
-                      variant='contained'
+                      variant="contained"
                       startIcon={<DeleteIcon />}
                       sx={{ mr: 2 }}
-                      color='error'
-                      type='button'
+                      color="error"
+                      type="button"
                       disabled={isSubmitting}
                       onClick={handleClickOpen}
                     >
                       {`Delete ${values.username}`}
                     </Button>
-                    <Dialog open={open} onClose={handleClose}>
+                    <Dialog
+                      open={open}
+                      onClose={handleClose}
+                    >
                       <DialogContent>
                         <DialogContentText>
                           {`Delete ${values.username} ?`}
@@ -255,7 +262,10 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                       </DialogContent>
                       <DialogActions>
                         <Button onClick={handleClose}>Cancel</Button>
-                        <Button onClick={handleDeleteUser} autoFocus>
+                        <Button
+                          onClick={handleDeleteUser}
+                          autoFocus
+                        >
                           Delete
                         </Button>
                       </DialogActions>
@@ -263,7 +273,7 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                   </Grid>
                   <Grid sx={{ mt: 2 }}>
                     {errContent ? (
-                      <Alert severity='warning'>{errContent}</Alert>
+                      <Alert severity="warning">{errContent}</Alert>
                     ) : (
                       ''
                     )}
@@ -294,12 +304,18 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
 
       <Box sx={{ my: 1 }}>
         <HeaderBox>
-          <Chip label={`Jobs ${filteredJobs?.length || 0}`} color='success' />
+          <Chip
+            label={`Jobs ${filteredJobs?.length || 0}`}
+            color="success"
+          />
         </HeaderBox>
         <Paper sx={{ p: 1 }}>
           {filteredJobs.length >= 1 ? (
             filteredJobs.map((job, index) => (
-              <JobSummary key={index} job={job} />
+              <JobSummary
+                key={index}
+                job={job}
+              />
             ))
           ) : (
             <Typography>No jobs for this user</Typography>

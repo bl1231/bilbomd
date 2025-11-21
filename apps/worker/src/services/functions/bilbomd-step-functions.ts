@@ -25,13 +25,6 @@ import {
   createPdb2CrdCharmmInpFiles,
   spawnPdb2CrdCharmm
 } from './pdb-to-crd.js'
-// import {
-//   CharmmParams,
-//   MultiFoxsParams,
-//   PaeParams,
-//   CharmmHeatParams,
-//   CharmmMDParams
-// } from '../../types/index.js'
 import { updateStepStatus } from './mongo-utils.js'
 import {
   makeDir,

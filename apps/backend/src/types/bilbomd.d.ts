@@ -1,5 +1,5 @@
 import { Job as BullMQJob } from 'bullmq'
-import { Job as MongoDBJob } from '@bilbomd/mongodb-schema'
+import { Job as MongoDBJob, User } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 
 export type BilboMDSteps = {
@@ -84,7 +84,7 @@ export type BilboMDDispatchContext = {
   res: Response
   bilbomd_mode: string
   UUID: string
-  user?: DispatchUser
+  user?: User
   accessMode: 'user' | 'anonymous'
   publicId?: string
   client_ip_hash?: string

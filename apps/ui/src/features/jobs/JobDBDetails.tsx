@@ -23,7 +23,14 @@ import CloseIcon from '@mui/icons-material/Close'
 import HeaderBox from 'components/HeaderBox'
 import { displayPropertiesByJobType } from './JobDBDisplayProperties'
 import { formatDateSafe } from 'utils/dates'
-import { BilboMDJob, AnyBilboJob, MongoWithIdString } from 'types/interfaces'
+import type {
+  BilboMDJobDTO,
+  BilboMDPDBDTO,
+  BilboMDCRDDTO,
+  BilboMDAutoDTO,
+  BilboMDSANSDTO,
+  BilboMDScoperDTO
+} from '@bilbomd/bilbomd-types'
 import CopyableChip from 'components/CopyableChip'
 import { useLazyGetFileByIdAndNameQuery } from 'slices/jobsApiSlice'
 import { green } from '@mui/material/colors'
@@ -35,7 +42,7 @@ import {
 } from '@bilbomd/mongodb-schema'
 
 interface JobDBDetailsProps {
-  job: BilboMDJob
+  job: BilboMDJobDTO
 }
 
 type MongoDBProperty = {
@@ -55,14 +62,19 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
   const handleOpenModal = () => {
     setOpen(true)
     if (
-      job.mongo.__t === 'BilboMdPDB' ||
-      job.mongo.__t === 'BilboMdCRD' ||
-      job.mongo.__t === 'BilboMdAuto' ||
-      job.mongo.__t === 'BilboMdSANS'
+      job.mongo.jobType === 'pdb' ||
+      job.mongo.jobType === 'crd' ||
+      job.mongo.jobType === 'auto' ||
+      job.mongo.jobType === 'sans'
     ) {
+      const specificJob = job.mongo as
+        | BilboMDPDBDTO
+        | BilboMDCRDDTO
+        | BilboMDAutoDTO
+        | BilboMDSANSDTO
       void triggerGetFile({
         id: job.mongo.id,
-        filename: job.mongo.const_inp_file || ''
+        filename: specificJob.const_inp_file || ''
       })
     }
   }
@@ -79,19 +91,24 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
   }
 
   const jobTypeDisplayName: Record<string, string> = {
-    BilboMdPDB: 'BilboMD Classic w/PDB',
-    BilboMdAuto: 'BilboMD Auto',
-    BilboMdAlphaFold: 'BilboMD AlphaFold',
-    BilboMdSANS: 'BilboMD SANS',
-    BilboMdCRD: 'BilboMD Classic w/CRD/PSF',
-    BilboMdScoper: 'BilboMD Scoper'
+    pdb: 'BilboMD Classic w/PDB',
+    auto: 'BilboMD Auto',
+    alphafold: 'BilboMD AlphaFold',
+    sans: 'BilboMD SANS',
+    crd: 'BilboMD Classic w/CRD/PSF',
+    scoper: 'BilboMD Scoper',
+    multi: 'BilboMD MultiMD'
   }
 
   const getJobTypeDisplayName = (type: string | undefined) =>
     type ? jobTypeDisplayName[type] || 'Unknown Job Type' : 'Unknown Job Type'
 
-  const getNumConformations = (job: MongoWithIdString<AnyBilboJob>) => {
-    const { rg_min = 0, rg_max = 0, conformational_sampling } = job
+  const getNumConformations = (job: {
+    rg_min?: number
+    rg_max?: number
+    conformational_sampling?: number
+  }) => {
+    const { rg_min = 0, rg_max = 0, conformational_sampling = 1 } = job
     const stepSize = Math.max(Math.round((rg_max - rg_min) / 5), 1)
     const rgList: number[] = []
     for (let rg = rg_min; rg <= rg_max; rg += stepSize) {
@@ -103,7 +120,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
 
   const baseProperties: MongoDBProperty[] = [
     { label: 'MongoDB ID', value: job.mongo.id },
-    { label: 'Pipeline', value: getJobTypeDisplayName(job.mongo.__t) },
+    { label: 'Pipeline', value: getJobTypeDisplayName(job.mongo.jobType) },
     { label: 'MD Engine', value: job.mongo.md_engine ?? 'CHARMM' },
     { label: 'Submitted', value: job.mongo.time_submitted },
     { label: 'Started', value: job.mongo.time_started },
@@ -112,7 +129,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
   ]
 
   const getJobSpecificProperties = (): MongoDBProperty[] => {
-    const allowedLabels = displayPropertiesByJobType[job.mongo.__t] || []
+    const allowedLabels = displayPropertiesByJobType[job.mongo.jobType] || []
 
     // Filter base properties
     const staticProperties = baseProperties.filter((prop) =>
@@ -236,8 +253,9 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
         )
       })
     }
-    if (job.mongo.__t === 'BilboMdSANS') {
-      const specificJob = job.mongo
+
+    if (job.mongo.jobType === 'sans') {
+      const specificJob = job.mongo as BilboMDSANSDTO
 
       const { stepSize, numSteps, numConformations, rgList } =
         getNumConformations(specificJob)
@@ -304,15 +322,21 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
         }
       )
     }
-    if (job.mongo.__t === 'BilboMdScoper') {
-      dynamicProperties.push({ label: 'PDB file', value: job.mongo.pdb_file })
+
+    if (job.mongo.jobType === 'scoper') {
+      const specificJob = job.mongo as BilboMDScoperDTO
+      dynamicProperties.push({ label: 'PDB file', value: specificJob.pdb_file })
     }
+
     if (
-      job.mongo.__t === 'BilboMdPDB' ||
-      job.mongo.__t === 'BilboMdCRD' ||
-      job.mongo.__t === 'BilboMdAuto'
+      job.mongo.jobType === 'pdb' ||
+      job.mongo.jobType === 'crd' ||
+      job.mongo.jobType === 'auto'
     ) {
-      const specificJob = job.mongo
+      const specificJob = job.mongo as
+        | BilboMDPDBDTO
+        | BilboMDCRDDTO
+        | BilboMDAutoDTO
       const { stepSize, numSteps, numConformations, rgList } =
         getNumConformations(specificJob)
       dynamicProperties.push(
@@ -401,6 +425,26 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
           value={job.mongo.uuid}
         />
       </Box>
+      {job.mongo.access_mode === 'anonymous' && job.mongo.public_id && (
+        <>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <Typography fontWeight="bold">Public UUID:</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <CopyableChip
+                label="Public UUID"
+                value={job.mongo.public_id}
+                url={`/results/${job.mongo.public_id}`}
+              />
+            </Box>
+          </Box>
+        </>
+      )}
 
       {props.map(({ label, value, render, suffix = '' }) =>
         render ? (
