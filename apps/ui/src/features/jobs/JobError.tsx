@@ -1,5 +1,5 @@
 import { axiosInstance, AxiosResponse } from 'app/api/axios'
-import { BilboMDJob } from 'types/interfaces'
+import type { BilboMDJobDTO, StepStatus } from '@bilbomd/bilbomd-types'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from 'slices/authSlice'
 import { useEffect, useState, useCallback } from 'react'
@@ -7,7 +7,7 @@ import { Box } from '@mui/system'
 import Grid from '@mui/material/Grid'
 
 interface JobProps {
-  job: BilboMDJob
+  job: BilboMDJobDTO
 }
 
 const JobError = ({ job }: JobProps) => {
@@ -36,12 +36,11 @@ const JobError = ({ job }: JobProps) => {
   )
 
   useEffect(() => {
-    for (const step in job.bullmq.bilbomdStep) {
-      const key = step as keyof typeof job.bullmq.bilbomdStep
-      if (job.bullmq.bilbomdStep[key] === 'error') {
-        setStepWithError(step)
-        break
-      }
+    if (Array.isArray(job.mongo.steps)) {
+      const erroredStep = job.mongo.steps.find(
+        (step: StepStatus) => step.status === 'Error'
+      )
+      setStepWithError(erroredStep ? erroredStep.name : null)
     }
   }, [job])
 

@@ -3,9 +3,7 @@ import {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDSANSJob,
-  IBilboMDAlphaFoldJob,
-  IMultiJob,
-  IBilboMDScoperJob
+  IMultiJob
 } from '@bilbomd/mongodb-schema'
 
 export interface Chain {
@@ -115,23 +113,6 @@ export type BilboMDBullMQ = {
 }
 
 export type MongoWithIdString<T> = Omit<T, '_id'> & { _id: string }
-
-export type BilboMDJob = {
-  id: string
-  username: string
-  mongo:
-    | MongoWithIdString<IBilboMDPDBJob>
-    | MongoWithIdString<IBilboMDCRDJob>
-    | MongoWithIdString<IBilboMDAutoJob>
-    | MongoWithIdString<IBilboMDSANSJob>
-    | MongoWithIdString<IBilboMDAlphaFoldJob>
-    | MongoWithIdString<IBilboMDScoperJob>
-  bullmq: BilboMDBullMQ
-  scoper?: BilboMDScoperSteps
-  classic?: { numEnsembles: number }
-  auto?: { numEnsembles: number }
-  alphafold?: { numEnsembles: number }
-}
 
 export type AnyBilboJob =
   | IBilboMDPDBJob
