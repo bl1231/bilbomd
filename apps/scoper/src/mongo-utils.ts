@@ -70,4 +70,20 @@ const updateJobStatus = async (
   await updateStepStatus(job, stepName, stepStatus)
 }
 
-export { updateStepStatus, handleStepError, updateJobStatus, updateJobResults }
+// Update job progress using atomic update
+const updateJobProgress = async (job: IJob, progress: number) => {
+  try {
+    await Job.updateOne({ _id: job._id }, { $set: { progress } })
+    // logger.info(`Successfully updated progress to ${progress} for job ${job._id}`)
+  } catch (error) {
+    logger.error(`Error updating progress for job ${job._id}: ${error}`)
+  }
+}
+
+export {
+  updateStepStatus,
+  handleStepError,
+  updateJobStatus,
+  updateJobResults,
+  updateJobProgress
+}
