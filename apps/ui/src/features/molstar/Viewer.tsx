@@ -5,7 +5,6 @@ import { useSelector } from 'react-redux'
 import { selectCurrentToken } from '../../slices/authSlice'
 import type {
   BilboMDJobDTO,
-  BilboMDScoperDTO,
   JobType,
   ClassicJobResults,
   AutoJobResults,
@@ -178,10 +177,9 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
         processEnsembleResults(jobResults)
       }
     } else if (job.mongo.jobType === 'scoper') {
-      const scoperJob = job.mongo as BilboMDScoperDTO
       const scoperResults = job.mongo.results?.scoper
-      if (scoperResults && scoperJob.foxs_top_file) {
-        const pdbFilename = `scoper_combined_${scoperJob.foxs_top_file}`
+      if (scoperResults && scoperResults.foxs_top_file) {
+        const pdbFilename = `scoper_combined_${scoperResults.foxs_top_file}`
         addFilesToLoadParams(pdbFilename, 1)
       }
     } else if (job.mongo.jobType === 'sans') {
