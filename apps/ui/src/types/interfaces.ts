@@ -2,8 +2,7 @@ import {
   IBilboMDPDBJob,
   IBilboMDCRDJob,
   IBilboMDAutoJob,
-  IBilboMDSANSJob,
-  IMultiJob
+  IBilboMDSANSJob
 } from '@bilbomd/mongodb-schema'
 
 export interface Chain {
@@ -119,10 +118,3 @@ export type AnyBilboJob =
   | IBilboMDCRDJob
   | IBilboMDAutoJob
   | IBilboMDSANSJob
-
-export type BilboMDMultiJob = {
-  id: string
-  username: string
-  mongo: IMultiJob
-  bullmq: BilboMDBullMQ
-}
