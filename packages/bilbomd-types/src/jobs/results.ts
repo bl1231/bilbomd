@@ -48,8 +48,16 @@ export interface SANSJobResults {
 }
 
 export interface ScoperJobResults {
-  total_num_ensembles?: number // Total number of ensembles (N)
-  ensembles?: IEnsemble[] // Array of ensembles for each N
+  kgs_conformations: number
+  kgs_files: number
+  foxs_progress: number
+  foxs_top_file: string
+  foxs_top_score: number
+  created_features: boolean
+  prediction_threshold: number
+  multifoxs_ensemble_size: number
+  multifoxs_score: number
+  ensembles?: IEnsemble[] // not sure we will use this.
 }
 
 export type JobResultsDTO = {

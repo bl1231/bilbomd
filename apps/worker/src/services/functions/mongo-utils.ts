@@ -6,7 +6,9 @@ import {
   IBilboMDSteps
 } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
-type JobStatusEnum = 'Submitted' | 'Pending' | 'Running' | 'Completed' | 'Error'
+
+import type { JobStatusEnum } from '@bilbomd/mongodb-schema'
+
 const updateStepStatus = async (
   job: IJob | IMultiJob,
   stepName: keyof IBilboMDSteps,

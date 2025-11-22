@@ -45,7 +45,15 @@ interface IAlphaFoldResults {
 interface ISANSResults {}
 
 interface IScoperResults {
+  kgs_conformations?: number
+  kgs_files?: number
+  foxs_progress?: number
   foxs_top_file?: string
+  foxs_top_score?: number
+  created_features?: boolean
+  prediction_threshold?: number
+  multifoxs_ensemble_size?: number
+  multifoxs_score?: number
 }
 
 interface IJobResults {

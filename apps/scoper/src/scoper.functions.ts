@@ -4,35 +4,37 @@ import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
-import { IJob, IBilboMDScoperJob, IUser } from '@bilbomd/mongodb-schema'
+import {
+  IJob,
+  IBilboMDScoperJob,
+  IUser,
+  IStepStatus
+} from '@bilbomd/mongodb-schema'
 import { sendJobCompleteEmail } from './helpers/mailer.js'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
+import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
+import { parseScoperLogLine } from './scoperLogParser.js'
 
 const execPromise = promisify(exec)
 
 const DATA_VOL = process.env.DATA_VOL ?? '/bilbomd/uploads'
 const IONNET_DIR = process.env.IONNET_DIR ?? '/home/scoper/IonNet'
 const SCOPER_KGS_CONFORMERS = process.env.SCOPER_KGS_CONFORMERS ?? '111'
-const BILBOMD_URL = process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
+const BILBOMD_URL =
+  process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
 
-type JobStatusEnum = 'Submitted' | 'Pending' | 'Running' | 'Completed' | 'Error'
+const getErrorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
-const handleError = async (error: Error | unknown, MQjob: BullMQJob, DBjob: IJob) => {
+const handleError = async (
+  error: Error | unknown,
+  MQjob: BullMQJob,
+  DBjob: IJob
+) => {
   const errorMsg = error instanceof Error ? error.message : String(error)
 
-  // Updates primary status in MongoDB
-  await updateJobStatus(DBjob, 'Error')
-  // Update the specific step status
-  // if (step) {
-  //   const status: IStepStatus = {
-  //     status: 'Error',
-  //     message: `Error in step ${step}: ${errorMsg}`
-  //   }
-  //   await updateStepStatus(DBjob, step, status)
-  // } else {
-  //   logger.error(`Step not provided or invalid when handling error: ${errorMsg}`)
-  // }
+  // await updateJobStatus(DBjob, 'Error')
 
   MQjob.log(`error ${errorMsg}`)
 
@@ -46,7 +48,13 @@ const handleError = async (error: Error | unknown, MQjob: BullMQJob, DBjob: IJob
   const recipientEmail = (DBjob.user as IUser).email
   if (MQjob.attemptsMade >= config.bullmqAttempts - 1) {
     if (config.sendEmailNotifications) {
-      sendJobCompleteEmail(recipientEmail, BILBOMD_URL, DBjob.id, DBjob.title, true)
+      sendJobCompleteEmail(
+        recipientEmail,
+        BILBOMD_URL,
+        DBjob.id,
+        DBjob.title,
+        true
+      )
       logger.warn(`email notification sent to ${recipientEmail}`)
       await MQjob.log(`email notification sent to ${recipientEmail}`)
     }
@@ -54,12 +62,10 @@ const handleError = async (error: Error | unknown, MQjob: BullMQJob, DBjob: IJob
   throw new Error('BilboMD failed')
 }
 
-const updateJobStatus = async (job: IJob, status: JobStatusEnum): Promise<void> => {
-  job.status = status
-  await job.save()
-}
-
-const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
+const runScoper = async (
+  MQjob: BullMQJob,
+  DBjob: IBilboMDScoperJob
+): Promise<void> => {
   try {
     await spawnScoper(MQjob, DBjob)
   } catch (error) {
@@ -67,7 +73,10 @@ const runScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<vo
   }
 }
 
-const spawnScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
+const spawnScoper = async (
+  MQjob: BullMQJob,
+  DBjob: IBilboMDScoperJob
+): Promise<void> => {
   const outputDir = path.join(DATA_VOL, DBjob.uuid)
   const logFile = path.join(outputDir, 'scoper.log')
   const errorFile = path.join(outputDir, 'scoper_error.log')
@@ -116,8 +125,15 @@ const spawnScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<
     logger.info(`Running Scoper with args: ${['-u', ...args].join(' ')}`)
     const scoper = spawn('python', ['-u', ...args], { cwd: outputDir })
 
-    scoper.stdout?.on('data', (data) => {
-      logStream.write(data.toString())
+    scoper.stdout?.on('data', async (data) => {
+      const text = data.toString()
+      logStream.write(text)
+      // parse output in order to update job progression.
+      try {
+        await parseScoperLogLine(text, DBjob)
+      } catch (error) {
+        logger.error(`Error parsing scoper log line: ${error}`)
+      }
     })
 
     scoper.stderr?.on('data', (data) => {
@@ -139,7 +155,9 @@ const spawnScoper = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<
       } catch (error: unknown) {
         // Explicitly declare error as unknown
         if (error instanceof Error) {
-          logger.error(`Scoper - did not complete successfully: ${error.message}`)
+          logger.error(
+            `Scoper - did not complete successfully: ${error.message}`
+          )
           reject(error)
         } else {
           // Handle the case where the error might not be an Error instance
@@ -174,11 +192,15 @@ const processExitLogic = async (
       throw error // Changed to throw to allow the caller to handle rejections.
     }
   } else {
-    throw new Error(`Scoper - mgclassifierv2.py script exited with code ${code}`)
+    throw new Error(
+      `Scoper - mgclassifierv2.py script exited with code ${code}`
+    )
   }
 }
 
-const findTopKDirFromLog = async (logFilePath: string): Promise<string | null> => {
+const findTopKDirFromLog = async (
+  logFilePath: string
+): Promise<string | null> => {
   try {
     const logContent = await fs.readFile(logFilePath, 'utf-8')
     const lines = logContent.split('\n')
@@ -199,15 +221,28 @@ const findTopKDirFromLog = async (logFilePath: string): Promise<string | null> =
   return null
 }
 
-const prepareScoperResults = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob): Promise<void> => {
+const prepareScoperResults = async (
+  MQjob: BullMQJob,
+  DBjob: IBilboMDScoperJob
+): Promise<void> => {
   try {
+    await updateJobStatus(
+      DBjob,
+      'results',
+      'Running',
+      'Gathering Scoper job results has started.'
+    )
+    // =================================================================================
+    //
     const outputDir = path.join(DATA_VOL, DBjob.uuid)
     const resultsDir = path.join(outputDir, 'results')
 
     await makeDir(resultsDir)
     MQjob.log('create results directory')
 
-    const newpdbDir = await readDirNameFromFile(path.join(outputDir, 'top_k_dirname.txt'))
+    const newpdbDir = await readDirNameFromFile(
+      path.join(outputDir, 'top_k_dirname.txt')
+    )
     if (!newpdbDir) {
       MQjob.log('error Top K directory name not found')
       throw new Error('Top K directory name not found')
@@ -230,7 +265,10 @@ const prepareScoperResults = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob):
     MQjob.log(`best KGSrna model is #${pdbNumber}`)
 
     const rnaFile = path.join(topKDir, `newpdb_${pdbNumber}_rna_.pdb`)
-    const probeFile = path.join(topKDir, `new_probe_newpdb_${pdbNumber}_probes.pdb`)
+    const probeFile = path.join(
+      topKDir,
+      `new_probe_newpdb_${pdbNumber}_probes.pdb`
+    )
 
     const rnaExists = await fileExists(rnaFile)
     const probeExists = await fileExists(probeFile)
@@ -244,12 +282,23 @@ const prepareScoperResults = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob):
     const probeContent = await fs.readFile(probeFile, 'utf-8')
 
     const combinedContent = rnaContent + '\n' + probeContent
-    const outputFile = path.join(outputDir, `scoper_combined_newpdb_${pdbNumber}.pdb`)
+    const outputFile = path.join(
+      outputDir,
+      `scoper_combined_newpdb_${pdbNumber}.pdb`
+    )
+    await updateJobStatus(
+      DBjob,
+      'results',
+      'Success',
+      'Scoper job results gathered successfully.'
+    )
+    // =================================================================================
 
     // Write the final combined PDB file.
     await fs.writeFile(outputFile, combinedContent)
     MQjob.log(`combine RNA and Mg: scoper_combined_newpdb_${pdbNumber}.pdb`)
 
+    // =================================================================================
     // FoXS analysis here
     await runFoXS(MQjob, DBjob, pdbNumber)
     MQjob.log('running FoXS analysis of Scoper PDB file')
@@ -271,65 +320,93 @@ const runFoXS = async (
   DBjob: IBilboMDScoperJob,
   pdbNumber: number
 ): Promise<void> => {
-  const outputDir = path.join(DATA_VOL, DBjob.uuid)
-  const foxsAnalysisDir = path.join(DATA_VOL, DBjob.uuid, 'foxs_analysis')
-  await makeDir(foxsAnalysisDir)
-  const logFile = path.join(foxsAnalysisDir, 'foxs.log')
-  const errorFile = path.join(foxsAnalysisDir, 'foxs_error.log')
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
-  const inputPDB = DBjob.pdb_file
-  const scoperPDB = `scoper_combined_newpdb_${pdbNumber}.pdb`
-  const inputDAT = DBjob.data_file
-
-  const filesToCopy = [inputPDB, inputDAT, scoperPDB]
-  for (const file of filesToCopy) {
-    await execPromise(`cp ${path.join(outputDir, file)} .`, { cwd: foxsAnalysisDir })
-    // MQjob.log(`gather ${file}`)
+  let status: IStepStatus = {
+    status: 'Running',
+    message: 'FoXS Calculations have started.'
   }
+  try {
+    const outputDir = path.join(DATA_VOL, DBjob.uuid)
+    const foxsAnalysisDir = path.join(DATA_VOL, DBjob.uuid, 'foxs_analysis')
+    await makeDir(foxsAnalysisDir)
+    const logFile = path.join(foxsAnalysisDir, 'foxs.log')
+    const errorFile = path.join(foxsAnalysisDir, 'foxs_error.log')
+    const logStream = fs.createWriteStream(logFile)
+    const errorStream = fs.createWriteStream(errorFile)
+    const inputPDB = DBjob.pdb_file
+    const scoperPDB = `scoper_combined_newpdb_${pdbNumber}.pdb`
+    const inputDAT = DBjob.data_file
 
-  // Conditionally set foxsArgs based on DBjob.fixc1c2
-  const foxsArgs = DBjob.fixc1c2
-    ? [
-        '-p',
-        '--min_c1=1.00',
-        '--max_c1=1.00',
-        '--min_c2=1.00',
-        '--max_c2=1.00',
-        inputPDB,
-        scoperPDB,
-        inputDAT
-      ]
-    : ['-p', inputPDB, scoperPDB, inputDAT]
+    const filesToCopy = [inputPDB, inputDAT, scoperPDB]
+    for (const file of filesToCopy) {
+      await execPromise(`cp ${path.join(outputDir, file)} .`, {
+        cwd: foxsAnalysisDir
+      })
+      // MQjob.log(`gather ${file}`)
+    }
 
-  return new Promise<void>((resolve, reject) => {
-    const foxs = spawn('foxs', foxsArgs, { cwd: foxsAnalysisDir })
-    foxs.stdout?.on('data', (data) => {
-      logStream.write(data.toString())
+    // Conditionally set foxsArgs based on DBjob.fixc1c2
+    const foxsArgs = DBjob.fixc1c2
+      ? [
+          '-p',
+          '--min_c1=1.00',
+          '--max_c1=1.00',
+          '--min_c2=1.00',
+          '--max_c2=1.00',
+          inputPDB,
+          scoperPDB,
+          inputDAT
+        ]
+      : ['-p', inputPDB, scoperPDB, inputDAT]
+
+    return new Promise<void>((resolve, reject) => {
+      const foxs = spawn('foxs', foxsArgs, { cwd: foxsAnalysisDir })
+      foxs.stdout?.on('data', (data) => {
+        logStream.write(data.toString())
+      })
+
+      foxs.stderr?.on('data', (data) => {
+        errorStream.write(data.toString())
+      })
+
+      foxs.on('error', (error) => {
+        errorStream.end()
+        reject(error)
+      })
+
+      foxs.on('exit', (code) => {
+        logStream.end()
+        errorStream.end()
+
+        if (code === 0) {
+          logger.info('FoXS analysis exited successfully')
+          MQjob.log('foxs analysis successful')
+          status = {
+            status: 'Success',
+            message: 'FoXS Calculations have completed successfully.'
+          }
+          updateStepStatus(DBjob, 'foxs', status)
+            .then(() => {
+              resolve()
+            })
+            .catch((err) => {
+              logger.error('Failed to update step status:', err)
+              resolve() // Still resolve, since FoXS succeeded
+            })
+        } else {
+          reject(`runFoXS on close reject`)
+        }
+      })
     })
-
-    foxs.stderr?.on('data', (data) => {
-      errorStream.write(data.toString())
-    })
-
-    foxs.on('error', (error) => {
-      errorStream.end()
-      reject(error)
-    })
-
-    foxs.on('exit', (code) => {
-      logStream.end()
-      errorStream.end()
-
-      if (code === 0) {
-        logger.info('FoXS analysis exited successfully')
-        MQjob.log('foxs analysis successful')
-        resolve()
-      } else {
-        reject(`runFoXS on close reject`)
-      }
-    })
-  })
+  } catch (error) {
+    // Handle errors and update status to Error
+    status = {
+      status: 'Error',
+      message: `Error in FoXS Calculations: ${getErrorMessage(error)}`
+    }
+    await updateStepStatus(DBjob, 'foxs', status)
+    logger.error(`FoXS calculations failed: ${getErrorMessage(error)}`)
+    throw error
+  }
 }
 
 const createReadmeFile = async (
@@ -398,7 +475,10 @@ const prepareResultsArchiveFile = async (
   resultsDir: string
 ): Promise<void> => {
   const outputDir = path.join(DATA_VOL, DBjob.uuid)
-  const outputFile = path.join(outputDir, `scoper_combined_newpdb_${pdbNumber}.pdb`)
+  const outputFile = path.join(
+    outputDir,
+    `scoper_combined_newpdb_${pdbNumber}.pdb`
+  )
   const foxsAnalysisDir = path.join(DATA_VOL, DBjob.uuid, 'foxs_analysis')
   // Copy the final combined PDB file using fs.copyFile with safety checks.
   const safeCopy = async (src: string, destDir: string, label: string) => {
@@ -416,7 +496,11 @@ const prepareResultsArchiveFile = async (
       logger.error(`Could not copy ${label}: ${err}`)
     }
   }
-  await safeCopy(outputFile, resultsDir, `scoper_combined_newpdb_${pdbNumber}.pdb`)
+  await safeCopy(
+    outputFile,
+    resultsDir,
+    `scoper_combined_newpdb_${pdbNumber}.pdb`
+  )
 
   // Copy the original uploaded pdb and dat files
   const origFilesToCopy = [DBjob.pdb_file, DBjob.data_file]
@@ -429,8 +513,14 @@ const prepareResultsArchiveFile = async (
     await safeCopy(path.join(outputDir, file), resultsDir, file)
   }
   // Copy the FoXS dat files
-  const datFileBase = path.basename(DBjob.data_file, path.extname(DBjob.data_file))
-  const pdbFileBase = path.basename(DBjob.pdb_file, path.extname(DBjob.pdb_file))
+  const datFileBase = path.basename(
+    DBjob.data_file,
+    path.extname(DBjob.data_file)
+  )
+  const pdbFileBase = path.basename(
+    DBjob.pdb_file,
+    path.extname(DBjob.pdb_file)
+  )
   logger.info(`DEBUG datFileBase: ${datFileBase}, pdbFileBase: ${pdbFileBase}`)
   const foxsFilesToCopy = [
     `scoper_combined_newpdb_${pdbNumber}_${datFileBase}.dat`,
@@ -451,7 +541,9 @@ const prepareResultsArchiveFile = async (
   }
 }
 
-const readDirNameFromFile = async (filePath: string): Promise<string | null> => {
+const readDirNameFromFile = async (
+  filePath: string
+): Promise<string | null> => {
   try {
     const content = await fs.readFile(filePath, 'utf-8')
     return content.trim()

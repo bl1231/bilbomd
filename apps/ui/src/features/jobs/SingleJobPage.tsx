@@ -30,12 +30,10 @@ import { useSelector } from 'react-redux'
 import { selectCurrentToken } from 'slices/authSlice'
 import BilboMDNerscSteps from './BilboMDNerscSteps'
 import BilboMDMongoSteps from './BilboMDMongoSteps'
-import { BilboMDScoperSteps } from './BilboMDScoperSteps'
 import HeaderBox from 'components/HeaderBox'
 import JobDBDetails from './JobDBDetails'
 import MultiMDJobDBDetails from 'features/multimd/MultiMDJobDBDetails'
 import MolstarViewer from 'features/molstar/Viewer'
-// import { BilboMDScoperTable } from '../scoperjob/BilboMDScoperTable'
 import ScoperFoXSAnalysis from 'features/scoperjob/ScoperFoXSAnalysis'
 const FoXSAnalysis = lazy(() => import('./FoXSAnalysis'))
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
@@ -295,7 +293,7 @@ const SingleJobPage = () => {
         </Grid>
 
         {/* New BilboMD Steps that uses mongo.steps object */}
-        {job.mongo.steps && !useNersc && job.mongo.jobType !== 'scoper' && (
+        {job.mongo.steps && !useNersc && (
           <Grid
             size={{ xs: 12, sm: 12, md: 6 }}
             sx={{
@@ -317,18 +315,6 @@ const SingleJobPage = () => {
             }}
           >
             <BilboMDNerscSteps job={job} />
-          </Grid>
-        )}
-
-        {/* Scoper steps */}
-        {job.mongo.jobType === 'scoper' && (
-          <Grid size={{ xs: 12, sm: 12, md: 6 }}>
-            <HeaderBox sx={{ py: '6px' }}>
-              <Typography>Scoper Steps</Typography>
-            </HeaderBox>
-            <BilboMDScoperSteps job={job} />
-            {/* NEED TO REFACTOR */}
-            {/* <BilboMDScoperTable scoper={job} /> */}
           </Grid>
         )}
 
