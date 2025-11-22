@@ -129,7 +129,11 @@ export const StructurePreset = StructureRepresentationPresetProvider({
         components.ligand,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.35
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -152,7 +156,11 @@ export const StructurePreset = StructureRepresentationPresetProvider({
         components.ions,
         {
           type: 'spacefill',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 1.0 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 1.0
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -252,7 +260,11 @@ const SurfacePreset = StructureRepresentationPresetProvider({
         components.ligand,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.26 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.26
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -279,7 +291,11 @@ const SurfacePreset = StructureRepresentationPresetProvider({
         components.ions,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 1.0 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 1.0
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -306,11 +322,12 @@ const PocketPreset = StructureRepresentationPresetProvider({
 
     const components = {
       ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
-      surroundings: await plugin.builders.structure.tryCreateComponentFromSelection(
-        structureCell,
-        ligandSurroundings,
-        `surroundings`
-      )
+      surroundings:
+        await plugin.builders.structure.tryCreateComponentFromSelection(
+          structureCell,
+          ligandSurroundings,
+          `surroundings`
+        )
     }
 
     const { update, builder, typeParams } =
@@ -321,7 +338,11 @@ const PocketPreset = StructureRepresentationPresetProvider({
         components.ligand,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.26 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.26
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -365,11 +386,12 @@ const InteractionsPreset = StructureRepresentationPresetProvider({
 
     const components = {
       ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
-      surroundings: await plugin.builders.structure.tryCreateComponentFromSelection(
-        structureCell,
-        ligandSurroundings,
-        `surroundings`
-      ),
+      surroundings:
+        await plugin.builders.structure.tryCreateComponentFromSelection(
+          structureCell,
+          ligandSurroundings,
+          `surroundings`
+        ),
       interactions: await presetStaticComponent(plugin, structureCell, 'ligand')
     }
 
@@ -381,7 +403,11 @@ const InteractionsPreset = StructureRepresentationPresetProvider({
         components.ligand,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.3 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.3
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -447,16 +473,26 @@ const InteractionsPreset = StructureRepresentationPresetProvider({
 export const ShowButtons = PluginConfig.item('showButtons', true)
 
 export class ViewportComponent extends PluginUIComponent {
+  state = {
+    visibleEnsembles: new Set<string>() // Track which ensembles are visible
+  }
+
   async _set(
     structures: readonly StructureRef[],
     preset: StructureRepresentationPresetProvider
   ) {
     await this.plugin.managers.structure.component.clear(structures)
-    await this.plugin.managers.structure.component.applyPreset(structures, preset)
+    await this.plugin.managers.structure.component.applyPreset(
+      structures,
+      preset
+    )
   }
 
   set = async (preset: StructureRepresentationPresetProvider) => {
-    await this._set(this.plugin.managers.structure.hierarchy.selection.structures, preset)
+    await this._set(
+      this.plugin.managers.structure.hierarchy.selection.structures,
+      preset
+    )
   }
 
   structurePreset = () => this.set(StructurePreset)
@@ -465,12 +501,132 @@ export class ViewportComponent extends PluginUIComponent {
   pocketPreset = () => this.set(PocketPreset)
   interactionsPreset = () => this.set(InteractionsPreset)
 
+  toggleEnsemble = async (ensembleSize: number) => {
+    const ensembleKey = `ensemble_size_${ensembleSize}`
+    const isVisible = this.state.visibleEnsembles.has(ensembleKey)
+    const newVisibility = !isVisible
+
+    // Find structures matching this ensemble size using global ensemble info
+    const state = this.plugin.state.data
+    const structures =
+      this.plugin.managers.structure.hierarchy.current.structures
+
+    if (window.molstarEnsembleInfo) {
+      for (const structure of structures) {
+        const ensembleInfo = window.molstarEnsembleInfo.get(
+          structure.cell.transform.ref
+        )
+        if (ensembleInfo && ensembleInfo.ensembleSize === ensembleSize) {
+          // Toggle visibility of matching structures and their representations
+          await PluginCommands.State.ToggleVisibility(this.plugin, {
+            state,
+            ref: structure.cell.transform.ref
+          }).catch((e) => console.warn('Failed to toggle visibility:', e))
+
+          // Also check for child components (representations)
+          const children = state.tree.children.get(structure.cell.transform.ref)
+          if (children) {
+            for (const childRef of children.values()) {
+              await PluginCommands.State.ToggleVisibility(this.plugin, {
+                state,
+                ref: childRef
+              }).catch((e) =>
+                console.warn('Failed to toggle child visibility:', e)
+              )
+            }
+          }
+        }
+      }
+    }
+
+    // Update local state
+    if (newVisibility) {
+      this.state.visibleEnsembles.add(ensembleKey)
+    } else {
+      this.state.visibleEnsembles.delete(ensembleKey)
+    }
+    this.forceUpdate()
+  }
+
+  getAvailableEnsembles = () => {
+    const structures =
+      this.plugin.managers.structure.hierarchy.current.structures
+    const ensembleSizes = new Set<number>()
+
+    console.log('DEBUG: Checking structures for ensembles:', structures.length)
+    console.log('DEBUG: Global ensemble info:', window.molstarEnsembleInfo)
+
+    if (window.molstarEnsembleInfo) {
+      structures.forEach((s) => {
+        const ensembleInfo = window.molstarEnsembleInfo?.get(
+          s.cell.transform.ref
+        )
+        console.log(
+          'DEBUG: Structure ref:',
+          s.cell.transform.ref,
+          'Info:',
+          ensembleInfo
+        )
+        if (ensembleInfo) {
+          ensembleSizes.add(ensembleInfo.ensembleSize)
+        }
+      })
+    }
+
+    console.log('DEBUG: Available ensemble sizes:', Array.from(ensembleSizes))
+    return Array.from(ensembleSizes).sort((a, b) => a - b)
+  }
+
+  // Initialize all ensembles as visible when first loaded
+  componentDidMount() {
+    console.log('DEBUG: ViewportComponent mounted')
+
+    // Set up a listener for when structures are loaded
+    this.plugin.managers.structure.hierarchy.behaviors.selection.subscribe(
+      () => {
+        console.log('DEBUG: Structure hierarchy changed')
+        const available = this.getAvailableEnsembles()
+        console.log('DEBUG: Available ensembles after change:', available)
+        if (available.length > 0 && this.state.visibleEnsembles.size === 0) {
+          // Initialize all ensembles as visible
+          available.forEach((size) => {
+            this.state.visibleEnsembles.add(`ensemble_size_${size}`)
+          })
+          console.log(
+            'DEBUG: Initialized visible ensembles:',
+            this.state.visibleEnsembles
+          )
+          this.forceUpdate()
+        }
+      }
+    )
+
+    // Also check periodically in case the subscription doesn't fire
+    const checkInterval = setInterval(() => {
+      const available = this.getAvailableEnsembles()
+      if (available.length > 0) {
+        console.log('DEBUG: Periodic check found ensembles:', available)
+        if (this.state.visibleEnsembles.size === 0) {
+          available.forEach((size) => {
+            this.state.visibleEnsembles.add(`ensemble_size_${size}`)
+          })
+          this.forceUpdate()
+        }
+        clearInterval(checkInterval)
+      }
+    }, 1000)
+
+    // Clear interval after 10 seconds to avoid memory leaks
+    setTimeout(() => clearInterval(checkInterval), 10000)
+  }
+
   get showButtons() {
     return this.plugin.config.get(ShowButtons)
   }
 
   render() {
-    const VPControls = this.plugin.spec.components?.viewport?.controls || ViewportControls
+    const VPControls =
+      this.plugin.spec.components?.viewport?.controls || ViewportControls
 
     return (
       <>
@@ -486,6 +642,61 @@ export class ViewportComponent extends PluginUIComponent {
             <div style={{ marginBottom: '4px' }}>
               <Button onClick={this.surfacePreset}>Surface</Button>
             </div>
+            {/* Ensemble toggle buttons */}
+            {(() => {
+              const availableEnsembles = this.getAvailableEnsembles()
+              console.log(
+                'DEBUG: Render - available ensembles:',
+                availableEnsembles
+              )
+              return availableEnsembles.length > 0
+            })() && (
+              <div
+                style={{
+                  borderTop: '1px solid #ccc',
+                  paddingTop: '8px',
+                  marginTop: '8px'
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '12px',
+                    marginBottom: '4px',
+                    color: '#666'
+                  }}
+                >
+                  Ensembles:
+                </div>
+                {this.getAvailableEnsembles().map((size) => {
+                  const ensembleKey = `ensemble_size_${size}`
+                  const isVisible = this.state.visibleEnsembles.has(ensembleKey)
+                  return (
+                    <div
+                      key={size}
+                      style={{ marginBottom: '2px' }}
+                    >
+                      <Button
+                        onClick={() => this.toggleEnsemble(size)}
+                        style={{
+                          backgroundColor: isVisible ? '#28a745' : '#6c757d',
+                          color: 'white',
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          minWidth: '60px'
+                        }}
+                        title={
+                          isVisible
+                            ? `Hide ensemble size ${size}`
+                            : `Show ensemble size ${size}`
+                        }
+                      >
+                        {isVisible ? '\u25CF' : '\u25CB'} {size}
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             {/* <div style={{ marginBottom: '4px' }}>
                     <Button onClick={this.pocketPreset}>Pocket</Button>
                 </div> */}

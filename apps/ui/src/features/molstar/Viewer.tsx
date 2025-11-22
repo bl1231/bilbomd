@@ -34,6 +34,14 @@ import Item from 'themes/components/Item'
 declare global {
   interface Window {
     molstar?: PluginUIContext
+    molstarEnsembleInfo?: Map<
+      string,
+      {
+        ensembleSize: number
+        fileName: string
+        assemblyId: number
+      }
+    >
   }
 }
 
@@ -327,6 +335,22 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
           )
           const struct =
             await window.molstar.builders.structure.createStructure(model)
+
+          // Store ensemble information globally for the viewport to access
+          if (!window.molstarEnsembleInfo) {
+            window.molstarEnsembleInfo = new Map()
+          }
+
+          // Extract ensemble size from fileName if it matches the pattern
+          const ensembleMatch = fileName.match(/ensemble_size_(\d+)_model\.pdb/)
+          if (ensembleMatch && struct.cell) {
+            const ensembleSize = parseInt(ensembleMatch[1], 10)
+            window.molstarEnsembleInfo.set(struct.cell.transform.ref, {
+              ensembleSize,
+              fileName,
+              assemblyId
+            })
+          }
           // console.log('struct: ', struct)
           await window.molstar.builders.structure.representation.addRepresentation(
             struct,
