@@ -489,10 +489,24 @@ export class ViewportComponent extends PluginUIComponent {
   }
 
   set = async (preset: StructureRepresentationPresetProvider) => {
-    await this._set(
-      this.plugin.managers.structure.hierarchy.selection.structures,
-      preset
-    )
+    // Only apply preset to visible structures based on our ensemble visibility state
+    const allStructures =
+      this.plugin.managers.structure.hierarchy.selection.structures
+    const visibleStructures = allStructures.filter((structure) => {
+      if (window.molstarEnsembleInfo) {
+        const ensembleInfo = window.molstarEnsembleInfo.get(
+          structure.cell.transform.ref
+        )
+        if (ensembleInfo) {
+          const ensembleKey = `ensemble_size_${ensembleInfo.ensembleSize}`
+          return this.state.visibleEnsembles.has(ensembleKey)
+        }
+      }
+      // If no ensemble info, assume it should be visible (for non-ensemble structures)
+      return true
+    })
+
+    await this._set(visibleStructures, preset)
   }
 
   structurePreset = () => this.set(StructurePreset)
@@ -503,8 +517,11 @@ export class ViewportComponent extends PluginUIComponent {
 
   toggleEnsemble = async (ensembleSize: number) => {
     const ensembleKey = `ensemble_size_${ensembleSize}`
-    const isVisible = this.state.visibleEnsembles.has(ensembleKey)
-    const newVisibility = !isVisible
+    const isCurrentlyVisible = this.state.visibleEnsembles.has(ensembleKey)
+
+    console.log(
+      `DEBUG: Toggling ensemble ${ensembleSize}, currently tracked as visible: ${isCurrentlyVisible}`
+    )
 
     // Find structures matching this ensemble size using global ensemble info
     const state = this.plugin.state.data
@@ -517,13 +534,17 @@ export class ViewportComponent extends PluginUIComponent {
           structure.cell.transform.ref
         )
         if (ensembleInfo && ensembleInfo.ensembleSize === ensembleSize) {
-          // Toggle visibility of matching structures and their representations
+          console.log(
+            `DEBUG: Found structure for ensemble ${ensembleSize}, ref: ${structure.cell.transform.ref}`
+          )
+
+          // Always toggle - let Molstar handle the actual visibility state
           await PluginCommands.State.ToggleVisibility(this.plugin, {
             state,
             ref: structure.cell.transform.ref
           }).catch((e) => console.warn('Failed to toggle visibility:', e))
 
-          // Also check for child components (representations)
+          // Also toggle child components (representations)
           const children = state.tree.children.get(structure.cell.transform.ref)
           if (children) {
             for (const childRef of children.values()) {
@@ -539,12 +560,19 @@ export class ViewportComponent extends PluginUIComponent {
       }
     }
 
-    // Update local state
-    if (newVisibility) {
-      this.state.visibleEnsembles.add(ensembleKey)
-    } else {
+    // Update local state - simply flip the current state
+    if (isCurrentlyVisible) {
       this.state.visibleEnsembles.delete(ensembleKey)
+      console.log(`DEBUG: Removed ${ensembleKey} from visible set`)
+    } else {
+      this.state.visibleEnsembles.add(ensembleKey)
+      console.log(`DEBUG: Added ${ensembleKey} to visible set`)
     }
+
+    console.log(
+      `DEBUG: Visible ensembles after toggle:`,
+      Array.from(this.state.visibleEnsembles)
+    )
     this.forceUpdate()
   }
 
@@ -577,47 +605,94 @@ export class ViewportComponent extends PluginUIComponent {
     return Array.from(ensembleSizes).sort((a, b) => a - b)
   }
 
-  // Initialize all ensembles as visible when first loaded
+  // Initialize ensemble visibility when component mounts
   componentDidMount() {
     console.log('DEBUG: ViewportComponent mounted')
 
-    // Set up a listener for when structures are loaded
+    // Set up a single listener for when structures are loaded
     this.plugin.managers.structure.hierarchy.behaviors.selection.subscribe(
-      () => {
+      async () => {
         console.log('DEBUG: Structure hierarchy changed')
-        const available = this.getAvailableEnsembles()
-        console.log('DEBUG: Available ensembles after change:', available)
-        if (available.length > 0 && this.state.visibleEnsembles.size === 0) {
-          // Initialize all ensembles as visible
-          available.forEach((size) => {
-            this.state.visibleEnsembles.add(`ensemble_size_${size}`)
-          })
-          console.log(
-            'DEBUG: Initialized visible ensembles:',
-            this.state.visibleEnsembles
-          )
-          this.forceUpdate()
-        }
+        await this.initializeEnsembleVisibility()
       }
     )
 
-    // Also check periodically in case the subscription doesn't fire
-    const checkInterval = setInterval(() => {
-      const available = this.getAvailableEnsembles()
-      if (available.length > 0) {
-        console.log('DEBUG: Periodic check found ensembles:', available)
-        if (this.state.visibleEnsembles.size === 0) {
-          available.forEach((size) => {
-            this.state.visibleEnsembles.add(`ensemble_size_${size}`)
-          })
-          this.forceUpdate()
-        }
-        clearInterval(checkInterval)
-      }
-    }, 1000)
+    // Also try immediate initialization in case structures are already loaded
+    setTimeout(() => this.initializeEnsembleVisibility(), 100)
+  }
 
-    // Clear interval after 10 seconds to avoid memory leaks
-    setTimeout(() => clearInterval(checkInterval), 10000)
+  initializeEnsembleVisibility = async () => {
+    const available = this.getAvailableEnsembles()
+    console.log('DEBUG: Available ensembles:', available)
+
+    if (available.length > 0 && this.state.visibleEnsembles.size === 0) {
+      console.log('DEBUG: Initializing ensemble visibility...')
+
+      // Initialize only the first (smallest) ensemble as visible
+      const firstEnsemble = available[0] // available is already sorted
+      this.state.visibleEnsembles.clear()
+      this.state.visibleEnsembles.add(`ensemble_size_${firstEnsemble}`)
+
+      // Hide all other ensembles
+      const state = this.plugin.state.data
+      const structures =
+        this.plugin.managers.structure.hierarchy.current.structures
+
+      console.log(
+        `DEBUG: Will keep ensemble ${firstEnsemble} visible, hiding others`
+      )
+
+      if (window.molstarEnsembleInfo) {
+        for (const structure of structures) {
+          const ensembleInfo = window.molstarEnsembleInfo.get(
+            structure.cell.transform.ref
+          )
+          if (ensembleInfo && ensembleInfo.ensembleSize !== firstEnsemble) {
+            // Check if structure is currently visible before toggling
+            const isVisible =
+              state.tree.transforms.get(structure.cell.transform.ref)?.state
+                .isCollapsed === false
+            console.log(
+              `DEBUG: Ensemble ${ensembleInfo.ensembleSize} is currently visible: ${isVisible}`
+            )
+
+            if (isVisible) {
+              console.log(`DEBUG: Hiding ensemble ${ensembleInfo.ensembleSize}`)
+              await PluginCommands.State.ToggleVisibility(this.plugin, {
+                state,
+                ref: structure.cell.transform.ref
+              }).catch((e) =>
+                console.warn('Failed to hide initial ensemble:', e)
+              )
+
+              // Also hide child components
+              const children = state.tree.children.get(
+                structure.cell.transform.ref
+              )
+              if (children) {
+                for (const childRef of children.values()) {
+                  await PluginCommands.State.ToggleVisibility(this.plugin, {
+                    state,
+                    ref: childRef
+                  }).catch((e) => console.warn('Failed to hide child:', e))
+                }
+              }
+            }
+          }
+        }
+      }
+
+      console.log(
+        'DEBUG: Initialized only first ensemble as visible:',
+        this.state.visibleEnsembles
+      )
+      this.forceUpdate()
+    }
+  }
+
+  componentWillUnmount() {
+    // Clean up any remaining intervals
+    console.log('DEBUG: ViewportComponent unmounting')
   }
 
   get showButtons() {
@@ -633,7 +708,7 @@ export class ViewportComponent extends PluginUIComponent {
         <Viewport />
         {this.showButtons && (
           <div className="msp-viewport-top-left-controls">
-            <div style={{ marginBottom: '4px' }}>
+            {/* <div style={{ marginBottom: '4px' }}>
               <Button onClick={this.structurePreset}>Structure</Button>
             </div>
             <div style={{ marginBottom: '4px' }}>
@@ -641,14 +716,35 @@ export class ViewportComponent extends PluginUIComponent {
             </div>
             <div style={{ marginBottom: '4px' }}>
               <Button onClick={this.surfacePreset}>Surface</Button>
-            </div>
+            </div> */}
             {/* Ensemble toggle buttons */}
             {(() => {
               const availableEnsembles = this.getAvailableEnsembles()
               console.log(
                 'DEBUG: Render - available ensembles:',
-                availableEnsembles
+                availableEnsembles,
+                'visible:',
+                Array.from(this.state.visibleEnsembles)
               )
+
+              // If we have ensembles but no visible state, trigger initialization
+              if (
+                availableEnsembles.length > 0 &&
+                this.state.visibleEnsembles.size === 0
+              ) {
+                console.log(
+                  'DEBUG: Triggering delayed initialization from render'
+                )
+                // Use setTimeout to avoid React warning about state updates during render
+                setTimeout(() => {
+                  const firstEnsemble = availableEnsembles[0]
+                  this.state.visibleEnsembles.add(
+                    `ensemble_size_${firstEnsemble}`
+                  )
+                  this.forceUpdate()
+                }, 0)
+              }
+
               return availableEnsembles.length > 0
             })() && (
               <div
@@ -665,11 +761,15 @@ export class ViewportComponent extends PluginUIComponent {
                     color: '#666'
                   }}
                 >
-                  Ensembles:
+                  Toggle Ensembles:
                 </div>
                 {this.getAvailableEnsembles().map((size) => {
                   const ensembleKey = `ensemble_size_${size}`
                   const isVisible = this.state.visibleEnsembles.has(ensembleKey)
+                  console.log(
+                    `DEBUG: Button render ${size} - tracked visible: ${isVisible}, visible set:`,
+                    Array.from(this.state.visibleEnsembles)
+                  )
                   return (
                     <div
                       key={size}

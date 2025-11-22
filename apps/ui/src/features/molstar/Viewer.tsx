@@ -1,4 +1,4 @@
-import { useEffect, useRef, createRef } from 'react'
+import { useEffect, useRef, createRef, useState } from 'react'
 import Grid from '@mui/material/Grid'
 import { axiosInstance } from 'app/api/axios'
 import { useSelector } from 'react-redux'
@@ -91,6 +91,8 @@ interface MolstarViewerProps {
 
 const MolstarViewer = ({ job }: MolstarViewerProps) => {
   const token = useSelector(selectCurrentToken)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const createLoadParamsArray = async (
     job: BilboMDJobDTO
@@ -229,139 +231,226 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
     const showButtons = true
 
     async function init() {
-      const o = {
-        ...DefaultViewerOptions,
-        ...{
-          layoutIsExpanded: false,
-          layoutShowControls: false,
-          layoutShowRemoteState: false,
-          layoutShowSequence: false,
-          layoutShowLog: false,
-          layoutShowLeftPanel: true,
+      try {
+        setIsLoading(true)
+        setError(null)
+        console.log('DEBUG: Starting Molstar initialization...')
 
-          viewportShowExpand: false,
-          viewportShowControls: true,
-          viewportShowSettings: false,
-          viewportShowSelectionMode: false,
-          viewportShowAnimation: false
-        }
-      }
-      const defaultSpec = DefaultPluginUISpec()
-      const spec: PluginUISpec = {
-        actions: defaultSpec.actions,
-        behaviors: [
-          PluginSpec.Behavior(PluginBehaviors.Representation.HighlightLoci, {
-            mark: false
-          }),
-          PluginSpec.Behavior(
-            PluginBehaviors.Representation.DefaultLociLabelProvider
-          ),
-          PluginSpec.Behavior(PluginBehaviors.Camera.FocusLoci),
+        // Pre-fetch all PDB data and prepare ensemble info BEFORE creating Molstar
+        const loadParamsArray = await createLoadParamsArray(job)
+        console.log(
+          'DEBUG: LoadParams created:',
+          loadParamsArray.length,
+          'groups'
+        )
 
-          PluginSpec.Behavior(PluginBehaviors.CustomProps.StructureInfo),
-          PluginSpec.Behavior(PluginBehaviors.CustomProps.Interactions),
-          PluginSpec.Behavior(PluginBehaviors.CustomProps.SecondaryStructure)
-        ],
-        animations: defaultSpec.animations,
-        customParamEditors: defaultSpec.customParamEditors,
-        layout: {
-          initial: {
-            isExpanded: o.layoutIsExpanded,
-            showControls: o.layoutShowControls,
-            controlsDisplay: o.layoutControlsDisplay
-          }
-        },
-        components: {
-          ...defaultSpec.components,
-          controls: {
-            ...defaultSpec.components?.controls,
-            top: o.layoutShowSequence ? undefined : 'none',
-            bottom: o.layoutShowLog ? undefined : 'none',
-            left: o.layoutShowLeftPanel ? undefined : 'none'
-          },
-          remoteState: o.layoutShowRemoteState ? 'default' : 'none',
-          viewport: {
-            view: ViewportComponent
-          }
-        },
-        config: [
-          [PluginConfig.Viewport.ShowExpand, o.viewportShowExpand],
-          [PluginConfig.Viewport.ShowControls, o.viewportShowControls],
-          [PluginConfig.Viewport.ShowSettings, o.viewportShowSettings],
-          [
-            PluginConfig.Viewport.ShowSelectionMode,
-            o.viewportShowSelectionMode
-          ],
-          [PluginConfig.Viewport.ShowAnimation, o.viewportShowAnimation],
-          [PluginConfig.State.DefaultServer, o.pluginStateServer],
-          [PluginConfig.State.CurrentServer, o.pluginStateServer],
-          [PluginConfig.VolumeStreaming.DefaultServer, o.volumeStreamingServer],
-          [PluginConfig.Download.DefaultPdbProvider, o.pdbProvider],
-          [PluginConfig.Download.DefaultEmdbProvider, o.emdbProvider],
-          // [PluginConfig.item('showButtons', true), true]
-          [ShowButtons, showButtons]
-        ]
-      }
-
-      window.molstar = await createPluginUI({
-        target: parent.current as HTMLDivElement,
-        spec,
-        render: renderReact18
-      })
-
-      const loadParamsArray = await createLoadParamsArray(job)
-      // console.log(loadParamsArray)
-      for (const loadParamsGroup of loadParamsArray) {
-        const { url, format, fileName } = loadParamsGroup[0] // All items in group have same url, format, fileName
-        const pdbData = await fetchPdbData(url)
-
-        for (const { assemblyId } of loadParamsGroup) {
-          const data = await window.molstar.builders.data.rawData({
-            data: pdbData,
-            label: fileName
-          })
-          const trajectory =
-            await window.molstar.builders.structure.parseTrajectory(
-              data,
-              format
-            )
-          // console.log('traj: ', trajectory)
-          // console.log('create model for assemblyId:', assemblyId)
-          const model = await window.molstar.builders.structure.createModel(
-            trajectory,
-            {
-              modelIndex: assemblyId
+        // Pre-fetch all PDB files
+        const pdbDataMap = new Map<string, string>()
+        for (const loadParamsGroup of loadParamsArray) {
+          const { url, fileName } = loadParamsGroup[0]
+          if (!pdbDataMap.has(url)) {
+            console.log('DEBUG: Fetching PDB data for:', fileName)
+            const pdbData = await fetchPdbData(url)
+            if (pdbData) {
+              pdbDataMap.set(url, pdbData)
             }
-          )
-          const struct =
-            await window.molstar.builders.structure.createStructure(model)
-
-          // Store ensemble information globally for the viewport to access
-          if (!window.molstarEnsembleInfo) {
-            window.molstarEnsembleInfo = new Map()
           }
+        }
+        console.log('DEBUG: All PDB data fetched:', pdbDataMap.size, 'files')
 
-          // Extract ensemble size from fileName if it matches the pattern
+        // Pre-populate ensemble info
+        if (!window.molstarEnsembleInfo) {
+          window.molstarEnsembleInfo = new Map()
+        }
+
+        // Count expected ensemble sizes
+        const expectedEnsembleSizes = new Set<number>()
+        for (const loadParamsGroup of loadParamsArray) {
+          const { fileName } = loadParamsGroup[0]
           const ensembleMatch = fileName.match(/ensemble_size_(\d+)_model\.pdb/)
-          if (ensembleMatch && struct.cell) {
-            const ensembleSize = parseInt(ensembleMatch[1], 10)
-            window.molstarEnsembleInfo.set(struct.cell.transform.ref, {
-              ensembleSize,
-              fileName,
-              assemblyId
-            })
+          if (ensembleMatch) {
+            expectedEnsembleSizes.add(parseInt(ensembleMatch[1], 10))
           }
-          // console.log('struct: ', struct)
-          await window.molstar.builders.structure.representation.addRepresentation(
-            struct,
-            {
-              type: 'cartoon',
-              color: 'structure-index',
-              size: 'uniform',
-              sizeParams: { value: 1.0 }
-            }
-          )
         }
+        console.log(
+          'DEBUG: Expected ensemble sizes:',
+          Array.from(expectedEnsembleSizes)
+        )
+        const o = {
+          ...DefaultViewerOptions,
+          ...{
+            layoutIsExpanded: false,
+            layoutShowControls: false,
+            layoutShowRemoteState: false,
+            layoutShowSequence: false,
+            layoutShowLog: false,
+            layoutShowLeftPanel: true,
+
+            viewportShowExpand: false,
+            viewportShowControls: true,
+            viewportShowSettings: false,
+            viewportShowSelectionMode: false,
+            viewportShowAnimation: false
+          }
+        }
+        const defaultSpec = DefaultPluginUISpec()
+        const spec: PluginUISpec = {
+          actions: defaultSpec.actions,
+          behaviors: [
+            PluginSpec.Behavior(PluginBehaviors.Representation.HighlightLoci, {
+              mark: false
+            }),
+            PluginSpec.Behavior(
+              PluginBehaviors.Representation.DefaultLociLabelProvider
+            ),
+            PluginSpec.Behavior(PluginBehaviors.Camera.FocusLoci),
+
+            PluginSpec.Behavior(PluginBehaviors.CustomProps.StructureInfo),
+            PluginSpec.Behavior(PluginBehaviors.CustomProps.Interactions),
+            PluginSpec.Behavior(PluginBehaviors.CustomProps.SecondaryStructure)
+          ],
+          animations: defaultSpec.animations,
+          customParamEditors: defaultSpec.customParamEditors,
+          layout: {
+            initial: {
+              isExpanded: o.layoutIsExpanded,
+              showControls: o.layoutShowControls,
+              controlsDisplay: o.layoutControlsDisplay
+            }
+          },
+          components: {
+            ...defaultSpec.components,
+            controls: {
+              ...defaultSpec.components?.controls,
+              top: o.layoutShowSequence ? undefined : 'none',
+              bottom: o.layoutShowLog ? undefined : 'none',
+              left: o.layoutShowLeftPanel ? undefined : 'none'
+            },
+            remoteState: o.layoutShowRemoteState ? 'default' : 'none',
+            viewport: {
+              view: ViewportComponent
+            }
+          },
+          config: [
+            [PluginConfig.Viewport.ShowExpand, o.viewportShowExpand],
+            [PluginConfig.Viewport.ShowControls, o.viewportShowControls],
+            [PluginConfig.Viewport.ShowSettings, o.viewportShowSettings],
+            [
+              PluginConfig.Viewport.ShowSelectionMode,
+              o.viewportShowSelectionMode
+            ],
+            [PluginConfig.Viewport.ShowAnimation, o.viewportShowAnimation],
+            [PluginConfig.State.DefaultServer, o.pluginStateServer],
+            [PluginConfig.State.CurrentServer, o.pluginStateServer],
+            [
+              PluginConfig.VolumeStreaming.DefaultServer,
+              o.volumeStreamingServer
+            ],
+            [PluginConfig.Download.DefaultPdbProvider, o.pdbProvider],
+            [PluginConfig.Download.DefaultEmdbProvider, o.emdbProvider],
+            // [PluginConfig.item('showButtons', true), true]
+            [ShowButtons, showButtons]
+          ]
+        }
+
+        window.molstar = await createPluginUI({
+          target: parent.current as HTMLDivElement,
+          spec,
+          render: renderReact18
+        })
+        console.log('DEBUG: Molstar plugin created, now loading structures...')
+
+        // Use pre-fetched PDB data to load structures
+        for (const loadParamsGroup of loadParamsArray) {
+          const { url, format, fileName } = loadParamsGroup[0] // All items in group have same url, format, fileName
+          const pdbData = pdbDataMap.get(url)
+
+          if (!pdbData) {
+            console.warn('DEBUG: No PDB data found for:', fileName)
+            continue
+          }
+
+          for (const { assemblyId } of loadParamsGroup) {
+            const data = await window.molstar.builders.data.rawData({
+              data: pdbData,
+              label: fileName
+            })
+            const trajectory =
+              await window.molstar.builders.structure.parseTrajectory(
+                data,
+                format
+              )
+            // console.log('traj: ', trajectory)
+            // console.log('create model for assemblyId:', assemblyId)
+            const model = await window.molstar.builders.structure.createModel(
+              trajectory,
+              {
+                modelIndex: assemblyId
+              }
+            )
+            const struct =
+              await window.molstar.builders.structure.createStructure(model)
+
+            // Store ensemble information with the actual structure reference
+            const ensembleMatch = fileName.match(
+              /ensemble_size_(\d+)_model\.pdb/
+            )
+            if (ensembleMatch && struct.cell) {
+              const ensembleSize = parseInt(ensembleMatch[1], 10)
+              window.molstarEnsembleInfo.set(struct.cell.transform.ref, {
+                ensembleSize,
+                fileName,
+                assemblyId
+              })
+              console.log(
+                'DEBUG: Stored ensemble info for size:',
+                ensembleSize,
+                'ref:',
+                struct.cell.transform.ref
+              )
+            }
+
+            // Determine representation type based on job type and file name
+            const isScoperFile = fileName.startsWith('scoper_combined_')
+            const representationType = isScoperFile ? 'spacefill' : 'cartoon'
+
+            console.log(
+              'DEBUG: Using representation type:',
+              representationType,
+              'for file:',
+              fileName
+            )
+
+            // console.log('struct: ', struct)
+            await window.molstar.builders.structure.representation.addRepresentation(
+              struct,
+              {
+                type: representationType,
+                color: 'chain-id'
+              }
+            )
+          }
+        }
+
+        console.log(
+          'DEBUG: All structures loaded, ensemble info:',
+          window.molstarEnsembleInfo?.size,
+          'entries'
+        )
+        setIsLoading(false)
+        console.log('DEBUG: Molstar initialization complete!')
+      } catch (err) {
+        console.error('DEBUG: Error during Molstar initialization:', err)
+        // Only show user-friendly errors, not internal Molstar node errors
+        if (
+          err instanceof Error &&
+          !err.message.includes('Could not find node')
+        ) {
+          setError(err.message)
+        } else {
+          console.log('DEBUG: Ignoring internal Molstar node error')
+        }
+        setIsLoading(false)
       }
     }
 
@@ -378,12 +467,49 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
   return (
     <Item>
       <Grid container>
+        {isLoading && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1000,
+              textAlign: 'center'
+            }}
+          >
+            <div>Loading Molstar viewer...</div>
+            <div style={{ fontSize: '12px', marginTop: '8px', color: '#666' }}>
+              Fetching PDB files and initializing 3D viewer
+            </div>
+          </div>
+        )}
+        {error && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1000,
+              textAlign: 'center',
+              color: 'red',
+              backgroundColor: '#ffe6e6',
+              padding: '16px',
+              borderRadius: '4px'
+            }}
+          >
+            <div>Error loading Molstar viewer:</div>
+            <div style={{ fontSize: '12px', marginTop: '8px' }}>{error}</div>
+          </div>
+        )}
         <div
           ref={parent}
           style={{
             width: '100%',
             height: '600px',
-            position: 'relative'
+            position: 'relative',
+            opacity: isLoading ? 0.3 : 1
           }}
         />
       </Grid>
