@@ -86,6 +86,12 @@ const handleJobEmailNotification = async (
   DBjob: IJob,
   user: IUser
 ): Promise<void> => {
+  if (!user.email) {
+    logger.info(
+      `Skipping email notification: user email is undefined for job uuid=${DBjob.uuid}`
+    )
+    return
+  }
   if (config.sendEmailNotifications) {
     let status: IStepStatus = {
       status: 'Running',
