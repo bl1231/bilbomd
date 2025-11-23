@@ -14,6 +14,7 @@ import path from 'path'
 import { spawn, ChildProcess } from 'node:child_process'
 import Handlebars from 'handlebars'
 import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
+import { Types } from 'mongoose'
 
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
@@ -66,6 +67,16 @@ const markJobAsCompleted = async (DBjob: IJob): Promise<void> => {
 
 // Fetch user associated with the job
 const fetchJobUser = async (DBjob: IJob): Promise<IUser | null> => {
+  if (!DBjob.user) {
+    return null
+  }
+  if (typeof DBjob.user === 'object' && '_id' in DBjob.user) {
+    // Already populated IUser document
+    return DBjob.user as IUser
+  }
+  if (!Types.ObjectId.isValid(DBjob.user)) {
+    return null
+  }
   return User.findById(DBjob.user).lean<IUser>().exec()
 }
 
