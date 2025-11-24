@@ -49,6 +49,7 @@ import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import MovieGallery from 'features/analysis/MovieGallery'
 import { getStatusColors } from 'features/shared/StatusColors'
+import { BilboMDScoperTable } from 'features/scoperjob/BilboMDScoperTable'
 
 const jobTypeToRoute: Record<string, string> = {
   pdb: 'classic',
@@ -333,8 +334,20 @@ const SingleJobPage = () => {
           )}
         </Grid>
 
+        {/* SCOPER RESULTS SUMMARY */}
+        {job.mongo.results?.scoper && (
+          <Grid size={{ xs: 12 }}>
+            <HeaderBox sx={{ py: '6px' }}>
+              <Typography>Scoper Summary</Typography>
+            </HeaderBox>
+            <Item>
+              <BilboMDScoperTable results={job.mongo.results.scoper} />
+            </Item>
+          </Grid>
+        )}
+
         {/* Analysis Tabs */}
-        {job.mongo.status === 'Completed' && id && (
+        {job.mongo.status === 'Completed' && job.mongo.jobType !== 'scoper' && (
           <>
             <Grid size={{ xs: 12 }}>
               <HeaderBox sx={{ py: '6px' }}>
