@@ -430,6 +430,7 @@ const SingleJobPage = () => {
 
         {/* Molstar Viewer */}
         {job.mongo.status === 'Completed' &&
+          job.mongo.results &&
           (job.mongo.jobType === 'pdb' ||
             job.mongo.jobType === 'crd' ||
             job.mongo.jobType === 'auto' ||
@@ -441,13 +442,17 @@ const SingleJobPage = () => {
                   Molstar Viewer
                   <Box
                     component="span"
-                    sx={{ color: 'yellow', fontSize: '0.75em' }}
+                    sx={{ ml: 1, color: 'yellow', fontSize: '0.75em' }}
                   >
                     experimental
                   </Box>
                 </Typography>
               </HeaderBox>
-              <MolstarViewer job={job} />
+              <MolstarViewer
+                id={id ?? ''}
+                jobType={job.mongo.jobType}
+                results={job.mongo.results}
+              />
             </Grid>
           )}
 

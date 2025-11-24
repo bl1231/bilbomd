@@ -4,16 +4,11 @@ import { axiosInstance } from 'app/api/axios'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from '../../slices/authSlice'
 import type {
-  BilboMDJobDTO,
-  BilboMDScoperDTO,
   JobType,
-  ClassicJobResults,
-  AutoJobResults,
-  AlphafoldJobResults,
-  SANSJobResults,
-  ScoperJobResults,
+  JobResultsDTO,
   IEnsembleModel,
-  IEnsembleMember
+  IEnsembleMember,
+  IEnsemble
 } from '@bilbomd/bilbomd-types'
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui'
 import {
@@ -48,12 +43,9 @@ type LoadParams = {
 
 type PDBsToLoad = LoadParams[]
 
-type EnsembleResults =
-  | ClassicJobResults
-  | AutoJobResults
-  | AlphafoldJobResults
-  | SANSJobResults
-  | ScoperJobResults
+interface HasEnsembles {
+  ensembles: IEnsemble[]
+}
 
 const DefaultViewerOptions = {
   extensions: ObjectKeys({}),
@@ -79,27 +71,37 @@ const DefaultViewerOptions = {
 }
 
 interface MolstarViewerProps {
-  job: BilboMDJobDTO
+  id: string
+  jobType: JobType
+  results: JobResultsDTO
+  isPublic?: boolean
+  publicId?: string
 }
 
-const MolstarViewer = ({ job }: MolstarViewerProps) => {
+const MolstarViewer = ({
+  id,
+  jobType,
+  results,
+  isPublic,
+  publicId
+}: MolstarViewerProps) => {
   const token = useSelector(selectCurrentToken)
 
   const createLoadParamsArray = async (
-    job: BilboMDJobDTO
+    id: string,
+    jobType: JobType,
+    results: JobResultsDTO
   ): Promise<PDBsToLoad[]> => {
-    console.log(
-      'Creating LoadParams for job:',
-      job.mongo.id,
-      'jobType:',
-      job.mongo.jobType
-    )
-    console.log('Results available:', !!job.mongo.results)
-    console.log('MolstarViewer job:', job)
+    console.log('Creating LoadParams for job:', id, 'jobType:', jobType)
+    console.log('Results available:', !!results)
+    console.log('MolstarViewer job:', { id, jobType, results })
     const loadParamsMap = new Map<string, LoadParams[]>()
 
     // Helper function to add LoadParams to the Map
     const addFilesToLoadParams = (fileName: string, numModels: number) => {
+      console.log(
+        `Adding file to load params: ${fileName} with ${numModels} models`
+      )
       let paramsArray = loadParamsMap.get(fileName)
 
       if (!paramsArray) {
@@ -108,8 +110,11 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
       }
 
       for (let assemblyId = 1; assemblyId <= numModels; assemblyId++) {
+        const url = isPublic
+          ? `/public/jobs/${publicId}/results/${fileName}`
+          : `/jobs/${id}/results/${fileName}`
         paramsArray.push({
-          url: `/jobs/${job.mongo.id}/results/${fileName}`,
+          url: url,
           format: 'pdb',
           fileName: fileName,
           assemblyId: assemblyId
@@ -141,11 +146,17 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
     }
 
     // Helper function to process ensemble results
-    const processEnsembleResults = (results: EnsembleResults) => {
-      if (!results?.ensembles) return
+    const processEnsembleResults = (results: JobResultsDTO) => {
+      // console.log('Processing ensemble results for job type:', jobType)
+      // console.log('Ensemble results data:', results)
+      if (
+        !('ensembles' in results) ||
+        !Array.isArray((results as HasEnsembles).ensembles)
+      )
+        return
 
       // Process each ensemble size
-      for (const ensemble of results.ensembles) {
+      for (const ensemble of (results as HasEnsembles).ensembles) {
         const fileName = `ensemble_size_${ensemble.size}_model.pdb`
 
         // Count unique PDB files from all models' states to determine number of assemblies
@@ -167,24 +178,24 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
     // Adding LoadParams based on job type and results structure
     const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
 
-    if (ensembleJobTypes.includes(job.mongo.jobType)) {
+    if (ensembleJobTypes.includes(jobType)) {
       // Use the appropriate results structure based on job type
-      const resultsKey = getResultsKey(job.mongo.jobType)
-      const jobResults = job.mongo.results?.[
-        resultsKey as keyof typeof job.mongo.results
-      ] as EnsembleResults
+      const resultsKey = getResultsKey(jobType)
+      const jobResults = results?.[
+        resultsKey as keyof typeof results
+      ] as JobResultsDTO
 
       if (jobResults) {
         processEnsembleResults(jobResults)
       }
-    } else if (job.mongo.jobType === 'scoper') {
-      const scoperJob = job.mongo as BilboMDScoperDTO
-      const scoperResults = job.mongo.results?.scoper
-      if (scoperResults && scoperJob.foxs_top_file) {
-        const pdbFilename = `scoper_combined_${scoperJob.foxs_top_file}`
+    } else if (jobType === 'scoper') {
+      // const scoperJob = job as BilboMDScoperDTO
+      // const scoperResults = results as ScoperJobResults
+      if (results && results.scoper && results.scoper.foxs_top_file) {
+        const pdbFilename = `scoper_combined_${results.scoper.foxs_top_file}`
         addFilesToLoadParams(pdbFilename, 1)
       }
-    } else if (job.mongo.jobType === 'sans') {
+    } else if (jobType === 'sans') {
       // SANS jobs might have different file structures - handle if needed
       console.log('SANS job detected - no ensemble loading implemented yet')
     }
@@ -193,13 +204,13 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
     return Array.from(loadParamsMap.values())
   }
 
+  // Function to fetch PDB data with authorization
   const fetchPdbData = async (url: string) => {
     try {
+      const headers = isPublic ? {} : { Authorization: `Bearer ${token}` }
       const response = await axiosInstance.get(url, {
         responseType: 'text',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers
       })
       // console.log('fetch: ', url)
       return response.data
@@ -303,7 +314,7 @@ const MolstarViewer = ({ job }: MolstarViewerProps) => {
         render: renderReact18
       })
 
-      const loadParamsArray = await createLoadParamsArray(job)
+      const loadParamsArray = await createLoadParamsArray(id, jobType, results)
       // console.log(loadParamsArray)
       for (const loadParamsGroup of loadParamsArray) {
         const { url, format, fileName } = loadParamsGroup[0] // All items in group have same url, format, fileName
