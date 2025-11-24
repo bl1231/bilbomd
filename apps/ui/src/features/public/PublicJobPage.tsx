@@ -24,6 +24,7 @@ import MolstarViewer from 'features/molstar/Viewer'
 import PublicDownloadResultsSection from 'features/public/PublicDownloadResultsSection'
 
 import CopyableChip from 'components/CopyableChip'
+import { BilboMDScoperTable } from 'features/scoperjob/BilboMDScoperTable'
 
 const PublicJobPage = () => {
   useTitle('BilboMD: Job Status')
@@ -154,6 +155,18 @@ const PublicJobPage = () => {
             </Typography>
           </Item>
         </Grid>
+
+        {/* SCOPER RESULTS SUMMARY */}
+        {job.results?.scoper && (
+          <Grid size={{ xs: 12 }}>
+            <HeaderBox sx={{ py: '6px' }}>
+              <Typography>Scoper Summary</Typography>
+            </HeaderBox>
+            <Item>
+              <BilboMDScoperTable results={job.results.scoper} />
+            </Item>
+          </Grid>
+        )}
 
         {/* Molstar Viewer */}
         {job.status === 'Completed' && job.results && (
