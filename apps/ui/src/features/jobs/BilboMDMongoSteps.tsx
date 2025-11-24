@@ -76,7 +76,7 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
 
   return (
     <Accordion
-      defaultExpanded={steps.email?.status === 'Success' ? false : true}
+      defaultExpanded={steps.results?.status === 'Success' ? false : true}
     >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon sx={{ color: '#fff' }} />}
