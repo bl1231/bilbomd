@@ -13,8 +13,13 @@ import {
 import { sendJobCompleteEmail } from './helpers/mailer.js'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
-import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
+import {
+  updateStepStatus,
+  updateJobResults,
+  updateJobStatus
+} from './mongo-utils.js'
 import { parseScoperLogLine } from './scoperLogParser.js'
+import { getKGSrnaProgress } from 'functions/getKGSrnaProgress.js'
 
 const execPromise = promisify(exec)
 
@@ -67,6 +72,9 @@ const runScoper = async (
   DBjob: IBilboMDScoperJob
 ): Promise<void> => {
   try {
+    await updateJobResults(DBjob, {
+      'results.scoper.kgs_conformations': parseInt(SCOPER_KGS_CONFORMERS)
+    })
     await spawnScoper(MQjob, DBjob)
   } catch (error) {
     await handleError(error, MQjob, DBjob)
@@ -146,7 +154,38 @@ const spawnScoper = async (
       reject(new Error(`Scoper - encountered an error: ${error.message}`))
     })
 
+    const KGSOutputDir = path.join(
+      DATA_VOL,
+      DBjob.uuid,
+      'KGSRNA',
+      DBjob.pdb_file,
+      'output'
+    )
+    let pollingActive = true
+
+    const pollKGSProgress = async () => {
+      if (!pollingActive) return
+      try {
+        const kgs_files = await getKGSrnaProgress(KGSOutputDir)
+        const kgs_conformations = parseInt(SCOPER_KGS_CONFORMERS, 10)
+        // Save to ScoperJobResults (pseudo-code, replace with your actual update logic)
+        // await updateScoperJobResults(DBjob.id, { kgs_files, kgs_conformations })
+        await updateJobResults(DBjob, {
+          'results.scoper.kgs_files': kgs_files
+        })
+        const percent = Math.round((kgs_files / kgs_conformations) * 100)
+        logger.info(
+          `KGS Progress: ${kgs_files}/${kgs_conformations} (${percent}%)`
+        )
+      } catch (err) {
+        logger.error('Error polling KGS progress:', err)
+      }
+      setTimeout(pollKGSProgress, 5000)
+    }
+    pollKGSProgress()
+
     scoper.on('exit', async (code: number) => {
+      pollingActive = false
       logStream.end()
       errorStream.end()
       try {
