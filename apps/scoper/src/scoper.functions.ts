@@ -19,7 +19,7 @@ import {
   updateJobStatus
 } from './mongo-utils.js'
 import { parseScoperLogLine } from './scoperLogParser.js'
-import { getKGSrnaProgress } from 'functions/getKGSrnaProgress.js'
+import { getKGSrnaProgress } from './functions/getKGSrnaProgress.js'
 
 const execPromise = promisify(exec)
 
