@@ -1,5 +1,14 @@
 # @bilbomd/scoper
 
+## 1.5.10
+
+### Patch Changes
+
+- 2ff4c96: Refactor `Scoper` results and steps to align with new DTO mindset
+- Updated dependencies [bdc6d1d]
+- Updated dependencies [2ff4c96]
+  - @bilbomd/mongodb-schema@2.1.0
+
 ## 1.5.9
 
 ### Patch Changes
