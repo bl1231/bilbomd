@@ -94,7 +94,6 @@ const handleBilboMDScoperJob = async (
       foxs: { status: StepStatus.Waiting, message: '' },
       ionnet: { status: StepStatus.Waiting, message: '' },
       multifoxs: { status: StepStatus.Waiting, message: '' },
-      scoper: { status: StepStatus.Waiting, message: '' },
       results: { status: StepStatus.Waiting, message: '' },
       ...(ctx.accessMode === 'user' && {
         email: { status: StepStatus.Waiting, message: '' }
