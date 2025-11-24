@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import BilboMDNerscStep from './BilboMDNerscStep'
 import {
   Accordion,
@@ -18,8 +17,8 @@ interface BilboMDMongoStepsProps {
 
 const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
   // console.log('BilboMDMongoSteps: steps:', steps)
-  // Lets add another prop to allow us to change the accordian title.
-  const [accordionTitle, setAccordionTitle] = useState('BilboMD Steps')
+
+  const accordionTitle = 'kgs' in steps ? 'Scoper Steps' : 'BilboMD Steps'
   let stepsToHide: string[] = []
   stepsToHide = ['_id']
 
