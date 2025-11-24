@@ -6,11 +6,11 @@ import {
   TableRow,
   Paper
 } from '@mui/material'
-import { BilboMDScoperSteps } from 'types/interfaces'
+// import { BilboMDScoperSteps } from 'types/interfaces'
 // import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 
 interface BilboMDScoperTableProps {
-  scoper: BilboMDScoperSteps
+  scoper
 }
 
 const BilboMDScoperTable = ({ scoper }: BilboMDScoperTableProps) => {
@@ -21,7 +21,7 @@ const BilboMDScoperTable = ({ scoper }: BilboMDScoperTableProps) => {
     },
     { key: 'KGS Progress', value: scoper.kgsFiles },
     // { key: 'FoXS Top File', value: scoper.foxsTopFile },
-    // { key: 'FoXS Top Score', value: scoper.foxsTopScore },
+    // { key: 'FoXS Top Score', value: scoper.foxsTopScore
     // { key: 'IonNet threshold', value: scoper.predictionThreshold },
     { key: 'Number of predicted Mg ions', value: scoper.multifoxsEnsembleSize }
     // { key: 'MultiFoXS Best Chi2 Score', value: scoper.multifoxsScore }
