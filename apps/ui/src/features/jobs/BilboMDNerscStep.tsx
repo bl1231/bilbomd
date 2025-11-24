@@ -44,7 +44,8 @@ const BilboMDNerscStep = ({
       case 'reduce':
         return {
           friendlyName: 'Reduce',
-          tooltipMessage: 'In this step we run Reduce.'
+          tooltipMessage:
+            'In this step Hydrogen atoms are added to your RNA molecule.'
         }
       case 'rnaview':
         return {
@@ -56,7 +57,7 @@ const BilboMDNerscStep = ({
         return {
           friendlyName: 'KGS',
           tooltipMessage:
-            'KGS is an engine that generates conformational perturbations in biomolecules (protein, RNA, or ligands alike) by maintaining user-specified non-local constraints. '
+            'KGS (Kino-Geometric Sampling) is an engine that generates conformational perturbations in biomolecules (protein, RNA, or ligands alike) by maintaining user-specified non-local constraints. '
         }
       case 'ionnet':
         return {
