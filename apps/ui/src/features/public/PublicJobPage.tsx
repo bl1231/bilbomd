@@ -18,11 +18,13 @@ import HeaderBox from 'components/HeaderBox'
 import Item from 'themes/components/Item'
 import { getStatusColors } from 'features/shared/StatusColors'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
-import PublicJobAnalysisSection from 'features/public/PublicJobAnalysisSection'
-import PublicMolstarViewer from './PublicMolstarViewer'
+// import PublicJobAnalysisSection from 'features/public/PublicJobAnalysisSection'
+// import PublicMolstarViewer from './PublicMolstarViewer'
+import MolstarViewer from 'features/molstar/Viewer'
 import PublicDownloadResultsSection from 'features/public/PublicDownloadResultsSection'
 
 import CopyableChip from 'components/CopyableChip'
+import { BilboMDScoperTable } from 'features/scoperjob/BilboMDScoperTable'
 
 const PublicJobPage = () => {
   useTitle('BilboMD: Job Status')
@@ -108,20 +110,20 @@ const PublicJobPage = () => {
             <Typography variant="subtitle1">
               Submitted: {job.submittedAt ? formatDate(job.submittedAt) : 'N/A'}
             </Typography>
-            <Typography sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
               <span style={{ width: '140px' }}>Public Job ID:</span>
               <CopyableChip
                 label="Public ID"
                 value={job.publicId}
               />
-            </Typography>
-            <Typography sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
+            </Box>
+            <Box sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
               <span style={{ width: '140px' }}>Results Permalink:</span>
               <CopyableChip
                 label="Permalink"
                 value={`${window.location.origin}/results/${job.publicId}`}
               />
-            </Typography>
+            </Box>
           </Item>
         </Grid>
 
@@ -153,12 +155,46 @@ const PublicJobPage = () => {
             </Typography>
           </Item>
         </Grid>
+
+        {/* SCOPER RESULTS SUMMARY */}
+        {job.results?.scoper && (
+          <Grid size={{ xs: 12 }}>
+            <HeaderBox sx={{ py: '6px' }}>
+              <Typography>Scoper Summary</Typography>
+            </HeaderBox>
+            <Item>
+              <BilboMDScoperTable results={job.results.scoper} />
+            </Item>
+          </Grid>
+        )}
+
+        {/* Molstar Viewer */}
+        {job.status === 'Completed' && job.results && (
+          <Grid size={{ xs: 12 }}>
+            <HeaderBox sx={{ py: '6px' }}>
+              <Typography>
+                Molstar Viewer
+                <Box
+                  component="span"
+                  sx={{ ml: 1, color: 'yellow', fontSize: '0.75em' }}
+                >
+                  experimental
+                </Box>
+              </Typography>
+            </HeaderBox>
+            <MolstarViewer
+              id={job.jobId}
+              jobType={job.jobType}
+              results={job.results}
+              isPublic={true}
+              publicId={job.publicId}
+            />
+          </Grid>
+        )}
+
+        {/* Download Results */}
         {job.status === 'Completed' && (
-          <>
-            <PublicJobAnalysisSection job={job} />
-            <PublicMolstarViewer job={job} />
-            <PublicDownloadResultsSection job={job} />
-          </>
+          <PublicDownloadResultsSection job={job} />
         )}
       </Grid>
     </Box>

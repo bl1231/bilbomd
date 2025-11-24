@@ -40,7 +40,6 @@ const handleDownload = async (publicId: string) => {
 }
 
 const PublicDownloadResultsSection = ({ job }: { job: PublicJobStatus }) => {
-  console.log('PublicDownloadResultsSection loaded')
   return (
     <Grid size={{ xs: 12 }}>
       <HeaderBox sx={{ py: '6px' }}>

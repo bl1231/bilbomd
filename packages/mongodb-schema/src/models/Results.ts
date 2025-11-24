@@ -44,7 +44,15 @@ const classicResultsSchema = new Schema({
 })
 
 const scoperResultsSchema = new Schema({
-  foxs_top_file: { type: String, required: false }
+  kgs_conformations: { type: Number, required: false },
+  kgs_files: { type: Number, required: false },
+  foxs_progress: { type: Number, required: false },
+  foxs_top_file: { type: String, required: false },
+  foxs_top_score: { type: Number, required: false },
+  created_features: { type: Boolean, required: false },
+  prediction_threshold: { type: Number, required: false },
+  multifoxs_ensemble_size: { type: Number, required: false },
+  multifoxs_score: { type: Number, required: false }
 })
 
 export const resultsSchema = new Schema({

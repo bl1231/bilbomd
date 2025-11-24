@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose'
 import { assetsSchema } from './Assets'
 import { resultsSchema } from './Results'
+import { stepsSchema } from './JobSteps'
 import {
   IJob,
   IBilboMDPDBJob,
@@ -21,17 +22,8 @@ import {
 } from '../interfaces'
 import { IOpenMMParameters } from '../interfaces/openmmInterface'
 
-// Enum for step statuses
-const stepStatusEnum = ['Waiting', 'Running', 'Success', 'Error']
-
 // Enum for simulation engines (MD/minimize/heat implementation)
 const mdEngineEnum = ['CHARMM', 'OpenMM'] as const
-
-// Schema for step status
-const stepStatusSchema = new Schema({
-  status: { type: String, enum: stepStatusEnum, default: 'Waiting' },
-  message: { type: String, required: false }
-})
 
 const alphaFoldEntitySchema = new Schema<IAlphaFoldEntity>({
   name: { type: String, required: true },
@@ -56,31 +48,6 @@ const feedbackSchema = new Schema<IFeedbackData>({
   second_highest_chi_square_feedback: { type: String, required: true },
   regional_chi_square_feedback: { type: String, required: true },
   timestamp: { type: Date, default: () => new Date(Date.now()) }
-})
-
-const stepsSchema = new Schema<IBilboMDSteps>({
-  alphafold: { type: stepStatusSchema, required: false },
-  pdb2crd: { type: stepStatusSchema, required: false },
-  pae: { type: stepStatusSchema, required: false },
-  autorg: { type: stepStatusSchema, required: false },
-  minimize: { type: stepStatusSchema, required: false },
-  initfoxs: { type: stepStatusSchema, required: false },
-  heat: { type: stepStatusSchema, required: false },
-  md: { type: stepStatusSchema, required: false },
-  dcd2pdb: { type: stepStatusSchema, required: false },
-  pdb_remediate: { type: stepStatusSchema, required: false },
-  movies: { type: stepStatusSchema, required: false },
-  foxs: { type: stepStatusSchema, required: false },
-  pepsisans: { type: stepStatusSchema, required: false },
-  multifoxs: { type: stepStatusSchema, required: false },
-  gasans: { type: stepStatusSchema, required: false },
-  copy_results_to_cfs: { type: stepStatusSchema, required: false },
-  results: { type: stepStatusSchema, required: false },
-  email: { type: stepStatusSchema, required: false },
-  nersc_prepare_slurm_batch: { type: stepStatusSchema, required: false },
-  nersc_submit_slurm_batch: { type: stepStatusSchema, required: false },
-  nersc_job_status: { type: stepStatusSchema, required: false },
-  nersc_copy_results_to_cfs: { type: stepStatusSchema, required: false }
 })
 
 const nerscInfoSchema = new Schema<INerscInfo>({
@@ -390,7 +357,6 @@ export {
   BilboMdScoperJob,
   BilboMdAlphaFoldJob,
   BilboMdSANSJob,
-  stepsSchema,
   nerscInfoSchema,
   mdConstraintsSchema,
   fixedBodySchema,
