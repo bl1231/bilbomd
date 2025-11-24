@@ -234,6 +234,10 @@ const MolstarViewer = ({
     const showButtons = true
 
     async function init() {
+      if (window.molstar) {
+        window.molstar.dispose()
+        window.molstar = undefined
+      }
       const o = {
         ...DefaultViewerOptions,
         ...{
