@@ -92,16 +92,16 @@ const MolstarViewer = ({
     jobType: JobType,
     results: JobResultsDTO
   ): Promise<PDBsToLoad[]> => {
-    console.log('Creating LoadParams for job:', id, 'jobType:', jobType)
-    console.log('Results available:', !!results)
-    console.log('MolstarViewer job:', { id, jobType, results })
+    // console.log('Creating LoadParams for job:', id, 'jobType:', jobType)
+    // console.log('Results available:', !!results)
+    // console.log('MolstarViewer job:', { id, jobType, results })
     const loadParamsMap = new Map<string, LoadParams[]>()
 
     // Helper function to add LoadParams to the Map
     const addFilesToLoadParams = (fileName: string, numModels: number) => {
-      console.log(
-        `Adding file to load params: ${fileName} with ${numModels} models`
-      )
+      // console.log(
+      //   `Adding file to load params: ${fileName} with ${numModels} models`
+      // )
       let paramsArray = loadParamsMap.get(fileName)
 
       if (!paramsArray) {
