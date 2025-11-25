@@ -1,5 +1,13 @@
 # @bilbomd/scoper
 
+## 1.5.12
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/mongodb-schema@2.1.1
+
 ## 1.5.11
 
 ### Patch Changes

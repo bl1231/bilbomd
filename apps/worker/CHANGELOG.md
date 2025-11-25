@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 2.0.7
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/md-utils@1.0.12
+  - @bilbomd/mongodb-schema@2.1.1
+
 ## 2.0.6
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @bilbomd/ui
 
+## 2.1.2
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/bilbomd-types@1.2.1
+  - @bilbomd/mongodb-schema@2.1.1
+
 ## 3.0.0
 
 ### Major Changes

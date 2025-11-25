@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 2.1.1
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+
 ## 2.1.0
 
 ### Minor Changes
