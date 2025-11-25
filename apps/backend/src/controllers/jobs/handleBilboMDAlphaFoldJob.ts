@@ -17,8 +17,9 @@ import { queueJob } from '../../queues/bilbomd.js'
 import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { config } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = config.uploadDir
 
 type AutoRgResults = {
   rg: number
@@ -37,13 +38,14 @@ const handleBilboMDAlphaFoldJob = async (
     client_ip_hash?: string
   }
 ): Promise<void> => {
-  if (process.env.USE_NERSC?.toLowerCase() !== 'true') {
-    logger.warn('AlphaFold job rejected: NERSC not enabled')
+  if (!config.bilbomd.AlphaFoldEnabled) {
+    logger.warn('AlphaFold jobs not enabled.')
     res.status(403).json({
       message: 'AlphaFold jobs unavailable on this deployment.'
     })
     return
   }
+
   const jobDir = path.join(uploadFolder, UUID)
 
   const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()

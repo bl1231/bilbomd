@@ -85,7 +85,9 @@ function AminoAcidField(props: {
   }, [rawValue])
 
   const handleFocus = () => {
-    setIsFocused(true)
+    if (!disabled) {
+      setIsFocused(true)
+    }
   }
 
   const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
@@ -124,20 +126,21 @@ function AminoAcidField(props: {
     return (
       <Box sx={{ width: '100%' }}>
         <Box
-          tabIndex={0}
+          tabIndex={disabled ? -1 : 0}
           onFocus={handleFocus}
-          onClick={() => setIsFocused(true)}
+          onClick={() => !disabled && setIsFocused(true)}
           sx={{
             minHeight: '54px',
             border: `1px solid ${grey[300]}`,
             borderRadius: '4px',
             p: 1,
-            cursor: 'text',
+            cursor: disabled ? 'default' : 'text',
             fontFamily: 'monospace',
             whiteSpace: 'pre-wrap',
             letterSpacing: '0.08em',
             fontSize: '0.9rem',
-            color: 'text.primary'
+            color: disabled ? 'text.disabled' : 'text.primary',
+            opacity: disabled ? 0.6 : 1
           }}
           dangerouslySetInnerHTML={{ __html: chunkedHTML }}
         />
@@ -193,7 +196,8 @@ const EntitiesFieldArray = ({
   touched,
   handleChange,
   handleBlur,
-  setFieldValue
+  setFieldValue,
+  useExampleData
 }: {
   values: NewAlphaFoldJobFormValues
   errors: FormikErrors<NewAlphaFoldJobFormValues>
@@ -205,6 +209,7 @@ const EntitiesFieldArray = ({
     value: string | number,
     shouldValidate?: boolean
   ) => void
+  useExampleData: boolean
 }) => {
   const theme = useTheme()
   return (
@@ -264,6 +269,7 @@ const EntitiesFieldArray = ({
                       fullWidth
                       variant="outlined"
                       value={entity.type || 'Protein'}
+                      disabled={useExampleData}
                       onChange={(e) => {
                         handleChange(e)
                         const newName = generateName(e.target.value, entity.id)
@@ -299,6 +305,7 @@ const EntitiesFieldArray = ({
                       name={`entities.${index}.copies`}
                       label="Copies"
                       type="number"
+                      disabled={useExampleData}
                       InputProps={{
                         inputProps: { min: 1, step: 1 },
                         sx: { height: '100%' } // Ensure full height usage
@@ -324,6 +331,7 @@ const EntitiesFieldArray = ({
                         rawValue={entity.sequence || ''}
                         error={seqError as string}
                         touched={Boolean(seqTouched)}
+                        disabled={useExampleData}
                         // Pass the raw value to Formik
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
                           const newSeq = e.target.value
@@ -430,16 +438,19 @@ const SubmitButton = ({
     >
       <span>Submit</span>
     </Button>
-    {status?.startsWith('Error') ? (
-      <Alert severity="error">{status.replace('Error: ', '')}</Alert>
-    ) : (
-      status && <Alert severity="success">{status}</Alert>
-    )}
   </Grid>
 )
 
 const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
-  useTitle('BilboMD: New AlphaFold Job')
+  useTitle(
+    mode === 'anonymous'
+      ? 'BilboMD: New AlphaFold Job (anonymous)'
+      : 'BilboMD: New AlphaFold Job'
+  )
+  // theme and dark mode detection
+  const theme = useTheme()
+  const isDarkMode = theme.palette.mode === 'dark'
+
   const [
     addNewAlphaFoldJob,
     { isSuccess: isAuthSuccess, data: authJobResponse }
@@ -448,8 +459,12 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     useAddNewPublicJobMutation()
   const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
   const jobResponse = mode === 'anonymous' ? anonJobResponse : authJobResponse
-
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
+  const handleStatusCheck = (isUnavailable: boolean) => {
+    setIsPerlmutterUnavailable(isUnavailable)
+  }
+  const [useExampleData, setUseExampleData] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Fetch configuration object
   const {
@@ -458,20 +473,12 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     isLoading: configIsLoading
   } = useGetConfigsQuery('configData')
 
-  const theme = useTheme()
-  const isDarkMode = theme.palette.mode === 'dark'
-
   if (configIsLoading) return <LinearProgress />
   if (configError)
     return <Alert severity="error">Error loading configuration</Alert>
 
   const useAlphaFold = config.enableBilboMdAlphaFold?.toLowerCase() === 'true'
   const useNersc = config.useNersc?.toLowerCase() === 'true'
-
-  const handleStatusCheck = (isUnavailable: boolean) => {
-    // Update the state based on the system's availability
-    setIsPerlmutterUnavailable(isUnavailable)
-  }
 
   const initialValues: NewAlphaFoldJobFormValues = {
     title: '',
@@ -492,6 +499,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     values: NewAlphaFoldJobFormValues,
     { setStatus }: { setStatus: (status: string) => void }
   ) => {
+    setSubmitError(null)
     const form = new FormData()
     form.append('title', values.title)
     form.append('dat_file', values.dat_file)
@@ -503,6 +511,9 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       form.append(`entities[${index}][type]`, entity.type)
       form.append(`entities[${index}][copies]`, entity.copies.toString())
     })
+    if (useExampleData) {
+      form.append('useExampleData', 'true')
+    }
 
     try {
       const newJob =
@@ -512,6 +523,10 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       setStatus(newJob)
     } catch (error) {
       console.error('rejected', error)
+      setSubmitError(
+        (error as { data?: { message?: string } }).data?.message ||
+          'An error occurred during submission.'
+      )
     }
   }
 
@@ -562,7 +577,9 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
           ) : (
             <Formik<NewAlphaFoldJobFormValues>
               initialValues={initialValues}
-              validationSchema={BilboMDAlphaFoldJobSchema}
+              validationSchema={
+                useExampleData ? undefined : BilboMDAlphaFoldJobSchema
+              }
               onSubmit={onSubmit}
             >
               {({
@@ -575,7 +592,8 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                 handleBlur,
                 status,
                 setFieldValue,
-                setFieldTouched
+                setFieldTouched,
+                validateForm
               }) => (
                 <Form>
                   <Grid
@@ -588,27 +606,123 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         onStatusCheck={handleStatusCheck}
                       />
                     )}
-                    {/* Title */}
-                    <Grid sx={{ my: 2, width: '520px' }}>
-                      <Field
-                        fullWidth
-                        label="Title"
-                        name="title"
-                        id="title"
-                        type="text"
-                        disabled={isSubmitting}
-                        as={TextField}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={errors.title && touched.title}
-                        helperText={
-                          errors.title && touched.title ? errors.title : ''
-                        }
-                        value={values.title || ''}
-                      />
-                    </Grid>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        my: 1
+                      }}
+                    >
+                      {/* Title */}
+                      <Box sx={{ minWidth: '520px' }}>
+                        <Field
+                          fullWidth
+                          label="Title"
+                          name="title"
+                          id="title"
+                          type="text"
+                          disabled={isSubmitting}
+                          as={TextField}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={errors.title && touched.title}
+                          helperText={
+                            errors.title && touched.title ? errors.title : ''
+                          }
+                          value={values.title || ''}
+                        />
+                      </Box>
+                      <Box sx={{ ml: 8, minWidth: 'fit-content' }}>
+                        <Button
+                          variant={useExampleData ? 'outlined' : 'contained'}
+                          onClick={() => {
+                            setUseExampleData(!useExampleData)
+                            if (!useExampleData) {
+                              void setFieldValue(
+                                'title',
+                                'example-alphafold-job'
+                              )
+                              // Set example dat_file
+                              void setFieldValue('dat_file', 'example-saxs.dat')
+                              // Set example entities data
+                              void setFieldValue('entities', [
+                                {
+                                  id: '1',
+                                  name: 'pro-1',
+                                  sequence: [
+                                    'MGKKRTKGKTVPIDDSSETLEPVCRHIRKGLEQGNLKKALVNVEWNICQDCKTDNKVKDKAEEETEEKPSVWLCLKCGHQ',
+                                    'GCGRNSQEQHALKHYLTPRSEPHCLVLSLDNWSVWCYVCDNEVQYCSSNQLGQVVDYVRKQASITTPKPAEKDNGNIELE',
+                                    'NKKLEKESKNEQEREKKENMAKENPPMNSPCQITVKGLSNLGNTCFFNAVMQNLSQTPVLRELLKEVKMSGTIVKIEPPD',
+                                    'LALTEPLEINLEPPGPLTLAMSQFLNEMQETKKGVVTPKELFSQVCKKAVRFKGYQQQDSQELLRYLLDGMRAEEHQRVS',
+                                    'KGILKAFGNSTEKLDEELKNKVKDYEKKKSMPSFVDRIFGGELTSMIMCDQCRTVSLVHESFLDLSLPVLDDQSGKKSVN',
+                                    'DKNLKKTVEDEDQDSEEEKDNDSYIKERSDIPSGTSKHLQKKAKKQAKKQAKNQRRQQKIQGKVLHLNDICTIDHPEDSE',
+                                    'YEAEMSLQGEVNIKSNHISQEGVMHKEYCVNQKDLNGQAKMIESVTDNQKSTEEVDMKNINMDNDLEVLTSSPTRNLNGA',
+                                    'YLTEGSNGEVDISNGFKNLNLNAALHPDEINIEILNDSHTPGTKVYEVVNEDPETAFCTLANREVFNTDECSIQHCLYQF',
+                                    'TRNEKLRDANKLLCEVCTRRQCNGPKANIKGERKHVYTNAKKQMLISLAPPVLTLHLKRFQQAGFNLRKVNKHIKFPEIL',
+                                    'DLAPFCTLKCKNVAEENTRVLYSLYGVVEHSGTMRSGHYTAYAKARTANSHLSNLVLHGDIPQDFEMESKGQWFHISDTH',
+                                    'VQAVPTTKVLNSQAYLLFYERIL'
+                                  ].join(''),
+                                  type: 'Protein',
+                                  copies: 1,
+                                  seq_length: 823
+                                }
+                              ])
+                            } else {
+                              void setFieldValue('title', '')
+                              void setFieldValue('dat_file', '')
+                              // Reset to initial empty entity
+                              void setFieldValue('entities', [
+                                {
+                                  id: '1',
+                                  name: 'pro-1',
+                                  sequence: '',
+                                  type: 'Protein',
+                                  copies: 1,
+                                  seq_length: 0
+                                }
+                              ])
+                            }
+                            // Delay validation to ensure form state has been updated
+                            // Force validation after state update
+                            setTimeout(async () => {
+                              await validateForm()
+                            }, 100)
+                          }}
+                        >
+                          {useExampleData
+                            ? 'Use Custom Data'
+                            : 'Load Example Data'}
+                        </Button>
+                      </Box>
+                      <Box sx={{ ml: 2, minWidth: 'fit-content' }}>
+                        <Button
+                          variant="contained"
+                          href={'/api/v1/public/examples/af'}
+                        >
+                          Download Example Data
+                        </Button>
+                      </Box>
+                    </Box>
+                    {useExampleData && (
+                      <Alert
+                        severity="warning"
+                        sx={{ my: 1 }}
+                      >
+                        Using example data for Auto mode
+                      </Alert>
+                    )}
+
+                    {submitError && (
+                      <Alert
+                        severity="error"
+                        sx={{ my: 1 }}
+                      >
+                        {submitError}
+                      </Alert>
+                    )}
+
                     {/* Entities */}
-                    <Grid>
+                    <Grid sx={{ my: 2 }}>
                       <EntitiesFieldArray
                         values={values}
                         errors={errors}
@@ -616,6 +730,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         handleChange={handleChange}
                         handleBlur={handleBlur}
                         setFieldValue={setFieldValue}
+                        useExampleData={useExampleData}
                       />
 
                       {/* Conditionally display error messages for alphafold_entities */}
@@ -656,13 +771,16 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         id="dat-file-upload"
                         as={FileSelect}
                         title="Select File"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || useExampleData}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.dat_file && touched.dat_file}
                         errorMessage={errors.dat_file ? errors.dat_file : ''}
                         fileType="experimental SAXS data *.dat"
                         fileExt=".dat"
+                        existingFileName={
+                          useExampleData ? 'example-saxs.dat' : undefined
+                        }
                       />
                     </Grid>
 
@@ -676,7 +794,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     {/* Submit Button */}
                     <SubmitButton
                       isSubmitting={isSubmitting}
-                      isValid={isValid}
+                      isValid={useExampleData ? true : isValid}
                       isFormValid={isFormValid(values)}
                       status={status}
                     />

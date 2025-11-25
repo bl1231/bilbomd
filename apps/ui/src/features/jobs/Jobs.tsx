@@ -172,7 +172,7 @@ const Jobs = () => {
     isError,
     error
   } = useGetJobsQuery('jobsList', {
-    pollingInterval: 60000,
+    pollingInterval: 30000,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
