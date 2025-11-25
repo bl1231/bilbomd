@@ -438,11 +438,6 @@ const SubmitButton = ({
     >
       <span>Submit</span>
     </Button>
-    {status?.startsWith('Error') ? (
-      <Alert severity="error">{status.replace('Error: ', '')}</Alert>
-    ) : (
-      status && <Alert severity="success">{status}</Alert>
-    )}
   </Grid>
 )
 
