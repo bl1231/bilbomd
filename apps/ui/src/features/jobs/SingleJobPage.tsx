@@ -30,12 +30,10 @@ import { useSelector } from 'react-redux'
 import { selectCurrentToken } from 'slices/authSlice'
 import BilboMDNerscSteps from './BilboMDNerscSteps'
 import BilboMDMongoSteps from './BilboMDMongoSteps'
-import { BilboMDScoperSteps } from './BilboMDScoperSteps'
 import HeaderBox from 'components/HeaderBox'
 import JobDBDetails from './JobDBDetails'
 import MultiMDJobDBDetails from 'features/multimd/MultiMDJobDBDetails'
 import MolstarViewer from 'features/molstar/Viewer'
-// import { BilboMDScoperTable } from '../scoperjob/BilboMDScoperTable'
 import ScoperFoXSAnalysis from 'features/scoperjob/ScoperFoXSAnalysis'
 const FoXSAnalysis = lazy(() => import('./FoXSAnalysis'))
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
@@ -51,6 +49,7 @@ import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import MovieGallery from 'features/analysis/MovieGallery'
 import { getStatusColors } from 'features/shared/StatusColors'
+import { BilboMDScoperTable } from 'features/scoperjob/BilboMDScoperTable'
 
 const jobTypeToRoute: Record<string, string> = {
   pdb: 'classic',
@@ -295,7 +294,7 @@ const SingleJobPage = () => {
         </Grid>
 
         {/* New BilboMD Steps that uses mongo.steps object */}
-        {job.mongo.steps && !useNersc && job.mongo.jobType !== 'scoper' && (
+        {job.mongo.steps && !useNersc && (
           <Grid
             size={{ xs: 12, sm: 12, md: 6 }}
             sx={{
@@ -320,18 +319,6 @@ const SingleJobPage = () => {
           </Grid>
         )}
 
-        {/* Scoper steps */}
-        {job.mongo.jobType === 'scoper' && (
-          <Grid size={{ xs: 12, sm: 12, md: 6 }}>
-            <HeaderBox sx={{ py: '6px' }}>
-              <Typography>Scoper Steps</Typography>
-            </HeaderBox>
-            <BilboMDScoperSteps job={job} />
-            {/* NEED TO REFACTOR */}
-            {/* <BilboMDScoperTable scoper={job} /> */}
-          </Grid>
-        )}
-
         {/* MongoDB Job Details */}
         <Grid
           size={{ xs: 4 }}
@@ -347,8 +334,20 @@ const SingleJobPage = () => {
           )}
         </Grid>
 
+        {/* SCOPER RESULTS SUMMARY */}
+        {job.mongo.results?.scoper && (
+          <Grid size={{ xs: 12 }}>
+            <HeaderBox sx={{ py: '6px' }}>
+              <Typography>Scoper Summary</Typography>
+            </HeaderBox>
+            <Item>
+              <BilboMDScoperTable results={job.mongo.results.scoper} />
+            </Item>
+          </Grid>
+        )}
+
         {/* Analysis Tabs */}
-        {job.mongo.status === 'Completed' && id && (
+        {job.mongo.status === 'Completed' && job.mongo.jobType !== 'scoper' && (
           <>
             <Grid size={{ xs: 12 }}>
               <HeaderBox sx={{ py: '6px' }}>
@@ -444,6 +443,7 @@ const SingleJobPage = () => {
 
         {/* Molstar Viewer */}
         {job.mongo.status === 'Completed' &&
+          job.mongo.results &&
           (job.mongo.jobType === 'pdb' ||
             job.mongo.jobType === 'crd' ||
             job.mongo.jobType === 'auto' ||
@@ -455,13 +455,17 @@ const SingleJobPage = () => {
                   Molstar Viewer
                   <Box
                     component="span"
-                    sx={{ color: 'yellow', fontSize: '0.75em' }}
+                    sx={{ ml: 1, color: 'yellow', fontSize: '0.75em' }}
                   >
                     experimental
                   </Box>
                 </Typography>
               </HeaderBox>
-              <MolstarViewer job={job} />
+              <MolstarViewer
+                id={id ?? ''}
+                jobType={job.mongo.jobType}
+                results={job.mongo.results}
+              />
             </Grid>
           )}
 

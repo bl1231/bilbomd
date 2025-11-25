@@ -319,6 +319,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           <LinearProgress />
                         </Box>
                       )}
+
                       <Grid sx={{ mt: 2 }}>
                         <Button
                           type="submit"

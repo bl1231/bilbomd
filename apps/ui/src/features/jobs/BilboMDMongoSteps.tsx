@@ -17,11 +17,17 @@ interface BilboMDMongoStepsProps {
 
 const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
   // console.log('BilboMDMongoSteps: steps:', steps)
+
+  const accordionTitle = 'kgs' in steps ? 'Scoper Steps' : 'BilboMD Steps'
   let stepsToHide: string[] = []
   stepsToHide = ['_id']
 
   const stepOrder = [
     'alphafold',
+    'reduce',
+    'rnaview',
+    'kgs',
+    'ionnet',
     'pdb2crd',
     'pae',
     'autorg',
@@ -60,17 +66,17 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
       />
     ))
 
-  // Find the latest message from the steps
+  // Find the latest message from the any of the steps
   const latestStepMessage = Object.entries(steps).reduce(
     (latestMessage, [, stepValue]) => {
-      return stepValue.message || latestMessage // Find the latest available message
+      return stepValue.message || latestMessage
     },
     ''
   )
 
   return (
     <Accordion
-      defaultExpanded={steps.email?.status === 'Success' ? false : true}
+      defaultExpanded={steps.results?.status === 'Success' ? false : true}
     >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon sx={{ color: '#fff' }} />}
@@ -82,7 +88,7 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
         }}
       >
         <HeaderBox sx={{ py: 0 }}>
-          <Typography>BilboMD Steps</Typography>
+          <Typography>{accordionTitle}</Typography>
         </HeaderBox>
       </AccordionSummary>
       <AccordionDetails>

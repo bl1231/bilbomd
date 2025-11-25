@@ -4,28 +4,40 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-  Paper
+  Paper,
+  LinearProgress,
+  Box,
+  Typography
 } from '@mui/material'
-import { BilboMDScoperSteps } from 'types/interfaces'
-// import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
+import type { ScoperJobResults } from '@bilbomd/bilbomd-types'
 
 interface BilboMDScoperTableProps {
-  scoper: BilboMDScoperSteps
+  results: ScoperJobResults
 }
 
-const BilboMDScoperTable = ({ scoper }: BilboMDScoperTableProps) => {
+const BilboMDScoperTable = ({ results }: BilboMDScoperTableProps) => {
+  console.log('BilboMDScoperTable: results:', results)
   const rows = [
     {
       key: 'KGS Number of Conformations to Generate',
-      value: scoper.kgsConformations
+      value: results.kgs_conformations
     },
-    { key: 'KGS Progress', value: scoper.kgsFiles },
-    // { key: 'FoXS Top File', value: scoper.foxsTopFile },
-    // { key: 'FoXS Top Score', value: scoper.foxsTopScore },
-    // { key: 'IonNet threshold', value: scoper.predictionThreshold },
-    { key: 'Number of predicted Mg ions', value: scoper.multifoxsEnsembleSize }
-    // { key: 'MultiFoXS Best Chi2 Score', value: scoper.multifoxsScore }
+    { key: 'KGS Progress', value: results.kgs_files },
+    { key: 'FoXS Top File', value: results.foxs_top_file },
+    // { key: 'FoXS Top Score', value: results.foxsTopScore
+    // { key: 'IonNet threshold', value: results.predictionThreshold },
+    {
+      key: 'Number of predicted Mg ions',
+      value: results.multifoxs_ensemble_size
+    }
+    // { key: 'MultiFoXS Best Chi2 Score', value: results.multifoxsScore }
   ]
+
+  // Calculate progress percentage
+  const kgsConformations = Number(results.kgs_conformations) || 0
+  const kgsFiles = Number(results.kgs_files) || 0
+  const progress =
+    kgsConformations > 0 ? Math.round((kgsFiles / kgsConformations) * 100) : 0
 
   return (
     <TableContainer component={Paper}>
@@ -45,6 +57,30 @@ const BilboMDScoperTable = ({ scoper }: BilboMDScoperTableProps) => {
               <TableCell align="right">{row.value}</TableCell>
             </TableRow>
           ))}
+          <TableRow>
+            <TableCell
+              component="th"
+              scope="row"
+            >
+              KGS Progress Bar
+            </TableCell>
+            <TableCell align="right">
+              <Box sx={{ minWidth: 120 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 0.5 }}
+                >
+                  {`${progress}%`}
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={progress}
+                  sx={{ height: 10, borderRadius: 5 }}
+                />
+              </Box>
+            </TableCell>
+          </TableRow>
         </TableBody>
       </Table>
     </TableContainer>

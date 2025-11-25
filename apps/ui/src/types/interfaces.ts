@@ -56,25 +56,3 @@ export interface Queue {
   active_count: number
   waiting_count: number
 }
-
-export type BilboMDScoperSteps = {
-  reduce: string
-  rnaview: string
-  kgs: string
-  kgsConformations: number
-  kgsFiles: number
-  foxs: string
-  foxsProgress: number
-  foxsTopFile: string
-  foxsTopScore: number
-  createdFeatures: boolean
-  IonNet: string
-  predictionThreshold: number
-  multifoxs: string
-  multifoxsEnsembleSize: number
-  multifoxsScore: number
-  scoperPdb: string
-  scoper: string
-  results: string
-  email: string
-}
