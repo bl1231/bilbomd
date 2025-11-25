@@ -339,7 +339,7 @@ generate_pdb2crd_input_files_af() {
 # Convert AF PDB to CRD/PSF
 update_status pdb2crd Running
 echo "Generating pdb2crd input files..."
-srun --job-name af-pdb2crd podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${AF_WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pdb2crd.py af-rank1.pdb . > pdb2crd_output.txt"
+srun --job-name af-pdb2crd podman-hpc run --rm -v \${WORKDIR}:/bilbomd/work ${WORKER} /bin/bash -c "cd /bilbomd/work/ && python /app/scripts/pdb2crd.py af-rank1.pdb . > pdb2crd_output.txt"
 
 # Parse the file "pdb2crd_output.txt"
 # This will also run CHARMM for each chain-specific *.inp file
