@@ -1,5 +1,15 @@
 # @bilbomd/backend
 
+## 2.1.2
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/bilbomd-types@1.2.1
+  - @bilbomd/md-utils@1.0.12
+  - @bilbomd/mongodb-schema@2.1.1
+
 ## 2.1.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @bilbomd/bilbomd-types
 
+## 1.2.1
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+
 ## 1.2.0
 
 ### Minor Changes
