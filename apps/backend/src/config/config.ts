@@ -17,12 +17,12 @@ const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
 }
 
 export const config = {
-  sendEmailNotifications: process.env.SEND_EMAIL_NOTIFICATIONS === 'true',
+  sendEmailNotifications: toBoolean(process.env.SEND_EMAIL_NOTIFICATIONS),
   bullmqAttempts: process.env.BULLMQ_ATTEMPTS
     ? parseInt(process.env.BULLMQ_ATTEMPTS)
     : 3,
   bilbomdUrl: getEnvVar('BILBOMD_URL'),
-  runOnNERSC: process.env.USE_NERSC === 'true',
+  runOnNERSC: toBoolean(process.env.USE_NERSC),
   nerscBaseAPI: getEnvVar('SFAPI_URL'),
   nerscScriptDir: getEnvVar('SCRIPT_DIR'),
   nerscUploadDir: getEnvVar('UPLOAD_DIR'),
