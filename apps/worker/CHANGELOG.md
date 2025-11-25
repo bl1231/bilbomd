@@ -1,5 +1,13 @@
 # @bilbomd/worker
 
+## 2.0.6
+
+### Patch Changes
+
+- 3b0da23: Add Example Data option for Alphafold jobs
+  Adjust all `config.ts` to support boolean toggles for pipeline availability
+- 89c7d7b: [BUG] NERSC Alphafold jobs were using the wrong container
+
 ## 2.0.5
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @bilbomd/ui
 
+## 3.0.0
+
+### Major Changes
+
+- 3b0da23: Add Example Data option for Alphafold jobs
+  Adjust all `config.ts` to support boolean toggles for pipeline availability
+
+### Patch Changes
+
+- 6611da5: Add nginx config for proper ip address tracking in req.headers
+
 ## 2.1.0
 
 ### Minor Changes

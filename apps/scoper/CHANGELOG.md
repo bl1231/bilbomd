@@ -1,5 +1,12 @@
 # @bilbomd/scoper
 
+## 1.5.11
+
+### Patch Changes
+
+- 3b0da23: Add Example Data option for Alphafold jobs
+  Adjust all `config.ts` to support boolean toggles for pipeline availability
+
 ## 1.5.10
 
 ### Patch Changes
