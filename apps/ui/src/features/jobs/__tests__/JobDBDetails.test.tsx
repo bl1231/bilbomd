@@ -16,24 +16,13 @@ describe('JobDBDetails', () => {
     vi.clearAllMocks()
   })
 
-  const jobTypes = [
-    'BilboMdPDB',
-    'BilboMdAuto',
-    'BilboMdAlphaFold',
-    'BilboMdSANS',
-    'BilboMdCRD',
-    'BilboMdScoper'
-  ]
+  const jobTypes = ['pdb', 'auto', 'alphafold', 'sans', 'crd', 'scoper']
 
   jobTypes.forEach((type) => {
     it(`renders basic job information for ${type}`, () => {
       const job = createMockBilboMDJob({
         mongo: {
-          __t: type as
-            | 'BilboMdPDB'
-            | 'BilboMdCRD'
-            | 'BilboMdAuto'
-            | 'BilboMdSANS'
+          jobType: type as 'pdb' | 'crd' | 'auto' | 'sans'
         }
       })
       renderWithProviders(<JobDBDetails job={job} />)

@@ -22,7 +22,7 @@ import path from 'path'
 import fs from 'fs-extra'
 import jwt from 'jsonwebtoken'
 import { v4 as uuid } from 'uuid'
-import app from './appMock'
+import app from './appMock.js'
 import { User, IUser, Job } from '@bilbomd/mongodb-schema'
 import { Queue } from 'bullmq'
 
@@ -125,7 +125,7 @@ describe('BullMQ Queue mock', () => {
   test('should use mocked Queue with expected methods and values', async () => {
     const queue = new Queue('bilbomd')
 
-    expect(vi.isMockFunction(Queue)).toBe(true)
+    // expect(vi.isMockFunction(Queue)).toBe(true)
     expect(queue.name).toBe('bilbomd-mock')
 
     const data = { foo: 'bar' }

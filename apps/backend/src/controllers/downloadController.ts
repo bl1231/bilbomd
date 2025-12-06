@@ -131,13 +131,21 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
       return res.status(404).json({ message: 'results directory unavailable.' })
     }
 
-    const datFileBase = path.basename(job.data_file, path.extname(job.data_file))
+    const datFileBase = path.basename(
+      job.data_file,
+      path.extname(job.data_file)
+    )
     // Try all possible file names for the original .dat file
     // The OpenMM option does end up outputting to a subdirectory
     const possibleDatFiles = [
       path.join(jobDir, `minimization_output_${datFileBase}.dat`),
       path.join(jobDir, `minimized_${datFileBase}.dat`),
-      path.join(jobDir, 'openmm', 'minimization', `minimized_${datFileBase}.dat`)
+      path.join(
+        jobDir,
+        'openmm',
+        'minimization',
+        `minimized_${datFileBase}.dat`
+      )
     ]
 
     let foundDatFile = null
@@ -164,7 +172,9 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
     try {
       files = await fs.readdir(resultsDir)
     } catch (e) {
-      logger.warn(`FoXS results directory not readable: ${resultsDir} (${(e as Error).message})`)
+      logger.warn(
+        `FoXS results directory not readable: ${resultsDir} (${(e as Error).message})`
+      )
     }
 
     const filePattern = /^multi_state_model_\d+_1_1\.dat$/
@@ -175,7 +185,9 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
           data.push(await createDataObject(filename, jobDir))
           ensembleCount += 1
         } catch (e) {
-          logger.warn(`Skipping unreadable FoXS ensemble file ${filename}: ${(e as Error).message}`)
+          logger.warn(
+            `Skipping unreadable FoXS ensemble file ${filename}: ${(e as Error).message}`
+          )
         }
       }
     }
@@ -195,12 +207,17 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
     logger.error(`error getting FoXS analysis data ${error}`)
     return res
       .status(500)
-      .json({ message: 'Internal server error while processing FoXS analysis data.' })
+      .json({
+        message: 'Internal server error while processing FoXS analysis data.'
+      })
   }
 }
 
 // Modify the createDataObject function to accept jobDir as an additional parameter
-const createDataObject = async (file: string, jobDir: string): Promise<FoxsData> => {
+const createDataObject = async (
+  file: string,
+  jobDir: string
+): Promise<FoxsData> => {
   try {
     // Check if the main file exists
     await fs.access(file)
@@ -243,7 +260,9 @@ const createDataObject = async (file: string, jobDir: string): Promise<FoxsData>
   }
 }
 
-const extractC1C2 = async (logFilePath: string): Promise<{ c1: string; c2: string }> => {
+const extractC1C2 = async (
+  logFilePath: string
+): Promise<{ c1: string; c2: string }> => {
   // logger.info('in extractC1C2 -----------------')
   const logContent = await fs.readFile(logFilePath, 'utf8')
   // logger.info(`Reading from log file: ${logFilePath}`)
@@ -363,4 +382,4 @@ const extractC2Values = (fileContent: string) => {
   return { c2FromOrig, c2FromScop }
 }
 
-export { downloadPDB, getFoxsData }
+export { downloadPDB, getFoxsData, getFoxsBilboData }

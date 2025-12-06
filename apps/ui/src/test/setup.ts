@@ -6,10 +6,23 @@ import { cleanup } from '@testing-library/react'
 import { server } from './server'
 
 // Polyfill ResizeObserver for Recharts
-global.ResizeObserver = class {
+globalThis.ResizeObserver = class {
   observe() {}
   unobserve() {}
   disconnect() {}
+}
+
+// Set up globalThis URL base for RTK Query in tests
+const originalURL = globalThis.URL
+globalThis.URL = class extends originalURL {
+  constructor(url: string | URL, base?: string | URL) {
+    if (!base && typeof url === 'string' && url.startsWith('/')) {
+      // If no base is provided and URL is relative, use our test base
+      super(url, 'http://localhost:3002')
+    } else {
+      super(url, base)
+    }
+  }
 }
 
 // Establish API mocking before all tests

@@ -11,16 +11,17 @@ __version__ = "0.1.0"
 __license__ = "SIBYLS"
 
 
+import argparse
 import copy
 import glob
+import json
 import os
 import os.path
 import shutil
-import json
-import argparse
 import tempfile
 from pathlib import Path
 from typing import List
+
 import numpy as np
 
 from pdb_utils import calculate_molecular_weight
@@ -140,7 +141,7 @@ def mw_bayes(eprof):
     # Prepare a minimal config from env vars
     calib = os.getenv("BILBOMD_MW_CALIB_JSON")
     conc = os.getenv("BILBOMD_SAMPLE_CONC_G_PER_CM3")
-    alpha = os.getenv("BILBOMD_MW_ALPHA", "0.048")
+    alpha = os.getenv("BILBOMD_MW_ALPHA", "0.14")
     beta = os.getenv("BILBOMD_MW_BETA", "1.0")
 
     # Build EstimationConfig consistent with my_bayes
@@ -237,8 +238,7 @@ def _log_and_return_best(best_cs, cs_models, multi_state_models):
     multi_states_num = _extract_model_number(multi_states_file)
 
     print_debug(
-        f"The best chi-square is {round(best_cs, 2)} "
-        f"({multi_states_num} multi states)"
+        f"The best chi-square is {round(best_cs, 2)} ({multi_states_num} multi states)"
     )
     return best_index
 
@@ -560,8 +560,7 @@ def generate_overall_chi_square_feedback(overall_chi_square, mw_err):
             "Moderate."
         )
     return (
-        f"The overall chi-square of this fit is {round(overall_chi_square, 2)}. "
-        "Poor."
+        f"The overall chi-square of this fit is {round(overall_chi_square, 2)}. Poor."
     )
 
 

@@ -3,7 +3,7 @@ const router = express.Router()
 import {
   mockVerifyNewUser,
   mockResendVerificationCode
-} from '../controllers/verifyControllerMock'
+} from '../controllers/verifyControllerMock.js'
 
 router.route('/').post(mockVerifyNewUser)
 router.route('/resend').post(mockResendVerificationCode)

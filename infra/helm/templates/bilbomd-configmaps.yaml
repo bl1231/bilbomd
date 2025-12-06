@@ -18,6 +18,7 @@ data:
   SEND_EMAIL_NOTIFICATIONS: 'true'
   SEND_EMAIL_USER: bilbomd@lbl.gov
   DATA_VOL: /bilbomd/uploads
+  EXAMPLE_DATA: /app/examples
   BILBOMD_LOGS: /bilbomd/logs
   NODE_ENV: '{{ .Values.env.NODE_ENV }}'
   BILBOMD_ENV: '{{ .Values.env.BILBOMD_ENV }}'
@@ -34,6 +35,7 @@ data:
   CP2CFS_SCRIPT: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/copy-back-to-cfs.sh'
   ENABLE_BILBOMD_SANS: 'false'
   ENABLE_BILBOMD_MULTI: 'false'
+  ENABLE_BILBOMD_ALPHAFOLD: 'true'
   ENABLE_HOME_PAGE_ALERT: 'false'
   CHARMM_TOPOLOGY: /app/scripts/bilbomd_top_par_files.str
   CHARMM_TEMPLATES: /app/build/templates/bilbomd
@@ -43,15 +45,3 @@ data:
   ORCID_ISSUER: '{{ .Values.auth.orcid_issuer }}'
   ORCID_CLIENT_ID: '{{ .Values.auth.orcid_client_id }}'
   ORCID_REDIRECT_URI: '{{ .Values.auth.orcid_redirect_uri }}'
-  OMM_MINIMIZE_MAX_ITER: '1000'
-  OMM_HEAT_FIRST_TEMP: '300'
-  OMM_HEAT_FINAL_TEMP: '600'
-  OMM_HEAT_TOTAL_STEPS: '10000'
-  OMM_HEAT_TIMESTEP: '0.001'
-  OMM_MD_TEMP: '600'
-  OMM_MD_FRICTION: '0.1'
-  OMM_MD_NSTEPS: '100000'
-  OMM_MD_TIMESTEP: '0.001'
-  OMM_MD_K_RG: '10'
-  OMM_MD_RG_REPORT_INTERVAL: '500'
-  OMM_MD_PDB_REPORT_INTERVAL: '500'

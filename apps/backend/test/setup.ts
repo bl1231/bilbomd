@@ -1,5 +1,7 @@
 import dotenv from 'dotenv'
-dotenv.config({ path: './test/.env.test' })
+dotenv.config({ path: './.env.test' })
+console.log('*** backend test setup loaded ***')
+
 import { logger } from '../src/middleware/loggers.js'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import mongoose from 'mongoose'
@@ -16,16 +18,27 @@ beforeAll(() => {
   vi.spyOn(console, 'info').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
-  vi.spyOn(logger, 'info').mockImplementation(function (this: typeof logger, ..._args: any[]) {
+  vi.spyOn(logger, 'info').mockImplementation(function (
+    this: typeof logger,
+    ..._args: any[]
+  ) {
     return this
   })
-  vi.spyOn(logger, 'warn').mockImplementation(function (this: typeof logger, ..._args: any[]) {
+  vi.spyOn(logger, 'warn').mockImplementation(function (
+    this: typeof logger,
+    ..._args: any[]
+  ) {
     return this
   })
-  vi.spyOn(logger, 'error').mockImplementation(function (this: typeof logger, ..._args: any[]) {
+  vi.spyOn(logger, 'error').mockImplementation(function (
+    this: typeof logger,
+    ..._args: any[]
+  ) {
     return this
   })
 })
+
+console.log('*** Connecting to in-memory MongoDB for tests ***')
 
 // Setup MongoDB Memory Server
 export const mongoServer = await MongoMemoryServer.create()
@@ -33,23 +46,35 @@ const uri = mongoServer.getUri()
 
 await mongoose.connect(uri)
 
-// Mock bullmq queues
-const mockQueue = {
-  name: 'bilbomd-mock',
-  add: vi.fn().mockResolvedValue({
+// Mock bullmq queues with real classes for Vitest v4 compatibility
+class MockQueue {
+  name = 'bilbomd-mock'
+  add = vi.fn().mockResolvedValue({
     id: 'mock-job-id',
     name: 'mock-job',
     data: { foo: 'bar' }
-  }),
-  close: vi.fn()
+  })
+  close = vi.fn()
+}
+
+class MockWorker {
+  close = vi.fn()
+}
+class MockQueueScheduler {
+  close = vi.fn()
+}
+class MockQueueEvents {
+  close = vi.fn()
+  on = vi.fn()
+  off = vi.fn()
 }
 
 vi.mock('bullmq', () => {
   return {
-    Queue: vi.fn(() => mockQueue),
-    Worker: vi.fn(() => ({ close: vi.fn() })),
-    QueueScheduler: vi.fn(() => ({ close: vi.fn() })),
-    QueueEvents: vi.fn(() => ({ close: vi.fn(), on: vi.fn(), off: vi.fn() }))
+    Queue: MockQueue,
+    Worker: MockWorker,
+    QueueScheduler: MockQueueScheduler,
+    QueueEvents: MockQueueEvents
   }
 })
 
@@ -69,6 +94,7 @@ const { __useMock, __sendMailMock } = vi.hoisted(() => ({
 // Attach mocks to the global object for access in all tests
 globalThis.__useMock = __useMock
 globalThis.__sendMailMock = __sendMailMock
+globalThis.__sendMailMock.mockResolvedValue(undefined)
 
 vi.mock('nodemailer', () => {
   const createTransport = vi.fn(() => ({

@@ -2,20 +2,21 @@
 
 import os
 import sys
+
 import yaml
-from openmm.app import (
-    ForceField,
-    Modeller,
-    Simulation,
-    PDBFile,
-    CutoffNonPeriodic,
-    HBonds,
-)
 from openmm import LangevinIntegrator
-from openmm.unit import kelvin, picoseconds, nanometer
+from openmm.app import (
+    CutoffNonPeriodic,
+    ForceField,
+    HBonds,
+    Modeller,
+    PDBFile,
+    Simulation,
+)
 from openmm.openmm import XmlSerializer
-from utils.rigid_body import get_rigid_bodies, create_rigid_bodies
+from openmm.unit import kelvin, nanometer, picoseconds
 from utils.fixed_bodies import apply_fixed_body_constraints
+from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
 
 if len(sys.argv) != 2:
     print("Usage: python heat.py <config.yaml>")
@@ -36,9 +37,9 @@ minimized_pdb_file = config["steps"]["minimization"]["output_pdb"]
 output_pdb_file_name = config["steps"]["heating"]["output_pdb"]
 output_restart_file_name = config["steps"]["heating"]["output_restart"]
 
-first_temp = config["steps"]["heating"]["parameters"]["first_temp"] * kelvin
+start_temp = config["steps"]["heating"]["parameters"]["start_temp"] * kelvin
 final_temp = config["steps"]["heating"]["parameters"]["final_temp"] * kelvin
-total_steps = config["steps"]["heating"]["parameters"]["total_steps"]
+nsteps = config["steps"]["heating"]["parameters"]["nsteps"]
 timestep = config["steps"]["heating"]["parameters"]["timestep"] * picoseconds
 
 for d in [output_dir, min_dir, heat_dir, md_dir]:
@@ -68,7 +69,7 @@ system = forcefield.createSystem(
     nonbondedCutoff=1.2 * nanometer,
     constraints=HBonds,
     soluteDielectric=1.0,
-    solventDielectric=78.5
+    solventDielectric=78.5,
 )
 
 # 🔒 Apply fixed body constraints
@@ -81,19 +82,19 @@ create_rigid_bodies(system, modeller.positions, list(rigid_bodies.values()))
 
 
 # 🔥 Heating
-temperature_increment = (final_temp - first_temp) / total_steps
+temperature_increment = (final_temp - start_temp) / nsteps
 
-temperature = first_temp
+temperature = start_temp
 friction = 1 / picoseconds
 integrator = LangevinIntegrator(temperature, friction, timestep)
 
 simulation = Simulation(modeller.topology, system, integrator)
 simulation.context.setPositions(modeller.positions)
-simulation.context.setVelocitiesToTemperature(first_temp)
+simulation.context.setVelocitiesToTemperature(start_temp)
 
-print(f"🔥 Starting heating from {first_temp} to {final_temp}...")
-for step in range(total_steps):
-    temperature = first_temp + temperature_increment * step
+print(f"🔥 Starting heating from {start_temp} to {final_temp}...")
+for step in range(nsteps):
+    temperature = start_temp + temperature_increment * step
     integrator.setTemperature(temperature)
     simulation.step(1)
     if step % 1000 == 0:

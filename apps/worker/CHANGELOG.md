@@ -1,5 +1,181 @@
 # @bilbomd/worker
 
+## 2.0.8
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+  - @bilbomd/md-utils@1.0.13
+
+## 2.0.7
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/md-utils@1.0.12
+  - @bilbomd/mongodb-schema@2.1.1
+
+## 2.0.6
+
+### Patch Changes
+
+- 3b0da23: Add Example Data option for Alphafold jobs
+  Adjust all `config.ts` to support boolean toggles for pipeline availability
+- 89c7d7b: [BUG] NERSC Alphafold jobs were using the wrong container
+
+## 2.0.5
+
+### Patch Changes
+
+- 2ff4c96: Refactor `Scoper` results and steps to align with new DTO mindset
+- Updated dependencies [bdc6d1d]
+- Updated dependencies [2ff4c96]
+  - @bilbomd/mongodb-schema@2.1.0
+  - @bilbomd/md-utils@1.0.11
+
+## 2.0.4
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+  - @bilbomd/md-utils@1.0.10
+
+## 2.0.3
+
+### Patch Changes
+
+- 1d9457e: Add script to automatically sync the NERSC scripts from `bilbomd-worker` to CFS when SPIN image starts.
+
+## 2.0.2
+
+### Patch Changes
+
+- 91ce282: Update the NERSC Slurm generation bash script.
+
+## 2.0.1
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+  - @bilbomd/md-utils@1.0.9
+
+## 2.0.0
+
+### Major Changes
+
+- f514114: Allow public unauthenticated BilboMD job submission
+  Add new public endpoints to `bilbomd-backend`
+  Add Help component
+  Add Cookie consent
+  Add PublicJobPage to display job results for unauthenticated users
+  Add Privacy Policy Component
+  Add new shared `bilbomd-types` package for Typescript types/interfaces
+
+### Patch Changes
+
+- Updated dependencies [f514114]
+  - @bilbomd/mongodb-schema@2.0.0
+  - @bilbomd/md-utils@1.0.8
+
+## 1.24.3
+
+### Patch Changes
+
+- 2335ee6: Update license as per IPO
+- 9f102df: fix the path logic when parsing `ensemble_size_N.txt` files (bug #199)
+  consolodate `prepareResults` functions for several workflows
+- Updated dependencies [2335ee6]
+  - @bilbomd/md-utils@1.0.7
+  - @bilbomd/mongodb-schema@1.12.2
+
+## 1.24.2
+
+### Patch Changes
+
+- 3bad4a2: Use versioned OpenMM (v8.4.0) instead of `master` branch
+  Pin CUDA to v12 for NERSC `bilbomd-openmm-worker` Docker image
+- fce115a: Update nodejs and dependencies
+- Updated dependencies [fce115a]
+  - @bilbomd/md-utils@1.0.6
+
+## 1.24.1
+
+### Patch Changes
+
+- 93da9d9: Use versioned OpenMM (v8.4.0) instead of `master` branch
+- 578d870: Add LBL license
+- Updated dependencies [578d870]
+  - @bilbomd/md-utils@1.0.5
+  - @bilbomd/mongodb-schema@1.12.1
+
+## 1.24.0
+
+### Minor Changes
+
+- 3091aeb: Remove dedicated BullMQ queue to process PDB to CRD conversion.
+  Add extra step in the worker to do conversion instead.
+
+## 1.23.0
+
+### Minor Changes
+
+- 6c1e84e: Add OpenMM config and constraint files to results dir
+  Reorganize pipeline functions
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+- Updated dependencies [3e2f5b4]
+  - @bilbomd/md-utils@1.0.4
+
+## 1.22.1
+
+### Patch Changes
+
+- 267faf5: Adjust alpha factor for MW estimation in `mw_bayes.py`
+- d51af33: Make sure we reserve GPUs for our workers on machines with GPUs.
+
+## 1.22.0
+
+### Minor Changes
+
+- e110840: Add ability to make mp4 movies from Molecular Dynamics trajectory file (`*.dcd` files)
+  Creates one mp4 moview per DCD file. Only implemented for OpenMM.
+  Add movie gallery and viewer to Jobs result page in UI.
+  Add PyMOL to the `bilbomd-worker-base` image
+
+### Patch Changes
+
+- 258ac41: Use `set` to update `md_constraints` in mongo ratehr than direct assignment of YAML values.
+- Updated dependencies [e110840]
+  - @bilbomd/mongodb-schema@1.12.0
+  - @bilbomd/md-utils@1.0.3
+
+## 1.21.0
+
+### Minor Changes
+
+- 9d755b6: Add OpenMM params to MongoDB Job Schema
+  Remove all `OMM_*` env variables from `.env.example`
+  Remove all `OMM_*` env variables from `infra/helm/templates/bilbomd-configmaps.yaml`
+
+### Patch Changes
+
+- ef6ace8: Fix CLI arg for `pae2const.py` in the NERSC slurm prep script `apps/worker/scripts/nersc/gen-openmm-slurm-file.py`.
+  Add a new `README.md` with instructions on building `bilbomd-worker-base` Docker image
+  Bump CHARMM to `c49b2`
+- 5abfc4f: bump `bilbomd-worker-base` to `v0.0.3`
+- Updated dependencies [9d755b6]
+  - @bilbomd/mongodb-schema@1.11.0
+  - @bilbomd/md-utils@1.0.2
+
 ## 1.20.0
 
 ### Minor Changes

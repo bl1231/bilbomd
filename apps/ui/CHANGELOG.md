@@ -1,5 +1,171 @@
 # @bilbomd/ui
 
+## 2.1.3
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+
+## 2.1.2
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/bilbomd-types@1.2.1
+  - @bilbomd/mongodb-schema@2.1.1
+
+## 3.0.0
+
+### Major Changes
+
+- 3b0da23: Add Example Data option for Alphafold jobs
+  Adjust all `config.ts` to support boolean toggles for pipeline availability
+
+### Patch Changes
+
+- 6611da5: Add nginx config for proper ip address tracking in req.headers
+
+## 2.1.0
+
+### Minor Changes
+
+- bdc6d1d: Implement structured Data Transfer Object (DTO) to decouple mongodb entries from frontend logic.
+  Added a new package for shared types `bilbomd-types`.
+  Added `results` to MongoDB Job schema.
+  Extensive refactoring of `ui` React components.
+
+### Patch Changes
+
+- 2ff4c96: Refactor `Scoper` results and steps to align with new DTO mindset
+- Updated dependencies [bdc6d1d]
+- Updated dependencies [2ff4c96]
+  - @bilbomd/mongodb-schema@2.1.0
+  - @bilbomd/bilbomd-types@1.2.0
+
+## 2.0.6
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+
+## 2.0.5
+
+### Patch Changes
+
+- 6846821: Remove some deprecated Typescript config settings in prep for Typescript 6.x
+  This required a bit of fiddling with `bilbomd-ui` types and interfaces
+
+## 2.0.4
+
+### Patch Changes
+
+- a591ec7: Use `bilbomd@lbl.gov` support email.
+  Fix some broken tests
+  Enable a bare bones minimal `/settings/safety` landing page for users to request account deletion.
+
+## 2.0.3
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+
+## 2.0.2
+
+### Patch Changes
+
+- 0ccfbb3: Add `Help` to the main layout/routes
+  Added a Back button to User Settings Nav drawer
+
+## 2.0.1
+
+### Patch Changes
+
+- 899b5ce: Added pipeline figures to the Help page.
+
+## 2.0.0
+
+### Major Changes
+
+- f514114: Allow public unauthenticated BilboMD job submission
+  Add new public endpoints to `bilbomd-backend`
+  Add Help component
+  Add Cookie consent
+  Add PublicJobPage to display job results for unauthenticated users
+  Add Privacy Policy Component
+  Add new shared `bilbomd-types` package for Typescript types/interfaces
+
+### Patch Changes
+
+- Updated dependencies [f514114]
+  - @bilbomd/mongodb-schema@2.0.0
+  - @bilbomd/bilbomd-types@1.1.0
+
+## 1.24.5
+
+### Patch Changes
+
+- dcad9a1: Update GitHub link in footer of UI
+- 2335ee6: Update license as per IPO
+- Updated dependencies [2335ee6]
+  - @bilbomd/mongodb-schema@1.12.2
+
+## 1.24.4
+
+### Patch Changes
+
+- fce115a: Update nodejs and dependencies
+
+## 1.24.3
+
+### Patch Changes
+
+- 578d870: Add LBL license
+- Updated dependencies [578d870]
+  - @bilbomd/mongodb-schema@1.12.1
+
+## 1.24.2
+
+### Patch Changes
+
+- ef1f18f: Add simple component to display `md_constraints` if present
+  Adjust CSS FlexBox for SingleJobPage
+  Adjust CSS for cluster checkboxes in PAE Jiffy
+
+## 1.24.1
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+
+## 1.24.0
+
+### Minor Changes
+
+- e110840: Add ability to make mp4 movies from Molecular Dynamics trajectory file (`*.dcd` files)
+  Creates one mp4 moview per DCD file. Only implemented for OpenMM.
+  Add movie gallery and viewer to Jobs result page in UI.
+  Add PyMOL to the `bilbomd-worker-base` image
+
+### Patch Changes
+
+- dc30f9c: Make BilboMD Job step names more generic in order to support **CHARMM** and **OpenMM** equally
+- Updated dependencies [e110840]
+  - @bilbomd/mongodb-schema@1.12.0
+
+## 1.23.5
+
+### Patch Changes
+
+- Updated dependencies [9d755b6]
+  - @bilbomd/mongodb-schema@1.11.0
+
 ## 1.23.4
 
 ### Patch Changes

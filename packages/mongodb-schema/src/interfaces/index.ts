@@ -1,3 +1,7 @@
 export * from './jobInterface.js'
 export * from './userInterface.js'
 export * from './multijobInterface.js'
+export * from './openmmInterface.js'
+export * from './assetsInterface.js'
+export * from './resultsInterface.js'
+export * from './jobStepInterface.js'

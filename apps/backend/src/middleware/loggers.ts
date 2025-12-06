@@ -4,21 +4,41 @@ import moment from 'moment-timezone'
 import morgan from 'morgan'
 import { v4 as uuidv4 } from 'uuid'
 import { Request, Response, NextFunction } from 'express'
+import { config } from '../config/config.js'
 
 const { combine, timestamp, label, printf, colorize } = format
 const localTimezone = 'America/Los_Angeles'
 const logsFolder = `/bilbomd/logs`
 
-const customTimestamp = () => moment().tz(localTimezone).format('YYYY-MM-DD HH:mm:ss')
+const customTimestamp = () =>
+  moment().tz(localTimezone).format('YYYY-MM-DD HH:mm:ss')
 
 const logFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp} - ${level}: [${label}] ${message}`
 })
+// Validate log level
+const validLogLevels = [
+  'error',
+  'warn',
+  'info',
+  'http',
+  'verbose',
+  'debug',
+  'silly'
+]
+const logLevel = validLogLevels.includes(config.logLevel)
+  ? config.logLevel
+  : 'info'
+
+if (!validLogLevels.includes(config.logLevel)) {
+  console.warn(`Invalid LOG_LEVEL "${config.logLevel}", defaulting to "info"`)
+}
 
 const loggerTransports = []
 if (process.env.NODE_ENV !== 'test') {
   loggerTransports.push(
     new DailyRotateFile({
+      level: logLevel,
       filename: `${logsFolder}/bilbomd-backend-%DATE%.log`,
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
@@ -36,10 +56,12 @@ if (process.env.NODE_ENV !== 'test') {
   )
 }
 // Always include Console transport
-loggerTransports.push(new transports.Console({ format: combine(colorize(), logFormat) }))
+loggerTransports.push(
+  new transports.Console({ format: combine(colorize(), logFormat) })
+)
 
 const logger = createLogger({
-  level: 'info',
+  level: logLevel,
   format: combine(
     label({ label: 'bilbomd-backend' }),
     timestamp({ format: customTimestamp }),

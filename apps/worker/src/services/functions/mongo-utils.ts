@@ -7,6 +7,8 @@ import {
 } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 
+import type { JobStatusEnum } from '@bilbomd/mongodb-schema'
+
 const updateStepStatus = async (
   job: IJob | IMultiJob,
   stepName: keyof IBilboMDSteps,
@@ -46,4 +48,12 @@ const handleStepError = async (
   logger.error(`Error in ${stepName}: ${errorMessage}`)
 }
 
-export { updateStepStatus, handleStepError }
+const updateJobStatus = async (
+  job: IJob,
+  status: JobStatusEnum
+): Promise<void> => {
+  job.status = status
+  await job.save()
+}
+
+export { updateStepStatus, handleStepError, updateJobStatus }

@@ -19,6 +19,12 @@ import {
   ResponsiveContainer,
   ReferenceLine
 } from 'recharts'
+import { FoxsData } from '@bilbomd/bilbomd-types'
+
+type CombinedFoxsData = {
+  q: number
+  exp_intensity: number
+} & Record<string, number>
 
 type Props = {
   combinedData: CombinedFoxsData[]
@@ -39,7 +45,7 @@ const colors = [
   '#76b7b2' // muted blue-teal
 ]
 
-const getUniqueColor = (index) => {
+const getUniqueColor = (index: number) => {
   return colors[index % colors.length]
 }
 const FoXSEnsembleCharts = ({
@@ -56,7 +62,7 @@ const FoXSEnsembleCharts = ({
     ...new Array(foxsData.length - 1).fill(true)
   ])
   // Handle checkbox change
-  const handleCheckboxChange = (index) => {
+  const handleCheckboxChange = (index: number) => {
     const newVisibility = visibility.slice()
     newVisibility[index] = !newVisibility[index]
     // console.log('Updated visibility:', newVisibility)
@@ -65,33 +71,40 @@ const FoXSEnsembleCharts = ({
   return (
     <>
       <Typography
-        variant='h5'
+        variant="h5"
         sx={{ pl: 2, m: 1 }}
       >{`Ensemble Models - I vs. q`}</Typography>
-      <ResponsiveContainer width='100%' height={300}>
+      <ResponsiveContainer
+        width="100%"
+        height={300}
+      >
         <LineChart data={combinedData}>
-          <CartesianGrid strokeDasharray='3 3' />
-          <XAxis dataKey='q' scale='linear' type='number' />
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis
+            dataKey="q"
+            scale="linear"
+            type="number"
+          />
           <YAxis
-            yAxisId='left'
-            scale='log'
-            type='number'
+            yAxisId="left"
+            scale="log"
+            type="number"
             domain={['auto', 'auto']}
           />
           <Tooltip />
           <Legend
-            iconType='line'
-            verticalAlign='bottom'
+            iconType="line"
+            verticalAlign="bottom"
             height={30}
-            layout='horizontal'
-            align='center'
+            layout="horizontal"
+            align="center"
           />
           <Line
-            yAxisId='left'
-            type='monotone'
-            dataKey='exp_intensity'
-            name='Exp Intensity'
-            stroke='#8884d8'
+            yAxisId="left"
+            type="monotone"
+            dataKey="exp_intensity"
+            name="Exp Intensity"
+            stroke="#8884d8"
             activeDot={{ r: 8 }}
             dot={{ strokeWidth: 1 }}
           />
@@ -99,8 +112,8 @@ const FoXSEnsembleCharts = ({
             <Fragment key={index}>
               {visibility[index] && (
                 <Line
-                  yAxisId='left'
-                  type='monotone'
+                  yAxisId="left"
+                  type="monotone"
                   dataKey={`model_intensity_${index}`}
                   name={`Ens. Size ${index}`}
                   stroke={getUniqueColor(index)}
@@ -111,26 +124,36 @@ const FoXSEnsembleCharts = ({
           ))}
         </LineChart>
       </ResponsiveContainer>
-      <Typography variant='h5' sx={{ pl: 2, m: 1, mt: 3 }}>
+      <Typography
+        variant="h5"
+        sx={{ pl: 2, m: 1, mt: 3 }}
+      >
         Ensemble Models - Chi&sup2; residuals
       </Typography>
-      <ResponsiveContainer width='100%' height={200}>
+      <ResponsiveContainer
+        width="100%"
+        height={200}
+      >
         <LineChart data={combinedData}>
-          <XAxis dataKey='q' scale='linear' type='number' />
+          <XAxis
+            dataKey="q"
+            scale="linear"
+            type="number"
+          />
           <YAxis domain={[minYAxis, maxYAxis]} />
           <Tooltip />
           <Legend
-            iconType='line'
-            verticalAlign='bottom'
+            iconType="line"
+            verticalAlign="bottom"
             height={30}
-            layout='horizontal'
-            align='center'
+            layout="horizontal"
+            align="center"
           />
           {foxsData.map((_, index) => (
             <Fragment key={index}>
               {visibility[index] && (
                 <Line
-                  type='monotone'
+                  type="monotone"
                   dataKey={`residual_${index}`}
                   name={`Ens. Size ${index}`}
                   stroke={getUniqueColor(index)}
@@ -138,12 +161,18 @@ const FoXSEnsembleCharts = ({
               )}
             </Fragment>
           ))}
-          <ReferenceLine y={0} stroke='black' />
+          <ReferenceLine
+            y={0}
+            stroke="black"
+          />
         </LineChart>
       </ResponsiveContainer>
       <Grid sx={{ ml: 8 }}>
         <TableContainer component={Paper}>
-          <Table size='small' aria-label='bilbomd multifoxs ensemble results'>
+          <Table
+            size="small"
+            aria-label="bilbomd multifoxs ensemble results"
+          >
             <TableHead>
               <TableRow>
                 <TableCell>Show</TableCell>
@@ -163,7 +192,7 @@ const FoXSEnsembleCharts = ({
                         <Checkbox
                           checked={visibility[index]}
                           onChange={() => handleCheckboxChange(index)}
-                          color='default'
+                          color="default"
                         />
                       </TableCell>
                       <TableCell>

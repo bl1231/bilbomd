@@ -643,49 +643,58 @@ const Alphafold2PAEJiffy = () => {
                   {matrix ? (
                     <>
                       {' '}
-                      <FormGroup
-                        row
-                        sx={{ mb: 1 }}
+                      <Box
+                        sx={{
+                          maxWidth: 600,
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          mb: 1
+                        }}
                       >
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={showRigid}
-                              onChange={(e) => setShowRigid(e.target.checked)}
-                              size="small"
-                            />
-                          }
-                          label="Show rigid"
-                        />
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={showFixed}
-                              onChange={(e) => setShowFixed(e.target.checked)}
-                              size="small"
-                            />
-                          }
-                          label="Show fixed"
-                        />
-                        {viz?.clusters.map((c) => (
+                        <FormGroup
+                          row
+                          sx={{ width: '100%', flexWrap: 'wrap' }}
+                        >
                           <FormControlLabel
-                            key={c.id}
                             control={
                               <Checkbox
-                                checked={clusterVisibility[c.id] ?? true}
-                                onChange={(e) => {
-                                  setClusterVisibility((prev) => ({
-                                    ...prev,
-                                    [c.id]: e.target.checked
-                                  }))
-                                }}
+                                checked={showRigid}
+                                onChange={(e) => setShowRigid(e.target.checked)}
                                 size="small"
                               />
                             }
-                            label={`Cluster ${c.id}`}
+                            label="Show rigid"
                           />
-                        ))}
-                      </FormGroup>{' '}
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={showFixed}
+                                onChange={(e) => setShowFixed(e.target.checked)}
+                                size="small"
+                              />
+                            }
+                            label="Show fixed"
+                          />
+                          {viz?.clusters.map((c) => (
+                            <FormControlLabel
+                              key={c.id}
+                              control={
+                                <Checkbox
+                                  checked={clusterVisibility[c.id] ?? true}
+                                  onChange={(e) => {
+                                    setClusterVisibility((prev) => ({
+                                      ...prev,
+                                      [c.id]: e.target.checked
+                                    }))
+                                  }}
+                                  size="small"
+                                />
+                              }
+                              label={`Cluster ${c.id}`}
+                            />
+                          ))}
+                        </FormGroup>
+                      </Box>
                       <PAEMatrixPlot
                         matrix={matrix}
                         viz={viz}

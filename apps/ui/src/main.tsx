@@ -3,13 +3,13 @@ import * as ReactDOM from 'react-dom/client'
 import './index.css'
 import App from './App'
 import { Provider as ReduxProvider } from 'react-redux'
-import { setupStore } from 'app/store'
+import { setupStore } from './app/store'
 import { createBrowserRouter, RouterProvider } from 'react-router'
-import { ThemeContextProvider } from 'themes/ThemeContextProvider'
+import { ThemeContextProvider } from './themes/ThemeContextProvider'
 import { StyledEngineProvider } from '@mui/system'
 import { ErrorBoundary } from 'react-error-boundary'
 import { SnackbarProvider } from 'notistack'
-import ErrorFallback from 'components/ErrorFallback'
+import ErrorFallback from './components/ErrorFallback'
 
 const router = createBrowserRouter([
   {

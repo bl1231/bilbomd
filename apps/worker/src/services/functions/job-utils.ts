@@ -1,37 +1,34 @@
-import { User, IUser, IJob, IStepStatus } from '@bilbomd/mongodb-schema'
+import {
+  User,
+  IUser,
+  IJob,
+  IStepStatus,
+  IBilboMDSteps
+} from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
 import { logger } from '../../helpers/loggers.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { config } from '../../config/config.js'
 import fs from 'fs-extra'
-import { CharmmDCD2PDBParams, CharmmParams } from '../../types/index.js'
 import path from 'path'
 import { spawn, ChildProcess } from 'node:child_process'
 import Handlebars from 'handlebars'
-import { updateStepStatus } from './mongo-utils.js'
+import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
+import { Types } from 'mongoose'
 
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
 const initializeJob = async (MQJob: BullMQJob, DBjob: IJob): Promise<void> => {
   try {
-    // Make sure the user exists in MongoDB
-    const foundUser = await User.findById(DBjob.user).lean().exec()
-    if (!foundUser) {
-      throw new Error(`No user found for: ${DBjob.uuid}`)
-    }
-
     // Clear the BullMQ Job logs in the case this job is being re-run
     await MQJob.clearLogs()
 
-    // Set MongoDB status to Running when we are submitting to Slurm at NERSC
-    // Does this need to be set to Running when we are running locally?6
+    // Set MongoDB status to Running when we start processing the job
     DBjob.status = 'Running'
-    // DBjob.time_started = new Date()
     await DBjob.save()
   } catch (error) {
-    // Handle and log the error
-    logger.error(`Error in initializeJob: ${error}`)
+    logger.error(`Error in initializeJob: ${getErrorMessage(error)}`)
     throw error
   }
 }
@@ -41,17 +38,22 @@ const cleanupJob = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
     // Mark job as completed in the database
     await markJobAsCompleted(DBjob)
 
-    // Fetch user associated with the job
+    // Fetch user associated with the job (may be null for anonymous jobs)
     const user = await fetchJobUser(DBjob)
+
     if (!user) {
-      logger.error(`No user found for: ${DBjob.uuid}`)
+      logger.info(
+        `cleanupJob: no user associated with job uuid=${DBjob.uuid}, skipping email notification`
+      )
+      DBjob.progress = 100
+      await DBjob.save()
       return
     }
 
-    // Handle email notifications
+    // Handle email notifications for jobs with a valid user
     await handleJobEmailNotification(MQjob, DBjob, user)
   } catch (error) {
-    logger.error(`Error in cleanupJob: ${error}`)
+    logger.error(`Error in cleanupJob: ${getErrorMessage(error)}`)
     throw error
   }
 }
@@ -65,6 +67,16 @@ const markJobAsCompleted = async (DBjob: IJob): Promise<void> => {
 
 // Fetch user associated with the job
 const fetchJobUser = async (DBjob: IJob): Promise<IUser | null> => {
+  if (!DBjob.user) {
+    return null
+  }
+  if (typeof DBjob.user === 'object' && '_id' in DBjob.user) {
+    // Already populated IUser document
+    return DBjob.user as IUser
+  }
+  if (!Types.ObjectId.isValid(DBjob.user)) {
+    return null
+  }
   return User.findById(DBjob.user).lean<IUser>().exec()
 }
 
@@ -74,6 +86,12 @@ const handleJobEmailNotification = async (
   DBjob: IJob,
   user: IUser
 ): Promise<void> => {
+  if (!user.email) {
+    logger.info(
+      `Skipping email notification: user email is undefined for job uuid=${DBjob.uuid}`
+    )
+    return
+  }
   if (config.sendEmailNotifications) {
     let status: IStepStatus = {
       status: 'Running',
@@ -108,7 +126,9 @@ const handleJobEmailNotification = async (
       await updateStepStatus(DBjob, 'email', status)
     }
   } else {
-    logger.info(`Skipping email notification for ${user.email}`)
+    logger.info(
+      `Skipping email notification for job uuid=${DBjob.uuid} (email notifications disabled)`
+    )
   }
 }
 
@@ -268,6 +288,78 @@ const spawnFoXS = async (
   }
 }
 
+const handleError = async (
+  error: Error | unknown,
+  DBjob: IJob,
+  step?: keyof IBilboMDSteps
+) => {
+  // Enhanced error message extraction
+  let errorMsg: string
+  let stackTrace: string | undefined
+
+  if (error instanceof Error) {
+    errorMsg = error.message
+    stackTrace = error.stack
+    logger.error(
+      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}`
+    )
+  } else {
+    errorMsg = String(error)
+    logger.error(
+      `handleError - Non-Error object: error=${error}, type=${typeof error}, step=${step || 'unknown'}`
+    )
+  }
+
+  // Log the step and error details
+  logger.error(
+    `handleError called for step: ${step || 'undefined'} with error: ${errorMsg}`
+  )
+
+  if (stackTrace) {
+    logger.error(`Stack trace: ${stackTrace}`)
+  }
+
+  // Log job details for context
+  logger.error(
+    `Job context: jobId=${DBjob.id}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}`
+  )
+
+  try {
+    // Updates primary status in MongoDB
+    logger.debug(`Updating job status to 'Error' for job ${DBjob.id}`)
+    await updateJobStatus(DBjob, 'Error')
+    logger.debug(`Successfully updated job status to 'Error'`)
+  } catch (updateError) {
+    logger.error(`Failed to update job status: ${updateError}`)
+  }
+
+  // Update the specific step status
+  if (step) {
+    try {
+      const status: IStepStatus = {
+        status: 'Error',
+        message: `Error in step ${step}: ${errorMsg}`
+      }
+      logger.debug(`Updating step status for step: ${step}`)
+      await updateStepStatus(DBjob, step, status)
+      logger.debug(`Successfully updated step status for step: ${step}`)
+    } catch (stepUpdateError) {
+      logger.error(
+        `Failed to update step status for step ${step}: ${stepUpdateError}`
+      )
+    }
+  } else {
+    logger.error(`Step not provided when handling error. Error: ${errorMsg}`)
+  }
+
+  // Create a more descriptive error to throw
+  const finalError = new Error(
+    `BilboMD failed in step '${step || 'unknown'}': ${errorMsg}`
+  )
+  logger.error(`Throwing final error: ${finalError.message}`)
+  throw finalError
+}
+
 export {
   initializeJob,
   cleanupJob,
@@ -276,5 +368,6 @@ export {
   generateDCD2PDBInpFile,
   generateInputFile,
   spawnCharmm,
-  spawnFoXS
+  spawnFoXS,
+  handleError
 }

@@ -1,0 +1,32 @@
+# @bilbomd/bilbomd-types
+
+## 1.2.1
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+
+## 1.2.0
+
+### Minor Changes
+
+- bdc6d1d: Implement structured Data Transfer Object (DTO) to decouple mongodb entries from frontend logic.
+  Added a new package for shared types `bilbomd-types`.
+  Added `results` to MongoDB Job schema.
+  Extensive refactoring of `ui` React components.
+
+### Patch Changes
+
+- 2ff4c96: Refactor `Scoper` results and steps to align with new DTO mindset
+
+## 1.1.0
+
+### Minor Changes
+
+- f514114: Allow public unauthenticated BilboMD job submission
+  Add new public endpoints to `bilbomd-backend`
+  Add Help component
+  Add Cookie consent
+  Add PublicJobPage to display job results for unauthenticated users
+  Add Privacy Policy Component
+  Add new shared `bilbomd-types` package for Typescript types/interfaces

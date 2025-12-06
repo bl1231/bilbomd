@@ -1,5 +1,171 @@
 # @bilbomd/backend
 
+## 2.1.3
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+  - @bilbomd/md-utils@1.0.13
+
+## 2.1.2
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/bilbomd-types@1.2.1
+  - @bilbomd/md-utils@1.0.12
+  - @bilbomd/mongodb-schema@2.1.1
+
+## 2.1.1
+
+### Patch Changes
+
+- 3b0da23: Add Example Data option for Alphafold jobs
+  Adjust all `config.ts` to support boolean toggles for pipeline availability
+- 6611da5: Add nginx config for proper ip address tracking in req.headers
+
+## 2.1.0
+
+### Minor Changes
+
+- bdc6d1d: Implement structured Data Transfer Object (DTO) to decouple mongodb entries from frontend logic.
+  Added a new package for shared types `bilbomd-types`.
+  Added `results` to MongoDB Job schema.
+  Extensive refactoring of `ui` React components.
+
+### Patch Changes
+
+- 2ff4c96: Refactor `Scoper` results and steps to align with new DTO mindset
+- Updated dependencies [bdc6d1d]
+- Updated dependencies [2ff4c96]
+  - @bilbomd/mongodb-schema@2.1.0
+  - @bilbomd/bilbomd-types@1.2.0
+  - @bilbomd/md-utils@1.0.11
+
+## 2.0.6
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+  - @bilbomd/md-utils@1.0.10
+
+## 2.0.5
+
+### Patch Changes
+
+- 744b0d5: Fix bug in public SANS jobs where ip_hash not getting added to mongodb entry
+
+## 2.0.4
+
+### Patch Changes
+
+- 009fac1: Bump `backend` to include tsconfig changes
+
+## 2.0.3
+
+### Patch Changes
+
+- a591ec7: Use `bilbomd@lbl.gov` support email.
+  Fix some broken tests
+  Enable a bare bones minimal `/settings/safety` landing page for users to request account deletion.
+
+## 2.0.2
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+  - @bilbomd/md-utils@1.0.9
+
+## 2.0.1
+
+### Patch Changes
+
+- be9ac82: Change default prod cookie `sameSite` from `none` to `lax`
+
+## 2.0.0
+
+### Major Changes
+
+- f514114: Allow public unauthenticated BilboMD job submission
+  Add new public endpoints to `bilbomd-backend`
+  Add Help component
+  Add Cookie consent
+  Add PublicJobPage to display job results for unauthenticated users
+  Add Privacy Policy Component
+  Add new shared `bilbomd-types` package for Typescript types/interfaces
+
+### Patch Changes
+
+- Updated dependencies [f514114]
+  - @bilbomd/mongodb-schema@2.0.0
+  - @bilbomd/bilbomd-types@1.1.0
+  - @bilbomd/md-utils@1.0.8
+
+## 1.28.3
+
+### Patch Changes
+
+- 2335ee6: Update license as per IPO
+- Updated dependencies [2335ee6]
+  - @bilbomd/md-utils@1.0.7
+  - @bilbomd/mongodb-schema@1.12.2
+
+## 1.28.2
+
+### Patch Changes
+
+- fce115a: Update nodejs and dependencies
+- Updated dependencies [fce115a]
+  - @bilbomd/md-utils@1.0.6
+
+## 1.28.1
+
+### Patch Changes
+
+- 578d870: Add LBL license
+- Updated dependencies [578d870]
+  - @bilbomd/md-utils@1.0.5
+  - @bilbomd/mongodb-schema@1.12.1
+
+## 1.28.0
+
+### Minor Changes
+
+- 3091aeb: Remove dedicated BullMQ queue to process PDB to CRD conversion.
+  Add extra step in the worker to do conversion instead.
+
+## 1.27.3
+
+### Patch Changes
+
+- 06d26e3: Purge old BilboMD Multi jobs
+- 3e2f5b4: Update pnpm and dependencies
+- Updated dependencies [3e2f5b4]
+  - @bilbomd/md-utils@1.0.4
+
+## 1.27.2
+
+### Patch Changes
+
+- Updated dependencies [e110840]
+  - @bilbomd/mongodb-schema@1.12.0
+  - @bilbomd/md-utils@1.0.3
+
+## 1.27.1
+
+### Patch Changes
+
+- Updated dependencies [9d755b6]
+  - @bilbomd/mongodb-schema@1.11.0
+  - @bilbomd/md-utils@1.0.2
+
 ## 1.27.0
 
 ### Minor Changes

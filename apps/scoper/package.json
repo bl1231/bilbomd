@@ -1,7 +1,7 @@
 {
   "name": "@bilbomd/scoper",
   "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
-  "version": "1.4.4",
+  "version": "1.5.13",
   "main": "build/scoper.js",
   "files": [
     "build",
@@ -25,7 +25,8 @@
   ],
   "scripts": {
     "clean": "rimraf build/*",
-    "build": "npm-run-all clean copy-assets lint tsc",
+    "build": "npm-run-all clean copy-assets tsc",
+    "build:ci": "npm-run-all clean copy-assets lint tsc",
     "copy-assets": "copyfiles --all --up 1 --exclude \"./**/*.{ts,tsx}\" \"./src/**/*\" ./build",
     "start": "npm run build && node build/scoper.js",
     "dev": "nodemon --watch src --ext ts,ejs --verbose --exec npm run start",
@@ -34,15 +35,16 @@
   },
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
-    "bullmq": "^5.61.0",
+    "bullmq": "^5.65.1",
     "dotenv": "^17.2.3",
     "fs-extra": "^11.3.2",
     "handlebars": "^4.7.8",
+    "ioredis": "^5.8.2",
     "moment-timezone": "^0.6.0",
-    "mongoose": "^8.19.1",
-    "nodemailer": "^7.0.9",
+    "mongoose": "^8.20.2",
+    "nodemailer": "^7.0.11",
     "nodemailer-express-handlebars": "^7.0.0",
-    "nodemon": "^3.1.10",
+    "nodemon": "^3.1.11",
     "winston": "^3.18.3",
     "winston-daily-rotate-file": "^5.0.0"
   },

@@ -1,4 +1,4 @@
-import { Document } from 'mongoose'
+import { Document, Types } from 'mongoose'
 import { IUser } from './userInterface'
 import {
   IBilboMDPDBJob,
@@ -8,10 +8,12 @@ import {
   IBilboMDSteps,
   INerscInfo
 } from './jobInterface'
+import { IJobResults } from './resultsInterface'
 
 type JobStatusEnum = 'Submitted' | 'Pending' | 'Running' | 'Completed' | 'Error'
 
 interface IMultiJob extends Document {
+  _id: Types.ObjectId
   __t: 'MultiJob'
   title: string
   uuid: string
@@ -31,6 +33,7 @@ interface IMultiJob extends Document {
   )[]
   steps: IBilboMDSteps
   nersc?: INerscInfo
+  results?: IJobResults
 }
 
 export { IMultiJob }

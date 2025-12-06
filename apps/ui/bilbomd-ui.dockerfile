@@ -6,6 +6,8 @@ RUN corepack enable
 
 # Copy only files needed to resolve workspace dependencies (better cache)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
+COPY packages/eslint-config/ packages/eslint-config/
 COPY apps/ui/package.json apps/ui/package.json
 
 # Prefetch dependencies into pnpm store (no linking yet)
@@ -26,6 +28,7 @@ COPY . .
 # Install using the fetched store and frozen lockfile
 RUN pnpm install --frozen-lockfile
 RUN pnpm -C packages/mongodb-schema run build
+RUN pnpm -C packages/bilbomd-types run build
 RUN pnpm -C apps/ui run build
 
 # Produce a minimal, deployable output for just the UI (node_modules pruned to prod)
@@ -44,8 +47,9 @@ RUN apk add --no-cache bash
 # Copy the Vite build output (dist/build) to nginx serving directory
 COPY --from=build /repo/apps/ui/build /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY apps/ui/nginx.default.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configurations
+COPY apps/ui/nginx/nginx.default.conf /etc/nginx/conf.d/default.conf
+COPY apps/ui/nginx/nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
 

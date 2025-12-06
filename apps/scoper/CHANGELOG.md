@@ -1,5 +1,130 @@
 # @bilbomd/scoper
 
+## 1.5.13
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+
+## 1.5.12
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/mongodb-schema@2.1.1
+
+## 1.5.11
+
+### Patch Changes
+
+- 3b0da23: Add Example Data option for Alphafold jobs
+  Adjust all `config.ts` to support boolean toggles for pipeline availability
+
+## 1.5.10
+
+### Patch Changes
+
+- 2ff4c96: Refactor `Scoper` results and steps to align with new DTO mindset
+- Updated dependencies [bdc6d1d]
+- Updated dependencies [2ff4c96]
+  - @bilbomd/mongodb-schema@2.1.0
+
+## 1.5.9
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+
+## 1.5.8
+
+### Patch Changes
+
+- 6846821: Remove some deprecated Typescript config settings in prep for Typescript 6.x
+  This required a bit of fiddling with `bilbomd-ui` types and interfaces
+
+## 1.5.7
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+
+## 1.5.6
+
+### Patch Changes
+
+- f514114: Allow public unauthenticated BilboMD job submission
+  Add new public endpoints to `bilbomd-backend`
+  Add Help component
+  Add Cookie consent
+  Add PublicJobPage to display job results for unauthenticated users
+  Add Privacy Policy Component
+  Add new shared `bilbomd-types` package for Typescript types/interfaces
+- Updated dependencies [f514114]
+  - @bilbomd/mongodb-schema@2.0.0
+
+## 1.5.5
+
+### Patch Changes
+
+- 895cff4: unpin IMP so that `bilbomd-scoper` Docker build will complete without errors
+
+## 1.5.4
+
+### Patch Changes
+
+- 2335ee6: Update license as per IPO
+- Updated dependencies [2335ee6]
+  - @bilbomd/mongodb-schema@1.12.2
+
+## 1.5.3
+
+### Patch Changes
+
+- fce115a: Update nodejs and dependencies
+
+## 1.5.2
+
+### Patch Changes
+
+- 578d870: Add LBL license
+- Updated dependencies [578d870]
+  - @bilbomd/mongodb-schema@1.12.1
+
+## 1.5.1
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+
+## 1.5.0
+
+### Minor Changes
+
+- 3a0f787: Changes needed to run Scoper on separate hardware from the rest of BilboMD
+
+## 1.4.6
+
+### Patch Changes
+
+- Updated dependencies [e110840]
+  - @bilbomd/mongodb-schema@1.12.0
+
+## 1.4.5
+
+### Patch Changes
+
+- fad981e: I'm not sure how it happened, and don't have the time or wherewithall to do the forensics, but the BullMQ queue that the Scoper worker was subscribed to was `bilbomd-scoper`. It should be `scoper`. I fixed it.
+  Also ran into an odd issue [issue](https://github.com/conda-forge/pytorch-cpu-feedstock/issues/350) with shared `libtorch_cpu.so` and the executable stack...Ended up switching docker file to build from `ubuntu:22.04` instead of `python:3.xx-slim`
+- Updated dependencies [9d755b6]
+  - @bilbomd/mongodb-schema@1.11.0
+
 ## 1.4.4
 
 ### Patch Changes

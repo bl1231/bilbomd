@@ -1,12 +1,17 @@
 import request from 'supertest'
-import { describe, test, expect, beforeAll, afterAll } from 'vitest'
+import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest'
 import mongoose from 'mongoose'
-import app from './appMock'
+import app from './appMock.js'
 import { User } from '@bilbomd/mongodb-schema'
 // import { closeQueue } from '../src/queues/bilbomd'
 import dotenv from 'dotenv'
 
 dotenv.config()
+
+// Mock the loginLimiter middleware to prevent rate limiting in tests
+vi.mock('../src/middleware/loginLimiter.js', () => ({
+  loginLimiter: vi.fn((req, res, next) => next())
+}))
 
 let server: any // Adjust the type as needed.
 
@@ -36,7 +41,9 @@ describe('POST /api/v1/verify', () => {
   })
 
   test('Should return error if no user found with that verification code', async () => {
-    const res = await request(server).post('/api/v1/verify').send({ code: '54321' })
+    const res = await request(server)
+      .post('/api/v1/verify')
+      .send({ code: '54321' })
     expect(res.statusCode).toBe(400)
     expect(res.body.message).toBe('Unable to verify 54321.')
   })
@@ -52,7 +59,9 @@ describe('POST /api/v1/verify', () => {
 
 describe('POST /api/v1/verify/resend', () => {
   test('should return error if email key is missing', async () => {
-    const res = await request(server).post('/api/v1/verify/resend').send({ nope: '' })
+    const res = await request(server)
+      .post('/api/v1/verify/resend')
+      .send({ nope: '' })
     expect(res.statusCode).toBe(400)
     expect(res.body.message).toBe('Email required.')
   })
@@ -66,7 +75,9 @@ describe('POST /api/v1/verify/resend', () => {
   })
 
   test('should return error if email missing', async () => {
-    const res = await request(server).post('/api/v1/verify/resend').send({ email: '' })
+    const res = await request(server)
+      .post('/api/v1/verify/resend')
+      .send({ email: '' })
     expect(res.statusCode).toBe(400)
     expect(res.body.message).toBe('Email required.')
   })

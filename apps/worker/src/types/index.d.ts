@@ -1,5 +1,3 @@
-import { Job as BullMQJob } from 'bullmq'
-
 type Params = {
   out_dir: string
 }
@@ -68,7 +66,6 @@ interface FileCopyParams {
   source: string
   destination: string
   filename: string
-  MQjob: BullMQJob
   isCritical: boolean
 }
 

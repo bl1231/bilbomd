@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Box from '@mui/material/Box'
 import Stepper from '@mui/material/Stepper'
 import Step from '@mui/material/Step'
@@ -31,7 +31,7 @@ const ConstInpStepper = () => {
 
   function renderStepContent(
     step: RenderStepContentProps['step']
-  ): JSX.Element {
+  ): React.JSX.Element {
     switch (step) {
       case 0:
         return <UploadForm setStepIsValid={setStepIsValid} />
@@ -82,7 +82,10 @@ const ConstInpStepper = () => {
             stepProps.completed = false
           }
           return (
-            <Step key={label} {...stepProps}>
+            <Step
+              key={label}
+              {...stepProps}
+            >
               <StepLabel {...labelProps}>{label}</StepLabel>
             </Step>
           )
@@ -90,14 +93,20 @@ const ConstInpStepper = () => {
       </Stepper>
       {activeStep === steps.length ? (
         <>
-          <Alert variant='outlined' sx={{ mt: 4 }}>
+          <Alert
+            variant="outlined"
+            sx={{ mt: 4 }}
+          >
             Woot! That&apos;s it. Reset the form if you want to create a new{' '}
             <b>const.inp file.</b>
           </Alert>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', pt: 2 }}>
             <Box sx={{ flex: '0 1 50%', alignItems: 'center' }} />
-            <Button variant='contained' onClick={handleReset}>
+            <Button
+              variant="contained"
+              onClick={handleReset}
+            >
               Reset
             </Button>
           </Box>
@@ -108,7 +117,7 @@ const ConstInpStepper = () => {
             <Button
               disabled={activeStep === 0}
               onClick={handleBack}
-              variant='contained'
+              variant="contained"
               sx={{ mr: 1 }}
             >
               Back
@@ -119,7 +128,7 @@ const ConstInpStepper = () => {
             <Button
               onClick={handleNext}
               disabled={!stepIsValid}
-              variant='contained'
+              variant="contained"
             >
               {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
             </Button>
@@ -161,10 +170,10 @@ const ConstInpStepper = () => {
 
           <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}>
             <Button
-              color='inherit'
+              color="inherit"
               disabled={activeStep === 0}
               onClick={handleBack}
-              variant='contained'
+              variant="contained"
               sx={{ mr: 1 }}
             >
               Back
@@ -174,7 +183,7 @@ const ConstInpStepper = () => {
             <Button
               onClick={handleNext}
               disabled={!stepIsValid}
-              variant='contained'
+              variant="contained"
             >
               {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
             </Button>

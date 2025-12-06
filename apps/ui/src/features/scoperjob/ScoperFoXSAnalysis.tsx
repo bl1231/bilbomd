@@ -15,8 +15,8 @@ interface FoxsDataPoint {
 interface FoxsData {
   filename: string
   chisq: number
-  c1: number
-  c2: number
+  c1: string
+  c2: string
   data: FoxsDataPoint[]
 }
 
@@ -83,7 +83,10 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
   if (isLoading) return <div>Loading...</div>
   if (isError || !data)
     return (
-      <Alert severity='info' variant='outlined'>
+      <Alert
+        severity="info"
+        variant="outlined"
+      >
         <AlertTitle>FoXS data is unavailable for this job.</AlertTitle>
       </Alert>
     )
@@ -100,7 +103,10 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
 
   return (
     <Item>
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         <Grid size={{ xs: 6 }}>
           <FoXSChart
             title={`Original Model - ${origPDBFile}`}

@@ -24,7 +24,6 @@ const redis = new Redis(redisOptions)
 // Create instances for both queues
 const bilbomdQueue = new QueueMQ('bilbomd', { connection: redis })
 const bilbomdScoperQueue = new QueueMQ('bilbomd-scoper', { connection: redis })
-const pdb2crdQueue = new QueueMQ('pdb2crd', { connection: redis })
 const multimdQueue = new QueueMQ('multimd', { connection: redis })
 
 const serverAdapter = new ExpressAdapter()
@@ -34,7 +33,6 @@ createBullBoard({
   queues: [
     new BullMQAdapter(bilbomdQueue),
     new BullMQAdapter(bilbomdScoperQueue),
-    new BullMQAdapter(pdb2crdQueue),
     new BullMQAdapter(multimdQueue)
   ],
   serverAdapter: serverAdapter

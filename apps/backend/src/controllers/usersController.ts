@@ -8,6 +8,7 @@ import {
   sendDeleteAccountSuccessEmail
 } from '../config/nodemailerConfig.js'
 import crypto from 'crypto'
+const bilboMdUrl: string = process.env.BILBOMD_URL ?? ''
 
 // Helper function to validate email format
 const isValidEmail = (email: string): boolean => {
@@ -48,7 +49,9 @@ const updateUser = async (req: Request, res: Response): Promise<void> => {
     return
   }
   if (typeof active !== 'boolean') {
-    res.status(400).json({ success: false, message: 'Active status is required' })
+    res
+      .status(400)
+      .json({ success: false, message: 'Active status is required' })
     return
   }
   if (!email || !isValidEmail(email)) {
@@ -81,7 +84,9 @@ const updateUser = async (req: Request, res: Response): Promise<void> => {
 
     const updatedUser = await user.save()
 
-    res.status(200).json({ success: true, message: `${updatedUser.username} updated` })
+    res
+      .status(200)
+      .json({ success: true, message: `${updatedUser.username} updated` })
   } catch (error) {
     logger.error(`Failed to update user: ${error}`)
     res.status(500).json({ success: false, message: 'Internal server error' })
@@ -126,7 +131,10 @@ const deleteUserById = async (req: Request, res: Response): Promise<void> => {
   }
 }
 
-const deleteUserByUsername = async (req: Request, res: Response): Promise<void> => {
+const deleteUserByUsername = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const username = req.params.username
 
   if (!username || !isValidUsername(username)) {
@@ -143,7 +151,9 @@ const deleteUserByUsername = async (req: Request, res: Response): Promise<void> 
 
     const hasAssignedJobs = await Job.exists({ user: user._id })
     if (hasAssignedJobs) {
-      res.status(409).json({ success: false, message: 'User has assigned jobs' })
+      res
+        .status(409)
+        .json({ success: false, message: 'User has assigned jobs' })
       return
     }
 
@@ -158,7 +168,9 @@ const deleteUserByUsername = async (req: Request, res: Response): Promise<void> 
       sendDeleteAccountSuccessEmail(user.email, user.username)
       logger.info(`Deletion success email sent to ${user.email}`)
     } catch (emailError) {
-      logger.error(`Failed to send deletion email to ${user.email}: ${emailError}`)
+      logger.error(
+        `Failed to send deletion email to ${user.email}: ${emailError}`
+      )
     }
 
     const reply = `User ${user.username} with ID ${user._id} deleted successfully`
@@ -190,7 +202,10 @@ const getUser = async (req: Request, res: Response): Promise<void> => {
   }
 }
 
-const sendChangeEmailOtp = async (req: Request, res: Response): Promise<void> => {
+const sendChangeEmailOtp = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { username, currentEmail, newEmail } = req.body
 
@@ -221,7 +236,9 @@ const sendChangeEmailOtp = async (req: Request, res: Response): Promise<void> =>
     }
 
     if (user.email !== currentEmail) {
-      res.status(400).json({ success: false, message: 'Current email does not match' })
+      res
+        .status(400)
+        .json({ success: false, message: 'Current email does not match' })
       return
     }
 
@@ -234,7 +251,7 @@ const sendChangeEmailOtp = async (req: Request, res: Response): Promise<void> =>
     user.newEmail = newEmail // Store the new email in the user's record
     await user.save()
 
-    sendOtpEmail(newEmail, otpCode) // Send OTP to new email
+    sendOtpEmail(newEmail, bilboMdUrl, otpCode) // Send OTP to new email
 
     res.status(200).json({ success: true, message: 'OTP sent successfully' })
   } catch (error) {
@@ -258,13 +275,17 @@ const verifyOtp = async (req: Request, res: Response): Promise<void> => {
       user.otp?.code !== otp ||
       (user.otp?.expiresAt && user.otp.expiresAt < new Date())
     ) {
-      res.status(400).json({ success: false, message: 'Invalid or expired OTP' })
+      res
+        .status(400)
+        .json({ success: false, message: 'Invalid or expired OTP' })
       return
     }
     const oldEmail = user.email
 
     if (!user.newEmail) {
-      res.status(400).json({ success: false, message: 'No new email address found' })
+      res
+        .status(400)
+        .json({ success: false, message: 'No new email address found' })
       return
     }
     user.previousEmails.push(user.email)
@@ -275,7 +296,9 @@ const verifyOtp = async (req: Request, res: Response): Promise<void> => {
 
     sendUpdatedEmailMessage(user.email, oldEmail)
 
-    res.status(200).json({ success: true, message: 'Email address updated successfully' })
+    res
+      .status(200)
+      .json({ success: true, message: 'Email address updated successfully' })
   } catch (error) {
     logger.error(`Failed to verify OTP: ${error}`)
     res.status(500).json({ success: false, message: 'Internal server error' })
@@ -287,7 +310,9 @@ const resendOtp = async (req: Request, res: Response): Promise<void> => {
     const { username } = req.body
 
     if (!username || !isValidUsername(username)) {
-      res.status(400).json({ success: false, message: 'Invalid username format' })
+      res
+        .status(400)
+        .json({ success: false, message: 'Invalid username format' })
       return
     }
 
@@ -298,7 +323,9 @@ const resendOtp = async (req: Request, res: Response): Promise<void> => {
     }
 
     if (!user.newEmail) {
-      res.status(400).json({ success: false, message: 'No new email address found' })
+      res
+        .status(400)
+        .json({ success: false, message: 'No new email address found' })
       return
     }
 
@@ -310,7 +337,7 @@ const resendOtp = async (req: Request, res: Response): Promise<void> => {
     }
     await user.save()
 
-    sendOtpEmail(user.newEmail, otpCode) // Send OTP to new email
+    sendOtpEmail(user.newEmail, bilboMdUrl, otpCode) // Send OTP to new email
 
     res.status(200).json({ success: true, message: 'OTP resent successfully' })
   } catch (error) {

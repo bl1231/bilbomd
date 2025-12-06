@@ -1,12 +1,9 @@
 import { Document, Types } from 'mongoose'
 import { IUser } from './userInterface'
-
-export const StepStatus = {
-  Waiting: 'Waiting',
-  Running: 'Running',
-  Success: 'Success',
-  Error: 'Error'
-} as const
+import { IOpenMMParameters } from './openmmInterface'
+import { IAssets } from './assetsInterface'
+import { IJobResults } from './resultsInterface'
+import { IBilboMDSteps, IStepStatus } from './jobStepInterface'
 
 export const JobStatus = {
   Submitted: 'Submitted',
@@ -37,35 +34,10 @@ export const MDEngine = {
   OpenMM: 'OpenMM'
 } as const
 
-interface IStepStatus {
-  status: StepStatusEnum
-  message: string
-}
-
-// Interface for steps status
-interface IBilboMDSteps {
-  alphafold?: IStepStatus
-  pdb2crd?: IStepStatus
-  pae?: IStepStatus
-  autorg?: IStepStatus
-  minimize?: IStepStatus
-  initfoxs?: IStepStatus
-  heat?: IStepStatus
-  md?: IStepStatus
-  dcd2pdb?: IStepStatus
-  pdb_remediate?: IStepStatus
-  foxs?: IStepStatus
-  pepsisans?: IStepStatus
-  multifoxs?: IStepStatus
-  gasans?: IStepStatus
-  copy_results_to_cfs?: IStepStatus
-  results?: IStepStatus
-  email?: IStepStatus
-  nersc_prepare_slurm_batch?: IStepStatus
-  nersc_submit_slurm_batch?: IStepStatus
-  nersc_job_status?: IStepStatus
-  nersc_copy_results_to_cfs?: IStepStatus
-}
+export const AccessMode = {
+  User: 'user',
+  Anonymous: 'anonymous'
+} as const
 
 interface IAlphaFoldEntity {
   name: string
@@ -139,20 +111,26 @@ interface IJob extends Document {
     | 'BilboMdSANS'
   title: string
   uuid: string
+  access_mode: AccessModeEnum
+  public_id?: string
+  client_ip_hash?: string
   status: JobStatusEnum
   data_file: string
   md_engine?: MDEngineEnum
+  openmm_parameters?: IOpenMMParameters
   md_constraints?: IMDConstraints
   time_submitted: Date
   time_started?: Date
   time_completed?: Date
-  user: IUser | Types.ObjectId
+  user?: IUser | Types.ObjectId
   resubmitted_from?: IJob | Types.ObjectId
   steps?: IBilboMDSteps
   progress: number
   feedback?: IFeedbackData
+  assets?: IAssets
   nersc?: INerscInfo
   cleanup_in_progress: boolean
+  results?: IJobResults
 }
 
 interface IBilboMDPDBJob extends IJob {
@@ -233,8 +211,8 @@ interface IBilboMDScoperJob extends IJob {
 
 export type JobStatusEnum = (typeof JobStatus)[keyof typeof JobStatus]
 export type NerscStatusEnum = (typeof NerscStatus)[keyof typeof NerscStatus]
-export type StepStatusEnum = (typeof StepStatus)[keyof typeof StepStatus]
 export type MDEngineEnum = (typeof MDEngine)[keyof typeof MDEngine]
+export type AccessModeEnum = (typeof AccessMode)[keyof typeof AccessMode]
 
 export {
   IStepStatus,

@@ -15,6 +15,8 @@ const OrcidConfirmation = Loadable(
 )
 const OrcidError = Loadable(lazy(() => import('features/auth/OrcidError')))
 
+// ===========================|| LOGIN and AUTH ROUTING ||============================ //
+
 const LoginRoutes = {
   element: <MinimalLayout />,
   path: '/',

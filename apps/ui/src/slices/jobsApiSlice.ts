@@ -1,10 +1,10 @@
 import { createEntityAdapter, createSelector, EntityId } from '@reduxjs/toolkit'
 import { apiSlice } from 'app/api/apiSlice'
-import { BilboMDJob } from 'types/interfaces'
+import type { BilboMDJobDTO, JobAssetsDTO } from '@bilbomd/bilbomd-types'
 import { FileCheckResult } from 'types/jobCheckResults'
 import { RootState } from 'app/store'
 
-const jobsAdapter = createEntityAdapter<BilboMDJob>()
+const jobsAdapter = createEntityAdapter<BilboMDJobDTO>()
 
 const initialState = jobsAdapter.getInitialState()
 
@@ -15,16 +15,14 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         url: '/jobs',
         method: 'GET'
       }),
-      transformResponse: (responseData: BilboMDJob[]) => {
-        // Handle the case where there's no content (204)
+
+      transformResponse: (responseData: BilboMDJobDTO[]) => {
         if (!responseData || responseData.length === 0) {
           return jobsAdapter.getInitialState()
         }
-        const loadedJobs = responseData.map((job) => {
-          job.mongo.id = job.mongo._id
-          job.id = job.mongo._id
-          return job
-        })
+
+        const loadedJobs = responseData
+
         return jobsAdapter.setAll(initialState, loadedJobs)
       },
       providesTags: (result) =>
@@ -43,9 +41,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         url: `/jobs/${id}`,
         method: 'GET'
       }),
-      transformResponse: (responseData: BilboMDJob) => {
-        responseData.mongo.id = responseData.mongo._id
-        responseData.id = responseData.mongo._id
+      transformResponse: (responseData: BilboMDJobDTO) => {
         return responseData
       },
       providesTags: (_, __, id) => [{ type: 'Job', id }]
@@ -167,7 +163,6 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         responseHandler: 'text'
       }),
       transformResponse(baseQueryReturnValue: string) {
-        // console.log('Received const.inp file:', baseQueryReturnValue)
         return baseQueryReturnValue
       }
     }),
@@ -189,7 +184,11 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
           return text
         }
       }
-    )
+    ),
+    getMDMovies: builder.query<JobAssetsDTO, string>({
+      query: (id) => ({ url: `/jobs/${id}/movies`, method: 'GET' }),
+      providesTags: (_, __, id) => [{ type: 'MovieAsset', id }]
+    })
   })
 })
 
@@ -211,7 +210,8 @@ export const {
   useGetAf2PaeConstFileQuery,
   useGetAf2PaeStatusQuery,
   useGetFileByIdAndNameQuery,
-  useLazyGetFileByIdAndNameQuery
+  useLazyGetFileByIdAndNameQuery,
+  useGetMDMoviesQuery
 } = jobsApiSlice
 
 // Select the query result object from the cache

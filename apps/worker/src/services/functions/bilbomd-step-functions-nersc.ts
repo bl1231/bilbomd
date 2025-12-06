@@ -18,7 +18,7 @@ import {
   monitorTaskAtNERSC,
   monitorJobAtNERSC
 } from './nersc-api-functions.js'
-import { prepareResults } from './bilbomd-step-functions.js'
+import { prepareResults } from './prepare-results.js'
 import { cleanupJob } from './job-utils.js'
 
 interface INerscTaskResult {
@@ -268,10 +268,7 @@ const monitorBilboMDJob = async (
   }
 }
 
-const prepareBilboMDResults = async (
-  MQjob: BullMQJob,
-  DBjob: IJob
-): Promise<void> => {
+const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
   try {
     await updateJobStatus(
       DBjob,
@@ -287,7 +284,7 @@ const prepareBilboMDResults = async (
       isBilboMDAutoJob(DBjob) ||
       isBilboMDAlphaFoldJob(DBjob)
     ) {
-      await prepareResults(MQjob, DBjob)
+      await prepareResults(DBjob)
       await updateJobStatus(
         DBjob,
         'results',

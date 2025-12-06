@@ -1,4 +1,7 @@
 import { Schema, model } from 'mongoose'
+import { assetsSchema } from './Assets'
+import { resultsSchema } from './Results'
+import { stepsSchema } from './JobSteps'
 import {
   IJob,
   IBilboMDPDBJob,
@@ -17,18 +20,10 @@ import {
   IRigidBody,
   IMDConstraints
 } from '../interfaces'
-
-// Enum for step statuses
-const stepStatusEnum = ['Waiting', 'Running', 'Success', 'Error']
+import { IOpenMMParameters } from '../interfaces/openmmInterface'
 
 // Enum for simulation engines (MD/minimize/heat implementation)
 const mdEngineEnum = ['CHARMM', 'OpenMM'] as const
-
-// Schema for step status
-const stepStatusSchema = new Schema({
-  status: { type: String, enum: stepStatusEnum, default: 'Waiting' },
-  message: { type: String, required: false }
-})
 
 const alphaFoldEntitySchema = new Schema<IAlphaFoldEntity>({
   name: { type: String, required: true },
@@ -53,30 +48,6 @@ const feedbackSchema = new Schema<IFeedbackData>({
   second_highest_chi_square_feedback: { type: String, required: true },
   regional_chi_square_feedback: { type: String, required: true },
   timestamp: { type: Date, default: () => new Date(Date.now()) }
-})
-
-const stepsSchema = new Schema<IBilboMDSteps>({
-  alphafold: { type: stepStatusSchema, required: false },
-  pdb2crd: { type: stepStatusSchema, required: false },
-  pae: { type: stepStatusSchema, required: false },
-  autorg: { type: stepStatusSchema, required: false },
-  minimize: { type: stepStatusSchema, required: false },
-  initfoxs: { type: stepStatusSchema, required: false },
-  heat: { type: stepStatusSchema, required: false },
-  md: { type: stepStatusSchema, required: false },
-  dcd2pdb: { type: stepStatusSchema, required: false },
-  pdb_remediate: { type: stepStatusSchema, required: false },
-  foxs: { type: stepStatusSchema, required: false },
-  pepsisans: { type: stepStatusSchema, required: false },
-  multifoxs: { type: stepStatusSchema, required: false },
-  gasans: { type: stepStatusSchema, required: false },
-  copy_results_to_cfs: { type: stepStatusSchema, required: false },
-  results: { type: stepStatusSchema, required: false },
-  email: { type: stepStatusSchema, required: false },
-  nersc_prepare_slurm_batch: { type: stepStatusSchema, required: false },
-  nersc_submit_slurm_batch: { type: stepStatusSchema, required: false },
-  nersc_job_status: { type: stepStatusSchema, required: false },
-  nersc_copy_results_to_cfs: { type: stepStatusSchema, required: false }
 })
 
 const nerscInfoSchema = new Schema<INerscInfo>({
@@ -113,6 +84,27 @@ const mdConstraintsSchema = new Schema<IMDConstraints>({
   rigid_bodies: [{ type: rigidBodySchema, required: false }]
 })
 
+const openmmParametersSchema = new Schema<IOpenMMParameters>({
+  minimize: {
+    max_iterations: { type: Number, min: 100, max: 10000, default: 1000 }
+  },
+  heating: {
+    start_temp: { type: Number, min: 250, max: 350, default: 300 },
+    final_temp: { type: Number, min: 500, max: 1500, default: 600 },
+    nsteps: { type: Number, min: 1000, max: 50000, default: 10000 },
+    timestep: { type: Number, min: 0.0001, max: 0.01, default: 0.001 }
+  },
+  md: {
+    temperature: { type: Number, min: 300, max: 1500, default: 600 },
+    friction: { type: Number, min: 0.01, max: 1.0, default: 0.1 },
+    nsteps: { type: Number, min: 1000, max: 10000000, default: 300000 },
+    timestep: { type: Number, min: 0.0001, max: 0.01, default: 0.001 },
+    k_rg: { type: Number, min: 1, max: 100, default: 10 },
+    rg_report_interval: { type: Number, min: 100, max: 1000, default: 500 },
+    pdb_report_interval: { type: Number, min: 100, max: 1000, default: 500 }
+  }
+})
+
 const jobSchema = new Schema(
   {
     title: {
@@ -120,6 +112,25 @@ const jobSchema = new Schema(
       required: true
     },
     uuid: { type: String, required: true },
+    access_mode: {
+      type: String,
+      enum: ['user', 'anonymous'],
+      default: 'user',
+      required: true
+    },
+    public_id: {
+      type: String,
+      required: function (this: any) {
+        return this.access_mode === 'anonymous'
+      }
+    },
+    client_ip_hash: {
+      type: String,
+      required: function (this: any) {
+        return this.access_mode === 'anonymous'
+      },
+      index: true
+    },
     data_file: { type: String, required: true },
     md_engine: {
       type: String,
@@ -128,6 +139,7 @@ const jobSchema = new Schema(
       required: false
     },
     md_constraints: { type: mdConstraintsSchema, required: false },
+    openmm_parameters: { type: openmmParametersSchema, required: false },
     status: {
       type: String,
       enum: [
@@ -145,9 +157,25 @@ const jobSchema = new Schema(
     time_started: Date,
     time_completed: Date,
     user: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
+      _id: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: function (this: any) {
+          return this.access_mode === 'user'
+        }
+      },
+      username: {
+        type: String,
+        required: function (this: any) {
+          return this.access_mode === 'user'
+        }
+      },
+      email: {
+        type: String,
+        required: function (this: any) {
+          return this.access_mode === 'user'
+        }
+      }
     },
     resubmitted_from: {
       type: Schema.Types.ObjectId,
@@ -162,13 +190,29 @@ const jobSchema = new Schema(
       default: 0
     },
     feedback: { type: feedbackSchema, required: false },
+    assets: { type: assetsSchema, required: false },
     nersc: { type: nerscInfoSchema, required: false },
-    cleanup_in_progress: { type: Boolean, default: false }
+    cleanup_in_progress: { type: Boolean, default: false },
+    results: { type: resultsSchema, required: false }
   },
   {
     timestamps: true,
     id: true,
-    toJSON: { virtuals: true },
+    toJSON: {
+      virtuals: true,
+      transform: (doc, ret) => {
+        // Ensure the `user` field includes only minimal details
+        if (ret.user && typeof ret.user === 'object' && ret.user._id) {
+          ret.user = {
+            _id: ret.user._id,
+            username: ret.user.username,
+            email: ret.user.email
+          }
+        }
+
+        return ret
+      }
+    },
     toObject: { virtuals: true }
   }
 )
@@ -287,6 +331,7 @@ const bilboMdScoperJobSchema = new Schema<IBilboMDScoperJob>({
 })
 
 jobSchema.index({ uuid: 1 })
+jobSchema.index({ client_ip_hash: 1, access_mode: 1, status: 1 })
 
 const Job = model<IJob>('Job', jobSchema)
 const BilboMdPDBJob = Job.discriminator('BilboMdPDB', bilboMdPDBJobSchema)
@@ -312,7 +357,6 @@ export {
   BilboMdScoperJob,
   BilboMdAlphaFoldJob,
   BilboMdSANSJob,
-  stepsSchema,
   nerscInfoSchema,
   mdConstraintsSchema,
   fixedBodySchema,

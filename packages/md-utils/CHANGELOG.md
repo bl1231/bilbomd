@@ -1,5 +1,94 @@
 # @bilbomd/md-utils
 
+## 1.0.13
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+
+## 1.0.12
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/mongodb-schema@2.1.1
+
+## 1.0.11
+
+### Patch Changes
+
+- Updated dependencies [bdc6d1d]
+- Updated dependencies [2ff4c96]
+  - @bilbomd/mongodb-schema@2.1.0
+
+## 1.0.10
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+
+## 1.0.9
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+
+## 1.0.8
+
+### Patch Changes
+
+- Updated dependencies [f514114]
+  - @bilbomd/mongodb-schema@2.0.0
+
+## 1.0.7
+
+### Patch Changes
+
+- 2335ee6: Update license as per IPO
+- Updated dependencies [2335ee6]
+  - @bilbomd/mongodb-schema@1.12.2
+
+## 1.0.6
+
+### Patch Changes
+
+- fce115a: Update nodejs and dependencies
+
+## 1.0.5
+
+### Patch Changes
+
+- 578d870: Add LBL license
+- Updated dependencies [578d870]
+  - @bilbomd/mongodb-schema@1.12.1
+
+## 1.0.4
+
+### Patch Changes
+
+- 3e2f5b4: Update pnpm and dependencies
+
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [e110840]
+  - @bilbomd/mongodb-schema@1.12.0
+
+## 1.0.2
+
+### Patch Changes
+
+- Updated dependencies [9d755b6]
+  - @bilbomd/mongodb-schema@1.11.0
+
 ## 1.0.1
 
 ### Patch Changes

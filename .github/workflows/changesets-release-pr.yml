@@ -16,7 +16,7 @@ concurrency:
 jobs:
   release-pr:
     if: ${{ github.actor != 'github-actions[bot]' }}
-    runs-on: [self-hosted, linux, x64]
+    runs-on: [ubuntu-22.04]
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v4
@@ -42,11 +42,7 @@ jobs:
           corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
           pnpm -v
 
-      - name: Prep local pnpm store (changesets)
-        run: |
-          sudo mkdir -p /scr/pnpm-store
-          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
-          pnpm config set store-dir /scr/pnpm-store
+      # Removed local pnpm store setup for GitHub-hosted runners
 
       - name: Install deps
         run: pnpm install --frozen-lockfile

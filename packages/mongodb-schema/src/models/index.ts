@@ -1,3 +1,5 @@
 export * from './Job'
 export * from './User'
 export * from './MultiJob'
+export * from './Assets'
+export * from './Results'

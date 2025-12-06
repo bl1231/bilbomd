@@ -74,7 +74,8 @@ export const apiSlice = createApi({
     'Stats',
     'Token',
     'AdminQueue',
-    'Af2PaeViz'
+    'Af2PaeViz',
+    'MovieAsset'
   ],
   endpoints: () => ({})
 })

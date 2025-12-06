@@ -3,7 +3,7 @@ import { RootFilterQuery } from 'mongoose'
 import { connectDB } from '../config/dbConn.js'
 import path from 'path'
 import fs from 'fs-extra'
-import { Job, IJob } from '@bilbomd/mongodb-schema'
+import { Job, IJob, MultiJob, IMultiJob } from '@bilbomd/mongodb-schema'
 import { logger } from './loggers.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
@@ -49,6 +49,41 @@ export const deleteOldJobs = async () => {
     } as RootFilterQuery<IJob>)
     const deletedJobsCount = deleteResult.deletedCount
     logger.warn(`Deleted ${deletedJobsCount} jobs from MongoDB`)
+
+    const oldMultiJobs = await MultiJob.find({
+      createdAt: { $lt: thresholdDate }
+    } as RootFilterQuery<IMultiJob>)
+    const numOldMultiJobs = oldMultiJobs.length
+
+    if (numOldMultiJobs > 0) {
+      logger.warn(`Found ${numOldMultiJobs} multi-jobs older than 1 month.`)
+    }
+
+    for (const multiJob of oldMultiJobs) {
+      logger.warn(
+        `Preparing to delete: ${multiJob.title} user: ${multiJob.user} completed: ${multiJob.time_completed}`
+      )
+      const multiJobDir = path.join(uploadFolder, multiJob.uuid)
+
+      try {
+        const exists = await fs.pathExists(multiJobDir)
+        if (!exists) {
+          logger.warn(`Directory ${multiJobDir} not found on disk`)
+        } else {
+          await fs.remove(multiJobDir)
+        }
+      } catch (error) {
+        logger.error(
+          `Error deleting multi-job directory: ${multiJobDir} ${error}`
+        )
+      }
+    }
+
+    const deleteMultiResult = await MultiJob.deleteMany({
+      createdAt: { $lt: thresholdDate }
+    } as RootFilterQuery<IMultiJob>)
+    const deletedMultiJobsCount = deleteMultiResult.deletedCount
+    logger.warn(`Deleted ${deletedMultiJobsCount} multi-jobs from MongoDB`)
   } catch (error) {
     logger.error(`Error deleting old jobs: ${error}`)
   }

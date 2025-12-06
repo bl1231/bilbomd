@@ -1,0 +1,70 @@
+export interface JobSummary {
+  ensemble_size: number
+  warnings?: string[]
+  notes?: string[]
+  version?: string
+}
+
+export interface IEnsembleMember {
+  pdb: string
+  weight?: number
+  rg?: number
+  weight_avg?: number // Average weight across good scoring models
+  weight_stddev?: number // Standard deviation of the weight
+  fraction?: number // Fraction of good scoring models containing this conformation
+}
+
+export interface IEnsembleModel {
+  rank: number // Rank of the multi-state model
+  chi2: number // Chi^2 value for the fit to SAXS profile
+  c1: number // c1 value from MultiFoXS optimized fit
+  c2: number // c2 value from MultiFoXS optimized fit
+  states: IEnsembleMember[] // Array of states in this multi-state model
+}
+
+export interface IEnsemble {
+  size: number // The size of the ensemble (e.g., 3 for ensemble_size_3.txt)
+  models: IEnsembleModel[] // Array of multi-state models for this ensemble size
+}
+
+export interface ClassicJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
+export interface AutoJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
+export interface AlphafoldJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
+export interface SANSJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
+export interface ScoperJobResults {
+  kgs_conformations?: number
+  kgs_files?: number
+  foxs_progress?: number
+  foxs_top_file?: string
+  foxs_top_score?: number
+  created_features?: boolean
+  prediction_threshold?: number
+  multifoxs_ensemble_size?: number
+  multifoxs_score?: number
+  ensembles?: IEnsemble[] // not sure we will use this.
+}
+
+export type JobResultsDTO = {
+  summary: JobSummary | null
+  classic: ClassicJobResults | null
+  auto: AutoJobResults | null
+  alphafold: AlphafoldJobResults | null
+  sans: SANSJobResults | null
+  scoper: ScoperJobResults | null
+}

@@ -1,19 +1,13 @@
 import { logger } from '../../middleware/loggers.js'
-import { config } from '../../config/config.js'
 import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
 import {
-  queueJob as queuePdb2CrdJob,
-  waitForJobCompletion,
-  pdb2crdQueueEvents
-} from '../../queues/pdb2crd.js'
-import {
-  IUser,
   BilboMdAutoJob,
   IBilboMDAutoJob,
   IBilboMDSteps,
   JobStatus,
-  StepStatus
+  StepStatus,
+  IUser
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
@@ -22,14 +16,20 @@ import { writeJobParams, getFileStats } from './utils/jobUtils.js'
 import { spawnAutoRgCalculator } from './utils/autoRg.js'
 import fs from 'fs-extra'
 import { autoJobSchema } from '../../validation/index.js'
+import { buildOpenMMParameters } from './utils/openmmParams.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const handleBilboMDAutoJob = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
+  user: IUser | undefined,
+  UUID: string,
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ) => {
   try {
     const isResubmission = Boolean(
@@ -105,9 +105,33 @@ const handleBilboMDAutoJob = async (
       pdbFile = files['pdb_file']?.[0]
       paeFile = files['pae_file']?.[0]
       datFile = files['dat_file']?.[0]
-      pdbFileName = files['pdb_file']?.[0]?.originalname.toLowerCase()
-      paeFileName = files['pae_file']?.[0]?.originalname.toLowerCase()
-      datFileName = files['dat_file']?.[0]?.originalname.toLowerCase()
+
+      // Handle example data files if no uploaded files
+      if (!pdbFile && req.body.pdb_file) {
+        pdbFile = {
+          originalname: req.body.pdb_file,
+          path: path.join(jobDir, req.body.pdb_file),
+          size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
+        } as Express.Multer.File
+      }
+      if (!paeFile && req.body.pae_file) {
+        paeFile = {
+          originalname: req.body.pae_file,
+          path: path.join(jobDir, req.body.pae_file),
+          size: getFileStats(path.join(jobDir, req.body.pae_file)).size
+        } as Express.Multer.File
+      }
+      if (!datFile && req.body.dat_file) {
+        datFile = {
+          originalname: req.body.dat_file,
+          path: path.join(jobDir, req.body.dat_file),
+          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+        } as Express.Multer.File
+      }
+
+      pdbFileName = pdbFile?.originalname.toLowerCase()
+      paeFileName = paeFile?.originalname.toLowerCase()
+      datFileName = datFile?.originalname.toLowerCase()
     }
 
     logger.info(`PDB File: ${pdbFileName}`)
@@ -149,36 +173,41 @@ const handleBilboMDAutoJob = async (
       }
     }
 
-    // Build default steps, allow minor tweaks based on md_engine
-    const stepsInit: IBilboMDSteps = {
-      pdb2crd: { status: StepStatus.Waiting, message: '' },
-      minimize: { status: StepStatus.Waiting, message: '' },
-      initfoxs: { status: StepStatus.Waiting, message: '' },
-      heat: { status: StepStatus.Waiting, message: '' },
-      md: { status: StepStatus.Waiting, message: '' },
-      dcd2pdb: { status: StepStatus.Waiting, message: '' },
-      pdb_remediate: { status: StepStatus.Waiting, message: '' },
-      foxs: { status: StepStatus.Waiting, message: '' },
-      multifoxs: { status: StepStatus.Waiting, message: '' },
-      results: { status: StepStatus.Waiting, message: '' },
-      email: { status: StepStatus.Waiting, message: '' }
-    } as const
+    let stepsInit: IBilboMDSteps
 
-    // If using OpenMM, note that pdb2crd is not needed and will be skipped downstream.
-    const stepsAdjusted = {
-      ...stepsInit,
-      pdb2crd: {
-        ...stepsInit.pdb2crd,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
-      },
-      pdb_remediate: {
-        ...stepsInit.pdb_remediate,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
+    if (md_engine === 'OpenMM') {
+      stepsInit = {
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
+      }
+    } else {
+      stepsInit = {
+        pdb2crd: { status: StepStatus.Waiting, message: '' },
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        dcd2pdb: { status: StepStatus.Waiting, message: '' },
+        pdb_remediate: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     }
 
     // Initialize BilboMdAuto Job Data
-    const newJob: IBilboMDAutoJob = new BilboMdAutoJob({
+    const jobData = {
       title: req.body.title,
       uuid: UUID,
       status: JobStatus.Submitted,
@@ -190,13 +219,25 @@ const handleBilboMDAutoJob = async (
       rg_max: autorgResults.rg_max,
       conformational_sampling: 3,
       time_submitted: new Date(),
-      user: user,
-      steps: stepsAdjusted,
+      steps: stepsInit,
       md_engine,
+      ...(md_engine === 'OpenMM' && {
+        openmm_parameters: buildOpenMMParameters(req.body)
+      }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
+        : {}),
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash: ctx.client_ip_hash }
         : {})
-    })
+    }
+
+    const newJob: IBilboMDAutoJob = new BilboMdAutoJob(jobData)
 
     // Save the job to the database
     await newJob.save()
@@ -205,35 +246,8 @@ const handleBilboMDAutoJob = async (
     // Write Job params for use by NERSC job script.
     await writeJobParams(newJob.id)
 
-    // ---------------------------------------------------------- //
-    // Convert PDB to PSF and CRD (only if not on NERSC and not OpenMM)
-    logger.info(`md_engine is ${md_engine}`)
-    logger.info(`config.runOnNERSC is ${config.runOnNERSC}`)
-    if (!config.runOnNERSC && md_engine !== 'OpenMM') {
-      const Pdb2CrdBullId = await queuePdb2CrdJob({
-        type: 'Pdb2Crd',
-        title: 'convert PDB to CRD',
-        uuid: UUID,
-        pdb_file: pdbFileName,
-        pae_power: '2.0',
-        plddt_cutoff: '50'
-      })
-      logger.info(`Pdb2Crd Job assigned UUID: ${UUID}`)
-      logger.info(`Pdb2Crd Job assigned BullMQ ID: ${Pdb2CrdBullId}`)
-
-      // Need to wait here until the BullMQ job is finished
-      await waitForJobCompletion(Pdb2CrdBullId, pdb2crdQueueEvents)
-      logger.info('Pdb2Crd completed.')
-
-      // Add PSF and CRD files to Mongo entry
-      newJob.psf_file = 'bilbomd_pdb2crd.psf'
-      newJob.crd_file = 'bilbomd_pdb2crd.crd'
-      await newJob.save()
-    }
-    // ---------------------------------------------------------- //
-
     // Create BullMQ Job object
-    const jobData = {
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
@@ -242,17 +256,41 @@ const handleBilboMDAutoJob = async (
     }
 
     // Queue the job
-    const BullId = await queueJob(jobData)
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
-    res.status(200).json({
-      message: `New BilboMD Auto Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid,
-      md_engine
-    })
+    // Respond with job details
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New BilboMD Auto Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD Auto Job successfully created`,
+        jobid: newJob.id,
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     const msg =
       error instanceof Error

@@ -1,5 +1,83 @@
 # @bilbomd/mongodb-schema
 
+## 2.1.2
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+
+## 2.1.1
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+
+## 2.1.0
+
+### Minor Changes
+
+- bdc6d1d: Implement structured Data Transfer Object (DTO) to decouple mongodb entries from frontend logic.
+  Added a new package for shared types `bilbomd-types`.
+  Added `results` to MongoDB Job schema.
+  Extensive refactoring of `ui` React components.
+
+### Patch Changes
+
+- 2ff4c96: Refactor `Scoper` results and steps to align with new DTO mindset
+
+## 2.0.2
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+
+## 2.0.1
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+
+## 2.0.0
+
+### Major Changes
+
+- f514114: Allow public unauthenticated BilboMD job submission
+  Add new public endpoints to `bilbomd-backend`
+  Add Help component
+  Add Cookie consent
+  Add PublicJobPage to display job results for unauthenticated users
+  Add Privacy Policy Component
+  Add new shared `bilbomd-types` package for Typescript types/interfaces
+
+## 1.12.2
+
+### Patch Changes
+
+- 2335ee6: Update license as per IPO
+
+## 1.12.1
+
+### Patch Changes
+
+- 578d870: Add LBL license
+
+## 1.12.0
+
+### Minor Changes
+
+- e110840: Add ability to make mp4 movies from Molecular Dynamics trajectory file (`*.dcd` files)
+  Creates one mp4 moview per DCD file. Only implemented for OpenMM.
+  Add movie gallery and viewer to Jobs result page in UI.
+  Add PyMOL to the `bilbomd-worker-base` image
+
+## 1.11.0
+
+### Minor Changes
+
+- 9d755b6: Add OpenMM params to MongoDB Job Schema
+  Remove all `OMM_*` env variables from `.env.example`
+  Remove all `OMM_*` env variables from `infra/helm/templates/bilbomd-configmaps.yaml`
+
 ## 1.10.0
 
 ### Minor Changes

@@ -1,9 +1,7 @@
 import request from 'supertest'
-import mongoose from 'mongoose'
-import app from './appMock'
+import app from './appMock.js'
 import { describe, test, expect, beforeAll, afterAll } from 'vitest'
 import { User } from '@bilbomd/mongodb-schema'
-// import { closeQueue } from '../src/queues/bilbomd'
 
 let server: any
 import dotenv from 'dotenv'
@@ -17,7 +15,10 @@ beforeAll(async () => {
     username: 'testuser1',
     email: 'testuser1@example.com',
     roles: ['User'],
-    confirmationCode: { code: '12345', expiresAt: new Date(Date.now() + 3600000) }
+    confirmationCode: {
+      code: '12345',
+      expiresAt: new Date(Date.now() + 3600000)
+    }
   })
 })
 

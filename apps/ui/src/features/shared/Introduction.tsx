@@ -8,11 +8,14 @@ interface IntroductionProps {
 const Introduction = ({ title, children }: IntroductionProps) => (
   <Box>
     <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-      <Typography variant='h1' sx={{ my: 3 }}>
+      <Typography
+        variant="h1"
+        sx={{ my: 3 }}
+      >
         {title}
       </Typography>
     </Box>
-    <Box sx={{ m: 2, p: 0 }}>{children}</Box>
+    <Box sx={{ m: 1, p: 0 }}>{children}</Box>
   </Box>
 )
 

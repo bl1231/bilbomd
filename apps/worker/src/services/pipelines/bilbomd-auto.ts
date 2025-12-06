@@ -6,7 +6,8 @@ import {
   runMolecularDynamics,
   runMultiFoxs,
   runPaeToConstInp,
-  runAutoRg
+  runAutoRg,
+  runPdb2Crd
 } from '../functions/bilbomd-step-functions.js'
 import {
   runOmmMinimize,
@@ -22,6 +23,7 @@ import { runFoXS } from '../functions/foxs-functions.js'
 import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc.js'
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
+import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 
 const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)
@@ -63,6 +65,11 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   await foundJob.save()
 
   if (engine === 'CHARMM') {
+    // Make sure CRD/PSF files are ready
+    await MQjob.log('start pdb2crd')
+    await runPdb2Crd(MQjob, foundJob)
+    await MQjob.log('end pdb2crd')
+
     // CHARMM minimization
     await MQjob.log('start minimize')
     await runMinimize(MQjob, foundJob)
@@ -147,6 +154,11 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
     await MQjob.updateProgress(50)
     foundJob.progress = 50
     await foundJob.save()
+
+    // Generate MP4 movies from DCD files
+    // We don't want to await this.
+    // Just fire and forget.
+    enqueueMakeMovie(MQjob, foundJob)
   }
 
   // Calculate FoXS profiles
@@ -167,7 +179,7 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
 
   // Prepare results
   await MQjob.log('start results')
-  await prepareBilboMDResults(MQjob, foundJob)
+  await prepareBilboMDResults(foundJob)
   await MQjob.log('end results')
   await MQjob.updateProgress(99)
   foundJob.progress = 99

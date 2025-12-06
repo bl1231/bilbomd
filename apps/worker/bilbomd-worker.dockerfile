@@ -10,6 +10,7 @@ RUN corepack enable
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
 COPY packages/md-utils/package.json packages/md-utils/package.json
+COPY packages/eslint-config/ packages/eslint-config/
 COPY apps/worker/package.json apps/worker/package.json
 
 # Prefetch dependencies into pnpm store (no linking yet)
@@ -42,14 +43,14 @@ RUN pnpm deploy --filter @bilbomd/worker --prod /out
 ########################################
 # Stage 3: runtime (your existing base image)
 ########################################
-FROM ghcr.io/bl1231/bilbomd-worker-base:0.0.3 AS runtime
+FROM ghcr.io/bl1231/bilbomd-worker-base:0.0.5 AS runtime
 WORKDIR /app
 
 # Install Node.js (if your base image doesn't already have it)
 # Keep your original approach here so the base remains unchanged
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get update \
-    && apt-get install -y nodejs \
+    && apt-get install -y nodejs rsync \
     && npm install -g npm@latest \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
