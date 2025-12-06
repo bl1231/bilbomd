@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 2.0.8
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+  - @bilbomd/md-utils@1.0.13
+
 ## 2.0.7
 
 ### Patch Changes

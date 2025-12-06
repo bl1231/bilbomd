@@ -1,5 +1,13 @@
 # @bilbomd/ui
 
+## 2.1.3
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+
 ## 2.1.2
 
 ### Patch Changes
