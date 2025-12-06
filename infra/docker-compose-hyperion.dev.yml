@@ -1,17 +1,9 @@
 # --------------------------------------------------------------------------------------
 # Use this Docker compose file for development deployment on Hyperion
-# You may need to create the following volumes before running this file:
+#
+# Currently only the scoper service is deployed using this file.
+# because of dependency of KGSRna binary only runs on Intel
 # --------------------------------------------------------------------------------------
-# volumes:
-#   mongodb:
-#     name: bilbomd-mongodb-dev
-#     external: true
-#   redis-cache:
-#     name: bilbomd-redis-cache-dev
-#     external: true
-#   scratch:
-#     name: bilbomd-scratch-dev
-#     external: true
 
 networks:
   app-network-dev:
@@ -19,7 +11,7 @@ networks:
 
 services:
   scoper:
-    image: ghcr.io/bl1231/bilbomd-scoper:1.5.1
+    image: ghcr.io/bl1231/bilbomd-scoper:1.5.10
     pull_policy: always
     deploy:
       replicas: 1
