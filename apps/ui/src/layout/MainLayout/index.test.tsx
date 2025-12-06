@@ -50,7 +50,11 @@ describe('ClippedDrawer Component', () => {
 
     return {
       ...render(
-        <Router location={location} navigator={navigator}>
+        <Router
+          location={location}
+          navigator={navigator}
+          unstable_useTransitions={false}
+        >
           {ui}
         </Router>
       ),

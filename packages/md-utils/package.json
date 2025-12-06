@@ -27,14 +27,14 @@
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
     "fs-extra": "^11.3.2",
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@bilbomd/eslint-config": "workspace:*",
     "@types/fs-extra": "^11.0.4",
-    "@vitest/coverage-v8": "^4.0.10",
+    "@vitest/coverage-v8": "^4.0.15",
     "typescript": "^5.9.3",
     "uuid": "^13.0.0",
-    "vitest": "^4.0.10"
+    "vitest": "^4.0.15"
   }
 }
