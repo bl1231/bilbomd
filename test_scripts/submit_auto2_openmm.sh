@@ -13,9 +13,9 @@ set -a
 source "$SCRIPT_DIR/.env"
 set +a
 
-PDB_FILE="$SCRIPT_DIR/data/sasdnf2/sasdnf2.pdb"
-DAT_FILE="$SCRIPT_DIR/data/sasdnf2/sasdnf2.dat"
-PAE_FILE="$SCRIPT_DIR/data/sasdnf2/sasdnf2-pae.json"
+PDB_FILE="$SCRIPT_DIR/data/auto2/auto2.pdb"
+DAT_FILE="$SCRIPT_DIR/data/auto2/saxs-data.dat"
+PAE_FILE="$SCRIPT_DIR/data/auto2/auto2-pae.json"
 
 TITLE_DATE=$(date +%m%d)
 TITLE_SUFFIX=$(date +%s | tail -c 5)
@@ -27,7 +27,8 @@ HTTP_STATUS=$(curl -# -o "$RESPONSE_FILE" -w "%{http_code}" \
   -H "Accept: application/json" \
   -F "bilbomd_mode=auto" \
   -F "md_engine=OpenMM" \
-  -F "title=${TITLE_DATE}-sasdnf2-openmm-${TITLE_SUFFIX}" \
+  -F "omm_md_nsteps=300000" \
+  -F "title=${TITLE_DATE}-auto2-openmm-${TITLE_SUFFIX}" \
   -F "pdb_file=@${PDB_FILE}" \
   -F "dat_file=@${DAT_FILE}" \
   -F "pae_file=@${PAE_FILE}" )

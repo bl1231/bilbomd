@@ -26,7 +26,8 @@ HTTP_STATUS=$(curl -# -o "$RESPONSE_FILE" -w "%{http_code}" \
   -H "Authorization: Bearer $BILBOMD_API_TOKEN" \
   -H "Accept: application/json" \
   -F "bilbomd_mode=auto" \
-  -F "title=${TITLE_DATE}-api-test-auto1-${TITLE_SUFFIX}" \
+  -F "md_engine=CHARMM" \
+  -F "title=${TITLE_DATE}-auto1-charmm-${TITLE_SUFFIX}" \
   -F "pdb_file=@${PDB_FILE}" \
   -F "dat_file=@${DAT_FILE}" \
   -F "pae_file=@${PAE_FILE}" )
