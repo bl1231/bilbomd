@@ -27,7 +27,7 @@ HTTP_STATUS=$(curl -# -o "$RESPONSE_FILE" -w "%{http_code}" \
   -H "Accept: application/json" \
   -F "bilbomd_mode=auto" \
   -F "md_engine=CHARMM" \
-  -F "title=${TITLE_DATE}-sasdnf2-openmm-${TITLE_SUFFIX}" \
+  -F "title=${TITLE_DATE}-sasdnf2-charmm-${TITLE_SUFFIX}" \
   -F "pdb_file=@${PDB_FILE}" \
   -F "dat_file=@${DAT_FILE}" \
   -F "pae_file=@${PAE_FILE}" )
