@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 2.1.2
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+
 ## 2.1.1
 
 ### Patch Changes

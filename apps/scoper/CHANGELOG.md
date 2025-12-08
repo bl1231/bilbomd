@@ -1,5 +1,13 @@
 # @bilbomd/scoper
 
+## 1.5.13
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+
 ## 1.5.12
 
 ### Patch Changes
