@@ -1,5 +1,6 @@
 import { IOpenMMParameters } from '@bilbomd/mongodb-schema'
 import { Request } from 'express'
+import { calculateRgyrRange } from './calculateRgyrRange.js'
 
 const buildOpenMMParameters = (reqBody: Request['body']): IOpenMMParameters => {
   // Start with defaults, override with any provided values
@@ -18,6 +19,10 @@ const buildOpenMMParameters = (reqBody: Request['body']): IOpenMMParameters => {
       friction: parseFloat(reqBody.omm_md_friction) || 0.1,
       nsteps: parseInt(reqBody.omm_md_nsteps) || 300000,
       timestep: parseFloat(reqBody.omm_md_timestep) || 0.001,
+      rgyr: calculateRgyrRange(
+        parseInt(reqBody.omm_md_rgyr_min) || 20,
+        parseInt(reqBody.omm_md_rgyr_max) || 50
+      ),
       k_rg: parseInt(reqBody.omm_md_k_rg) || 10,
       rg_report_interval: parseInt(reqBody.omm_md_rg_report_interval) || 500,
       pdb_report_interval: parseInt(reqBody.omm_md_pdb_report_interval) || 500
