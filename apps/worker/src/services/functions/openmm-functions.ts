@@ -79,19 +79,9 @@ const buildOpenMMConfigForJob = (
           timestep: omm_params.md?.timestep ?? 0.001
         },
         rgyr: {
-          rgs: (() => {
-            if (
-              typeof DBjob.rg_min !== 'number' ||
-              typeof DBjob.rg_max !== 'number'
-            ) {
-              throw new Error('rg_min and rg_max must be defined numbers')
-            }
-            const rg_min = DBjob.rg_min
-            const rg_max = DBjob.rg_max
-            return Array.from({ length: 6 }, (_, i) =>
-              Math.round(rg_min + (i * (rg_max - rg_min)) / 5)
-            )
-          })(),
+          rgs: Array.isArray(omm_params.md?.rgyr?.[0])
+            ? (omm_params.md?.rgyr?.[0] ?? [])
+            : (omm_params.md?.rgyr ?? []),
           k_rg: omm_params.md?.k_rg ?? 10,
           report_interval: omm_params.md?.rg_report_interval ?? 500,
           filename: 'rgyr.csv'
