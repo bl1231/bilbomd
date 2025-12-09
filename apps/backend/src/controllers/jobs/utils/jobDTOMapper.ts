@@ -68,6 +68,7 @@ export const mapJobMongoToDTO = (job: IJob) => {
     cleanup_in_progress: job.cleanup_in_progress ?? false,
     md_engine: job.md_engine,
     openmm_parameters: job.openmm_parameters,
+    charmm_parameters: job.charmm_parameters,
     md_constraints: job.md_constraints,
     steps: job.steps,
     feedback: job.feedback,
