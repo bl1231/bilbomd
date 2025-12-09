@@ -17,7 +17,8 @@ const charmmParametersSchema = new Schema<ICHARMMParameters>({
     nsteps: { type: Number, min: 1000, max: 10000000 },
     timestep: { type: Number, min: 0.0001, max: 0.01 },
     rgyr: { type: [Number], default: [] },
-    k_rg: { type: Number, min: 1, max: 100 }
+    k_rg: { type: Number, min: 1, max: 100 },
+    pdb_report_interval: { type: Number, min: 100, max: 1000, default: 500 }
   }
 })
 
