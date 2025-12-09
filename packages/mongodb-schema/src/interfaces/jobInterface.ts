@@ -1,6 +1,7 @@
 import { Document, Types } from 'mongoose'
 import { IUser } from './userInterface'
 import { IOpenMMParameters } from './openmmInterface'
+import { ICHARMMParameters } from './charmmInterface'
 import { IAssets } from './assetsInterface'
 import { IJobResults } from './resultsInterface'
 import { IBilboMDSteps, IStepStatus } from './jobStepInterface'
@@ -118,6 +119,7 @@ interface IJob extends Document {
   data_file: string
   md_engine?: MDEngineEnum
   openmm_parameters?: IOpenMMParameters
+  charmm_parameters?: ICHARMMParameters
   md_constraints?: IMDConstraints
   time_submitted: Date
   time_started?: Date
