@@ -13,8 +13,8 @@ const buildOpenMMParameters = (reqBody: Request['body']): IOpenMMParameters => {
     omm_md_friction,
     omm_md_nsteps,
     omm_md_timestep,
-    omm_md_rgyr_min,
-    omm_md_rgyr_max,
+    rg_min,
+    rg_max,
     omm_md_k_rg,
     omm_md_rg_report_interval,
     omm_md_pdb_report_interval
@@ -35,10 +35,7 @@ const buildOpenMMParameters = (reqBody: Request['body']): IOpenMMParameters => {
       friction: parseFloat(omm_md_friction) || 0.1,
       nsteps: parseInt(omm_md_nsteps) || 300000,
       timestep: parseFloat(omm_md_timestep) || 0.001,
-      rgyr: calculateRgyrRange(
-        parseInt(omm_md_rgyr_min),
-        parseInt(omm_md_rgyr_max)
-      ),
+      rgyr: calculateRgyrRange(parseInt(rg_min), parseInt(rg_max)),
       k_rg: parseInt(omm_md_k_rg) || 10,
       rg_report_interval: parseInt(omm_md_rg_report_interval) || 500,
       pdb_report_interval: parseInt(omm_md_pdb_report_interval) || 500
