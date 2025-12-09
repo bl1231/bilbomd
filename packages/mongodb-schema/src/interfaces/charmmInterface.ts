@@ -1,4 +1,4 @@
-interface IOpenMMParameters {
+interface ICHARMMParameters {
   minimize?: {
     max_iterations?: number
   }
@@ -20,4 +20,4 @@ interface IOpenMMParameters {
   }
 }
 
-export { IOpenMMParameters }
+export { ICHARMMParameters }
