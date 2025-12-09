@@ -11,6 +11,53 @@ import { Request, Response } from 'express'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobDTOMapper.js'
 
+// Helper to resolve username from user field
+type UserField =
+  | IUser
+  | { _id?: unknown; $oid?: string }
+  | { $oid: string }
+  | string
+  | null
+  | undefined
+const resolveUsername = async (userField: UserField): Promise<string> => {
+  if (!userField) return 'anonymous'
+  // If populated with username
+  if (
+    typeof userField === 'object' &&
+    userField !== null &&
+    'username' in userField &&
+    (userField as IUser).username
+  ) {
+    return (userField as IUser).username!
+  }
+  // If only _id or ObjectId
+  let userId: unknown = null
+  if (
+    typeof userField === 'object' &&
+    userField !== null &&
+    '_id' in userField
+  ) {
+    userId = (userField as { _id: unknown })._id
+  } else if (
+    typeof userField === 'object' &&
+    userField !== null &&
+    '$oid' in userField
+  ) {
+    userId = userField as { $oid: string }
+  } else if (typeof userField === 'string') {
+    userId = userField
+  }
+  if (userId) {
+    try {
+      const userDoc = await User.findById(userId).lean<IUser>()
+      return userDoc?.username || 'anonymous'
+    } catch (e) {
+      logger.warn('Failed to fetch user for job', e)
+    }
+  }
+  return 'anonymous'
+}
+
 const getAllJobs = async (req: Request, res: Response) => {
   try {
     const username = req.user as string
@@ -61,6 +108,53 @@ const getAllJobs = async (req: Request, res: Response) => {
     // Combine both job types
     const allJobs: BilboMDJobDTO[] = []
 
+    // Helper to resolve username from user field
+    type UserField =
+      | IUser
+      | { _id?: unknown; $oid?: string }
+      | { $oid: string }
+      | string
+      | null
+      | undefined
+    const resolveUsername = async (userField: UserField): Promise<string> => {
+      if (!userField) return 'anonymous'
+      // If populated with username
+      if (
+        typeof userField === 'object' &&
+        userField !== null &&
+        'username' in userField &&
+        (userField as IUser).username
+      ) {
+        return (userField as IUser).username!
+      }
+      // If only _id or ObjectId
+      let userId: unknown = null
+      if (
+        typeof userField === 'object' &&
+        userField !== null &&
+        '_id' in userField
+      ) {
+        userId = (userField as { _id: unknown })._id
+      } else if (
+        typeof userField === 'object' &&
+        userField !== null &&
+        '$oid' in userField
+      ) {
+        userId = userField as { $oid: string }
+      } else if (typeof userField === 'string') {
+        userId = userField
+      }
+      if (userId) {
+        try {
+          const userDoc = await User.findById(userId).lean<IUser>()
+          return userDoc?.username || 'anonymous'
+        } catch (e) {
+          logger.warn('Failed to fetch user for job', e)
+        }
+      }
+      return 'anonymous'
+    }
+
     // Map Job collection docs → DTOs
     for (const mongoJob of DBjobs) {
       try {
@@ -69,15 +163,11 @@ const getAllJobs = async (req: Request, res: Response) => {
           continue
         }
 
-        const userObj =
-          typeof mongoJob.user === 'object'
-            ? (mongoJob.user as IUser)
-            : undefined
-
+        const username = await resolveUsername(mongoJob.user)
         const dto = buildBilboMDJobDTO({
           jobId: mongoJob._id.toString(),
           mongo: mongoJob,
-          username: userObj?.username || 'anonymous'
+          username
         })
 
         allJobs.push(dto)
@@ -95,15 +185,11 @@ const getAllJobs = async (req: Request, res: Response) => {
           continue
         }
 
-        const userObj =
-          typeof mongoMulti.user === 'object'
-            ? (mongoMulti.user as IUser)
-            : undefined
-
+        const username = await resolveUsername(mongoMulti.user)
         const dto = buildMultiJobDTO({
           jobId: mongoMulti._id.toString(),
           mongo: mongoMulti,
-          username: userObj?.username || 'anonymous'
+          username
         })
 
         allJobs.push(dto)
@@ -161,13 +247,11 @@ const getJobById = async (req: Request, res: Response) => {
         return
       }
 
-      const userObj =
-        typeof job.user === 'object' ? (job.user as IUser) : undefined
-
+      const username = await resolveUsername(job.user)
       const dto = buildBilboMDJobDTO({
         jobId,
         mongo: job,
-        username: userObj?.username || 'anonymous'
+        username
       })
 
       res.status(200).json(dto)
@@ -178,13 +262,11 @@ const getJobById = async (req: Request, res: Response) => {
         return
       }
 
-      const userObj =
-        typeof multiJob.user === 'object' ? (multiJob.user as IUser) : undefined
-
+      const username = await resolveUsername(multiJob.user)
       const dto = buildMultiJobDTO({
         jobId,
         mongo: multiJob,
-        username: userObj?.username || 'anonymous'
+        username
       })
 
       res.status(200).json(dto)
