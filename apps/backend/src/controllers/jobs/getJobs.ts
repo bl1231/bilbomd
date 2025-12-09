@@ -44,7 +44,9 @@ const getAllJobs = async (req: Request, res: Response) => {
       }
 
       // Use the user's ObjectId to filter jobs
-      jobFilter = { user: user._id }
+      jobFilter = {
+        $or: [{ user: user._id }, { 'user._id': user._id }]
+      }
     }
 
     // Fetch jobs from both Job and MultiJob collections
@@ -52,6 +54,9 @@ const getAllJobs = async (req: Request, res: Response) => {
       Job.find(jobFilter).populate('user').lean<IJob[]>().exec(),
       MultiJob.find(jobFilter).populate('user').lean<IMultiJob[]>().exec()
     ])
+    logger.info(
+      `Fetched ${DBjobs.length} jobs and ${DBmultiJobs.length} multi-jobs`
+    )
 
     // Combine both job types
     const allJobs: BilboMDJobDTO[] = []
