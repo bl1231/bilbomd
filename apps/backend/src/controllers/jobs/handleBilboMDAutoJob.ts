@@ -17,6 +17,7 @@ import { spawnAutoRgCalculator } from './utils/autoRg.js'
 import fs from 'fs-extra'
 import { autoJobSchema } from '../../validation/index.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -223,6 +224,12 @@ const handleBilboMDAutoJob = async (
       md_engine,
       ...(md_engine === 'OpenMM' && {
         openmm_parameters: buildOpenMMParameters(req.body)
+      }),
+      ...(md_engine === 'CHARMM' && {
+        charmm_parameters: buildCHARMMParameters(
+          autorgResults.rg_min,
+          autorgResults.rg_max
+        )
       }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }

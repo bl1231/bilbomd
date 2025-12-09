@@ -18,6 +18,7 @@ import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { config } from '../../config/config.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
 
 const uploadFolder = config.uploadDir
 
@@ -219,6 +220,12 @@ const handleBilboMDAlphaFoldJob = async (
       md_engine,
       ...(md_engine === 'OpenMM' && {
         openmm_parameters: buildOpenMMParameters(req.body)
+      }),
+      ...(md_engine === 'OpenMM' && {
+        openmm_parameters: buildOpenMMParameters(req.body)
+      }),
+      ...(md_engine === 'CHARMM' && {
+        charmm_parameters: buildCHARMMParameters(rg_min, rg_max)
       }),
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),

@@ -28,6 +28,7 @@ import {
   extractConstraintsFromYaml
 } from '@bilbomd/md-utils'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
@@ -263,6 +264,9 @@ const handleBilboMDClassicPDB = async (
       md_engine,
       ...(md_engine === 'OpenMM' && {
         openmm_parameters: buildOpenMMParameters(req.body)
+      }),
+      ...(md_engine === 'CHARMM' && {
+        charmm_parameters: buildCHARMMParameters(rg_min, rg_max)
       }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
