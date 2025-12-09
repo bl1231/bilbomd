@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.1.4
+
+### Patch Changes
+
+- 9dbaa93: Fix bug in backend job filtering for non-admin users
+
 ## 2.1.3
 
 ### Patch Changes
