@@ -1,5 +1,4 @@
 import { Schema } from 'mongoose'
-
 import { IOpenMMParameters } from '../interfaces/openmmInterface'
 
 const openmmParametersSchema = new Schema<IOpenMMParameters>({
