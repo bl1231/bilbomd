@@ -223,13 +223,18 @@ const handleBilboMDAutoJob = async (
       steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
-        openmm_parameters: buildOpenMMParameters(req.body)
+        openmm_parameters: buildOpenMMParameters({
+          ...req.body,
+          rg_min: autorgResults.rg_min,
+          rg_max: autorgResults.rg_max
+        })
       }),
       ...(md_engine === 'CHARMM' && {
-        charmm_parameters: buildCHARMMParameters(
-          autorgResults.rg_min,
-          autorgResults.rg_max
-        )
+        charmm_parameters: buildCHARMMParameters({
+          ...req.body,
+          rg_min: autorgResults.rg_min,
+          rg_max: autorgResults.rg_max
+        })
       }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }

@@ -263,10 +263,18 @@ const handleBilboMDClassicPDB = async (
       steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
-        openmm_parameters: buildOpenMMParameters(req.body)
+        openmm_parameters: buildOpenMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
       }),
       ...(md_engine === 'CHARMM' && {
-        charmm_parameters: buildCHARMMParameters(rg_min, rg_max)
+        charmm_parameters: buildCHARMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
       }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }

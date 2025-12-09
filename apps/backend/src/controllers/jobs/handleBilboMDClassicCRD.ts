@@ -235,7 +235,11 @@ const handleBilboMDClassicCRD = async (
       rg,
       rg_min,
       rg_max,
-      charmm_parameters: buildCHARMMParameters(rg_min, rg_max),
+      charmm_parameters: buildCHARMMParameters({
+        ...req.body,
+        rg_min,
+        rg_max
+      }),
       time_submitted: new Date(),
       progress: 0,
       cleanup_in_progress: false,
