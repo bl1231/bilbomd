@@ -26,6 +26,7 @@ const initializeJob = async (MQJob: BullMQJob, DBjob: IJob): Promise<void> => {
 
     // Set MongoDB status to Running when we start processing the job
     DBjob.status = 'Running'
+    DBjob.time_started = new Date()
     await DBjob.save()
   } catch (error) {
     logger.error(`Error in initializeJob: ${getErrorMessage(error)}`)
