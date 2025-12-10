@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import React from 'react'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import type { MongoDBProperty } from '../types'
@@ -9,6 +9,25 @@ export const useJobProperties = (
   job: BilboMDJobDTO,
   onOpenModal?: () => void
 ): MongoDBProperty[] => {
+  // State for live duration updates (only for running jobs)
+  const [currentTime, setCurrentTime] = useState<Date>(new Date())
+
+  // Only update the timer for running jobs
+  const isJobRunning =
+    job.mongo.status === 'Running' &&
+    job.mongo.time_started &&
+    !job.mongo.time_completed
+
+  useEffect(() => {
+    if (!isJobRunning) return
+
+    const interval = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [isJobRunning])
+
   return useMemo(() => {
     const jobTypeDisplayNames: Record<string, string> = {
       pdb: 'BilboMD Classic w/PDB',
@@ -29,9 +48,13 @@ export const useJobProperties = (
       if (!job.mongo.time_started) return undefined
 
       const startTime = new Date(job.mongo.time_started)
+      // For running jobs, use currentTime (updated every second)
+      // For completed jobs, use time_completed
       const endTime = job.mongo.time_completed
         ? new Date(job.mongo.time_completed)
-        : new Date() // Use current time if still running
+        : isJobRunning
+          ? currentTime
+          : new Date()
 
       const durationMs = endTime.getTime() - startTime.getTime()
       const durationSeconds = Math.floor(durationMs / 1000)
@@ -59,7 +82,7 @@ export const useJobProperties = (
       ...(job.mongo.time_started
         ? [{ label: 'Duration', value: calculateDuration() }]
         : []),
-      { label: 'Data file', value: job.mongo.data_file }
+      { label: 'SAXS Data', value: job.mongo.data_file }
     ]
 
     const handler = createJobHandler(job.mongo.jobType)
@@ -88,5 +111,5 @@ export const useJobProperties = (
       ...jobSpecificProperties,
       ...constraintProperties
     ]
-  }, [job, onOpenModal])
+  }, [job, onOpenModal, currentTime, isJobRunning])
 }
