@@ -1,12 +1,28 @@
 import type {
   BilboMDJobDTO,
   BilboMDMongoJobDTO,
+  BilboMDAutoDTO,
+  BilboMDPDBDTO,
+  BilboMDCRDDTO,
+  BilboMDAlphaFoldDTO,
+  BilboMDSANSDTO,
+  BilboMDScoperDTO,
   JobType,
   JobStatusEnum as JobStatus,
   UserSummaryDTO,
   JobResultsDTO
 } from '@bilbomd/bilbomd-types'
-import type { IJob, IMultiJob, IUser } from '@bilbomd/mongodb-schema'
+import type {
+  IJob,
+  IMultiJob,
+  IUser,
+  IBilboMDPDBJob,
+  IBilboMDCRDJob,
+  IBilboMDAutoJob,
+  IBilboMDAlphaFoldJob,
+  IBilboMDSANSJob,
+  IBilboMDScoperJob
+} from '@bilbomd/mongodb-schema'
 
 export const mapDiscriminatorToJobType = (__t?: string): JobType => {
   switch (__t) {
@@ -50,7 +66,7 @@ export const mapUserToSummary = (
 export const mapJobMongoToDTO = (job: IJob) => {
   const jobType = mapDiscriminatorToJobType(job.__t)
 
-  // Base shape – extend per jobType as needed
+  // Base shape – common to all job types
   const base = {
     id: job._id.toString(),
     jobType,
@@ -78,10 +94,112 @@ export const mapJobMongoToDTO = (job: IJob) => {
     results: job.results as JobResultsDTO
   }
 
-  // Specialize by jobType if needed:
-  // if (jobType === 'alphafold') { ... }
+  // Add job-specific properties
+  switch (jobType) {
+    case 'auto': {
+      const autoJob = job as IBilboMDAutoJob
+      return {
+        ...base,
+        pdb_file: autoJob.pdb_file,
+        pae_file: autoJob.pae_file,
+        psf_file: autoJob.psf_file,
+        crd_file: autoJob.crd_file,
+        const_inp_file: autoJob.const_inp_file,
+        rg: autoJob.rg,
+        rg_min: autoJob.rg_min,
+        rg_max: autoJob.rg_max,
+        conformational_sampling: autoJob.conformational_sampling
+      } as BilboMDAutoDTO
+    }
 
-  return base as BilboMDMongoJobDTO
+    case 'pdb': {
+      const pdbJob = job as IBilboMDPDBJob
+      return {
+        ...base,
+        pdb_file: pdbJob.pdb_file,
+        psf_file: pdbJob.psf_file,
+        crd_file: pdbJob.crd_file,
+        const_inp_file: pdbJob.const_inp_file,
+        rg: pdbJob.rg,
+        rg_min: pdbJob.rg_min,
+        rg_max: pdbJob.rg_max,
+        conformational_sampling: pdbJob.conformational_sampling
+      } as BilboMDPDBDTO
+    }
+
+    case 'crd': {
+      const crdJob = job as IBilboMDCRDJob
+      return {
+        ...base,
+        psf_file: crdJob.psf_file,
+        crd_file: crdJob.crd_file,
+        const_inp_file: crdJob.const_inp_file,
+        rg: crdJob.rg,
+        rg_min: crdJob.rg_min,
+        rg_max: crdJob.rg_max,
+        conformational_sampling: crdJob.conformational_sampling
+      } as BilboMDCRDDTO
+    }
+
+    case 'alphafold': {
+      const afJob = job as IBilboMDAlphaFoldJob
+      return {
+        ...base,
+        alphafold_entities: afJob.alphafold_entities,
+        fasta_file: afJob.fasta_file,
+        pdb_file: afJob.pdb_file,
+        psf_file: afJob.psf_file,
+        crd_file: afJob.crd_file,
+        pae_file: afJob.pae_file,
+        conformational_sampling: afJob.conformational_sampling,
+        rg: afJob.rg,
+        rg_min: afJob.rg_min,
+        rg_max: afJob.rg_max
+      } as BilboMDAlphaFoldDTO
+    }
+
+    case 'sans': {
+      const sansJob = job as IBilboMDSANSJob
+
+      // Convert Map<string, number> to array of objects
+      const deuterationFractionsArray = sansJob.deuteration_fractions
+        ? Array.from(sansJob.deuteration_fractions.entries()).map(
+            ([label, fraction]) => ({
+              label,
+              fraction
+            })
+          )
+        : []
+
+      return {
+        ...base,
+        pdb_file: sansJob.pdb_file,
+        psf_file: sansJob.psf_file,
+        crd_file: sansJob.crd_file,
+        const_inp_file: sansJob.const_inp_file,
+        rg: sansJob.rg,
+        rg_min: sansJob.rg_min,
+        rg_max: sansJob.rg_max,
+        d2o_fraction: sansJob.d2o_fraction,
+        conformational_sampling: sansJob.conformational_sampling,
+        deuteration_fractions: deuterationFractionsArray
+      } as BilboMDSANSDTO
+    }
+
+    case 'scoper': {
+      const scoperJob = job as IBilboMDScoperJob
+      return {
+        ...base,
+        pdb_file: scoperJob.pdb_file,
+        fixc1c2: scoperJob.fixc1c2,
+        foxs_top_file: scoperJob.foxs_top_file
+      } as BilboMDScoperDTO
+    }
+
+    case 'multi':
+    default:
+      return base as BilboMDMongoJobDTO
+  }
 }
 
 export const mapMultiJobMongoToDTO = (

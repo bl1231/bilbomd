@@ -209,6 +209,7 @@ interface IBilboMDScoperJob extends IJob {
   __t: 'BilboMdScoper'
   pdb_file: string
   fixc1c2: boolean
+  foxs_top_file?: string
 }
 
 export type JobStatusEnum = (typeof JobStatus)[keyof typeof JobStatus]
