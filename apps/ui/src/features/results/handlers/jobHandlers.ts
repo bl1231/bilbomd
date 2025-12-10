@@ -23,14 +23,18 @@ export const createAutoJobHandler = (): JobHandler => ({
       { label: 'PDB file', value: specificJob.pdb_file },
       { label: 'PSF file', value: specificJob.psf_file },
       { label: 'CRD file', value: specificJob.crd_file },
-      {
-        label: 'MD constraint file',
-        render: () =>
-          React.createElement(ConstraintFileChip, {
-            job: specificJob,
-            onOpenModal
-          })
-      },
+      ...(job.mongo.md_engine === 'CHARMM'
+        ? [
+            {
+              label: 'MD constraint file',
+              render: () =>
+                React.createElement(ConstraintFileChip, {
+                  job: specificJob,
+                  onOpenModal
+                })
+            }
+          ]
+        : []),
       {
         label: 'Number of MD Runs',
         value: specificJob.openmm_parameters?.md?.rgyr?.length || 0
@@ -56,14 +60,18 @@ export const createSansJobHandler = (): JobHandler => ({
         value: specificJob.d2o_fraction,
         suffix: '%'
       },
-      {
-        label: 'MD constraint file',
-        render: () =>
-          React.createElement(ConstraintFileChip, {
-            job: specificJob,
-            onOpenModal
-          })
-      },
+      ...(job.mongo.md_engine === 'CHARMM'
+        ? [
+            {
+              label: 'MD constraint file',
+              render: () =>
+                React.createElement(ConstraintFileChip, {
+                  job: specificJob,
+                  onOpenModal
+                })
+            }
+          ]
+        : []),
       { label: 'Rg min', value: specificJob.rg_min, suffix: 'Å' },
       { label: 'Rg max', value: specificJob.rg_max, suffix: 'Å' }
     ]
@@ -83,14 +91,18 @@ export const createPdbJobHandler = (): JobHandler => ({
       { label: 'PDB file', value: specificJob.pdb_file },
       { label: 'PSF file', value: specificJob.psf_file },
       { label: 'CRD file', value: specificJob.crd_file },
-      {
-        label: 'MD constraint file',
-        render: () =>
-          React.createElement(ConstraintFileChip, {
-            job: specificJob,
-            onOpenModal
-          })
-      },
+      ...(job.mongo.md_engine === 'CHARMM'
+        ? [
+            {
+              label: 'MD constraint file',
+              render: () =>
+                React.createElement(ConstraintFileChip, {
+                  job: specificJob,
+                  onOpenModal
+                })
+            }
+          ]
+        : []),
       {
         label: 'Number of MD Runs',
         value: specificJob.openmm_parameters?.md?.rgyr?.length || 0
@@ -113,14 +125,18 @@ export const createCrdJobHandler = (): JobHandler => ({
       { label: 'PDB file', value: specificJob.pdb_file },
       { label: 'PSF file', value: specificJob.psf_file },
       { label: 'CRD file', value: specificJob.crd_file },
-      {
-        label: 'MD constraint file',
-        render: () =>
-          React.createElement(ConstraintFileChip, {
-            job: specificJob,
-            onOpenModal
-          })
-      },
+      ...(job.mongo.md_engine === 'CHARMM'
+        ? [
+            {
+              label: 'MD constraint file',
+              render: () =>
+                React.createElement(ConstraintFileChip, {
+                  job: specificJob,
+                  onOpenModal
+                })
+            }
+          ]
+        : []),
       {
         label: 'Number of MD Runs',
         value: specificJob.openmm_parameters?.md?.rgyr?.length || 0
