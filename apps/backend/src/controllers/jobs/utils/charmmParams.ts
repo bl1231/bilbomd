@@ -3,8 +3,12 @@ import { Request } from 'express'
 import { calculateRgyrRange } from './calculateRgyrRange.js'
 
 const buildCHARMMParameters = (reqBody: Request['body']): ICHARMMParameters => {
-  const { charmm_md_nsteps, charmm_md_pdb_report_interval, rg_min, rg_max } =
-    reqBody
+  let { charmm_md_nsteps } = reqBody
+  const { charmm_md_pdb_report_interval, rg_min, rg_max } = reqBody
+  if (!charmm_md_nsteps) {
+    charmm_md_nsteps = reqBody.num_conf * 100000
+  }
+
   return {
     minimize: {},
     heating: {},
