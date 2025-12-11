@@ -10,6 +10,60 @@ import type {
 import type { JobHandler, MongoDBProperty } from '../types'
 import { ConstraintFileChip } from '../components/ConstraintFileChip'
 
+const getMdRunCount = (job: BilboMDJobDTO): number => {
+  if (job.mongo.md_engine === 'CHARMM') {
+    return job.mongo.charmm_parameters?.md?.rgyr?.length ?? 0
+  }
+
+  return job.mongo.openmm_parameters?.md?.rgyr?.length ?? 0
+}
+
+const getRgValues = (job: BilboMDJobDTO): string | undefined => {
+  const engine = job.mongo.md_engine ?? 'CHARMM'
+  const rgyr =
+    engine === 'CHARMM'
+      ? job.mongo.charmm_parameters?.md?.rgyr
+      : job.mongo.openmm_parameters?.md?.rgyr
+
+  if (!rgyr || rgyr.length === 0) {
+    return undefined
+  }
+
+  return rgyr.map(value => `${value} Å`).join(', ')
+}
+
+const getConformationCount = (job: BilboMDJobDTO): number => {
+  const engine = job.mongo.md_engine ?? 'CHARMM'
+
+  if (engine === 'CHARMM') {
+    const mdParams = job.mongo.charmm_parameters?.md
+    const nsteps = mdParams?.nsteps
+    const rgyrLength = mdParams?.rgyr?.length
+    const reportInterval = mdParams?.pdb_report_interval
+
+    if (!nsteps || !rgyrLength || !reportInterval || reportInterval <= 0) {
+      return 0
+    }
+
+    return (nsteps * rgyrLength) / reportInterval
+  }
+
+  if (engine === 'OpenMM') {
+    const mdParams = job.mongo.openmm_parameters?.md
+    const nsteps = mdParams?.nsteps
+    const rgyrLength = mdParams?.rgyr?.length
+    const reportInterval = mdParams?.pdb_report_interval
+
+    if (!nsteps || !rgyrLength || !reportInterval || reportInterval <= 0) {
+      return 0
+    }
+
+    return (nsteps * rgyrLength) / reportInterval
+  }
+
+  return 0
+}
+
 export const createAutoJobHandler = (): JobHandler => ({
   getJobTypeDisplayName: () => 'BilboMD Auto',
 
@@ -35,11 +89,9 @@ export const createAutoJobHandler = (): JobHandler => ({
             }
           ]
         : []),
-      {
-        label: 'Number of MD Runs',
-        value: specificJob.openmm_parameters?.md?.rgyr?.length || 0
-      },
-      { label: 'Number of conformations', value: 600 }
+      { label: 'Number of MD Runs', value: getMdRunCount(job) },
+      { label: 'Rg values', value: getRgValues(job) },
+      { label: 'Number of conformations', value: getConformationCount(job) }
     ]
   }
 })
@@ -103,11 +155,9 @@ export const createPdbJobHandler = (): JobHandler => ({
             }
           ]
         : []),
-      {
-        label: 'Number of MD Runs',
-        value: specificJob.openmm_parameters?.md?.rgyr?.length || 0
-      },
-      { label: 'Number of conformations', value: 600 }
+      { label: 'Number of MD Runs', value: getMdRunCount(job) },
+      { label: 'Rg values', value: getRgValues(job) },
+      { label: 'Number of conformations', value: getConformationCount(job) }
     ]
   }
 })
@@ -137,11 +187,9 @@ export const createCrdJobHandler = (): JobHandler => ({
             }
           ]
         : []),
-      {
-        label: 'Number of MD Runs',
-        value: specificJob.openmm_parameters?.md?.rgyr?.length || 0
-      },
-      { label: 'Number of conformations', value: 600 }
+      { label: 'Number of MD Runs', value: getMdRunCount(job) },
+      { label: 'Rg values', value: getRgValues(job) },
+      { label: 'Number of conformations', value: getConformationCount(job) }
     ]
   }
 })
