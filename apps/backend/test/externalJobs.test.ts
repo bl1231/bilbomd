@@ -211,8 +211,8 @@ describe('/api/v1/external/jobs', () => {
     )
   })
   test('should submit a BilboMD alphafold job successfully', async () => {
-    const originalUseNersc = process.env.USE_NERSC
-    process.env.USE_NERSC = 'true'
+    const originalEnableAlphaFold = process.env.ENABLE_BILBOMD_ALPHAFOLD
+    process.env.ENABLE_BILBOMD_ALPHAFOLD = 'true'
     const apiToken = generateApiToken()
 
     const datFilePath = path.resolve(
@@ -233,6 +233,6 @@ describe('/api/v1/external/jobs', () => {
       .attach('dat_file', datFilePath)
       .attach('entities_json', entitiesJsonPath)
     expectSuccessfulJobResponse(res, 'New BilboMD AF Job successfully created')
-    process.env.USE_NERSC = originalUseNersc
+    process.env.ENABLE_BILBOMD_ALPHAFOLD = originalEnableAlphaFold
   })
 })

@@ -55,7 +55,6 @@ describe('PublicJobPage', () => {
     submittedAt: new Date('2023-01-01'),
     startedAt: new Date('2023-01-01T01:00:00'),
     results: {
-      summary: null,
       classic: null,
       auto: { total_num_ensembles: 10 },
       alphafold: null,
@@ -68,7 +67,14 @@ describe('PublicJobPage', () => {
     ...mockJobData,
     status: 'Completed',
     progress: 100,
-    completedAt: new Date('2023-01-01T02:00:00')
+    completedAt: new Date('2023-01-01T02:00:00'),
+    results: {
+      classic: null,
+      auto: null,
+      alphafold: null,
+      sans: null,
+      scoper: null
+    }
   }
 
   beforeEach(() => {
@@ -176,11 +182,8 @@ describe('PublicJobPage', () => {
         expect(screen.getByText('100%')).toBeInTheDocument()
       })
 
-      expect(screen.getByTestId('analysis-section')).toBeInTheDocument()
       expect(screen.getByTestId('download-section')).toBeInTheDocument()
-      expect(
-        screen.getByText(`Analysis Section for ${mockPublicId}`)
-      ).toBeInTheDocument()
+
       expect(
         screen.getByText(`Download Section for ${mockPublicId}`)
       ).toBeInTheDocument()

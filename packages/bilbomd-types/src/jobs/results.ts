@@ -1,9 +1,9 @@
-export interface JobSummary {
-  ensemble_size: number
-  warnings?: string[]
-  notes?: string[]
-  version?: string
-}
+// export interface JobSummary {
+//   ensemble_size: number
+//   warnings?: string[]
+//   notes?: string[]
+//   version?: string
+// }
 
 export interface IEnsembleMember {
   pdb: string
@@ -61,7 +61,7 @@ export interface ScoperJobResults {
 }
 
 export type JobResultsDTO = {
-  summary: JobSummary | null
+  // summary: JobSummary | null
   classic: ClassicJobResults | null
   auto: AutoJobResults | null
   alphafold: AlphafoldJobResults | null

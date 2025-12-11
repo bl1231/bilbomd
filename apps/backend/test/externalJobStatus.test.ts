@@ -6,17 +6,19 @@ import crypto from 'crypto'
 
 let server: any
 
+const FIXED_API_TOKEN = '12345trewq12345trewq'
+
 const generateApiToken = (): string => {
-  return process.env.BILBOMD_API_TOKEN ?? '12345trewq12345trewq'
+  return FIXED_API_TOKEN
 }
 
 beforeAll(async () => {
-  const apiToken = generateApiToken()
+  const apiToken = FIXED_API_TOKEN
   const tokenHash = crypto.createHash('sha256').update(apiToken).digest('hex')
 
   await User.create({
-    email: 'testuser@example.com',
-    username: 'apitestuser',
+    email: 'testuser-status@example.com',
+    username: 'apitestuser-status',
     roles: ['User'],
     apiTokens: [
       {
@@ -26,7 +28,7 @@ beforeAll(async () => {
     ]
   })
 
-  const user = await User.findOne({ username: 'apitestuser' })
+  const user = await User.findOne({ username: 'apitestuser-status' })
   await Job.create({
     title: 'Test Job for Status',
     status: 'Running',
@@ -34,7 +36,7 @@ beforeAll(async () => {
     uuid: 'test-uuid-1234',
     submittedAt: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
     completedAt: new Date(),
-    user: user?._id,
+    user: user,
     data_file: 'test_data_file.txt'
   })
 
@@ -42,21 +44,26 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await new Promise((resolve) => server.close(resolve))
+  if (server) {
+    await new Promise((resolve) => server.close(resolve))
+  }
 })
 
 describe('/api/v1/external/jobs/:id/status', () => {
   test('should return status of an existing job', async () => {
     const apiToken = generateApiToken()
     const job = await Job.findOne({ title: 'Test Job for Status' })
+    const user = await User.findOne({ username: 'apitestuser-status' })
 
     const res = await request(server)
       .get(`/api/v1/external/jobs/${job?._id}/status`)
       .set('Authorization', `Bearer ${apiToken}`)
       .set('Accept', 'application/json')
-    console.log('res.body:', res.body)
 
-    expect(res.status).toBe(200)
+    expect(
+      res.status,
+      `Expected 200 but got ${res.status}. Response body: ${JSON.stringify(res.body)}. Job ID: ${job?._id}. User IDs - job: ${job?.user}, api: ${user?._id}`
+    ).toBe(200)
     expect(res.body).toHaveProperty('status')
     expect(res.body.status).toBe('Running')
   })
