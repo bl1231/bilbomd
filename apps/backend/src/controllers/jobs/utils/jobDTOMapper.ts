@@ -172,12 +172,43 @@ export const mapJobMongoToDTO = (job: IJob) => {
         rg_max: sansJob.rg_max,
         d2o_fraction: sansJob.d2o_fraction,
         conformational_sampling: sansJob.conformational_sampling,
-        deuteration_fractions: (sansJob.deuteration_fractions ?? []).map(
-          (df) => ({
-            label: df.label,
-            fraction: df.fraction
-          })
-        )
+        deuteration_fractions: (() => {
+          const raw = sansJob.deuteration_fractions as
+            | { label: string; fraction: number }[]
+            | Map<string, number>
+            | Record<string, number>
+            | undefined
+
+          if (!raw) return []
+
+          if (Array.isArray(raw)) {
+            return raw
+              .filter(
+                (x) =>
+                  x && typeof x === 'object' && 'label' in x && 'fraction' in x
+              )
+              .map((x) => ({
+                label: String(x.label),
+                fraction: Number(x.fraction)
+              }))
+          }
+
+          if (raw instanceof Map) {
+            return Array.from(raw.entries()).map(([label, fraction]) => ({
+              label: String(label),
+              fraction: Number(fraction)
+            }))
+          }
+
+          if (typeof raw === 'object') {
+            return Object.entries(raw).map(([label, fraction]) => ({
+              label: String(label),
+              fraction: Number(fraction)
+            }))
+          }
+
+          return []
+        })()
       } as BilboMDSANSDTO
     }
 
