@@ -10,6 +10,9 @@ import {
 import { Request, Response } from 'express'
 import path from 'path'
 import { getFileStats } from './utils/jobUtils.js'
+import { config } from '../../config/config.js'
+
+const uploadFolder = config.uploadDir
 
 const handleBilboMDScoperJob = async (
   req: Request,
@@ -46,35 +49,17 @@ const handleBilboMDScoperJob = async (
     if (!pdbFile && req.body.pdb_file) {
       pdbFile = {
         originalname: req.body.pdb_file,
-        path: path.join(
-          path.join(process.env.DATA_VOL ?? ''),
-          UUID,
-          req.body.pdb_file
-        ),
-        size: getFileStats(
-          path.join(
-            path.join(process.env.DATA_VOL ?? ''),
-            UUID,
-            req.body.pdb_file
-          )
-        ).size
+        path: path.join(uploadFolder, UUID, req.body.pdb_file),
+        size: getFileStats(path.join(uploadFolder, UUID, req.body.pdb_file))
+          .size
       } as Express.Multer.File
     }
     if (!datFile && req.body.dat_file) {
       datFile = {
         originalname: req.body.dat_file,
-        path: path.join(
-          path.join(process.env.DATA_VOL ?? ''),
-          UUID,
-          req.body.dat_file
-        ),
-        size: getFileStats(
-          path.join(
-            path.join(process.env.DATA_VOL ?? ''),
-            UUID,
-            req.body.dat_file
-          )
-        ).size
+        path: path.join(uploadFolder, UUID, req.body.dat_file),
+        size: getFileStats(path.join(uploadFolder, UUID, req.body.dat_file))
+          .size
       } as Express.Multer.File
     }
 

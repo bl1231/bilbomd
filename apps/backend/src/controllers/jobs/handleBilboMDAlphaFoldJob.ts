@@ -39,18 +39,6 @@ const handleBilboMDAlphaFoldJob = async (
     client_ip_hash?: string
   }
 ): Promise<void> => {
-  // Check if AlphaFold is enabled (dynamic check for testability)
-  const isAlphaFoldEnabled =
-    process.env.ENABLE_BILBOMD_ALPHAFOLD === 'true' ||
-    process.env.ENABLE_BILBOMD_ALPHAFOLD === '1'
-  if (!isAlphaFoldEnabled) {
-    logger.warn('AlphaFold jobs not enabled.')
-    res.status(403).json({
-      message: 'AlphaFold jobs unavailable on this deployment.'
-    })
-    return
-  }
-
   const jobDir = path.join(uploadFolder, UUID)
 
   const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
