@@ -14,6 +14,7 @@ type PublicJobSuccessAlertProps = {
   jobResponse: {
     resultUrl?: string
     publicId?: string
+    md_engine?: string
   }
   jobType: string
 }
@@ -27,7 +28,16 @@ const PublicJobSuccessAlert = ({
     <Alert severity="success">
       <AlertTitle>Job submitted!</AlertTitle>
       <Typography>
-        Your anonymous <b>BilboMD {jobType} job</b> has been submitted.
+        Your anonymous <b>BilboMD {jobType} job</b> has been submitted
+        {jobResponse?.md_engine ? (
+          <>
+            {' '}
+            and will use <b>{jobResponse.md_engine}</b> for the Molecular
+            Dynamics step.
+          </>
+        ) : (
+          '.'
+        )}
       </Typography>
       {jobResponse && jobResponse.resultUrl && (
         <Typography sx={{ my: 2 }}>
