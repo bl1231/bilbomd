@@ -6,6 +6,8 @@ const buildCHARMMParameters = (reqBody: Request['body']): ICHARMMParameters => {
   let { charmm_md_nsteps } = reqBody
   const { charmm_md_pdb_report_interval, rg_min, rg_max } = reqBody
   if (!charmm_md_nsteps) {
+    // Default to 100,000 steps per conformation is because teh template file for CHARMM
+    // uses a hardcoded value of 100,000 steps for the MD run.
     charmm_md_nsteps = reqBody.num_conf * 100000
   }
 
