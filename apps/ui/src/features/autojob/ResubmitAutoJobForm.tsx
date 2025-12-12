@@ -30,6 +30,7 @@ import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
 import type { BilboMDAutoDTO } from '@bilbomd/bilbomd-types'
+import MdEngineField from 'components/MdEngineField'
 
 const ResubmitAutoJobForm = () => {
   useTitle('BilboMD: Resubmit Auto Job')
@@ -116,7 +117,9 @@ const ResubmitAutoJobForm = () => {
     title: 'resubmit-' + jobMongo.title,
     pdb_file: jobMongo.pdb_file ?? '',
     pae_file: jobMongo.pae_file ?? '',
-    dat_file: jobMongo.data_file ?? ''
+    dat_file: jobMongo.data_file ?? '',
+    md_engine:
+      (jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ?? 'charmm'
   }
 
   const onSubmit = async (
@@ -126,6 +129,7 @@ const ResubmitAutoJobForm = () => {
     const form = new FormData()
     form.append('bilbomd_mode', values.bilbomd_mode)
     form.append('title', values.title)
+    form.append('md_engine', values.md_engine)
 
     form.append('resubmit', 'true')
     if (job?.mongo.id) {
@@ -238,6 +242,15 @@ const ResubmitAutoJobForm = () => {
                           errors.title && touched.title ? errors.title : ''
                         }
                         value={values.title || ''}
+                      />
+                    </Grid>
+
+                    {/* MD Engine selection */}
+                    <Grid sx={{ width: '520px', mb: 1 }}>
+                      <MdEngineField
+                        value={values.md_engine as 'charmm' | 'openmm'}
+                        onChange={(val) => void setFieldValue('md_engine', val)}
+                        disabled={isSubmitting}
                       />
                     </Grid>
 

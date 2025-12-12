@@ -100,8 +100,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
 
-  const initialValues = {
-    bilbomd_mode: 'sans',
+  const initialValues: NewSANSJobFormValues = {
     title: '',
     pdb_file: '',
     dat_file: '',
