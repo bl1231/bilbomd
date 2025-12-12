@@ -14,6 +14,9 @@ const isAminoAcidSequence = (sequence: string) => {
 }
 
 const BilboMDAlphaFoldJobSchema = object().shape({
+  md_engine: string()
+    .oneOf(['charmm', 'openmm'], 'Invalid MD engine')
+    .required('Please select an MD engine'),
   title: string()
     .required('Please provide a title for your BilboMD Job.')
     .min(4, 'Title must contain at least 4 characters.')

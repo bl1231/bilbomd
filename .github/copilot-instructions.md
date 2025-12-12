@@ -130,16 +130,6 @@ vi.setSystemTime()
 vi.advanceTimersByTime()
 ```
 
-**Jest to Vitest Migration Checklist:**
-
-- [ ] Add `import { vi } from 'vitest'`
-- [ ] Replace `jest.mock()` → `vi.mock()`
-- [ ] Replace `jest.fn()` → `vi.fn()`
-- [ ] Replace `jest.clearAllMocks()` → `vi.clearAllMocks()`
-- [ ] Replace timer functions: `jest.useFakeTimers()` → `vi.useFakeTimers()`
-- [ ] Update mock paths to be relative to test file location
-- [ ] Verify all tests pass after conversion
-
 **React Component Testing Best Practices:**
 
 ```typescript

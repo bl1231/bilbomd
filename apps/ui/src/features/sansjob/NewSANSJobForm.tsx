@@ -33,6 +33,7 @@ import ChainDeuterationSlider from './ChainDeuterationSlider'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -108,7 +109,8 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     rg_min: 0,
     rg_max: 0,
     inp_file: '',
-    d2o_fraction: 100
+    d2o_fraction: 100,
+    md_engine: 'charmm'
   }
 
   const onSubmit = async (
@@ -125,6 +127,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('inp_file', values.inp_file)
     form.append('d2o_fraction', values.d2o_fraction.toString())
     form.append('bilbomd_mode', 'sans')
+    form.append('md_engine', values.md_engine)
 
     chainIds.forEach((chainId) => {
       const key =
@@ -263,6 +266,15 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           errors.title && touched.title ? errors.title : ''
                         }
                         value={values.title || ''}
+                      />
+                    </Grid>
+
+                    {/* MD Engine selection */}
+                    <Grid sx={{ width: '520px' }}>
+                      <MdEngineField
+                        value={values.md_engine as 'charmm' | 'openmm'}
+                        onChange={(val) => void setFieldValue('md_engine', val)}
+                        disabled={isSubmitting}
                       />
                     </Grid>
 

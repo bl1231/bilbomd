@@ -11,4 +11,5 @@ export interface NewAlphaFoldJobFormValues {
   title: string
   dat_file: string
   entities: Entity[]
+  md_engine: 'charmm' | 'openmm'
 }
