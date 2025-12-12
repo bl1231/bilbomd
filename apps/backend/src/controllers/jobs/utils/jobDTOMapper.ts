@@ -161,16 +161,6 @@ export const mapJobMongoToDTO = (job: IJob) => {
     case 'sans': {
       const sansJob = job as IBilboMDSANSJob
 
-      // Convert Map<string, number> to array of objects
-      const deuterationFractionsArray = sansJob.deuteration_fractions
-        ? Array.from(sansJob.deuteration_fractions.entries()).map(
-            ([label, fraction]) => ({
-              label,
-              fraction
-            })
-          )
-        : []
-
       return {
         ...base,
         pdb_file: sansJob.pdb_file,
@@ -182,7 +172,12 @@ export const mapJobMongoToDTO = (job: IJob) => {
         rg_max: sansJob.rg_max,
         d2o_fraction: sansJob.d2o_fraction,
         conformational_sampling: sansJob.conformational_sampling,
-        deuteration_fractions: deuterationFractionsArray
+        deuteration_fractions: (sansJob.deuteration_fractions ?? []).map(
+          (df) => ({
+            label: df.label,
+            fraction: df.fraction
+          })
+        )
       } as BilboMDSANSDTO
     }
 
