@@ -76,7 +76,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.1.3
+    image: ghcr.io/bl1231/bilbomd-backend:2.2.0
     pull_policy: always
     deploy:
       resources:
@@ -106,7 +106,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.0.8
+    image: ghcr.io/bl1231/bilbomd-worker:2.0.9
     pull_policy: always
     deploy:
       replicas: 1
@@ -140,7 +140,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.1.3
+    image: ghcr.io/bl1231/bilbomd-ui:2.2.0
     pull_policy: always
     env_file:
       - .env.dev
