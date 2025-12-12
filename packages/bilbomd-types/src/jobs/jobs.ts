@@ -1,4 +1,5 @@
 import { OpenMMParametersDTO } from './openmm'
+import { CHARMMParametersDTO } from './charmm'
 import { AlphafoldEntityDTO } from './alphafold'
 import { UserSummaryDTO } from '../users/user'
 import { MDConstraintsDTO } from './mdConstraints'
@@ -42,6 +43,7 @@ export interface BaseJobDTO {
   data_file: string
   md_engine: MDEngine
   openmm_parameters?: OpenMMParametersDTO
+  charmm_parameters?: CHARMMParametersDTO
   md_constraints?: MDConstraintsDTO
   time_submitted: Date
   time_started?: Date

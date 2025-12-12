@@ -13,6 +13,7 @@ interface IOpenMMParameters {
     friction?: number
     nsteps?: number
     timestep?: number
+    rgyr?: number[]
     k_rg?: number
     rg_report_interval?: number
     pdb_report_interval?: number

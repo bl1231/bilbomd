@@ -19,8 +19,10 @@ import {
 } from './utils/jobUtils.js'
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
+import { config } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = config.uploadDir
 
 const handleBilboMDClassicCRD = async (
   req: Request,
@@ -234,6 +236,11 @@ const handleBilboMDClassicCRD = async (
       rg,
       rg_min,
       rg_max,
+      charmm_parameters: buildCHARMMParameters({
+        ...req.body,
+        rg_min,
+        rg_max
+      }),
       time_submitted: new Date(),
       progress: 0,
       cleanup_in_progress: false,

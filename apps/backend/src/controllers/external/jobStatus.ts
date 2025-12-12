@@ -32,7 +32,13 @@ export const getApiJobStatus = async (req: Request, res: Response) => {
     }
 
     // Check that the job belongs to the requesting API user
-    if (job.user.toString() !== user._id.toString()) {
+    // Handle both populated user object and ObjectId reference (backwards compatibility)
+    const jobUserId =
+      typeof job.user === 'object' && job.user !== null && '_id' in job.user
+        ? job.user._id.toString()
+        : (job.user as mongoose.Types.ObjectId).toString()
+
+    if (jobUserId !== user._id.toString()) {
       res
         .status(403)
         .json({ message: 'Forbidden: job does not belong to user' })

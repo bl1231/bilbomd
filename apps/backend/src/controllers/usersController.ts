@@ -102,7 +102,7 @@ const deleteUserById = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-    const job = await Job.findOne({ user: id }).lean().exec()
+    const job = await Job.findOne({ 'user._id': id }).lean().exec()
     if (job) {
       res.status(400).json({ success: false, message: 'User has jobs' })
       return
@@ -149,7 +149,7 @@ const deleteUserByUsername = async (
       return
     }
 
-    const hasAssignedJobs = await Job.exists({ user: user._id })
+    const hasAssignedJobs = await Job.exists({ 'user._id': user._id })
     if (hasAssignedJobs) {
       res
         .status(409)

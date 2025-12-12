@@ -1,5 +1,5 @@
 import { axiosInstance, AxiosResponse } from 'app/api/axios'
-import type { BilboMDJobDTO, StepStatus } from '@bilbomd/bilbomd-types'
+import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from 'slices/authSlice'
 import { useEffect, useState, useCallback } from 'react'

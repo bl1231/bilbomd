@@ -18,6 +18,7 @@ import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { config } from '../../config/config.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
 
 const uploadFolder = config.uploadDir
 
@@ -38,14 +39,6 @@ const handleBilboMDAlphaFoldJob = async (
     client_ip_hash?: string
   }
 ): Promise<void> => {
-  if (!config.bilbomd.AlphaFoldEnabled) {
-    logger.warn('AlphaFold jobs not enabled.')
-    res.status(403).json({
-      message: 'AlphaFold jobs unavailable on this deployment.'
-    })
-    return
-  }
-
   const jobDir = path.join(uploadFolder, UUID)
 
   const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
@@ -218,7 +211,18 @@ const handleBilboMDAlphaFoldJob = async (
       steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
-        openmm_parameters: buildOpenMMParameters(req.body)
+        openmm_parameters: buildOpenMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
+      }),
+      ...(md_engine === 'CHARMM' && {
+        charmm_parameters: buildCHARMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
       }),
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),

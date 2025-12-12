@@ -860,8 +860,14 @@ const runMolecularDynamics = async (
     }
     await updateStepStatus(DBjob, 'md', status)
     const molecularDynamicsTasks = []
-    const step = Math.max(Math.round((params.rg_max - params.rg_min) / 5), 1)
-    for (let rg = params.rg_min; rg <= params.rg_max; rg += step) {
+    let rgyrList: number[] = []
+    if (
+      'charmm_parameters' in DBjob &&
+      Array.isArray(DBjob.charmm_parameters?.md?.rgyr)
+    ) {
+      rgyrList = DBjob.charmm_parameters.md.rgyr
+    }
+    for (const rg of rgyrList) {
       params.charmm_inp_file = `${params.charmm_template}_rg${rg}.inp`
       params.charmm_out_file = `${params.charmm_template}_rg${rg}.out`
       params.inp_basename = `${params.charmm_template}_rg${rg}`

@@ -8,17 +8,19 @@ import path from 'path'
 
 let server: any
 
+const FIXED_API_TOKEN = '12345trewq12345trewq-results'
+
 const generateApiToken = (): string => {
-  return process.env.BILBOMD_API_TOKEN ?? '12345trewq12345trewq'
+  return FIXED_API_TOKEN
 }
 
 beforeAll(async () => {
-  const apiToken = generateApiToken()
+  const apiToken = FIXED_API_TOKEN
   const tokenHash = crypto.createHash('sha256').update(apiToken).digest('hex')
 
   await User.create({
-    email: 'testuser@example.com',
-    username: 'apitestuser',
+    email: 'testuser-results@example.com',
+    username: 'apitestuser-results',
     roles: ['User'],
     apiTokens: [
       {
@@ -28,7 +30,7 @@ beforeAll(async () => {
     ]
   })
 
-  const user = await User.findOne({ username: 'apitestuser' })
+  const user = await User.findOne({ username: 'apitestuser-results' })
 
   const testJob = await Job.create({
     title: 'Test Job for Results',
@@ -37,7 +39,7 @@ beforeAll(async () => {
     uuid: 'test-uuid-results-1234',
     submittedAt: new Date(Date.now() - 10 * 60 * 1000),
     completedAt: new Date(Date.now() - 5 * 60 * 1000),
-    user: user?._id,
+    user: user,
     data_file: 'test_data_file.txt'
   })
 
@@ -48,13 +50,18 @@ beforeAll(async () => {
   //   path.join(resultDir, 'results.json'),
   //   JSON.stringify({ test: 'result' })
   // )
-  await fs.writeFile(path.join(resultDir, 'results.tar.gz'), 'dummy tarball content')
+  await fs.writeFile(
+    path.join(resultDir, 'results.tar.gz'),
+    'dummy tarball content'
+  )
 
   server = app.listen(0)
 })
 
 afterAll(async () => {
-  await new Promise((resolve) => server.close(resolve))
+  if (server) {
+    await new Promise((resolve) => server.close(resolve))
+  }
 })
 
 describe('/api/v1/external/jobs/:id/results', () => {

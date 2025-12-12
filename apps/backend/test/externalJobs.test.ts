@@ -181,38 +181,9 @@ describe('/api/v1/external/jobs', () => {
       'New BilboMD Classic w/CRD Job successfully created'
     )
   })
-  test('should inform us that BilboMD alphafold is unavailable on this deployment', async () => {
-    const apiToken = generateApiToken()
-
-    const datFilePath = path.resolve(
-      __dirname,
-      '../../../test_scripts/data/af-mono/A_S_USP16-FL_1.dat'
-    )
-    const entitiesJsonPath = path.resolve(
-      __dirname,
-      '../../../test_scripts/data/af-mono/entities.json'
-    )
-
-    const res = await request(server)
-      .post('/api/v1/external/jobs')
-      .set('Authorization', `Bearer ${apiToken}`)
-      .set('Accept', 'application/json')
-      .field('bilbomd_mode', 'alphafold')
-      .field('title', 'API Test Job CRD')
-      .attach('dat_file', datFilePath)
-      .attach('entities_json', entitiesJsonPath)
-
-    console.log('RESPONSE STATUS:', res.status)
-    console.log('Response:', res.body)
-
-    expect(res.status).toBe(403)
-    expect(res.body.message).toBe(
-      'AlphaFold jobs unavailable on this deployment.'
-    )
-  })
   test('should submit a BilboMD alphafold job successfully', async () => {
-    const originalUseNersc = process.env.USE_NERSC
-    process.env.USE_NERSC = 'true'
+    const originalEnableAlphaFold = process.env.ENABLE_BILBOMD_ALPHAFOLD
+    process.env.ENABLE_BILBOMD_ALPHAFOLD = 'true'
     const apiToken = generateApiToken()
 
     const datFilePath = path.resolve(
@@ -233,6 +204,6 @@ describe('/api/v1/external/jobs', () => {
       .attach('dat_file', datFilePath)
       .attach('entities_json', entitiesJsonPath)
     expectSuccessfulJobResponse(res, 'New BilboMD AF Job successfully created')
-    process.env.USE_NERSC = originalUseNersc
+    process.env.ENABLE_BILBOMD_ALPHAFOLD = originalEnableAlphaFold
   })
 })
