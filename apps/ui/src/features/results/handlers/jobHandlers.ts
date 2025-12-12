@@ -29,7 +29,7 @@ const getRgValues = (job: BilboMDJobDTO): string | undefined => {
     return undefined
   }
 
-  return rgyr.map(value => `${value} Å`).join(', ')
+  return rgyr.map((value) => `${value} Å`).join(', ')
 }
 
 const getConformationCount = (job: BilboMDJobDTO): number => {
