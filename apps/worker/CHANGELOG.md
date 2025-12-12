@@ -1,5 +1,13 @@
 # @bilbomd/worker
 
+## 2.0.9
+
+### Patch Changes
+
+- Updated dependencies [53937de]
+  - @bilbomd/mongodb-schema@2.2.0
+  - @bilbomd/md-utils@1.0.14
+
 ## 2.0.8
 
 ### Patch Changes
