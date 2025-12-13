@@ -273,7 +273,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       <MdEngineField
                         value={values.md_engine as 'charmm' | 'openmm'}
                         onChange={(val) => void setFieldValue('md_engine', val)}
-                        disabled={isSubmitting}
+                        disabled={true}
                       />
                     </Grid>
 
