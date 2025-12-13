@@ -81,7 +81,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [chainIds, setChainIds] = useState<string[]>([])
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
 
-  // Fetch the configuration object
   const {
     data: config,
     error: configError,
@@ -96,7 +95,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const useNersc = config.useNersc?.toLowerCase() === 'true'
 
   const handleStatusCheck = (isUnavailable: boolean) => {
-    // Update the state based on the system's availability
     setIsPerlmutterUnavailable(isUnavailable)
   }
 
@@ -269,6 +267,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     </Grid>
 
                     {/* MD Engine selection */}
+                    {/* Disabled until we write teh necessary worker code*/}
                     <Grid sx={{ width: '520px' }}>
                       <MdEngineField
                         value={values.md_engine as 'charmm' | 'openmm'}

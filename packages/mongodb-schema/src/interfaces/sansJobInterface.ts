@@ -1,6 +1,6 @@
 import { IJob } from './jobInterface.js'
 
-interface IDeurerationFraction {
+interface IDeuterationFraction {
   label: string
   fraction: number
 }
@@ -16,7 +16,7 @@ interface IBilboMDSANSJob extends IJob {
   rg: number
   rg_min: number
   rg_max: number
-  deuteration_fractions: IDeurerationFraction[]
+  deuteration_fractions: IDeuterationFraction[]
 }
 
 export { IBilboMDSANSJob }

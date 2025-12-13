@@ -72,7 +72,6 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     dat_file: '',
     md_engine: 'charmm'
   }
-  // mdEngine state moved above early returns to satisfy React Hooks rules
 
   const onSubmit = async (
     values: BilboMDAutoJobFormValues,
