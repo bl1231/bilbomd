@@ -33,7 +33,7 @@ import ChainDeuterationSlider from './ChainDeuterationSlider'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
-import MdEngineField from 'components/MdEngineField'
+// import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -269,13 +269,13 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     </Grid>
 
                     {/* MD Engine selection */}
-                    <Grid sx={{ width: '520px' }}>
+                    {/* <Grid sx={{ width: '520px' }}>
                       <MdEngineField
                         value={values.md_engine as 'charmm' | 'openmm'}
                         onChange={(val) => void setFieldValue('md_engine', val)}
                         disabled={isSubmitting}
                       />
-                    </Grid>
+                    </Grid> */}
 
                     {/* PDB file */}
                     <Grid>
