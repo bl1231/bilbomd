@@ -1,0 +1,10 @@
+PSF EXT CMAP CHEQ XPLOR
+
+         3 !NTITLE
+* HEADER
+* SUBHEADER
+* DATE
+
+      2 !NATOM
+         1 PROA     1        MET      N        NH3     -0.300000       14.0070           0   0.00000     -0.301140E-02
+         2 PROA     1        MET      HT1      HC       0.330000       1.00800           0   0.00000     -0.301140E-02

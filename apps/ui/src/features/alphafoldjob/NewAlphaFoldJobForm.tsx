@@ -39,6 +39,7 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -492,7 +493,8 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         copies: 1,
         seq_length: 0
       }
-    ]
+    ],
+    md_engine: 'charmm'
   }
 
   const onSubmit = async (
@@ -504,6 +506,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('title', values.title)
     form.append('dat_file', values.dat_file)
     form.append('bilbomd_mode', 'alphafold')
+    form.append('md_engine', values.md_engine)
     values.entities.forEach((entity, index) => {
       form.append(`entities[${index}][id]`, entity.id)
       form.append(`entities[${index}][name]`, entity.name)
@@ -703,6 +706,15 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Button>
                       </Box>
                     </Box>
+
+                    {/* MD Engine selection */}
+                    <Grid sx={{ width: '520px' }}>
+                      <MdEngineField
+                        value={values.md_engine as 'charmm' | 'openmm'}
+                        onChange={(val) => void setFieldValue('md_engine', val)}
+                        disabled={isSubmitting}
+                      />
+                    </Grid>
                     {useExampleData && (
                       <Alert
                         severity="warning"

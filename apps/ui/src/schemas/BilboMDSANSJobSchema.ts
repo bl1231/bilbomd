@@ -7,6 +7,9 @@ import { noSpaces, isSaxsData } from './ValidationFunctions'
 // }
 
 const BilboMDSANSJobSchema = object().shape({
+  md_engine: string()
+    .oneOf(['charmm', 'openmm'], 'Invalid MD engine')
+    .required('Please select an MD engine'),
   title: string()
     .required('Please provide a title for your BilboMD SANS Job.')
     .min(4, 'Title must contain at least 4 characters.')

@@ -44,6 +44,7 @@ import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
 import type { BilboMDCRDDTO, BilboMDPDBDTO } from '@bilbomd/bilbomd-types'
+import MdEngineField from 'components/MdEngineField'
 
 const ResubmitJobForm = () => {
   useTitle('BilboMD: Resubmit Classic Job')
@@ -149,7 +150,10 @@ const ResubmitJobForm = () => {
         num_conf: jobMongo.conformational_sampling?.toString() ?? '',
         rg: jobMongo.rg?.toString() ?? '',
         rg_min: jobMongo.rg_min?.toString() ?? '',
-        rg_max: jobMongo.rg_max?.toString() ?? ''
+        rg_max: jobMongo.rg_max?.toString() ?? '',
+        md_engine:
+          (jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
+          'charmm'
       }
       break
     case 'pdb':
@@ -164,7 +168,10 @@ const ResubmitJobForm = () => {
         num_conf: jobMongo.conformational_sampling?.toString() ?? '',
         rg: jobMongo.rg?.toString() ?? '',
         rg_min: jobMongo.rg_min?.toString() ?? '',
-        rg_max: jobMongo.rg_max?.toString() ?? ''
+        rg_max: jobMongo.rg_max?.toString() ?? '',
+        md_engine:
+          (jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
+          'charmm'
       }
       break
     default:
@@ -178,6 +185,7 @@ const ResubmitJobForm = () => {
     const form = new FormData()
     form.append('bilbomd_mode', values.bilbomd_mode)
     form.append('title', values.title)
+    form.append('md_engine', values.md_engine)
     form.append('resubmit', 'true')
     if (job?.mongo.id) {
       form.append('original_job_id', job.mongo.id)
@@ -437,6 +445,16 @@ const ResubmitJobForm = () => {
                             errors.title && touched.title ? errors.title : ''
                           }
                           value={values.title || ''}
+                        />
+                      </Grid>
+                      {/* MD Engine selection */}
+                      <Grid sx={{ width: '520px', mb: 1 }}>
+                        <MdEngineField
+                          value={values.md_engine as 'charmm' | 'openmm'}
+                          onChange={(val) =>
+                            void setFieldValue('md_engine', val)
+                          }
+                          disabled={isSubmitting}
                         />
                       </Grid>
                       {values.bilbomd_mode === 'crd_psf' && (

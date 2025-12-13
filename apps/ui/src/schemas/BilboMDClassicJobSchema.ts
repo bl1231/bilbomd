@@ -16,6 +16,9 @@ import {
 
 const BilboMDClassicJobSchema = object().shape({
   bilbomd_mode: string().required('Selection is required'),
+  md_engine: string()
+    .oneOf(['charmm', 'openmm'], 'Invalid MD engine')
+    .required('Please select an MD engine'),
   title: string()
     .required('Please provide a title for your BilboMD Job.')
     .min(4, 'Title must contain at least 4 characters.')

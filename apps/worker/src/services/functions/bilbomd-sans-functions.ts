@@ -120,7 +120,12 @@ async function runPepsiSANSProcess(
   const outputPath = path.join(pepsiSansRunDir, outputFile)
 
   return new Promise<string>((resolve, reject) => {
-    const proc = spawn('Pepsi-SANS', [inputPath, '-o', outputPath, ...pepsiSANSOpts])
+    const proc = spawn('Pepsi-SANS', [
+      inputPath,
+      '-o',
+      outputPath,
+      ...pepsiSANSOpts
+    ])
 
     proc.on('close', (code) => {
       if (code === 0) {
@@ -161,7 +166,14 @@ const spawnPepsiSANS = async (
 
     const tasks = pdbFiles.map((file, i) =>
       limit(() =>
-        runPepsiSANSProcess(pepsiSansRunDir, file, pepsiSANSOpts, MQjob, i, total)
+        runPepsiSANSProcess(
+          pepsiSansRunDir,
+          file,
+          pepsiSANSOpts,
+          MQjob,
+          i,
+          total
+        )
       )
     )
 
@@ -169,7 +181,10 @@ const spawnPepsiSANS = async (
     csvLines.push(...results)
 
     const csvFileName = `pepsisans_${path.basename(pepsiSansRunDir)}.csv`
-    await fs.writeFile(path.join(pepsiSansRunDir, csvFileName), csvLines.join('\n'))
+    await fs.writeFile(
+      path.join(pepsiSansRunDir, csvFileName),
+      csvLines.join('\n')
+    )
 
     logger.info(`Pepsi-SANS processing complete. ${csvFileName} created.`)
   } catch (error) {
@@ -203,7 +218,9 @@ const combineCSVFiles = async (
         }
 
         // Add the data lines (excluding the header line)
-        combinedCSVContent.push(...lines.slice(1).filter((line) => line.trim() !== ''))
+        combinedCSVContent.push(
+          ...lines.slice(1).filter((line) => line.trim() !== '')
+        )
       }
     }
   }
@@ -277,9 +294,12 @@ const extractPDBFilesFromDCD = async (
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
 
+  // Determine MD engine
+  const engine = DBjob.md_engine ?? 'CHARMM'
+
   let status: IStepStatus = {
     status: 'Running',
-    message: 'CHARMM Extract PDBs from DCD Trajectories has started.'
+    message: `${engine} Extract PDBs from DCD Trajectories has started.`
   }
   await updateStepStatus(DBjob, 'dcd2pdb', status)
   // Create the output directory for the PDB files
@@ -289,12 +309,30 @@ const extractPDBFilesFromDCD = async (
   const pepsisansRgFile = path.join(outputDir, 'pepsisans_rg.out')
   await makeFile(pepsisansRgFile)
 
-  const step = Math.max(Math.round((DBjob.rg_max - DBjob.rg_min) / 5), 1)
-
-  // Prepare Rg values array
-  const rgValues: number[] = []
-  for (let rg = DBjob.rg_min; rg <= DBjob.rg_max; rg += step) {
-    rgValues.push(rg)
+  // Extract Rg values based on MD engine
+  let rgValues: number[] = []
+  if (engine === 'CHARMM') {
+    if (
+      'charmm_parameters' in DBjob &&
+      Array.isArray(DBjob.charmm_parameters?.md?.rgyr)
+    ) {
+      rgValues = DBjob.charmm_parameters.md.rgyr
+    } else {
+      throw new Error(
+        'CHARMM engine selected but charmm_parameters.md.rgyr not found'
+      )
+    }
+  } else {
+    if (
+      'openmm_parameters' in DBjob &&
+      Array.isArray(DBjob.openmm_parameters?.md?.rgyr)
+    ) {
+      rgValues = DBjob.openmm_parameters.md.rgyr
+    } else {
+      throw new Error(
+        'OpenMM engine selected but openmm_parameters.md.rgyr not found'
+      )
+    }
   }
 
   // Parallelize the outer loop (Rg loop) using Promise.all, process each Rg group sequentially
@@ -329,7 +367,7 @@ const extractPDBFilesFromDCD = async (
 
   status = {
     status: 'Success',
-    message: 'CHARMM Extract PDBs from DCD Trajectories has completed.'
+    message: `${engine} Extract PDBs from DCD Trajectories has completed.`
   }
   await updateStepStatus(DBjob, 'dcd2pdb', status)
   logger.info('PDB extraction completed.')
@@ -457,14 +495,19 @@ const runPepsiSANSOnPDBFiles = async (
     await updateStepStatus(DBjob, 'pepsisans', status)
     logger.info('Pepsi-SANS analysis completed.')
   } catch (error) {
-    logger.error(`Error during Pepsi-SANS analysis: ${(error as Error).message}`)
+    logger.error(
+      `Error during Pepsi-SANS analysis: ${(error as Error).message}`
+    )
     throw error // Re-throw after logging
   } finally {
     if (heartbeat) clearInterval(heartbeat)
   }
 }
 
-const runGASANS = async (MQjob: BullMQJob, DBjob: IBilboMDSANSJob): Promise<void> => {
+const runGASANS = async (
+  MQjob: BullMQJob,
+  DBjob: IBilboMDSANSJob
+): Promise<void> => {
   const workingDir = path.join(config.uploadDir, DBjob.uuid)
   const gasansOpts = ['/app/scripts/sans/GASANS-dask.py']
 
@@ -514,7 +557,9 @@ const runGASANS = async (MQjob: BullMQJob, DBjob: IBilboMDSANSJob): Promise<void
         stderrStream.close()
 
         if (code === 0) {
-          logger.info(`GASANS process completed successfully. Exit code: ${code}`)
+          logger.info(
+            `GASANS process completed successfully. Exit code: ${code}`
+          )
           resolve()
         } else {
           logger.error(`GASANS process exited with code ${code}`)
@@ -543,7 +588,9 @@ const runGASANS = async (MQjob: BullMQJob, DBjob: IBilboMDSANSJob): Promise<void
   }
 }
 
-const prepareBilboMDSANSResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
+const prepareBilboMDSANSResults = async (
+  DBjob: IBilboMDSANSJob
+): Promise<void> => {
   let status: IStepStatus = {
     status: 'Running',
     message: 'Gathering BilboMD SANS results has started.'
@@ -604,9 +651,12 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
     ]
 
     // Gather GASANS ensemble Scattering Data CSV files
-    const gasansCsvScatteringDataFiles = await glob('best_model_EnsembleSize*.csv', {
-      cwd: jobDir
-    })
+    const gasansCsvScatteringDataFiles = await glob(
+      'best_model_EnsembleSize*.csv',
+      {
+        cwd: jobDir
+      }
+    )
 
     gasansCsvScatteringDataFiles.forEach((file) => {
       filesToCopy.push({ file, label: file })
@@ -638,7 +688,9 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
     // Catenate the "best" N-state ensemble PDB files
     for (const summaryFile of gasansSummaryFiles) {
       const ensembleNumber = summaryFile.match(/\d+/)?.[0] // Extract ensemble number
-      logger.info(`Processing GASANS summary file for ensemble size ${ensembleNumber}`)
+      logger.info(
+        `Processing GASANS summary file for ensemble size ${ensembleNumber}`
+      )
       if (!ensembleNumber) continue
 
       const summaryFilePath = path.join(jobDir, summaryFile)
@@ -699,7 +751,9 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
 
         // Read and concatenate the content of all PDB files in memory
         const concatenatedContent = await Promise.all(
-          pdbFilesToConcatenate.map((filePath) => fs.promises.readFile(filePath, 'utf-8'))
+          pdbFilesToConcatenate.map((filePath) =>
+            fs.promises.readFile(filePath, 'utf-8')
+          )
         ).then((contents) => contents.join('\n')) // Join all files' contents
 
         // Filter out lines starting with "REMARK"

@@ -35,6 +35,7 @@ import PipelineSchematic from './PipelineSchematic'
 import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from './JobSuccessAlert'
+import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -93,7 +94,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     num_conf: '',
     rg: '10',
     rg_min: '',
-    rg_max: ''
+    rg_max: '',
+    md_engine: 'charmm'
   }
 
   const onSubmit = async (
@@ -113,6 +115,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('rg_max', values.rg_max)
     form.append('dat_file', values.dat_file)
     form.append('inp_file', values.inp_file)
+    form.append('md_engine', values.md_engine)
     if (useExampleData) {
       form.append('useExampleData', 'true')
     }
@@ -426,6 +429,15 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           errors.title && touched.title ? errors.title : ''
                         }
                         value={values.title || ''}
+                      />
+                    </Grid>
+
+                    {/* MD Engine selection */}
+                    <Grid sx={{ width: '520px' }}>
+                      <MdEngineField
+                        value={values.md_engine as 'charmm' | 'openmm'}
+                        onChange={(val) => void setFieldValue('md_engine', val)}
+                        disabled={isSubmitting}
                       />
                     </Grid>
                     {values.bilbomd_mode === 'crd_psf' && (
