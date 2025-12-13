@@ -13,6 +13,8 @@ import { sanitizeConstInpFile, writeJobParams } from './index.js'
 import { queueJob } from '../../queues/bilbomd.js'
 import { DispatchUser } from '../../types/bilbomd.js'
 import { config } from '../../config/config.js'
+import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
 
 const uploadFolder = config.uploadDir
 
@@ -115,6 +117,21 @@ const handleBilboMDSANSJob = async (
       status: 'Submitted',
       time_submitted: new Date(),
       steps: stepsInit,
+      md_engine,
+      ...(md_engine === 'OpenMM' && {
+        openmm_parameters: buildOpenMMParameters({
+          ...req.body,
+          rg_min: req.body.rg_min,
+          rg_max: req.body.rg_max
+        })
+      }),
+      ...(md_engine === 'CHARMM' && {
+        charmm_parameters: buildCHARMMParameters({
+          ...req.body,
+          rg_min: req.body.rg_min,
+          rg_max: req.body.rg_max
+        })
+      }),
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
