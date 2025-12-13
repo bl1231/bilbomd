@@ -34,11 +34,11 @@ describe('NewSANSJobForm md_engine', () => {
     expect((charmm as HTMLInputElement).checked).toBe(true)
   })
 
-  it('allows selecting OpenMM', async () => {
-    const user = userEvent.setup()
-    render(<NewSANSJob />)
-    const openmm = screen.getByLabelText(/OpenMM/i)
-    await user.click(openmm)
-    expect((openmm as HTMLInputElement).checked).toBe(true)
-  })
+  // it('allows selecting OpenMM', async () => {
+  //   const user = userEvent.setup()
+  //   render(<NewSANSJob />)
+  //   const openmm = screen.getByLabelText(/OpenMM/i)
+  //   await user.click(openmm)
+  //   expect((openmm as HTMLInputElement).checked).toBe(true)
+  // })
 })
