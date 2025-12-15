@@ -101,7 +101,7 @@ Jobs are transformed from MongoDB documents to DTOs using `buildBilboMDJobDTO()`
 
 **TypeScript Rules:**
 
-- **Never use `any`** - use proper types, `unknown`, or generics instead
+- **Never use `any`** - use proper types or generics instead
 - Prefer **functional programming** over classes when possible
 - Use **arrow functions** for consistency: `const myFunc = () => {}`
 
