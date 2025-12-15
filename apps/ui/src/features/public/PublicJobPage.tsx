@@ -9,7 +9,8 @@ import {
   Grid,
   Typography,
   LinearProgress,
-  useTheme
+  useTheme,
+  Button
 } from '@mui/material'
 import useTitle from 'hooks/useTitle'
 import { useGetPublicJobByIdQuery } from 'slices/publicJobsApiSlice'
@@ -24,6 +25,44 @@ import PublicDownloadResultsSection from 'features/public/PublicDownloadResultsS
 
 import CopyableChip from 'components/CopyableChip'
 import { BilboMDScoperTable } from 'features/scoperjob/BilboMDScoperTable'
+import { axiosInstance } from 'app/api/axios'
+
+const handleDownload = async (publicId: string) => {
+  try {
+    const response = await axiosInstance.get(
+      `/public/jobs/${publicId}/results`,
+      {
+        responseType: 'blob'
+      }
+    )
+
+    if (response && response.data) {
+      const contentDisposition = response.headers['content-disposition'] as
+        | string
+        | undefined
+      let filename = 'results.tar.gz'
+
+      if (contentDisposition) {
+        const matches = /filename="?([^"]+)"?/.exec(contentDisposition)
+        if (matches && matches.length > 1) {
+          filename = matches[1]
+        }
+      }
+
+      const url = window.URL.createObjectURL(response.data)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', filename)
+      document.body.appendChild(link)
+      link.click()
+      link.parentNode?.removeChild(link)
+    } else {
+      console.error('No data to download')
+    }
+  } catch (error) {
+    console.error('Download results error:', error)
+  }
+}
 
 const PublicJobPage = () => {
   useTitle('BilboMD: Job Status')
@@ -185,10 +224,21 @@ const PublicJobPage = () => {
             />
             <Typography
               variant="h3"
-              sx={{ ml: 1 }}
+              sx={{ mx: 1 }}
             >
               {progress.toFixed(0)}%
             </Typography>
+            {job.status === 'Completed' && (
+              <Button
+                variant="contained"
+                onClick={() => {
+                  void handleDownload(job.publicId)
+                }}
+                sx={{ mr: 2 }}
+              >
+                Download Results
+              </Button>
+            )}
           </Item>
         </Grid>
 
