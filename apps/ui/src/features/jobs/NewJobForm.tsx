@@ -115,7 +115,10 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('rg_max', values.rg_max)
     form.append('dat_file', values.dat_file)
     form.append('inp_file', values.inp_file)
-    form.append('md_engine', values.md_engine)
+    form.append(
+      'md_engine',
+      values.bilbomd_mode === 'crd_psf' ? 'charmm' : values.md_engine
+    )
     if (useExampleData) {
       form.append('useExampleData', 'true')
     }
@@ -435,11 +438,22 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     {/* MD Engine selection */}
                     <Grid sx={{ width: '520px' }}>
                       <MdEngineField
-                        value={values.md_engine as 'charmm' | 'openmm'}
-                        onChange={(val) => void setFieldValue('md_engine', val)}
-                        disabled={isSubmitting}
+                        value={
+                          (values.bilbomd_mode === 'crd_psf'
+                            ? 'charmm'
+                            : values.md_engine) as 'charmm' | 'openmm'
+                        }
+                        onChange={(val) => {
+                          if (values.bilbomd_mode !== 'crd_psf') {
+                            void setFieldValue('md_engine', val)
+                          }
+                        }}
+                        disabled={
+                          isSubmitting || values.bilbomd_mode === 'crd_psf'
+                        }
                       />
                     </Grid>
+
                     {values.bilbomd_mode === 'crd_psf' && (
                       <>
                         <Grid
