@@ -51,8 +51,8 @@
     "@mui/material": "^7.3.6",
     "@mui/system": "^7.3.6",
     "@mui/utils": "^7.3.6",
-    "@mui/x-data-grid": "^8.21.0",
-    "@reduxjs/toolkit": "^2.11.0",
+    "@mui/x-data-grid": "^8.22.0",
+    "@reduxjs/toolkit": "^2.11.2",
     "axios": "^1.13.2",
     "axios-retry": "^4.5.0",
     "clsx": "^2.1.1",
@@ -60,11 +60,11 @@
     "form-data": "^4.0.5",
     "formik": "^2.4.9",
     "jwt-decode": "^4.0.0",
-    "molstar": "^5.4.1",
+    "molstar": "^5.4.2",
     "notistack": "^3.0.2",
     "prop-types": "^15.8.1",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "react-dropzone": "^14.3.8",
     "react-error-boundary": "^6.0.0",
     "react-icons": "^5.5.0",
@@ -72,7 +72,7 @@
     "react-router": "^7.10.1",
     "react-smooth": "^4.0.4",
     "react-spinners": "^0.17.0",
-    "recharts": "^3.5.1",
+    "recharts": "^3.6.0",
     "yup": "^1.7.1"
   },
   "overrides": {
@@ -92,7 +92,7 @@
   },
   "devDependencies": {
     "@testing-library/user-event": "^14.6.1",
-    "sass-embedded": "^1.93.3",
-    "type-fest": "^5.3.0"
+    "sass-embedded": "^1.96.0",
+    "type-fest": "^5.3.1"
   }
 }

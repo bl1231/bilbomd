@@ -16,7 +16,7 @@ vi.mock('../ValidationFunctions', () => ({
 }))
 
 // Use string filenames to bypass heavy content validators
-const makeFile = (name: string) => name
+// const makeFile = (name: string) => name
 
 describe('BilboMDAutoJobSchema', () => {
   it('md_engine allows charmm and openmm', async () => {
