@@ -64,7 +64,13 @@ export default defineConfig({
       enabled: true,
       provider: 'v8',
       reportsDirectory: 'coverage',
-      exclude: ['node_modules/', 'build/', 'dist/', '**/*.d.ts']
+      exclude: [
+        'node_modules/',
+        'build/',
+        'dist/',
+        '**/*.d.ts',
+        '**/*.{png,jpg,jpeg,gif,svg,webp,ico,json}'
+      ]
     }
   }
 })
