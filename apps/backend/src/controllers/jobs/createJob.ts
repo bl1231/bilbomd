@@ -12,6 +12,17 @@ import { handleBilboMDScoperJob } from './handleBilboMDScoperJob.js'
 import { handleBilboMDAlphaFoldJob } from './handleBilboMDAlphaFoldJob.js'
 import applyExampleDataIfRequested from './utils/exampleData.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
+import { recordUsageEvent } from '../../services/usageEvents.js'
+type PipelineType =
+  | 'pdb'
+  | 'crd'
+  | 'auto'
+  | 'alphafold'
+  | 'sans'
+  | 'scoper'
+  | 'multi'
+const toPipeline = (mode: string): PipelineType =>
+  mode === 'crd_psf' ? 'crd' : (mode as PipelineType)
 import {
   User,
   BilboMdPDBJob,
@@ -106,6 +117,20 @@ const createNewJob = async (req: Request, res: Response) => {
           user: foundUser,
           UUID,
           accessMode: 'user'
+        })
+
+        // Record usage: job submitted (authenticated)
+        await recordUsageEvent({
+          uuid: UUID,
+          pipeline: toPipeline(bilbomd_mode),
+          eventType: 'job_submitted',
+          accessMode: 'user',
+          user: {
+            _id: foundUser._id,
+            username: foundUser.username,
+            email: foundUser.email
+          },
+          status: 'Submitted'
         })
       } catch (error) {
         logger.error(`Job handler error: ${error}`)
@@ -234,6 +259,17 @@ const createPublicJob = async (req: Request, res: Response) => {
           accessMode: 'anonymous',
           publicId,
           client_ip_hash // Pass to handlers
+        })
+
+        // Record usage: job submitted (anonymous)
+        await recordUsageEvent({
+          uuid: UUID,
+          pipeline: toPipeline(bilbomd_mode),
+          eventType: 'job_submitted',
+          accessMode: 'anonymous',
+          publicId,
+          clientIpHash: client_ip_hash,
+          status: 'Submitted'
         })
       } catch (error) {
         logger.error(`Job handler error: ${error}`)
