@@ -31,7 +31,7 @@ const PublicJobPage = () => {
   const theme = useTheme()
   const { publicId } = useParams<{ publicId: string }>()
   const [shouldPoll, setShouldPoll] = useState(true)
-
+  const [currentTime, setCurrentTime] = useState<Date>(new Date())
   // console.log('PublicJobPage publicId:', publicId)
 
   const { data, isLoading, isError } = useGetPublicJobByIdQuery(publicId!, {
@@ -47,6 +47,16 @@ const PublicJobPage = () => {
       setShouldPoll(!isFinished)
     }
   }, [data?.status])
+
+  // Compute running state early and set up timer effect before any returns
+  const isJobRunning =
+    data?.status === 'Running' && !!data?.startedAt && !data?.completedAt
+
+  useEffect(() => {
+    if (!isJobRunning) return
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(interval)
+  }, [isJobRunning])
 
   const statusColors = getStatusColors(
     (data?.status as JobStatusEnum) || 'Pending',
@@ -90,6 +100,24 @@ const PublicJobPage = () => {
 
   const job: PublicJobStatus = data
   const progress = job.progress ?? 0
+
+  const calculateDuration = (): string | undefined => {
+    if (!job.startedAt) return undefined
+    const startTime = new Date(job.startedAt)
+    const endTime = job.completedAt
+      ? new Date(job.completedAt)
+      : isJobRunning
+        ? currentTime
+        : new Date()
+    const durationMs = endTime.getTime() - startTime.getTime()
+    const durationSeconds = Math.floor(durationMs / 1000)
+    const hours = Math.floor(durationSeconds / 3600)
+    const minutes = Math.floor((durationSeconds % 3600) / 60)
+    const seconds = durationSeconds % 60
+    if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`
+    if (minutes > 0) return `${minutes}m ${seconds}s`
+    return `${seconds}s`
+  }
 
   return (
     <Box>
@@ -142,6 +170,15 @@ const PublicJobPage = () => {
                 mr: 2
               }}
             />
+            {/* Live job timer */}
+            {calculateDuration() && (
+              <Typography
+                variant="body1"
+                sx={{ mr: 2, minWidth: '90px' }}
+              >
+                ⏱ {calculateDuration()}
+              </Typography>
+            )}
             <LinearProgress
               variant="determinate"
               value={progress}
