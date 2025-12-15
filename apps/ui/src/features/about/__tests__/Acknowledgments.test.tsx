@@ -20,7 +20,9 @@ describe('Acknowledgments', () => {
     expect(
       screen.getAllByRole('link', { name: /CHARMM/i }).length
     ).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByRole('link', { name: /FoXS/i }).length).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getAllByRole('link', { name: /FoXS/i }).length
+    ).toBeGreaterThanOrEqual(1)
     expect(screen.getByRole('link', { name: /MultiFoXS/i })).toBeInTheDocument()
   })
 })
