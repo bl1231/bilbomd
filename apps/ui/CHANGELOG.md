@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.3.2
+
+### Patch Changes
+
+- 9ab656e: Enforce `CHARMM` for BilboMD Classic with CRD/PSF inputs
+
 ## 2.3.1
 
 ### Patch Changes
