@@ -7,12 +7,19 @@ import {
   makeBilboMDSlurm,
   submitBilboMDSlurm
 } from '../functions/bilbomd-step-functions-nersc.js'
+import {
+  recordWorkerUsageEvent,
+  buildContext,
+  toPipeline
+} from '../functions/usageEvents.js'
 
 const processBilboMDJobNersc = async (MQjob: BullMQJob) => {
   try {
     await MQjob.updateProgress(1)
 
-    const foundJob = await Job.findOne({ _id: MQjob.data.jobid }).populate('user').exec()
+    const foundJob = await Job.findOne({ _id: MQjob.data.jobid })
+      .populate('user')
+      .exec()
     if (!foundJob) {
       throw new Error(`No job found for: ${MQjob.data.jobid}`)
     }
@@ -48,10 +55,49 @@ const processBilboMDJobNersc = async (MQjob: BullMQJob) => {
     let nerscJobID: string
     try {
       nerscJobID = await submitBilboMDSlurm(MQjob, foundJob)
-      logger.info(`Submitted bilbomd.slurm: ${MQjob.data.uuid} with jobID: ${nerscJobID}`)
+      logger.info(
+        `Submitted bilbomd.slurm: ${MQjob.data.uuid} with jobID: ${nerscJobID}`
+      )
+
+      // Record NERSC submission as usage event
+      await recordWorkerUsageEvent({
+        uuid: foundJob.uuid,
+        jobId: foundJob._id,
+        pipeline: toPipeline(
+          foundJob.__t.replace('BilboMd', '').toLowerCase() || 'auto'
+        ),
+        eventType: 'job_started',
+        status: 'Pending',
+        nersc: { jobid: nerscJobID, qos: foundJob.nersc?.qos },
+        context: buildContext({
+          access_mode: foundJob.access_mode,
+          user: foundJob.user,
+          public_id: undefined,
+          client_ip_hash: undefined
+        }),
+        metadata: { stage: 'submitSlurm' }
+      })
       await MQjob.updateProgress(100)
     } catch (error) {
       logger.error(`Failed to submit bilbomd.slurm: ${MQjob.data.uuid}`)
+      // Record failure to submit
+      await recordWorkerUsageEvent({
+        uuid: foundJob.uuid,
+        jobId: foundJob._id,
+        pipeline: toPipeline(
+          foundJob.__t.replace('BilboMd', '').toLowerCase() || 'auto'
+        ),
+        eventType: 'job_failed',
+        status: 'Failed',
+        nersc: { jobid: undefined, qos: foundJob.nersc?.qos },
+        context: buildContext({
+          access_mode: foundJob.access_mode,
+          user: foundJob.user,
+          public_id: undefined,
+          client_ip_hash: undefined
+        }),
+        metadata: { stage: 'submitSlurm', error: (error as Error)?.message }
+      })
       throw error
     }
   } catch (error) {
