@@ -5,6 +5,8 @@ import StatsPanel from './BilboMDStats'
 // import ConfigPanel from './ConfigPanel'
 import QueueOverviewPanel from './QueueOverviewPanel'
 import { grey } from '@mui/material/colors'
+import AnalyticsDashboard from '../analytics/AnalyticsDashboard'
+
 const AdminPanel = () => {
   useTitle('BilboMD: Admin Panel')
 
@@ -48,6 +50,9 @@ const AdminPanel = () => {
         <Box>
           <StatsPanel />
         </Box>
+      </Box>
+      <Box>
+        <AnalyticsDashboard />
       </Box>
       {/* <Box>
           {' '}
