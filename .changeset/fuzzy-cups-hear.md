@@ -44,7 +44,6 @@ Added comprehensive usage analytics infrastructure across the BilboMD stack:
 
 - Usage event emission across all pipeline services
 - NERSC job monitoring with status tracking
-- Scoper integration for protein analysis workflows
 
 ## 🧪 Testing & Quality
 
@@ -58,7 +57,3 @@ Added comprehensive usage analytics infrastructure across the BilboMD stack:
 - Usage analytics aggregation guide with MongoDB pipeline examples
 - Updated Copilot instructions with testing best practices
 - Detailed changeset documentation for future reference
-
----
-
-**Impact:** Enables data-driven insights into BilboMD platform usage, job success rates, and user behavior patterns while maintaining security and performance standards.
