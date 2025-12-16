@@ -18,7 +18,7 @@ const mockData = {
   ]
 }
 
-vi.mock('../../../../slices/analyticsApiSlice', () => ({
+vi.mock('slices/analyticsApiSlice', () => ({
   useGetSummaryQuery: () => ({
     data: mockData,
     isLoading: false,

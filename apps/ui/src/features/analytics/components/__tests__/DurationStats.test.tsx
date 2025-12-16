@@ -1,10 +1,10 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { screen } from '@testing-library/react'
-import { renderWithProviders } from '../../../../test/test-utils'
+import { renderWithProviders } from 'test/test-utils'
 import { DurationStats } from '../DurationStats'
 
-vi.mock('../../../../slices/analyticsApiSlice', () => ({
+vi.mock('slices/analyticsApiSlice', () => ({
   useGetUsageDurationStatsQuery: vi.fn(() => ({
     isLoading: false,
     data: [
@@ -13,7 +13,7 @@ vi.mock('../../../../slices/analyticsApiSlice', () => ({
     ]
   }))
 }))
-import { useGetUsageDurationStatsQuery } from '../../../../slices/analyticsApiSlice'
+import { useGetUsageDurationStatsQuery } from 'slices/analyticsApiSlice'
 
 describe('DurationStats', () => {
   beforeEach(() => {

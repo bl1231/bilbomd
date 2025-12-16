@@ -1,12 +1,12 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { screen } from '@testing-library/react'
-import { renderWithProviders } from '../../../../test/test-utils'
+import { renderWithProviders } from 'test/test-utils'
 import userEvent from '@testing-library/user-event'
 import { PipelineTrends } from '../PipelineTrends'
 
 // Mock the analytics API slice hook
-vi.mock('../../../../slices/analyticsApiSlice', () => {
+vi.mock('slices/analyticsApiSlice', () => {
   const makeData = () =>
     Array.from({ length: 30 }).map((_, i) => ({
       day: `2025-01-${String(i + 1).padStart(2, '0')}`,

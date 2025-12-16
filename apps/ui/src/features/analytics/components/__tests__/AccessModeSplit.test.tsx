@@ -1,10 +1,10 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { screen } from '@testing-library/react'
-import { renderWithProviders } from '../../../../test/test-utils'
+import { renderWithProviders } from 'test/test-utils'
 import { AccessModeSplit } from '../AccessModeSplit'
 
-vi.mock('../../../../slices/analyticsApiSlice', () => ({
+vi.mock('slices/analyticsApiSlice', () => ({
   useGetUsageAccessModeSplitQuery: vi.fn(() => ({
     isLoading: false,
     data: [
@@ -14,7 +14,7 @@ vi.mock('../../../../slices/analyticsApiSlice', () => ({
     ]
   }))
 }))
-import { useGetUsageAccessModeSplitQuery } from '../../../../slices/analyticsApiSlice'
+import { useGetUsageAccessModeSplitQuery } from 'slices/analyticsApiSlice'
 
 describe('AccessModeSplit', () => {
   beforeEach(() => {

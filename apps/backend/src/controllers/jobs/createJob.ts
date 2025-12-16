@@ -13,16 +13,7 @@ import { handleBilboMDAlphaFoldJob } from './handleBilboMDAlphaFoldJob.js'
 import applyExampleDataIfRequested from './utils/exampleData.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
 import { recordUsageEvent } from '../../services/usageEvents.js'
-type PipelineType =
-  | 'pdb'
-  | 'crd'
-  | 'auto'
-  | 'alphafold'
-  | 'sans'
-  | 'scoper'
-  | 'multi'
-const toPipeline = (mode: string): PipelineType =>
-  mode === 'crd_psf' ? 'crd' : (mode as PipelineType)
+import { toPipeline } from '@bilbomd/md-utils'
 import {
   User,
   BilboMdPDBJob,

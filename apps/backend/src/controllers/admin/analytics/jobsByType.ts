@@ -1,9 +1,6 @@
 import { Request, Response } from 'express'
 import { Job as DBJob } from '@bilbomd/mongodb-schema'
-
-// Jobs use Mongoose discriminators; __t holds the type like 'BilboMdPdb' etc.
-const toPipeline = (t?: string): string =>
-  (t || '').replace('BilboMd', '').toLowerCase() || 'auto'
+import { discriminatorToPipeline } from '@bilbomd/md-utils'
 
 export const getJobsByType = async (req: Request, res: Response) => {
   try {
@@ -23,7 +20,10 @@ export const getJobsByType = async (req: Request, res: Response) => {
       { $sort: { count: -1 } }
     ])
     res.json(
-      results.map((r) => ({ pipeline: toPipeline(r.pipeline), count: r.count }))
+      results.map((r) => ({
+        pipeline: discriminatorToPipeline(r.pipeline),
+        count: r.count
+      }))
     )
   } catch (error) {
     console.error(error)

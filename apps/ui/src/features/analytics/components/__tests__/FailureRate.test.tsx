@@ -1,10 +1,10 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { screen } from '@testing-library/react'
-import { renderWithProviders } from '../../../../test/test-utils'
+import { renderWithProviders } from 'test/test-utils'
 import { FailureRate } from '../FailureRate'
 
-vi.mock('../../../../slices/analyticsApiSlice', () => ({
+vi.mock('slices/analyticsApiSlice', () => ({
   useGetUsageSuccessRateQuery: vi.fn(() => ({
     isLoading: false,
     data: [
@@ -14,7 +14,7 @@ vi.mock('../../../../slices/analyticsApiSlice', () => ({
   }))
 }))
 
-import { useGetUsageSuccessRateQuery } from '../../../../slices/analyticsApiSlice'
+import { useGetUsageSuccessRateQuery } from 'slices/analyticsApiSlice'
 
 describe('FailureRate', () => {
   beforeEach(() => {
