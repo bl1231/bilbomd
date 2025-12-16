@@ -1,7 +1,12 @@
 // BilboMD Usage Event DTOs
 
 export type PipelineType = 'pdb' | 'crd' | 'auto' | 'sans' | 'multi'
-export type EventType = 'job_submitted' | 'job_started' | 'job_completed' | 'job_failed' | 'job_cancelled'
+export type EventType =
+  | 'job_submitted'
+  | 'job_started'
+  | 'job_completed'
+  | 'job_failed'
+  | 'job_cancelled'
 
 export interface IUserLite {
   _id: string
@@ -28,7 +33,14 @@ export interface UsageEventDTO {
   jobId: string
   pipeline: PipelineType
   eventType: EventType
-  status?: 'Submitted' | 'Pending' | 'Running' | 'Completed' | 'Error' | 'Failed' | 'Cancelled'
+  status?:
+    | 'Submitted'
+    | 'Pending'
+    | 'Running'
+    | 'Completed'
+    | 'Error'
+    | 'Failed'
+    | 'Cancelled'
   durationMs?: number
   context: IUsageEventContext
   nersc?: INerscLite
