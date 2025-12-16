@@ -1,10 +1,12 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit'
 import { apiSlice } from './api/apiSlice'
+import { analyticsApi } from '../slices/analyticsApiSlice'
 import { superfacilityApiSlice } from './api/sfapiSlice'
 import authReducer from '../slices/authSlice'
 
 const rootReducer = combineReducers({
   [apiSlice.reducerPath]: apiSlice.reducer,
+  [analyticsApi.reducerPath]: analyticsApi.reducer,
   [superfacilityApiSlice.reducerPath]: superfacilityApiSlice.reducer,
   auth: authReducer
 })
@@ -15,6 +17,7 @@ export const setupStore = (preloadedState?: Partial<RootState>) => {
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(
         apiSlice.middleware,
+        analyticsApi.middleware,
         superfacilityApiSlice.middleware
       ),
     preloadedState,
