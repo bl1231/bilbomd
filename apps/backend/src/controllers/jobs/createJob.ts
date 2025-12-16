@@ -57,10 +57,11 @@ const createNewJob = async (req: Request, res: Response) => {
       if (err) {
         logger.error(`Multer error during file upload: ${err}`)
         await fs.remove(jobDir)
-        return res.status(400).json({
+        res.status(400).json({
           message: 'File upload error',
           error: err.message || String(err)
         })
+        return
       }
 
       try {
@@ -126,10 +127,11 @@ const createNewJob = async (req: Request, res: Response) => {
       } catch (error) {
         logger.error(`Job handler error: ${error}`)
         await fs.remove(jobDir)
-        return res.status(500).json({
+        res.status(500).json({
           message: 'Job submission failed',
           error: error instanceof Error ? error.message : String(error)
         })
+        return
       }
     })
   } catch (error) {
@@ -175,10 +177,11 @@ const createPublicJob = async (req: Request, res: Response) => {
       if (err) {
         logger.error(`Multer error during file upload: ${err}`)
         await fs.remove(jobDir)
-        return res.status(400).json({
+        res.status(400).json({
           message: 'File upload error',
           error: err.message || String(err)
         })
+        return
       }
 
       try {
