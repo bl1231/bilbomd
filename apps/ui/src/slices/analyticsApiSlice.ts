@@ -1,4 +1,5 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+// import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { apiSlice } from 'app/api/apiSlice'
 
 type PipelineType = 'pdb' | 'crd' | 'auto' | 'sans' | 'multi'
 
@@ -38,31 +39,25 @@ export interface SummaryAnalytics {
   usagePerPipeline: PerPipelineCount[]
 }
 
-export const analyticsApi = createApi({
-  reducerPath: 'analyticsApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: '/api/v1/admin/analytics',
-    credentials: 'include'
-  }),
-  tagTypes: ['Analytics'],
+export const analyticsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getSummary: builder.query<SummaryAnalytics, void>({
-      query: () => ({ url: '/summary' }),
+      query: () => ({ url: '/admin/analytics/summary' }),
       providesTags: ['Analytics']
     }),
     getJobsByUser: builder.query<{ userId: string; count: number }[], void>({
-      query: () => ({ url: '/jobs/by-user' }),
+      query: () => ({ url: '/admin/analytics/jobs/by-user' }),
       providesTags: ['Analytics']
     }),
     getJobsByType: builder.query<
       { pipeline: PipelineType; count: number }[],
       void
     >({
-      query: () => ({ url: '/jobs/by-type' }),
+      query: () => ({ url: '/admin/analytics/jobs/by-type' }),
       providesTags: ['Analytics']
     }),
     getJobsByStatus: builder.query<{ status: string; count: number }[], void>({
-      query: () => ({ url: '/jobs/by-status' }),
+      query: () => ({ url: '/admin/analytics/jobs/by-status' }),
       providesTags: ['Analytics']
     }),
     getJobsTimeseries: builder.query<
@@ -75,30 +70,30 @@ export const analyticsApi = createApi({
         type?: PipelineType
       }
     >({
-      query: (params) => ({ url: '/jobs/timeseries', params }),
+      query: (params) => ({ url: '/admin/analytics/jobs/timeseries', params }),
       providesTags: ['Analytics']
     }),
     getUsagePerPipeline: builder.query<PerPipelineCount[], void>({
-      query: () => ({ url: '/usage/per-pipeline' }),
+      query: () => ({ url: '/admin/analytics/usage/per-pipeline' }),
       providesTags: ['Analytics']
     }),
     getUsageSuccessRate: builder.query<SuccessRateByPipeline[], void>({
-      query: () => ({ url: '/usage/success-rate' }),
+      query: () => ({ url: '/admin/analytics/usage/success-rate' }),
       providesTags: ['Analytics']
     }),
     getUsageDurationStats: builder.query<DurationStatsByPipeline[], void>({
-      query: () => ({ url: '/usage/duration-stats' }),
+      query: () => ({ url: '/admin/analytics/usage/duration-stats' }),
       providesTags: ['Analytics']
     }),
     getUsageAccessModeSplit: builder.query<AccessModeSplitByPipeline[], void>({
-      query: () => ({ url: '/usage/access-mode-split' }),
+      query: () => ({ url: '/admin/analytics/usage/access-mode-split' }),
       providesTags: ['Analytics']
     }),
     getUsageDailyCounts: builder.query<
       DailyCountsByPipeline[],
       { start?: string; end?: string }
     >({
-      query: (params) => ({ url: '/usage/daily', params }),
+      query: (params) => ({ url: '/admin/analytics/usage/daily', params }),
       providesTags: ['Analytics']
     })
   })
