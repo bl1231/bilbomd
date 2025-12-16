@@ -44,13 +44,15 @@ describe('pipelineUtils', () => {
     })
 
     it('should throw error for non-string input', () => {
-      expect(() => toPipeline(null as any)).toThrow(
+      expect(() => toPipeline(null as unknown as string)).toThrow(
         'Invalid pipeline mode: null'
       )
-      expect(() => toPipeline(undefined as any)).toThrow(
+      expect(() => toPipeline(undefined as unknown as string)).toThrow(
         'Invalid pipeline mode: undefined'
       )
-      expect(() => toPipeline(123 as any)).toThrow('Invalid pipeline mode: 123')
+      expect(() => toPipeline(123 as unknown as string)).toThrow(
+        'Invalid pipeline mode: 123'
+      )
     })
   })
 
@@ -64,7 +66,7 @@ describe('pipelineUtils', () => {
     it('should return auto for empty or undefined input', () => {
       expect(discriminatorToPipeline()).toBe('auto')
       expect(discriminatorToPipeline('')).toBe('auto')
-      expect(discriminatorToPipeline(null as any)).toBe('auto')
+      expect(discriminatorToPipeline(null as unknown as string)).toBe('auto')
     })
 
     it('should return auto for invalid discriminators', () => {
