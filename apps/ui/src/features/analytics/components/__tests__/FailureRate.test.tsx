@@ -36,7 +36,7 @@ describe('FailureRate', () => {
     vi.mocked(useGetUsageSuccessRateQuery).mockReturnValueOnce({
       isLoading: true,
       data: []
-    } as any)
+    } as unknown as ReturnType<typeof useGetUsageSuccessRateQuery>)
     renderWithProviders(<FailureRate />)
     // Loading shows a Skeleton instead of content; ensure content not present
     expect(
@@ -48,7 +48,7 @@ describe('FailureRate', () => {
     vi.mocked(useGetUsageSuccessRateQuery).mockReturnValueOnce({
       isLoading: false,
       data: []
-    } as any)
+    } as unknown as ReturnType<typeof useGetUsageSuccessRateQuery>)
     renderWithProviders(<FailureRate />)
     expect(
       screen.getByText(/No usage events for the selected range/i)

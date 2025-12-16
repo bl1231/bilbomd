@@ -40,7 +40,7 @@ describe('DurationStats', () => {
     vi.mocked(useGetUsageDurationStatsQuery).mockReturnValueOnce({
       isLoading: true,
       data: []
-    } as any)
+    } as unknown as ReturnType<typeof useGetUsageDurationStatsQuery>)
     renderWithProviders(<DurationStats />)
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })

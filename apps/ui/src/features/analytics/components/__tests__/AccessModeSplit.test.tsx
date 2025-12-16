@@ -42,7 +42,7 @@ describe('AccessModeSplit', () => {
     vi.mocked(useGetUsageAccessModeSplitQuery).mockReturnValueOnce({
       isLoading: true,
       data: []
-    } as any)
+    } as unknown as ReturnType<typeof useGetUsageAccessModeSplitQuery>)
     renderWithProviders(<AccessModeSplit />)
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })

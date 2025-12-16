@@ -19,7 +19,6 @@ vi.mock('../../../../slices/analyticsApiSlice', () => {
     }))
   }
 })
-import { useGetJobsTimeseriesQuery } from '../../../../slices/analyticsApiSlice'
 
 describe('PipelineTrends', () => {
   beforeEach(() => {
