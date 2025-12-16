@@ -11,7 +11,7 @@ import {
 import {
   recordWorkerUsageEvent,
   buildContext
-} from '../functions/usageEvents.js'
+} from '../functions/usage-events.js'
 
 const processMultiMDJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)

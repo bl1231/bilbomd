@@ -23,7 +23,7 @@ import {
   recordWorkerUsageEvent,
   buildContext,
   toPipeline
-} from '../services/functions/usageEvents.js'
+} from '../services/functions/usage-events.js'
 
 const fetchIncompleteJobs = async (): Promise<IJob[]> => {
   return DBJob.find({

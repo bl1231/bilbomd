@@ -17,7 +17,7 @@ import { runSingleFoXS } from '../functions/foxs-analysis.js'
 import {
   recordWorkerUsageEvent,
   buildContext
-} from '../functions/usageEvents.js'
+} from '../functions/usage-events.js'
 
 const processBilboMDCRDJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)

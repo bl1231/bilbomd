@@ -27,7 +27,7 @@ import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 import {
   recordWorkerUsageEvent,
   buildContext
-} from '../functions/usageEvents.js'
+} from '../functions/usage-events.js'
 
 const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)

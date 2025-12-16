@@ -24,7 +24,7 @@ import { prepareOpenMMConfig } from '../functions/openmm-functions.js'
 import {
   recordWorkerUsageEvent,
   buildContext
-} from '../functions/usageEvents.js'
+} from '../functions/usage-events.js'
 type StepRunners = {
   minimize: (MQjob: BullMQJob, job: IBilboMDPDBJob) => Promise<void>
   heat: (MQjob: BullMQJob, job: IBilboMDPDBJob) => Promise<void>

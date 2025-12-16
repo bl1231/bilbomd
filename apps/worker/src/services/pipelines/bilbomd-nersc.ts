@@ -11,7 +11,7 @@ import {
   recordWorkerUsageEvent,
   buildContext,
   toPipeline
-} from '../functions/usageEvents.js'
+} from '../functions/usage-events.js'
 
 const processBilboMDJobNersc = async (MQjob: BullMQJob) => {
   try {

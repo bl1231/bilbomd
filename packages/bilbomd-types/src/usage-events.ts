@@ -1,6 +1,13 @@
 // BilboMD Usage Event DTOs
 
-export type PipelineType = 'pdb' | 'crd' | 'auto' | 'sans' | 'multi'
+export type PipelineType =
+  | 'pdb'
+  | 'crd'
+  | 'auto'
+  | 'sans'
+  | 'multi'
+  | 'alphafold'
+  | 'scoper'
 export type EventType =
   | 'job_submitted'
   | 'job_started'
