@@ -12,6 +12,8 @@ import { handleBilboMDScoperJob } from './handleBilboMDScoperJob.js'
 import { handleBilboMDAlphaFoldJob } from './handleBilboMDAlphaFoldJob.js'
 import applyExampleDataIfRequested from './utils/exampleData.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
+import { recordUsageEvent } from '../../services/usageEvents.js'
+import { toPipeline } from '@bilbomd/md-utils'
 import {
   User,
   BilboMdPDBJob,
@@ -55,10 +57,11 @@ const createNewJob = async (req: Request, res: Response) => {
       if (err) {
         logger.error(`Multer error during file upload: ${err}`)
         await fs.remove(jobDir)
-        return res.status(400).json({
+        res.status(400).json({
           message: 'File upload error',
           error: err.message || String(err)
         })
+        return
       }
 
       try {
@@ -107,13 +110,30 @@ const createNewJob = async (req: Request, res: Response) => {
           UUID,
           accessMode: 'user'
         })
+
+        // Record usage: job submitted (authenticated)
+        await recordUsageEvent({
+          uuid: UUID,
+          pipeline: toPipeline(bilbomd_mode),
+          eventType: 'job_submitted',
+          accessMode: 'user',
+          user: {
+            _id: foundUser._id,
+            username: foundUser.username,
+            email: foundUser.email
+          },
+          status: 'Submitted'
+        })
       } catch (error) {
         logger.error(`Job handler error: ${error}`)
         await fs.remove(jobDir)
-        return res.status(500).json({
-          message: 'Job submission failed',
-          error: error instanceof Error ? error.message : String(error)
-        })
+        if (!res.headersSent) {
+          res.status(500).json({
+            message: 'Job submission failed',
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }
+        return
       }
     })
   } catch (error) {
@@ -125,7 +145,10 @@ const createNewJob = async (req: Request, res: Response) => {
           : 'Unknown error occurred'
 
     logger.error(`handleBilboMDJob error: ${error}`)
-    res.status(500).json({ message: msg })
+    if (!res.headersSent) {
+      res.status(500).json({ message: msg })
+    }
+    return
   }
 }
 
@@ -159,10 +182,11 @@ const createPublicJob = async (req: Request, res: Response) => {
       if (err) {
         logger.error(`Multer error during file upload: ${err}`)
         await fs.remove(jobDir)
-        return res.status(400).json({
+        res.status(400).json({
           message: 'File upload error',
           error: err.message || String(err)
         })
+        return
       }
 
       try {
@@ -235,13 +259,27 @@ const createPublicJob = async (req: Request, res: Response) => {
           publicId,
           client_ip_hash // Pass to handlers
         })
+
+        // Record usage: job submitted (anonymous)
+        await recordUsageEvent({
+          uuid: UUID,
+          pipeline: toPipeline(bilbomd_mode),
+          eventType: 'job_submitted',
+          accessMode: 'anonymous',
+          publicId,
+          clientIpHash: client_ip_hash,
+          status: 'Submitted'
+        })
       } catch (error) {
         logger.error(`Job handler error: ${error}`)
         await fs.remove(jobDir)
-        return res.status(500).json({
-          message: 'Anonymous job submission failed',
-          error: error instanceof Error ? error.message : String(error)
-        })
+        if (!res.headersSent) {
+          res.status(500).json({
+            message: 'Anonymous job submission failed',
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }
+        return
       }
     })
   } catch (error) {
@@ -253,7 +291,10 @@ const createPublicJob = async (req: Request, res: Response) => {
           : 'Unknown error occurred'
 
     logger.error(`handleBilboMDJob error: ${error}`)
-    res.status(500).json({ message: msg })
+    if (!res.headersSent) {
+      res.status(500).json({ message: msg })
+    }
+    return
   }
 }
 
@@ -302,7 +343,7 @@ const dispatchBilboMDJob = async (ctx: BilboMDDispatchContext) => {
       client_ip_hash
     })
   } else {
-    res.status(400).json({ message: 'Invalid job type' })
+    ctx.res.status(400).json({ message: 'Invalid job type' })
     return
   }
 }

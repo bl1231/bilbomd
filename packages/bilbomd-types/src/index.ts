@@ -1,3 +1,5 @@
+export * from './usage-events.js'
+export * from './aggregations.js'
 export * from './jobs/publicJob'
 export * from './jobs/jobs'
 export * from './users/user'

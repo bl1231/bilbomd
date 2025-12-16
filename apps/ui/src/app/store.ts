@@ -5,6 +5,7 @@ import authReducer from '../slices/authSlice'
 
 const rootReducer = combineReducers({
   [apiSlice.reducerPath]: apiSlice.reducer,
+
   [superfacilityApiSlice.reducerPath]: superfacilityApiSlice.reducer,
   auth: authReducer
 })

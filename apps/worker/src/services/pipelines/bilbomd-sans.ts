@@ -22,6 +22,10 @@ import {
 // import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc'
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
+import {
+  recordWorkerUsageEvent,
+  buildContext
+} from '../functions/usage-events.js'
 
 const processBilboMDSANSJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)
@@ -35,6 +39,21 @@ const processBilboMDSANSJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(5)
   foundJob.progress = 5
   await foundJob.save()
+
+  // Record job start
+  await recordWorkerUsageEvent({
+    uuid: foundJob.uuid,
+    jobId: foundJob._id,
+    pipeline: 'sans',
+    eventType: 'job_started',
+    status: 'Running',
+    context: buildContext({
+      access_mode: foundJob.access_mode,
+      user: foundJob.user,
+      public_id: foundJob.public_id,
+      client_ip_hash: foundJob.client_ip_hash
+    })
+  })
 
   // Determine MD engine
   const engine = foundJob.md_engine ?? 'CHARMM'
@@ -163,6 +182,27 @@ const processBilboMDSANSJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(100)
   foundJob.progress = 100
   await foundJob.save()
+
+  // Record job completion with duration if available
+  const durationMs =
+    foundJob.time_started && foundJob.time_completed
+      ? new Date(foundJob.time_completed).getTime() -
+        new Date(foundJob.time_started).getTime()
+      : undefined
+  await recordWorkerUsageEvent({
+    uuid: foundJob.uuid,
+    jobId: foundJob._id,
+    pipeline: 'sans',
+    eventType: 'job_completed',
+    status: 'Completed',
+    durationMs,
+    context: buildContext({
+      access_mode: foundJob.access_mode,
+      user: foundJob.user,
+      public_id: foundJob.public_id,
+      client_ip_hash: foundJob.client_ip_hash
+    })
+  })
 }
 
 export { processBilboMDSANSJob }

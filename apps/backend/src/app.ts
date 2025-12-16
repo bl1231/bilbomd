@@ -26,6 +26,7 @@ import autorgRoutes from './routes/autorg.js'
 import bullmqRoutes from './routes/bullmq.js'
 import configsRoutes from './routes/configs.js'
 import statsRoutes from './routes/stats.js'
+import adminAnalyticsRoutes from './routes/admin-analytics.js'
 import externalRoutes from './routes/external.js'
 import adminApiRoutes from './routes/admin-api.js'
 import publicJobsRoutes from './routes/public.js'
@@ -114,6 +115,7 @@ v1Router.use(
   externalRoutes
 )
 v1Router.use('/admin', adminApiRoutes)
+v1Router.use('/admin/analytics', adminAnalyticsRoutes)
 v1Router.use('/public/jobs', logPublicJobIPs, publicJobsRoutes)
 v1Router.use('/public/examples', exampleData)
 
