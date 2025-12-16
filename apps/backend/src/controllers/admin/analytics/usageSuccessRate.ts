@@ -6,7 +6,7 @@ export const getUsageSuccessRate = async (req: Request, res: Response) => {
     const results = await UsageEvent.aggregate([
       {
         $match: {
-          eventType: { $in: ['job_completed', 'job_failed', 'job_cancelled'] }
+          event_type: { $in: ['job_completed', 'job_failed', 'job_cancelled'] }
         }
       },
       {
@@ -14,7 +14,7 @@ export const getUsageSuccessRate = async (req: Request, res: Response) => {
           _id: '$pipeline',
           total: { $sum: 1 },
           successes: {
-            $sum: { $cond: [{ $eq: ['$eventType', 'job_completed'] }, 1, 0] }
+            $sum: { $cond: [{ $eq: ['$event_type', 'job_completed'] }, 1, 0] }
           }
         }
       },

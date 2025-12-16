@@ -22,7 +22,14 @@ export const FailureRate: React.FC = () => {
         >
           Success Rate by Pipeline
         </Typography>
-        {isLoading ? (
+        {!isLoading && (!data || data.length === 0) ? (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            No usage events for the selected range.
+          </Typography>
+        ) : isLoading ? (
           <Skeleton
             variant="rectangular"
             height={140}
@@ -30,18 +37,20 @@ export const FailureRate: React.FC = () => {
         ) : (
           <Stack spacing={1}>
             {data?.map((item) => {
-              const pct = Math.round((item.successRate || 0) * 100)
+              const successPct = Math.round((item.successRate ?? 0) * 100)
+              const failurePct = 100 - successPct
               return (
                 <Box key={item.pipeline}>
                   <Typography
                     variant="body2"
                     gutterBottom
                   >
-                    {item.pipeline} — {pct}% ({item.total} events)
+                    {item.pipeline} — {successPct}% success / {failurePct}%
+                    failure ({item.total} events)
                   </Typography>
                   <LinearProgress
                     variant="determinate"
-                    value={pct}
+                    value={successPct}
                   />
                 </Box>
               )

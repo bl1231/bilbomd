@@ -4,11 +4,11 @@ import { UsageEvent } from '@bilbomd/mongodb-schema'
 export const getUsageDurationStats = async (req: Request, res: Response) => {
   try {
     const results = await UsageEvent.aggregate([
-      { $match: { eventType: 'job_completed', durationMs: { $gt: 0 } } },
+      { $match: { event_type: 'job_completed', duration_ms: { $gt: 0 } } },
       {
         $group: {
           _id: '$pipeline',
-          avgMs: { $avg: '$durationMs' },
+          avgMs: { $avg: '$duration_ms' },
           count: { $sum: 1 }
         }
       },
