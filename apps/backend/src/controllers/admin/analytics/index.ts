@@ -3,7 +3,6 @@ export { getJobsByUser } from './jobsByUser.js'
 export { getJobsByType } from './jobsByType.js'
 export { getJobsByStatus } from './jobsByStatus.js'
 export { getJobsTimeSeries } from './jobsTimeSeries.js'
-
 export { getUsagePerPipeline } from './usagePerPipeline.js'
 export { getUsageSuccessRate } from './usageSuccessRate.js'
 export { getUsageDurationStats } from './usageDurationStats.js'

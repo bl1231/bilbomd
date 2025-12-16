@@ -3,7 +3,7 @@ import { UsageEvent } from '@bilbomd/mongodb-schema'
 
 export const getUsageSuccessRate = async (req: Request, res: Response) => {
   try {
-    const terminal = await UsageEvent.aggregate([
+    const results = await UsageEvent.aggregate([
       {
         $match: {
           eventType: { $in: ['job_completed', 'job_failed', 'job_cancelled'] }
@@ -34,7 +34,7 @@ export const getUsageSuccessRate = async (req: Request, res: Response) => {
       },
       { $sort: { successRate: -1 } }
     ])
-    res.json(terminal)
+    res.json(results)
   } catch (error) {
     res
       .status(500)
