@@ -140,22 +140,5 @@ export const recordWorkerUsageEvent = async (params: {
   }
 }
 
-export const toPipeline = (mode: string): PipelineType => {
-  if (mode === 'crd_psf') return 'crd'
-
-  const validPipelines: PipelineType[] = [
-    'pdb',
-    'crd',
-    'auto',
-    'alphafold',
-    'sans',
-    'scoper',
-    'multi'
-  ]
-
-  if (validPipelines.includes(mode as PipelineType)) {
-    return mode as PipelineType
-  }
-
-  throw new Error(`Invalid pipeline mode: ${mode}`)
-}
+// Re-export the shared utility for backward compatibility
+export { toPipeline } from '@bilbomd/md-utils'

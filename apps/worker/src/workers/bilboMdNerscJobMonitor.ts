@@ -21,9 +21,9 @@ import {
 } from '../services/functions/job-monitor-functions.js'
 import {
   recordWorkerUsageEvent,
-  buildContext,
-  toPipeline
+  buildContext
 } from '../services/functions/usage-events.js'
+import { discriminatorToPipeline } from '@bilbomd/md-utils'
 
 const fetchIncompleteJobs = async (): Promise<IJob[]> => {
   return DBJob.find({
@@ -167,9 +167,7 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
       await updateJobStateInMongoDB(job, nerscState)
 
       // Step 3: Handle the job based on its NERSC state
-      const pipeline = toPipeline(
-        (job.__t || '').replace('BilboMd', '').toLowerCase() || 'auto'
-      )
+      const pipeline = discriminatorToPipeline(job.__t)
       const context = buildContext({ access_mode: 'user', user: job.user })
       const started =
         job.nersc?.time_started && job.nersc.time_started.getTime() > 0
