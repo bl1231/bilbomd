@@ -40,6 +40,7 @@ const AdminPanel = () => {
           borderColor: grey[500],
           backgroundColor: grey[200],
           mx: 'auto',
+          mb: 2,
           display: 'flex',
           flexDirection: 'column',
           width: '100%',
@@ -51,16 +52,26 @@ const AdminPanel = () => {
           <StatsPanel />
         </Box>
       </Box>
-      <Box>
-        <AnalyticsDashboard />
+
+      <Box
+        sx={{
+          p: 0,
+          border: 1,
+          borderRadius: 1,
+          borderColor: grey[500],
+          backgroundColor: grey[200],
+          mx: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          maxWidth: 'calc(100vw - 260px)',
+          overflow: 'hidden'
+        }}
+      >
+        <Box>
+          <AnalyticsDashboard />
+        </Box>
       </Box>
-      {/* <Box>
-          {' '}
-          <Typography variant='h4' gutterBottom mt={4}>
-            Admin Panel - Configuration
-          </Typography>
-          <ConfigPanel />
-        </Box> */}
     </React.Fragment>
   )
 }

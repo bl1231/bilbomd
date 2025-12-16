@@ -1,7 +1,7 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { KpiCards } from '../components/KpiCards'
+import { KpiCards } from '../KpiCards'
 
 const mockData = {
   users: 5,
@@ -18,7 +18,7 @@ const mockData = {
   ]
 }
 
-vi.mock('../../../slices/analyticsApiSlice', () => ({
+vi.mock('../../../../slices/analyticsApiSlice', () => ({
   useGetSummaryQuery: () => ({
     data: mockData,
     isLoading: false,
