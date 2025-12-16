@@ -1,3 +1,12 @@
+---
+'@bilbomd/mongodb-schema': minor
+'@bilbomd/bilbomd-types': minor
+'@bilbomd/backend': minor
+'@bilbomd/scoper': patch
+'@bilbomd/worker': patch
+'@bilbomd/ui': minor
+---
+
 # Changeset: Store Job Usage Events in MongoDB and Expose Admin Analytics
 
 Branch: `238-store-job-stats-in-mongodb`
