@@ -127,10 +127,12 @@ const createNewJob = async (req: Request, res: Response) => {
       } catch (error) {
         logger.error(`Job handler error: ${error}`)
         await fs.remove(jobDir)
-        res.status(500).json({
-          message: 'Job submission failed',
-          error: error instanceof Error ? error.message : String(error)
-        })
+        if (!res.headersSent) {
+          res.status(500).json({
+            message: 'Job submission failed',
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }
         return
       }
     })
@@ -143,7 +145,10 @@ const createNewJob = async (req: Request, res: Response) => {
           : 'Unknown error occurred'
 
     logger.error(`handleBilboMDJob error: ${error}`)
-    res.status(500).json({ message: msg })
+    if (!res.headersSent) {
+      res.status(500).json({ message: msg })
+    }
+    return
   }
 }
 
@@ -268,10 +273,13 @@ const createPublicJob = async (req: Request, res: Response) => {
       } catch (error) {
         logger.error(`Job handler error: ${error}`)
         await fs.remove(jobDir)
-        return res.status(500).json({
-          message: 'Anonymous job submission failed',
-          error: error instanceof Error ? error.message : String(error)
-        })
+        if (!res.headersSent) {
+          res.status(500).json({
+            message: 'Anonymous job submission failed',
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }
+        return
       }
     })
   } catch (error) {
@@ -283,7 +291,10 @@ const createPublicJob = async (req: Request, res: Response) => {
           : 'Unknown error occurred'
 
     logger.error(`handleBilboMDJob error: ${error}`)
-    res.status(500).json({ message: msg })
+    if (!res.headersSent) {
+      res.status(500).json({ message: msg })
+    }
+    return
   }
 }
 
@@ -332,7 +343,7 @@ const dispatchBilboMDJob = async (ctx: BilboMDDispatchContext) => {
       client_ip_hash
     })
   } else {
-    res.status(400).json({ message: 'Invalid job type' })
+    ctx.res.status(400).json({ message: 'Invalid job type' })
     return
   }
 }
