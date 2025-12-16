@@ -54,7 +54,9 @@ describe('parseDateSafe', () => {
 describe('formatDateSafe', () => {
   it('returns fallback when date cannot be parsed', () => {
     expect(formatDateSafe(null, 'MM/dd/yyyy', 'N/A')).toBe('N/A')
-    expect(formatDateSafe('bad-date', 'MM/dd/yyyy', 'fallback')).toBe('fallback')
+    expect(formatDateSafe('bad-date', 'MM/dd/yyyy', 'fallback')).toBe(
+      'fallback'
+    )
   })
 
   it('formats with default pattern into a recognizable shape', () => {

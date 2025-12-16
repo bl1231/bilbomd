@@ -2,11 +2,18 @@ import { describe, it, expect } from 'vitest'
 import { parsePLDDTFromPDB } from '../pdbUtils'
 
 // Helper to build minimal PDB ATOM lines with correct column positions
-const buildAtomLine = (chainId: string, residueNumber: number, plddt: number) => {
+const buildAtomLine = (
+  chainId: string,
+  residueNumber: number,
+  plddt: number
+) => {
   const width = 66 // we need at least up to index 65
   const arr = Array<string>(width).fill(' ')
   // "ATOM" at start
-  arr[0] = 'A'; arr[1] = 'T'; arr[2] = 'O'; arr[3] = 'M'
+  arr[0] = 'A'
+  arr[1] = 'T'
+  arr[2] = 'O'
+  arr[3] = 'M'
   // chain at index 21 (Column 22)
   arr[21] = (chainId || ' ').charAt(0)
   // residue number at substring(22,26) → indices 22..25
@@ -71,7 +78,7 @@ describe('parsePLDDTFromPDB', () => {
   it('handles final residue push correctly', () => {
     const content = [
       buildAtomLine('C', 5, 42.0),
-      buildAtomLine('C', 5, 44.0), // average to 43.0
+      buildAtomLine('C', 5, 44.0) // average to 43.0
     ].join('\n')
 
     const { data, chainBoundaries } = parsePLDDTFromPDB(content)
