@@ -1,7 +1,5 @@
 import { Schema, model } from 'mongoose'
 import {
-  PipelineType,
-  EventType,
   IUsageEventContext,
   IUsageEvent
 } from '../interfaces/usageEventInterface.js'
@@ -73,6 +71,25 @@ const usageEventSchema = new Schema<IUsageEvent>(
 )
 
 usageEventSchema.index({ pipeline: 1, event_type: 1, timestamp: -1 })
+
+usageEventSchema.index({ 'nersc.jobid': 1, timestamp: -1 })
+
+usageEventSchema.index({
+  'context.access_mode': 1,
+  pipeline: 1,
+  event_type: 1,
+  timestamp: -1
+})
+
+usageEventSchema.index(
+  { event_type: 1, pipeline: 1, duration_ms: 1, timestamp: -1 },
+  {
+    partialFilterExpression: {
+      event_type: 'job_completed',
+      duration_ms: { $gt: 0 }
+    }
+  }
+)
 
 export const UsageEvent = model<IUsageEvent>('UsageEvent', usageEventSchema)
 export const usageEventSchemaRef = usageEventSchema
