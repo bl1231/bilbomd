@@ -38,7 +38,9 @@ export const getUsageDailyCounts = async (req: Request, res: Response) => {
       { $sort: { day: 1, pipeline: 1 } }
     ])
     res.json(results)
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to compute usage daily counts' })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: `Failed to compute usage daily counts: ${error}` })
   }
 }

@@ -21,7 +21,9 @@ export const getUsageAccessModeSplit = async (req: Request, res: Response) => {
       { $sort: { pipeline: 1, access_mode: 1 } }
     ])
     res.json(results)
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to compute usage access mode split' })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: `Failed to compute usage access mode split: ${error}` })
   }
 }

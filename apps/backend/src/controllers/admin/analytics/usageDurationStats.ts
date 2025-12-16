@@ -16,7 +16,9 @@ export const getUsageDurationStats = async (req: Request, res: Response) => {
       { $sort: { avgMs: 1 } }
     ])
     res.json(results)
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to compute usage duration stats' })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: `Failed to compute usage duration stats: ${error}` })
   }
 }

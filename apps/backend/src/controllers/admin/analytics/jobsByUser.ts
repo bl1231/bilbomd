@@ -10,7 +10,7 @@ export const getJobsByUser = async (req: Request, res: Response) => {
       { $sort: { count: -1 } }
     ])
     res.json(results)
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to compute jobs by user' })
+  } catch (error) {
+    res.status(500).json({ error: `Failed to compute jobs by user: ${error}` })
   }
 }

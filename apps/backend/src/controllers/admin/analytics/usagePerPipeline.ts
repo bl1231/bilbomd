@@ -9,7 +9,9 @@ export const getUsagePerPipeline = async (req: Request, res: Response) => {
       { $sort: { count: -1 } }
     ])
     res.json(results)
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to compute usage per pipeline' })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: `Failed to compute usage per pipeline: ${error}` })
   }
 }

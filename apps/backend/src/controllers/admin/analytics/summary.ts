@@ -30,7 +30,9 @@ export const getSummaryAnalytics = async (req: Request, res: Response) => {
       jobsFailed: failedCount,
       usagePerPipeline: perPipeline
     })
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to compute summary analytics' })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: `Failed to compute summary analytics: ${error}` })
   }
 }

@@ -9,7 +9,9 @@ export const getJobsByStatus = async (req: Request, res: Response) => {
       { $sort: { count: -1 } }
     ])
     res.json(results)
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to compute jobs by status' })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: `Failed to compute jobs by status: ${error}` })
   }
 }

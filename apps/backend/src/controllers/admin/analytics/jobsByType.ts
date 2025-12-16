@@ -25,7 +25,8 @@ export const getJobsByType = async (req: Request, res: Response) => {
     res.json(
       results.map((r) => ({ pipeline: toPipeline(r.pipeline), count: r.count }))
     )
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to compute jobs by type' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: `Failed to compute jobs by type: ${error}` })
   }
 }

@@ -40,7 +40,9 @@ export const getJobsTimeSeries = async (req: Request, res: Response) => {
       { $sort: { day: 1 } }
     ])
     res.json(results)
-  } catch {
-    res.status(500).json({ error: 'Failed to compute jobs time series' })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: `Failed to compute jobs time series: ${error}` })
   }
 }

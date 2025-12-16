@@ -35,7 +35,9 @@ export const getUsageSuccessRate = async (req: Request, res: Response) => {
       { $sort: { successRate: -1 } }
     ])
     res.json(terminal)
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to compute usage success rate' })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: `Failed to compute usage success rate: ${error}` })
   }
 }
