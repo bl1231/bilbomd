@@ -214,7 +214,7 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                           const next = (e.target.value as string[]).map(
                             (r) => r as UserRole
                           )
-                          setFieldValue('roles', next)
+                          void setFieldValue('roles', next)
                         }}
                         input={<OutlinedInput label="Roles" />}
                         renderValue={(selected) =>
