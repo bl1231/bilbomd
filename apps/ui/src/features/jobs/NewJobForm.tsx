@@ -341,6 +341,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   'title',
                                   'example-bilbomd-pdb-job'
                                 )
+                                void setFieldValue('rg', '33')
                                 void setFieldValue('rg_min', '30')
                                 void setFieldValue('rg_max', '49')
                                 void setFieldValue('num_conf', 2)
@@ -349,6 +350,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   'title',
                                   'example-bilbomd-crd-psf-job'
                                 )
+                                void setFieldValue('rg', '27')
                                 void setFieldValue('rg_min', '26')
                                 void setFieldValue('rg_max', '41')
                                 void setFieldValue('num_conf', 2)
