@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.4.2
+
+### Patch Changes
+
+- f3afd62: Fix `Rg` validation issue for example data. `rg` must be defined.
+
 ## 2.4.1
 
 ### Patch Changes
