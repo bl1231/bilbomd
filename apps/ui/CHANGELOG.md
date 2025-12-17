@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.4.3
+
+### Patch Changes
+
+- 955c712: Add tests for RTK Query
+
 ## 2.4.2
 
 ### Patch Changes
