@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.4.4
+
+### Patch Changes
+
+- cec10f2: Add `md_engine` to the Jobs table.
+
 ## 2.4.3
 
 ### Patch Changes
