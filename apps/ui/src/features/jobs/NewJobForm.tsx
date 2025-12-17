@@ -92,7 +92,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     inp_file: '',
     dat_file: '',
     num_conf: '',
-    rg: '10',
+    rg: '',
     rg_min: '',
     rg_max: '',
     md_engine: 'charmm'
@@ -341,16 +341,16 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   'title',
                                   'example-bilbomd-pdb-job'
                                 )
-                                void setFieldValue('rg_min', '26')
-                                void setFieldValue('rg_max', '42')
-                                void setFieldValue('num_conf', 1)
+                                void setFieldValue('rg_min', '30')
+                                void setFieldValue('rg_max', '49')
+                                void setFieldValue('num_conf', 2)
                               } else {
                                 void setFieldValue(
                                   'title',
                                   'example-bilbomd-crd-psf-job'
                                 )
-                                void setFieldValue('rg_min', '20')
-                                void setFieldValue('rg_max', '50')
+                                void setFieldValue('rg_min', '26')
+                                void setFieldValue('rg_max', '41')
                                 void setFieldValue('num_conf', 2)
                               }
                             } else {
@@ -446,6 +446,10 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         onChange={(val) => {
                           if (values.bilbomd_mode !== 'crd_psf') {
                             void setFieldValue('md_engine', val)
+                            // For OpenMM, lock num_conf to the default (600)
+                            if (val === 'openmm') {
+                              void setFieldValue('num_conf', 3)
+                            }
                           }
                         }}
                         disabled={
@@ -739,11 +743,14 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         sx={{ width: '520px' }}
                         onChange={handleChange}
                         onBlur={handleBlur}
+                        disabled={isSubmitting || values.md_engine === 'openmm'}
                         error={Boolean(errors.num_conf && touched.num_conf)}
                         helperText={
                           errors.num_conf && touched.num_conf
                             ? errors.num_conf
-                            : 'Number of conformations to sample per Rg'
+                            : values.md_engine === 'openmm'
+                              ? 'OpenMM uses a fixed setting (600)'
+                              : 'Number of conformations to sample per Rg'
                         }
                       >
                         <MenuItem
