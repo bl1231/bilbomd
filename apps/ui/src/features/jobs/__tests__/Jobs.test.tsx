@@ -1,10 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from 'test/rendersWithProviders'
 import Jobs from '../Jobs'
 import { server } from 'test/server'
 import { http, HttpResponse } from 'msw'
 import type { BilboMDJobDTO, BilboMDPDBDTO } from '@bilbomd/bilbomd-types'
+import useAuth from 'hooks/useAuth'
+import { useGetConfigsQuery } from 'slices/configsApiSlice'
+// Local type for mocking the configs query hook
+type MockConfigsQueryResult = {
+  data: { useNersc: string }
+  error: null
+  isLoading: boolean
+  refetch: () => void
+}
 
 vi.mock('hooks/useAuth', () => ({
   default: vi.fn(() => ({
@@ -17,6 +27,19 @@ vi.mock('hooks/useAuth', () => ({
     isAuthenticated: true
   }))
 }))
+
+vi.mock('slices/configsApiSlice', () => {
+  const defaultReturn: MockConfigsQueryResult = {
+    data: { useNersc: 'false' },
+    error: null,
+    isLoading: false,
+    refetch: vi.fn()
+  }
+  const useGetConfigsQuery = vi.fn<() => MockConfigsQueryResult>(
+    () => defaultReturn
+  )
+  return { useGetConfigsQuery }
+})
 
 const createMockPdbMongo = (
   overrides: Partial<BilboMDPDBDTO> = {}
@@ -53,9 +76,17 @@ const createMockJobDTO = (
   ...overrides
 })
 
+import type { INerscInfo } from '@bilbomd/mongodb-schema/frontend'
 describe('Jobs table', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default config: non-NERSC path
+    vi.mocked(useGetConfigsQuery).mockReturnValue({
+      data: { useNersc: 'false' },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn()
+    })
   })
   it('renders the Engine column header', async () => {
     server.use(
@@ -88,5 +119,203 @@ describe('Jobs table', () => {
     // Assert a cell with the engine value renders
     const engineCell = await screen.findByText('CHARMM')
     expect(engineCell).toBeInTheDocument()
+  })
+
+  it('shows User → Engine → Status order for admins', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      username: 'admin',
+      roles: ['Admin'],
+      status: 'Admin',
+      isManager: false,
+      isAdmin: true,
+      email: 'admin@example.com',
+      isAuthenticated: true
+    })
+
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([createMockJobDTO()])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    const headers = await screen.findAllByRole('columnheader')
+    const headerTexts = headers.map((h) => h.textContent?.trim() || '')
+    const userIdx = headerTexts.findIndex((t) => t === 'User')
+    const engineIdx = headerTexts.findIndex((t) => t === 'Engine')
+    const statusIdx = headerTexts.findIndex((t) => t === 'Status')
+    expect(userIdx).toBeGreaterThan(-1)
+    expect(engineIdx).toBeGreaterThan(-1)
+    expect(statusIdx).toBeGreaterThan(-1)
+    expect(userIdx).toBeLessThan(engineIdx)
+    expect(engineIdx).toBeLessThan(statusIdx)
+  })
+
+  it('renders NERSC columns and queue/run times when enabled', async () => {
+    vi.mocked(useGetConfigsQuery).mockReturnValue({
+      data: { useNersc: 'true' },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn()
+    })
+
+    const nerscTimes: INerscInfo = {
+      time_submitted: new Date('2025-01-01T00:00:00Z'),
+      time_started: new Date('2025-01-01T00:05:00Z'),
+      time_completed: new Date('2025-01-01T00:15:00Z'),
+      jobid: '12345',
+      state: 'RUNNING',
+      qos: 'debug'
+    }
+
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([
+          createMockJobDTO({
+            mongo: createMockPdbMongo({
+              status: 'Running',
+              nersc: nerscTimes
+            })
+          })
+        ])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    // Headers present
+    expect(
+      await screen.findByRole('columnheader', { name: /queue time/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('columnheader', { name: /run time/i })
+    ).toBeInTheDocument()
+
+    // Cells show computed durations
+    expect(await screen.findByText(/5min/i)).toBeInTheDocument()
+    expect(screen.getByText(/10min/i)).toBeInTheDocument()
+  })
+
+  it('filters by Job Type and Status and resets', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      username: 'admin',
+      roles: ['Admin'],
+      status: 'Admin',
+      isManager: false,
+      isAdmin: true,
+      email: 'admin@example.com',
+      isAuthenticated: true
+    })
+
+    const job1 = createMockJobDTO({
+      mongo: createMockPdbMongo({
+        title: 'PDB Job',
+        jobType: 'pdb',
+        status: 'Completed'
+      })
+    })
+    const job2 = createMockJobDTO({
+      id: 'job-2',
+      username: 'other',
+      mongo: createMockPdbMongo({
+        title: 'AUTO Job',
+        jobType: 'auto',
+        status: 'Running'
+      })
+    })
+
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([job1, job2])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    // Both jobs visible initially (via count chip)
+    expect(await screen.findByText(/2 jobs?/i)).toBeInTheDocument()
+
+    // Filter by Job Type = pdb
+    const typeCombo = screen.getByRole('combobox', { name: /job type/i })
+    await userEvent.click(typeCombo)
+    const listbox = await screen.findByRole('listbox')
+    await userEvent.click(within(listbox).getByRole('option', { name: 'pdb' }))
+
+    expect(await screen.findByText(/1 job/i)).toBeInTheDocument()
+
+    // Filter by Status = Completed (no-op for current state but exercise control)
+    const statusCombo = screen.getByRole('combobox', { name: /status/i })
+    await userEvent.click(statusCombo)
+    const statusList = await screen.findByRole('listbox')
+    await userEvent.click(
+      within(statusList).getByRole('option', { name: 'Completed' })
+    )
+    expect(screen.getByText(/1 job/i)).toBeInTheDocument()
+
+    // Reset filters restores all
+    await userEvent.click(
+      screen.getByRole('button', { name: /reset filters/i })
+    )
+    expect(await screen.findByText(/2 jobs?/i)).toBeInTheDocument()
+  })
+
+  it('opens Delete dialog from More Actions menu', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([
+          createMockJobDTO({
+            mongo: createMockPdbMongo({ title: 'Deletable Job' })
+          })
+        ])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    const moreBtn = await screen.findByRole('button', { name: /more actions/i })
+    await userEvent.click(moreBtn)
+
+    const deleteItem = await screen.findByRole('menuitem', { name: /delete/i })
+    await userEvent.click(deleteItem)
+
+    const dialog = await screen.findByRole('dialog', {
+      name: /confirm delete/i
+    })
+    expect(dialog).toBeInTheDocument()
+    expect(within(dialog).getByText(/deletable job/i)).toBeInTheDocument()
+
+    // Close dialog and ensure it disappears
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }))
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: /confirm delete/i })
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows empty-state info alert when no jobs', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    expect(await screen.findByText(/no jobs found/i)).toBeInTheDocument()
+  })
+
+  it('shows empty-state when backend returns 204 No Content', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return new Response(null, { status: 204 })
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    // RTK Query treats 204 as success with empty data
+    expect(await screen.findByText(/no jobs found/i)).toBeInTheDocument()
   })
 })
