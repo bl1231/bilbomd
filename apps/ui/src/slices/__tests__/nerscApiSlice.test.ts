@@ -72,7 +72,7 @@ describe('nerscApiSlice', () => {
   describe('getNerscStatus', () => {
     it('should fetch NERSC system status successfully', async () => {
       const result = await storeRef.store.dispatch(
-        nerscApiSlice.endpoints.getNerscStatus.initiate()
+        nerscApiSlice.endpoints.getNerscStatus.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -89,7 +89,7 @@ describe('nerscApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        nerscApiSlice.endpoints.getNerscStatus.initiate()
+        nerscApiSlice.endpoints.getNerscStatus.initiate(undefined)
       )
 
       expect(result.data).toEqual([])
@@ -111,7 +111,7 @@ describe('nerscApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        nerscApiSlice.endpoints.getNerscStatus.initiate()
+        nerscApiSlice.endpoints.getNerscStatus.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()
@@ -124,7 +124,7 @@ describe('nerscApiSlice', () => {
   describe('getNerscOutages', () => {
     it('should fetch NERSC planned outages successfully', async () => {
       const result = await storeRef.store.dispatch(
-        nerscApiSlice.endpoints.getNerscOutages.initiate()
+        nerscApiSlice.endpoints.getNerscOutages.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -141,7 +141,7 @@ describe('nerscApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        nerscApiSlice.endpoints.getNerscOutages.initiate()
+        nerscApiSlice.endpoints.getNerscOutages.initiate(undefined)
       )
 
       expect(result.data).toEqual([])
@@ -160,7 +160,7 @@ describe('nerscApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        nerscApiSlice.endpoints.getNerscOutages.initiate()
+        nerscApiSlice.endpoints.getNerscOutages.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()

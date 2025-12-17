@@ -1,4 +1,4 @@
-import { http } from 'msw'
+import { http, HttpResponse } from 'msw'
 
 const mockUsers = [
   {
@@ -154,8 +154,8 @@ export const handlers = [
   }),
 
   http.post('http://localhost:3003/api/v1/jobs', async ({ request }) => {
-    const body = await request.json()
-    if (body.invalidData) {
+    const body = (await request.json()) as Record<string, any>
+    if (body?.invalidData) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -177,7 +177,7 @@ export const handlers = [
   }),
 
   http.patch('http://localhost:3003/api/v1/jobs', async ({ request }) => {
-    const body = await request.json()
+    const body = (await request.json()) as Record<string, any>
     return new Response(JSON.stringify({ ...mockJob, ...body }), {
       headers: {
         'Content-Type': 'application/json'
@@ -304,7 +304,7 @@ export const handlers = [
   }),
 
   http.post('http://localhost:3003/api/v1/users', async ({ request }) => {
-    const body = await request.json()
+    const body = (await request.json()) as Record<string, any>
     return new Response(JSON.stringify({ ...mockUsers[0], ...body }), {
       headers: {
         'Content-Type': 'application/json'
@@ -313,7 +313,7 @@ export const handlers = [
   }),
 
   http.patch('http://localhost:3003/api/v1/users', async ({ request }) => {
-    const body = await request.json()
+    const body = (await request.json()) as Record<string, any>
     return new Response(JSON.stringify({ ...mockUsers[0], ...body }), {
       headers: {
         'Content-Type': 'application/json'

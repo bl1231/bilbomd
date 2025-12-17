@@ -36,7 +36,7 @@ describe('configApiSlice', () => {
   describe('getConfigs', () => {
     it('should fetch configs successfully', async () => {
       const result = await storeRef.store.dispatch(
-        configApiSlice.endpoints.getConfigs.initiate()
+        configApiSlice.endpoints.getConfigs.initiate({})
       )
 
       expect(result.data).toBeDefined()
@@ -53,7 +53,7 @@ describe('configApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        configApiSlice.endpoints.getConfigs.initiate()
+        configApiSlice.endpoints.getConfigs.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -73,7 +73,7 @@ describe('configApiSlice', () => {
 
       try {
         await freshStoreRef.store.dispatch(
-          configApiSlice.endpoints.getConfigs.initiate()
+          configApiSlice.endpoints.getConfigs.initiate({})
         )
         expect.fail('Expected query to throw')
       } catch (error) {
@@ -93,7 +93,7 @@ describe('configApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        configApiSlice.endpoints.getConfigs.initiate()
+        configApiSlice.endpoints.getConfigs.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -112,7 +112,7 @@ describe('configApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        configApiSlice.endpoints.getConfigs.initiate()
+        configApiSlice.endpoints.getConfigs.initiate({})
       )
 
       expect(result.data).toBeNull()

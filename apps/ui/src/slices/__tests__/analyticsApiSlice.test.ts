@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { setupApiStore } from '../../test/testUtils'
 import { analyticsApi, type SummaryAnalytics } from '../analyticsApiSlice'
 import { server } from '../../test/server'
@@ -83,7 +83,7 @@ describe('analyticsApiSlice', () => {
   describe('getSummary', () => {
     it('should fetch summary analytics successfully', async () => {
       const result = await storeRef.store.dispatch(
-        analyticsApi.endpoints.getSummary.initiate()
+        analyticsApi.endpoints.getSummary.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -94,7 +94,7 @@ describe('analyticsApiSlice', () => {
   describe('getJobsByUser', () => {
     it('should fetch jobs by user successfully', async () => {
       const result = await storeRef.store.dispatch(
-        analyticsApi.endpoints.getJobsByUser.initiate()
+        analyticsApi.endpoints.getJobsByUser.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -105,7 +105,7 @@ describe('analyticsApiSlice', () => {
   describe('getUsageSuccessRate', () => {
     it('should fetch success rates by pipeline successfully', async () => {
       const result = await storeRef.store.dispatch(
-        analyticsApi.endpoints.getUsageSuccessRate.initiate()
+        analyticsApi.endpoints.getUsageSuccessRate.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -116,7 +116,7 @@ describe('analyticsApiSlice', () => {
   describe('getUsageDurationStats', () => {
     it('should fetch duration statistics successfully', async () => {
       const result = await storeRef.store.dispatch(
-        analyticsApi.endpoints.getUsageDurationStats.initiate()
+        analyticsApi.endpoints.getUsageDurationStats.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -127,7 +127,7 @@ describe('analyticsApiSlice', () => {
   describe('getUsageAccessModeSplit', () => {
     it('should fetch access mode statistics successfully', async () => {
       const result = await storeRef.store.dispatch(
-        analyticsApi.endpoints.getUsageAccessModeSplit.initiate()
+        analyticsApi.endpoints.getUsageAccessModeSplit.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -157,7 +157,7 @@ describe('analyticsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        analyticsApi.endpoints.getSummary.initiate()
+        analyticsApi.endpoints.getSummary.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()

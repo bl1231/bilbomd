@@ -46,11 +46,11 @@ describe('usersApiSlice', () => {
         return HttpResponse.json(mockUsersResponse)
       }),
       http.post('/api/v1/users', async ({ request }) => {
-        const body = await request.json()
+        const body = (await request.json()) as Record<string, any>
         return HttpResponse.json({ ...mockUser, ...body })
       }),
       http.patch('/api/v1/users', async ({ request }) => {
-        const body = await request.json()
+        const body = (await request.json()) as Record<string, any>
         return HttpResponse.json({ ...mockUser, ...body })
       }),
       http.delete('/api/v1/users/:id', ({ params }) => {
@@ -66,13 +66,13 @@ describe('usersApiSlice', () => {
   describe('getUsers', () => {
     it('should fetch users and transform them using entity adapter', async () => {
       const result = await storeRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate()
+        usersApiSlice.endpoints.getUsers.initiate({})
       )
 
       expect(result.data).toBeDefined()
       expect(result.error).toBeUndefined()
-      expect(result.data?.entities).toBeDefined()
-      expect(result.data?.ids).toContain('user-123')
+      expect((result.data as any)?.entities).toBeDefined()
+      expect((result.data as any)?.ids).toContain('user-123')
       expect(result.data?.entities['user-123']).toMatchObject({
         ...mockUser,
         id: 'user-123'
@@ -86,8 +86,8 @@ describe('usersApiSlice', () => {
 
       // If we have cached data, verify the entity structure
       if (result?.data) {
-        expect(result.data.entities).toBeDefined()
-        expect(result.data.ids).toBeDefined()
+        expect((result.data as any).entities).toBeDefined()
+        expect((result.data as any).ids).toBeDefined()
       } else {
         expect(true).toBe(true) // Test passes if no cached data
       }
@@ -102,7 +102,7 @@ describe('usersApiSlice', () => {
     it('should handle different response statuses correctly', async () => {
       // Test successful response
       const result = await storeRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate()
+        usersApiSlice.endpoints.getUsers.initiate({})
       )
 
       // Should handle the response without throwing errors
@@ -126,7 +126,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate()
+        usersApiSlice.endpoints.getUsers.initiate({})
       )
 
       expect(result.data).toBeDefined()
@@ -147,7 +147,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate()
+        usersApiSlice.endpoints.getUsers.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -166,7 +166,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate()
+        usersApiSlice.endpoints.getUsers.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -186,7 +186,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate()
+        usersApiSlice.endpoints.getUsers.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -374,7 +374,7 @@ describe('usersApiSlice', () => {
 
       try {
         await freshStoreRef.store.dispatch(
-          usersApiSlice.endpoints.getUsers.initiate()
+          usersApiSlice.endpoints.getUsers.initiate({})
         )
         expect.fail('Expected query to throw')
       } catch (error) {
@@ -394,7 +394,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate()
+        usersApiSlice.endpoints.getUsers.initiate({})
       )
 
       expect(result.error).toBeDefined()

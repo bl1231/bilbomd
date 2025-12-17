@@ -8,37 +8,52 @@ import type { IFeedbackData } from '@bilbomd/mongodb-schema/frontend'
 import type { FoxsData } from '../../types/foxs'
 
 const mockAnonJobResponse: AnonJobResponse = {
-  success: true,
-  publicId: 'pub-123',
-  message: 'Job submitted successfully'
+  message: 'Job submitted successfully',
+  jobid: 'job-123',
+  uuid: 'uuid-123',
+  md_engine: 'CHARMM',
+  publicId: 'pub-123'
 }
 
 const mockPublicJobStatus: PublicJobStatus = {
   publicId: 'pub-123',
+  jobId: 'job-123',
+  uuid: 'uuid-123',
+  jobType: 'pdb',
   status: 'Completed',
   progress: 100,
-  title: 'Public Test Job',
-  jobType: 'pdb',
-  time_started: '2023-12-01T10:00:00Z',
-  time_completed: '2023-12-01T11:00:00Z',
-  email: null
+  md_engine: 'CHARMM',
+  submittedAt: new Date('2023-12-01T09:00:00Z'),
+  startedAt: new Date('2023-12-01T10:00:00Z'),
+  completedAt: new Date('2023-12-01T11:00:00Z')
 }
 
 const mockFoxsData: FoxsData[] = [
   {
     filename: 'structure_001.pdb',
-    chi_sq: 1.23,
-    rg: 25.4,
-    dmax: 80.5,
-    excluded_points: []
+    chisq: 1.23,
+    c1: '1.0',
+    c2: '0.0',
+    data: []
   }
 ]
 
 const mockFeedbackData: IFeedbackData = {
-  publicId: 'pub-123',
-  rating: 5,
-  comments: 'Great results!',
-  timestamp: '2023-12-01T12:00:00Z'
+  mw_saxs: 25.4,
+  mw_model: 24.8,
+  mw_err: 0.6,
+  best_model_dat_file: 'best_model.dat',
+  best_ensemble_pdb_file: 'ensemble.pdb',
+  overall_chi_square: 1.23,
+  q_ranges: [0.1, 0.5],
+  chi_squares_of_regions: [1.1, 1.3],
+  residuals_of_regions: [0.1, 0.2],
+  mw_feedback: 'Good MW agreement',
+  overall_chi_square_feedback: 'Excellent fit',
+  highest_chi_square_feedback: 'Good',
+  second_highest_chi_square_feedback: 'Acceptable',
+  regional_chi_square_feedback: 'Good regional fit',
+  timestamp: new Date('2023-12-01T12:00:00Z')
 }
 
 const mockEnsemblePdbFiles = {

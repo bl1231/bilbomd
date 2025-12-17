@@ -4,6 +4,7 @@ import { setupListeners } from '@reduxjs/toolkit/query'
 import { apiSlice } from '../app/api/apiSlice'
 import { superfacilityApiSlice } from '../app/api/sfapiSlice'
 import authReducer from '../slices/authSlice'
+import type { RootState, AppStore } from '../app/store'
 
 const rootReducer = combineReducers({
   [apiSlice.reducerPath]: apiSlice.reducer,
@@ -12,7 +13,7 @@ const rootReducer = combineReducers({
 })
 
 interface StoreRef {
-  store: EnhancedStore
+  store: AppStore
   cleanup: () => void
 }
 
@@ -21,7 +22,9 @@ interface StoreRef {
  * @param preloadedState - Initial state for the store
  * @returns Object containing the configured store and cleanup function
  */
-export const setupApiStore = (preloadedState?: any): StoreRef => {
+export const setupApiStore = (
+  preloadedState?: Partial<RootState>
+): StoreRef => {
   const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
@@ -33,7 +36,7 @@ export const setupApiStore = (preloadedState?: any): StoreRef => {
       auth: { token: 'test-token' },
       ...preloadedState
     }
-  })
+  }) as AppStore
 
   // Setup listeners for refetchOnFocus/refetchOnReconnect behaviors
   const cleanup = setupListeners(store.dispatch)
@@ -81,7 +84,7 @@ export const createMockFormData = (data: Record<string, any>): FormData => {
  * @param timeout - Maximum time to wait in milliseconds
  */
 export const waitForApiState = async (
-  store: EnhancedStore,
+  store: AppStore,
   timeout = 1000
 ): Promise<void> => {
   const startTime = Date.now()

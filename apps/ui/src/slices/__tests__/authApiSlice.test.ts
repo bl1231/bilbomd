@@ -26,7 +26,7 @@ describe('authApiSlice', () => {
       http.post(
         'http://localhost:3003/api/v1/auth/otp',
         async ({ request }) => {
-          const body = await request.json()
+          const _body = await request.json()
           return HttpResponse.json(mockLoginResponse)
         }
       ),
@@ -42,7 +42,7 @@ describe('authApiSlice', () => {
       http.post(
         'http://localhost:3003/api/v1/auth/orcid/finalize',
         async ({ request }) => {
-          const body = await request.json()
+          const _body = await request.json()
           return HttpResponse.json({ success: true })
         }
       )
@@ -90,7 +90,7 @@ describe('authApiSlice', () => {
   describe('sendLogout', () => {
     it('should send logout request and clear state', async () => {
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.sendLogout.initiate()
+        authApiSlice.endpoints.sendLogout.initiate({})
       )
 
       expect(result.data).toBeDefined()
@@ -105,7 +105,7 @@ describe('authApiSlice', () => {
       )
 
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.sendLogout.initiate()
+        authApiSlice.endpoints.sendLogout.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -116,7 +116,7 @@ describe('authApiSlice', () => {
   describe('refresh', () => {
     it('should refresh access token', async () => {
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.refresh.initiate()
+        authApiSlice.endpoints.refresh.initiate({})
       )
 
       expect(result.data).toBeDefined()
@@ -131,7 +131,7 @@ describe('authApiSlice', () => {
       )
 
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.refresh.initiate()
+        authApiSlice.endpoints.refresh.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -142,7 +142,7 @@ describe('authApiSlice', () => {
   describe('getOrcidSession', () => {
     it('should fetch ORCID session information', async () => {
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.getOrcidSession.initiate()
+        authApiSlice.endpoints.getOrcidSession.initiate({})
       )
 
       expect(result.data).toBeDefined()

@@ -93,7 +93,7 @@ describe('adminApiSlice', () => {
   describe('getQueues', () => {
     it('should fetch queues successfully', async () => {
       const result = await storeRef.store.dispatch(
-        adminApiSlice.endpoints.getQueues.initiate()
+        adminApiSlice.endpoints.getQueues.initiate({})
       )
 
       expect(result.data).toBeDefined()
