@@ -197,17 +197,7 @@ describe('Jobs table', () => {
     expect(screen.getByText(/10min/i)).toBeInTheDocument()
   })
 
-  it('filters by Job Type and Status and resets', async () => {
-    vi.mocked(useAuth).mockReturnValue({
-      username: 'admin',
-      roles: ['Admin'],
-      status: 'Admin',
-      isManager: false,
-      isAdmin: true,
-      email: 'admin@example.com',
-      isAuthenticated: true
-    })
-
+  describe('with multiple jobs', () => {
     const job1 = createMockJobDTO({
       mongo: createMockPdbMongo({
         title: 'PDB Job',
@@ -225,39 +215,69 @@ describe('Jobs table', () => {
       })
     })
 
-    server.use(
-      http.get('http://localhost:3003/api/v1/jobs', () => {
-        return HttpResponse.json([job1, job2])
+    beforeEach(() => {
+      vi.mocked(useAuth).mockReturnValue({
+        username: 'admin',
+        roles: ['Admin'],
+        status: 'Admin',
+        isManager: false,
+        isAdmin: true,
+        email: 'admin@example.com',
+        isAuthenticated: true
       })
-    )
+      server.use(
+        http.get('http://localhost:3003/api/v1/jobs', () => {
+          return HttpResponse.json([job1, job2])
+        })
+      )
+    })
 
-    renderWithProviders(<Jobs />)
+    it('filters by Job Type', async () => {
+      renderWithProviders(<Jobs />)
+      expect(await screen.findByText(/2 jobs?/i)).toBeInTheDocument()
 
-    // Both jobs visible initially (via count chip)
-    expect(await screen.findByText(/2 jobs?/i)).toBeInTheDocument()
+      const typeCombo = screen.getByRole('combobox', { name: /job type/i })
+      await userEvent.click(typeCombo)
+      const listbox = await screen.findByRole('listbox')
+      await userEvent.click(
+        within(listbox).getByRole('option', { name: 'pdb' })
+      )
 
-    // Filter by Job Type = pdb
-    const typeCombo = screen.getByRole('combobox', { name: /job type/i })
-    await userEvent.click(typeCombo)
-    const listbox = await screen.findByRole('listbox')
-    await userEvent.click(within(listbox).getByRole('option', { name: 'pdb' }))
+      expect(await screen.findByText(/1 job/i)).toBeInTheDocument()
+    })
 
-    expect(await screen.findByText(/1 job/i)).toBeInTheDocument()
+    it('filters by Status', async () => {
+      renderWithProviders(<Jobs />)
+      expect(await screen.findByText(/2 jobs?/i)).toBeInTheDocument()
 
-    // Filter by Status = Completed (no-op for current state but exercise control)
-    const statusCombo = screen.getByRole('combobox', { name: /status/i })
-    await userEvent.click(statusCombo)
-    const statusList = await screen.findByRole('listbox')
-    await userEvent.click(
-      within(statusList).getByRole('option', { name: 'Completed' })
-    )
-    expect(screen.getByText(/1 job/i)).toBeInTheDocument()
+      const statusCombo = screen.getByRole('combobox', { name: /status/i })
+      await userEvent.click(statusCombo)
+      const statusList = await screen.findByRole('listbox')
+      await userEvent.click(
+        within(statusList).getByRole('option', { name: 'Completed' })
+      )
+      expect(await screen.findByText(/1 job/i)).toBeInTheDocument()
+    })
 
-    // Reset filters restores all
-    await userEvent.click(
-      screen.getByRole('button', { name: /reset filters/i })
-    )
-    expect(await screen.findByText(/2 jobs?/i)).toBeInTheDocument()
+    it('resets filters', async () => {
+      renderWithProviders(<Jobs />)
+      expect(await screen.findByText(/2 jobs?/i)).toBeInTheDocument()
+
+      // Apply a filter
+      const typeCombo = screen.getByRole('combobox', { name: /job type/i })
+      await userEvent.click(typeCombo)
+      const listbox = await screen.findByRole('listbox')
+      await userEvent.click(
+        within(listbox).getByRole('option', { name: 'pdb' })
+      )
+      expect(await screen.findByText(/1 job/i)).toBeInTheDocument()
+
+      // Reset filters restores all
+      await userEvent.click(
+        screen.getByRole('button', { name: /reset filters/i })
+      )
+      expect(await screen.findByText(/2 jobs?/i)).toBeInTheDocument()
+    })
   })
 
   it('opens Delete dialog from More Actions menu', async () => {
