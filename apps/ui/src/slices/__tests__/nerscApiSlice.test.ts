@@ -58,7 +58,7 @@ describe('nerscApiSlice', () => {
       }),
       http.get(
         'http://localhost:3003/sfapi/account/projects/:projectCode',
-        ({ params }) => {
+        ({ params: _params }) => {
           return HttpResponse.json(mockProjectHours)
         }
       )

@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { setupApiStore } from '../../test/testUtils'
-import { usersApiSlice, selectAllUsers } from '../usersApiSlice'
+import { usersApiSlice } from '../usersApiSlice'
 import { server } from '../../test/server'
 import { http, HttpResponse } from 'msw'
 import type { IUser } from '@bilbomd/mongodb-schema'
 
-const mockUser: any = {
+const mockUser: IUser = {
   _id: 'user-123',
   username: 'testuser',
   email: 'test@example.com',
@@ -46,14 +46,14 @@ describe('usersApiSlice', () => {
         return HttpResponse.json(mockUsersResponse)
       }),
       http.post('/api/v1/users', async ({ request }) => {
-        const body = (await request.json()) as Record<string, any>
+        const body = (await request.json()) as Record<string, unknown>
         return HttpResponse.json({ ...mockUser, ...body })
       }),
       http.patch('/api/v1/users', async ({ request }) => {
-        const body = (await request.json()) as Record<string, any>
+        const body = (await request.json()) as Record<string, unknown>
         return HttpResponse.json({ ...mockUser, ...body })
       }),
-      http.delete('/api/v1/users/:id', ({ params }) => {
+      http.delete('/api/v1/users/:id', ({ params: _params }) => {
         return HttpResponse.json({ success: true })
       })
     )
@@ -71,8 +71,11 @@ describe('usersApiSlice', () => {
 
       expect(result.data).toBeDefined()
       expect(result.error).toBeUndefined()
-      expect((result.data as any)?.entities).toBeDefined()
-      expect((result.data as any)?.ids).toContain('user-123')
+      const data = result.data as
+        | { ids: string[]; entities: Record<string, IUser> }
+        | undefined
+      expect(data?.entities).toBeDefined()
+      expect(data?.ids).toContain('user-123')
       expect(result.data?.entities['user-123']).toMatchObject({
         ...mockUser,
         id: 'user-123'
@@ -86,8 +89,12 @@ describe('usersApiSlice', () => {
 
       // If we have cached data, verify the entity structure
       if (result?.data) {
-        expect((result.data as any).entities).toBeDefined()
-        expect((result.data as any).ids).toBeDefined()
+        const data = result.data as {
+          ids: string[]
+          entities: Record<string, IUser>
+        }
+        expect(data.entities).toBeDefined()
+        expect(data.ids).toBeDefined()
       } else {
         expect(true).toBe(true) // Test passes if no cached data
       }

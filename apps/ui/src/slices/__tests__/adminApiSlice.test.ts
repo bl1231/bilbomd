@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { setupApiStore } from '../../test/testUtils'
 import { adminApiSlice } from '../adminApiSlice'
 import { server } from '../../test/server'

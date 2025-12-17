@@ -1,4 +1,3 @@
-import type { EnhancedStore } from '@reduxjs/toolkit'
 import { configureStore, combineReducers } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
 import { apiSlice } from '../app/api/apiSlice'
@@ -49,7 +48,7 @@ export const setupApiStore = (
  * @param payload - The payload to encode in the JWT
  * @returns A mock JWT token string
  */
-export const createTestJWT = (payload: any): string => {
+export const createTestJWT = (payload: unknown): string => {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
   const encodedPayload = btoa(JSON.stringify(payload))
   const signature = 'mock-signature'
@@ -62,7 +61,7 @@ export const createTestJWT = (payload: any): string => {
  * @param data - Object with key-value pairs to add to FormData
  * @returns FormData instance with the provided data
  */
-export const createMockFormData = (data: Record<string, any>): FormData => {
+export const createMockFormData = (data: Record<string, unknown>): FormData => {
   const formData = new FormData()
 
   Object.entries(data).forEach(([key, value]) => {
@@ -95,11 +94,11 @@ export const waitForApiState = async (
 
     // Check if there are any pending queries
     const hasPendingQueries = Object.values(apiState?.queries || {}).some(
-      (query: any) => query?.status === 'pending'
+      (query) => (query as { status?: string })?.status === 'pending'
     )
 
     const hasPendingMutations = Object.values(apiState?.mutations || {}).some(
-      (mutation: any) => mutation?.status === 'pending'
+      (mutation) => (mutation as { status?: string })?.status === 'pending'
     )
 
     if (!hasPendingQueries && !hasPendingMutations) {

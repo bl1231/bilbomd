@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { setupApiStore, waitForApiState } from '../../test/testUtils'
 import { jobsApiSlice, selectAllJobs } from '../jobsApiSlice'
 import { server } from '../../test/server'
 import { http, HttpResponse } from 'msw'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
+import type { RootState } from '../../app/store'
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
 const mockJob: BilboMDJobDTO = {
   id: 'job-123',
@@ -63,7 +65,7 @@ describe('jobsApiSlice', () => {
       http.get('/api/v1/jobs', () => {
         return HttpResponse.json(mockJobsResponse)
       }),
-      http.get('/api/v1/jobs/:id', ({ params }) => {
+      http.get('/api/v1/jobs/:id', ({ params: _params }) => {
         return HttpResponse.json(mockJob)
       }),
       http.get('/api/v1/jobs/:id/results/foxs', () => {
@@ -171,7 +173,8 @@ describe('jobsApiSlice', () => {
       // RTK Query returns errors in the result object, not as thrown exceptions
       expect(result.error).toBeDefined()
       expect(result.data).toBeUndefined()
-      expect((result.error as any)?.status).toBe(404)
+      const status = (result.error as FetchBaseQueryError | undefined)?.status
+      expect(status).toBe(404)
     })
   })
 
@@ -228,7 +231,8 @@ describe('jobsApiSlice', () => {
       // RTK Query returns errors in the result object, not as thrown exceptions
       expect(result.error).toBeDefined()
       expect(result.data).toBeUndefined()
-      expect((result.error as any)?.status).toBe(400)
+      const status = (result.error as FetchBaseQueryError | undefined)?.status
+      expect(status).toBe(400)
     })
   })
 
@@ -318,10 +322,10 @@ describe('jobsApiSlice', () => {
             }
           }
         }
-      }
+      } as unknown as RootState
 
       // The selector expects the full Redux state
-      const allJobs = selectAllJobs(mockState as any)
+      const allJobs = selectAllJobs(mockState)
       expect(allJobs).toEqual([mockJob])
     })
   })
@@ -361,7 +365,8 @@ describe('jobsApiSlice', () => {
       // RTK Query returns errors in the result object, not as thrown exceptions
       expect(result.error).toBeDefined()
       expect(result.data).toBeUndefined()
-      expect((result.error as any)?.status).toBe(500)
+      const status = (result.error as FetchBaseQueryError | undefined)?.status
+      expect(status).toBe(500)
 
       freshStoreRef.cleanup()
     })

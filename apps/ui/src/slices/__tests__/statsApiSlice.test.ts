@@ -24,10 +24,7 @@ const mockStatsData: Stats = {
   }
 }
 
-const mockStatsResponse = {
-  success: true,
-  data: mockStatsData
-}
+// Removed unused mockStatsResponse
 
 describe('statsApiSlice', () => {
   const storeRef = setupApiStore()
