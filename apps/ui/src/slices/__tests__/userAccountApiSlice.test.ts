@@ -40,27 +40,27 @@ describe('userAccountApiSlice', () => {
       http.post(
         'http://localhost:3003/api/v1/users/change-email',
         async ({ request }) => {
-          const body = (await request.json()) as EmailData
+          const _body = (await request.json()) as EmailData
           return HttpResponse.json(mockSuccessResponse)
         }
       ),
       http.post(
         'http://localhost:3003/api/v1/users/verify-otp',
         async ({ request }) => {
-          const body = (await request.json()) as OtpData
+          const _body = (await request.json()) as OtpData
           return HttpResponse.json(mockSuccessResponse)
         }
       ),
       http.post(
         'http://localhost:3003/api/v1/users/resend-otp',
         async ({ request }) => {
-          const body = (await request.json()) as EmailData
+          const _body = (await request.json()) as EmailData
           return HttpResponse.json(mockSuccessResponse)
         }
       ),
       http.delete(
         'http://localhost:3003/api/v1/users/delete-user-by-username/:username',
-        ({ params }) => {
+        ({ params: _params }) => {
           return HttpResponse.json(mockSuccessResponse)
         }
       )

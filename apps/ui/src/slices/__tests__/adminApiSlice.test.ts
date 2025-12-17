@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { setupApiStore } from '../../test/testUtils'
 import { adminApiSlice } from '../adminApiSlice'
 import { server } from '../../test/server'
@@ -93,7 +93,7 @@ describe('adminApiSlice', () => {
   describe('getQueues', () => {
     it('should fetch queues successfully', async () => {
       const result = await storeRef.store.dispatch(
-        adminApiSlice.endpoints.getQueues.initiate()
+        adminApiSlice.endpoints.getQueues.initiate({})
       )
 
       expect(result.data).toBeDefined()

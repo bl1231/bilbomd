@@ -1,9 +1,9 @@
-import type { EnhancedStore } from '@reduxjs/toolkit'
 import { configureStore, combineReducers } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
 import { apiSlice } from '../app/api/apiSlice'
 import { superfacilityApiSlice } from '../app/api/sfapiSlice'
 import authReducer from '../slices/authSlice'
+import type { RootState, AppStore } from '../app/store'
 
 const rootReducer = combineReducers({
   [apiSlice.reducerPath]: apiSlice.reducer,
@@ -12,7 +12,7 @@ const rootReducer = combineReducers({
 })
 
 interface StoreRef {
-  store: EnhancedStore
+  store: AppStore
   cleanup: () => void
 }
 
@@ -21,7 +21,9 @@ interface StoreRef {
  * @param preloadedState - Initial state for the store
  * @returns Object containing the configured store and cleanup function
  */
-export const setupApiStore = (preloadedState?: any): StoreRef => {
+export const setupApiStore = (
+  preloadedState?: Partial<RootState>
+): StoreRef => {
   const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
@@ -33,7 +35,7 @@ export const setupApiStore = (preloadedState?: any): StoreRef => {
       auth: { token: 'test-token' },
       ...preloadedState
     }
-  })
+  }) as AppStore
 
   // Setup listeners for refetchOnFocus/refetchOnReconnect behaviors
   const cleanup = setupListeners(store.dispatch)
@@ -46,7 +48,7 @@ export const setupApiStore = (preloadedState?: any): StoreRef => {
  * @param payload - The payload to encode in the JWT
  * @returns A mock JWT token string
  */
-export const createTestJWT = (payload: any): string => {
+export const createTestJWT = (payload: unknown): string => {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
   const encodedPayload = btoa(JSON.stringify(payload))
   const signature = 'mock-signature'
@@ -59,7 +61,7 @@ export const createTestJWT = (payload: any): string => {
  * @param data - Object with key-value pairs to add to FormData
  * @returns FormData instance with the provided data
  */
-export const createMockFormData = (data: Record<string, any>): FormData => {
+export const createMockFormData = (data: Record<string, unknown>): FormData => {
   const formData = new FormData()
 
   Object.entries(data).forEach(([key, value]) => {
@@ -81,7 +83,7 @@ export const createMockFormData = (data: Record<string, any>): FormData => {
  * @param timeout - Maximum time to wait in milliseconds
  */
 export const waitForApiState = async (
-  store: EnhancedStore,
+  store: AppStore,
   timeout = 1000
 ): Promise<void> => {
   const startTime = Date.now()
@@ -92,11 +94,11 @@ export const waitForApiState = async (
 
     // Check if there are any pending queries
     const hasPendingQueries = Object.values(apiState?.queries || {}).some(
-      (query: any) => query?.status === 'pending'
+      (query) => (query as { status?: string })?.status === 'pending'
     )
 
     const hasPendingMutations = Object.values(apiState?.mutations || {}).some(
-      (mutation: any) => mutation?.status === 'pending'
+      (mutation) => (mutation as { status?: string })?.status === 'pending'
     )
 
     if (!hasPendingQueries && !hasPendingMutations) {

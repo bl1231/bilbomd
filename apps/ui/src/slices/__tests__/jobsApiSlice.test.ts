@@ -1,29 +1,41 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { setupApiStore, waitForApiState } from '../../test/testUtils'
 import { jobsApiSlice, selectAllJobs } from '../jobsApiSlice'
 import { server } from '../../test/server'
 import { http, HttpResponse } from 'msw'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
+import type { RootState } from '../../app/store'
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
 const mockJob: BilboMDJobDTO = {
-  _id: 'job-123',
   id: 'job-123',
-  title: 'Test Job',
-  email: 'test@example.com',
-  jobType: 'pdb',
-  status: 'Completed',
-  progress: 100,
-  time_started: '2023-12-01T10:00:00Z',
-  time_completed: '2023-12-01T11:00:00Z',
-  pdb_file: 'test.pdb',
-  dat_file: 'test.dat',
-  const_inp_file: 'test.inp',
-  user: {
-    _id: 'user-123',
-    username: 'testuser',
-    email: 'test@example.com'
-  },
-  uuid: 'uuid-123'
+  username: 'testuser',
+  mongo: {
+    id: 'job-123',
+    title: 'Test Job',
+    jobType: 'pdb',
+    uuid: 'test-uuid-123',
+    access_mode: 'user',
+    status: 'Completed',
+    data_file: 'test.dat',
+    md_engine: 'CHARMM',
+    time_submitted: new Date('2023-12-01T10:00:00Z'),
+    time_started: new Date('2023-12-01T10:30:00Z'),
+    time_completed: new Date('2023-12-01T11:00:00Z'),
+    pdb_file: 'test.pdb',
+    const_inp_file: 'test.inp',
+    conformational_sampling: 100,
+    rg: 25.4,
+    rg_min: 20.0,
+    rg_max: 30.0,
+    progress: 100,
+    cleanup_in_progress: false,
+    user: {
+      id: 'user-123',
+      username: 'testuser',
+      email: 'test@example.com'
+    }
+  }
 }
 
 const mockJobsResponse: BilboMDJobDTO[] = [mockJob]
@@ -53,18 +65,18 @@ describe('jobsApiSlice', () => {
       http.get('/api/v1/jobs', () => {
         return HttpResponse.json(mockJobsResponse)
       }),
-      http.get('/api/v1/jobs/:id', ({ params }) => {
+      http.get('/api/v1/jobs/:id', ({ params: _params }) => {
         return HttpResponse.json(mockJob)
       }),
       http.get('/api/v1/jobs/:id/results/foxs', () => {
         return HttpResponse.json(mockFoxsAnalysis)
       }),
       http.post('/api/v1/jobs', async ({ request }) => {
-        const body = await request.json()
+        const body = (await request.json()) as Partial<BilboMDJobDTO>
         return HttpResponse.json({ ...mockJob, ...body })
       }),
       http.patch('/api/v1/jobs', async ({ request }) => {
-        const body = await request.json()
+        const body = (await request.json()) as Partial<BilboMDJobDTO>
         return HttpResponse.json({ ...mockJob, ...body })
       }),
       http.delete('/api/v1/jobs/:id', () => {
@@ -86,12 +98,18 @@ describe('jobsApiSlice', () => {
   describe('getJobs', () => {
     it('should fetch jobs and transform them using entity adapter', async () => {
       const result = await storeRef.store.dispatch(
-        jobsApiSlice.endpoints.getJobs.initiate()
+        jobsApiSlice.endpoints.getJobs.initiate({})
       )
 
       expect(result.data?.entities).toBeDefined()
       expect(result.data?.ids).toContain('job-123')
-      expect(result.data?.entities['job-123']).toEqual(mockJob)
+      // Check that the job has been transformed and stored correctly
+      expect(result.data?.entities['job-123']).toMatchObject({
+        id: 'job-123',
+        title: 'Test Job',
+        jobType: 'pdb',
+        status: 'Completed'
+      })
     })
 
     it('should handle empty jobs response', async () => {
@@ -105,7 +123,7 @@ describe('jobsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        jobsApiSlice.endpoints.getJobs.initiate()
+        jobsApiSlice.endpoints.getJobs.initiate({})
       )
 
       expect(result.data?.ids).toHaveLength(0)
@@ -126,7 +144,12 @@ describe('jobsApiSlice', () => {
         jobsApiSlice.endpoints.getJobById.initiate('job-123')
       )
 
-      expect(result.data).toEqual(mockJob)
+      expect(result.data).toMatchObject({
+        id: 'job-123',
+        title: 'Test Job',
+        jobType: 'pdb',
+        status: 'Completed'
+      })
     })
 
     it('should provide correct tags', () => {
@@ -150,7 +173,8 @@ describe('jobsApiSlice', () => {
       // RTK Query returns errors in the result object, not as thrown exceptions
       expect(result.error).toBeDefined()
       expect(result.data).toBeUndefined()
-      expect((result.error as any)?.status).toBe(404)
+      const status = (result.error as FetchBaseQueryError | undefined)?.status
+      expect(status).toBe(404)
     })
   })
 
@@ -207,7 +231,8 @@ describe('jobsApiSlice', () => {
       // RTK Query returns errors in the result object, not as thrown exceptions
       expect(result.error).toBeDefined()
       expect(result.data).toBeUndefined()
-      expect((result.error as any)?.status).toBe(400)
+      const status = (result.error as FetchBaseQueryError | undefined)?.status
+      expect(status).toBe(400)
     })
   })
 
@@ -297,10 +322,10 @@ describe('jobsApiSlice', () => {
             }
           }
         }
-      }
+      } as unknown as RootState
 
       // The selector expects the full Redux state
-      const allJobs = selectAllJobs(mockState as any)
+      const allJobs = selectAllJobs(mockState)
       expect(allJobs).toEqual([mockJob])
     })
   })
@@ -314,7 +339,9 @@ describe('jobsApiSlice', () => {
       )
 
       try {
-        await storeRef.store.dispatch(jobsApiSlice.endpoints.getJobs.initiate())
+        await storeRef.store.dispatch(
+          jobsApiSlice.endpoints.getJobs.initiate({})
+        )
         expect.fail('Expected query to throw')
       } catch (error) {
         expect(error).toBeDefined()
@@ -332,13 +359,14 @@ describe('jobsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        jobsApiSlice.endpoints.getJobs.initiate()
+        jobsApiSlice.endpoints.getJobs.initiate({})
       )
 
       // RTK Query returns errors in the result object, not as thrown exceptions
       expect(result.error).toBeDefined()
       expect(result.data).toBeUndefined()
-      expect((result.error as any)?.status).toBe(500)
+      const status = (result.error as FetchBaseQueryError | undefined)?.status
+      expect(status).toBe(500)
 
       freshStoreRef.cleanup()
     })

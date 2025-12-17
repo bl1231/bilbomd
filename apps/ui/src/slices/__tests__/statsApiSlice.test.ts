@@ -24,10 +24,7 @@ const mockStatsData: Stats = {
   }
 }
 
-const mockStatsResponse = {
-  success: true,
-  data: mockStatsData
-}
+// Removed unused mockStatsResponse
 
 describe('statsApiSlice', () => {
   const storeRef = setupApiStore()
@@ -50,7 +47,7 @@ describe('statsApiSlice', () => {
   describe('getStats', () => {
     it('should fetch stats successfully', async () => {
       const result = await storeRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate()
+        statsApiSlice.endpoints.getStats.initiate({})
       )
 
       expect(result.data).toBeDefined()
@@ -67,7 +64,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate()
+        statsApiSlice.endpoints.getStats.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -86,7 +83,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate()
+        statsApiSlice.endpoints.getStats.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -110,7 +107,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate()
+        statsApiSlice.endpoints.getStats.initiate({})
       )
 
       expect(result.data).toBeNull()
@@ -129,7 +126,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate()
+        statsApiSlice.endpoints.getStats.initiate({})
       )
 
       expect(result.error).toBeDefined()
@@ -153,7 +150,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate()
+        statsApiSlice.endpoints.getStats.initiate({})
       )
 
       expect(result.data).toBeUndefined()
@@ -180,7 +177,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate()
+        statsApiSlice.endpoints.getStats.initiate({})
       )
 
       expect(result.data?.jobTypes).toEqual({})

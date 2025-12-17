@@ -1,4 +1,4 @@
-import { http } from 'msw'
+import { http, HttpResponse } from 'msw'
 
 const mockUsers = [
   {
@@ -54,10 +54,7 @@ const mockPublicJobStatus = {
   progress: 100
 }
 
-const mockFoxsData = [{ file: 'test.pdb', chi: 1.2 }]
-const mockFeedbackData = { feedback: 'Good job' }
-const mockEnsemblePdbFiles = ['model1.pdb', 'model2.pdb']
-const mockTextFile = 'This is a test file'
+// Removed unused mock data definitions
 const mockFileCheckResult = {
   isValid: true,
   errors: [],
@@ -154,8 +151,8 @@ export const handlers = [
   }),
 
   http.post('http://localhost:3003/api/v1/jobs', async ({ request }) => {
-    const body = await request.json()
-    if (body.invalidData) {
+    const body = (await request.json()) as Record<string, unknown>
+    if (body?.invalidData) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -177,7 +174,7 @@ export const handlers = [
   }),
 
   http.patch('http://localhost:3003/api/v1/jobs', async ({ request }) => {
-    const body = await request.json()
+    const body = (await request.json()) as Record<string, unknown>
     return new Response(JSON.stringify({ ...mockJob, ...body }), {
       headers: {
         'Content-Type': 'application/json'
@@ -304,7 +301,7 @@ export const handlers = [
   }),
 
   http.post('http://localhost:3003/api/v1/users', async ({ request }) => {
-    const body = await request.json()
+    const body = (await request.json()) as Record<string, unknown>
     return new Response(JSON.stringify({ ...mockUsers[0], ...body }), {
       headers: {
         'Content-Type': 'application/json'
@@ -313,7 +310,7 @@ export const handlers = [
   }),
 
   http.patch('http://localhost:3003/api/v1/users', async ({ request }) => {
-    const body = await request.json()
+    const body = (await request.json()) as Record<string, unknown>
     return new Response(JSON.stringify({ ...mockUsers[0], ...body }), {
       headers: {
         'Content-Type': 'application/json'
@@ -656,7 +653,7 @@ export const handlers = [
 
   http.get(
     'http://localhost:3003/sfapi/account/projects/:projectCode',
-    ({ params }) => {
+    ({ params: _params }) => {
       return HttpResponse.json({
         cpu_hours_given: 10000,
         cpu_hours_used: 5500,
