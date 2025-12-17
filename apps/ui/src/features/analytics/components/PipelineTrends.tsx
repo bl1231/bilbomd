@@ -17,17 +17,17 @@ import {
 } from '@mui/material'
 import { useGetJobsTimeseriesQuery } from '../../../slices/analyticsApiSlice'
 
+const LIMITS: Record<'day' | 'week' | 'month', number> = {
+  day: 7,
+  week: 8,
+  month: 12
+}
+
 export const PipelineTrends: React.FC = () => {
   const [granularity, setGranularity] = React.useState<
     'day' | 'week' | 'month'
   >('day')
   const { data, isLoading } = useGetJobsTimeseriesQuery({ granularity })
-
-  const LIMITS: Record<'day' | 'week' | 'month', number> = {
-    day: 7,
-    week: 8,
-    month: 12
-  }
 
   const labelByGranularity: Record<'day' | 'week' | 'month', string> = {
     day: 'Daily',

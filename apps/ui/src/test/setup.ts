@@ -18,7 +18,7 @@ globalThis.URL = class extends originalURL {
   constructor(url: string | URL, base?: string | URL) {
     if (!base && typeof url === 'string' && url.startsWith('/')) {
       // If no base is provided and URL is relative, use our test base
-      super(url, 'http://localhost:3002')
+      super(url, 'http://localhost:3003')
     } else {
       super(url, base)
     }
