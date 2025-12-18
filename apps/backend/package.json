@@ -22,6 +22,8 @@
     "start": "npm run build && node dist/server.js",
     "test": "vitest --run --coverage",
     "test:watch": "vitest",
+    "test:integration": "vitest --run --coverage test/integration --config vitest.integration.config.ts",
+    "test:integration:watch": "vitest test/integration --config vitest.integration.config.ts",
     "server": "nodemon ."
   },
   "dependencies": {
