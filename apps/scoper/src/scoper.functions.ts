@@ -56,7 +56,7 @@ const handleError = async (
       sendJobCompleteEmail(
         recipientEmail,
         BILBOMD_URL,
-        DBjob.id,
+        DBjob._id.toString(),
         DBjob.title,
         true
       )

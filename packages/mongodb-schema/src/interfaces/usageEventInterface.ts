@@ -1,4 +1,4 @@
-import { Schema } from 'mongoose'
+import { Types } from 'mongoose'
 
 export type PipelineType =
   | 'pdb'
@@ -20,7 +20,7 @@ export type EventType =
 export interface IUsageEventContext {
   access_mode: 'user' | 'anonymous'
   user?: {
-    _id: Schema.Types.ObjectId
+    _id: Types.ObjectId
     username: string
     email: string
   }
@@ -30,7 +30,7 @@ export interface IUsageEventContext {
 
 export interface IUsageEvent {
   uuid: string
-  job_id?: Schema.Types.ObjectId
+  job_id?: Types.ObjectId
   pipeline: PipelineType
   event_type: EventType
   timestamp: Date

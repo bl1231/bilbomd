@@ -1,17 +1,9 @@
 import request from 'supertest'
-import {
-  describe,
-  test,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach
-} from 'vitest'
+import { describe, test, expect, beforeEach, afterEach } from 'vitest'
 import mongoose from 'mongoose'
 import jwt from 'jsonwebtoken'
 import { v4 as uuid } from 'uuid'
-import app from './appMock.js'
+import app from '../appMock.js'
 import { User, IUser, Job } from '@bilbomd/mongodb-schema'
 
 const accessTokenSecret: string = process.env.ACCESS_TOKEN_SECRET ?? ''
@@ -53,8 +45,6 @@ interface MyUser {
   email: string
 }
 
-let server: any
-
 const generateValidToken = (): string => {
   const accessTokenPayload: JwtPayload = {
     UserInfo: {
@@ -94,14 +84,10 @@ const createNewJob = async (user: IUser) => {
   return createdJob
 }
 
-beforeAll(async () => {
-  server = app.listen(0)
-  await User.deleteMany()
-  await Job.deleteMany()
-})
-
-afterAll(async () => {
-  await new Promise((resolve) => server.close(resolve))
+beforeEach(async () => {
+  // Clear collections before each test
+  await User.deleteMany({})
+  await Job.deleteMany({})
 })
 
 describe('GET /api/v1/users', () => {
@@ -135,14 +121,14 @@ describe('GET /api/v1/users', () => {
     await User.deleteOne({ _id: testUser2._id })
   })
   test('should return error if we are unauthorized', async () => {
-    const res = await request(server).get('/api/v1/users')
+    const res = await request(app).get('/api/v1/users')
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Unauthorized')
   })
   test('should return users', async () => {
     const token = generateValidToken()
     // console.log('token--->', token)
-    const res = await await request(server)
+    const res = await await request(app)
       .get('/api/v1/users')
       .set('Authorization', `Bearer ${token}`)
       .set('Content-Type', 'application/json')
@@ -186,13 +172,13 @@ describe('PATCH /api/v1/users', () => {
     await User.deleteOne({ _id: testUser1._id })
   })
   test('should return error if we are unauthorized', async () => {
-    const res = await request(server).patch('/api/v1/users')
+    const res = await request(app).patch('/api/v1/users')
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Unauthorized')
   })
   test('should return error if you dont provide valid user object', async () => {
     const token = generateValidToken()
-    const res = await await request(server)
+    const res = await await request(app)
       .patch('/api/v1/users')
       .send({})
       .set('Authorization', `Bearer ${token}`)
@@ -212,7 +198,7 @@ describe('PATCH /api/v1/users', () => {
       email: testUser1.email
     }
 
-    const res = await await request(server)
+    const res = await await request(app)
       .patch('/api/v1/users')
       .send(user)
       .set('Authorization', `Bearer ${token}`)
@@ -229,7 +215,7 @@ describe('PATCH /api/v1/users', () => {
       email: 'updated@example.com'
     }
 
-    const res = await await request(server)
+    const res = await await request(app)
       .patch('/api/v1/users')
       .send(user)
       .set('Authorization', `Bearer ${token}`)
@@ -264,13 +250,13 @@ describe('DELETE /api/v1/users', () => {
   })
   test('should return error if we are unauthorized', async () => {
     const id = new mongoose.Types.ObjectId().toString()
-    const res = await request(server).delete('/api/v1/users').send({ id })
+    const res = await request(app).delete('/api/v1/users').send({ id })
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Unauthorized')
   })
   test('should return error if user has a Job', async () => {
     await createNewJob(testUser1)
-    const res = await request(server)
+    const res = await request(app)
       .delete(`/api/v1/users/${testUser1._id}`)
       .set('Authorization', `Bearer ${token}`)
       .set('Content-Type', 'application/json')
@@ -280,7 +266,7 @@ describe('DELETE /api/v1/users', () => {
   })
   test('should return error if user does not exist', async () => {
     const id = new mongoose.Types.ObjectId().toString()
-    const res = await request(server)
+    const res = await request(app)
       .delete(`/api/v1/users/${id}`)
       .set('Authorization', `Bearer ${token}`)
       .set('Content-Type', 'application/json')
@@ -288,7 +274,7 @@ describe('DELETE /api/v1/users', () => {
     expect(res.body.message).toBe('User not found')
   })
   test('should return success if user is deleted', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .delete(`/api/v1/users/${testUser1._id}`)
       .set('Authorization', `Bearer ${token}`)
       .set('Content-Type', 'application/json')

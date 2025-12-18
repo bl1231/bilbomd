@@ -8,4 +8,5 @@
 '@bilbomd/mongodb-schema': patch
 ---
 
-Update mongoose from v8 to v9
+Update mongoose from v8 to v9.
+Split `backend` tests into unit and integration

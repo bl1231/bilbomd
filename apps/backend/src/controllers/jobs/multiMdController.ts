@@ -3,7 +3,11 @@ import { config } from '../../config/config.js'
 import multer from 'multer'
 import fs from 'fs-extra'
 import path from 'path'
-import { v4 as uuid, validate as uuidValidate, version as uuidVersion } from 'uuid'
+import {
+  v4 as uuid,
+  validate as uuidValidate,
+  version as uuidVersion
+} from 'uuid'
 import { User, IUser, MultiJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { queueJob } from '../../queues/multimd.js'
@@ -28,35 +32,41 @@ const createNewMultiJob = async (req: Request, res: Response) => {
 
     const upload = multer({ storage: storage })
 
-    upload.fields([{ name: 'bilbomd_uuids', maxCount: 1 }])(req, res, async (err) => {
-      if (err) {
-        logger.error(err)
-        res.status(500).json({ message: 'Failed to upload one or more files' })
-        return
-      }
-      try {
-        const email = req.email
-        logger.info(`Processing MultiJob creation for e-mail: ${email}`)
-
-        const foundUser = await User.findOne({ email }).exec()
-        if (!foundUser) {
-          res.status(401).json({ message: 'No user found with that email' })
+    upload.fields([{ name: 'bilbomd_uuids', maxCount: 1 }])(
+      req,
+      res,
+      async (err) => {
+        if (err) {
+          logger.error(err)
+          res
+            .status(500)
+            .json({ message: 'Failed to upload one or more files' })
           return
         }
+        try {
+          const email = req.email
+          logger.info(`Processing MultiJob creation for e-mail: ${email}`)
 
-        // Update jobCount and jobTypes
-        const bilbomd_mode = 'multimd'
-        const jobTypeField = `jobTypes.${bilbomd_mode}`
-        await User.findByIdAndUpdate(foundUser._id, {
-          $inc: { jobCount: 1, [jobTypeField]: 1 }
-        })
+          const foundUser = await User.findOne({ email }).exec()
+          if (!foundUser) {
+            res.status(401).json({ message: 'No user found with that email' })
+            return
+          }
 
-        await handleBilboMDMultiJobCreation(req, res, foundUser, UUID)
-      } catch (error) {
-        logger.error(error)
-        res.status(500).json({ message: 'Internal server error' })
+          // Update jobCount and jobTypes
+          const bilbomd_mode = 'multimd'
+          const jobTypeField = `jobTypes.${bilbomd_mode}`
+          await User.findByIdAndUpdate(foundUser._id, {
+            $inc: { jobCount: 1, [jobTypeField]: 1 }
+          })
+
+          await handleBilboMDMultiJobCreation(req, res, foundUser, UUID)
+        } catch (error) {
+          logger.error(error)
+          res.status(500).json({ message: 'Internal server error' })
+        }
       }
-    })
+    )
   } catch (error) {
     // Handle errors related to directory creation
     logger.error(error)
@@ -75,13 +85,17 @@ const handleBilboMDMultiJobCreation = async (
   const bilbomd_uuids = req.body.bilbomd_uuids
 
   if (!Array.isArray(bilbomd_uuids) || bilbomd_uuids.length < 2) {
-    logger.error('Invalid bilbomd_uuids: Must be an array with at least 2 elements')
+    logger.error(
+      'Invalid bilbomd_uuids: Must be an array with at least 2 elements'
+    )
     return res.status(400).json({
       message: 'bilbomd_uuids must be an array of at least 2 UUIDs'
     })
   }
 
-  const invalidUUIDs = bilbomd_uuids.filter((id) => !uuidValidate(id) || uuidVersion(id) !== 4)
+  const invalidUUIDs = bilbomd_uuids.filter(
+    (id) => !uuidValidate(id) || uuidVersion(id) !== 4
+  )
 
   if (invalidUUIDs.length > 0) {
     logger.error(`Invalid UUIDs detected: ${invalidUUIDs.join(', ')}`)
@@ -114,11 +128,13 @@ const handleBilboMDMultiJobCreation = async (
       type: 'BilboMDMultiJob',
       title: newMultiJob.title,
       uuid: newMultiJob.uuid,
-      jobid: newMultiJob.id
+      jobid: newMultiJob._id.toString()
     })
     logger.info(`MultiJob queued with BullId: ${BullId}`)
 
-    return res.status(201).json({ message: 'MultiJob created successfully', uuid: UUID })
+    return res
+      .status(201)
+      .json({ message: 'MultiJob created successfully', uuid: UUID })
   } catch (error) {
     logger.error(`Failed to create MultiJob: ${error}`)
     return res.status(500).json({ message: 'Failed to create MultiJob entry' })

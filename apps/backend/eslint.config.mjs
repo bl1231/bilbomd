@@ -12,6 +12,8 @@ export default defineConfig([
       'openapi/**',
       'test/**',
       'vitest.config.*',
+      'vitest.integration.config.*',
+      'vitest.*.config.*',
       'vite.config.*',
       'eslint.config.*',
       'tsup.config.*'

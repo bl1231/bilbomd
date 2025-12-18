@@ -1,10 +1,8 @@
-import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest'
+import { describe, test, expect, beforeEach, vi } from 'vitest'
 import request from 'supertest'
-import app from './appMock.js'
+import app from '../appMock.js'
 import { User, Job } from '@bilbomd/mongodb-schema'
 import crypto from 'crypto'
-
-let server: any
 
 const FIXED_API_TOKEN = '12345trewq12345trewq'
 
@@ -12,7 +10,11 @@ const generateApiToken = (): string => {
   return FIXED_API_TOKEN
 }
 
-beforeAll(async () => {
+beforeEach(async () => {
+  // Clear collections before each test
+  await User.deleteMany({})
+  await Job.deleteMany({})
+
   const apiToken = FIXED_API_TOKEN
   const tokenHash = crypto.createHash('sha256').update(apiToken).digest('hex')
 
@@ -39,14 +41,6 @@ beforeAll(async () => {
     user: user,
     data_file: 'test_data_file.txt'
   })
-
-  server = app.listen(0)
-})
-
-afterAll(async () => {
-  if (server) {
-    await new Promise((resolve) => server.close(resolve))
-  }
 })
 
 describe('/api/v1/external/jobs/:id/status', () => {
@@ -55,7 +49,7 @@ describe('/api/v1/external/jobs/:id/status', () => {
     const job = await Job.findOne({ title: 'Test Job for Status' })
     const user = await User.findOne({ username: 'apitestuser-status' })
 
-    const res = await request(server)
+    const res = await request(app)
       .get(`/api/v1/external/jobs/${job?._id}/status`)
       .set('Authorization', `Bearer ${apiToken}`)
       .set('Accept', 'application/json')
@@ -71,7 +65,7 @@ describe('/api/v1/external/jobs/:id/status', () => {
   test('should return 400 for invalid job ID', async () => {
     const apiToken = generateApiToken()
 
-    const res = await request(server)
+    const res = await request(app)
       .get('/api/v1/external/jobs/invalid-id/status')
       .set('Authorization', `Bearer ${apiToken}`)
       .set('Accept', 'application/json')
@@ -84,7 +78,7 @@ describe('/api/v1/external/jobs/:id/status', () => {
     const apiToken = generateApiToken()
     const randomValidMongoId = '0123456789abcdef01234567' // valid format but no job
 
-    const res = await request(server)
+    const res = await request(app)
       .get(`/api/v1/external/jobs/${randomValidMongoId}/status`)
       .set('Authorization', `Bearer ${apiToken}`)
       .set('Accept', 'application/json')
@@ -94,7 +88,7 @@ describe('/api/v1/external/jobs/:id/status', () => {
   })
 
   test('should return 401 if Authorization header is missing', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .get('/api/v1/external/jobs/whatever/status')
       .set('Accept', 'application/json')
 

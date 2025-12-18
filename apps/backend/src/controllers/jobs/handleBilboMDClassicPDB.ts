@@ -294,7 +294,9 @@ const handleBilboMDClassicPDB = async (
 
     // Save the job to the database
     await newJob.save()
-    logger.info(`BilboMD-${bilbomdMode} Job saved to MongoDB: ${newJob.id}`)
+    logger.info(
+      `BilboMD-${bilbomdMode} Job saved to MongoDB: ${newJob._id.toString()}`
+    )
 
     // Store MD constraints in MongoDB if constraint file was processed
     if (!isResubmission && inpFile) {
@@ -319,10 +321,12 @@ const handleBilboMDClassicPDB = async (
         // Update the job with MD constraints
         newJob.md_constraints = mdConstraints
         await newJob.save()
-        logger.info(`MD constraints stored in MongoDB for job ${newJob.id}`)
+        logger.info(
+          `MD constraints stored in MongoDB for job ${newJob._id.toString()}`
+        )
       } catch (constraintError) {
         logger.warn(
-          `Failed to store MD constraints for job ${newJob.id}:`,
+          `Failed to store MD constraints for job ${newJob._id.toString()}:`,
           constraintError
         )
         // Don't fail the job creation if constraint storage fails
@@ -330,14 +334,14 @@ const handleBilboMDClassicPDB = async (
     }
 
     // Write Job params for use by NERSC job script.
-    await writeJobParams(newJob.id)
+    await writeJobParams(newJob._id.toString())
 
     // Create BullMQ Job object
     const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id,
+      jobid: newJob._id.toString(),
       md_engine
     }
 
@@ -362,7 +366,7 @@ const handleBilboMDClassicPDB = async (
 
       res.status(200).json({
         message: `New BilboMD Classic w/PDB Job successfully created`,
-        jobid: newJob.id,
+        jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine,
         publicId: ctx.publicId,
@@ -372,7 +376,7 @@ const handleBilboMDClassicPDB = async (
     } else {
       res.status(200).json({
         message: `New BilboMD Classic w/PDB Job successfully created`,
-        jobid: newJob.id,
+        jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine
       })
