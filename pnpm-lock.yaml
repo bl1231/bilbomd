@@ -212,7 +212,7 @@ importers:
         version: link:../../packages/md-utils
       '@bilbomd/mongodb-schema':
         specifier: workspace:*
-        version: link:../../packages/mongodb-schema
+        version: file:packages/mongodb-schema
       '@bull-board/api':
         specifier: ^6.15.0
         version: 6.15.0(@bull-board/ui@6.15.0)
@@ -271,8 +271,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       mongoose:
-        specifier: ^8.20.3
-        version: 8.20.3
+        specifier: ^9.0.2
+        version: 9.0.2
       mongoose-to-swagger:
         specifier: ^1.5.1
         version: 1.5.1
@@ -320,7 +320,7 @@ importers:
     dependencies:
       '@bilbomd/mongodb-schema':
         specifier: workspace:*
-        version: link:../../packages/mongodb-schema
+        version: file:packages/mongodb-schema
       bullmq:
         specifier: ^5.66.1
         version: 5.66.1
@@ -340,8 +340,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       mongoose:
-        specifier: ^8.20.3
-        version: 8.20.3
+        specifier: ^9.0.2
+        version: 9.0.2
       nodemailer:
         specifier: ^7.0.11
         version: 7.0.11
@@ -365,7 +365,7 @@ importers:
         version: link:../../packages/bilbomd-types
       '@bilbomd/mongodb-schema':
         specifier: workspace:*
-        version: link:../../packages/mongodb-schema
+        version: file:packages/mongodb-schema
       '@emotion/core':
         specifier: ^11.0.0
         version: 11.0.0
@@ -477,7 +477,7 @@ importers:
         version: link:../../packages/md-utils
       '@bilbomd/mongodb-schema':
         specifier: workspace:*
-        version: link:../../packages/mongodb-schema
+        version: file:packages/mongodb-schema
       axios:
         specifier: ^1.13.2
         version: 1.13.2
@@ -518,8 +518,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       mongoose:
-        specifier: ^8.20.3
-        version: 8.20.3
+        specifier: ^9.0.2
+        version: 9.0.2
       nodemailer:
         specifier: ^7.0.11
         version: 7.0.11
@@ -576,7 +576,7 @@ importers:
     dependencies:
       '@bilbomd/mongodb-schema':
         specifier: workspace:*
-        version: link:../mongodb-schema
+        version: file:packages/mongodb-schema
       fs-extra:
         specifier: ^11.3.3
         version: 11.3.3
@@ -609,8 +609,8 @@ importers:
   packages/mongodb-schema:
     dependencies:
       mongoose:
-        specifier: ^8.20.3
-        version: 8.20.3
+        specifier: ^9.0.2
+        version: 9.0.2
 
 packages:
 
@@ -1371,6 +1371,9 @@ packages:
   '@bcoe/v8-coverage@1.0.2':
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
+
+  '@bilbomd/mongodb-schema@file:packages/mongodb-schema':
+    resolution: {directory: packages/mongodb-schema, type: directory}
 
   '@bufbuild/protobuf@2.10.2':
     resolution: {integrity: sha512-uFsRXwIGyu+r6AMdz+XijIIZJYpoWeYzILt5yZ2d3mCjQrWUTVpVD9WL/jZAbvp+Ed04rOhrsk7FiTcEDseB5A==}
@@ -2827,6 +2830,9 @@ packages:
   '@types/whatwg-url@11.0.5':
     resolution: {integrity: sha512-coYR071JRaHa+xoEvvYqvnIHaVqaYrLPbsufM9BF63HkwI5Lgmy2QR8Q5K/lYDYo5AK82wOvSOS0UsLTpTG7uQ==}
 
+  '@types/whatwg-url@13.0.0':
+    resolution: {integrity: sha512-N8WXpbE6Wgri7KUSvrmQcqrMllKZ9uxkYWMt+mCSGwNc0Hsw9VQTW7ApqI4XNrx6/SaM2QQJCzMPDEXE058s+Q==}
+
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
 
@@ -3329,6 +3335,10 @@ packages:
   bson@6.10.4:
     resolution: {integrity: sha512-WIsKqkSC0ABoBJuT1LEX+2HEvNmNKKgnTAyd0fL8qzK4SH2i9NXg+t08YtdZp/V9IZ33cxe3iV4yM0qg8lMQng==}
     engines: {node: '>=16.20.1'}
+
+  bson@7.0.0:
+    resolution: {integrity: sha512-Kwc6Wh4lQ5OmkqqKhYGKIuELXl+EPYSCObVE6bWsp1T/cGkOCBN0I8wF/T44BiuhHyNi1mmKVPXk60d41xZ7kw==}
+    engines: {node: '>=20.19.0'}
 
   buffer-builder@0.2.0:
     resolution: {integrity: sha512-7VPMEPuYznPSoR21NE1zvd2Xna6c/CloiZCfcMXR1Jny6PjX0N4Nsa38zcBFo/FMK+BlA+FLKbJCQ0i2yxp+Xg==}
@@ -4963,6 +4973,10 @@ packages:
     resolution: {integrity: sha512-C3iHfuGUXK2u8/ipq9LfjFfXFxAZMQJJq7vLS45r3D9Y2xQ/m4S8zaR4zMLFWh9AsNPXmcFfUDhTEO8UIC/V6Q==}
     engines: {node: '>=12.0.0'}
 
+  kareem@3.0.0:
+    resolution: {integrity: sha512-RKhaOBSPN8L7y4yAgNhDT2602G5FD6QbOIISbjN9D6mjHPeqeg7K+EB5IGSU5o81/X2Gzm3ICnAvQW3x3OP8HA==}
+    engines: {node: '>=18.0.0'}
+
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
@@ -5380,6 +5394,10 @@ packages:
   mongodb-connection-string-url@3.0.2:
     resolution: {integrity: sha512-rMO7CGo/9BFwyZABcKAWL8UJwH/Kc2x0g72uhDWzG48URRax5TCIcJ7Rc3RZqffZzO/Gwff/jyKwCU9TN8gehA==}
 
+  mongodb-connection-string-url@7.0.0:
+    resolution: {integrity: sha512-irhhjRVLE20hbkRl4zpAYLnDMM+zIZnp0IDB9akAFFUZp/3XdOfwwddc7y6cNvF2WCEtfTYRwYbIfYa2kVY0og==}
+    engines: {node: '>=20.19.0'}
+
   mongodb-memory-server-core@10.4.2:
     resolution: {integrity: sha512-/w7SWH+f/bpzmQlYu0lRWF33GLOo0GwZrflP1gkDhc6PCuLo5T1mnME/W+mrFmsowLGzthdJnezGBpOnIYNALw==}
     engines: {node: '>=16.20.1'}
@@ -5442,12 +5460,43 @@ packages:
       socks:
         optional: true
 
+  mongodb@7.0.0:
+    resolution: {integrity: sha512-vG/A5cQrvGGvZm2mTnCSz1LUcbOPl83hfB6bxULKQ8oFZauyox/2xbZOoGNl+64m8VBrETkdGCDBdOsCr3F3jg==}
+    engines: {node: '>=20.19.0'}
+    peerDependencies:
+      '@aws-sdk/credential-providers': ^3.806.0
+      '@mongodb-js/zstd': ^7.0.0
+      gcp-metadata: ^7.0.1
+      kerberos: ^7.0.0
+      mongodb-client-encryption: '>=7.0.0 <7.1.0'
+      snappy: ^7.3.2
+      socks: ^2.8.6
+    peerDependenciesMeta:
+      '@aws-sdk/credential-providers':
+        optional: true
+      '@mongodb-js/zstd':
+        optional: true
+      gcp-metadata:
+        optional: true
+      kerberos:
+        optional: true
+      mongodb-client-encryption:
+        optional: true
+      snappy:
+        optional: true
+      socks:
+        optional: true
+
   mongoose-to-swagger@1.5.1:
     resolution: {integrity: sha512-gwEr0NhA+DyGswtgypIoV/iR0RGX4jY/SE9zmYYk6qpG2C83urcQfYJWzm7PsDPo3snMm8XjBYiAtLyYAqirXA==}
 
   mongoose@8.20.3:
     resolution: {integrity: sha512-AQk63Ry4YM/lWJRt/D5P7UiRjKT+z+vD0NkNKgeQ35TioBC7kuI6wBzhu6/kyrNXg+WotFidW1icEWLNC1rUfg==}
     engines: {node: '>=16.20.1'}
+
+  mongoose@9.0.2:
+    resolution: {integrity: sha512-+GCaqwE+X//yN9eo2M2L/n+mVti9J6vH5iQKbhD+2AArZd5iaZqK/DkmkE4S6/iYYMyVQPTXsRk7jyVOYEtJzA==}
+    engines: {node: '>=20.19.0'}
 
   morgan@1.10.1:
     resolution: {integrity: sha512-223dMRJtI/l25dJKWpgij2cMtywuG/WiUKXdvwfbhGKBhy1puASqXwFzmWZ7+K73vUPoR7SS2Qz2cI/g9MKw0A==}
@@ -5460,6 +5509,10 @@ packages:
   mquery@5.0.0:
     resolution: {integrity: sha512-iQMncpmEK8R8ncT8HJGsGc9Dsp8xcgYMVSbs5jgnm1lFHTZqMJTUWTDx1LBO8+mK3tPNZWFLBghQEIOULSTHZg==}
     engines: {node: '>=14.0.0'}
+
+  mquery@6.0.0:
+    resolution: {integrity: sha512-b2KQNsmgtkscfeDgkYMcWGn9vZI9YoXh802VDEwE6qc50zxBFQ0Oo8ROkawbPAsXCY1/Z1yp0MagqsZStPWJjw==}
+    engines: {node: '>=20.19.0'}
 
   mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
@@ -8525,6 +8578,19 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
+  '@bilbomd/mongodb-schema@file:packages/mongodb-schema':
+    dependencies:
+      mongoose: 8.20.3
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-providers'
+      - '@mongodb-js/zstd'
+      - gcp-metadata
+      - kerberos
+      - mongodb-client-encryption
+      - snappy
+      - socks
+      - supports-color
+
   '@bufbuild/protobuf@2.10.2': {}
 
   '@bull-board/api@6.15.0(@bull-board/ui@6.15.0)':
@@ -10207,6 +10273,10 @@ snapshots:
     dependencies:
       '@types/webidl-conversions': 7.0.3
 
+  '@types/whatwg-url@13.0.0':
+    dependencies:
+      '@types/webidl-conversions': 7.0.3
+
   '@types/yargs-parser@21.0.3': {}
 
   '@types/yargs@17.0.35':
@@ -10803,6 +10873,8 @@ snapshots:
       node-int64: 0.4.0
 
   bson@6.10.4: {}
+
+  bson@7.0.0: {}
 
   buffer-builder@0.2.0: {}
 
@@ -12805,6 +12877,8 @@ snapshots:
 
   kareem@2.6.3: {}
 
+  kareem@3.0.0: {}
+
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
@@ -13409,6 +13483,11 @@ snapshots:
       '@types/whatwg-url': 11.0.5
       whatwg-url: 14.2.0
 
+  mongodb-connection-string-url@7.0.0:
+    dependencies:
+      '@types/whatwg-url': 13.0.0
+      whatwg-url: 14.2.0
+
   mongodb-memory-server-core@10.4.2:
     dependencies:
       async-mutex: 0.5.0
@@ -13463,6 +13542,12 @@ snapshots:
       bson: 6.10.4
       mongodb-connection-string-url: 3.0.2
 
+  mongodb@7.0.0:
+    dependencies:
+      '@mongodb-js/saslprep': 1.4.4
+      bson: 7.0.0
+      mongodb-connection-string-url: 7.0.0
+
   mongoose-to-swagger@1.5.1: {}
 
   mongoose@8.20.3:
@@ -13484,6 +13569,23 @@ snapshots:
       - socks
       - supports-color
 
+  mongoose@9.0.2:
+    dependencies:
+      kareem: 3.0.0
+      mongodb: 7.0.0
+      mpath: 0.9.0
+      mquery: 6.0.0
+      ms: 2.1.3
+      sift: 17.1.3
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-providers'
+      - '@mongodb-js/zstd'
+      - gcp-metadata
+      - kerberos
+      - mongodb-client-encryption
+      - snappy
+      - socks
+
   morgan@1.10.1:
     dependencies:
       basic-auth: 2.0.1
@@ -13501,6 +13603,8 @@ snapshots:
       debug: 4.4.3(supports-color@5.5.0)
     transitivePeerDependencies:
       - supports-color
+
+  mquery@6.0.0: {}
 
   mri@1.2.0: {}
 
