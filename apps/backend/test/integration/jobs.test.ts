@@ -1,5 +1,5 @@
 // Mock spawnAutoRgCalculator at the very top to avoid invoking real Python code during tests.
-vi.mock('../src/controllers/jobs/utils/autoRg.js', () => ({
+vi.mock('../../src/controllers/jobs/utils/autoRg.js', () => ({
   spawnAutoRgCalculator: vi.fn(() =>
     Promise.resolve({
       rg: 30,
@@ -8,25 +8,24 @@ vi.mock('../src/controllers/jobs/utils/autoRg.js', () => ({
     })
   )
 }))
-vi.mock('../src/queues/pdb2crd.js', async () => {
-  const actual = await vi.importActual('../src/queues/pdb2crd.js')
+vi.mock('../../src/queues/pdb2crd.js', async () => {
+  const actual = await vi.importActual('../../src/queues/pdb2crd.js')
   return {
     ...actual,
     waitForJobCompletion: vi.fn().mockResolvedValue(true)
   }
 })
 import request from 'supertest'
-import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest'
+import { describe, test, expect, beforeEach, vi } from 'vitest'
 import mongoose from 'mongoose'
 import path from 'path'
 import fs from 'fs-extra'
 import jwt from 'jsonwebtoken'
 import { v4 as uuid } from 'uuid'
-import app from './appMock.js'
+import app from '../appMock.js'
 import { User, IUser, Job } from '@bilbomd/mongodb-schema'
 import { Queue } from 'bullmq'
 
-let server: any
 let testUser1: IUser
 
 const accessTokenSecret: string = process.env.ACCESS_TOKEN_SECRET ?? ''
@@ -99,10 +98,10 @@ const createNewJob = async (user: IUser) => {
   return createdJob
 }
 
-beforeAll(async () => {
-  server = app.listen(0)
-  await User.deleteMany()
-  await Job.deleteMany()
+beforeEach(async () => {
+  // Clear collections
+  await User.deleteMany({})
+  await Job.deleteMany({})
 
   testUser1 = await User.create({
     username: 'testuser1',
@@ -113,12 +112,6 @@ beforeAll(async () => {
       expiresAt: new Date(Date.now() + 3600000)
     }
   })
-})
-
-afterAll(async () => {
-  await User.deleteMany()
-  await Job.deleteMany()
-  await new Promise((resolve) => server.close(resolve))
 })
 
 describe('BullMQ Queue mock', () => {
@@ -142,14 +135,14 @@ describe('GET /api/v1/jobs', () => {
   //Test cases for the GET /api/v1/jobs endpoint
   test('should return error if unauthorized', async () => {
     expect.assertions(2)
-    const res = await request(server).get('/api/v1/jobs')
+    const res = await request(app).get('/api/v1/jobs')
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Unauthorized')
   })
   test('should return error if no jobs found', async () => {
     expect.assertions(2)
     const token = generateAccessToken()
-    const res = await request(server)
+    const res = await request(app)
       .get('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
     console.log('no jobs', res.statusCode, res.body)
@@ -160,7 +153,7 @@ describe('GET /api/v1/jobs', () => {
     expect.assertions(3)
     await createNewJob(testUser1)
     const token = generateAccessToken()
-    const res = await request(server)
+    const res = await request(app)
       .get('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
     expect(res.statusCode).toBe(200)
@@ -178,7 +171,7 @@ describe('GET /api/v1/jobs/:id', () => {
   test('should return error if unauthorized', async () => {
     expect.assertions(2)
     const id = new mongoose.Types.ObjectId().toString()
-    const res = await request(server).get(`/api/v1/jobs/${id}`)
+    const res = await request(app).get(`/api/v1/jobs/${id}`)
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Unauthorized')
   })
@@ -186,7 +179,7 @@ describe('GET /api/v1/jobs/:id', () => {
     expect.assertions(2)
     const token = generateAccessToken()
     const id = new mongoose.Types.ObjectId().toString()
-    const res = await request(server)
+    const res = await request(app)
       .get(`/api/v1/jobs/${id}`)
       .set('Authorization', `Bearer ${token}`)
     expect(res.statusCode).toBe(404)
@@ -195,7 +188,7 @@ describe('GET /api/v1/jobs/:id', () => {
   test('should return success if job is found', async () => {
     const token = generateAccessToken()
     const newJob = await createNewJob(testUser1)
-    const res = await request(server)
+    const res = await request(app)
       .get(`/api/v1/jobs/${newJob._id}`)
       .set('Authorization', `Bearer ${token}`)
     expect(res.statusCode).toBe(200)
@@ -207,27 +200,27 @@ describe('POST /api/v1/jobs', () => {
   //Test cases for the POST /api/v1/jobs endpoint
   test('should return error if unauthorized', async () => {
     expect.assertions(2)
-    const res = await request(server).post('/api/v1/jobs')
+    const res = await request(app).post('/api/v1/jobs')
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Unauthorized')
   })
   test('should return error if user not found', async () => {
     expect.assertions(2)
     const token = generateAccessToken('nope@nope.com')
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
       .attach(
         'pdb_file',
-        `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`
+        `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
       )
       .attach(
         'inp_file',
-        `${__dirname}/../../../test_scripts/data/pdb/const.inp`
+        `${__dirname}/../../../../test_scripts/data/pdb/const.inp`
       )
       .attach(
         'dat_file',
-        `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`
+        `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
       )
       .field('title', 'Test Job')
       .field('bilbomd_mode', 'pdb')
@@ -237,20 +230,20 @@ describe('POST /api/v1/jobs', () => {
   test('should return error if no job type provided', async () => {
     expect.assertions(2)
     const token = generateAccessToken()
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
       .attach(
         'pdb_file',
-        `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`
+        `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
       )
       .attach(
         'inp_file',
-        `${__dirname}/../../../test_scripts/data/pdb/const.inp`
+        `${__dirname}/../../../../test_scripts/data/pdb/const.inp`
       )
       .attach(
         'dat_file',
-        `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`
+        `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
       )
       .field('title', 'Test Job')
       .field('rg', 35)
@@ -263,20 +256,20 @@ describe('POST /api/v1/jobs', () => {
   test('should return error if wrong job type provided', async () => {
     expect.assertions(2)
     const token = generateAccessToken()
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
       .attach(
         'pdb_file',
-        `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`
+        `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
       )
       .attach(
         'inp_file',
-        `${__dirname}/../../../test_scripts/data/pdb/const.inp`
+        `${__dirname}/../../../../test_scripts/data/pdb/const.inp`
       )
       .attach(
         'dat_file',
-        `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`
+        `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
       )
       .field('title', 'Test Job')
       .field('rg', 35)
@@ -290,21 +283,21 @@ describe('POST /api/v1/jobs', () => {
   test('should return success if new BilboMD job created', async () => {
     expect.assertions(2)
     const token = generateAccessToken()
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'BilboMD Test Job')
       .attach(
         'pdb_file',
-        `${__dirname}/../../../test_scripts/data/pdb/pro_dna.pdb`
+        `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
       )
       .attach(
         'inp_file',
-        `${__dirname}/../../../test_scripts/data/pdb/const.inp`
+        `${__dirname}/../../../../test_scripts/data/pdb/const.inp`
       )
       .attach(
         'dat_file',
-        `${__dirname}/../../../test_scripts/data/pdb/saxs-data.dat`
+        `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
       )
       .field('rg', 35)
       .field('rg_min', 30)
@@ -321,21 +314,21 @@ describe('POST /api/v1/jobs', () => {
   test('should return success if new BilboMDAuto job created', async () => {
     expect.assertions(2)
     const token = generateAccessToken()
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'BilboMDAuto Test Job')
       .attach(
         'pdb_file',
-        `${__dirname}/../../../test_scripts/data/auto1/auto1.pdb`
+        `${__dirname}/../../../../test_scripts/data/auto1/auto1.pdb`
       )
       .attach(
         'pae_file',
-        `${__dirname}/../../../test_scripts/data/auto1/auto1-pae.json`
+        `${__dirname}/../../../../test_scripts/data/auto1/auto1-pae.json`
       )
       .attach(
         'dat_file',
-        `${__dirname}/../../../test_scripts/data/auto1/saxs-data.dat`
+        `${__dirname}/../../../../test_scripts/data/auto1/saxs-data.dat`
       )
       .field('bilbomd_mode', 'auto')
     // console.log('res----->', res.body)
@@ -347,7 +340,7 @@ describe('POST /api/v1/jobs', () => {
 describe('PATCH /api/v1/jobs', () => {
   //Test cases for the PATCH /api/v1/jobs endpoint
   test('should return error if unauthorized', async () => {
-    const res = await request(server).patch('/api/v1/jobs')
+    const res = await request(app).patch('/api/v1/jobs')
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Unauthorized')
   })
@@ -357,7 +350,7 @@ describe('DELETE /api/v1/jobs/:id', () => {
   //Test cases for the DELETE /api/v1/jobs endpoint
   test('should return error if unauthorized', async () => {
     expect.assertions(2)
-    const res = await request(server).delete('/api/v1/jobs')
+    const res = await request(app).delete('/api/v1/jobs')
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Unauthorized')
   })
@@ -365,7 +358,7 @@ describe('DELETE /api/v1/jobs/:id', () => {
   test('should return 202 if Job ID not found (still queued)', async () => {
     const token = generateAccessToken()
     const id = new mongoose.Types.ObjectId().toString()
-    const res = await request(server)
+    const res = await request(app)
       .delete(`/api/v1/jobs/${id}`)
       .set('Authorization', `Bearer ${token}`)
     expect(res.statusCode).toBe(202)
@@ -375,7 +368,7 @@ describe('DELETE /api/v1/jobs/:id', () => {
   test('should return 202 if directory is missing (worker will handle)', async () => {
     const token = generateAccessToken()
     const newJob = await createNewJob(testUser1)
-    const res = await request(server)
+    const res = await request(app)
       .delete(`/api/v1/jobs/${newJob._id}`)
       .set('Authorization', `Bearer ${token}`)
     expect(res.statusCode).toBe(202)
@@ -387,7 +380,7 @@ describe('DELETE /api/v1/jobs/:id', () => {
     const newJob = await createNewJob(testUser1)
     const jobDir = path.join(dataVolume, newJob.uuid)
     await fs.mkdir(jobDir, { recursive: true })
-    const res = await request(server)
+    const res = await request(app)
       .delete(`/api/v1/jobs/${newJob._id}`)
       .set('Authorization', `Bearer ${token}`)
     expect(res.statusCode).toBe(202)

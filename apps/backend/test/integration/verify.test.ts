@@ -1,7 +1,7 @@
 import request from 'supertest'
-import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest'
+import { describe, test, expect, beforeEach, vi } from 'vitest'
 import mongoose from 'mongoose'
-import app from './appMock.js'
+import app from '../appMock.js'
 import { User } from '@bilbomd/mongodb-schema'
 // import { closeQueue } from '../src/queues/bilbomd'
 import dotenv from 'dotenv'
@@ -9,14 +9,15 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 // Mock the loginLimiter middleware to prevent rate limiting in tests
-vi.mock('../src/middleware/loginLimiter.js', () => ({
+vi.mock('../../src/middleware/loginLimiter.js', () => ({
   loginLimiter: vi.fn((req, res, next) => next())
 }))
 
-let server: any // Adjust the type as needed.
+beforeEach(async () => {
+  // Clear users collection before each test
+  await User.deleteMany({})
 
-beforeAll(async () => {
-  server = app.listen(0)
+  // Create test user for verification tests
   await User.create({
     username: 'testuser3',
     email: 'testuser3@example.com',
@@ -28,20 +29,15 @@ beforeAll(async () => {
   })
 })
 
-afterAll(async () => {
-  await User.deleteOne({ username: 'testuser3' })
-  await new Promise((resolve) => server.close(resolve))
-})
-
 describe('POST /api/v1/verify', () => {
   test('should return error if no verification code provided', async () => {
-    const res = await request(server).post('/api/v1/verify').send({ code: '' })
+    const res = await request(app).post('/api/v1/verify').send({ code: '' })
     expect(res.statusCode).toBe(400)
     expect(res.body.message).toBe('Confirmation code required.')
   })
 
   test('Should return error if no user found with that verification code', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/verify')
       .send({ code: '54321' })
     expect(res.statusCode).toBe(400)
@@ -49,7 +45,7 @@ describe('POST /api/v1/verify', () => {
   })
 
   test('Should return verification success', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/verify')
       .send({ code: 'eFHfeP7USO7xK5K4PKasrvh2ZxlwPvCEMFTW' })
     expect(res.statusCode).toBe(200)
@@ -59,7 +55,7 @@ describe('POST /api/v1/verify', () => {
 
 describe('POST /api/v1/verify/resend', () => {
   test('should return error if email key is missing', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/verify/resend')
       .send({ nope: '' })
     expect(res.statusCode).toBe(400)
@@ -67,7 +63,7 @@ describe('POST /api/v1/verify/resend', () => {
   })
 
   test('should return error if email key is missing but email is provided', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/verify/resend')
       .send({ nope: 'testuser3@example.com' })
     expect(res.statusCode).toBe(400)
@@ -75,7 +71,7 @@ describe('POST /api/v1/verify/resend', () => {
   })
 
   test('should return error if email missing', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/verify/resend')
       .send({ email: '' })
     expect(res.statusCode).toBe(400)
@@ -83,7 +79,7 @@ describe('POST /api/v1/verify/resend', () => {
   })
 
   test('Should return error if no user found with that email', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/verify/resend')
       .send({ email: 'nope@example.com' })
     expect(res.statusCode).toBe(401)
@@ -91,7 +87,7 @@ describe('POST /api/v1/verify/resend', () => {
   })
 
   test('Should return success', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/verify/resend')
       .send({ email: 'testuser3@example.com' })
     expect(res.statusCode).toBe(201)

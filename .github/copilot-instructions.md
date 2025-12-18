@@ -112,6 +112,7 @@ Jobs are transformed from MongoDB documents to DTOs using `buildBilboMDJobDTO()`
 - Uses `vitest` for testing.
 - **Don't use** a single `tests` folder at src root
 - Example structure: `src/controllers/jobs/__tests__/getAllJobs.test.ts`
+- do not use the command line flag `--reporter=verbose` when running tests
 
 ## Testing Guidelines & Best Practices
 

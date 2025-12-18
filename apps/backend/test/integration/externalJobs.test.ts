@@ -1,5 +1,5 @@
 // Mock spawnAutoRgCalculator at the very top to avoid invoking real Python code during tests
-vi.mock('../src/controllers/jobs/utils/autoRg.js', () => ({
+vi.mock('../../src/controllers/jobs/utils/autoRg.js', () => ({
   spawnAutoRgCalculator: vi.fn(() =>
     Promise.resolve({
       rg: 30,
@@ -8,16 +8,16 @@ vi.mock('../src/controllers/jobs/utils/autoRg.js', () => ({
     })
   )
 }))
-vi.mock('../src/queues/pdb2crd.js', async () => {
-  const actual = await vi.importActual('../src/queues/pdb2crd.js')
+vi.mock('../../src/queues/pdb2crd.js', async () => {
+  const actual = await vi.importActual('../../src/queues/pdb2crd.js')
   return {
     ...actual,
     waitForJobCompletion: vi.fn().mockResolvedValue(true)
   }
 })
-import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest'
+import { describe, test, expect, beforeEach, vi } from 'vitest'
 import request from 'supertest'
-import app from './appMock.js'
+import app from '../appMock.js'
 import path from 'path'
 import { User } from '@bilbomd/mongodb-schema'
 import crypto from 'crypto'
@@ -41,13 +41,14 @@ const expectSuccessfulJobResponse = (
   )
 }
 
-let server: any
-
 const generateApiToken = (): string => {
   return process.env.BILBOMD_API_TOKEN ?? '12345trewq12345trewq'
 }
 
-beforeAll(async () => {
+beforeEach(async () => {
+  // Clear collections
+  await User.deleteMany({})
+
   const apiToken = process.env.BILBOMD_API_TOKEN ?? '12345trewq12345trewq'
   const tokenHash = crypto.createHash('sha256').update(apiToken).digest('hex')
 
@@ -62,17 +63,12 @@ beforeAll(async () => {
       }
     ]
   })
-  server = app.listen(0)
-})
-
-afterAll(async () => {
-  await new Promise((resolve) => server.close(resolve))
 })
 
 describe('/api/v1/external/jobs', () => {
   test('should inform us that the API Token is missing', async () => {
     const apiToken = generateApiToken()
-    const res = await request(server).get('/api/v1/external/jobs')
+    const res = await request(app).get('/api/v1/external/jobs')
     console.log('sanity test res:', res.body)
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Missing or invalid Authorization header')
@@ -91,18 +87,18 @@ describe('/api/v1/external/jobs', () => {
 
     const pdbFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/auto1/auto1.pdb'
+      '../../../../test_scripts/data/auto1/auto1.pdb'
     )
     const datFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/auto1/saxs-data.dat'
+      '../../../../test_scripts/data/auto1/saxs-data.dat'
     )
     const paeFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/auto1/auto1-pae.json'
+      '../../../../test_scripts/data/auto1/auto1-pae.json'
     )
 
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/external/jobs')
       .set('Authorization', `Bearer ${apiToken}`)
       .set('Accept', 'application/json')
@@ -121,18 +117,18 @@ describe('/api/v1/external/jobs', () => {
 
     const pdbFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/pdb/pro_dna.pdb'
+      '../../../../test_scripts/data/pdb/pro_dna.pdb'
     )
     const datFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/pdb/saxs-data.dat'
+      '../../../../test_scripts/data/pdb/saxs-data.dat'
     )
     const inpFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/pdb/const.inp'
+      '../../../../test_scripts/data/pdb/const.inp'
     )
 
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/external/jobs')
       .set('Authorization', `Bearer ${apiToken}`)
       .set('Accept', 'application/json')
@@ -151,22 +147,22 @@ describe('/api/v1/external/jobs', () => {
 
     const crdFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/crd/pro_dna.crd'
+      '../../../../test_scripts/data/crd/pro_dna.crd'
     )
     const psfFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/crd/pro_dna.psf'
+      '../../../../test_scripts/data/crd/pro_dna.psf'
     )
     const datFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/crd/saxs-data.dat'
+      '../../../../test_scripts/data/crd/saxs-data.dat'
     )
     const inpFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/crd/const.inp'
+      '../../../../test_scripts/data/crd/const.inp'
     )
 
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/external/jobs')
       .set('Authorization', `Bearer ${apiToken}`)
       .set('Accept', 'application/json')
@@ -188,14 +184,14 @@ describe('/api/v1/external/jobs', () => {
 
     const datFilePath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/af-mono/A_S_USP16-FL_1.dat'
+      '../../../../test_scripts/data/af-mono/A_S_USP16-FL_1.dat'
     )
     const entitiesJsonPath = path.resolve(
       __dirname,
-      '../../../test_scripts/data/af-mono/entities.json'
+      '../../../../test_scripts/data/af-mono/entities.json'
     )
 
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/external/jobs')
       .set('Authorization', `Bearer ${apiToken}`)
       .set('Accept', 'application/json')

@@ -1,36 +1,11 @@
 import request from 'supertest'
-import app from './appMock.js'
-import { describe, test, expect, beforeAll, afterAll } from 'vitest'
+import app from '../appMock.js'
+import { describe, test, expect, beforeEach } from 'vitest'
 import { User } from '@bilbomd/mongodb-schema'
-
-let server: any
-import dotenv from 'dotenv'
-
-dotenv.config()
-
-beforeAll(async () => {
-  server = app.listen(0)
-  await User.deleteMany()
-  await User.create({
-    username: 'testuser1',
-    email: 'testuser1@example.com',
-    roles: ['User'],
-    confirmationCode: {
-      code: '12345',
-      expiresAt: new Date(Date.now() + 3600000)
-    }
-  })
-})
-
-afterAll(async () => {
-  await User.deleteOne({ username: 'testuser1' })
-  await User.deleteOne({ username: 'testuser2' })
-  await new Promise((resolve) => server.close(resolve))
-})
 
 describe('POST /api/v1/register', () => {
   test('should return error if no user or email provided', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/register')
       .send({ user: '', email: '' })
     expect(res.statusCode).toBe(400)
@@ -38,7 +13,14 @@ describe('POST /api/v1/register', () => {
   })
 
   test('Should return error when duplicate username provided', async () => {
-    const res = await request(server)
+    // Create existing user first
+    await User.create({
+      username: 'testuser1',
+      email: 'testuser1@example.com',
+      roles: ['User']
+    })
+
+    const res = await request(app)
       .post('/api/v1/register')
       .send({ user: 'testuser1', email: 'testuser2@example.com' })
     expect(res.statusCode).toBe(409)
@@ -46,7 +28,14 @@ describe('POST /api/v1/register', () => {
   })
 
   test('Should return error when duplicate email provided', async () => {
-    const res = await request(server)
+    // Create existing user first
+    await User.create({
+      username: 'testuser1',
+      email: 'testuser1@example.com',
+      roles: ['User']
+    })
+
+    const res = await request(app)
       .post('/api/v1/register')
       .send({ user: 'testuser2', email: 'testuser1@example.com' })
     expect(res.statusCode).toBe(409)
@@ -54,7 +43,7 @@ describe('POST /api/v1/register', () => {
   })
 
   test('Should create new user', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/register')
       .send({ user: 'testuser2', email: 'testuser2@example.com' })
     expect(res.statusCode).toBe(201)
@@ -62,7 +51,7 @@ describe('POST /api/v1/register', () => {
   })
 
   test('Should give error if new user is malformed', async () => {
-    const res = await request(server)
+    const res = await request(app)
       .post('/api/v1/register')
       .send({ userr: 'testuser2', emailack: 'testuser2@example.com' })
     expect(res.statusCode).toBe(400)

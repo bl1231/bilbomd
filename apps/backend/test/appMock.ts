@@ -1,4 +1,5 @@
 import './mocks/mockRedis.js'
+import './mocks/mockBullMQ.js'
 import express, { Request, Response, NextFunction, Application } from 'express'
 import cors from 'cors'
 import { IUser } from '@bilbomd/mongodb-schema'
