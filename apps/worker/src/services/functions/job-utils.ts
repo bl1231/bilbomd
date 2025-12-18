@@ -104,7 +104,7 @@ const handleJobEmailNotification = async (
       sendJobCompleteEmail(
         user.email,
         config.bilbomdUrl,
-        DBjob.id,
+        DBjob._id.toString(),
         DBjob.title,
         false
       )
@@ -322,12 +322,14 @@ const handleError = async (
 
   // Log job details for context
   logger.error(
-    `Job context: jobId=${DBjob.id}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}`
+    `Job context: jobId=${DBjob._id.toString()}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}`
   )
 
   try {
     // Updates primary status in MongoDB
-    logger.debug(`Updating job status to 'Error' for job ${DBjob.id}`)
+    logger.debug(
+      `Updating job status to 'Error' for job ${DBjob._id.toString()}`
+    )
     await updateJobStatus(DBjob, 'Error')
     logger.debug(`Successfully updated job status to 'Error'`)
   } catch (updateError) {

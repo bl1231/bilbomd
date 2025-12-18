@@ -1,5 +1,11 @@
-import mongoose, { Types, Schema } from 'mongoose'
-import type { IUsageEvent, IUser } from '@bilbomd/mongodb-schema'
+import { Types } from 'mongoose'
+import type { IUser } from '@bilbomd/mongodb-schema'
+import { UsageEvent } from '@bilbomd/mongodb-schema'
+import type {
+  IUsageEventContext,
+  IUsageEvent,
+  UsageEventContextDoc
+} from '@bilbomd/mongodb-schema'
 
 type PipelineType =
   | 'pdb'
@@ -15,7 +21,6 @@ type EventType =
   | 'job_failed'
   | 'job_cancelled'
   | 'job_resubmitted'
-
 // Type guard functions for safe shape validation
 interface PopulatedUserShape {
   _id: Types.ObjectId | string
@@ -60,14 +65,8 @@ const createContextUser = (
   _id: Types.ObjectId,
   username: string,
   email: string
-): { _id: Schema.Types.ObjectId; username: string; email: string } => {
-  // At runtime, Types.ObjectId and Schema.Types.ObjectId are compatible
-  // This helper encapsulates the type assertion in one place
-  return {
-    _id: _id as unknown as Schema.Types.ObjectId,
-    username,
-    email
-  }
+): IUsageEventContext['user'] => {
+  return { _id, username, email } as UsageEventContextDoc['user']
 }
 
 // Accept either a populated mongoose user with _id, or a monorepo DTO with id
@@ -76,11 +75,11 @@ export const buildContext = (params: {
   user?: Record<string, unknown> | Types.ObjectId | string | IUser | null
   public_id?: string
   client_ip_hash?: string
-}): IUsageEvent['context'] => {
+}): IUsageEventContext => {
   const { access_mode, user, public_id, client_ip_hash } = params
 
   let contextUser:
-    | { _id: Schema.Types.ObjectId; username: string; email: string }
+    | { _id: Types.ObjectId; username: string; email: string }
     | undefined
 
   if (access_mode === 'user') {
@@ -115,12 +114,11 @@ export const recordWorkerUsageEvent = async (params: {
     | 'Cancelled'
   durationMs?: number
   nersc?: { qos?: string; jobid?: string }
-  context: IUsageEvent['context']
+  context: IUsageEventContext
   metadata?: Record<string, unknown>
 }) => {
   try {
-    const UsageEvent = mongoose.model<IUsageEvent>('UsageEvent')
-    await UsageEvent.create({
+    const doc: IUsageEvent = {
       uuid: params.uuid,
       job_id: new Types.ObjectId(
         typeof params.jobId === 'string'
@@ -129,12 +127,14 @@ export const recordWorkerUsageEvent = async (params: {
       ),
       pipeline: params.pipeline,
       event_type: params.eventType,
+      timestamp: new Date(),
       status: params.status,
       duration_ms: params.durationMs,
       nersc: params.nersc,
       context: params.context,
       metadata: params.metadata
-    })
+    }
+    await new UsageEvent(doc).save()
   } catch (err) {
     console.warn('Worker UsageEvent recording failed:', err)
   }
