@@ -52,6 +52,7 @@ vi.mock('../utils/charmmParams.js', () => ({
 vi.mock('@bilbomd/mongodb-schema', () => {
   class BilboMdSANSJobMock {
     public id = 'mongo-id-1'
+    public _id = 'mongo-id-1'
     public uuid!: string
     public title!: string
     public md_engine!: 'CHARMM' | 'OpenMM'
