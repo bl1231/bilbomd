@@ -8,7 +8,7 @@ describe('tsconfig.json build verification', () => {
     // Run TypeScript compiler
     try {
       execSync('npx tsc', { cwd: process.cwd() })
-    } catch (error) {
+    } catch {
       throw new Error('TypeScript compilation failed')
     }
 
