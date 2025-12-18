@@ -1,8 +1,8 @@
-import { Schema, model } from 'mongoose'
+import { Schema, model, InferSchemaType } from 'mongoose'
 import {
   IUsageEventContext,
   IUsageEvent
-} from '../interfaces/usageEventInterface.js'
+} from '../interfaces/usageEventInterface'
 
 const usageEventContextSchema = new Schema<IUsageEventContext>({
   access_mode: { type: String, enum: ['user', 'anonymous'], required: true },
@@ -93,3 +93,7 @@ usageEventSchema.index(
 
 export const UsageEvent = model<IUsageEvent>('UsageEvent', usageEventSchema)
 export const usageEventSchemaRef = usageEventSchema
+export type UsageEventDoc = InferSchemaType<typeof usageEventSchema>
+export type UsageEventContextDoc = InferSchemaType<
+  typeof usageEventContextSchema
+>
