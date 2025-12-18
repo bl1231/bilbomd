@@ -1,5 +1,12 @@
 # @bilbomd/bilbomd-types
 
+## 1.3.2
+
+### Patch Changes
+
+- 690bed9: Update mongoose from v8 to v9.
+  Split `backend` tests into unit and integration
+
 ## 1.3.1
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @bilbomd/md-utils
 
+## 1.0.18
+
+### Patch Changes
+
+- 34ef235: Update all dependencies with minor or patch level bumps
+- 690bed9: Update mongoose from v8 to v9.
+  Split `backend` tests into unit and integration
+- Updated dependencies [690bed9]
+  - @bilbomd/mongodb-schema@2.3.3
+
 ## 1.0.17
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @bilbomd/mongodb-schema
 
+## 2.3.3
+
+### Patch Changes
+
+- 690bed9: Update mongoose from v8 to v9.
+  Split `backend` tests into unit and integration
+
 ## 2.3.2
 
 ### Patch Changes
