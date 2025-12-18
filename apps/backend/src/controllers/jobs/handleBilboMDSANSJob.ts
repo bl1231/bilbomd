@@ -161,17 +161,18 @@ const handleBilboMDSANSJob = async (
       return
     }
 
-    logger.info(`${bilbomdMode} Job saved to  MongoDB: ${newJob.id}`)
+    logger.info(
+      `${bilbomdMode} Job saved to  MongoDB: ${newJob._id.toString()}`
+    )
 
     // Write Job params for use by NERSC job script.
-    await writeJobParams(newJob.id)
-
+    await writeJobParams(newJob._id.toString())
     // Create BullMQ Job object
     const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id,
+      jobid: newJob._id.toString(),
       md_engine
     }
 
@@ -196,7 +197,7 @@ const handleBilboMDSANSJob = async (
 
       res.status(200).json({
         message: `New BilboMD SANS Job successfully created`,
-        jobid: newJob.id,
+        jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine,
         publicId: ctx.publicId,
@@ -206,7 +207,7 @@ const handleBilboMDSANSJob = async (
     } else {
       res.status(200).json({
         message: `New BilboMD SANS Job successfully created`,
-        jobid: newJob.id,
+        jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine
       })

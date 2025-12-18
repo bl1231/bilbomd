@@ -108,14 +108,14 @@ const handleBilboMDScoperJob = async (
 
     // Save the job to the database
     await newJob.save()
-    logger.info(`${bilbomdMode} Job saved to MongoDB: ${newJob.id}`)
+    logger.info(`${bilbomdMode} Job saved to MongoDB: ${newJob._id.toString()}`)
 
     // Create BullMQ Job object
     const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id
+      jobid: newJob._id.toString()
     }
 
     // Queue the job
@@ -139,7 +139,7 @@ const handleBilboMDScoperJob = async (
 
       res.status(200).json({
         message: `New Scoper Job successfully created`,
-        jobid: newJob.id,
+        jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine,
         publicId: ctx.publicId,
@@ -149,7 +149,7 @@ const handleBilboMDScoperJob = async (
     } else {
       res.status(200).json({
         message: `New Scoper Job successfully created`,
-        jobid: newJob.id,
+        jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine
       })
