@@ -65,14 +65,10 @@ COPY --from=build-deps /usr/local/RNAView/bin/rnaview /usr/local/bin/
 COPY --from=build-deps /usr/local/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
 
 # Install micromamba (fast, reproducible conda) with arch-aware URL
-RUN set -eux; \
-    case "$TARGETARCH" in \
-    amd64) MICROMAMBA_URL="https://micro.mamba.pm/api/micromamba/linux-64/latest" ;; \
-    arm64) MICROMAMBA_URL="https://micro.mamba.pm/api/micromamba/linux-aarch64/latest" ;; \
-    *) echo "Unsupported TARGETARCH: $TARGETARCH"; exit 1 ;; \
-    esac; \
-    curl -fsSL --retry 3 --retry-delay 2 "$MICROMAMBA_URL" -o /usr/local/bin/micromamba; \
-    chmod +x /usr/local/bin/micromamba
+RUN curl -L -o /tmp/miniforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh && \
+    bash /tmp/miniforge.sh -b -p /opt/conda && \
+    rm /tmp/miniforge.sh && \
+    /opt/conda/bin/conda clean --all --yes
 
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV PATH=/opt/conda/bin:/usr/local/bin:$PATH
