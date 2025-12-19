@@ -24,14 +24,18 @@ beforeAll(async () => {
     })
     await User.deleteOne({ _id: tempUser._id })
   } catch (error) {
-    console.log('User collection initialization:', error.message)
+    if (error instanceof Error) {
+      console.log('User collection initialization:', error.message)
+    } else {
+      console.log('User collection initialization:', error)
+    }
   }
 }, 15000)
 
 // Clear collections before each test to ensure isolation
 afterEach(async () => {
   // Clear collections after each test to avoid interfering with test-specific setup
-  if (mongoose.connection.readyState === 1) {
+  if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
     const collections = await mongoose.connection.db.collections()
     const userCollections = collections.filter(
       (c) =>
