@@ -595,16 +595,122 @@ jobs:
       - name: Test md-utils
         run: pnpm -C packages/md-utils run test
 
+  backend-unit-tests:
+    name: Test backend (unit)
+    if: needs.changes.outputs.backend == 'true'
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build shared schema
+        run: pnpm -C packages/mongodb-schema run build
+
+      - name: Run backend unit tests
+        run: pnpm -C apps/backend run test
+
+  backend-integration-tests:
+    name: Test backend (integration)
+    if: needs.changes.outputs.backend == 'true'
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="bash -lc 'cat </dev/tcp/127.0.0.1/27017'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      # Override integration test DB to use the service
+      MONGODB_TEST_URI: mongodb://127.0.0.1:27017/bilbomd-test
+      # Secrets used by auth middleware during integration tests
+      ACCESS_TOKEN_SECRET: test-access-secret
+      REFRESH_TOKEN_SECRET: test-refresh-secret
+      BILBOMD_API_TOKEN: test-external-api-token
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build shared schema
+        run: pnpm -C packages/mongodb-schema run build
+
+      - name: Wait for Mongo to be ready
+        run: |
+          for i in {1..30}; do
+            if (echo > /dev/tcp/127.0.0.1/27017) >/dev/null 2>&1; then
+              echo "Mongo is ready"; break; fi; echo "Waiting for Mongo..."; sleep 2; done
+
+      - name: Run backend integration tests
+        run: pnpm -C apps/backend run test:integration
+
   gate:
     name: Branch Protection Gate
     runs-on: [ubuntu-22.04]
-    needs: [lint, backend, ui, worker, scoper, schema, md-utils]
+    needs:
+      [
+        lint,
+        backend,
+        ui,
+        worker,
+        scoper,
+        schema,
+        md-utils,
+        backend-unit-tests,
+        backend-integration-tests,
+      ]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     steps:
       - name: Check build results
         run: |
           set -e
-          for job in lint backend ui worker scoper schema md-utils; do
+          for job in lint backend ui worker scoper schema md-utils backend-unit-tests backend-integration-tests; do
             result="${{ needs[job].result }}"
             echo "$job result: $result"
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
