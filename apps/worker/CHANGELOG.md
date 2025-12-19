@@ -1,5 +1,15 @@
 # @bilbomd/worker
 
+## 2.1.4
+
+### Patch Changes
+
+- 0daf2a4: improved cicd pipeline
+- Updated dependencies [0daf2a4]
+  - @bilbomd/bilbomd-types@1.3.3
+  - @bilbomd/md-utils@1.0.19
+  - @bilbomd/mongodb-schema@2.3.4
+
 ## 2.1.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 2.3.4
+
+### Patch Changes
+
+- 0daf2a4: improved cicd pipeline
+
 ## 2.3.3
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @bilbomd/ui
 
+## 2.4.6
+
+### Patch Changes
+
+- 0daf2a4: improved cicd pipeline
+- Updated dependencies [0daf2a4]
+  - @bilbomd/bilbomd-types@1.3.3
+  - @bilbomd/mongodb-schema@2.3.4
+
 ## 2.4.5
 
 ### Patch Changes
