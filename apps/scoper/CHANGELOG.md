@@ -1,5 +1,13 @@
 # @bilbomd/scoper
 
+## 1.5.19
+
+### Patch Changes
+
+- 0daf2a4: improved cicd pipeline
+- Updated dependencies [0daf2a4]
+  - @bilbomd/mongodb-schema@2.3.4
+
 ## 1.5.18
 
 ### Patch Changes

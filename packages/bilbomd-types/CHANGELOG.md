@@ -1,5 +1,11 @@
 # @bilbomd/bilbomd-types
 
+## 1.3.3
+
+### Patch Changes
+
+- 0daf2a4: improved cicd pipeline
+
 ## 1.3.2
 
 ### Patch Changes
