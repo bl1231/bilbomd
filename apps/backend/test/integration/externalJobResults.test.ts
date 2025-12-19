@@ -26,8 +26,8 @@ beforeEach(async () => {
     status: 'Completed',
     progress: 100,
     uuid: 'test-uuid-results-1234',
-    submittedAt: new Date(Date.now() - 10 * 60 * 1000),
-    completedAt: new Date(Date.now() - 5 * 60 * 1000),
+    time_submitted: new Date(Date.now() - 10 * 60 * 1000),
+    time_completed: new Date(Date.now() - 5 * 60 * 1000),
     user: {
       _id: user?._id,
       username: user?.username,
