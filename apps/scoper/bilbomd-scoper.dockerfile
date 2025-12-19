@@ -4,11 +4,11 @@
 # Scoper app image: builds app on top of long-lived base
 # The base image consolidates stages 1–4 (toolchain, RNAView/reduce, Node, Python env)
 
-ARG BASE_IMAGE=bilbomd-scoper-base:sha-bf71c1f
+# ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-scoper-base:sha-bf71c1f
 
 # -----------------------------------------------------------------------------
 # Build stage 5a - deps: prefetch pnpm store for monorepo
-FROM ${BASE_IMAGE} AS deps
+FROM ghcr.io/bl1231/bilbomd-scoper-base:sha-bf71c1f AS deps
 WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the repo version (user set to latest)
@@ -27,7 +27,7 @@ RUN pnpm fetch
 
 # -----------------------------------------------------------------------------
 # Build stage 5b - build: install, build schema + scoper, and deploy to /out
-FROM ${BASE_IMAGE} AS build
+FROM ghcr.io/bl1231/bilbomd-scoper-base:sha-bf71c1f AS build
 WORKDIR /repo
 
 RUN corepack enable \
@@ -52,7 +52,7 @@ RUN pnpm deploy --filter @bilbomd/scoper --prod /out
 
 # -----------------------------------------------------------------------------
 # Final stage: Use base directly (keeps all libraries)
-FROM ${BASE_IMAGE} AS bilbomd-scoper
+FROM ghcr.io/bl1231/bilbomd-scoper-base:sha-bf71c1f AS bilbomd-scoper
 ARG USER_ID
 ARG GROUP_ID
 
