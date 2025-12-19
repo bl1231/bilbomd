@@ -23,6 +23,7 @@
     "test": "vitest --run --coverage",
     "test:watch": "vitest",
     "test:integration": "vitest --run --coverage test/integration --config vitest.integration.config.ts",
+    "test:integration:compose": "docker compose --env-file ../../infra/.env.local -f ../../infra/docker-compose.local.yml -p bilbomd-local up -d mongodb && sleep 10 && vitest --run --config vitest.integration.config.ts && docker compose -f ../../infra/docker-compose.local.yml -p bilbomd-local down",
     "test:integration:watch": "vitest test/integration --config vitest.integration.config.ts",
     "server": "nodemon ."
   },

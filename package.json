@@ -43,7 +43,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/browser": "^4.0.16",
     "@vitest/coverage-v8": "^4.0.16",
-    "@vitest/eslint-plugin": "^1.5.2",
+    "@vitest/eslint-plugin": "^1.5.4",
     "@vitest/ui": "^4.0.16",
     "concurrently": "^9.2.1",
     "copyfiles": "^2.4.1",

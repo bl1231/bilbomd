@@ -5,12 +5,14 @@ class MockQueue {
   name: string
 
   constructor(name: string, _options?: any) {
-    this.name = name
+    // Tag the queue name to indicate it's mocked, aligning with test expectations
+    this.name = `${name}-mock`
   }
 
   async add(_jobName: string, _jobData: any, _options?: any) {
     return {
       id: 'mock-job-id',
+      name: _jobName,
       data: _jobData,
       opts: _options
     }

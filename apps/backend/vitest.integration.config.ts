@@ -14,10 +14,11 @@ export default defineConfig({
     testTimeout: 3000,
     pool: 'forks',
     sequence: { concurrent: false },
+    // Run files serially to avoid cross-test DB cleanup interference
+    maxWorkers: 1,
     setupFiles: ['./test/integration-setup.ts'],
     // Environment variables for integration tests
     env: {
-      MONGODB_TEST_URI: 'mongodb://localhost:27017/bilbomd-test',
       SFAPI_URL: 'https://api.nersc.gov',
       BILBOMD_URL: 'http://localhost:3000',
       SCRIPT_DIR: '/app/scripts',

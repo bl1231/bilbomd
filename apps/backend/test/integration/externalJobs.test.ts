@@ -20,7 +20,7 @@ import request from 'supertest'
 import app from '../appMock.js'
 import path from 'path'
 import { User } from '@bilbomd/mongodb-schema'
-import crypto from 'crypto'
+import { seedApiTokenUser } from '../helpers/seedApiTokenUser.js'
 
 const expectSuccessfulJobResponse = (
   res: request.Response,
@@ -41,49 +41,35 @@ const expectSuccessfulJobResponse = (
   )
 }
 
-const generateApiToken = (): string => {
-  return process.env.BILBOMD_API_TOKEN ?? '12345trewq12345trewq'
-}
+let apiTokenForTests: string
 
 beforeEach(async () => {
-  // Clear collections
+  // Clear collections and seed a token user
   await User.deleteMany({})
-
-  const apiToken = process.env.BILBOMD_API_TOKEN ?? '12345trewq12345trewq'
-  const tokenHash = crypto.createHash('sha256').update(apiToken).digest('hex')
-
-  await User.create({
+  const seeded = await seedApiTokenUser({
     email: 'testuser@example.com',
-    username: 'apitestuser',
-    roles: ['User'],
-    apiTokens: [
-      {
-        tokenHash: tokenHash,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24) // 1 day in future
-      }
-    ]
+    username: 'apitestuser'
   })
+  apiTokenForTests = seeded.token
 })
 
 describe('/api/v1/external/jobs', () => {
   test('should inform us that the API Token is missing', async () => {
-    const apiToken = generateApiToken()
     const res = await request(app).get('/api/v1/external/jobs')
     console.log('sanity test res:', res.body)
     expect(res.statusCode).toBe(401)
     expect(res.body.message).toBe('Missing or invalid Authorization header')
   })
   test('should verify that the external API Token protected route is alive', async () => {
-    const apiToken = generateApiToken()
-    const res = await request(server)
+    const res = await request(app)
       .get('/api/v1/external/jobs')
-      .set('Authorization', `Bearer ${apiToken}`)
+      .set('Authorization', `Bearer ${apiTokenForTests}`)
     console.log('sanity test res:', res.body)
     expect(res.statusCode).toBe(200)
     expect(res.body.message).toBe('External API route is working.')
   })
   test('should submit a BilboMD auto job successfully', async () => {
-    const apiToken = generateApiToken()
+    const apiToken = apiTokenForTests
 
     const pdbFilePath = path.resolve(
       __dirname,
@@ -113,7 +99,7 @@ describe('/api/v1/external/jobs', () => {
     )
   })
   test('should submit a BilboMD classic PDB job successfully', async () => {
-    const apiToken = generateApiToken()
+    const apiToken = apiTokenForTests
 
     const pdbFilePath = path.resolve(
       __dirname,
@@ -143,7 +129,7 @@ describe('/api/v1/external/jobs', () => {
     )
   })
   test('should submit a BilboMD classic CRD job successfully', async () => {
-    const apiToken = generateApiToken()
+    const apiToken = apiTokenForTests
 
     const crdFilePath = path.resolve(
       __dirname,
@@ -180,7 +166,7 @@ describe('/api/v1/external/jobs', () => {
   test('should submit a BilboMD alphafold job successfully', async () => {
     const originalEnableAlphaFold = process.env.ENABLE_BILBOMD_ALPHAFOLD
     process.env.ENABLE_BILBOMD_ALPHAFOLD = 'true'
-    const apiToken = generateApiToken()
+    const apiToken = apiTokenForTests
 
     const datFilePath = path.resolve(
       __dirname,

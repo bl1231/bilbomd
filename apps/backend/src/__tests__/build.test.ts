@@ -7,7 +7,7 @@ describe('tsconfig.json build verification', () => {
   it('should compile TypeScript and produce dist/server.js', () => {
     // Run TypeScript compiler
     try {
-      execSync('npx tsc', { cwd: process.cwd() })
+      execSync('pnpm exec tsc -p .', { cwd: process.cwd(), stdio: 'inherit' })
     } catch {
       throw new Error('TypeScript compilation failed')
     }

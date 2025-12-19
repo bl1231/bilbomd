@@ -2,35 +2,22 @@ import { describe, test, expect, beforeEach, vi } from 'vitest'
 import request from 'supertest'
 import app from '../appMock.js'
 import { User, Job } from '@bilbomd/mongodb-schema'
-import crypto from 'crypto'
+import { seedApiTokenUser } from '../helpers/seedApiTokenUser.js'
 import fs from 'fs-extra'
 import path from 'path'
 
-const FIXED_API_TOKEN = '12345trewq12345trewq-results'
-
-const generateApiToken = (): string => {
-  return FIXED_API_TOKEN
-}
+let apiTokenForTests: string
 
 beforeEach(async () => {
   // Clear collections
   await User.deleteMany({})
   await Job.deleteMany({})
 
-  const apiToken = FIXED_API_TOKEN
-  const tokenHash = crypto.createHash('sha256').update(apiToken).digest('hex')
-
-  await User.create({
+  const seeded = await seedApiTokenUser({
     email: 'testuser-results@example.com',
-    username: 'apitestuser-results',
-    roles: ['User'],
-    apiTokens: [
-      {
-        tokenHash: tokenHash,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
-      }
-    ]
+    username: 'apitestuser-results'
   })
+  apiTokenForTests = seeded.token
 
   const user = await User.findOne({ username: 'apitestuser-results' })
 
@@ -39,9 +26,13 @@ beforeEach(async () => {
     status: 'Completed',
     progress: 100,
     uuid: 'test-uuid-results-1234',
-    submittedAt: new Date(Date.now() - 10 * 60 * 1000),
-    completedAt: new Date(Date.now() - 5 * 60 * 1000),
-    user: user,
+    time_submitted: new Date(Date.now() - 10 * 60 * 1000),
+    time_completed: new Date(Date.now() - 5 * 60 * 1000),
+    user: {
+      _id: user?._id,
+      username: user?.username,
+      email: user?.email
+    },
     data_file: 'test_data_file.txt'
   })
 
@@ -60,7 +51,7 @@ beforeEach(async () => {
 
 describe('/api/v1/external/jobs/:id/results', () => {
   test('should download results tar.gz of an existing job', async () => {
-    const apiToken = generateApiToken()
+    const apiToken = apiTokenForTests
     const job = await Job.findOne({ title: 'Test Job for Results' })
 
     const res = await request(app)
@@ -79,7 +70,7 @@ describe('/api/v1/external/jobs/:id/results', () => {
     expect(res.body.length).toBeGreaterThan(0)
   })
   test('should return 400 for invalid job ID', async () => {
-    const apiToken = generateApiToken()
+    const apiToken = apiTokenForTests
 
     const res = await request(app)
       .get('/api/v1/external/jobs/invalid-id/results')
@@ -91,7 +82,7 @@ describe('/api/v1/external/jobs/:id/results', () => {
   })
 
   test('should return 404 if job not found', async () => {
-    const apiToken = generateApiToken()
+    const apiToken = apiTokenForTests
     const randomValidMongoId = '0123456789abcdef01234567'
 
     const res = await request(app)
