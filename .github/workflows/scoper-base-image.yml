@@ -2,20 +2,6 @@ name: Build and Push Scoper Base Image
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - apps/scoper/bilbomd-scoper-base.dockerfile
-      - apps/scoper/environment.yml
-    tags:
-      - "v*.*.*"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - apps/scoper/bilbomd-scoper-base.dockerfile
-      - apps/scoper/environment.yml
 
 permissions:
   contents: read
