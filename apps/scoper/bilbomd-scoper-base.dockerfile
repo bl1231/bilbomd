@@ -73,21 +73,36 @@ RUN curl -L -o /tmp/miniforge.sh https://github.com/conda-forge/miniforge/releas
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV PATH=/opt/conda/bin:/usr/local/bin:$PATH
 
-# Pre-create base env, add mamba, then update from environment.yml
-WORKDIR /tmp
+# Add Conda/Mamba to PATH
+ENV PATH=/opt/conda/bin:$PATH
+
+# Install PyTorch
+# This is a big red flag: pyg and torchmetrics (below)
+# from conda are usually built against conda’s pytorch, not a random pip wheel.
+RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
+
+# Update Conda as per ChatGPT suggestion
+RUN conda install --yes --name base -c defaults python=3.10
+RUN conda config --add channels pyg
+RUN conda config --add channels pytorch
+RUN conda config --add channels conda-forge
+RUN conda config --add channels default
+
+# ChatGPT suggests we might try this
+# RUN conda config --set channel_priority strict
+
+# Copy the environment.yml file into the image
 COPY apps/scoper/environment.yml /tmp/environment.yml
 
-# Use cache for package downloads; unify CPU PyTorch + PyG via conda channels
-RUN --mount=type=cache,target=/opt/conda/pkgs \
-    micromamba install -y -n base -c conda-forge mamba && \
-    micromamba env update -y -n base -f /tmp/environment.yml && \
-    micromamba install -y -n base -c pytorch -c pyg -c conda-forge \
-    pytorch=2.2.* cpuonly \
+# Update existing base environment from environment.yml
+RUN conda env update -n base -f /tmp/environment.yml && \
+    conda install -n base -y \
     pyg=2.4.0 \
     torchmetrics=0.7.2 \
     tabulate \
-    wandb && \
-    micromamba clean --all --yes
+    -c pyg -c conda-forge
+RUN conda install -y imp
+RUN pip install wandb && conda clean --all --yes
 
 # Environment config
 ENV RNAVIEW=/usr/local/RNAView
