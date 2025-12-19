@@ -1,137 +1,19 @@
-# -----------------------------------------------------------------------------
-# Build stage 1 - build external dependencies of Scoper
-# FROM python:3.10-slim AS bilbomd-scoper-build-deps
-FROM ubuntu:22.04 AS bilbomd-scoper-build-deps
-# ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=America/Los_Angeles
-
-# Install dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential \
-    git \
-    cmake \
-    unzip \
-    curl \
-    ca-certificates \
-    libgsl-dev && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Clone and build 'reduce'
-WORKDIR /usr/local/src
-RUN git clone https://github.com/rlabduke/reduce.git reduce && \
-    cd reduce && \
-    make && make install && \
-    rm -rf /usr/local/src/reduce
-
-# Clone and build 'RNAview'
-WORKDIR /usr/local
-RUN curl -L -o rnaview.zip https://github.com/rcsb/RNAView/archive/refs/heads/master.zip
-# COPY rnaview/rnaview.zip .
-# RUN git clone https://github.com/rcsb/RNAView.git RNAView && \
-RUN unzip rnaview.zip && \
-    mv RNAView-master RNAView && \
-    cd RNAView && \
-    make && \
-    rm /usr/local/rnaview.zip
-
+# syntax=docker/dockerfile:1.7-labs
 
 # -----------------------------------------------------------------------------
-# Build stage 2 - install the build artifacts into a clean image
-# FROM pytorch/pytorch:latest AS bilbomd-scoper-install-deps
-# FROM python:3.10-slim AS bilbomd-scoper-install-deps
-# FROM python:3.11-slim AS bilbomd-scoper-install-deps
-# FROM python:3.12-slim AS bilbomd-scoper-install-deps
-# FROM python:3.13-slim AS bilbomd-scoper-install-deps
-FROM ubuntu:22.04 AS bilbomd-scoper-install-deps
+# Scoper app image: builds app on top of long-lived base
+# The base image consolidates stages 1–4 (toolchain, RNAView/reduce, Node, Python env)
 
-
-# Update and install necessary packages
-RUN apt-get update && \
-    apt-get install -y wget curl unzip git libgsl-dev && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Install Miniforge (lightweight Conda) for Conda or Mamba
-RUN curl -L -o /tmp/miniforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh && \
-    bash /tmp/miniforge.sh -b -p /opt/conda && \
-    rm /tmp/miniforge.sh && \
-    /opt/conda/bin/conda clean --all --yes
-
-# Add Conda/Mamba to PATH
-ENV PATH=/opt/conda/bin:$PATH
-
-# Install Mamba for faster dependency resolution (optional)
-RUN conda install -n base -c conda-forge mamba && \
-    conda clean --all --yes
-
-# Copy reduce
-COPY --from=bilbomd-scoper-build-deps /usr/local/bin/reduce /usr/local/bin/
-COPY --from=bilbomd-scoper-build-deps /usr/local/reduce_wwPDB_het_dict.txt /usr/local/
-
-# Copy RNAView binary
-COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/bin/rnaview /usr/local/bin/
-COPY --from=bilbomd-scoper-build-deps /usr/local/RNAView/BASEPARS /usr/local/RNAView/BASEPARS
-
-
-# -----------------------------------------------------------------------------
-# Build stage 3 - install NodeJS v22
-FROM bilbomd-scoper-install-deps AS bilbomd-scoper-nodejs
-RUN apt-get update && \
-    apt-get install -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y nodejs && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# -----------------------------------------------------------------------------
-# Build stage 4
-FROM bilbomd-scoper-nodejs AS bilbomd-scoper-pyg
-ARG USER_ID
-ARG GROUP_ID
-
-# Add Conda/Mamba to PATH
-ENV PATH=/opt/conda/bin:$PATH
-
-# Install PyTorch
-# This is a big red flag: pyg and torchmetrics (below)
-# from conda are usually built against conda’s pytorch, not a random pip wheel.
-RUN pip install torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
-
-# Update Conda as per ChatGPT suggestion
-RUN conda install --yes --name base -c defaults python=3.10
-RUN conda config --add channels pyg
-RUN conda config --add channels pytorch
-RUN conda config --add channels conda-forge
-RUN conda config --add channels default
-
-# ChatGPT suggests we might try this
-# RUN conda config --set channel_priority strict
-
-# Copy the environment.yml file into the image
-COPY apps/scoper/environment.yml /tmp/environment.yml
-
-# Update existing base environment from environment.yml
-RUN conda env update -n base -f /tmp/environment.yml && \
-    conda install -n base -y \
-    pyg=2.4.0 \
-    torchmetrics=0.7.2 \
-    tabulate \
-    -c pyg -c conda-forge
-RUN conda install -y imp
-RUN pip install wandb && conda clean --all --yes
-
-RUN groupadd -g $GROUP_ID scoper && \
-    useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
-    mkdir -p /home/scoper/app && \
-    chown -R scoper:scoper /home/scoper
+ARG BASE_IMAGE=bilbomd-scoper-base:local
 
 # -----------------------------------------------------------------------------
 # Build stage 5a - deps: prefetch pnpm store for monorepo
-FROM bilbomd-scoper-nodejs AS deps
+FROM ${BASE_IMAGE} AS deps
 WORKDIR /repo
 
-# Enable pnpm via Corepack and pin the same version used in the repo
+# Enable pnpm via Corepack and pin the repo version (user set to latest)
 RUN corepack enable \
-    && corepack prepare pnpm@10.18.3 --activate \
+    && corepack prepare pnpm@latest --activate \
     && pnpm config set inject-workspace-packages=true
 
 # Copy only manifests for better caching
@@ -145,11 +27,11 @@ RUN pnpm fetch
 
 # -----------------------------------------------------------------------------
 # Build stage 5b - build: install, build schema + scoper, and deploy to /out
-FROM bilbomd-scoper-nodejs AS build
+FROM ${BASE_IMAGE} AS build
 WORKDIR /repo
 
 RUN corepack enable \
-    && corepack prepare pnpm@10.18.3 --activate \
+    && corepack prepare pnpm@latest --activate \
     && pnpm config set inject-workspace-packages=true
 
 ENV HUSKY=0
@@ -169,15 +51,21 @@ RUN pnpm -C apps/scoper run build
 RUN pnpm deploy --filter @bilbomd/scoper --prod /out
 
 # -----------------------------------------------------------------------------
-# Final stage: Use bilbomd-scoper-pyg directly (no copying, keeps all libraries)
-FROM bilbomd-scoper-pyg AS bilbomd-scoper
+# Final stage: Use base directly (keeps all libraries)
+FROM ${BASE_IMAGE} AS bilbomd-scoper
 ARG USER_ID
 ARG GROUP_ID
 
-# Switch to scoper user (already created in bilbomd-scoper-pyg)
+# Create scoper user
+RUN groupadd -g $GROUP_ID scoper && \
+    useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
+    mkdir -p /home/scoper/app && \
+    chown -R scoper:scoper /home/scoper
+
+# Switch to scoper user
 USER scoper:scoper
 
-# Optional: fetch IonNet assets (as in previous image) under the scoper user
+# Optional: fetch IonNet assets (consider gating via build-arg)
 WORKDIR /home/scoper
 RUN set -eux; \
     cd /home/scoper; \
@@ -192,8 +80,9 @@ RUN set -eux; \
 WORKDIR /home/scoper/app
 COPY --from=build /out/ .
 
-# Environment variables
+# Environment variables (RNAVIEW already set in base, ok to keep)
 ENV RNAVIEW=/usr/local/RNAView
 
 # Expose and start (adjust if your start script differs)
 CMD [ "node", "build/scoper.js" ]
+
