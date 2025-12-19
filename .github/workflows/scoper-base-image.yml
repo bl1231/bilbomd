@@ -8,6 +8,12 @@ on:
         paths:
             - apps/scoper/bilbomd-scoper-base.dockerfile
             - apps/scoper/environment.yml
+    pull_request:
+        branches:
+            - main
+        paths:
+            - apps/scoper/bilbomd-scoper-base.dockerfile
+            - apps/scoper/environment.yml
 
 permissions:
     contents: read
