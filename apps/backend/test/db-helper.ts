@@ -1,8 +1,12 @@
 import mongoose from 'mongoose'
 
 const connectTestDB = async (): Promise<void> => {
-  const mongoUri =
-    process.env.MONGODB_TEST_URI || 'mongodb://localhost:27017/bilbomd-test'
+  const mongoUri = process.env.MONGODB_TEST_URI
+  if (!mongoUri) {
+    throw new Error(
+      'MONGODB_TEST_URI is not set. For Compose-backed tests, create apps/backend/.env.test.compose with MONGODB_TEST_URI, or export it before running.'
+    )
+  }
 
   // Ensure clean state
   if (mongoose.connection.readyState !== 0) {

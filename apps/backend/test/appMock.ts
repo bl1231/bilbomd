@@ -1,6 +1,7 @@
 import './mocks/mockRedis.js'
 import './mocks/mockBullMQ.js'
 import express, { Request, Response, NextFunction, Application } from 'express'
+import session from 'express-session'
 import cors from 'cors'
 import { IUser } from '@bilbomd/mongodb-schema'
 import registerRoutes from '../src/routes/register.js'
@@ -15,6 +16,16 @@ const app: Application = express()
 
 app.use(cors())
 app.use(express.json())
+
+// Minimal session setup to support video session middleware in tests
+app.use(
+  session({
+    secret: process.env.ACCESS_TOKEN_SECRET || 'test-session-secret',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }
+  })
+)
 
 // Mock express-rate-limit to disable rate limiting in tests
 vi.mock('express-rate-limit', () => ({
