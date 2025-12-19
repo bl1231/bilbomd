@@ -1,5 +1,12 @@
 # @bilbomd/scoper
 
+## 1.5.20
+
+### Patch Changes
+
+- 1853a50: Split docker build into 2: base imafge and main image.
+  This should speed up subsequent GitHub Actions workflows that are building the main scoper image
+
 ## 1.5.19
 
 ### Patch Changes
