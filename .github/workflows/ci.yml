@@ -729,12 +729,22 @@ jobs:
         backend-integration-tests,
       ]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    env:
+      LINT: ${{ needs.lint.result }}
+      BACKEND: ${{ needs.backend.result }}
+      UI: ${{ needs.ui.result }}
+      WORKER: ${{ needs.worker.result }}
+      SCOPER: ${{ needs.scoper.result }}
+      SCHEMA: ${{ needs.schema.result }}
+      MDUTILS: ${{ needs['md-utils'].result }}
+      BACKEND_UNIT: ${{ needs['backend-unit-tests'].result }}
+      BACKEND_INT: ${{ needs['backend-integration-tests'].result }}
     steps:
       - name: Check build results
         run: |
           set -e
-          for job in lint backend ui worker scoper schema md-utils backend-unit-tests backend-integration-tests; do
-            result="${{ needs[job].result }}"
+          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT BACKEND_INT; do
+            result="${!job}"
             echo "$job result: $result"
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               echo "Job $job failed or was cancelled"
