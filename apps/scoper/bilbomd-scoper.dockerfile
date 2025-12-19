@@ -55,8 +55,8 @@ RUN pnpm deploy --filter @bilbomd/scoper --prod /out
 # -----------------------------------------------------------------------------
 # Final stage: Use base directly (keeps all libraries)
 FROM ${BASE_IMAGE} AS bilbomd-scoper
-ARG USER_ID
-ARG GROUP_ID
+ARG USER_ID=501
+ARG GROUP_ID=1000
 ARG FETCH_IONNET=1
 
 # Create scoper user
@@ -88,7 +88,7 @@ COPY --from=build /out/ .
 ENV RNAVIEW=/usr/local/RNAView
 
 # Final cleanup to reduce layer size
-RUN rm -rf ~/.cache /home/scoper/.cache /tmp/*
+RUN rm -rf ~/.cache /home/scoper/.cache
 
 # Expose and start
 CMD [ "node", "build/scoper.js" ]
