@@ -25,8 +25,27 @@ jobs:
 
       - name: Free up runner disk space
         run: |
+          echo "Before cleanup:"
+          df -h
+          echo ""
+
+          echo "Checking what's taking up space..."
+          sudo du -sh /usr/share/* 2>/dev/null | sort -hr | head -10 || true
+          echo ""
+
+          # Remove common space-hogging directories
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo docker system prune -af
+          sudo rm -rf /usr/local/share/boost /usr/local/share/vcpkg /usr/local/share/chromium
+          sudo rm -rf /usr/share/swift /usr/local/share/powershell
+          sudo rm -rf /opt/az /usr/share/gradle* /usr/local/share/cmake*
+
+          # Clean apt cache
+          sudo apt-get clean
+
+          # Clean docker
+          sudo docker system prune -af --volumes
+
+          echo "After cleanup:"
           df -h
 
       - name: Set up Docker Buildx
