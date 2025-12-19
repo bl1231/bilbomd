@@ -12,14 +12,8 @@ ARG PNPM_VERSION=latest
 FROM ${BASE_IMAGE} AS deps
 WORKDIR /repo
 
-RUN set -eux; \
-    if command -v corepack >/dev/null 2>&1; then \
-    corepack enable || true; \
-    corepack prepare pnpm@${PNPM_VERSION} --activate || corepack use pnpm@${PNPM_VERSION}; \
-    else \
-    npm i -g pnpm@${PNPM_VERSION}; \
-    fi; \
-    pnpm config set inject-workspace-packages=true; \
+RUN npm i -g pnpm@${PNPM_VERSION} && \
+    pnpm config set inject-workspace-packages=true && \
     pnpm --version
 
 # Copy only manifests for better caching
@@ -36,14 +30,8 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 FROM ${BASE_IMAGE} AS build
 WORKDIR /repo
 
-RUN set -eux; \
-    if command -v corepack >/dev/null 2>&1; then \
-    corepack enable || true; \
-    corepack prepare pnpm@${PNPM_VERSION} --activate || corepack use pnpm@${PNPM_VERSION}; \
-    else \
-    npm i -g pnpm@${PNPM_VERSION}; \
-    fi; \
-    pnpm config set inject-workspace-packages=true; \
+RUN npm i -g pnpm@${PNPM_VERSION} && \
+    pnpm config set inject-workspace-packages=true && \
     pnpm --version
 
 ENV HUSKY=0
