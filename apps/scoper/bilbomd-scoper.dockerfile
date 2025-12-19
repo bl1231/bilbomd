@@ -4,7 +4,7 @@
 # Scoper app image: builds app on top of long-lived base
 # The base image consolidates stages 1–4 (toolchain, RNAView/reduce, Node, Python env)
 
-ARG BASE_IMAGE=bilbomd-scoper-base:local
+ARG BASE_IMAGE=bilbomd-scoper-base:sha-bf71c1f
 
 # -----------------------------------------------------------------------------
 # Build stage 5a - deps: prefetch pnpm store for monorepo
