@@ -130,6 +130,22 @@ jobs:
           restore-keys: |
             pnpm-store-${{ runner.os }}-
 
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       - name: Install deps
         run: pnpm install --frozen-lockfile --prefer-offline
 
@@ -497,6 +513,22 @@ jobs:
           restore-keys: |
             pnpm-store-${{ runner.os }}-
 
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       # Only cache TS incremental build info for schema package (keep pnpm store local)
       - name: Cache TS incremental (schema)
         uses: actions/cache@v4
@@ -560,6 +592,22 @@ jobs:
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-store-${{ runner.os }}-
+
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
 
       # Only cache TS incremental build info for md-utils package (keep pnpm store local)
       - name: Cache TS incremental (md-utils)
@@ -629,6 +677,22 @@ jobs:
           restore-keys: |
             pnpm-store-${{ runner.os }}-
 
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       - name: Install deps
         run: pnpm install --frozen-lockfile --prefer-offline
 
@@ -678,6 +742,22 @@ jobs:
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-store-${{ runner.os }}-
+
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
 
       - name: Install deps
         run: pnpm install --frozen-lockfile --prefer-offline
