@@ -648,10 +648,11 @@ jobs:
         ports:
           - 27017:27017
         options: >-
-          --health-cmd="bash -lc 'cat </dev/tcp/127.0.0.1/27017'"
-          --health-interval=10s
+          --health-cmd="mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval=5s
           --health-timeout=5s
-          --health-retries=10
+          --health-start-period=30s
+          --health-retries=30
     env:
       # Override integration test DB to use the service
       MONGODB_TEST_URI: mongodb://127.0.0.1:27017/bilbomd-test
@@ -695,9 +696,19 @@ jobs:
 
       - name: Wait for Mongo to be ready
         run: |
-          for i in {1..30}; do
+          echo "Waiting for MongoDB port and ping..."
+          for i in {1..60}; do
             if (echo > /dev/tcp/127.0.0.1/27017) >/dev/null 2>&1; then
-              echo "Mongo is ready"; break; fi; echo "Waiting for Mongo..."; sleep 2; done
+              echo "MongoDB TCP port open";
+              CONTAINER_ID=$(docker ps -q --filter "ancestor=mongo:7" | head -n1)
+              if [ -n "$CONTAINER_ID" ]; then
+                if docker exec "$CONTAINER_ID" mongosh --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; then
+                  echo "MongoDB ping OK"; break;
+                fi
+              fi
+            fi
+            echo "Waiting for Mongo..."; sleep 2;
+          done
 
       - name: Run backend integration tests
         run: pnpm -C apps/backend run test:integration
