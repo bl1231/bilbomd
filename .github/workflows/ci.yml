@@ -197,8 +197,6 @@ jobs:
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # main: short sha for traceability
-            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
 
@@ -276,8 +274,6 @@ jobs:
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # main: short sha for traceability
-            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
 
@@ -298,7 +294,7 @@ jobs:
           build-args: |
             USER_ID=${{ vars.USER_ID || '1001' }}
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
-            UI_GIT_HASH=${{ env.SHORT_SHA }}
+            UI_GIT_HASH=${{ github.sha }}
             UI_VERSION=${{ env.VERSION }}
           # Removed local cache-from/cache-to for GitHub-hosted runners
 
@@ -357,8 +353,6 @@ jobs:
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # main: short sha for traceability
-            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
 
@@ -438,8 +432,6 @@ jobs:
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # main: short sha for traceability
-            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
             # pull requests: single concise tag
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
 
