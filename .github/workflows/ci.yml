@@ -159,6 +159,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
+        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -168,23 +169,10 @@ jobs:
       - name: Read version from package.json
         run: echo "VERSION=$(jq -r .version 'apps/backend/package.json')" >> $GITHUB_ENV
 
-      - name: Compute branch + short sha
+      - name: Compute short sha
         run: |
-          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-
-      - name: Resolve PR number for this branch (if any)
-        id: pr
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner, repo} = context.repo;
-            const branch = context.ref.replace('refs/heads/', '');
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
-            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
 
       - name: Detect version bump (backend)
         id: bump
@@ -251,6 +239,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
+        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -259,23 +248,10 @@ jobs:
       - name: Read version
         run: echo "VERSION=$(jq -r .version 'apps/ui/package.json')" >> $GITHUB_ENV
 
-      - name: Compute branch + short sha
+      - name: Compute short sha
         run: |
-          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-
-      - name: Resolve PR number for this branch (if any)
-        id: pr
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner, repo} = context.repo;
-            const branch = context.ref.replace('refs/heads/', '');
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
-            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
 
       - name: Detect version bump (ui)
         id: bump
@@ -344,6 +320,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
+        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -352,23 +329,10 @@ jobs:
       - name: Read version
         run: echo "VERSION=$(jq -r .version 'apps/worker/package.json')" >> $GITHUB_ENV
 
-      - name: Compute branch + short sha
+      - name: Compute short sha
         run: |
-          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-
-      - name: Resolve PR number for this branch (if any)
-        id: pr
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner, repo} = context.repo;
-            const branch = context.ref.replace('refs/heads/', '');
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
-            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
 
       - name: Detect version bump (worker)
         id: bump
@@ -437,6 +401,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
+        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -445,23 +410,10 @@ jobs:
       - name: Read version
         run: echo "VERSION=$(jq -r .version 'apps/scoper/package.json')" >> $GITHUB_ENV
 
-      - name: Compute branch + short sha
+      - name: Compute short sha
         run: |
-          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-
-      - name: Resolve PR number for this branch (if any)
-        id: pr
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner, repo} = context.repo;
-            const branch = context.ref.replace('refs/heads/', '');
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
-            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
 
       - name: Detect version bump (scoper)
         id: bump
