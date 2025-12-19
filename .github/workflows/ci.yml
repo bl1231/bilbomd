@@ -208,6 +208,8 @@ jobs:
           context: .
           file: apps/backend/bilbomd-backend.dockerfile
           push: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }}
@@ -299,6 +301,8 @@ jobs:
           context: .
           file: apps/ui/bilbomd-ui.dockerfile
           push: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+          cache-from: type=gha,scope=ui
+          cache-to: type=gha,mode=max,scope=ui
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }}
@@ -390,6 +394,8 @@ jobs:
           context: .
           file: apps/worker/bilbomd-worker.dockerfile
           push: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }}
@@ -481,6 +487,8 @@ jobs:
           context: .
           file: apps/scoper/bilbomd-scoper.dockerfile
           push: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+          cache-from: type=gha,scope=scoper
+          cache-to: type=gha,mode=max,scope=scoper
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }}
