@@ -628,6 +628,12 @@ jobs:
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build
 
+      - name: Build shared types
+        run: pnpm -C packages/bilbomd-types run build
+
+      - name: Build md-utils (depends on schema)
+        run: pnpm -C packages/md-utils run build
+
       - name: Run backend unit tests
         run: pnpm -C apps/backend run test
 
@@ -680,6 +686,12 @@ jobs:
 
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build
+
+      - name: Build shared types
+        run: pnpm -C packages/bilbomd-types run build
+
+      - name: Build md-utils (depends on schema)
+        run: pnpm -C packages/md-utils run build
 
       - name: Wait for Mongo to be ready
         run: |
