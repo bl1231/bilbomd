@@ -136,8 +136,25 @@ FROM install-pymol AS pack-openmm-env
 RUN conda install -y -n base  -c conda-forge conda-pack && \
     conda install -y -n openmm -c conda-forge conda-pack && \
     conda clean -afy
-RUN conda run -n openmm conda-pack -n openmm -o /tmp/openmm-env.tar.gz
-RUN conda run -n base   conda-pack -p /miniforge3 -o /tmp/base-env.tar.gz
+
+# Check available disk space before packing
+RUN df -h && echo "Available space before packing:"
+
+# Clean up build artifacts first to free space
+RUN find /miniforge3 -type d -name "__pycache__" -prune -exec rm -rf {} + || true && \
+    find /miniforge3 -type f -name "*.py[co]" -delete || true && \
+    conda clean -afy
+
+# Pack smaller openmm environment first
+RUN echo "Packing OpenMM environment..." && \
+    conda run -n openmm conda-pack -n openmm -o /tmp/openmm-env.tar.gz && \
+    echo "OpenMM env packed successfully" && df -h
+
+# Pack base environment with compression optimization  
+RUN echo "Packing base environment..." && \
+    conda run -n base conda-pack -p /miniforge3 -o /tmp/base-env.tar.gz \
+    --compress-level 1 --n-threads 2 && \
+    echo "Base env packed successfully" && df -h
 
 # -----------------------------------------------------------------------------
 # Slim final runtime image (CUDA runtime only)
