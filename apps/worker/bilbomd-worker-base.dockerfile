@@ -2,6 +2,11 @@
 # Setup the base image for building
 FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS install-dependencies
 
+# Pin versions for better caching
+ARG CHARMM_VER=c49b2
+ARG OPENMM_VERSION=8.4.0
+ARG PYTHON_VERSION=3.12
+
 RUN apt-get update && \
     apt-get install -y cmake gcc gfortran g++ wget libgl1-mesa-dev \
     build-essential libarchive13 zip python3-launchpadlib curl && \
@@ -10,7 +15,6 @@ RUN apt-get update && \
 # -----------------------------------------------------------------------------
 # Build CHARMM
 FROM install-dependencies AS build_charmm
-ARG CHARMM_VER=c49b2
 RUN wget https://bl1231.als.lbl.gov/pickup/charmm/${CHARMM_VER}.tar.gz -O /usr/local/src/${CHARMM_VER}.tar.gz
 RUN mkdir -p /usr/local/src/charmm && \
     tar -zxvf /usr/local/src/${CHARMM_VER}.tar.gz -C /usr/local/src && \
@@ -69,7 +73,7 @@ RUN apt-get update && \
     git build-essential cmake gfortran make wget ca-certificates bzip2 tar swig && \
     rm -rf /var/lib/apt/lists/*
 RUN conda update -y -n base -c defaults conda && \
-    conda create -y -n openmm python=3.12 openmm=8.4.0 numpy doxygen pip cython pyyaml && \
+    conda create -y -n openmm python=${PYTHON_VERSION} openmm=${OPENMM_VERSION} numpy doxygen pip cython pyyaml && \
     conda clean -afy
 ENV PATH=/miniforge3/envs/openmm/bin:/miniforge3/bin:${PATH}
 
