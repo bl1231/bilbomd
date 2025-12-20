@@ -150,13 +150,12 @@ RUN echo "Checking OpenMM environment..." && \
     conda info --envs && \
     conda list -n openmm | head -10 && \
     echo "Packing OpenMM environment..." && \
-    conda run -n openmm conda-pack -n openmm -o /tmp/openmm-env.tar.gz --verbose && \
+    conda run -n openmm conda-pack -n openmm -o /tmp/openmm-env.tar.gz && \
     echo "OpenMM env packed successfully" && df -h
 
 # Pack base environment with compression optimization  
 RUN echo "Packing base environment..." && \
-    conda run -n base conda-pack -p /miniforge3 -o /tmp/base-env.tar.gz \
-    --compress-level 1 --n-threads 2 --verbose && \
+    conda run -n base conda-pack -p /miniforge3 -o /tmp/base-env.tar.gz && \
     echo "Base env packed successfully" && df -h
 
 # -----------------------------------------------------------------------------
