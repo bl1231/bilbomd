@@ -146,14 +146,17 @@ RUN find /miniforge3 -type d -name "__pycache__" -prune -exec rm -rf {} + || tru
     conda clean -afy
 
 # Pack smaller openmm environment first
-RUN echo "Packing OpenMM environment..." && \
-    conda run -n openmm conda-pack -n openmm -o /tmp/openmm-env.tar.gz && \
+RUN echo "Checking OpenMM environment..." && \
+    conda info --envs && \
+    conda list -n openmm | head -10 && \
+    echo "Packing OpenMM environment..." && \
+    conda run -n openmm conda-pack -n openmm -o /tmp/openmm-env.tar.gz --verbose && \
     echo "OpenMM env packed successfully" && df -h
 
 # Pack base environment with compression optimization  
 RUN echo "Packing base environment..." && \
     conda run -n base conda-pack -p /miniforge3 -o /tmp/base-env.tar.gz \
-    --compress-level 1 --n-threads 2 && \
+    --compress-level 1 --n-threads 2 --verbose && \
     echo "Base env packed successfully" && df -h
 
 # -----------------------------------------------------------------------------
