@@ -1,3 +1,4 @@
+ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.7
 ########################################
 # Stage 1: deps (prefetch pnpm store)
 ########################################
@@ -43,7 +44,7 @@ RUN pnpm deploy --filter @bilbomd/worker --prod /out
 ########################################
 # Stage 3: runtime (your existing base image)
 ########################################
-FROM ghcr.io/bl1231/bilbomd-worker-base:0.0.5 AS runtime
+FROM ${BASE_IMAGE} AS runtime
 WORKDIR /app
 
 # Install Node.js (if your base image doesn't already have it)
