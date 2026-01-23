@@ -32,9 +32,7 @@ export default function PrivacyPolicy() {
               borderColor: grey[500]
             }}
           >
-            <Typography variant="h4">
-              BilboMD Privacy and Cookie Policy
-            </Typography>
+            <Typography variant="h4">Privacy and Cookie Policy</Typography>
           </Box>
           <Box sx={{ p: 2 }}>
             <Typography variant="body1">
