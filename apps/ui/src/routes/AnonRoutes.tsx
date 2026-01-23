@@ -2,6 +2,7 @@ import { lazy } from 'react'
 import Loadable from 'components/Loadable'
 import AnonLayout from 'layout/AnonLayout'
 import About from 'features/about/About'
+import path from 'node:path'
 
 const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
 const NewJobForm = Loadable(lazy(() => import('features/jobs/NewJobForm')))
@@ -32,6 +33,8 @@ const PrivacyPolicy = Loadable(
   lazy(() => import('features/privacy/PrivacyPolicy'))
 )
 const Funding = Loadable(lazy(() => import('features/about/Funding')))
+const Terms = Loadable(lazy(() => import('features/about/TermsAndConditions')))
+const Copyright = Loadable(lazy(() => import('features/about/Copyright')))
 
 // ===========================|| PUBLIC ANON ROUTING ||============================ //
 
@@ -98,6 +101,14 @@ const AnonRoutes = {
     {
       path: 'funding',
       element: <Funding />
+    },
+    {
+      path: 'terms',
+      element: <Terms />
+    },
+    {
+      path: 'copyright',
+      element: <Copyright />
     }
   ]
 }

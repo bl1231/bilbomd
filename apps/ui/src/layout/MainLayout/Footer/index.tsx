@@ -56,7 +56,14 @@ const Footer = () => {
             variant="caption"
             sx={{ wordBreak: 'break-all' }}
           >
-            Copyright ©{currentYear}.{' '}
+            <Link
+              component={RouterLink}
+              to="/copyright"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Copyright ©2025
+            </Link>
+            {' • '}
             <Link
               href="https://bl1231.als.lbl.gov"
               target="_blank"
@@ -64,8 +71,8 @@ const Footer = () => {
               sx={{ fontWeight: 'bold' }}
             >
               SIBYLS Beamline
-            </Link>{' '}
-            - BilboMD v{version}-{gitHash}
+            </Link>
+            {' • '}BilboMD v{version}-{gitHash}
           </Typography>
 
           <Typography sx={{ wordBreak: 'break-all' }}>
@@ -116,9 +123,8 @@ const Footer = () => {
             </Link>
             {' • '}
             <Link
-              href="https://www.lbl.gov/terms-and-conditions/"
-              target="_blank"
-              rel="noopener noreferrer"
+              component={RouterLink}
+              to="/terms"
               sx={{ fontWeight: 'bold' }}
             >
               Terms and Conditions
