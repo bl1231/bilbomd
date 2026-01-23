@@ -125,16 +125,14 @@ describe('Footer Component', () => {
     }
 
     useGetConfigsQueryMock.mockReturnValue(successState)
-    const currentYear = new Date().getFullYear()
+
     renderWithProviders(<Footer />)
 
     expect(
       screen.getByText('"dynamicity... the essence of BilboMD"')
     ).toBeInTheDocument()
     expect(screen.getByText(/Copyright ©/)).toBeInTheDocument()
-    expect(
-      screen.getByText(currentYear.toString(), { exact: false })
-    ).toBeInTheDocument()
+    expect(screen.getByText('2025', { exact: false })).toBeInTheDocument()
 
     const link = screen.getByText('SIBYLS Beamline')
     expect(link).toHaveAttribute('href', 'https://bl1231.als.lbl.gov')
