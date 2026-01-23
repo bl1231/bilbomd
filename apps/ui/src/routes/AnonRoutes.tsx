@@ -2,7 +2,6 @@ import { lazy } from 'react'
 import Loadable from 'components/Loadable'
 import AnonLayout from 'layout/AnonLayout'
 import About from 'features/about/About'
-import path from 'node:path'
 
 const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
 const NewJobForm = Loadable(lazy(() => import('features/jobs/NewJobForm')))

@@ -23,7 +23,7 @@ describe('Funding', () => {
   it('renders acknowledgments heading and body', () => {
     renderWithProviders(<Funding />)
     expect(
-      screen.getByRole('heading', { name: /Acknowledgments/i })
+      screen.getByRole('heading', { name: /Acknowledgements/i })
     ).toBeInTheDocument()
     expect(
       screen.getByText(/We are grateful for the patience of our early users/i)

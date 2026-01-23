@@ -2,4 +2,4 @@
 '@bilbomd/ui': patch
 ---
 
-Update Terms and Conditions, Provacy, and Copyright as per LBNL IPO.
+Update Terms and Conditions, Privacy, and Copyright as per LBNL IPO.

@@ -6,7 +6,6 @@ import { blue } from '@mui/material/colors'
 import { Link as RouterLink } from 'react-router'
 
 const Footer = () => {
-  const currentYear = new Date().getFullYear()
   const {
     data: config,
     error: configError,

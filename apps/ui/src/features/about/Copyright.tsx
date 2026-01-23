@@ -1,6 +1,5 @@
 import React from 'react'
-import { Box, Typography, Link } from '@mui/material'
-import { Link as RouterLink } from 'react-router'
+import { Box, Typography } from '@mui/material'
 import useTitle from 'hooks/useTitle'
 import { grey } from '@mui/material/colors'
 
