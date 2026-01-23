@@ -6,7 +6,10 @@ import { logger } from '../../middleware/loggers.js'
 export const getApiJobStatus = async (req: Request, res: Response) => {
   try {
     const user = req.apiUser
-    const { id } = req.params
+    const rawId = req.params.id
+
+    // Ensure id is a string
+    const id = Array.isArray(rawId) ? rawId[0] : rawId
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       res.status(400).json({ message: 'Invalid job ID format' })

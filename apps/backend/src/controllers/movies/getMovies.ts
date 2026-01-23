@@ -89,7 +89,11 @@ const getMovies = async (
   logger.info('getMovies controller called')
 
   try {
-    const { id } = req.params
+    const rawId = req.params.id
+
+    // Ensure id is a string
+    const id = Array.isArray(rawId) ? rawId[0] : rawId
+
     logger.info(`Extracting job ID from params: ${id}`)
 
     if (!id) {

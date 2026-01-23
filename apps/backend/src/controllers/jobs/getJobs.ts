@@ -223,33 +223,34 @@ const getJobById = async (req: Request, res: Response) => {
     return
   }
 
-  // Validate ObjectId format
-  if (!/^[0-9a-fA-F]{24}$/.test(jobId)) {
+  // Ensure jobId is a string and validate ObjectId format
+  const jobIdString = Array.isArray(jobId) ? jobId[0] : jobId
+  if (!/^[0-9a-fA-F]{24}$/.test(jobIdString)) {
     res.status(400).json({ message: 'Invalid Job ID format.' })
     return
   }
 
   try {
-    const job = await Job.findOne({ _id: jobId }).populate('user').exec()
+    const job = await Job.findOne({ _id: jobIdString }).populate('user').exec()
     const multiJob = job
       ? null
-      : await MultiJob.findOne({ _id: jobId }).populate('user').exec()
+      : await MultiJob.findOne({ _id: jobIdString }).populate('user').exec()
 
     if (!job && !multiJob) {
-      res.status(404).json({ message: `No job matches ID ${jobId}.` })
+      res.status(404).json({ message: `No job matches ID ${jobIdString}.` })
       return
     }
 
     if (job) {
       if (!job._id) {
-        logger.error(`Job found but missing _id for jobId: ${jobId}`)
+        logger.error(`Job found but missing _id for jobId: ${jobIdString}`)
         res.status(500).json({ message: 'Job data integrity error.' })
         return
       }
 
       const username = await resolveUsername(job.user)
       const dto = buildBilboMDJobDTO({
-        jobId,
+        jobId: jobIdString,
         mongo: job,
         username
       })
@@ -257,14 +258,14 @@ const getJobById = async (req: Request, res: Response) => {
       res.status(200).json(dto)
     } else if (multiJob) {
       if (!multiJob._id) {
-        logger.error(`MultiJob found but missing _id for jobId: ${jobId}`)
+        logger.error(`MultiJob found but missing _id for jobId: ${jobIdString}`)
         res.status(500).json({ message: 'Job data integrity error.' })
         return
       }
 
       const username = await resolveUsername(multiJob.user)
       const dto = buildMultiJobDTO({
-        jobId,
+        jobId: jobIdString,
         mongo: multiJob,
         username
       })
@@ -272,7 +273,7 @@ const getJobById = async (req: Request, res: Response) => {
       res.status(200).json(dto)
     }
   } catch (error) {
-    logger.error(`Error retrieving job ${jobId}:`, error)
+    logger.error(`Error retrieving job ${jobIdString}:`, error)
     if (error instanceof Error) {
       logger.error(`Stack trace: ${error.stack}`)
     }

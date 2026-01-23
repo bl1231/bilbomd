@@ -7,7 +7,11 @@ import { Job } from '@bilbomd/mongodb-schema'
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const downloadPublicJobResultFile = async (req: Request, res: Response) => {
-  const { publicId, filename } = req.params
+  const { publicId: rawPublicId, filename: rawFilename } = req.params
+
+  // Ensure parameters are strings
+  const publicId = Array.isArray(rawPublicId) ? rawPublicId[0] : rawPublicId
+  const filename = Array.isArray(rawFilename) ? rawFilename[0] : rawFilename
 
   if (!publicId) {
     res.status(400).json({ message: 'publicId is required.' })
