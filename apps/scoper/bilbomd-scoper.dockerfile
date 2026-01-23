@@ -4,7 +4,7 @@
 # Scoper app image: builds app on top of long-lived base
 # The base image consolidates stages 1–4 (toolchain, RNAView/reduce, Node, Python env)
 
-ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-scoper-base:0.0.1
+ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-scoper-base:0.0.3
 ARG PNPM_VERSION=latest
 
 # -----------------------------------------------------------------------------
