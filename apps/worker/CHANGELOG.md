@@ -1,5 +1,18 @@
 # @bilbomd/worker
 
+## 2.1.5
+
+### Patch Changes
+
+- a0c6ed3: Add a docker base image for the worker.
+- 1d0c4f5: Update nodejs
+  Update pnpm
+  Update all deps
+  Fix some typescript errors that surfaced.
+- Updated dependencies [1d0c4f5]
+  - @bilbomd/mongodb-schema@2.3.5
+  - @bilbomd/md-utils@1.0.20
+
 ## 2.1.4
 
 ### Patch Changes

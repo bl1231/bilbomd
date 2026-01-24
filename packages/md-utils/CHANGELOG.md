@@ -1,5 +1,16 @@
 # @bilbomd/md-utils
 
+## 1.0.20
+
+### Patch Changes
+
+- 1d0c4f5: Update nodejs
+  Update pnpm
+  Update all deps
+  Fix some typescript errors that surfaced.
+- Updated dependencies [1d0c4f5]
+  - @bilbomd/mongodb-schema@2.3.5
+
 ## 1.0.19
 
 ### Patch Changes

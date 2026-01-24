@@ -1,5 +1,14 @@
 # @bilbomd/mongodb-schema
 
+## 2.3.5
+
+### Patch Changes
+
+- 1d0c4f5: Update nodejs
+  Update pnpm
+  Update all deps
+  Fix some typescript errors that surfaced.
+
 ## 2.3.4
 
 ### Patch Changes
