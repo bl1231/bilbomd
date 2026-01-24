@@ -1,5 +1,17 @@
 # @bilbomd/backend
 
+## 2.4.3
+
+### Patch Changes
+
+- 1d0c4f5: Update nodejs
+  Update pnpm
+  Update all deps
+  Fix some typescript errors that surfaced.
+- Updated dependencies [1d0c4f5]
+  - @bilbomd/mongodb-schema@2.3.5
+  - @bilbomd/md-utils@1.0.20
+
 ## 2.4.2
 
 ### Patch Changes
