@@ -8,10 +8,23 @@ import { Request, Response } from 'express'
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
 
 const downloadPDB = async (req: Request, res: Response) => {
-  const jobId = req.params.id
-  const pdbFilename = req.params.pdb
-  if (!jobId) res.status(400).json({ message: 'Job ID required.' })
-  if (!pdbFilename) res.status(400).json({ message: 'PDB filename required.' })
+  const rawJobId = req.params.id
+  const rawPdbFilename = req.params.pdb
+
+  // Ensure parameters are strings
+  const jobId = Array.isArray(rawJobId) ? rawJobId[0] : rawJobId
+  const pdbFilename = Array.isArray(rawPdbFilename)
+    ? rawPdbFilename[0]
+    : rawPdbFilename
+
+  if (!jobId) {
+    res.status(400).json({ message: 'Job ID required.' })
+    return
+  }
+  if (!pdbFilename) {
+    res.status(400).json({ message: 'PDB filename required.' })
+    return
+  }
   logger.info(`looking up job: ${jobId}`)
   const job = await Job.findOne({ _id: jobId }).exec()
   if (!job) {
@@ -38,7 +51,10 @@ const downloadPDB = async (req: Request, res: Response) => {
 }
 
 const getFoxsData = async (req: Request, res: Response) => {
-  const jobId = req.params.id
+  const rawJobId = req.params.id
+
+  // Ensure jobId is a string
+  const jobId = Array.isArray(rawJobId) ? rawJobId[0] : rawJobId
 
   if (!jobId) {
     res.status(400).json({ message: 'Job ID required.' })
@@ -205,11 +221,9 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
     return res.json(data)
   } catch (error) {
     logger.error(`error getting FoXS analysis data ${error}`)
-    return res
-      .status(500)
-      .json({
-        message: 'Internal server error while processing FoXS analysis data.'
-      })
+    return res.status(500).json({
+      message: 'Internal server error while processing FoXS analysis data.'
+    })
   }
 }
 

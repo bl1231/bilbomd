@@ -5,7 +5,10 @@ import type { PublicJobStatus, JobResultsDTO } from '@bilbomd/bilbomd-types'
 import { mapDiscriminatorToJobType } from '../jobs/utils/jobDTOMapper.js'
 
 const getPublicJobById = async (req: Request, res: Response) => {
-  const { publicId } = req.params
+  const rawPublicId = req.params.publicId
+
+  // Ensure publicId is a string
+  const publicId = Array.isArray(rawPublicId) ? rawPublicId[0] : rawPublicId
 
   if (!publicId) {
     res.status(400).json({ message: 'publicId is required.' })

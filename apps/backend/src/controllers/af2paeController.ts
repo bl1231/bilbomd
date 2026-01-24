@@ -231,7 +231,10 @@ const downloadConstFile = async (req: Request, res: Response) => {
 }
 
 const getVizJson = async (req: Request, res: Response) => {
-  const uuid = req.params.uuid
+  const rawUuid = req.params.uuid
+
+  // Ensure uuid is a string
+  const uuid = Array.isArray(rawUuid) ? rawUuid[0] : rawUuid
   if (!uuid) {
     return res.status(400).json({ message: 'UUID parameter required.' })
   }
@@ -251,7 +254,10 @@ const getVizJson = async (req: Request, res: Response) => {
 }
 
 const getPaeBin = async (req: Request, res: Response) => {
-  const uuid = req.params.uuid
+  const rawUuid = req.params.uuid
+
+  // Ensure uuid is a string
+  const uuid = Array.isArray(rawUuid) ? rawUuid[0] : rawUuid
   if (!uuid) {
     return res.status(400).json({ message: 'UUID parameter required.' })
   }
@@ -278,7 +284,10 @@ const getPaeBin = async (req: Request, res: Response) => {
 }
 
 const getPaePng = async (req: Request, res: Response) => {
-  const uuid = req.params.uuid
+  const rawUuid = req.params.uuid
+
+  // Ensure uuid is a string
+  const uuid = Array.isArray(rawUuid) ? rawUuid[0] : rawUuid
   if (!uuid) {
     return res.status(400).json({ message: 'UUID parameter required.' })
   }
@@ -298,7 +307,10 @@ const getPaePng = async (req: Request, res: Response) => {
 }
 
 const getVizPng = async (req: Request, res: Response) => {
-  const uuid = req.params.uuid
+  const rawUuid = req.params.uuid
+
+  // Ensure uuid is a string
+  const uuid = Array.isArray(rawUuid) ? rawUuid[0] : rawUuid
   if (!uuid) {
     return res.status(400).json({ message: 'UUID parameter required.' })
   }
