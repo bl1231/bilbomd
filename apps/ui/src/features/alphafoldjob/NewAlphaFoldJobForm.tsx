@@ -166,7 +166,13 @@ const Instructions = () => (
   </Grid>
 )
 
-const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
+const PipelineSchematic = ({
+  isDarkMode,
+  mdEngine
+}: {
+  isDarkMode: boolean
+  mdEngine: 'charmm' | 'openmm'
+}) => (
   <Grid size={{ xs: 12 }}>
     <HeaderBox>
       <Typography>BilboMD AF Schematic</Typography>
@@ -175,8 +181,8 @@ const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
       <img
         src={
           isDarkMode
-            ? '/images/bilbomd-af-schematic-dark.png'
-            : '/images/bilbomd-af-schematic.png'
+            ? `/images/bilbomd-af-schematic-${mdEngine}-dark.png`
+            : `/images/bilbomd-af-schematic-${mdEngine}.png`
         }
         alt="Overview of BilboMD AF pipeline"
         style={{ maxWidth: '100%', height: 'auto' }}
@@ -464,6 +470,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -545,7 +552,10 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       spacing={2}
     >
       <Instructions />
-      <PipelineSchematic isDarkMode={isDarkMode} />
+      <PipelineSchematic
+        isDarkMode={isDarkMode}
+        mdEngine={mdEngine}
+      />
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
           <Typography>BilboMD AF Job Form</Typography>
@@ -711,7 +721,10 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     <Grid sx={{ width: '520px' }}>
                       <MdEngineField
                         value={values.md_engine as 'charmm' | 'openmm'}
-                        onChange={(val) => void setFieldValue('md_engine', val)}
+                        onChange={(val) => {
+                          void setFieldValue('md_engine', val)
+                          setMdEngine(val)
+                        }}
                         disabled={isSubmitting}
                       />
                     </Grid>
