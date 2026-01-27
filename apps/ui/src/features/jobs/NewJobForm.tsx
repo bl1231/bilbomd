@@ -36,7 +36,6 @@ import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from './JobSuccessAlert'
 import MdEngineField from 'components/MdEngineField'
-import { set } from 'mongoose'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'

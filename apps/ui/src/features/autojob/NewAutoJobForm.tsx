@@ -47,6 +47,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -125,7 +126,10 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
           <NewAutoJobFormInstructions />
         </Grid>
 
-        <PipelineSchematic isDarkMode={isDarkMode} />
+        <PipelineSchematic
+          isDarkMode={isDarkMode}
+          mdEngine={mdEngine}
+        />
 
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
@@ -245,9 +249,10 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       <Grid sx={{ width: '520px' }}>
                         <MdEngineField
                           value={values.md_engine as 'charmm' | 'openmm'}
-                          onChange={(val) =>
+                          onChange={(val) => {
                             void setFieldValue('md_engine', val)
-                          }
+                            setMdEngine(val)
+                          }}
                           disabled={isSubmitting}
                         />
                       </Grid>
