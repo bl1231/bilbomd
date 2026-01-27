@@ -37,28 +37,28 @@ const AutoJobFormInstructions = () => (
         <Typography sx={{ m: 1 }}>
           <b>BilboMD Auto</b> is intended to be run using the outputs from{' '}
           <Link
-            href='https://deepmind.google/technologies/alphafold/'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://deepmind.google/technologies/alphafold/"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             AlphaFold2 & AlphaFold-Multimer
           </Link>
           . <b>BilboMD Auto</b> uses the{' '}
           <Link
-            href='https://alphafold.ebi.ac.uk/faq#faq-13'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://alphafold.ebi.ac.uk/faq#faq-13"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             Predicted Aligned Error
           </Link>{' '}
           (PAE) from AlphaFold along with the predicted coordinates (as a PDB
-          file) to automagically generate CHARMM-compatible input files. The{' '}
-          <b>*.pdb</b> and PAE <b>*.json</b> files must be the exact ones
-          obtained from AlphaFold since we are also using the{' '}
+          file) to automagically generate CHARMM or OpenMM-compatible input
+          files. The <b>*.pdb</b> and PAE <b>*.json</b> files must be the exact
+          ones obtained from AlphaFold since we are also using the{' '}
           <Link
-            href='https://alphafold.ebi.ac.uk/faq#faq-12'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://alphafold.ebi.ac.uk/faq#faq-12"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             pLDDT
           </Link>{' '}

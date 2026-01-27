@@ -37,11 +37,19 @@ const NewJobFormInstructions = () => (
       <Typography sx={{ mx: 1, my: 2 }}>
         <b>BilboMD Classic</b> uses{' '}
         <Link
-          href='https://academiccharmm.org/'
-          target='_blank'
-          rel='noopener noreferrer'
+          href="https://academiccharmm.org/"
+          target="_blank"
+          rel="noopener noreferrer"
         >
           CHARMM
+        </Link>{' '}
+        or{' '}
+        <Link
+          href="https://openmm.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          OpenMM
         </Link>{' '}
         to generate an ensemble of molecular models. In order for the Molecular
         Dynamics steps to run successfully you must provide compatible input
@@ -53,9 +61,9 @@ const NewJobFormInstructions = () => (
         example, if you have DNA, RNA, or other ligands and post-translational
         modifications then you should use{' '}
         <Link
-          href='https://www.charmm-gui.org/'
-          target='_blank'
-          rel='noopener noreferrer'
+          href="https://www.charmm-gui.org/"
+          target="_blank"
+          rel="noopener noreferrer"
         >
           CHARMM-GUI
         </Link>{' '}
@@ -78,9 +86,9 @@ const NewJobFormInstructions = () => (
           <li>
             <b>*.psf</b> file (A CHARMM{' '}
             <Link
-              href='https://academiccharmm.org/documentation/version/c47b2/struct'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://academiccharmm.org/documentation/version/c47b2/struct"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               data structure
             </Link>{' '}
@@ -97,20 +105,20 @@ const NewJobFormInstructions = () => (
         <Typography sx={{ mx: 1, my: 2 }}>
           Use the <b>PDB Reader</b> tool available from{' '}
           <Link
-            href='https://www.charmm-gui.org/'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://www.charmm-gui.org/"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             CHARMM-GUI
           </Link>{' '}
           to convert your standard PDB file to a CRD file. If you need help
           generating a valid <b>const.inp</b> file you can use our{' '}
-          <Link href='/dashboard/jobs/constinp'>
+          <Link href="/dashboard/jobs/constinp">
             <b>inp Jiffy{'\u2122'}</b>
           </Link>{' '}
           to help get you started.
         </Typography>
-        <Alert severity='warning'>
+        <Alert severity="warning">
           <AlertTitle>
             Warning about Chain ID and segid naming conventions
           </AlertTitle>
@@ -148,19 +156,22 @@ const NewJobFormInstructions = () => (
           </li>
         </Typography>
         <Typography sx={{ mx: 1, my: 2 }}>
-          <b>BilboMD Classic</b> will convert your PDB file to the required CRD
-          and PSF files. However, we do this slightly differently than
-          CHARMM-GUI. The main difference is the way we rename the chains for
-          input to CHARMM. Essentially we retain your original chain IDs wheras
-          CHARMM-GUI renames the first Protein chain as segid <b>PROA</b>, the
-          second Protein chain as segid <b>PROB</b>,{' '}
-          <span style={{ fontStyle: 'italic' }}>etc</span>. (see the notes
-          above). For that reason we strongly recommend that you use our{' '}
-          <b>inp Jiffy{'\u2122'}</b> to create your <b>const.inp</b> file. Feel
-          free to manually edit it, but pay attention to segid names.
+          If you select <b>CHARMM</b> as the MD Engine, <b>BilboMD Classic</b>{' '}
+          will convert your PDB file to the required CRD and PSF files. However,
+          we do this slightly differently than CHARMM-GUI. The main difference
+          is the way we rename the chains for input to CHARMM. Essentially we
+          retain your original chain IDs wheras CHARMM-GUI renames the first
+          Protein chain as segid <b>PROA</b>, the second Protein chain as segid{' '}
+          <b>PROB</b>, <span style={{ fontStyle: 'italic' }}>etc</span>. (see
+          the notes above). For that reason we strongly recommend that you use
+          our <b>inp Jiffy{'\u2122'}</b> to create your <b>const.inp</b> file.
+          Feel free to manually edit it, but pay attention to segid names.
         </Typography>
       </Accordion>
-      <Divider textAlign='left' sx={{ my: 1, mt: 2 }}>
+      <Divider
+        textAlign="left"
+        sx={{ my: 1, mt: 2 }}
+      >
         Other settings
       </Divider>
       <Typography sx={{ mx: 1, my: 2 }}>
@@ -170,7 +181,7 @@ const NewJobFormInstructions = () => (
         expense of slightly longer computational times.
       </Typography>
       <Typography sx={{ mx: 1, my: 2 }}>
-        <b>Rg Steps</b> - Define the Radius of Gyration range (as <b>Rg Min</b>
+        <b>Rg Steps</b> - Define the Radius of Gyration range (as <b>Rg Min</b>{' '}
         and <b>Rg Max</b>) that will constrain the MD simulations.{' '}
         <b>BilboMD</b> will calculate 5 equidistant steps bewteen <b>Rg Min</b>{' '}
         and <b>Rg Max</b> to perform Molecular Dynamics. A good rule-of-thumb

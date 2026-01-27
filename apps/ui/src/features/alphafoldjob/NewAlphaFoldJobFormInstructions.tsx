@@ -36,30 +36,30 @@ const NewAlphaFoldJobFormInstructions = () => (
     <AccordionDetails>
       <Box>
         <Typography sx={{ m: 1 }}>
-          <b>BilboMD AF</b> will take your Protein sequence information and run{' '}
+          <b>BilboMD AF</b> takes your Protein sequence information and run{' '}
           <Link
-            href='https://deepmind.google/technologies/alphafold/'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://deepmind.google/technologies/alphafold/"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             AlphaFold2 or AlphaFold-Multimer
           </Link>
-          . <b>BilboMD AF</b> then takes the{' '}
+          . <b>BilboMD AF</b> then analyzes the{' '}
           <Link
-            href='https://alphafold.ebi.ac.uk/faq#faq-13'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://alphafold.ebi.ac.uk/faq#faq-13"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             Predicted Aligned Error
           </Link>{' '}
           (PAE) from AlphaFold along with the top scoring AlphaFold model to
-          automagically generate CHARMM-compatible input files to feed into the
-          standard <b>BilboMD</b> pipeline. In addition to the PAE matrix,{' '}
-          <b>BilboMD AF</b> uses the{' '}
+          automagically generate CHARMM or OpenMM-compatible input files to feed
+          into the standard <b>BilboMD</b> pipeline. In addition to the PAE
+          matrix, <b>BilboMD AF</b> uses the{' '}
           <Link
-            href='https://alphafold.ebi.ac.uk/faq#faq-12'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://alphafold.ebi.ac.uk/faq#faq-12"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             pLDDT
           </Link>{' '}
@@ -83,16 +83,19 @@ const NewAlphaFoldJobFormInstructions = () => (
             </Typography>
           </li>
         </ul>
-        <Alert severity='info' sx={{ my: 2 }}>
+        <Alert
+          severity="info"
+          sx={{ my: 2 }}
+        >
           <AlertTitle>
             Important information about AlphaFold2 vs. AlphaFold3
           </AlertTitle>
           <Typography>
             <b>BilboMD AF</b> uses{' '}
             <Link
-              href='https://github.com/sokrypton/ColabFold'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://github.com/sokrypton/ColabFold"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               ColabFold
             </Link>{' '}
@@ -102,9 +105,9 @@ const NewAlphaFoldJobFormInstructions = () => (
             chains. If you want to predict Protein/DNA, Protien/RNA, or other
             more complicated Macromolecules you should run{' '}
             <Link
-              href='https://alphafoldserver.com/'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://alphafoldserver.com/"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               AlphaFold3
             </Link>{' '}
@@ -117,27 +120,33 @@ const NewAlphaFoldJobFormInstructions = () => (
           &ldquo;standard&rdquo; AlphaFold predictions (hint: it&apos;s the MSA
           alignments) please see these resources:
         </Typography>
-        <Typography variant='body2' sx={{ mx: 2, my: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{ mx: 2, my: 2 }}
+        >
           Mirdita M, Schütze K, Moriwaki Y, Heo L, Ovchinnikov S, Steinegger M.{' '}
           <b>ColabFold: making protein folding accessible to all.</b> Nat
           Methods. 2022 Jun;19(6):679-682. doi: 10.1038/s41592-022-01488-1. Epub
           2022 May 30. PMID:
           <Link
-            href='https://pubmed.ncbi.nlm.nih.gov/35637307/'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://pubmed.ncbi.nlm.nih.gov/35637307/"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             35637307
           </Link>
           ; PMCID: PMC9184281.
         </Typography>
-        <Typography variant='body2' sx={{ mx: 2, my: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{ mx: 2, my: 2 }}
+        >
           Gyuri Kim, Sewon Lee, Eli Levy Karin et al.{' '}
           <b>Easy and accurate protein structure prediction using ColabFold.</b>{' '}
           <Link
-            href='https://doi.org/10.21203/rs.3.pex-2490/v1'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://doi.org/10.21203/rs.3.pex-2490/v1"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             Version 1, 01 Dec, 2023 Protocol Exchange
           </Link>
