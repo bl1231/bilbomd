@@ -36,6 +36,7 @@ import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from './JobSuccessAlert'
 import MdEngineField from 'components/MdEngineField'
+import { set } from 'mongoose'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -65,6 +66,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
   const [selectedMode, setSelectedMode] = useState('pdb')
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -208,6 +210,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
       <PipelineSchematic
         isDarkMode={isDarkMode}
         pipeline={selectedMode}
+        mdEngine={mdEngine}
       />
 
       <Grid size={{ xs: 12 }}>
@@ -448,6 +451,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         onChange={(val) => {
                           if (values.bilbomd_mode !== 'crd_psf') {
                             void setFieldValue('md_engine', val)
+                            setMdEngine(val)
                             // For OpenMM, lock num_conf to the default (600)
                             if (val === 'openmm') {
                               void setFieldValue('num_conf', 3)
