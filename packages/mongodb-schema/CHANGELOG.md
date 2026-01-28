@@ -1,5 +1,17 @@
 # @bilbomd/mongodb-schema
 
+## 2.4.0
+
+### Minor Changes
+
+- 673e173: Bump Node.js from v22 to v24
+
+### Patch Changes
+
+- 72f4ea4: Update dependencies.
+  Improve pipeline instructions.
+  Update instructions to reference OpenMM in addition to CHARMM.
+
 ## 2.3.5
 
 ### Patch Changes

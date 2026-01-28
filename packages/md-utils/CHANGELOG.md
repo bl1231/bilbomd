@@ -1,5 +1,20 @@
 # @bilbomd/md-utils
 
+## 1.1.0
+
+### Minor Changes
+
+- 673e173: Bump Node.js from v22 to v24
+
+### Patch Changes
+
+- 72f4ea4: Update dependencies.
+  Improve pipeline instructions.
+  Update instructions to reference OpenMM in addition to CHARMM.
+- Updated dependencies [72f4ea4]
+- Updated dependencies [673e173]
+  - @bilbomd/mongodb-schema@2.4.0
+
 ## 1.0.20
 
 ### Patch Changes
