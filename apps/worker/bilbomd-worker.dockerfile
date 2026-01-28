@@ -2,7 +2,7 @@ ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.7
 ########################################
 # Stage 1: deps (prefetch pnpm store)
 ########################################
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /repo
 # Enable pnpm via Corepack
 RUN corepack enable
@@ -20,7 +20,7 @@ RUN pnpm fetch
 ########################################
 # Stage 2: build (install, build schema + worker, then prune)
 ########################################
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /repo
 RUN corepack enable
 
@@ -49,7 +49,7 @@ WORKDIR /app
 
 # Install Node.js (if your base image doesn't already have it)
 # Keep your original approach here so the base remains unchanged
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get update \
     && apt-get install -y nodejs rsync \
     && npm install -g npm@latest \
