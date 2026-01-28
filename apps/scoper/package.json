@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
-    "bullmq": "^5.67.1",
+    "bullmq": "^5.67.2",
     "dotenv": "^17.2.3",
     "fs-extra": "^11.3.3",
     "handlebars": "^4.7.8",
