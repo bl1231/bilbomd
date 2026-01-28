@@ -1,7 +1,7 @@
 # --------------------------------------------------------------------------------------
 # Build stage 1 - Install Miniforge3
 # FROM node:22-slim AS bilbomd-backend-step1
-FROM node:22 AS bilbomd-backend-step1
+FROM node:24 AS bilbomd-backend-step1
 
 RUN apt-get update && \
     apt-get install -y ncat ca-certificates wget libgl1-mesa-dev && \

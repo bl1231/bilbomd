@@ -67,20 +67,12 @@ describe('publicJobsApiSlice', () => {
 
   beforeEach(() => {
     server.use(
-      http.post(
-        'http://localhost:3003/api/v1/public/jobs',
-        async ({ request }) => {
-          const _formData = await request.formData()
-          return HttpResponse.json(mockAnonJobResponse)
-        }
-      ),
-      http.post(
-        'http://localhost:3003/api/v1/public/jobs/sans',
-        async ({ request }) => {
-          const _formData = await request.formData()
-          return HttpResponse.json(mockAnonJobResponse)
-        }
-      ),
+      http.post('http://localhost:3003/api/v1/public/jobs', () => {
+        return HttpResponse.json(mockAnonJobResponse)
+      }),
+      http.post('http://localhost:3003/api/v1/public/jobs/sans', () => {
+        return HttpResponse.json(mockAnonJobResponse)
+      }),
       http.get(
         'http://localhost:3003/api/v1/public/jobs/:publicId',
         ({ params: _params }) => {
