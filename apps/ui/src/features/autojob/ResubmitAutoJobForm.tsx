@@ -46,6 +46,7 @@ const ResubmitAutoJobForm = () => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
 
   // RTK Query to fetch the configuration
   const {
@@ -182,7 +183,10 @@ const ResubmitAutoJobForm = () => {
         <AutoJobFormInstructions />
       </Grid>
 
-      <PipelineSchematic isDarkMode={isDarkMode} />
+      <PipelineSchematic
+        isDarkMode={isDarkMode}
+        mdEngine={mdEngine}
+      />
 
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
@@ -249,7 +253,10 @@ const ResubmitAutoJobForm = () => {
                     <Grid sx={{ width: '520px', mb: 1 }}>
                       <MdEngineField
                         value={values.md_engine as 'charmm' | 'openmm'}
-                        onChange={(val) => void setFieldValue('md_engine', val)}
+                        onChange={(val) => {
+                          void setFieldValue('md_engine', val)
+                          setMdEngine(val)
+                        }}
                         disabled={isSubmitting}
                       />
                     </Grid>
