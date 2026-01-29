@@ -406,6 +406,11 @@ const Jobs = () => {
         ? [{ field: 'username', headerName: 'User', width: 100 }]
         : []),
       {
+        field: 'md_engine',
+        headerName: 'Engine',
+        width: 110
+      },
+      {
         field: 'status',
         headerName: 'Status',
         width: 110,

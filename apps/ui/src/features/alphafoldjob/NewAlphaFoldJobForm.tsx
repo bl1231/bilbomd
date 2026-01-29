@@ -39,6 +39,7 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -165,7 +166,13 @@ const Instructions = () => (
   </Grid>
 )
 
-const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
+const PipelineSchematic = ({
+  isDarkMode,
+  mdEngine
+}: {
+  isDarkMode: boolean
+  mdEngine: 'charmm' | 'openmm'
+}) => (
   <Grid size={{ xs: 12 }}>
     <HeaderBox>
       <Typography>BilboMD AF Schematic</Typography>
@@ -174,8 +181,8 @@ const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
       <img
         src={
           isDarkMode
-            ? '/images/bilbomd-af-schematic-dark.png'
-            : '/images/bilbomd-af-schematic.png'
+            ? `/images/bilbomd-af-schematic-${mdEngine}-dark.png`
+            : `/images/bilbomd-af-schematic-${mdEngine}.png`
         }
         alt="Overview of BilboMD AF pipeline"
         style={{ maxWidth: '100%', height: 'auto' }}
@@ -463,6 +470,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -492,7 +500,8 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         copies: 1,
         seq_length: 0
       }
-    ]
+    ],
+    md_engine: 'charmm'
   }
 
   const onSubmit = async (
@@ -504,6 +513,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('title', values.title)
     form.append('dat_file', values.dat_file)
     form.append('bilbomd_mode', 'alphafold')
+    form.append('md_engine', values.md_engine)
     values.entities.forEach((entity, index) => {
       form.append(`entities[${index}][id]`, entity.id)
       form.append(`entities[${index}][name]`, entity.name)
@@ -542,7 +552,10 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       spacing={2}
     >
       <Instructions />
-      <PipelineSchematic isDarkMode={isDarkMode} />
+      <PipelineSchematic
+        isDarkMode={isDarkMode}
+        mdEngine={mdEngine}
+      />
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
           <Typography>BilboMD AF Job Form</Typography>
@@ -703,6 +716,18 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Button>
                       </Box>
                     </Box>
+
+                    {/* MD Engine selection */}
+                    <Grid sx={{ width: '520px' }}>
+                      <MdEngineField
+                        value={values.md_engine as 'charmm' | 'openmm'}
+                        onChange={(val) => {
+                          void setFieldValue('md_engine', val)
+                          setMdEngine(val)
+                        }}
+                        disabled={isSubmitting}
+                      />
+                    </Grid>
                     {useExampleData && (
                       <Alert
                         severity="warning"

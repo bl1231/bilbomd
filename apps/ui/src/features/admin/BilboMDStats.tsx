@@ -33,7 +33,11 @@ const StatsPanel = () => {
   // Loading state
   if (statsIsLoading) {
     return (
-      <Box display='flex' justifyContent='center' mt={4}>
+      <Box
+        display="flex"
+        justifyContent="center"
+        mt={4}
+      >
         <CircularProgress />
       </Box>
     )
@@ -42,14 +46,14 @@ const StatsPanel = () => {
   // Error state
   if (statsError) {
     return (
-      <Alert severity='error'>
+      <Alert severity="error">
         {statsError ? 'and' : ''} {statsError ? 'statistics' : ''}
       </Alert>
     )
   }
   // Handle empty/fallback data
   if (!stats) {
-    return <Alert severity='warning'>No statistics data available</Alert>
+    return <Alert severity="warning">No statistics data available</Alert>
   }
 
   const { userCount, jobCount, totalJobsFromUsers, jobTypes } = stats
@@ -68,12 +72,24 @@ const StatsPanel = () => {
           borderColor: grey[500]
         }}
       >
-        <Typography variant='h4'>BilboMD Job Statistics</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
+          <Typography variant="h4">BilboMD Job Statistics</Typography>
+          <Typography
+            variant="subtitle2"
+            component="span"
+            sx={{ color: '#ffeb3b', ml: 1 }}
+          >
+            deprecated
+          </Typography>
+        </Box>
       </Box>
       {/* SUMMARY OF USERS AND JOBS */}
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         <Grid sx={{ m: 1, display: 'flex', alignItems: 'center' }}>
-          <Typography variant='h4'>Users:</Typography>
+          <Typography variant="h4">Users:</Typography>
           <Chip
             label={userCount}
             sx={{
@@ -84,7 +100,7 @@ const StatsPanel = () => {
               fontWeight: 'bold'
             }}
           />
-          <Typography variant='h4'>Jobs:</Typography>
+          <Typography variant="h4">Jobs:</Typography>
           <Chip
             label={jobCount}
             sx={{
@@ -95,7 +111,7 @@ const StatsPanel = () => {
               fontWeight: 'bold'
             }}
           />
-          <Typography variant='h4'>Total Jobs (All Time):</Typography>
+          <Typography variant="h4">Total Jobs (All Time):</Typography>
           <Chip
             label={totalJobsFromUsers}
             sx={{
@@ -113,18 +129,24 @@ const StatsPanel = () => {
 
       {/* PIE CHART */}
       <Box sx={{ justifyContent: 'center', display: 'flex' }}>
-        <ResponsiveContainer width='100%' height={250}>
-          <PieChart width={500} height={250}>
+        <ResponsiveContainer
+          width="100%"
+          height={250}
+        >
+          <PieChart
+            width={500}
+            height={250}
+          >
             <Pie
               data={Object.entries(jobTypes ?? {}).map(([name, value]) => ({
                 name,
                 value
               }))}
-              cx='50%'
-              cy='99%'
+              cx="50%"
+              cy="99%"
               outerRadius={200}
-              fill='#8884d8'
-              dataKey='value'
+              fill="#8884d8"
+              dataKey="value"
               startAngle={0}
               endAngle={180}
               label
@@ -144,7 +166,12 @@ const StatsPanel = () => {
           </PieChart>
         </ResponsiveContainer>
       </Box>
-      <Box display='flex' justifyContent='center' flexWrap='wrap' mt={2}>
+      <Box
+        display="flex"
+        justifyContent="center"
+        flexWrap="wrap"
+        mt={2}
+      >
         {Object.entries(jobTypes).map(([type, count], index) => (
           <Chip
             key={type}

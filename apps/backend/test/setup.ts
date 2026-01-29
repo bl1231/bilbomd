@@ -3,7 +3,7 @@ dotenv.config({ path: './.env.test' })
 console.log('*** backend test setup loaded ***')
 
 import { logger } from '../src/middleware/loggers.js'
-import { MongoMemoryServer } from 'mongodb-memory-server'
+// import { MongoMemoryServer } from 'mongodb-memory-server'
 import mongoose from 'mongoose'
 import { vi, beforeAll, Mock } from 'vitest'
 import fs from 'fs-extra'
@@ -41,10 +41,10 @@ beforeAll(() => {
 console.log('*** Connecting to in-memory MongoDB for tests ***')
 
 // Setup MongoDB Memory Server
-export const mongoServer = await MongoMemoryServer.create()
-const uri = mongoServer.getUri()
+// export const mongoServer = await MongoMemoryServer.create()
+// const uri = mongoServer.getUri()
 
-await mongoose.connect(uri)
+// await mongoose.connect(uri)
 
 // Mock bullmq queues with real classes for Vitest v4 compatibility
 class MockQueue {

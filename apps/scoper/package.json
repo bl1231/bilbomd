@@ -1,7 +1,7 @@
 {
   "name": "@bilbomd/scoper",
   "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
-  "version": "1.5.14",
+  "version": "1.6.0",
   "main": "build/scoper.js",
   "files": [
     "build",
@@ -35,17 +35,17 @@
   },
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
-    "bullmq": "^5.65.1",
+    "bullmq": "^5.67.2",
     "dotenv": "^17.2.3",
-    "fs-extra": "^11.3.2",
+    "fs-extra": "^11.3.3",
     "handlebars": "^4.7.8",
-    "ioredis": "^5.8.2",
+    "ioredis": "^5.9.2",
     "moment-timezone": "^0.6.0",
-    "mongoose": "^8.20.2",
-    "nodemailer": "^7.0.11",
+    "mongoose": "^9.1.5",
+    "nodemailer": "^7.0.13",
     "nodemailer-express-handlebars": "^7.0.0",
     "nodemon": "^3.1.11",
-    "winston": "^3.18.3",
+    "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
   "_moduleAliases": {

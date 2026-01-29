@@ -9,10 +9,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['test/**/*.test.ts', 'src/**/__tests__/**/*.test.ts'],
-    setupFiles: ['test/setup.ts'],
+    include: ['src/**/__tests__/**/*.test.ts'],
+    hookTimeout: 5000,
+    testTimeout: 3000,
+    pool: 'forks',
+    sequence: { concurrent: false },
+    // setupFiles: ['./test/integration-setup.ts'], // Only for integration tests
     // (Optional but handy) provide minimal env so imports don't explode
     env: {
+      MONGODB_TEST_URI: 'mongodb://localhost:27017/bilbomd-test',
       SFAPI_URL: 'https://api.nersc.gov',
       BILBOMD_URL: 'http://localhost:3000',
       SCRIPT_DIR: '/app/scripts',

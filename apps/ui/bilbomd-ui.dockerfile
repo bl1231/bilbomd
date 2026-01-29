@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # Stage 1: deps (prefetch pnpm store for monorepo)
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /repo
 RUN corepack enable
 
@@ -15,7 +15,7 @@ RUN pnpm fetch
 
 # -----------------------------------------------------------------------------
 # Stage 2: build (install, build UI, then prune)
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /repo
 RUN corepack enable
 

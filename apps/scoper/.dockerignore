@@ -14,3 +14,13 @@ logs
 .eslintrc.yml
 bilbomd-test-data
 imp-2.18.0.tar.gz
+**/node_modules
+**/dist
+**/build
+**/.turbo
+**/.vite
+**/.cache
+.git
+infra/logs
+uploads-dev
+*.log

@@ -50,7 +50,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/test/setup.ts', './vitest.setup.coverage.ts'],
     reporters: ['default'],
     globals: true,
     css: true,
@@ -61,7 +61,16 @@ export default defineConfig({
       }
     },
     coverage: {
-      exclude: ['node_modules/', 'build/', 'dist/', '**/*.d.ts']
+      enabled: true,
+      provider: 'v8',
+      reportsDirectory: 'coverage',
+      exclude: [
+        'node_modules/',
+        'build/',
+        'dist/',
+        '**/*.d.ts',
+        '**/*.{png,jpg,jpeg,gif,svg,webp,ico,json}'
+      ]
     }
   }
 })

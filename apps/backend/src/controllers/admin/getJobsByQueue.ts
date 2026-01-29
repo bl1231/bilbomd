@@ -3,7 +3,10 @@ import { allQueues } from './allQueues.js'
 import { redis as redisConn } from '../../queues/redisConn.js'
 
 const getJobsByQueue = async (req: Request, res: Response): Promise<void> => {
-  const { queueName } = req.params
+  const rawQueueName = req.params.queueName
+
+  // Ensure queueName is a string
+  const queueName = Array.isArray(rawQueueName) ? rawQueueName[0] : rawQueueName
 
   const queue = allQueues[queueName]
   if (!queue) {
@@ -33,7 +36,11 @@ const getJobsByQueue = async (req: Request, res: Response): Promise<void> => {
           id: job.id,
           name: job.name,
           data: job.data,
-          status: job.finishedOn ? 'completed' : job.failedReason ? 'failed' : state,
+          status: job.finishedOn
+            ? 'completed'
+            : job.failedReason
+              ? 'failed'
+              : state,
           timestamp: job.timestamp,
           attemptsMade: job.attemptsMade,
           lockExpiresAt

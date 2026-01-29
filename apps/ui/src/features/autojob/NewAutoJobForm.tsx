@@ -17,6 +17,7 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
+import MdEngineField from 'components/MdEngineField'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 
@@ -46,6 +47,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -68,7 +70,8 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     title: '',
     pdb_file: '',
     pae_file: '',
-    dat_file: ''
+    dat_file: '',
+    md_engine: 'charmm'
   }
 
   const onSubmit = async (
@@ -82,6 +85,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('dat_file', values.dat_file)
     form.append('pae_file', values.pae_file)
     form.append('bilbomd_mode', 'auto')
+    form.append('md_engine', values.md_engine)
     if (useExampleData) {
       form.append('useExampleData', 'true')
     }
@@ -122,7 +126,10 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
           <NewAutoJobFormInstructions />
         </Grid>
 
-        <PipelineSchematic isDarkMode={isDarkMode} />
+        <PipelineSchematic
+          isDarkMode={isDarkMode}
+          mdEngine={mdEngine}
+        />
 
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
@@ -237,6 +244,18 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           </Button>
                         </Box>
                       </Box>
+
+                      {/* MD Engine selection */}
+                      <Grid sx={{ width: '520px' }}>
+                        <MdEngineField
+                          value={values.md_engine as 'charmm' | 'openmm'}
+                          onChange={(val) => {
+                            void setFieldValue('md_engine', val)
+                            setMdEngine(val)
+                          }}
+                          disabled={isSubmitting}
+                        />
+                      </Grid>
 
                       {useExampleData && (
                         <Alert

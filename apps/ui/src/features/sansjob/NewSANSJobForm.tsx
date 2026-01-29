@@ -33,6 +33,7 @@ import ChainDeuterationSlider from './ChainDeuterationSlider'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -80,7 +81,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [chainIds, setChainIds] = useState<string[]>([])
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
 
-  // Fetch the configuration object
   const {
     data: config,
     error: configError,
@@ -95,12 +95,10 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const useNersc = config.useNersc?.toLowerCase() === 'true'
 
   const handleStatusCheck = (isUnavailable: boolean) => {
-    // Update the state based on the system's availability
     setIsPerlmutterUnavailable(isUnavailable)
   }
 
-  const initialValues = {
-    bilbomd_mode: 'sans',
+  const initialValues: NewSANSJobFormValues = {
     title: '',
     pdb_file: '',
     dat_file: '',
@@ -108,7 +106,8 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     rg_min: 0,
     rg_max: 0,
     inp_file: '',
-    d2o_fraction: 100
+    d2o_fraction: 100,
+    md_engine: 'charmm'
   }
 
   const onSubmit = async (
@@ -125,6 +124,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('inp_file', values.inp_file)
     form.append('d2o_fraction', values.d2o_fraction.toString())
     form.append('bilbomd_mode', 'sans')
+    form.append('md_engine', values.md_engine)
 
     chainIds.forEach((chainId) => {
       const key =
@@ -263,6 +263,16 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           errors.title && touched.title ? errors.title : ''
                         }
                         value={values.title || ''}
+                      />
+                    </Grid>
+
+                    {/* MD Engine selection */}
+                    {/* Disabled until we write teh necessary worker code*/}
+                    <Grid sx={{ width: '520px' }}>
+                      <MdEngineField
+                        value={values.md_engine as 'charmm' | 'openmm'}
+                        onChange={(val) => void setFieldValue('md_engine', val)}
+                        disabled={true}
                       />
                     </Grid>
 

@@ -20,7 +20,9 @@ const JobSuccessAlert = ({ jobResponse, jobType }: JobSuccessAlertProps) => {
     <Alert severity="success">
       <AlertTitle>Job submitted!</AlertTitle>
       <Typography>
-        Your <b>BilboMD {jobType} job</b> has been submitted.
+        Your <b>BilboMD {jobType} job</b> has been submitted and will use
+        <b> {jobResponse?.md_engine} </b>
+        for the Molecular Dynamics step.
       </Typography>
       {jobResponse && jobResponse.jobid && (
         <Typography sx={{ my: 1 }}>

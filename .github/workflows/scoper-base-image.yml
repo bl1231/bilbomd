@@ -1,0 +1,93 @@
+name: Build and Push Scoper Base Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semver for image (e.g. 1.2.3 or 1.2.3-beta.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
+jobs:
+  build-scoper-base:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/bilbomd-scoper-base
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for multi-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate version input
+        run: |
+          version="${{ inputs.version }}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([\-+][0-9A-Za-z\.-]+)?$ ]]; then
+            echo "Invalid semver: $version"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Check if version exists
+        run: |
+          version="${{ inputs.version }}"
+          if docker manifest inspect ${{ env.IMAGE_NAME }}:$version >/dev/null 2>&1; then
+            echo "❌ Version $version already exists in registry"
+            echo "Please use a new version number"
+            exit 1
+          else
+            echo "✅ Version $version is available"
+          fi
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # latest on main branch
+            type=raw,value=latest,enable=${{ github.ref_type == 'branch' && github.ref_name == 'main' }}
+            # semver tags derived from manual input
+            type=semver,pattern={{version}},value=${{ inputs.version }}
+            type=semver,pattern={{major}},value=${{ inputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }}
+            # fallback tags for branches/commits
+            type=ref,event=branch
+            type=sha
+          labels: |
+            org.opencontainers.image.title=BilboMD Scoper Base Image
+            org.opencontainers.image.source=${{ github.repository }}
+
+      - name: Build and push base image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/scoper/bilbomd-scoper-base.dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          cache-from: |
+            type=gha,scope=scoper-base
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: |
+            type=gha,scope=scoper-base,mode=max
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max

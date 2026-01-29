@@ -1,9 +1,8 @@
 import mongoose from 'mongoose'
-import { RootFilterQuery } from 'mongoose'
 import { connectDB } from '../config/dbConn.js'
 import path from 'path'
 import fs from 'fs-extra'
-import { Job, IJob, MultiJob, IMultiJob } from '@bilbomd/mongodb-schema'
+import { Job, MultiJob } from '@bilbomd/mongodb-schema'
 import { logger } from './loggers.js'
 
 const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
@@ -19,7 +18,9 @@ export const deleteOldJobs = async () => {
 
     const oldJobs = await Job.find({
       createdAt: { $lt: thresholdDate }
-    } as RootFilterQuery<IJob>)
+    })
+      .lean()
+      .exec()
     const numOldJobs = oldJobs.length
 
     if (numOldJobs > 0) {
@@ -46,13 +47,15 @@ export const deleteOldJobs = async () => {
 
     const deleteResult = await Job.deleteMany({
       createdAt: { $lt: thresholdDate }
-    } as RootFilterQuery<IJob>)
+    }).exec()
     const deletedJobsCount = deleteResult.deletedCount
     logger.warn(`Deleted ${deletedJobsCount} jobs from MongoDB`)
 
     const oldMultiJobs = await MultiJob.find({
       createdAt: { $lt: thresholdDate }
-    } as RootFilterQuery<IMultiJob>)
+    })
+      .lean()
+      .exec()
     const numOldMultiJobs = oldMultiJobs.length
 
     if (numOldMultiJobs > 0) {
@@ -81,7 +84,7 @@ export const deleteOldJobs = async () => {
 
     const deleteMultiResult = await MultiJob.deleteMany({
       createdAt: { $lt: thresholdDate }
-    } as RootFilterQuery<IMultiJob>)
+    }).exec()
     const deletedMultiJobsCount = deleteMultiResult.deletedCount
     logger.warn(`Deleted ${deletedMultiJobsCount} multi-jobs from MongoDB`)
   } catch (error) {

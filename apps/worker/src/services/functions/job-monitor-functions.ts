@@ -185,7 +185,7 @@ const cleanupJob = async (
       sendJobCompleteEmail(
         user.email,
         config.bilbomdUrl,
-        DBjob.id,
+        DBjob._id.toString(),
         DBjob.title,
         message.error ?? false
       )

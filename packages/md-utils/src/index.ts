@@ -6,6 +6,8 @@ export {
   extractConstraintsFromYaml
 } from './constraintUtils.js'
 
+export { toPipeline, discriminatorToPipeline } from './pipelineUtils.js'
+
 // Re-export constraint interfaces from mongodb-schema for convenience
 export type {
   IMDConstraints,

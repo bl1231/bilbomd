@@ -1,8 +1,8 @@
 import { createEntityAdapter, createSelector, EntityId } from '@reduxjs/toolkit'
-import { apiSlice } from 'app/api/apiSlice'
+import { apiSlice } from '../app/api/apiSlice'
 import type { BilboMDJobDTO, JobAssetsDTO } from '@bilbomd/bilbomd-types'
-import { FileCheckResult } from 'types/jobCheckResults'
-import { RootState } from 'app/store'
+import { FileCheckResult } from '../types/jobCheckResults'
+import { RootState } from '../app/store'
 
 const jobsAdapter = createEntityAdapter<BilboMDJobDTO>()
 

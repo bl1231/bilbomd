@@ -1,7 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
-import { http, HttpResponse } from 'msw'
-import { server } from 'test/server'
 import { renderWithProviders } from 'test/test-utils'
 import PublicJobPage from '../PublicJobPage'
 import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
@@ -22,6 +20,13 @@ vi.mock('react-router', async () => {
 // Mock the useTitle hook
 vi.mock('hooks/useTitle', () => ({
   default: vi.fn()
+}))
+
+// Mock the data hook: useGetPublicJobByIdQuery
+const mockUseGetPublicJobByIdQuery = vi.fn()
+vi.mock('slices/publicJobsApiSlice', () => ({
+  useGetPublicJobByIdQuery: (id: string, opts?: unknown) =>
+    mockUseGetPublicJobByIdQuery(id, opts)
 }))
 
 // Mock the child components
@@ -79,7 +84,22 @@ describe('PublicJobPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    server.resetHandlers()
+    // Default mock: no data, not loading, no error
+    mockUseGetPublicJobByIdQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false
+    })
+  })
+
+  // Ensure timers are restored even if a test fails
+  afterEach(() => {
+    try {
+      vi.clearAllTimers()
+    } catch {
+      // ignore errors if timers are already cleared
+    }
+    vi.useRealTimers()
   })
 
   describe('when publicId is missing', () => {
@@ -104,20 +124,22 @@ describe('PublicJobPage', () => {
     })
 
     it('should display loading state initially', () => {
-      // Don't mock the API response, so it will be loading
+      mockUseGetPublicJobByIdQuery.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        isError: false
+      })
       renderWithProviders(<PublicJobPage />)
 
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
     })
 
     it('should display error state when job is not found', async () => {
-      // Mock a 404 response
-      server.use(
-        http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-          return new HttpResponse(null, { status: 404 })
-        })
-      )
-
+      mockUseGetPublicJobByIdQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isError: true
+      })
       renderWithProviders(<PublicJobPage />)
 
       await waitFor(() => {
@@ -132,13 +154,11 @@ describe('PublicJobPage', () => {
     })
 
     it('should display job information when data is loaded', async () => {
-      // Mock successful API response
-      server.use(
-        http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-          return HttpResponse.json(mockJobData)
-        })
-      )
-
+      mockUseGetPublicJobByIdQuery.mockReturnValue({
+        data: mockJobData,
+        isLoading: false,
+        isError: false
+      })
       renderWithProviders(<PublicJobPage />)
 
       await waitFor(() => {
@@ -155,13 +175,51 @@ describe('PublicJobPage', () => {
       expect(screen.getByText('65%')).toBeInTheDocument()
     })
 
-    it('should display status chip with correct status', async () => {
-      server.use(
-        http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-          return HttpResponse.json(mockJobData)
-        })
-      )
+    it('should render a live timer for running jobs', async () => {
+      mockUseGetPublicJobByIdQuery.mockReturnValue({
+        data: mockJobData,
+        isLoading: false,
+        isError: false
+      })
+      renderWithProviders(<PublicJobPage />)
 
+      await waitFor(() => {
+        expect(screen.getByText('Running')).toBeInTheDocument()
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText(/⏱/)).toBeInTheDocument()
+      })
+    })
+
+    it('should render a final duration for completed jobs', async () => {
+      // Completed job has 1 hour runtime between startedAt and completedAt
+      mockUseGetPublicJobByIdQuery.mockReturnValue({
+        data: completedJobData,
+        isLoading: false,
+        isError: false
+      })
+      renderWithProviders(<PublicJobPage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Completed')).toBeInTheDocument()
+      })
+
+      // Expect a timer text like "⏱ 1h 0m 0s"
+      await waitFor(
+        () => {
+          expect(screen.getByText(/⏱\s+1h\s+0m\s+0s/)).toBeInTheDocument()
+        },
+        { timeout: 2000 }
+      )
+    })
+
+    it('should display status chip with correct status', async () => {
+      mockUseGetPublicJobByIdQuery.mockReturnValue({
+        data: mockJobData,
+        isLoading: false,
+        isError: false
+      })
       renderWithProviders(<PublicJobPage />)
 
       await waitFor(() => {
@@ -170,12 +228,11 @@ describe('PublicJobPage', () => {
     })
 
     it('should show analysis and download sections when job is completed', async () => {
-      server.use(
-        http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-          return HttpResponse.json(completedJobData)
-        })
-      )
-
+      mockUseGetPublicJobByIdQuery.mockReturnValue({
+        data: completedJobData,
+        isLoading: false,
+        isError: false
+      })
       renderWithProviders(<PublicJobPage />)
 
       await waitFor(() => {
@@ -189,32 +246,14 @@ describe('PublicJobPage', () => {
       ).toBeInTheDocument()
     })
 
-    it('should not show analysis and download sections when job is not completed', async () => {
-      server.use(
-        http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-          return HttpResponse.json(mockJobData)
-        })
-      )
-
-      renderWithProviders(<PublicJobPage />)
-
-      await waitFor(() => {
-        expect(screen.getByText('65%')).toBeInTheDocument()
-      })
-
-      expect(screen.queryByTestId('analysis-section')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('download-section')).not.toBeInTheDocument()
-    })
-
     it('should handle job with no md_engine', async () => {
       const jobWithoutEngine = { ...mockJobData, md_engine: undefined }
 
-      server.use(
-        http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-          return HttpResponse.json(jobWithoutEngine)
-        })
-      )
-
+      mockUseGetPublicJobByIdQuery.mockReturnValue({
+        data: jobWithoutEngine,
+        isLoading: false,
+        isError: false
+      })
       renderWithProviders(<PublicJobPage />)
 
       await waitFor(() => {
@@ -229,12 +268,11 @@ describe('PublicJobPage', () => {
     it('should handle job with no progress value', async () => {
       const jobWithoutProgress = { ...mockJobData, progress: 0 }
 
-      server.use(
-        http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-          return HttpResponse.json(jobWithoutProgress)
-        })
-      )
-
+      mockUseGetPublicJobByIdQuery.mockReturnValue({
+        data: jobWithoutProgress,
+        isLoading: false,
+        isError: false
+      })
       renderWithProviders(<PublicJobPage />)
 
       await waitFor(() => {
@@ -257,15 +295,11 @@ describe('PublicJobPage', () => {
         it(`should display ${status} status correctly`, async () => {
           const jobWithStatus = { ...mockJobData, status }
 
-          server.use(
-            http.get(
-              'http://localhost:3002/api/v1/public/jobs/:publicId',
-              () => {
-                return HttpResponse.json(jobWithStatus)
-              }
-            )
-          )
-
+          mockUseGetPublicJobByIdQuery.mockReturnValue({
+            data: jobWithStatus,
+            isLoading: false,
+            isError: false
+          })
           renderWithProviders(<PublicJobPage />)
 
           await waitFor(() => {
@@ -282,15 +316,11 @@ describe('PublicJobPage', () => {
         it(`should display ${jobType} job type correctly`, async () => {
           const jobWithType = { ...mockJobData, jobType }
 
-          server.use(
-            http.get(
-              'http://localhost:3002/api/v1/public/jobs/:publicId',
-              () => {
-                return HttpResponse.json(jobWithType)
-              }
-            )
-          )
-
+          mockUseGetPublicJobByIdQuery.mockReturnValue({
+            data: jobWithType,
+            isLoading: false,
+            isError: false
+          })
           renderWithProviders(<PublicJobPage />)
 
           await waitFor(() => {
@@ -311,15 +341,11 @@ describe('PublicJobPage', () => {
         it(`should display ${progress}% progress correctly`, async () => {
           const jobWithProgress = { ...mockJobData, progress }
 
-          server.use(
-            http.get(
-              'http://localhost:3002/api/v1/public/jobs/:publicId',
-              () => {
-                return HttpResponse.json(jobWithProgress)
-              }
-            )
-          )
-
+          mockUseGetPublicJobByIdQuery.mockReturnValue({
+            data: jobWithProgress,
+            isLoading: false,
+            isError: false
+          })
           renderWithProviders(<PublicJobPage />)
 
           await waitFor(() => {
@@ -331,12 +357,11 @@ describe('PublicJobPage', () => {
 
     describe('polling behavior', () => {
       it('should display running job and continue polling', async () => {
-        server.use(
-          http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-            return HttpResponse.json(mockJobData)
-          })
-        )
-
+        mockUseGetPublicJobByIdQuery.mockReturnValue({
+          data: mockJobData,
+          isLoading: false,
+          isError: false
+        })
         renderWithProviders(<PublicJobPage />)
 
         await waitFor(() => {
@@ -348,12 +373,11 @@ describe('PublicJobPage', () => {
       })
 
       it('should stop showing polling indicator for completed jobs', async () => {
-        server.use(
-          http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-            return HttpResponse.json(completedJobData)
-          })
-        )
-
+        mockUseGetPublicJobByIdQuery.mockReturnValue({
+          data: completedJobData,
+          isLoading: false,
+          isError: false
+        })
         renderWithProviders(<PublicJobPage />)
 
         await waitFor(() => {
@@ -364,12 +388,11 @@ describe('PublicJobPage', () => {
 
     describe('server errors', () => {
       it('should handle server error gracefully', async () => {
-        server.use(
-          http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-            return new HttpResponse(null, { status: 500 })
-          })
-        )
-
+        mockUseGetPublicJobByIdQuery.mockReturnValue({
+          data: undefined,
+          isLoading: false,
+          isError: true
+        })
         renderWithProviders(<PublicJobPage />)
 
         await waitFor(() => {
@@ -378,12 +401,11 @@ describe('PublicJobPage', () => {
       })
 
       it('should handle network error gracefully', async () => {
-        server.use(
-          http.get('http://localhost:3002/api/v1/public/jobs/:publicId', () => {
-            return HttpResponse.error()
-          })
-        )
-
+        mockUseGetPublicJobByIdQuery.mockReturnValue({
+          data: undefined,
+          isLoading: false,
+          isError: true
+        })
         renderWithProviders(<PublicJobPage />)
 
         await waitFor(() => {

@@ -13,6 +13,8 @@ import { sanitizeConstInpFile, writeJobParams } from './index.js'
 import { queueJob } from '../../queues/bilbomd.js'
 import { DispatchUser } from '../../types/bilbomd.js'
 import { config } from '../../config/config.js'
+import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
 
 const uploadFolder = config.uploadDir
 
@@ -115,6 +117,21 @@ const handleBilboMDSANSJob = async (
       status: 'Submitted',
       time_submitted: new Date(),
       steps: stepsInit,
+      md_engine,
+      ...(md_engine === 'OpenMM' && {
+        openmm_parameters: buildOpenMMParameters({
+          ...req.body,
+          rg_min: req.body.rg_min,
+          rg_max: req.body.rg_max
+        })
+      }),
+      ...(md_engine === 'CHARMM' && {
+        charmm_parameters: buildCHARMMParameters({
+          ...req.body,
+          rg_min: req.body.rg_min,
+          rg_max: req.body.rg_max
+        })
+      }),
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
@@ -144,17 +161,18 @@ const handleBilboMDSANSJob = async (
       return
     }
 
-    logger.info(`${bilbomdMode} Job saved to  MongoDB: ${newJob.id}`)
+    logger.info(
+      `${bilbomdMode} Job saved to  MongoDB: ${newJob._id.toString()}`
+    )
 
     // Write Job params for use by NERSC job script.
-    await writeJobParams(newJob.id)
-
+    await writeJobParams(newJob._id.toString())
     // Create BullMQ Job object
     const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id,
+      jobid: newJob._id.toString(),
       md_engine
     }
 
@@ -179,7 +197,7 @@ const handleBilboMDSANSJob = async (
 
       res.status(200).json({
         message: `New BilboMD SANS Job successfully created`,
-        jobid: newJob.id,
+        jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine,
         publicId: ctx.publicId,
@@ -189,7 +207,7 @@ const handleBilboMDSANSJob = async (
     } else {
       res.status(200).json({
         message: `New BilboMD SANS Job successfully created`,
-        jobid: newJob.id,
+        jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine
       })

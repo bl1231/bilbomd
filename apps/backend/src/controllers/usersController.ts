@@ -94,7 +94,10 @@ const updateUser = async (req: Request, res: Response): Promise<void> => {
 }
 
 const deleteUserById = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params
+  const rawId = req.params.id
+
+  // Ensure id is a string
+  const id = Array.isArray(rawId) ? rawId[0] : rawId
 
   if (!id) {
     res.status(400).json({ success: false, message: 'User ID is required' })
@@ -135,7 +138,10 @@ const deleteUserByUsername = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const username = req.params.username
+  const rawUsername = req.params.username
+
+  // Ensure username is a string
+  const username = Array.isArray(rawUsername) ? rawUsername[0] : rawUsername
 
   if (!username || !isValidUsername(username)) {
     res.status(400).json({ success: false, message: 'Invalid username format' })
@@ -182,17 +188,22 @@ const deleteUserByUsername = async (
 }
 
 const getUser = async (req: Request, res: Response): Promise<void> => {
-  if (!req?.params?.id) {
+  const rawId = req.params.id
+
+  // Ensure id is a string
+  const id = Array.isArray(rawId) ? rawId[0] : rawId
+
+  if (!id) {
     res.status(400).json({ success: false, message: 'User ID is required' })
     return
   }
 
   try {
-    const user = await User.findOne({ _id: req.params.id }).lean().exec()
+    const user = await User.findOne({ _id: id }).lean().exec()
     if (!user) {
       res
         .status(404)
-        .json({ success: false, message: `User ID ${req.params.id} not found` })
+        .json({ success: false, message: `User ID ${id} not found` })
       return
     }
     res.json({ success: true, data: user })

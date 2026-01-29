@@ -46,7 +46,15 @@ const Help = ({ title = 'BilboMD: Help' }) => {
           >
             CHARMM
           </Link>{' '}
-          is followed by structure validation using{' '}
+          or{' '}
+          <Link
+            href="https://openmm.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OpenMM
+          </Link>{' '}
+          and is followed by structure validation using{' '}
           <Link
             href="https://modbase.compbio.ucsf.edu/foxs/about"
             target="_blank"
@@ -54,14 +62,14 @@ const Help = ({ title = 'BilboMD: Help' }) => {
           >
             FoXS
           </Link>{' '}
-          and ensemble analysis using Minimal Ensemble Search (MES) via{' '}
+          and ensemble analysis using{' '}
           <Link
             href="https://modbase.compbio.ucsf.edu/multifoxs/"
             target="_blank"
             rel="noopener noreferrer"
           >
             MultiFoXS
-          </Link>
+          </Link>{' '}
           .Details of the implementation and integration of these tools into{' '}
           <b>BilboMD</b> are described in the following manuscript:
           <Typography
@@ -255,9 +263,10 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             variant="body2"
             sx={{ mt: 1 }}
           >
-            BilboMD is provided free of charge for academic and non-commercial
-            use. No login is required for basic usage or submitting anonymous
-            jobs.
+            <b>
+              BilboMD is free and open to all users and there is no login
+              requirement.
+            </b>
           </Typography>
 
           {/* Step-by-step: sample job */}
@@ -424,8 +433,7 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             sx={{ mb: 2 }}
           >
             You can explore example BilboMD output by running the built-in
-            sample job, or by visiting public demo result pages provided in the
-            manuscript or on the BilboMD website.
+            sample jobs.
           </Typography>
 
           {/* Access / license statement */}
@@ -440,11 +448,11 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             variant="body1"
             sx={{ mb: 2 }}
           >
-            BilboMD is freely accessible for academic and non-commercial use.
-            Basic functionality, including anonymous job submission and
-            retrieval of results, does not require registration. Optional user
-            accounts (e.g., via ORCID (coming soon) or email) are provided to
-            support long-term job management and API-based access.
+            BilboMD is freely accessible for all users. Basic functionality,
+            including anonymous job submission and retrieval of results, does
+            not require registration. Optional user accounts (e.g., via ORCID
+            (coming soon) or email) are provided to support long-term job
+            management and API-based access.
           </Typography>
           <Typography variant="body1">
             For more information about how data and cookies are handled, please

@@ -38,10 +38,10 @@ import { Box } from '@mui/system'
 import Paper from '@mui/material/Paper'
 import Chip from '@mui/material/Chip'
 import HeaderBox from 'components/HeaderBox'
-import { IUser } from '@bilbomd/mongodb-schema'
+import type { UserDTO, UserRole } from '@bilbomd/bilbomd-types'
 
 interface EditUserFormProps {
-  user: IUser
+  user: UserDTO
 }
 
 const ITEM_HEIGHT = 48
@@ -59,7 +59,7 @@ interface EditUserFormValues {
   username: string
   email: string
   active: boolean
-  roles: string[]
+  roles: UserRole[]
 }
 
 const EditUserForm = ({ user }: EditUserFormProps) => {
@@ -210,20 +210,25 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                         id="roles"
                         multiple={true}
                         value={values.roles}
-                        onChange={(e) =>
-                          setFieldValue('roles', e.target.value as string)
-                        }
+                        onChange={(e) => {
+                          const next = (e.target.value as string[]).map(
+                            (r) => r as UserRole
+                          )
+                          void setFieldValue('roles', next)
+                        }}
                         input={<OutlinedInput label="Roles" />}
-                        renderValue={(selected) => selected.join(', ')}
+                        renderValue={(selected) =>
+                          (selected as string[]).join(', ')
+                        }
                         MenuProps={MenuProps}
                       >
-                        {Object.values(ROLES).map((role) => (
+                        {(Object.values(ROLES) as string[]).map((role) => (
                           <MenuItem
                             key={role}
                             value={role}
                           >
                             <Checkbox
-                              checked={values.roles.indexOf(role) > -1}
+                              checked={values.roles.includes(role as UserRole)}
                             />
                             <ListItemText primary={role} />
                           </MenuItem>

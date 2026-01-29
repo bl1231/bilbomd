@@ -35,6 +35,7 @@ import PipelineSchematic from './PipelineSchematic'
 import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from './JobSuccessAlert'
+import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -64,6 +65,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
   const [selectedMode, setSelectedMode] = useState('pdb')
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -91,9 +93,10 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     inp_file: '',
     dat_file: '',
     num_conf: '',
-    rg: '10',
+    rg: '',
     rg_min: '',
-    rg_max: ''
+    rg_max: '',
+    md_engine: 'charmm'
   }
 
   const onSubmit = async (
@@ -113,6 +116,10 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('rg_max', values.rg_max)
     form.append('dat_file', values.dat_file)
     form.append('inp_file', values.inp_file)
+    form.append(
+      'md_engine',
+      values.bilbomd_mode === 'crd_psf' ? 'charmm' : values.md_engine
+    )
     if (useExampleData) {
       form.append('useExampleData', 'true')
     }
@@ -202,6 +209,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
       <PipelineSchematic
         isDarkMode={isDarkMode}
         pipeline={selectedMode}
+        mdEngine={mdEngine}
       />
 
       <Grid size={{ xs: 12 }}>
@@ -335,16 +343,18 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   'title',
                                   'example-bilbomd-pdb-job'
                                 )
-                                void setFieldValue('rg_min', '26')
-                                void setFieldValue('rg_max', '42')
-                                void setFieldValue('num_conf', 1)
+                                void setFieldValue('rg', '33')
+                                void setFieldValue('rg_min', '30')
+                                void setFieldValue('rg_max', '49')
+                                void setFieldValue('num_conf', 2)
                               } else {
                                 void setFieldValue(
                                   'title',
                                   'example-bilbomd-crd-psf-job'
                                 )
-                                void setFieldValue('rg_min', '20')
-                                void setFieldValue('rg_max', '50')
+                                void setFieldValue('rg', '27')
+                                void setFieldValue('rg_min', '26')
+                                void setFieldValue('rg_max', '41')
                                 void setFieldValue('num_conf', 2)
                               }
                             } else {
@@ -428,6 +438,31 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         value={values.title || ''}
                       />
                     </Grid>
+
+                    {/* MD Engine selection */}
+                    <Grid sx={{ width: '520px' }}>
+                      <MdEngineField
+                        value={
+                          (values.bilbomd_mode === 'crd_psf'
+                            ? 'charmm'
+                            : values.md_engine) as 'charmm' | 'openmm'
+                        }
+                        onChange={(val) => {
+                          if (values.bilbomd_mode !== 'crd_psf') {
+                            void setFieldValue('md_engine', val)
+                            setMdEngine(val)
+                            // For OpenMM, lock num_conf to the default (600)
+                            if (val === 'openmm') {
+                              void setFieldValue('num_conf', 3)
+                            }
+                          }
+                        }}
+                        disabled={
+                          isSubmitting || values.bilbomd_mode === 'crd_psf'
+                        }
+                      />
+                    </Grid>
+
                     {values.bilbomd_mode === 'crd_psf' && (
                       <>
                         <Grid
@@ -713,11 +748,14 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         sx={{ width: '520px' }}
                         onChange={handleChange}
                         onBlur={handleBlur}
+                        disabled={isSubmitting || values.md_engine === 'openmm'}
                         error={Boolean(errors.num_conf && touched.num_conf)}
                         helperText={
                           errors.num_conf && touched.num_conf
                             ? errors.num_conf
-                            : 'Number of conformations to sample per Rg'
+                            : values.md_engine === 'openmm'
+                              ? 'OpenMM uses a fixed setting (600)'
+                              : 'Number of conformations to sample per Rg'
                         }
                       >
                         <MenuItem

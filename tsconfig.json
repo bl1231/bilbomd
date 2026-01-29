@@ -13,7 +13,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmitOnError": false
