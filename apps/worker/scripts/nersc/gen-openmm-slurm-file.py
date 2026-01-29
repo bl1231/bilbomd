@@ -169,10 +169,12 @@ def prepare_openmm_config(config, params):
             },
         },
     }
-    
+
     # merge in the minimization, heating, and md parameters from params if they exist
     openmm_config["steps"]["minimization"]["parameters"]["max_iterations"] = int(
-        params.get("openmm_parameters", {}).get("minimize", {}).get("max_iterations", 1000)
+        params.get("openmm_parameters", {})
+        .get("minimize", {})
+        .get("max_iterations", 1000)
     )
     openmm_config["steps"]["heating"]["parameters"]["start_temp"] = int(
         params.get("openmm_parameters", {}).get("heating", {}).get("start_temp", 300)
@@ -378,6 +380,19 @@ check_exit_code $AF_EXIT alphafold
 echo "AlphaFold Done."
 update_status alphafold Success
 """
+    return section
+
+
+def generate_pae2const_prep_section(config):
+    section = f"""
+# --------------------------------------------------------------------------------------
+# Prepare input files for PAE2Const from AlphaFold output
+echo "Selecting best AlphaFold model..."
+cp {config["workdir"]}/alphafold/*_relaxed_rank_001_*.pdb {config["workdir"]}/af-rank1.pdb
+echo "Selecting PAE matrix file for best AlphaFold model..."
+cp {config["workdir"]}/alphafold/*_predicted_aligned_error_v1.json {config["workdir"]}/af-pae.json
+echo "AlphaFold model and PAE file copied to {config["workdir"]}"
+    """
     return section
 
 
@@ -743,6 +758,7 @@ def main():
     slurm_sections.append(add_helper_functions())
     if params.get("__t") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
+        # need to prepare input files for pae2const from alphafold output
         slurm_sections.append(generate_pae2const_section(config, params))
     if params.get("__t") == "BilboMdAuto":
         slurm_sections.append(generate_pae2const_section(config, params))
