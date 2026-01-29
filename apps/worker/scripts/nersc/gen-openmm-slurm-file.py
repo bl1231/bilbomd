@@ -368,8 +368,8 @@ echo "Running AlphaFold..."
 srun --gpus=4 \\
      --job-name alphafold \\
      podman-hpc run --rm --gpu \\
-        -v {config["workdir"]}:/bilbomd/work \\
-        -v {config["upload_dir"]}:/cfs \\
+        -v $WORKDIR:/bilbomd/work \\
+        -v $UPLOAD_DIR:/cfs \\
         {config["af_worker"]} /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
@@ -388,17 +388,18 @@ def generate_pae2const_prep_section(config):
 # --------------------------------------------------------------------------------------
 # Prepare input files for PAE2Const from AlphaFold output
 echo "Selecting best AlphaFold model..."
-cp {config["workdir"]}/alphafold/*_relaxed_rank_001_*.pdb {config["workdir"]}/af-rank1.pdb
+cp $WORKDIR/alphafold/*_relaxed_rank_001_*.pdb $WORKDIR/af-rank1.pdb
 echo "Selecting PAE matrix file for best AlphaFold model..."
-cp {config["workdir"]}/alphafold/*_predicted_aligned_error_v1.json {config["workdir"]}/af-pae.json
-echo "AlphaFold model and PAE file copied to {config["workdir"]}"
-    """
+cp $WORKDIR/alphafold/complex_scores_rank_001_*.json $WORKDIR/af-pae.json
+echo "AlphaFold model and PAE file copied to $WORKDIR"
+"""
+    # since we have access to `config` can we update it here?
     return section
 
 
 def generate_pae2const_section(config, params):
-    pae_file = params.get("pae_file", "alphafold/model_pae.json")
-    pdb_file = params.get("pdb_file", "openmm/minimization/minimized.pdb")
+    pae_file = params.get("pae_file", "af-pae.json")
+    pdb_file = params.get("pdb_file", "af-rank1.pdb")
     section = f"""
 # --------------------------------------------------------------------------------------
 # Generate constraints.yaml from PAE/PDB
@@ -758,7 +759,7 @@ def main():
     slurm_sections.append(add_helper_functions())
     if params.get("__t") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
-        # need to prepare input files for pae2const from alphafold output
+        slurm_sections.append(generate_pae2const_prep_section(config))
         slurm_sections.append(generate_pae2const_section(config, params))
     if params.get("__t") == "BilboMdAuto":
         slurm_sections.append(generate_pae2const_section(config, params))
