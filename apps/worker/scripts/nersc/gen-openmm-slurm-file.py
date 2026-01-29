@@ -169,10 +169,12 @@ def prepare_openmm_config(config, params):
             },
         },
     }
-    
+
     # merge in the minimization, heating, and md parameters from params if they exist
     openmm_config["steps"]["minimization"]["parameters"]["max_iterations"] = int(
-        params.get("openmm_parameters", {}).get("minimize", {}).get("max_iterations", 1000)
+        params.get("openmm_parameters", {})
+        .get("minimize", {})
+        .get("max_iterations", 1000)
     )
     openmm_config["steps"]["heating"]["parameters"]["start_temp"] = int(
         params.get("openmm_parameters", {}).get("heating", {}).get("start_temp", 300)
@@ -327,6 +329,11 @@ export OMP_PROC_BIND=spread
 export UPLOAD_DIR="{config["upload_dir"]}"
 export WORKDIR="{config["workdir"]}"
 export STATUS_FILE="{config["workdir"]}/status.txt"
+
+# Docker images
+export OPENMM_WORKER="{config["openmm_worker"]}"
+export BILBOMD_WORKER="{config["bilbomd_worker"]}"
+export AF_WORKER="{config["af_worker"]}"
 """
     return header
 
@@ -366,9 +373,9 @@ echo "Running AlphaFold..."
 srun --gpus=4 \\
      --job-name alphafold \\
      podman-hpc run --rm --gpu \\
-        -v {config["workdir"]}:/bilbomd/work \\
-        -v {config["upload_dir"]}:/cfs \\
-        {config["af_worker"]} /bin/bash -c "
+        -v $WORKDIR:/bilbomd/work \\
+        -v $UPLOAD_DIR:/cfs \\
+        $AF_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
             colabfold_batch --num-models=3 --amber --use-gpu-relax --num-recycle=4 af-entities.fasta alphafold
@@ -381,9 +388,35 @@ update_status alphafold Success
     return section
 
 
+def generate_pae2const_prep_section(config):
+    section = f"""
+# --------------------------------------------------------------------------------------
+# Prepare input files for PAE2Const from AlphaFold output
+echo "Selecting best AlphaFold model..."
+cp $WORKDIR/alphafold/*_relaxed_rank_001_*.pdb $WORKDIR/af-rank1.pdb
+echo "Selecting PAE matrix file for best AlphaFold model..."
+cp $WORKDIR/alphafold/complex_scores_rank_001_*.json $WORKDIR/af-pae.json
+echo "AlphaFold model and PAE file copied to $WORKDIR"
+"""
+    # Update the OpenMM config file to use the AlphaFold model
+    config_yaml_path = os.path.join(config["workdir"], "openmm_config.yaml")
+    if os.path.exists(config_yaml_path):
+        with open(config_yaml_path, "r") as f:
+            openmm_config = yaml.safe_load(f)
+        
+        # Update pdb_file to use the AlphaFold model
+        openmm_config["input"]["pdb_file"] = "af-rank1.pdb"
+        
+        with open(config_yaml_path, "w") as f:
+            yaml.dump(openmm_config, f)
+        
+        print(f"Updated OpenMM config to use af-rank1.pdb")
+    return section
+
+
 def generate_pae2const_section(config, params):
-    pae_file = params.get("pae_file", "alphafold/model_pae.json")
-    pdb_file = params.get("pdb_file", "openmm/minimization/minimized.pdb")
+    pae_file = params.get("pae_file", "af-pae.json")
+    pdb_file = params.get("pdb_file", "af-rank1.pdb")
     section = f"""
 # --------------------------------------------------------------------------------------
 # Generate constraints.yaml from PAE/PDB
@@ -395,7 +428,7 @@ srun --ntasks=1 \\
      --job-name pae2constraints \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        {config["bilbomd_worker"]} /bin/bash -c "
+        $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work
             python /app/scripts/pae2const.py {pae_file} \\
@@ -415,7 +448,7 @@ srun --ntasks=1 \\
      --job-name consmerge \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        {config["bilbomd_worker"]} /bin/bash -c "
+        $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work
             python /app/scripts/nersc/merge_constraints.py openmm_config.yaml constraints.yaml openmm_config.yaml
@@ -441,7 +474,7 @@ srun --ntasks=1 \\
      podman-hpc run --rm --gpu \\
         -v $WORKDIR:/bilbomd/work \\
         -v $UPLOAD_DIR:/cfs \\
-        {config["openmm_worker"]} /bin/bash -c "
+        $OPENMM_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
             python /app/scripts/openmm/minimize.py openmm_config.yaml
@@ -504,7 +537,7 @@ srun --ntasks=1 \\
      --job-name initfoxs \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        {config["bilbomd_worker"]} /bin/bash -c "
+        $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
             foxs \\
@@ -533,7 +566,7 @@ srun --ntasks=1 \\
      --job-name heat \\
      podman-hpc run --rm --gpu \\
         -v $WORKDIR:/bilbomd/work \\
-        {config["openmm_worker"]} /bin/bash -c "
+        $OPENMM_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
             python /app/scripts/openmm/heat.py openmm_config.yaml
@@ -588,7 +621,7 @@ update_status md Running
          --env SLURM_NTASKS \\
          --env CUDA_VISIBLE_DEVICES \\
          -v $WORKDIR:/bilbomd/work \\
-         {config["openmm_worker"]} /bin/bash -c "
+         $OPENMM_WORKER /bin/bash -c "
             set -e
             export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
             cd /bilbomd/work/ &&
@@ -616,7 +649,7 @@ srun --ntasks=1 \\
      --job-name foxs \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        {config["bilbomd_worker"]} /bin/bash -c "
+        $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/openmm/md &&
             python /app/scripts/nersc/run-foxs-after-openmm.py --root .
@@ -644,7 +677,7 @@ srun --ntasks=1 \\
      --job-name multifoxs \\
      podman-hpc run --rm \\
          -v $WORKDIR:/bilbomd/work \\
-         {config["bilbomd_worker"]} /bin/bash -c "
+         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/multifoxs &&
             python /app/scripts/nersc/run-multifoxs.py \\
@@ -677,7 +710,7 @@ srun --ntasks=1 \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
         -v $UPLOAD_DIR:/cfs \\
-        {config["bilbomd_worker"]} /bin/bash -c "
+        $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/analysis &&
             python /app/scripts/openmm/plot_rgyrs.py /bilbomd/work/openmm/md
@@ -743,6 +776,7 @@ def main():
     slurm_sections.append(add_helper_functions())
     if params.get("__t") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
+        slurm_sections.append(generate_pae2const_prep_section(config))
         slurm_sections.append(generate_pae2const_section(config, params))
     if params.get("__t") == "BilboMdAuto":
         slurm_sections.append(generate_pae2const_section(config, params))
