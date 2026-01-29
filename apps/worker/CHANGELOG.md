@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.2.1
+
+### Patch Changes
+
+- 340fb56: Fix bug #333 (AF outputs not preppped properly for pae2const)
+
 ## 2.2.0
 
 ### Minor Changes
