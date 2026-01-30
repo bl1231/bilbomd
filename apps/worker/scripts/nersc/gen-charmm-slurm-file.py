@@ -7,9 +7,9 @@ from pathlib import Path
 
 import yaml
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Argument and Environment Setup
-# -----------------------------
+# -----------------------------------------------------------------------------
 
 
 def setup_environment(uuid):
@@ -68,9 +68,9 @@ def setup_environment(uuid):
     }
 
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Input Preparation
-# -----------------------------
+# -----------------------------------------------------------------------------
 
 
 def prepare_input(workdir, upload_dir):
@@ -110,9 +110,9 @@ def prepare_input(workdir, upload_dir):
     return params
 
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Copy CHARMM template files
-# -----------------------------
+# -----------------------------------------------------------------------------
 
 
 def copy_template_files(config):
@@ -698,11 +698,12 @@ def generate_md_section(config, params):
     if cores_per_task < 1:
         cores_per_task = 1
 
-    section = """
+    section = f"""
 # --------------------------------------------------------------------------------------
 # CHARMM Molecular Dynamics (concurrent runs with each Rg set)
 update_status md Running
-echo 'Running CHARMM MD for all Rg values...'
+echo 'Running CHARMM MD for {num_rg_values} Rg values...'
+echo '{rg_values}'
 
 # Array to hold all background PIDs
 md_pids=()
@@ -729,6 +730,8 @@ md_pids=()
          " &
 # Capture the PID of the backgrounded srun command
 md_pids+=($!)
+# Small delay to ensure Slurm scheduler picks up each job
+sleep 2
 
 """
 
@@ -745,6 +748,121 @@ update_status md Success
 """
     
     return section
+
+
+def template_dcd2pdb_input_files(config, params):
+    """Create CHARMM DCD2PDB input files for each Rg value and run combination from template."""
+    print("Preparing CHARMM DCD2PDB input files")
+    
+    # Extract Rg values from nested params structure
+    rg_values = params.get("charmm_parameters", {}).get("md", {}).get("rgyr", [])
+    if not rg_values:
+        print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
+        sys.exit(1)
+    
+    # Get additional MD parameters to calculate conf_sample
+    charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
+    nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
+    conf_sample = int(nsteps / 100000)
+    
+    workdir = config["workdir"]
+    template_file = os.path.join(workdir, "dcd2pdb.tmpl")
+    
+    # Check if template file exists
+    if not os.path.exists(template_file):
+        print(f"Error: Template file {template_file} not found", file=sys.stderr)
+        sys.exit(1)
+    
+    # Define required parameters and validate they exist
+    required_params = {
+        "{{charmm_topo_dir}}": "charmm_topo_dir",
+        "{{in_psf_file}}": "in_psf_file",
+    }
+    
+    # Validate required parameters exist
+    for placeholder, param_key in required_params.items():
+        if param_key not in params or not params[param_key]:
+            print(f"Error: Required parameter '{param_key}' not found in params.json or is empty", file=sys.stderr)
+            sys.exit(1)
+    
+    dcd2pdb_inp_files = []
+    
+    # Create main foxs directory
+    foxs_dir = os.path.join(workdir, "foxs")
+    os.makedirs(foxs_dir, exist_ok=True)
+    
+    # Loop through each Rg value and run number combination
+    for rg_value in rg_values:
+        # Create foxs_rg filename (this appears to be used for CHARMM output)
+        foxs_rg = f"foxs_rg{rg_value}.dat"
+        foxs_rg_path = os.path.join(workdir, foxs_rg)
+        
+        # Create/touch the foxs_rg file (CHARMM appends to this file)
+        Path(foxs_rg_path).touch()
+        
+        for run in range(1, conf_sample + 1):
+            # Generate filename like "dcd2pdb_rg${rg}_run${run}.inp"
+            inp_filename = f"dcd2pdb_rg{rg_value}_run{run}.inp"
+            inp_basename = inp_filename.replace(".inp", "")  # Remove .inp extension
+            output_path = os.path.join(workdir, inp_filename)
+            
+            # Generate dynamic values based on bash logic
+            foxs_run_dir = f"rg{rg_value}_run{run}"
+            in_dcd = f"dynamics_rg{rg_value}_run{run}.dcd"
+            
+            print(f"Creating CHARMM DCD2PDB input file: {inp_filename} for Rg={rg_value}, run={run}")
+            
+            # Create FoXS output directory for this run
+            foxs_output_dir = os.path.join(foxs_dir, foxs_run_dir)
+            os.makedirs(foxs_output_dir, exist_ok=True)
+            
+            # Copy template to new input file
+            try:
+                shutil.copy2(template_file, output_path)
+            except (OSError, IOError) as e:
+                print(f"Failed to copy {template_file} to {output_path}: {e}", file=sys.stderr)
+                sys.exit(1)
+            
+            # Read the template content
+            try:
+                with open(output_path, "r") as f:
+                    content = f.read()
+            except (OSError, IOError) as e:
+                print(f"Failed to read {output_path}: {e}", file=sys.stderr)
+                sys.exit(1)
+            
+            # Prepare all replacements including dynamic values from bash template_dcd2pdb_file
+            replacements = {
+                "{{charmm_topo_dir}}": str(params["charmm_topo_dir"]),
+                "{{in_psf_file}}": str(params["in_psf_file"]),
+                "{{in_dcd}}": in_dcd,
+                "{{run}}": foxs_run_dir,  # This maps to foxs_run_dir in bash
+                "{{inp_basename}}": inp_basename,
+                "{{foxs_rg}}": foxs_rg,
+                "{{rg}}": str(rg_value),
+            }
+            
+            # Perform all replacements
+            for placeholder, value in replacements.items():
+                content = content.replace(placeholder, value)
+            
+            # Write the processed content back
+            try:
+                with open(output_path, "w") as f:
+                    f.write(content)
+            except (OSError, IOError) as e:
+                print(f"Failed to write {output_path}: {e}", file=sys.stderr)
+                sys.exit(1)
+            
+            # Add to list of generated files
+            dcd2pdb_inp_files.append(inp_filename)
+    
+    print(f"Done preparing {len(dcd2pdb_inp_files)} CHARMM DCD2PDB input files")
+    print(f"Created FoXS output directories in {foxs_dir}")
+    return dcd2pdb_inp_files
+
+
+
 
 
 def generate_foxs_section(config):
@@ -889,6 +1007,9 @@ def main():
 
     #     template_md_files
     template_md_files(config, params)
+    
+    #     template_dcd2pdb_input_files
+    template_dcd2pdb_input_files(config, params)
 
     # Step 3: Create status file
     create_status_file(config["workdir"])
