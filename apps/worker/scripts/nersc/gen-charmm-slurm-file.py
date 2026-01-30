@@ -390,6 +390,9 @@ export AF_WORKER="{config["af_worker"]}"
 
 def add_helper_functions():
     section = """
+# --------------------------------------------------------------------------------------
+# Helper functions
+
 # Updates our status.txt file using sed to update values
 update_status() {
   local step=$1
@@ -424,11 +427,15 @@ srun --gpus=4 \\
      --job-name alphafold \\
      podman-hpc run --rm --gpu \\
         -v $WORKDIR:/bilbomd/work \\
-        -v $UPLOAD_DIR:/cfs \\
         $AF_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
-            colabfold_batch --num-models=3 --amber --use-gpu-relax --num-recycle=4 af-entities.fasta alphafold
+            colabfold_batch \\
+                --num-models=3 \\
+                --amber \\
+                --use-gpu-relax \\
+                --num-recycle=4 \\
+                af-entities.fasta alphafold
         "
 AF_EXIT=$?
 check_exit_code $AF_EXIT alphafold
@@ -438,15 +445,80 @@ update_status alphafold Success
     return section
 
 
-def generate_pae2const_prep_section(config):
+def select_best_alphafold_model(config):
     section = """
 # --------------------------------------------------------------------------------------
 # Prepare input files for PAE2Const from AlphaFold output
 echo "Selecting best AlphaFold model..."
-cp $WORKDIR/alphafold/*_relaxed_rank_001_*.pdb $WORKDIR/af-rank1.pdb
-echo "Selecting PAE matrix file for best AlphaFold model..."
-cp $WORKDIR/alphafold/*_scores_rank_001_*.json $WORKDIR/af-pae.json
-echo "AlphaFold model and PAE file copied to $WORKDIR"
+
+# Find the best ranked relaxed PDB model (rank_001)
+echo "Looking for best AlphaFold PDB model in $WORKDIR/alphafold/"
+pdb_files=($(find $WORKDIR/alphafold -name "*_relaxed_rank_001_*.pdb" -type f))
+if [ ${#pdb_files[@]} -eq 0 ]; then
+    echo "ERROR: No rank_001 relaxed PDB files found in alphafold output directory"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+elif [ ${#pdb_files[@]} -gt 1 ]; then
+    echo "WARNING: Multiple rank_001 PDB files found, using first one:"
+    for pdb in "${pdb_files[@]}"; do
+        echo "  - $(basename "$pdb")"
+    done
+    echo "Selected: $(basename "${pdb_files[0]}")"
+else
+    echo "Found single rank_001 PDB file: $(basename "${pdb_files[0]}")"
+fi
+cp "${pdb_files[0]}" $WORKDIR/af-rank1.pdb
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to copy PDB file"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+# Find the corresponding PAE scores file
+echo "Looking for corresponding PAE scores file..."
+pae_files=($(find $WORKDIR/alphafold -name "*_scores_rank_001_*.json" -type f))
+if [ ${#pae_files[@]} -eq 0 ]; then
+    echo "ERROR: No rank_001 PAE scores files found in alphafold output directory"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+elif [ ${#pae_files[@]} -gt 1 ]; then
+    echo "WARNING: Multiple rank_001 PAE files found, using first one:"
+    for pae in "${pae_files[@]}"; do
+        echo "  - $(basename "$pae")"
+    done
+    echo "Selected: $(basename "${pae_files[0]}")"
+else
+    echo "Found single rank_001 PAE file: $(basename "${pae_files[0]}")"
+fi
+cp "${pae_files[0]}" $WORKDIR/af-pae.json
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to copy PAE file"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+# Verify the copied files exist and are non-empty
+if [ ! -s $WORKDIR/af-rank1.pdb ]; then
+    echo "ERROR: af-rank1.pdb is missing or empty"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+if [ ! -s $WORKDIR/af-pae.json ]; then
+    echo "ERROR: af-pae.json is missing or empty"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+echo "Successfully selected and copied AlphaFold model and PAE files:"
+echo "  PDB: $(basename "${pdb_files[0]}") -> af-rank1.pdb"
+echo "  PAE: $(basename "${pae_files[0]}") -> af-pae.json"
 """
     return section
 
@@ -1068,9 +1140,9 @@ update_status copy2cfs Success
     return section
 
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Main Assembly
-# -----------------------------
+# -----------------------------------------------------------------------------
 def main():
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <UUID>")
@@ -1083,33 +1155,25 @@ def main():
     # Step 2: Prepare input and read the job params
     params = prepare_input(config["workdir"], config["upload_dir"])
 
-    #     copy_template_files
+    # Step 3: Use template files to create CHARMM input files
     copy_template_files(config)
-
-    #     template_minimization_file
     template_minimization_file(config, params)
-
-    #     template_heat_file
     template_heat_file(config, params)
-
-    #     template_md_files
     template_md_files(config, params)
-    
-    #     template_dcd2pdb_input_files
     template_dcd2pdb_input_files(config, params)
 
-    # Step 3: Create status file
+    # Step 4: Create status file
     create_status_file(config["workdir"])
 
-    # Step 4: Prepare CHARMM input files here perhaps?
+    # Step 5: Prepare CHARMM input files here perhaps?
 
-    # Step 5: Generate Slurm script sections
+    # Step 6: Generate Slurm script sections
     slurm_sections = []
     slurm_sections.append(generate_slurm_header(config))
     slurm_sections.append(add_helper_functions())
     if params.get("__t") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
-        slurm_sections.append(generate_pae2const_prep_section(config))
+        slurm_sections.append(select_best_alphafold_model(config))
         slurm_sections.append(generate_pae2const_section(config, params))
         slurm_sections.append(generate_pdb2crd_input_files(config))
         slurm_sections.append(generate_meld_all_chains_section(config))
@@ -1125,7 +1189,7 @@ def main():
     slurm_sections.append(generate_analysis_section(config))
     slurm_sections.append(generate_end_matters(config))
 
-    # Step 6: Write final Slurm file
+    # Step 7: Write Slurm batch file
     slurm_file = Path(config["workdir"]) / "bilbomd-ttt.slurm"
     with open(slurm_file, "w") as f:
         for section in slurm_sections:
