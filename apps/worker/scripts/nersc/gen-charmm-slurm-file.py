@@ -238,8 +238,90 @@ def template_heat_file(config, params):
 
     print("Done Preparing CHARMM Heat input file")
 
-def template_md_file(config, params):
-    pass
+def template_md_files(config, params):
+    """Create CHARMM MD input files for each Rg value from template."""
+    print("Preparing CHARMM MD input files")
+    
+    # Extract Rg values from nested params structure
+    rg_values = params.get("charmm_parameters", {}).get("md", {}).get("rgyr", [])
+    if not rg_values:
+        print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
+        sys.exit(1)
+    
+    workdir = config["workdir"]
+    template_file = os.path.join(workdir, "dynamics.tmpl")
+    
+    # Check if template file exists
+    if not os.path.exists(template_file):
+        print(f"Error: Template file {template_file} not found", file=sys.stderr)
+        sys.exit(1)
+    
+    # Get additional MD parameters
+    charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
+    nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
+    conf_sample = int(nsteps / 100000)
+    timestep = 0.001  # Fixed timestep as in bash version
+    
+    # Define required parameters and validate they exist
+    required_params = {
+        "{{charmm_topo_dir}}": "charmm_topo_dir",
+        "{{in_psf_file}}": "in_psf_file",
+        "{{constinp}}": "constinp",
+    }
+    
+    # Validate required parameters exist
+    for placeholder, param_key in required_params.items():
+        if param_key not in params or not params[param_key]:
+            print(f"Error: Required parameter '{param_key}' not found in params.json or is empty", file=sys.stderr)
+            sys.exit(1)
+    
+    # Loop through each Rg value and create input file
+    for rg_value in rg_values:
+        inp_basename = f"dynamics_rg{rg_value}"
+        inp_file = f"{inp_basename}.inp"
+        output_path = os.path.join(workdir, inp_file)
+        
+        print(f"Creating CHARMM MD input file: {inp_file} for Rg={rg_value}")
+        
+        # Copy template to new input file
+        try:
+            shutil.copy2(template_file, output_path)
+        except (OSError, IOError) as e:
+            print(f"Failed to copy {template_file} to {output_path}: {e}", file=sys.stderr)
+            sys.exit(1)
+        
+        # Read the template content
+        try:
+            with open(output_path, "r") as f:
+                content = f.read()
+        except (OSError, IOError) as e:
+            print(f"Failed to read {output_path}: {e}", file=sys.stderr)
+            sys.exit(1)
+        
+        # Prepare all replacements including dynamic values
+        replacements = {
+            "{{charmm_topo_dir}}": str(params["charmm_topo_dir"]),
+            "{{in_psf_file}}": str(params["in_psf_file"]),
+            "{{constinp}}": str(params["constinp"]),
+            "{{rg}}": str(rg_value),
+            "{{inp_basename}}": inp_basename,
+            "{{conf_sample}}": str(conf_sample),
+            "{{timestep}}": str(timestep),
+        }
+        
+        # Perform all replacements
+        for placeholder, value in replacements.items():
+            content = content.replace(placeholder, value)
+        
+        # Write the processed content back
+        try:
+            with open(output_path, "w") as f:
+                f.write(content)
+        except (OSError, IOError) as e:
+            print(f"Failed to write {output_path}: {e}", file=sys.stderr)
+            sys.exit(1)
+    
+    print(f"Done preparing {len(rg_values)} CHARMM MD input files")
 
 # -----------------------------
 # Status File Creation
@@ -363,7 +445,7 @@ def generate_pae2const_prep_section(config):
 echo "Selecting best AlphaFold model..."
 cp $WORKDIR/alphafold/*_relaxed_rank_001_*.pdb $WORKDIR/af-rank1.pdb
 echo "Selecting PAE matrix file for best AlphaFold model..."
-cp $WORKDIR/alphafold/complex_scores_rank_001_*.json $WORKDIR/af-pae.json
+cp $WORKDIR/alphafold/*_scores_rank_001_*.json $WORKDIR/af-pae.json
 echo "AlphaFold model and PAE file copied to $WORKDIR"
 """
     return section
@@ -388,8 +470,7 @@ srun --ntasks=1 \\
             cd /bilbomd/work
             python /app/scripts/pae2const.py {pae_file} \\
                 --pdb_file {pdb_file} \\
-                --openmm-const-file constraints.yaml \\
-                --no-const
+                --charmm-const-file const.inp
     "
 PAE2CONS_EXIT=$?
 check_exit_code $PAE2CONS_EXIT pae2constraints
@@ -415,7 +496,7 @@ srun --ntasks=1 \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
-            do it here
+            charmm -o minimize.out -i minimize.inp
         "
 MIN_EXIT=$?
 check_exit_code $MIN_EXIT minimize
@@ -507,7 +588,7 @@ srun --ntasks=1 \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
-            do it here
+            charmm -o heat.out -i heat.inp
         "
 HEAT_EXIT=$?
 check_exit_code $HEAT_EXIT heat
@@ -703,6 +784,9 @@ def main():
 
     #     template_heat_file
     template_heat_file(config, params)
+
+    #     template_md_files
+    template_md_files(config, params)
 
     # Step 3: Create status file
     create_status_file(config["workdir"])
