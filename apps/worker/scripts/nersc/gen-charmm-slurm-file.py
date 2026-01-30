@@ -689,20 +689,28 @@ def generate_md_section(config, params):
     print(f"MD section: {config['num_cores']} cores, {num_rg_values} Rg values: {rg_values}")
     
     cores_per_task = (
-        int(config["num_cores"] / (num_rg_values / 1))
+        int(config["num_cores"] / num_rg_values)
         if num_rg_values > 1
         else config["num_cores"]
     )
-    # tasks_per_wave = int(num_rg_values / 2) if num_rg_values > 1 else 1
+    
+    # Ensure minimum 1 core per task
+    if cores_per_task < 1:
+        cores_per_task = 1
 
     section = """
 # --------------------------------------------------------------------------------------
 # CHARMM Molecular Dynamics (concurrent runs with each Rg set)
 update_status md Running
+echo 'Running CHARMM MD for all Rg values...'
+
+# Array to hold all background PIDs
+md_pids=()
 """
-    section += "echo 'Running CHARMM MD for all Rg values...'\n"
+    
+    # Launch all MD jobs in background
     for i, rg_value in enumerate(rg_values):
-        section += f"echo 'Running MD for Rg value {rg_value} (index {i})'\n"
+        section += f"echo 'Starting MD for Rg value {rg_value} (index {i})'\n"
         section += f"""srun --ntasks=1 \\
      --cpus-per-task={cores_per_task} \\
      --cpu-bind=cores \\
@@ -718,10 +726,24 @@ update_status md Running
             export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
             cd /bilbomd/work/ &&
             charmm -o dynamics_rg{rg_value}.out -i dynamics_rg{rg_value}.inp
-         "
+         " &
+# Capture the PID of the backgrounded srun command
+md_pids+=($!)
+
 """
-        section += "MD_EXIT=$?\ncheck_exit_code $MD_EXIT md\n"
-    section += "echo 'CHARMM MD complete'\nupdate_status md Success\n"
+
+    # Wait for all background jobs to complete and check exit codes
+    section += """# Wait for all MD background jobs to complete & check their exit codes
+for pid in "${md_pids[@]}"; do
+    wait $pid
+    exit_code=$?
+    check_exit_code $exit_code md
+done
+
+echo 'CHARMM MD complete'
+update_status md Success
+"""
+    
     return section
 
 
