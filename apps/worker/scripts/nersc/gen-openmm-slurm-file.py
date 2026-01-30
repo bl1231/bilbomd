@@ -365,7 +365,7 @@ check_exit_code() {
 
 
 def generate_alphafold_section(config):
-    section = f"""
+    section = """
 # --------------------------------------------------------------------------------------
 # Run ColabFoldLocal (i.e AlphaFold)
 update_status alphafold Running
@@ -389,7 +389,7 @@ update_status alphafold Success
 
 
 def generate_pae2const_prep_section(config):
-    section = f"""
+    section = """
 # --------------------------------------------------------------------------------------
 # Prepare input files for PAE2Const from AlphaFold output
 echo "Selecting best AlphaFold model..."
@@ -403,14 +403,14 @@ echo "AlphaFold model and PAE file copied to $WORKDIR"
     if os.path.exists(config_yaml_path):
         with open(config_yaml_path, "r") as f:
             openmm_config = yaml.safe_load(f)
-        
+
         # Update pdb_file to use the AlphaFold model
         openmm_config["input"]["pdb_file"] = "af-rank1.pdb"
-        
+
         with open(config_yaml_path, "w") as f:
             yaml.dump(openmm_config, f)
-        
-        print(f"Updated OpenMM config to use af-rank1.pdb")
+
+        print("Updated OpenMM config to use af-rank1.pdb")
     return section
 
 
