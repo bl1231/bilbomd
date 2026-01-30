@@ -890,9 +890,14 @@ update_status dcd2pdb Running
 echo "Running CHARMM Extract PDB from DCD Trajectories..."
 echo "Processing {total_jobs} DCD2PDB jobs with {cores_per_job} cores each"
 
-# Find all dcd2pdb input files
-dcd2pdb_files=(dcd2pdb_rg*.inp)
+# Find all dcd2pdb input files using find command
+mapfile -t dcd2pdb_files < <(find . -name "dcd2pdb_rg*.inp" -type f | sort)
 echo "Found ${{#dcd2pdb_files[@]}} DCD2PDB input files"
+
+# List the files for debugging
+for file in "${{dcd2pdb_files[@]}}"; do
+    echo "  - $file"
+done
 
 # Array to hold all background PIDs
 dcd2pdb_pids=()
