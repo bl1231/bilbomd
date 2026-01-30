@@ -5,8 +5,6 @@ import shutil
 import sys
 from pathlib import Path
 
-import yaml
-
 # -----------------------------------------------------------------------------
 # Argument and Environment Setup
 # -----------------------------------------------------------------------------
@@ -35,7 +33,7 @@ def setup_environment(uuid):
     template_dir = f"{cfs_base}/{env_dir}/templates"
 
     # Docker images
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.27"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.28"
     af_worker = "bilbomd/bilbomd-colabfold:0.0.9"
 
     # Number of cores
@@ -323,9 +321,9 @@ def template_md_files(config, params):
     
     print(f"Done preparing {len(rg_values)} CHARMM MD input files")
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Status File Creation
-# -----------------------------
+# -----------------------------------------------------------------------------
 
 
 def create_status_file(workdir):
@@ -353,10 +351,9 @@ def create_status_file(workdir):
             f.write(f"{step}: Waiting\n")
 
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Slurm Script Section Generation
-# -----------------------------
-
+# -----------------------------------------------------------------------------
 
 def generate_slurm_header(config):
     header = f"""#!/bin/bash -l
@@ -717,14 +714,9 @@ md_pids=()
      --cpu-bind=cores \\
      --job-name md_rg{rg_value} \\
      podman-hpc run --rm \\
-         --env SLURM_JOB_ID \\
-         --env SLURM_STEP_ID \\
-         --env SLURM_PROCID \\
-         --env SLURM_NTASKS \\
          -v $WORKDIR:/bilbomd/work \\
          $BILBOMD_WORKER /bin/bash -c "
             set -e
-            export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
             cd /bilbomd/work/ &&
             charmm -o dynamics_rg{rg_value}.out -i dynamics_rg{rg_value}.inp
          " &
@@ -746,7 +738,7 @@ done
 echo 'CHARMM MD complete'
 update_status md Success
 """
-    
+
     return section
 
 
@@ -790,16 +782,16 @@ def template_dcd2pdb_input_files(config, params):
     # Create main foxs directory
     foxs_dir = os.path.join(workdir, "foxs")
     os.makedirs(foxs_dir, exist_ok=True)
+
+    # Create foxs_rg file
+    foxs_rg = "foxs_rg.out"
+    foxs_rg_path = os.path.join(workdir, foxs_rg)
     
+    # Create/touch the foxs_rg file (CHARMM appends to this file)
+    Path(foxs_rg_path).touch()
+
     # Loop through each Rg value and run number combination
     for rg_value in rg_values:
-        # Create foxs_rg filename (this appears to be used for CHARMM output)
-        foxs_rg = f"foxs_rg{rg_value}.dat"
-        foxs_rg_path = os.path.join(workdir, foxs_rg)
-        
-        # Create/touch the foxs_rg file (CHARMM appends to this file)
-        Path(foxs_rg_path).touch()
-        
         for run in range(1, conf_sample + 1):
             # Generate filename like "dcd2pdb_rg${rg}_run${run}.inp"
             inp_filename = f"dcd2pdb_rg{rg_value}_run{run}.inp"
@@ -872,9 +864,7 @@ def generate_foxs_section(config):
 update_status foxs Running
 echo "Running FoXS on all MD PDB files..."
 
-PDB_DIR=$WORKDIR/openmm/md
 FOXSDIR=$WORKDIR/foxs
-mkdir -p $FOXSDIR
 srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
@@ -883,8 +873,8 @@ srun --ntasks=1 \\
         -v $WORKDIR:/bilbomd/work \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
-            cd /bilbomd/work/openmm/md &&
-            python /app/scripts/nersc/run-foxs-after-openmm.py --root .
+            cd /bilbomd/work/foxs &&
+            python /app/scripts/nersc/run-foxs-after-charmm.py
         "
 FOXS_EXIT=$?
 check_exit_code $FOXS_EXIT foxs
