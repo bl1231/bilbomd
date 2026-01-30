@@ -15,10 +15,10 @@ import yaml
 def setup_environment(uuid):
     # Slurm and project parameters
     project = "m4659"
-    queue = "regular"
+    queue = "debug"
     constraint = "gpu"
     nodes = 1
-    walltime = "03:00:00"
+    walltime = "00:30:00"
     mailtype = "end,fail"
     mailuser = "sclassen@lbl.gov"
 
@@ -102,7 +102,7 @@ def prepare_input(workdir, upload_dir):
         print(f"Warning: params.json not found in {workdir}.")
     # Inject a few hard-coded parameters here
     # until I can figure out a better way to do this.
-    params["charmm_topo_dir"] = "/bilbomd/data/charmm/topologies"
+    params["charmm_topo_dir"] = "/app/scripts/bilbomd_top_par_files.str"
     params["in_psf_file"] = "bilbomd_pdb2crd.psf"
     params["in_crd_file"] = "bilbomd_pdb2crd.crd"
     # will be calculated by pae2const.py
@@ -456,9 +456,9 @@ def generate_pae2const_section(config, params):
     pdb_file = params.get("pdb_file", "af-rank1.pdb")
     section = f"""
 # --------------------------------------------------------------------------------------
-# Generate constraints.yaml from PAE/PDB
+# Generate CHARMM const.inp from PAE/PDB
 update_status pae2constraints Running
-echo "Generating constraints.yaml from PAE..."
+echo "Generating const.inp from PAE..."
 srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
@@ -478,6 +478,86 @@ update_status pae2constraints Success
 """
     return section
 
+def generate_pdb2crd_input_files(config):
+    section = f"""
+# --------------------------------------------------------------------------------------
+# Convert AlphaFold PDB to CHARMM PSF/CRD
+update_status pdb2crd Running
+echo "Generating pdb2crd input files..."
+srun --job-name af-pdb2crd \\
+    podman-hpc run --rm \\
+        -v $WORKDIR:/bilbomd/work \\
+        $BILBOMD_WORKER /bin/bash -c "
+            set -e
+            cd /bilbomd/work/ &&
+            python /app/scripts/pdb2crd.py af-rank1.pdb . > pdb2crd_output.txt
+    "
+
+# Parse the file "pdb2crd_output.txt" and run CHARMM for each chain-specific *.inp file
+echo "Parsing pdb2crd_output.txt..."
+num_inp_files=$(wc -l < $WORKDIR/pdb2crd_output.txt)
+echo "Number of pdb2crd.inp files to process: $num_inp_files"
+cpus=$(({config["num_cores"]} / num_inp_files))
+if [ "$cpus" -lt 1 ]; then
+    cpus=1
+fi
+
+# Array to hold all background PIDs
+pids=()
+while IFS= read -r filename; do
+    # Extract the filename prefix (without extension)
+    filename_prefix=$(basename "$filename" .inp)
+    
+    # Generate the srun command
+    srun --ntasks=1 \\
+         --cpus-per-task=$cpus \\
+         --cpu-bind=cores \\
+         --job-name pdb2crd \\
+         podman-hpc run --rm \\
+            -v $WORKDIR:/bilbomd/work \\
+            $BILBOMD_WORKER /bin/bash -c "
+                set -e
+                cd /bilbomd/work/ &&
+                charmm -o ${{filename_prefix}}.out -i ${{filename}}
+            " &
+    # Capture the PID of the backgrounded srun command
+    pids+=($!)
+done < $WORKDIR/pdb2crd_output.txt
+
+# Wait for all background jobs to complete & check their exit codes
+for pid in "${{pids[@]}}"; do
+    wait $pid
+    exit_code=$?
+    check_exit_code $exit_code pdb2crd
+done
+
+echo "Individual chains converted to CRD files."
+update_status pdb2crd Success
+"""
+    return section
+
+
+def generate_meld_all_chains_section(config):
+    section = f"""
+# --------------------------------------------------------------------------------------
+# CHARMM Meld individual chains to create a single CRD and PSF file
+update_status meld Running
+echo "Melding individual chain CRD files..."
+srun --ntasks=1 \\
+     --cpus-per-task={config["num_cores"]} \\
+     --cpu-bind=cores \\
+     --job-name meld \\
+     podman-hpc run --rm \\
+        -v $WORKDIR:/bilbomd/work \\
+        $BILBOMD_WORKER /bin/bash -c "
+            set -e
+            cd /bilbomd/work/ &&
+            charmm -o pdb2crd_charmm_meld.out -i pdb2crd_charmm_meld.inp
+        "
+echo "All Individual CRD files melded into bilbomd_pdb2crd.crd" 
+update_status meld Success
+"""
+    return section
 
 def generate_minimize_section(config):
     section = f"""
@@ -801,6 +881,8 @@ def main():
         slurm_sections.append(generate_alphafold_section(config))
         slurm_sections.append(generate_pae2const_prep_section(config))
         slurm_sections.append(generate_pae2const_section(config, params))
+        slurm_sections.append(generate_pdb2crd_input_files(config))
+        slurm_sections.append(generate_meld_all_chains_section(config))
     if params.get("__t") == "BilboMdAuto":
         slurm_sections.append(generate_pae2const_section(config, params))
     slurm_sections.append(generate_minimize_section(config))
