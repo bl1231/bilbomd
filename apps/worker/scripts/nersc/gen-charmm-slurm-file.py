@@ -861,7 +861,83 @@ def template_dcd2pdb_input_files(config, params):
     return dcd2pdb_inp_files
 
 
+def generate_dcd2pdb_section(config, params):
+    """Generate section to extract PDB files from DCD trajectories using CHARMM."""
+    # Extract Rg values from nested params structure to calculate number of jobs
+    rg_values = params.get("charmm_parameters", {}).get("md", {}).get("rgyr", [])
+    if not rg_values:
+        print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
+        sys.exit(1)
+    
+    # Get additional MD parameters to calculate conf_sample (number of runs per Rg)
+    charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
+    nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
+    conf_sample = int(nsteps / 100000)
+    
+    # Total number of dcd2pdb input files = rg_values * conf_sample
+    total_jobs = len(rg_values) * conf_sample
+    
+    # Calculate cores per job, ensuring at least 1 core per job
+    cores_per_job = max(1, int(config["num_cores"] / total_jobs))
+    
+    print(f"DCD2PDB section: {total_jobs} jobs ({len(rg_values)} Rg values × {conf_sample} runs each)")
+    print(f"Allocating {cores_per_job} cores per DCD2PDB job")
 
+    section = f"""
+# --------------------------------------------------------------------------------------
+# CHARMM Extract PDB from DCD Trajectories
+update_status dcd2pdb Running
+echo "Running CHARMM Extract PDB from DCD Trajectories..."
+echo "Processing {total_jobs} DCD2PDB jobs with {cores_per_job} cores each"
+
+# Find all dcd2pdb input files
+dcd2pdb_files=(dcd2pdb_rg*.inp)
+echo "Found ${{#dcd2pdb_files[@]}} DCD2PDB input files"
+
+# Array to hold all background PIDs
+dcd2pdb_pids=()
+
+# Launch all DCD2PDB jobs in background
+for inp_file in "${{dcd2pdb_files[@]}}"; do
+    # Extract basename without extension for output file
+    basename=$(basename "$inp_file" .inp)
+    
+    echo "Starting DCD2PDB job for $inp_file"
+    srun --ntasks=1 \\
+         --cpus-per-task={cores_per_job} \\
+         --cpu-bind=cores \\
+         --job-name dcd2pdb \\
+         podman-hpc run --rm \\
+            -v $WORKDIR:/bilbomd/work \\
+            $BILBOMD_WORKER /bin/bash -c "
+                set -e
+                cd /bilbomd/work/ &&
+                charmm -o ${{basename}}.out -i ${{inp_file}}
+            " &
+    
+    # Capture the PID of the backgrounded srun command
+    dcd2pdb_pids+=($!)
+    echo "Started DCD2PDB job for $inp_file with PID $!"
+    
+    # Small delay to avoid overwhelming the scheduler
+    sleep 2
+done
+
+# Wait for all DCD2PDB background jobs to complete & check their exit codes
+echo "Waiting for ${{#dcd2pdb_pids[@]}} DCD2PDB jobs to complete..."
+for i in "${{!dcd2pdb_pids[@]}}"; do
+    pid=${{dcd2pdb_pids[$i]}}
+    echo "Waiting for DCD2PDB job $((i+1))/${{#dcd2pdb_pids[@]}} (PID: $pid)"
+    wait $pid
+    exit_code=$?
+    check_exit_code $exit_code dcd2pdb
+    echo "DCD2PDB job $((i+1)) completed with exit code $exit_code"
+done
+
+echo "Extract PDB from DCD Trajectories complete."
+update_status dcd2pdb Success
+"""
+    return section
 
 
 def generate_foxs_section(config):
@@ -1026,6 +1102,7 @@ def main():
     slurm_sections.append(generate_initial_foxs_analysis_section(config, params))
     slurm_sections.append(generate_heat_section(config))
     slurm_sections.append(generate_md_section(config, params))
+    slurm_sections.append(generate_dcd2pdb_section(config, params))
     slurm_sections.append(generate_foxs_section(config))
     slurm_sections.append(generate_multifoxs_section(config, params))
     slurm_sections.append(generate_analysis_section(config))
