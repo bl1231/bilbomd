@@ -685,15 +685,15 @@ def generate_md_section(config, params):
     num_rg_values = len(rg_values)
     print(f"MD section: {config['num_cores']} cores, {num_rg_values} Rg values: {rg_values}")
     
-    cores_per_task = (
-        int(config["num_cores"] / num_rg_values)
-        if num_rg_values > 1
-        else config["num_cores"]
-    )
+    # More conservative core allocation - leave some headroom for Slurm
+    available_cores = config["num_cores"] - 4  # Reserve 4 cores for system overhead
+    cores_per_task = max(1, int(available_cores / num_rg_values))
     
-    # Ensure minimum 1 core per task
-    if cores_per_task < 1:
-        cores_per_task = 1
+    # Cap at reasonable maximum to avoid memory issues
+    max_cores_per_task = 32
+    cores_per_task = min(cores_per_task, max_cores_per_task)
+    
+    print(f"Allocating {cores_per_task} cores per MD task ({cores_per_task * num_rg_values} total)")
 
     section = f"""
 # --------------------------------------------------------------------------------------
@@ -701,6 +701,7 @@ def generate_md_section(config, params):
 update_status md Running
 echo 'Running CHARMM MD for {num_rg_values} Rg values...'
 echo '{rg_values}'
+echo 'Using {cores_per_task} cores per task'
 
 # Array to hold all background PIDs
 md_pids=()
@@ -708,7 +709,7 @@ md_pids=()
     
     # Launch all MD jobs in background
     for i, rg_value in enumerate(rg_values):
-        section += f"echo 'Starting MD for Rg value {rg_value} (index {i})'\n"
+        section += f"echo 'Starting MD for Rg value {rg_value} (index {i}) with {cores_per_task} cores'\n"
         section += f"""srun --ntasks=1 \\
      --cpus-per-task={cores_per_task} \\
      --cpu-bind=cores \\
@@ -717,22 +718,28 @@ md_pids=()
          -v $WORKDIR:/bilbomd/work \\
          $BILBOMD_WORKER /bin/bash -c "
             set -e
+            export OMP_NUM_THREADS={cores_per_task}
             cd /bilbomd/work/ &&
             charmm -o dynamics_rg{rg_value}.out -i dynamics_rg{rg_value}.inp
          " &
 # Capture the PID of the backgrounded srun command
 md_pids+=($!)
-# Small delay to ensure Slurm scheduler picks up each job
-sleep 2
+echo "Started MD job for Rg {rg_value} with PID $!"
+# Longer delay to ensure Slurm scheduler picks up each job
+sleep 5
 
 """
 
     # Wait for all background jobs to complete and check exit codes
     section += """# Wait for all MD background jobs to complete & check their exit codes
-for pid in "${md_pids[@]}"; do
+echo "Waiting for ${#md_pids[@]} MD jobs to complete..."
+for i in "${!md_pids[@]}"; do
+    pid=${md_pids[$i]}
+    echo "Waiting for MD job $((i+1))/${#md_pids[@]} (PID: $pid)"
     wait $pid
     exit_code=$?
     check_exit_code $exit_code md
+    echo "MD job $((i+1)) completed with exit code $exit_code"
 done
 
 echo 'CHARMM MD complete'
@@ -863,8 +870,6 @@ def generate_foxs_section(config):
 # Run FoXS on all MD PDB files
 update_status foxs Running
 echo "Running FoXS on all MD PDB files..."
-
-FOXSDIR=$WORKDIR/foxs
 srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
@@ -890,7 +895,6 @@ def generate_multifoxs_section(config, params):
 # Run MultiFoXS on FoXS results
 update_status multifoxs Running
 echo "Running MultiFoXS..."
-
 MFOXSDIR=$WORKDIR/multifoxs
 mkdir -p $MFOXSDIR
 srun --ntasks=1 \\
@@ -903,7 +907,7 @@ srun --ntasks=1 \\
             set -e
             cd /bilbomd/work/multifoxs &&
             python /app/scripts/nersc/run-multifoxs.py \\
-                --foxs-list ../openmm/md/foxs_dat_files.txt \\
+                --foxs-list ./foxs_dat_files.txt \\
                 --prefix ../openmm/md \\
                 --saxs-data ../{params.get("data_file")} \\
                 --out-list ./foxs_dat_files_for_multifoxs.txt \\
