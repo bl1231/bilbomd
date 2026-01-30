@@ -64,8 +64,7 @@ def setup_environment(uuid):
         "template_dir": template_dir,
         "bilbomd_worker": bilbomd_worker,
         "af_worker": af_worker,
-        "num_cores": num_cores,
-        "num_rgs": 8,
+        "num_cores": num_cores
     }
 
 
@@ -101,6 +100,13 @@ def prepare_input(workdir, upload_dir):
                 print(f"Error reading params.json: {e}")
     else:
         print(f"Warning: params.json not found in {workdir}.")
+    # Inject a few hard-coded parameters here
+    # until I can figure out a better way to do this.
+    params["charmm_topo_dir"] = "/bilbomd/data/charmm/topologies"
+    params["in_psf_file"] = "bilbomd_pdb2crd.psf"
+    params["in_crd_file"] = "bilbomd_pdb2crd.crd"
+    # will be calculated by pae2const.py
+    params["constinp"] = "const.inp"
     return params
 
 
@@ -154,12 +160,19 @@ def template_minimization_file(config, params):
         print(f"Failed to read {output_file}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Replace template placeholders
-    replacements = {
-        "{{charmm_topo_dir}}": params.get("charmm_topo_dir", ""),
-        "{{in_psf_file}}": params.get("in_psf_file", ""),
-        "{{in_crd_file}}": params.get("in_crd_file", ""),
+    # Define required parameters and validate they exist
+    required_params = {
+        "{{charmm_topo_dir}}": "charmm_topo_dir",
+        "{{in_psf_file}}": "in_psf_file",
+        "{{in_crd_file}}": "in_crd_file",
     }
+    
+    replacements = {}
+    for placeholder, param_key in required_params.items():
+        if param_key not in params or not params[param_key]:
+            print(f"Error: Required parameter '{param_key}' not found in params.json or is empty", file=sys.stderr)
+            sys.exit(1)
+        replacements[placeholder] = str(params[param_key])
 
     for placeholder, value in replacements.items():
         content = content.replace(placeholder, str(value))
@@ -198,12 +211,19 @@ def template_heat_file(config, params):
         print(f"Failed to read {output_file}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Replace template placeholders
-    replacements = {
-        "{{charmm_topo_dir}}": params.get("charmm_topo_dir", ""),
-        "{{in_psf_file}}": params.get("in_psf_file", ""),
-        "{{constinp}}": params.get("constinp", ""),
+    # Define required parameters and validate they exist
+    required_params = {
+        "{{charmm_topo_dir}}": "charmm_topo_dir",
+        "{{in_psf_file}}": "in_psf_file", 
+        "{{constinp}}": "constinp",
     }
+    
+    replacements = {}
+    for placeholder, param_key in required_params.items():
+        if param_key not in params or not params[param_key]:
+            print(f"Error: Required parameter '{param_key}' not found in params.json or is empty", file=sys.stderr)
+            sys.exit(1)
+        replacements[placeholder] = str(params[param_key])
 
     for placeholder, value in replacements.items():
         content = content.replace(placeholder, str(value))
@@ -218,6 +238,8 @@ def template_heat_file(config, params):
 
     print("Done Preparing CHARMM Heat input file")
 
+def template_md_file(config, params):
+    pass
 
 # -----------------------------
 # Status File Creation
@@ -495,57 +517,50 @@ update_status heat Success
     return section
 
 
-def generate_md_section(config):
-    cores_per_task = int(config["num_cores"] / (config["num_rgs"] / 2))
-    tasks_per_wave = int(config["num_rgs"] / 2)
-    print(
-        f"MD section: {config['num_cores']} cores, {config['num_rgs']} Rg values, {cores_per_task} cores per task"
-    )
-    # Read rg_sets from openmm_config.yaml
-    config_yaml_path = os.path.join(config["workdir"], "openmm_config.yaml")
-    with open(config_yaml_path, "r") as f:
-        openmm_config = yaml.safe_load(f)
-    rg_sets = openmm_config["steps"]["md"]["rgyr"].get("rg_sets", [])
-    num_sets = len(rg_sets)
-
+def generate_md_section(config, params):
+    # Extract Rg values from nested params structure
+    rg_values = params.get("charmm_parameters", {}).get("md", {}).get("rgyr", [])
+    if not rg_values:
+        print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
+        sys.exit(1)
+    
+    num_rg_values = len(rg_values)
+    print(f"MD section: {config['num_cores']} cores, {num_rg_values} Rg values: {rg_values}")
+    
     cores_per_task = (
-        int(config["num_cores"] / (config["num_rgs"] / 2))
-        if config["num_rgs"] > 1
+        int(config["num_cores"] / (num_rg_values / 1))
+        if num_rg_values > 1
         else config["num_cores"]
     )
-    tasks_per_wave = int(config["num_rgs"] / 2) if config["num_rgs"] > 1 else 1
+    # tasks_per_wave = int(num_rg_values / 2) if num_rg_values > 1 else 1
 
     section = """
 # --------------------------------------------------------------------------------------
-# OpenMM Molecular Dynamics (concurrent runs with each Rg set)
+# CHARMM Molecular Dynamics (concurrent runs with each Rg set)
 update_status md Running
 """
-    section += "echo 'Running OpenMM MD for all Rg sets...'\n"
-    for i in range(num_sets):
-        rg_values = rg_sets[i]
-        section += f"echo 'Running MD for rg_set {i}: Rg values {rg_values}'\n"
-        section += f"""srun --ntasks={tasks_per_wave} \\
+    section += "echo 'Running CHARMM MD for all Rg values...'\n"
+    for i, rg_value in enumerate(rg_values):
+        section += f"echo 'Running MD for Rg value {rg_value} (index {i})'\n"
+        section += f"""srun --ntasks=1 \\
      --cpus-per-task={cores_per_task} \\
-     --gpus-per-node=4 \\
      --cpu-bind=cores \\
-     --gpu-bind=map_gpu:0,1,2,3 \\
-     --job-name md_rgset{i} \\
-     podman-hpc run --rm --gpu \\
+     --job-name md_rg{rg_value} \\
+     podman-hpc run --rm \\
          --env SLURM_JOB_ID \\
          --env SLURM_STEP_ID \\
          --env SLURM_PROCID \\
          --env SLURM_NTASKS \\
-         --env CUDA_VISIBLE_DEVICES \\
          -v $WORKDIR:/bilbomd/work \\
-         $OPENMM_WORKER /bin/bash -c "
+         $BILBOMD_WORKER /bin/bash -c "
             set -e
             export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
             cd /bilbomd/work/ &&
-            python /app/scripts/openmm/md.py openmm_config.yaml --rg-set {i}
+            charmm -o dynamics_rg{rg_value}.out -i dynamics_rg{rg_value}.inp
          "
 """
         section += "MD_EXIT=$?\ncheck_exit_code $MD_EXIT md\n"
-    section += "echo 'OpenMM MD complete'\nupdate_status md Success\n"
+    section += "echo 'CHARMM MD complete'\nupdate_status md Success\n"
     return section
 
 
@@ -707,14 +722,14 @@ def main():
     slurm_sections.append(generate_minimize_section(config))
     slurm_sections.append(generate_initial_foxs_analysis_section(config, params))
     slurm_sections.append(generate_heat_section(config))
-    slurm_sections.append(generate_md_section(config))
+    slurm_sections.append(generate_md_section(config, params))
     slurm_sections.append(generate_foxs_section(config))
     slurm_sections.append(generate_multifoxs_section(config, params))
     slurm_sections.append(generate_analysis_section(config))
     slurm_sections.append(generate_end_matters(config))
 
     # Step 6: Write final Slurm file
-    slurm_file = Path(config["workdir"]) / "bilbomd.slurm"
+    slurm_file = Path(config["workdir"]) / "bilbomd-ttt.slurm"
     with open(slurm_file, "w") as f:
         for section in slurm_sections:
             if section:
