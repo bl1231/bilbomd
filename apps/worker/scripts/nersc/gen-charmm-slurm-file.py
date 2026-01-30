@@ -368,6 +368,9 @@ def generate_slurm_header(config):
 #SBATCH --mail-type={config["mailtype"]}
 #SBATCH --mail-user={config["mailuser"]}
 
+# DEBUG setting to 1 will skip md steps
+# export SKIP_MD=1
+
 # OpenMP settings:
 export OMP_NUM_THREADS={config["num_cores"]}
 export OMP_PLACES=threads
@@ -603,7 +606,7 @@ def generate_initial_foxs_analysis_section(config, params):
     max_c1 = 1.05
     min_c2 = -0.50
     max_c2 = 2.00
-    minimized_pdb = os.path.join(".", "openmm/minimization/minimized.pdb")
+    minimized_pdb = os.path.join(config["workdir"], "minimization_output.pdb")
     saxs_data_in_container = os.path.join(".", params.get("data_file"))
 
     # build foxs args as a list, each argument separate
@@ -699,51 +702,59 @@ def generate_md_section(config, params):
 # --------------------------------------------------------------------------------------
 # CHARMM Molecular Dynamics (concurrent runs with each Rg set)
 update_status md Running
-echo 'Running CHARMM MD for {num_rg_values} Rg values...'
-echo '{rg_values}'
-echo 'Using {cores_per_task} cores per task'
 
-# Array to hold all background PIDs
-md_pids=()
+# Check if SKIP_MD is set to skip MD runs (useful for debugging downstream steps)
+if [[ -n "$SKIP_MD" ]]; then
+    echo "SKIP_MD is set - skipping MD runs"
+    echo "This assumes MD output files already exist from previous runs"
+    update_status md Success
+else
+    echo 'Running CHARMM MD for {num_rg_values} Rg values...'
+    echo '{rg_values}'
+    echo 'Using {cores_per_task} cores per task'
+
+    # Array to hold all background PIDs
+    md_pids=()
 """
     
     # Launch all MD jobs in background
     for i, rg_value in enumerate(rg_values):
-        section += f"echo 'Starting MD for Rg value {rg_value} (index {i}) with {cores_per_task} cores'\n"
-        section += f"""srun --ntasks=1 \\
-     --cpus-per-task={cores_per_task} \\
-     --cpu-bind=cores \\
-     --job-name md_rg{rg_value} \\
-     podman-hpc run --rm \\
-         -v $WORKDIR:/bilbomd/work \\
-         $BILBOMD_WORKER /bin/bash -c "
-            set -e
-            export OMP_NUM_THREADS={cores_per_task}
-            cd /bilbomd/work/ &&
-            charmm -o dynamics_rg{rg_value}.out -i dynamics_rg{rg_value}.inp
-         " &
-# Capture the PID of the backgrounded srun command
-md_pids+=($!)
-echo "Started MD job for Rg {rg_value} with PID $!"
-# Longer delay to ensure Slurm scheduler picks up each job
-sleep 5
+        section += f"    echo 'Starting MD for Rg value {rg_value} (index {i}) with {cores_per_task} cores'\n"
+        section += f"""    srun --ntasks=1 \\
+         --cpus-per-task={cores_per_task} \\
+         --cpu-bind=cores \\
+         --job-name md_rg{rg_value} \\
+         podman-hpc run --rm \\
+             -v $WORKDIR:/bilbomd/work \\
+             $BILBOMD_WORKER /bin/bash -c "
+                set -e
+                export OMP_NUM_THREADS={cores_per_task}
+                cd /bilbomd/work/ &&
+                charmm -o dynamics_rg{rg_value}.out -i dynamics_rg{rg_value}.inp
+             " &
+    # Capture the PID of the backgrounded srun command
+    md_pids+=($!)
+    echo "Started MD job for Rg {rg_value} with PID $!"
+    # Longer delay to ensure Slurm scheduler picks up each job
+    sleep 5
 
 """
 
     # Wait for all background jobs to complete and check exit codes
-    section += """# Wait for all MD background jobs to complete & check their exit codes
-echo "Waiting for ${#md_pids[@]} MD jobs to complete..."
-for i in "${!md_pids[@]}"; do
-    pid=${md_pids[$i]}
-    echo "Waiting for MD job $((i+1))/${#md_pids[@]} (PID: $pid)"
-    wait $pid
-    exit_code=$?
-    check_exit_code $exit_code md
-    echo "MD job $((i+1)) completed with exit code $exit_code"
-done
+    section += """    # Wait for all MD background jobs to complete & check their exit codes
+    echo "Waiting for ${#md_pids[@]} MD jobs to complete..."
+    for i in "${!md_pids[@]}"; do
+        pid=${md_pids[$i]}
+        echo "Waiting for MD job $((i+1))/${#md_pids[@]} (PID: $pid)"
+        wait $pid
+        exit_code=$?
+        check_exit_code $exit_code md
+        echo "MD job $((i+1)) completed with exit code $exit_code"
+    done
 
-echo 'CHARMM MD complete'
-update_status md Success
+    echo 'CHARMM MD complete'
+    update_status md Success
+fi
 """
 
     return section
@@ -868,7 +879,7 @@ def generate_dcd2pdb_section(config, params):
     if not rg_values:
         print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
         sys.exit(1)
-    
+
     # Get additional MD parameters to calculate conf_sample (number of runs per Rg)
     charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
     nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
@@ -876,10 +887,11 @@ def generate_dcd2pdb_section(config, params):
     
     # Total number of dcd2pdb input files = rg_values * conf_sample
     total_jobs = len(rg_values) * conf_sample
-    
-    # Calculate cores per job, ensuring at least 1 core per job
-    cores_per_job = max(1, int(config["num_cores"] / total_jobs))
-    
+
+    # More conservative core allocation - leave some headroom for Slurm
+    available_cores = config["num_cores"] - 4  # Reserve 4 cores for system overhead
+    cores_per_job = max(1, int(available_cores / total_jobs))
+
     print(f"DCD2PDB section: {total_jobs} jobs ({len(rg_values)} Rg values × {conf_sample} runs each)")
     print(f"Allocating {cores_per_job} cores per DCD2PDB job")
 
@@ -890,8 +902,8 @@ update_status dcd2pdb Running
 echo "Running CHARMM Extract PDB from DCD Trajectories..."
 echo "Processing {total_jobs} DCD2PDB jobs with {cores_per_job} cores each"
 
-# Find all dcd2pdb input files using find command
-mapfile -t dcd2pdb_files < <(find . -name "dcd2pdb_rg*.inp" -type f | sort)
+# Find all dcd2pdb input files and extract just the filenames
+mapfile -t dcd2pdb_files < <(find $WORKDIR -name "dcd2pdb_rg*.inp" -type f -exec basename {{}} \\; | sort)
 echo "Found ${{#dcd2pdb_files[@]}} DCD2PDB input files"
 
 # List the files for debugging
