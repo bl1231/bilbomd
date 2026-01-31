@@ -983,15 +983,14 @@ for file in "${{dcd2pdb_files[@]}}"; do
     echo "  - $file"
 done
 
-# Array to hold all background PIDs
-dcd2pdb_pids=()
-
-# Launch all DCD2PDB jobs in background
+# Process all DCD2PDB jobs serially
+job_count=0
 for inp_file in "${{dcd2pdb_files[@]}}"; do
     # Extract basename without extension for output file
     basename=$(basename "$inp_file" .inp)
+    job_count=$((job_count + 1))
     
-    echo "Starting DCD2PDB job for $inp_file"
+    echo "Running DCD2PDB job $job_count/${{#dcd2pdb_files[@]}} for $inp_file"
     srun --ntasks=1 \\
          --cpus-per-task={cores_per_job} \\
          --cpu-bind=cores \\
@@ -1002,25 +1001,12 @@ for inp_file in "${{dcd2pdb_files[@]}}"; do
                 set -e
                 cd /bilbomd/work/ &&
                 charmm -o ${{basename}}.out -i ${{inp_file}}
-            " &
+            "
     
-    # Capture the PID of the backgrounded srun command
-    dcd2pdb_pids+=($!)
-    echo "Started DCD2PDB job for $inp_file with PID $!"
-    
-    # Small delay to avoid overwhelming the scheduler
-    sleep 2
-done
-
-# Wait for all DCD2PDB background jobs to complete & check their exit codes
-echo "Waiting for ${{#dcd2pdb_pids[@]}} DCD2PDB jobs to complete..."
-for i in "${{!dcd2pdb_pids[@]}}"; do
-    pid=${{dcd2pdb_pids[$i]}}
-    echo "Waiting for DCD2PDB job $((i+1))/${{#dcd2pdb_pids[@]}} (PID: $pid)"
-    wait $pid
-    exit_code=$?
-    check_exit_code $exit_code dcd2pdb
-    echo "DCD2PDB job $((i+1)) completed with exit code $exit_code"
+    # Check exit code immediately after each job
+    DCD2PDB_EXIT=$?
+    check_exit_code $DCD2PDB_EXIT dcd2pdb
+    echo "DCD2PDB job $job_count completed successfully"
 done
 
 echo "Extract PDB from DCD Trajectories complete."
