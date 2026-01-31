@@ -1103,7 +1103,6 @@ srun --ntasks=1 \\
      --job-name analysis \\
      podman-hpc run --rm \\
         -v $WORKDIR:/bilbomd/work \\
-        -v $UPLOAD_DIR:/cfs \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/analysis &&
@@ -1189,7 +1188,7 @@ def main():
     slurm_sections.append(generate_dcd2pdb_section(config, params))
     slurm_sections.append(generate_foxs_section(config))
     slurm_sections.append(generate_multifoxs_section(config, params))
-    slurm_sections.append(generate_analysis_section(config))
+    # slurm_sections.append(generate_analysis_section(config))
     slurm_sections.append(generate_end_matters(config))
 
     # Step 7: Write Slurm batch file
