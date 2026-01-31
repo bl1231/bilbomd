@@ -19,7 +19,7 @@ def run_foxs_on_pdb(pdb_file, run_dir):
         # Generate the .dat file path and add to foxs_dat_files.txt
         pdb_basename = os.path.splitext(pdb_file)[0]
         current_dir = os.getcwd()
-        dat_path = f"{current_dir}/{pdb_basename}.dat"
+        dat_path = f"{current_dir}/{pdb_basename}.pdb.dat"
         
         # Replace /bilbomd/work with .. 
         relative_dat_path = dat_path.replace('/bilbomd/work', '..')
