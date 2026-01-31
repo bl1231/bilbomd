@@ -13,10 +13,10 @@ from pathlib import Path
 def setup_environment(uuid):
     # Slurm and project parameters
     project = "m4659"
-    queue = "debug"
+    queue = "regular"
     constraint = "gpu"
     nodes = 1
-    walltime = "00:30:00"
+    walltime = "03:00:00"
     mailtype = "end,fail"
     mailuser = "sclassen@lbl.gov"
 
@@ -1076,7 +1076,7 @@ srun --ntasks=1 \\
             cd /bilbomd/work/multifoxs &&
             python /app/scripts/nersc/run-multifoxs.py \\
                 --foxs-list ../foxs_dat_files.txt \\
-                --prefix ../charmm/md \\
+                --prefix .. \\
                 --saxs-data ../{params.get("data_file")} \\
                 --out-list ./foxs_dat_files_for_multifoxs.txt \\
                 --log ./multi_foxs.log
