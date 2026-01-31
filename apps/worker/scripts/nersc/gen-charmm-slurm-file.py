@@ -114,25 +114,37 @@ def prepare_input(workdir, upload_dir):
 
 
 def copy_template_files(config):
-    """Copy CHARMM input file templates from template directory to working directory."""
+    """Copy CHARMM input file templates from template directory to appropriate working subdirectories."""
     print("Copy CHARMM input file templates")
 
-    template_files = ["minimize.tmpl", "heat.tmpl", "dynamics.tmpl", "dcd2pdb.tmpl"]
+    # Define template files and their destination subdirectories
+    template_destinations = {
+        "minimize.tmpl": "charmm/minimize",
+        "heat.tmpl": "charmm/heat", 
+        "dynamics.tmpl": "charmm/md",
+        "dcd2pdb.tmpl": ".",  # Root workdir for dcd2pdb processing
+    }
 
-    for template_file in template_files:
+    for template_file, subdir in template_destinations.items():
         src_path = os.path.join(config["template_dir"], template_file)
-        dst_path = os.path.join(config["workdir"], template_file)
+        
+        # Create destination directory structure
+        dest_dir = os.path.join(config["workdir"], subdir)
+        os.makedirs(dest_dir, exist_ok=True)
+        
+        dst_path = os.path.join(dest_dir, template_file)
 
         try:
             shutil.copy2(src_path, dst_path)
+            print(f"  Copied {template_file} to {subdir}/")
         except (OSError, IOError) as e:
             print(
-                f"Failed to copy {template_file} from {config['template_dir']} to {config['workdir']}: {e}",
+                f"Failed to copy {template_file} from {config['template_dir']} to {dest_dir}: {e}",
                 file=sys.stderr,
             )
             sys.exit(1)
 
-    print("Template files copied successfully")
+    print("Template files copied successfully to their respective directories")
 
 
 def template_minimization_file(config, params):
@@ -140,8 +152,9 @@ def template_minimization_file(config, params):
     print("Preparing CHARMM Minimize input file")
 
     workdir = config["workdir"]
-    template_file = os.path.join(workdir, "minimize.tmpl")
-    output_file = os.path.join(workdir, "minimize.inp")
+    # Template is now in charmm/minimize/ subdirectory
+    template_file = os.path.join(workdir, "charmm", "minimize", "minimize.tmpl")
+    output_file = os.path.join(workdir, "charmm", "minimize", "minimize.inp")
 
     # Move template to input file
     try:
@@ -637,6 +650,10 @@ def generate_minimize_section(config):
 # CHARMM Minimization
 update_status minimize Running
 echo "Running CHARMM Minimization..."
+# Create charmm/minimize directory structure
+mkdir -p $WORKDIR/charmm/minimize
+# Copy minimize input file to minimize directory
+cp $WORKDIR/minimize.inp $WORKDIR/charmm/minimize/
 srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --gpus-per-task=1 \\
@@ -647,7 +664,7 @@ srun --ntasks=1 \\
         -v $UPLOAD_DIR:/cfs \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
-            cd /bilbomd/work/ &&
+            cd /bilbomd/work/charmm/minimize &&
             charmm -o minimize.out -i minimize.inp
         "
 MIN_EXIT=$?
@@ -730,6 +747,12 @@ def generate_heat_section(config):
 # CHARMM Heating
 update_status heat Running
 echo "Running CHARMM Heating..."
+# Create charmm/heat directory structure
+mkdir -p $WORKDIR/charmm/heat
+# Copy heat input file and required files to heat directory
+cp $WORKDIR/heat.inp $WORKDIR/charmm/heat/
+# Copy minimization output to heat directory (heating needs minimized coordinates)
+cp $WORKDIR/charmm/minimize/minimization_output.crd $WORKDIR/charmm/heat/
 srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --gpus-per-task=1 \\
@@ -739,7 +762,7 @@ srun --ntasks=1 \\
         -v $WORKDIR:/bilbomd/work \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
-            cd /bilbomd/work/ &&
+            cd /bilbomd/work/charmm/heat &&
             charmm -o heat.out -i heat.inp
         "
 HEAT_EXIT=$?
@@ -775,6 +798,13 @@ def generate_md_section(config, params):
 # CHARMM Molecular Dynamics (concurrent runs with each Rg set)
 update_status md Running
 
+# Create charmm/md directory structure
+mkdir -p $WORKDIR/charmm/md
+# Copy MD input files and required files to md directory
+cp $WORKDIR/dynamics_rg*.inp $WORKDIR/charmm/md/
+# Copy heated coordinates from heat step (MD needs heated coordinates)
+cp $WORKDIR/charmm/heat/heat_output.crd $WORKDIR/charmm/md/
+
 # Check if SKIP_MD is set to skip MD runs (useful for debugging downstream steps)
 if [[ -n "$SKIP_MD" ]]; then
     echo "SKIP_MD is set - skipping MD runs"
@@ -801,7 +831,7 @@ else
              $BILBOMD_WORKER /bin/bash -c "
                 set -e
                 export OMP_NUM_THREADS={cores_per_task}
-                cd /bilbomd/work/ &&
+                cd /bilbomd/work/charmm/md &&
                 charmm -o dynamics_rg{rg_value}.out -i dynamics_rg{rg_value}.inp
              " &
     # Capture the PID of the backgrounded srun command
@@ -1058,8 +1088,8 @@ srun --ntasks=1 \\
             set -e
             cd /bilbomd/work/multifoxs &&
             python /app/scripts/nersc/run-multifoxs.py \\
-                --foxs-list ./foxs_dat_files.txt \\
-                --prefix ../openmm/md \\
+                --foxs-list ../charmm/md/foxs_dat_files.txt \\
+                --prefix ../charmm/md \\
                 --saxs-data ../{params.get("data_file")} \\
                 --out-list ./foxs_dat_files_for_multifoxs.txt \\
                 --log ./multi_foxs.log

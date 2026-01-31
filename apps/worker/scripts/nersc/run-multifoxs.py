@@ -2,15 +2,20 @@
 """
 Run MultiFoXS on a list of FoXS .dat files produced earlier in the pipeline.
 
+Supports both OpenMM and CHARMM pipelines using consolidated foxs_dat_files.txt files.
+
 Defaults assume the sbatch step has `cd`'d into `/bilbomd/work/multifoxs`.
 Paths may be overridden via CLI flags. Example usage from an interactive shell:
 
+OpenMM style:
     python run-multifoxs.py \
         --foxs-list ../openmm/md/foxs_dat_files.txt \
-        --prefix ../openmm/md \
-        --saxs-data ../saxs-data.dat \
-        --out-list ./foxs_dat_files_for_multifoxs.txt \
-        --log ./multi_foxs.log
+        --prefix ../openmm/md
+
+CHARMM style:
+    python run-multifoxs.py \
+        --foxs-list ../charmm/md/foxs_dat_files.txt \
+        --prefix ../charmm/md
 
 Any arguments after `--` are passed directly to `multi_foxs`.
 """
@@ -29,12 +34,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--foxs-list",
         default="../openmm/md/foxs_dat_files.txt",
-        help="Path to the text file listing FoXS .dat basenames or relative paths (default: ../openmm/md/foxs_dat_files.txt)",
+        help="Path to foxs_dat_files.txt file (default: ../openmm/md/foxs_dat_files.txt)",
     )
     p.add_argument(
         "--prefix",
         default="../openmm/md",
-        help="Directory to prefix to each entry in --foxs-list when constructing full paths (default: ../openmm/md)",
+        help="Directory to prefix to each entry when constructing full paths (default: ../openmm/md)",
     )
     p.add_argument(
         "--saxs-data",
@@ -72,6 +77,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def read_foxs_entries(list_path: Path) -> List[str]:
+    """Read entries from a single foxs_dat_files.txt file."""
     if not list_path.exists():
         raise FileNotFoundError(f"FoXS list not found: {list_path}")
     entries: List[str] = []
@@ -119,11 +125,12 @@ def ensure_files_exist(paths: List[Path]) -> None:
 def main(argv: List[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
 
-    foxs_list = Path(args.foxs_list)
     prefix_dir = Path(args.prefix)
     saxs_output = Path(args.saxs_data)
     out_list = Path(args.out_list)
     log_path = Path(args.log)
+
+    foxs_list = Path(args.foxs_list)
 
     if args.verbose:
         print(f"[multifoxs] CWD: {Path.cwd()}")
@@ -137,6 +144,9 @@ def main(argv: List[str] | None = None) -> int:
     resolved_paths = resolve_paths(entries, prefix_dir)
     ensure_files_exist(resolved_paths)
     write_out_list(resolved_paths, out_list)
+
+    if args.verbose:
+        print(f"[multifoxs] Collected {len(resolved_paths)} .dat files total")
 
     if args.dry_run:
         if args.verbose:

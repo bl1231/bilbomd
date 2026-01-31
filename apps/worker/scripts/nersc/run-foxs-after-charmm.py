@@ -85,6 +85,39 @@ def process_directory(run_dir):
         else:
             os.chdir(original_dir)
 
+def create_consolidated_foxs_list():
+    """Create a consolidated foxs_dat_files.txt file from all individual rg*_run* directories."""
+    print("Creating consolidated foxs_dat_files.txt...")
+    
+    consolidated_entries = []
+    
+    # Find all rg*_run* directories
+    run_dirs = glob.glob('./rg*_run*')
+    run_dirs = [d for d in run_dirs if os.path.isdir(d)]
+    
+    for run_dir in sorted(run_dirs):
+        foxs_list_path = os.path.join(run_dir, 'foxs_dat_files.txt')
+        if os.path.exists(foxs_list_path):
+            with open(foxs_list_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        # Convert ../foxs/rg35_run1/file.dat to foxs/rg35_run1/file.dat
+                        if line.startswith('../foxs/'):
+                            relative_path = line[3:]  # Remove '../' prefix
+                            consolidated_entries.append(relative_path)
+                        else:
+                            consolidated_entries.append(line)
+    
+    # Write consolidated file to parent directory (charmm/md level)
+    os.chdir('..')  # Go up from foxs to md directory
+    with open('foxs_dat_files.txt', 'w') as f:
+        for entry in consolidated_entries:
+            f.write(f"{entry}\n")
+    
+    print(f"Created consolidated foxs_dat_files.txt with {len(consolidated_entries)} entries")
+    os.chdir('foxs')  # Return to foxs directory
+
 def main():
     """Main function to find and process all rg*_run* directories."""
     print("Run FoXS...")
@@ -102,6 +135,9 @@ def main():
     # Process each directory
     for run_dir in sorted(run_dirs):
         process_directory(run_dir)
+    
+    # Create consolidated foxs_dat_files.txt for MultiFoXS compatibility
+    create_consolidated_foxs_list()
     
     print("FoXS processing complete")
 

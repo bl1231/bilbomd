@@ -9,7 +9,7 @@ bomlev -2
 ! Read Topology-Files
 STREAM {{charmm_topo_dir}}
 
-open read unit 12 card name {{in_psf_file}}
+open read unit 12 card name ../../{{in_psf_file}}
 read psf card unit 12
 close unit 12
 
@@ -24,7 +24,7 @@ NBONDS bygr noelec cdie e14fac 0.000 eps 0.0 vdw vswitch CUTNB 8.0 -
 inbfrq 100 wmin 1.0
 open read unit 30 card name heat_output.rst
 
-STREAM {{constinp}}
+STREAM ../../{{constinp}}
 RGYRestrain Force 20 Reference {{rg}} select ALL end
 
 
