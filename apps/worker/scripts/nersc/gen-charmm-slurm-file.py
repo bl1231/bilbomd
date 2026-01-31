@@ -653,8 +653,6 @@ def generate_minimize_section(config):
 # CHARMM Minimization
 update_status minimize Running
 echo "Running CHARMM Minimization..."
-# Create charmm/minimize directory structure
-mkdir -p $WORKDIR/charmm/minimize
 # Copy minimize input file to minimize directory
 cp $WORKDIR/minimize.inp $WORKDIR/charmm/minimize/
 srun --ntasks=1 \\
@@ -698,7 +696,7 @@ def generate_initial_foxs_analysis_section(config, params):
     max_c1 = 1.05
     min_c2 = -0.50
     max_c2 = 2.00
-    minimized_pdb = os.path.join(config["workdir"], "minimization_output.pdb")
+    minimized_pdb = os.path.join("charmm","minimize", "minimization_output.pdb")
     saxs_data_in_container = os.path.join(".", params.get("data_file"))
 
     # build foxs args as a list, each argument separate
@@ -750,12 +748,6 @@ def generate_heat_section(config):
 # CHARMM Heating
 update_status heat Running
 echo "Running CHARMM Heating..."
-# Create charmm/heat directory structure
-mkdir -p $WORKDIR/charmm/heat
-# Copy heat input file and required files to heat directory
-cp $WORKDIR/heat.inp $WORKDIR/charmm/heat/
-# Copy minimization output to heat directory (heating needs minimized coordinates)
-cp $WORKDIR/charmm/minimize/minimization_output.crd $WORKDIR/charmm/heat/
 srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --gpus-per-task=1 \\
@@ -800,14 +792,6 @@ def generate_md_section(config, params):
 # --------------------------------------------------------------------------------------
 # CHARMM Molecular Dynamics (concurrent runs with each Rg set)
 update_status md Running
-
-# Create charmm/md directory structure
-mkdir -p $WORKDIR/charmm/md
-# Copy MD input files and required files to md directory
-cp $WORKDIR/dynamics_rg*.inp $WORKDIR/charmm/md/
-# Copy heated coordinates from heat step (MD needs heated coordinates)
-cp $WORKDIR/charmm/heat/heat_output.crd $WORKDIR/charmm/md/
-
 # Check if SKIP_MD is set to skip MD runs (useful for debugging downstream steps)
 if [[ -n "$SKIP_MD" ]]; then
     echo "SKIP_MD is set - skipping MD runs"
@@ -1091,7 +1075,7 @@ srun --ntasks=1 \\
             set -e
             cd /bilbomd/work/multifoxs &&
             python /app/scripts/nersc/run-multifoxs.py \\
-                --foxs-list ../charmm/md/foxs_dat_files.txt \\
+                --foxs-list ../foxs_dat_files.txt \\
                 --prefix ../charmm/md \\
                 --saxs-data ../{params.get("data_file")} \\
                 --out-list ./foxs_dat_files_for_multifoxs.txt \\
