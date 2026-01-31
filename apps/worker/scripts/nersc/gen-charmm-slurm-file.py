@@ -204,8 +204,9 @@ def template_heat_file(config, params):
     print("Preparing CHARMM Heat input file")
 
     workdir = config["workdir"]
-    template_file = os.path.join(workdir, "heat.tmpl")
-    output_file = os.path.join(workdir, "heat.inp")
+    # Template is now in charmm/heat/ subdirectory
+    template_file = os.path.join(workdir, "charmm", "heat", "heat.tmpl")
+    output_file = os.path.join(workdir, "charmm", "heat", "heat.inp")
 
     # Move template to input file
     try:
@@ -260,7 +261,8 @@ def template_md_files(config, params):
         sys.exit(1)
     
     workdir = config["workdir"]
-    template_file = os.path.join(workdir, "dynamics.tmpl")
+    # Template is now in charmm/md/ subdirectory
+    template_file = os.path.join(workdir, "charmm", "md", "dynamics.tmpl")
     
     # Check if template file exists
     if not os.path.exists(template_file):
@@ -290,7 +292,8 @@ def template_md_files(config, params):
     for rg_value in rg_values:
         inp_basename = f"dynamics_rg{rg_value}"
         inp_file = f"{inp_basename}.inp"
-        output_path = os.path.join(workdir, inp_file)
+        # Create output file in charmm/md/ subdirectory
+        output_path = os.path.join(workdir, "charmm", "md", inp_file)
         
         print(f"Creating CHARMM MD input file: {inp_file} for Rg={rg_value}")
         
