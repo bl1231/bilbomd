@@ -13,10 +13,10 @@ from pathlib import Path
 def setup_environment(uuid):
     # Slurm and project parameters
     project = "m4659"
-    queue = "regular"
+    queue = "debug"
     constraint = "gpu"
     nodes = 1
-    walltime = "03:00:00"
+    walltime = "00:30:00"
     mailtype = "end,fail"
     mailuser = "sclassen@lbl.gov"
 
@@ -101,8 +101,8 @@ def prepare_input(workdir, upload_dir):
     # Inject a few hard-coded parameters here
     # until I can figure out a better way to do this.
     params["charmm_topo_dir"] = "/app/scripts/bilbomd_top_par_files.str"
-    params["in_psf_file"] = "bilbomd_pdb2crd.psf"
-    params["in_crd_file"] = "bilbomd_pdb2crd.crd"
+    params["in_psf_file"] = params.get("psf_file", "bilbomd_pdb2crd.psf")
+    params["in_crd_file"] = params.get("crd_file", "bilbomd_pdb2crd.crd")
     # will be calculated by pae2const.py
     params["constinp"] = "const.inp"
     return params
@@ -566,7 +566,7 @@ update_status pae2constraints Success
 """
     return section
 
-def generate_pdb2crd_input_files(config):
+def generate_pdb2crd_input_files_af(config):
     section = f"""
 # --------------------------------------------------------------------------------------
 # Convert AlphaFold PDB to CHARMM PSF/CRD
@@ -624,6 +624,81 @@ update_status pdb2crd Success
 """
     return section
 
+def generate_pdb2crd_input_files(config, params):
+    """Generate section to convert PDB to CHARMM PSF/CRD format for regular PDB/Auto jobs."""
+    pdb_file = params.get("pdb_file", "input.pdb")
+    
+    section = f"""
+# --------------------------------------------------------------------------------------
+# Convert PDB to CHARMM PSF/CRD
+update_status pdb2crd Running
+echo "Generating pdb2crd input files..."
+srun --job-name pdb2crd \\
+    podman-hpc run --rm \\
+        -v $WORKDIR:/bilbomd/work \\
+        $BILBOMD_WORKER /bin/bash -c "
+            set -e
+            cd /bilbomd/work/ &&
+            python /app/scripts/pdb2crd.py {pdb_file} . > pdb2crd_output.txt
+    "
+
+# Check if output file was created
+if [ ! -f "$WORKDIR/pdb2crd_output.txt" ]; then
+    echo "ERROR: pdb2crd output file not found" >&2
+    update_status pdb2crd Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+# Parse the file "pdb2crd_output.txt" and run CHARMM for each chain-specific *.inp file
+echo "Parsing pdb2crd_output.txt..."
+num_inp_files=$(wc -l < $WORKDIR/pdb2crd_output.txt)
+if [ "$num_inp_files" -eq 0 ]; then
+    echo "ERROR: No input files were parsed, check the output for errors" >&2
+    update_status pdb2crd Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+echo "Number of pdb2crd.inp files to process: $num_inp_files"
+cpus=$(({config["num_cores"]} / num_inp_files))
+if [ "$cpus" -lt 1 ]; then
+    cpus=1
+fi
+
+# Array to hold all background PIDs
+pids=()
+while IFS= read -r filename; do
+    # Extract the filename prefix (without extension)
+    filename_prefix=$(basename "$filename" .inp)
+    
+    # Generate the srun command
+    srun --ntasks=1 \\
+         --cpus-per-task=$cpus \\
+         --cpu-bind=cores \\
+         --job-name pdb2crd \\
+         podman-hpc run --rm \\
+            -v $WORKDIR:/bilbomd/work \\
+            $BILBOMD_WORKER /bin/bash -c "
+                set -e
+                cd /bilbomd/work/ &&
+                charmm -o ${{filename_prefix}}.out -i ${{filename}}
+            " &
+    # Capture the PID of the backgrounded srun command
+    pids+=($!)
+done < $WORKDIR/pdb2crd_output.txt
+
+# Wait for all background jobs to complete & check their exit codes
+for pid in "${{pids[@]}}"; do
+    wait $pid
+    exit_code=$?
+    check_exit_code $exit_code pdb2crd
+done
+
+echo "Individual chains converted to CRD files."
+update_status pdb2crd Success
+"""
+    return section
 
 def generate_meld_all_chains_section(config):
     section = f"""
@@ -647,14 +722,13 @@ update_status meld Success
 """
     return section
 
+
 def generate_minimize_section(config):
     section = f"""
 # --------------------------------------------------------------------------------------
 # CHARMM Minimization
 update_status minimize Running
 echo "Running CHARMM Minimization..."
-# Copy minimize input file to minimize directory
-cp $WORKDIR/minimize.inp $WORKDIR/charmm/minimize/
 srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --gpus-per-task=1 \\
@@ -1167,20 +1241,25 @@ def main():
     # Step 4: Create status file
     create_status_file(config["workdir"])
 
-    # Step 5: Prepare CHARMM input files here perhaps?
-
-    # Step 6: Generate Slurm script sections
+    # Step 5: Generate Slurm script sections
     slurm_sections = []
     slurm_sections.append(generate_slurm_header(config))
     slurm_sections.append(add_helper_functions())
+
     if params.get("__t") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
         slurm_sections.append(select_best_alphafold_model(config))
         slurm_sections.append(generate_pae2const_section(config, params))
-        slurm_sections.append(generate_pdb2crd_input_files(config))
+        slurm_sections.append(generate_pdb2crd_input_files_af(config))
         slurm_sections.append(generate_meld_all_chains_section(config))
+
+    if params.get("__t") in ("BilboMdAuto", "BilboMdPDB"):
+        slurm_sections.append(generate_pdb2crd_input_files(config, params))
+        slurm_sections.append(generate_meld_all_chains_section(config))
+
     if params.get("__t") == "BilboMdAuto":
         slurm_sections.append(generate_pae2const_section(config, params))
+
     slurm_sections.append(generate_minimize_section(config))
     slurm_sections.append(generate_initial_foxs_analysis_section(config, params))
     slurm_sections.append(generate_heat_section(config))
@@ -1191,8 +1270,8 @@ def main():
     # slurm_sections.append(generate_analysis_section(config))
     slurm_sections.append(generate_end_matters(config))
 
-    # Step 7: Write Slurm batch file
-    slurm_file = Path(config["workdir"]) / "bilbomd-ttt.slurm"
+    # Step 6: Write Slurm batch file
+    slurm_file = Path(config["workdir"]) / "bilbomd.slurm"
     with open(slurm_file, "w") as f:
         for section in slurm_sections:
             if section:
