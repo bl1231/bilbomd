@@ -465,37 +465,23 @@ echo "  PAE: $(basename "${pae_files[0]}") -> af-pae.json"
 
 # Update the OpenMM config file to use the AlphaFold model
 echo "Updating openmm_config.yaml to use af-rank1.pdb..."
-srun --ntasks=1 \\
-     --cpus-per-task=1 \\
-     --job-name update_config \\
-     podman-hpc run --rm \\
-        -v $WORKDIR:/bilbomd/work \\
-        $BILBOMD_WORKER /bin/bash -c "
-            set -e
-            cd /bilbomd/work
-            python -c \"
-import yaml
-import os
-
-config_path = 'openmm_config.yaml'
-if os.path.exists(config_path):
-    with open(config_path, 'r') as f:
-        openmm_config = yaml.safe_load(f)
-    
-    # Update pdb_file to use the AlphaFold model
-    openmm_config['input']['pdb_file'] = 'af-rank1.pdb'
-    
-    with open(config_path, 'w') as f:
-        yaml.dump(openmm_config, f)
-    
-    print('Updated OpenMM config to use af-rank1.pdb')
-else:
-    print('Warning: openmm_config.yaml not found')
-            \"
-        "
-UPDATE_CONFIG_EXIT=$?
-check_exit_code $UPDATE_CONFIG_EXIT update_config
-echo "OpenMM config file updated successfully"
+if [ -f $WORKDIR/openmm_config.yaml ]; then
+    # Use sed to update the pdb_file line in the YAML
+    sed -i 's/pdb_file: .*/pdb_file: af-rank1.pdb/' $WORKDIR/openmm_config.yaml
+    if [ $? -eq 0 ]; then
+        echo "Successfully updated OpenMM config to use af-rank1.pdb"
+    else
+        echo "ERROR: Failed to update openmm_config.yaml"
+        update_status alphafold Error
+        scancel $SLURM_JOB_ID
+        exit 1
+    fi
+else
+    echo "ERROR: openmm_config.yaml not found in $WORKDIR"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
 
 """
     return section
