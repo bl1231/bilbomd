@@ -464,18 +464,38 @@ echo "  PDB: $(basename "${pdb_files[0]}") -> af-rank1.pdb"
 echo "  PAE: $(basename "${pae_files[0]}") -> af-pae.json"
 
 # Update the OpenMM config file to use the AlphaFold model
-config_yaml_path = os.path.join(config["workdir"], "openmm_config.yaml")
-if os.path.exists(config_yaml_path):
-    with open(config_yaml_path, "r") as f:
+echo "Updating openmm_config.yaml to use af-rank1.pdb..."
+srun --ntasks=1 \\
+     --cpus-per-task=1 \\
+     --job-name update_config \\
+     podman-hpc run --rm \\
+        -v $WORKDIR:/bilbomd/work \\
+        $BILBOMD_WORKER /bin/bash -c "
+            set -e
+            cd /bilbomd/work
+            python -c \"
+import yaml
+import os
+
+config_path = 'openmm_config.yaml'
+if os.path.exists(config_path):
+    with open(config_path, 'r') as f:
         openmm_config = yaml.safe_load(f)
-
+    
     # Update pdb_file to use the AlphaFold model
-    openmm_config["input"]["pdb_file"] = "af-rank1.pdb"
-
-    with open(config_yaml_path, "w") as f:
+    openmm_config['input']['pdb_file'] = 'af-rank1.pdb'
+    
+    with open(config_path, 'w') as f:
         yaml.dump(openmm_config, f)
-
-    print("Updated OpenMM config to use af-rank1.pdb")
+    
+    print('Updated OpenMM config to use af-rank1.pdb')
+else:
+    print('Warning: openmm_config.yaml not found')
+            \"
+        "
+UPDATE_CONFIG_EXIT=$?
+check_exit_code $UPDATE_CONFIG_EXIT update_config
+echo "OpenMM config file updated successfully"
 
 """
     return section
