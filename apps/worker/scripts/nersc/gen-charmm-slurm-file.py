@@ -13,10 +13,10 @@ from pathlib import Path
 def setup_environment(uuid):
     # Slurm and project parameters
     project = "m4659"
-    queue = "debug"
+    queue = "regular"
     constraint = "gpu"
     nodes = 1
-    walltime = "00:30:00"
+    walltime = "03:00:00"
     mailtype = "end,fail"
     mailuser = "sclassen@lbl.gov"
 
