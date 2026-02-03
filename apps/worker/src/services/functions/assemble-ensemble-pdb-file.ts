@@ -50,9 +50,26 @@ const assembleEnsemblePdbFiles = async ({
     // Save PDB files for the top-ranked model
     const topModelPdbFiles = ensemble.models[0]?.states.map(
       (state: IEnsembleMember) => {
-        // Resolve relative paths correctly from multifoxs directory to job directory
-        // The ensemble file is in multiFoxsDir, so relative paths should resolve from there
-        const resolvedPath = path.resolve(multiFoxsDir, state.pdb)
+        // Handle both absolute Docker paths and relative paths
+        let resolvedPath: string
+        
+        if (path.isAbsolute(state.pdb)) {
+          // For absolute paths like /bilbomd/work/openmm/md/...
+          // Map Docker container path to actual job directory
+          if (state.pdb.startsWith('/bilbomd/work/')) {
+            // Remove the Docker container prefix and resolve from job directory
+            const relativePath = state.pdb.replace('/bilbomd/work/', '')
+            resolvedPath = path.join(jobDir, relativePath)
+          } else {
+            // Other absolute paths - use as-is but log a warning
+            logger.warn(`Unexpected absolute path format: ${state.pdb}`)
+            resolvedPath = state.pdb
+          }
+        } else {
+          // For relative paths, resolve from multiFoxsDir (legacy behavior)
+          resolvedPath = path.resolve(multiFoxsDir, state.pdb)
+        }
+        
         logger.debug(`Resolving PDB path: ${state.pdb} -> ${resolvedPath}`)
         return resolvedPath
       }

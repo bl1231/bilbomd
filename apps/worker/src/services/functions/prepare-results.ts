@@ -41,7 +41,12 @@ const prepareResults = async (
 
     {
       const baseDataName = DBjob.data_file.split('.')[0]
-      const openmmPdb = path.join(jobDir, 'minimize', 'minimized.pdb')
+      const openmmPdb = path.join(
+        jobDir,
+        'openmm',
+        'minimization',
+        'minimized.pdb'
+      )
       const charmmNewPdb = path.join(
         jobDir,
         'charmm',
@@ -74,7 +79,8 @@ const prepareResults = async (
       // --- Copy the DAT file for the minimized PDB (supports both layouts)
       const openmmDat = path.join(
         jobDir,
-        'minimize',
+        'openmm',
+        'minimization',
         `minimized_${baseDataName}.dat`
       )
       const charmmNewDat = path.join(
