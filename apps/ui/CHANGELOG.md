@@ -1,5 +1,12 @@
 # @bilbomd/ui
 
+## 2.5.1
+
+### Patch Changes
+
+- c541a29: Update dependencies
+- bbb3c2e: Fix bug in NERSC Queue Time and Run Time calculations that was resulting in negative values
+
 ## 2.5.0
 
 ### Minor Changes

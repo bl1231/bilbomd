@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.5.1
+
+### Patch Changes
+
+- c541a29: Update dependencies
+
 ## 2.5.0
 
 ### Minor Changes
