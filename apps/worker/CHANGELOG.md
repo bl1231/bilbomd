@@ -1,5 +1,17 @@
 # @bilbomd/worker
 
+## 2.3.0
+
+### Minor Changes
+
+- 6ce0ac6: Refactor NERSC Slurm prep script from bash to Python
+
+### Patch Changes
+
+- f34ba14: Add PDB remediate step for CHARMM jobs run on NERSC
+- 8dd6c75: prepareResults now finds files in CHARMM subdirectories
+- 92f78b0: Skip email for anonymous jobs on NERSC
+
 ## 2.2.1
 
 ### Patch Changes
