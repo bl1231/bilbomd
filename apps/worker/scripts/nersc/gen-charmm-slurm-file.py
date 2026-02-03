@@ -357,6 +357,7 @@ def create_status_file(workdir):
         "heat",
         "md",
         "dcd2pdb",
+        "pdb_remediate",
         "foxs",
         "multifoxs",
         "analysis",
@@ -1105,6 +1106,73 @@ update_status dcd2pdb Success
 """
     return section
 
+def generate_pdb_remediate_section(config):
+    """Generate section to remediate PDB files by copying segid last character to chainid."""
+    section = f"""
+# --------------------------------------------------------------------------------------
+# Remediate PDB files (copy segid last char to chainid for ATOM/HETATM records)
+update_status pdb_remediate Running
+echo "Remediating PDB files in foxs directory..."
+
+cd $WORKDIR/foxs
+
+# Find all PDB files recursively in foxs directory
+pdb_files=$(find . -name '*.pdb' -type f)
+pdb_count=$(echo "$pdb_files" | wc -l)
+
+if [ -z "$pdb_files" ]; then
+    echo 'No PDB files found in foxs directory'
+    update_status pdb_remediate Success
+    exit 0
+fi
+
+echo "Found $pdb_count PDB files to process"
+
+# Process each PDB file
+processed=0
+while IFS= read -r pdb_file; do
+    if [ -n "$pdb_file" ]; then
+        echo "Processing: $pdb_file"
+        
+        # Create a temporary file for modifications
+        temp_file="${{pdb_file}}.tmp"
+        
+        # Process the file line by line using awk for better performance
+        awk '{{
+            if (/^(ATOM|HETATM)/) {{
+                # Extract segid (columns 73-76)
+                segid = substr($0, 73, 4)
+                # Remove trailing spaces from segid
+                gsub(/[[:space:]]*$/, "", segid)
+                
+                if (length(segid) > 0) {{
+                    # Get last character of segid
+                    last_char = substr(segid, length(segid), 1)
+                    
+                    # Replace chainid (column 22) with last character of segid
+                    # Construct new line: chars 1-21 + last_char + chars 23-end
+                    new_line = substr($0, 1, 21) last_char substr($0, 23)
+                    print new_line
+                }} else {{
+                    print $0
+                }}
+            }} else {{
+                # Non-ATOM/HETATM line, keep as is
+                print $0
+            }}
+        }}' "$pdb_file" > "$temp_file"
+        
+        # Replace original file with modified version
+        mv "$temp_file" "$pdb_file"
+        
+        processed=$((processed + 1))
+    fi
+done <<< "$pdb_files"
+
+echo "Successfully processed $processed PDB files"
+update_status pdb_remediate Success
+"""
+    return section
 
 def generate_foxs_section(config):
     section = f"""
@@ -1265,6 +1333,7 @@ def main():
     slurm_sections.append(generate_heat_section(config))
     slurm_sections.append(generate_md_section(config, params))
     slurm_sections.append(generate_dcd2pdb_section(config, params))
+    slurm_sections.append(generate_pdb_remediate_section(config))
     slurm_sections.append(generate_foxs_section(config))
     slurm_sections.append(generate_multifoxs_section(config, params))
     # slurm_sections.append(generate_analysis_section(config))
