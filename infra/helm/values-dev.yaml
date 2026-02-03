@@ -78,6 +78,6 @@ worker:
     user: null
     repository: bilbomd-worker
     build: null
-    tag: 2.2.1
+    tag: pr-338-a22eda1b
     pullPolicy: Always
     secret: ghcr
