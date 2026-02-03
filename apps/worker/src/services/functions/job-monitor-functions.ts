@@ -173,10 +173,16 @@ const cleanupJob = async (
     DBjob.time_completed = new Date()
     await DBjob.save()
 
+    // Skip email for anonymous jobs
+    if (!DBjob.user) {
+      logger.info(`Skipping email for anonymous job: ${DBjob.uuid}`)
+      return
+    }
+
     // Retrieve the user email from the associated User model
     const user = await User.findById(DBjob.user).lean().exec()
     if (!user) {
-      logger.error(`No user found for: ${DBjob.uuid}`)
+      logger.error(`No user found for registered job: ${DBjob.uuid}`)
       return
     }
 
