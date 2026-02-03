@@ -50,31 +50,131 @@ import { useNavigate } from 'react-router'
 import { JobActionsMenu } from './JobActionsMenu'
 import { useSnackbar } from 'notistack'
 
-const getRunTimeInHours = (nersc: INerscInfo | undefined) => {
-  if (!nersc?.time_started) return ''
-  const start = parseDateSafe(nersc.time_started)
-  const end = nersc.time_completed
-    ? parseDateSafe(nersc.time_completed)
-    : new Date()
-  if (!start || !end) return ''
-  const diffMs = end.getTime() - start.getTime()
+const getRunTimeInHours = (
+  nersc: INerscInfo | undefined,
+  jobStatus?: string
+) => {
+  if (!nersc) return ''
+
+  // Check if job has actually started (not just epoch placeholder)
+  const actualStartTime = nersc.time_started
+    ? parseDateSafe(nersc.time_started)
+    : null
+  const isEpochPlaceholder = actualStartTime && actualStartTime.getTime() === 0 // Unix epoch = not started
+
+  if (!actualStartTime || isEpochPlaceholder) {
+    // Job hasn't genuinely started yet
+    return ''
+  }
+
+  let end: Date | null = null
+
+  if (nersc.time_completed) {
+    // Job has completed, use actual completion time
+    end = parseDateSafe(nersc.time_completed)
+  } else if (jobStatus === 'Running' || nersc.state === 'RUNNING') {
+    // Job is still running, use current time
+    end = new Date()
+  } else {
+    // Job is not running and has no completion time (likely pending/failed)
+    return ''
+  }
+
+  if (!end) return ''
+
+  const diffMs = end.getTime() - actualStartTime.getTime()
+
+  // Validate that the time difference makes sense
+  if (diffMs < 0) {
+    console.warn('Invalid NERSC runtime: end time before start time', {
+      jobid: nersc.jobid,
+      time_started: nersc.time_started,
+      time_completed: nersc.time_completed,
+      status: jobStatus,
+      is_epoch: isEpochPlaceholder
+    })
+    return 'Invalid'
+  }
+
   const totalMinutes = Math.round(diffMs / 60000)
   const hrs = Math.floor(totalMinutes / 60)
   const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
   return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
 }
 
-const getHoursInQueue = (nersc: INerscInfo | undefined) => {
+const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
   if (!nersc?.time_submitted) return ''
+
   const start = parseDateSafe(nersc.time_submitted)
-  const end = nersc.time_started
+  if (!start) return ''
+
+  let end: Date | null = null
+
+  // Check if job has actually started (not just epoch placeholder)
+  const actualStartTime = nersc.time_started
     ? parseDateSafe(nersc.time_started)
-    : new Date()
-  if (!start || !end) return ''
+    : null
+  const isEpochPlaceholder = actualStartTime && actualStartTime.getTime() === 0 // Unix epoch = not started
+
+  if (actualStartTime && !isEpochPlaceholder) {
+    // Job has genuinely started, use actual start time
+    end = actualStartTime
+  } else if (jobStatus === 'Pending' || nersc.state === 'PENDING') {
+    // Job is still pending (or has epoch placeholder), use current time
+    end = new Date()
+  } else if (jobStatus === 'Running' || nersc.state === 'RUNNING') {
+    // Job is running but no real start time recorded - this shouldn't happen
+    console.warn('Job is running but no valid NERSC start time recorded', {
+      jobid: nersc.jobid,
+      status: jobStatus,
+      nersc_state: nersc.state,
+      time_started: nersc.time_started,
+      is_epoch: isEpochPlaceholder
+    })
+    return 'Unknown'
+  } else {
+    // Job failed, cancelled, or other status before starting
+    console.log('Queue time debug - job not pending/running:', {
+      jobid: nersc.jobid,
+      jobStatus,
+      nersc_state: nersc.state,
+      time_submitted: nersc.time_submitted,
+      time_started: nersc.time_started,
+      is_epoch: isEpochPlaceholder
+    })
+    return ''
+  }
+
+  if (!end) return ''
+
   const diffMs = end.getTime() - start.getTime()
+
+  // Debug logging for negative times (should be rare now)
+  if (diffMs < 0) {
+    const now = new Date()
+    console.warn('Invalid NERSC queue time: negative duration detected', {
+      jobid: nersc.jobid,
+      jobStatus,
+      nersc_state: nersc.state,
+      time_submitted: nersc.time_submitted,
+      time_started: nersc.time_started,
+      parsed_start: start.toISOString(),
+      parsed_end: end.toISOString(),
+      current_time: now.toISOString(),
+      diff_ms: diffMs,
+      diff_hours: diffMs / (1000 * 60 * 60),
+      is_epoch: isEpochPlaceholder
+    })
+    return 'Invalid'
+  }
+
   const totalMinutes = Math.round(diffMs / 60000)
   const hrs = Math.floor(totalMinutes / 60)
   const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
   return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
 }
 
@@ -350,8 +450,8 @@ const Jobs = () => {
     const rows = filteredJobs.map((job) => {
       const nerscJobid = job.mongo.nersc?.jobid || ''
       const nerscStatus = job.mongo.nersc?.state || ''
-      const queueHours = getHoursInQueue(job.mongo.nersc)
-      const runTimeHours = getRunTimeInHours(job.mongo.nersc)
+      const queueHours = getHoursInQueue(job.mongo.nersc, job.mongo.status)
+      const runTimeHours = getRunTimeInHours(job.mongo.nersc, job.mongo.status)
 
       return {
         ...job.mongo,
@@ -387,7 +487,13 @@ const Jobs = () => {
             {
               field: 'queueHours',
               headerName: 'Queue Time',
-              width: 100
+              width: 100,
+              cellClassName: (params: GridCellParams) => {
+                const value = params.value as string
+                return clsx('nersc', {
+                  error: value === 'Invalid' || value === 'Unknown'
+                })
+              }
             },
             {
               field: 'runTimeHours',
@@ -395,8 +501,10 @@ const Jobs = () => {
               width: 100,
               cellClassName: (params: GridCellParams) => {
                 const status = params.row.status
+                const value = params.value as string
                 return clsx('nersc', {
-                  running: status === 'Running'
+                  running: status === 'Running',
+                  error: value === 'Invalid' || value === 'Unknown'
                 })
               }
             }
