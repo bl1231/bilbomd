@@ -1,5 +1,13 @@
 # @bilbomd/worker
 
+## 2.3.1
+
+### Patch Changes
+
+- 4efba67: patch to handle both absolute Docker paths and relative paths
+- c541a29: Update dependencies
+- 27e0b76: Refactor the slurm gen scripts to create pipeline-specific `status.txt` files
+
 ## 2.3.0
 
 ### Minor Changes
