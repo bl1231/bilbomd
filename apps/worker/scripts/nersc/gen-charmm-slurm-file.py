@@ -62,7 +62,7 @@ def setup_environment(uuid):
         "template_dir": template_dir,
         "bilbomd_worker": bilbomd_worker,
         "af_worker": af_worker,
-        "num_cores": num_cores
+        "num_cores": num_cores,
     }
 
 
@@ -120,18 +120,18 @@ def copy_template_files(config):
     # Define template files and their destination subdirectories
     template_destinations = {
         "minimize.tmpl": "charmm/minimize",
-        "heat.tmpl": "charmm/heat", 
+        "heat.tmpl": "charmm/heat",
         "dynamics.tmpl": "charmm/md",
         "dcd2pdb.tmpl": ".",  # Root workdir for dcd2pdb processing
     }
 
     for template_file, subdir in template_destinations.items():
         src_path = os.path.join(config["template_dir"], template_file)
-        
+
         # Create destination directory structure
         dest_dir = os.path.join(config["workdir"], subdir)
         os.makedirs(dest_dir, exist_ok=True)
-        
+
         dst_path = os.path.join(dest_dir, template_file)
 
         try:
@@ -177,11 +177,14 @@ def template_minimization_file(config, params):
         "{{in_psf_file}}": "in_psf_file",
         "{{in_crd_file}}": "in_crd_file",
     }
-    
+
     replacements = {}
     for placeholder, param_key in required_params.items():
         if param_key not in params or not params[param_key]:
-            print(f"Error: Required parameter '{param_key}' not found in params.json or is empty", file=sys.stderr)
+            print(
+                f"Error: Required parameter '{param_key}' not found in params.json or is empty",
+                file=sys.stderr,
+            )
             sys.exit(1)
         replacements[placeholder] = str(params[param_key])
 
@@ -226,14 +229,17 @@ def template_heat_file(config, params):
     # Define required parameters and validate they exist
     required_params = {
         "{{charmm_topo_dir}}": "charmm_topo_dir",
-        "{{in_psf_file}}": "in_psf_file", 
+        "{{in_psf_file}}": "in_psf_file",
         "{{constinp}}": "constinp",
     }
-    
+
     replacements = {}
     for placeholder, param_key in required_params.items():
         if param_key not in params or not params[param_key]:
-            print(f"Error: Required parameter '{param_key}' not found in params.json or is empty", file=sys.stderr)
+            print(
+                f"Error: Required parameter '{param_key}' not found in params.json or is empty",
+                file=sys.stderr,
+            )
             sys.exit(1)
         replacements[placeholder] = str(params[param_key])
 
@@ -250,60 +256,66 @@ def template_heat_file(config, params):
 
     print("Done Preparing CHARMM Heat input file")
 
+
 def template_md_files(config, params):
     """Create CHARMM MD input files for each Rg value from template."""
     print("Preparing CHARMM MD input files")
-    
+
     # Extract Rg values from nested params structure
     rg_values = params.get("charmm_parameters", {}).get("md", {}).get("rgyr", [])
     if not rg_values:
         print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
         sys.exit(1)
-    
+
     workdir = config["workdir"]
     # Template is now in charmm/md/ subdirectory
     template_file = os.path.join(workdir, "charmm", "md", "dynamics.tmpl")
-    
+
     # Check if template file exists
     if not os.path.exists(template_file):
         print(f"Error: Template file {template_file} not found", file=sys.stderr)
         sys.exit(1)
-    
+
     # Get additional MD parameters
     charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
     nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
     conf_sample = int(nsteps / 100000)
     timestep = 0.001  # Fixed timestep as in bash version
-    
+
     # Define required parameters and validate they exist
     required_params = {
         "{{charmm_topo_dir}}": "charmm_topo_dir",
         "{{in_psf_file}}": "in_psf_file",
         "{{constinp}}": "constinp",
     }
-    
+
     # Validate required parameters exist
     for placeholder, param_key in required_params.items():
         if param_key not in params or not params[param_key]:
-            print(f"Error: Required parameter '{param_key}' not found in params.json or is empty", file=sys.stderr)
+            print(
+                f"Error: Required parameter '{param_key}' not found in params.json or is empty",
+                file=sys.stderr,
+            )
             sys.exit(1)
-    
+
     # Loop through each Rg value and create input file
     for rg_value in rg_values:
         inp_basename = f"dynamics_rg{rg_value}"
         inp_file = f"{inp_basename}.inp"
         # Create output file in charmm/md/ subdirectory
         output_path = os.path.join(workdir, "charmm", "md", inp_file)
-        
+
         print(f"Creating CHARMM MD input file: {inp_file} for Rg={rg_value}")
-        
+
         # Copy template to new input file
         try:
             shutil.copy2(template_file, output_path)
         except (OSError, IOError) as e:
-            print(f"Failed to copy {template_file} to {output_path}: {e}", file=sys.stderr)
+            print(
+                f"Failed to copy {template_file} to {output_path}: {e}", file=sys.stderr
+            )
             sys.exit(1)
-        
+
         # Read the template content
         try:
             with open(output_path, "r") as f:
@@ -311,7 +323,7 @@ def template_md_files(config, params):
         except (OSError, IOError) as e:
             print(f"Failed to read {output_path}: {e}", file=sys.stderr)
             sys.exit(1)
-        
+
         # Prepare all replacements including dynamic values
         replacements = {
             "{{charmm_topo_dir}}": str(params["charmm_topo_dir"]),
@@ -322,11 +334,11 @@ def template_md_files(config, params):
             "{{conf_sample}}": str(conf_sample),
             "{{timestep}}": str(timestep),
         }
-        
+
         # Perform all replacements
         for placeholder, value in replacements.items():
             content = content.replace(placeholder, value)
-        
+
         # Write the processed content back
         try:
             with open(output_path, "w") as f:
@@ -334,24 +346,20 @@ def template_md_files(config, params):
         except (OSError, IOError) as e:
             print(f"Failed to write {output_path}: {e}", file=sys.stderr)
             sys.exit(1)
-    
+
     print(f"Done preparing {len(rg_values)} CHARMM MD input files")
+
 
 # -----------------------------------------------------------------------------
 # Status File Creation
 # -----------------------------------------------------------------------------
 
 
-def create_status_file(workdir):
+def create_status_file(workdir, params):
     status_file = os.path.join(workdir, "status.txt")
+
+    # Base steps that are always included in CHARMM pipeline
     steps = [
-        "alphafold",
-        "pdb2crd",
-        "meld",
-        "pae",
-        "pae2constraints",
-        "consmerge",
-        "autorg",
         "minimize",
         "initfoxs",
         "heat",
@@ -360,9 +368,17 @@ def create_status_file(workdir):
         "pdb_remediate",
         "foxs",
         "multifoxs",
-        "analysis",
-        "copy2cfs",
     ]
+
+    # Add pipeline-specific steps at the beginning
+    pipeline_type = params.get("__t")
+    if pipeline_type == "BilboMdAlphaFold":
+        steps = ["alphafold", "pae2constraints", "pdb2crd", "meld"] + steps
+    elif pipeline_type == "BilboMdAuto":
+        steps = ["pae2constraints", "pdb2crd", "meld"] + steps
+    elif pipeline_type == "BilboMdPDB":
+        steps = ["pdb2crd", "meld"] + steps
+
     with open(status_file, "w") as f:
         for step in steps:
             f.write(f"{step}: Waiting\n")
@@ -371,6 +387,7 @@ def create_status_file(workdir):
 # -----------------------------------------------------------------------------
 # Slurm Script Section Generation
 # -----------------------------------------------------------------------------
+
 
 def generate_slurm_header(config):
     header = f"""#!/bin/bash -l
@@ -567,6 +584,7 @@ update_status pae2constraints Success
 """
     return section
 
+
 def generate_pdb2crd_input_files_af(config):
     section = f"""
 # --------------------------------------------------------------------------------------
@@ -625,10 +643,11 @@ update_status pdb2crd Success
 """
     return section
 
+
 def generate_pdb2crd_input_files(config, params):
     """Generate section to convert PDB to CHARMM PSF/CRD format for regular PDB/Auto jobs."""
     pdb_file = params.get("pdb_file", "input.pdb")
-    
+
     section = f"""
 # --------------------------------------------------------------------------------------
 # Convert PDB to CHARMM PSF/CRD
@@ -701,6 +720,7 @@ update_status pdb2crd Success
 """
     return section
 
+
 def generate_meld_all_chains_section(config):
     section = f"""
 # --------------------------------------------------------------------------------------
@@ -771,7 +791,7 @@ def generate_initial_foxs_analysis_section(config, params):
     max_c1 = 1.05
     min_c2 = -0.50
     max_c2 = 2.00
-    minimized_pdb = os.path.join("charmm","minimize", "minimization_output.pdb")
+    minimized_pdb = os.path.join("charmm", "minimize", "minimization_output.pdb")
     saxs_data_in_container = os.path.join(".", params.get("data_file"))
 
     # build foxs args as a list, each argument separate
@@ -849,19 +869,23 @@ def generate_md_section(config, params):
     if not rg_values:
         print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
         sys.exit(1)
-    
+
     num_rg_values = len(rg_values)
-    print(f"MD section: {config['num_cores']} cores, {num_rg_values} Rg values: {rg_values}")
-    
+    print(
+        f"MD section: {config['num_cores']} cores, {num_rg_values} Rg values: {rg_values}"
+    )
+
     # More conservative core allocation - leave some headroom for Slurm
     available_cores = config["num_cores"] - 4  # Reserve 4 cores for system overhead
     cores_per_task = max(1, int(available_cores / num_rg_values))
-    
+
     # Cap at reasonable maximum to avoid memory issues
     max_cores_per_task = 32
     cores_per_task = min(cores_per_task, max_cores_per_task)
-    
-    print(f"Allocating {cores_per_task} cores per MD task ({cores_per_task * num_rg_values} total)")
+
+    print(
+        f"Allocating {cores_per_task} cores per MD task ({cores_per_task * num_rg_values} total)"
+    )
 
     section = f"""
 # --------------------------------------------------------------------------------------
@@ -880,7 +904,7 @@ else
     # Array to hold all background PIDs
     md_pids=()
 """
-    
+
     # Launch all MD jobs in background
     for i, rg_value in enumerate(rg_values):
         section += f"    echo 'Starting MD for Rg value {rg_value} (index {i}) with {cores_per_task} cores'\n"
@@ -927,40 +951,43 @@ fi
 def template_dcd2pdb_input_files(config, params):
     """Create CHARMM DCD2PDB input files for each Rg value and run combination from template."""
     print("Preparing CHARMM DCD2PDB input files")
-    
+
     # Extract Rg values from nested params structure
     rg_values = params.get("charmm_parameters", {}).get("md", {}).get("rgyr", [])
     if not rg_values:
         print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
         sys.exit(1)
-    
+
     # Get additional MD parameters to calculate conf_sample
     charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
     nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
     conf_sample = int(nsteps / 100000)
-    
+
     workdir = config["workdir"]
     template_file = os.path.join(workdir, "dcd2pdb.tmpl")
-    
+
     # Check if template file exists
     if not os.path.exists(template_file):
         print(f"Error: Template file {template_file} not found", file=sys.stderr)
         sys.exit(1)
-    
+
     # Define required parameters and validate they exist
     required_params = {
         "{{charmm_topo_dir}}": "charmm_topo_dir",
         "{{in_psf_file}}": "in_psf_file",
     }
-    
+
     # Validate required parameters exist
     for placeholder, param_key in required_params.items():
         if param_key not in params or not params[param_key]:
-            print(f"Error: Required parameter '{param_key}' not found in params.json or is empty", file=sys.stderr)
+            print(
+                f"Error: Required parameter '{param_key}' not found in params.json or is empty",
+                file=sys.stderr,
+            )
             sys.exit(1)
-    
+
     dcd2pdb_inp_files = []
-    
+
     # Create main foxs directory
     foxs_dir = os.path.join(workdir, "foxs")
     os.makedirs(foxs_dir, exist_ok=True)
@@ -968,7 +995,7 @@ def template_dcd2pdb_input_files(config, params):
     # Create foxs_rg file
     foxs_rg = "foxs_rg.out"
     foxs_rg_path = os.path.join(workdir, foxs_rg)
-    
+
     # Create/touch the foxs_rg file (CHARMM appends to this file)
     Path(foxs_rg_path).touch()
 
@@ -979,24 +1006,29 @@ def template_dcd2pdb_input_files(config, params):
             inp_filename = f"dcd2pdb_rg{rg_value}_run{run}.inp"
             inp_basename = inp_filename.replace(".inp", "")  # Remove .inp extension
             output_path = os.path.join(workdir, inp_filename)
-            
+
             # Generate dynamic values based on bash logic
             foxs_run_dir = f"rg{rg_value}_run{run}"
             in_dcd = f"dynamics_rg{rg_value}_run{run}.dcd"
-            
-            print(f"Creating CHARMM DCD2PDB input file: {inp_filename} for Rg={rg_value}, run={run}")
-            
+
+            print(
+                f"Creating CHARMM DCD2PDB input file: {inp_filename} for Rg={rg_value}, run={run}"
+            )
+
             # Create FoXS output directory for this run
             foxs_output_dir = os.path.join(foxs_dir, foxs_run_dir)
             os.makedirs(foxs_output_dir, exist_ok=True)
-            
+
             # Copy template to new input file
             try:
                 shutil.copy2(template_file, output_path)
             except (OSError, IOError) as e:
-                print(f"Failed to copy {template_file} to {output_path}: {e}", file=sys.stderr)
+                print(
+                    f"Failed to copy {template_file} to {output_path}: {e}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
-            
+
             # Read the template content
             try:
                 with open(output_path, "r") as f:
@@ -1004,7 +1036,7 @@ def template_dcd2pdb_input_files(config, params):
             except (OSError, IOError) as e:
                 print(f"Failed to read {output_path}: {e}", file=sys.stderr)
                 sys.exit(1)
-            
+
             # Prepare all replacements including dynamic values from bash template_dcd2pdb_file
             replacements = {
                 "{{charmm_topo_dir}}": str(params["charmm_topo_dir"]),
@@ -1015,11 +1047,11 @@ def template_dcd2pdb_input_files(config, params):
                 "{{foxs_rg}}": foxs_rg,
                 "{{rg}}": str(rg_value),
             }
-            
+
             # Perform all replacements
             for placeholder, value in replacements.items():
                 content = content.replace(placeholder, value)
-            
+
             # Write the processed content back
             try:
                 with open(output_path, "w") as f:
@@ -1027,10 +1059,10 @@ def template_dcd2pdb_input_files(config, params):
             except (OSError, IOError) as e:
                 print(f"Failed to write {output_path}: {e}", file=sys.stderr)
                 sys.exit(1)
-            
+
             # Add to list of generated files
             dcd2pdb_inp_files.append(inp_filename)
-    
+
     print(f"Done preparing {len(dcd2pdb_inp_files)} CHARMM DCD2PDB input files")
     print(f"Created FoXS output directories in {foxs_dir}")
     return dcd2pdb_inp_files
@@ -1048,7 +1080,7 @@ def generate_dcd2pdb_section(config, params):
     charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
     nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
     conf_sample = int(nsteps / 100000)
-    
+
     # Total number of dcd2pdb input files = rg_values * conf_sample
     total_jobs = len(rg_values) * conf_sample
 
@@ -1056,7 +1088,9 @@ def generate_dcd2pdb_section(config, params):
     available_cores = config["num_cores"] - 4  # Reserve 4 cores for system overhead
     cores_per_job = max(1, int(available_cores / total_jobs))
 
-    print(f"DCD2PDB section: {total_jobs} jobs ({len(rg_values)} Rg values × {conf_sample} runs each)")
+    print(
+        f"DCD2PDB section: {total_jobs} jobs ({len(rg_values)} Rg values × {conf_sample} runs each)"
+    )
     print(f"Allocating {cores_per_job} cores per DCD2PDB job")
 
     section = f"""
@@ -1106,9 +1140,10 @@ update_status dcd2pdb Success
 """
     return section
 
+
 def generate_pdb_remediate_section(config):
     """Generate section to remediate PDB files by copying segid last character to chainid."""
-    section = f"""
+    section = """
 # --------------------------------------------------------------------------------------
 # Remediate PDB files (copy segid last char to chainid for ATOM/HETATM records)
 update_status pdb_remediate Running
@@ -1135,17 +1170,17 @@ while IFS= read -r pdb_file; do
         echo "Processing: $pdb_file"
         
         # Create a temporary file for modifications
-        temp_file="${{pdb_file}}.tmp"
+        temp_file="${pdb_file}.tmp"
         
         # Process the file line by line using awk for better performance
-        awk '{{
-            if (/^(ATOM|HETATM)/) {{
+        awk '{
+            if (/^(ATOM|HETATM)/) {
                 # Extract segid (columns 73-76)
                 segid = substr($0, 73, 4)
                 # Remove trailing spaces from segid
                 gsub(/[[:space:]]*$/, "", segid)
                 
-                if (length(segid) > 0) {{
+                if (length(segid) > 0) {
                     # Get last character of segid
                     last_char = substr(segid, length(segid), 1)
                     
@@ -1153,14 +1188,14 @@ while IFS= read -r pdb_file; do
                     # Construct new line: chars 1-21 + last_char + chars 23-end
                     new_line = substr($0, 1, 21) last_char substr($0, 23)
                     print new_line
-                }} else {{
+                } else {
                     print $0
-                }}
-            }} else {{
+                }
+            } else {
                 # Non-ATOM/HETATM line, keep as is
                 print $0
-            }}
-        }}' "$pdb_file" > "$temp_file"
+            }
+        }' "$pdb_file" > "$temp_file"
         
         # Replace original file with modified version
         mv "$temp_file" "$pdb_file"
@@ -1173,6 +1208,7 @@ echo "Successfully processed $processed PDB files"
 update_status pdb_remediate Success
 """
     return section
+
 
 def generate_foxs_section(config):
     section = f"""
@@ -1307,7 +1343,7 @@ def main():
     template_dcd2pdb_input_files(config, params)
 
     # Step 4: Create status file
-    create_status_file(config["workdir"])
+    create_status_file(config["workdir"], params)
 
     # Step 5: Generate Slurm script sections
     slurm_sections = []

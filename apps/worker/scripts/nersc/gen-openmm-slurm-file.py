@@ -9,9 +9,9 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Argument and Environment Setup
-# -----------------------------
+# -----------------------------------------------------------------------------
 
 
 def setup_environment(uuid):
@@ -71,9 +71,9 @@ def setup_environment(uuid):
     }
 
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Input Preparation
-# -----------------------------
+# -----------------------------------------------------------------------------
 
 
 def prepare_input(workdir, upload_dir):
@@ -106,9 +106,9 @@ def prepare_input(workdir, upload_dir):
     return params
 
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Prepare the OpenMM config yaml
-# -----------------------------
+# -----------------------------------------------------------------------------
 
 
 def prepare_openmm_config(config, params):
@@ -274,37 +274,40 @@ def prepare_openmm_config(config, params):
     return config_yaml_path
 
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Status File Creation
-# -----------------------------
+# -----------------------------------------------------------------------------
 
 
-def create_status_file(workdir):
+def create_status_file(workdir, params):
     status_file = os.path.join(workdir, "status.txt")
+
+    # Base steps that are always included
     steps = [
-        "alphafold",
-        "pae",
-        "pae2constraints",
-        "consmerge",
-        "autorg",
         "minimize",
         "initfoxs",
         "heat",
         "md",
-        "dcd2pdb",
         "foxs",
         "multifoxs",
         "analysis",
-        "copy2cfs",
     ]
+
+    # Add pipeline-specific steps at the beginning
+    pipeline_type = params.get("__t")
+    if pipeline_type == "BilboMdAlphaFold":
+        steps = ["alphafold", "pae2constraints", "consmerge"] + steps
+    elif pipeline_type == "BilboMdAuto":
+        steps = ["pae2constraints", "consmerge"] + steps
+
     with open(status_file, "w") as f:
         for step in steps:
             f.write(f"{step}: Waiting\n")
 
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Slurm Script Section Generation
-# -----------------------------
+# -----------------------------------------------------------------------------
 
 
 def generate_slurm_header(config):
@@ -838,7 +841,7 @@ def main():
     params = prepare_input(config["workdir"], config["upload_dir"])
 
     # Step 3: Create status file
-    create_status_file(config["workdir"])
+    create_status_file(config["workdir"], params)
 
     # Step 4: Prepare OpenMM config file
     prepare_openmm_config(config, params)
