@@ -41,14 +41,22 @@ const prepareResults = async (
 
     {
       const baseDataName = DBjob.data_file.split('.')[0]
-      const charmmPdb = path.join(jobDir, 'minimization_output.pdb')
       const openmmPdb = path.join(jobDir, 'minimize', 'minimized.pdb')
+      const charmmNewPdb = path.join(
+        jobDir,
+        'charmm',
+        'minimize',
+        'minimization_output.pdb'
+      )
+      const charmmOldPdb = path.join(jobDir, 'minimization_output.pdb')
 
       const pdbSource = (await fs.pathExists(openmmPdb))
         ? openmmPdb
-        : (await fs.pathExists(charmmPdb))
-          ? charmmPdb
-          : null
+        : (await fs.pathExists(charmmNewPdb))
+          ? charmmNewPdb
+          : (await fs.pathExists(charmmOldPdb))
+            ? charmmOldPdb
+            : null
 
       if (pdbSource) {
         await copyFiles({
@@ -64,21 +72,29 @@ const prepareResults = async (
       }
 
       // --- Copy the DAT file for the minimized PDB (supports both layouts)
-      const charmmDat = path.join(
-        jobDir,
-        `minimization_output_${baseDataName}.dat`
-      )
       const openmmDat = path.join(
         jobDir,
         'minimize',
         `minimized_${baseDataName}.dat`
       )
+      const charmmNewDat = path.join(
+        jobDir,
+        'charmm',
+        'minimize',
+        `minimization_output_${baseDataName}.dat`
+      )
+      const charmmOldDat = path.join(
+        jobDir,
+        `minimization_output_${baseDataName}.dat`
+      )
 
       const datSource = (await fs.pathExists(openmmDat))
         ? openmmDat
-        : (await fs.pathExists(charmmDat))
-          ? charmmDat
-          : null
+        : (await fs.pathExists(charmmNewDat))
+          ? charmmNewDat
+          : (await fs.pathExists(charmmOldDat))
+            ? charmmOldDat
+            : null
 
       if (datSource) {
         await copyFiles({
