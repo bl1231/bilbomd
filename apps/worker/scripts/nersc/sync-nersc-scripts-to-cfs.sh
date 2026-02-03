@@ -13,9 +13,8 @@ echo "       to:   ${DEST}"
 
 # Define the specific files to copy
 FILES_TO_COPY=(
-  "nersc-test.sh"
   "copy-back-to-cfs.sh"
-  "gen-bilbomd-slurm-file.sh"
+  "gen-charmm-slurm-file.py"
   "gen-openmm-slurm-file.py"
 )
 

@@ -37,7 +37,7 @@ def setup_environment(uuid):
 
     # Docker images
     openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.11"
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.27"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.28"
     af_worker = "bilbomd/bilbomd-colabfold:0.0.9"
 
     # Number of cores
@@ -365,7 +365,7 @@ check_exit_code() {
 
 
 def generate_alphafold_section(config):
-    section = f"""
+    section = """
 # --------------------------------------------------------------------------------------
 # Run ColabFoldLocal (i.e AlphaFold)
 update_status alphafold Running
@@ -388,29 +388,102 @@ update_status alphafold Success
     return section
 
 
-def generate_pae2const_prep_section(config):
-    section = f"""
+def select_best_alphafold_model(config):
+    section = """
 # --------------------------------------------------------------------------------------
 # Prepare input files for PAE2Const from AlphaFold output
 echo "Selecting best AlphaFold model..."
-cp $WORKDIR/alphafold/*_relaxed_rank_001_*.pdb $WORKDIR/af-rank1.pdb
-echo "Selecting PAE matrix file for best AlphaFold model..."
-cp $WORKDIR/alphafold/complex_scores_rank_001_*.json $WORKDIR/af-pae.json
-echo "AlphaFold model and PAE file copied to $WORKDIR"
+
+# Find the best ranked relaxed PDB model (rank_001)
+echo "Looking for best AlphaFold PDB model in $WORKDIR/alphafold/"
+pdb_files=($(find $WORKDIR/alphafold -name "*_relaxed_rank_001_*.pdb" -type f))
+if [ ${#pdb_files[@]} -eq 0 ]; then
+    echo "ERROR: No rank_001 relaxed PDB files found in alphafold output directory"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+elif [ ${#pdb_files[@]} -gt 1 ]; then
+    echo "WARNING: Multiple rank_001 PDB files found, using first one:"
+    for pdb in "${pdb_files[@]}"; do
+        echo "  - $(basename "$pdb")"
+    done
+    echo "Selected: $(basename "${pdb_files[0]}")"
+else
+    echo "Found single rank_001 PDB file: $(basename "${pdb_files[0]}")"
+fi
+cp "${pdb_files[0]}" $WORKDIR/af-rank1.pdb
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to copy PDB file"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+# Find the corresponding PAE scores file
+echo "Looking for corresponding PAE scores file..."
+pae_files=($(find $WORKDIR/alphafold -name "*_scores_rank_001_*.json" -type f))
+if [ ${#pae_files[@]} -eq 0 ]; then
+    echo "ERROR: No rank_001 PAE scores files found in alphafold output directory"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+elif [ ${#pae_files[@]} -gt 1 ]; then
+    echo "WARNING: Multiple rank_001 PAE files found, using first one:"
+    for pae in "${pae_files[@]}"; do
+        echo "  - $(basename "$pae")"
+    done
+    echo "Selected: $(basename "${pae_files[0]}")"
+else
+    echo "Found single rank_001 PAE file: $(basename "${pae_files[0]}")"
+fi
+cp "${pae_files[0]}" $WORKDIR/af-pae.json
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to copy PAE file"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+# Verify the copied files exist and are non-empty
+if [ ! -s $WORKDIR/af-rank1.pdb ]; then
+    echo "ERROR: af-rank1.pdb is missing or empty"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+if [ ! -s $WORKDIR/af-pae.json ]; then
+    echo "ERROR: af-pae.json is missing or empty"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
+echo "Successfully selected and copied AlphaFold model and PAE files:"
+echo "  PDB: $(basename "${pdb_files[0]}") -> af-rank1.pdb"
+echo "  PAE: $(basename "${pae_files[0]}") -> af-pae.json"
+
+# Update the OpenMM config file to use the AlphaFold model
+echo "Updating openmm_config.yaml to use af-rank1.pdb..."
+if [ -f $WORKDIR/openmm_config.yaml ]; then
+    # Use sed to update the pdb_file line in the YAML
+    sed -i 's/pdb_file: .*/pdb_file: af-rank1.pdb/' $WORKDIR/openmm_config.yaml
+    if [ $? -eq 0 ]; then
+        echo "Successfully updated OpenMM config to use af-rank1.pdb"
+    else
+        echo "ERROR: Failed to update openmm_config.yaml"
+        update_status alphafold Error
+        scancel $SLURM_JOB_ID
+        exit 1
+    fi
+else
+    echo "ERROR: openmm_config.yaml not found in $WORKDIR"
+    update_status alphafold Error
+    scancel $SLURM_JOB_ID
+    exit 1
+fi
+
 """
-    # Update the OpenMM config file to use the AlphaFold model
-    config_yaml_path = os.path.join(config["workdir"], "openmm_config.yaml")
-    if os.path.exists(config_yaml_path):
-        with open(config_yaml_path, "r") as f:
-            openmm_config = yaml.safe_load(f)
-        
-        # Update pdb_file to use the AlphaFold model
-        openmm_config["input"]["pdb_file"] = "af-rank1.pdb"
-        
-        with open(config_yaml_path, "w") as f:
-            yaml.dump(openmm_config, f)
-        
-        print(f"Updated OpenMM config to use af-rank1.pdb")
     return section
 
 
@@ -776,7 +849,8 @@ def main():
     slurm_sections.append(add_helper_functions())
     if params.get("__t") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
-        slurm_sections.append(generate_pae2const_prep_section(config))
+        # slurm_sections.append(generate_pae2const_prep_section(config))
+        slurm_sections.append(select_best_alphafold_model(config))
         slurm_sections.append(generate_pae2const_section(config, params))
     if params.get("__t") == "BilboMdAuto":
         slurm_sections.append(generate_pae2const_section(config, params))
