@@ -147,7 +147,7 @@ const generateDCD2PDBInpFile = async (
   rg: number,
   run: number
 ) => {
-  params.in_dcd = `dynamics_rg${rg}_run${run}.dcd`
+  params.in_dcd = path.join('charmm', 'md', `dynamics_rg${rg}_run${run}.dcd`)
   await generateInputFile(params)
 }
 

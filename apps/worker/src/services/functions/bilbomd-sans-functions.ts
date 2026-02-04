@@ -345,6 +345,7 @@ const extractPDBFilesFromDCD = async (
         await makeDir(pepsiSANSRunDir)
 
         // Move DCD2PDBParams definition inside the loop to ensure unique scope per task
+        const dcdFilePath = path.join('charmm', 'md', `${runLabel}.dcd`)
         const DCD2PDBParams: CharmmDCD2PDBParams = {
           out_dir: outputDir,
           charmm_template: 'dcd2pdb-sans',
@@ -355,7 +356,7 @@ const extractPDBFilesFromDCD = async (
           in_crd_file: '',
           inp_basename: `dcd2pdb-sans_${runLabel}`,
           pepsisans_rg: 'pepsisans_rg.out',
-          in_dcd: '',
+          in_dcd: dcdFilePath,
           run: runLabel
         }
 
