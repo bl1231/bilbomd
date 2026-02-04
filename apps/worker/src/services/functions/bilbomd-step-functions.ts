@@ -772,8 +772,8 @@ const runMinimize = async (
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: 'minimize.inp',
     charmm_out_file: 'minimize.out',
-    in_psf_file: path.join(outputDir, DBjob.psf_file ?? ''),
-    in_crd_file: path.join(outputDir, DBjob.crd_file ?? '')
+    in_psf_file: DBjob.psf_file ?? '',
+    in_crd_file: DBjob.crd_file ?? ''
   }
   try {
     let status: IStepStatus = {
@@ -814,14 +814,9 @@ const runHeat = async (
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: 'heat.inp',
     charmm_out_file: 'heat.out',
-    in_psf_file: path.join(outputDir, DBjob.psf_file ?? ''),
-    in_crd_file: path.join(
-      outputDir,
-      'charmm',
-      'minimize',
-      'minimization_output.crd'
-    ),
-    constinp: path.join(outputDir, DBjob.const_inp_file ?? '')
+    in_psf_file: DBjob.psf_file ?? '',
+    in_crd_file: 'minimization_output.crd',
+    constinp: DBjob.const_inp_file ?? ''
   }
   try {
     let status: IStepStatus = {
@@ -862,9 +857,9 @@ const runMolecularDynamics = async (
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: '',
     charmm_out_file: '',
-    in_psf_file: path.join(outputDir, DBjob.psf_file ?? ''),
-    in_crd_file: path.join(outputDir, 'charmm', 'heat', 'heat_output.crd'),
-    constinp: path.join(outputDir, DBjob.const_inp_file ?? ''),
+    in_psf_file: DBjob.psf_file ?? '',
+    in_crd_file: '',
+    constinp: DBjob.const_inp_file ?? '',
     rg_min: DBjob.rg_min ?? 20,
     rg_max: DBjob.rg_max ?? 60,
     conf_sample: DBjob.conformational_sampling,
