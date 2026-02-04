@@ -34,7 +34,7 @@ jobs:
       schema: ${{ steps.filter.outputs.schema }}
       md-utils: ${{ steps.filter.outputs.md-utils }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Paths filter
         id: filter
@@ -97,12 +97,12 @@ jobs:
     runs-on: [ubuntu-22.04]
     needs: [changes]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -123,7 +123,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -131,7 +131,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .turbo
@@ -167,7 +167,7 @@ jobs:
       group: backend-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -247,7 +247,7 @@ jobs:
       group: ui-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -326,7 +326,7 @@ jobs:
       group: worker-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -405,7 +405,7 @@ jobs:
       group: scoper-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -478,13 +478,13 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-22.04]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       # 1) Setup Node from .nvmrc (NO pnpm cache here)
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -506,7 +506,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -514,7 +514,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .turbo
@@ -531,7 +531,7 @@ jobs:
 
       # Only cache TS incremental build info for schema package (keep pnpm store local)
       - name: Cache TS incremental (schema)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             packages/mongodb-schema/tsconfig.tsbuildinfo
@@ -558,13 +558,13 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-22.04]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       # 1) Setup Node from .nvmrc (NO pnpm cache here)
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -586,7 +586,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -594,7 +594,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .turbo
@@ -611,7 +611,7 @@ jobs:
 
       # Only cache TS incremental build info for md-utils package (keep pnpm store local)
       - name: Cache TS incremental (md-utils)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             packages/md-utils/tsconfig.tsbuildinfo
@@ -644,12 +644,12 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-22.04]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -670,7 +670,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -678,7 +678,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .turbo
@@ -710,12 +710,12 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-22.04]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -736,7 +736,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -744,7 +744,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .turbo
@@ -777,12 +777,12 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-22.04]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -803,7 +803,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -831,12 +831,12 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-22.04]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -857,7 +857,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -903,12 +903,12 @@ jobs:
       REFRESH_TOKEN_SECRET: test-refresh-secret
       BILBOMD_API_TOKEN: test-external-api-token
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -929,7 +929,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
