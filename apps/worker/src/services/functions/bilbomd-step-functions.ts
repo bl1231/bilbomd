@@ -761,14 +761,19 @@ const runMinimize = async (
     | IBilboMDSANSJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
+  const charmmMinimizeDir = path.join(outputDir, 'charmm', 'minimize')
+
+  // Create the charmm/minimize directory
+  await makeDir(charmmMinimizeDir)
+
   const params: CharmmParams = {
-    out_dir: outputDir,
+    out_dir: charmmMinimizeDir,
     charmm_template: 'minimize',
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: 'minimize.inp',
     charmm_out_file: 'minimize.out',
-    in_psf_file: DBjob.psf_file ?? '',
-    in_crd_file: DBjob.crd_file ?? ''
+    in_psf_file: path.join(outputDir, DBjob.psf_file ?? ''),
+    in_crd_file: path.join(outputDir, DBjob.crd_file ?? '')
   }
   try {
     let status: IStepStatus = {
@@ -798,15 +803,25 @@ const runHeat = async (
     | IBilboMDSANSJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
+  const charmmHeatDir = path.join(outputDir, 'charmm', 'heat')
+
+  // Create the charmm/heat directory
+  await makeDir(charmmHeatDir)
+
   const params: CharmmHeatParams = {
-    out_dir: outputDir,
+    out_dir: charmmHeatDir,
     charmm_template: 'heat',
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: 'heat.inp',
     charmm_out_file: 'heat.out',
-    in_psf_file: DBjob.psf_file ?? '',
-    in_crd_file: 'minimization_output.crd',
-    constinp: DBjob.const_inp_file ?? ''
+    in_psf_file: path.join(outputDir, DBjob.psf_file ?? ''),
+    in_crd_file: path.join(
+      outputDir,
+      'charmm',
+      'minimize',
+      'minimization_output.crd'
+    ),
+    constinp: path.join(outputDir, DBjob.const_inp_file ?? '')
   }
   try {
     let status: IStepStatus = {
@@ -836,15 +851,20 @@ const runMolecularDynamics = async (
     | IBilboMDSANSJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
+  const charmmMdDir = path.join(outputDir, 'charmm', 'md')
+
+  // Create the charmm/md directory
+  await makeDir(charmmMdDir)
+
   const params: CharmmMDParams = {
-    out_dir: outputDir,
+    out_dir: charmmMdDir,
     charmm_template: 'dynamics',
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: '',
     charmm_out_file: '',
-    in_psf_file: DBjob.psf_file ?? '',
-    in_crd_file: '',
-    constinp: DBjob.const_inp_file ?? '',
+    in_psf_file: path.join(outputDir, DBjob.psf_file ?? ''),
+    in_crd_file: path.join(outputDir, 'charmm', 'heat', 'heat_output.crd'),
+    constinp: path.join(outputDir, DBjob.const_inp_file ?? ''),
     rg_min: DBjob.rg_min ?? 20,
     rg_max: DBjob.rg_max ?? 60,
     conf_sample: DBjob.conformational_sampling,
