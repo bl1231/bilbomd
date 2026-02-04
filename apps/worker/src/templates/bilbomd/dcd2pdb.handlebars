@@ -14,7 +14,7 @@ read psf card unit 12
 close unit 12
 
 set nframe = 0
-open unit 50 read unform name {{in_dcd}}
+open unit 50 read unform name charmm/md/{{in_dcd}}
 trajectory query unit 50
 calc nframe = @nframe + ?nfile ! NFILE is the number of frames in traj file.
 calc begin = ?start ! START is Step number for the first frame
