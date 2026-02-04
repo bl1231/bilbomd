@@ -268,8 +268,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       mongoose:
-        specifier: ^9.1.5
-        version: 9.1.5
+        specifier: ^9.1.6
+        version: 9.1.6
       mongoose-to-swagger:
         specifier: ^1.5.1
         version: 1.5.1
@@ -280,11 +280,11 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
       nodemailer:
-        specifier: ^7.0.13
-        version: 7.0.13
+        specifier: ^8.0.0
+        version: 8.0.0
       nodemailer-express-handlebars:
         specifier: ^7.0.0
-        version: 7.0.0(express-handlebars@8.0.3)(nodemailer@7.0.13)
+        version: 7.0.0(express-handlebars@8.0.3)(nodemailer@8.0.0)
       openid-client:
         specifier: ~6.8.1
         version: 6.8.1
@@ -337,14 +337,14 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       mongoose:
-        specifier: ^9.1.5
-        version: 9.1.5
+        specifier: ^9.1.6
+        version: 9.1.6
       nodemailer:
-        specifier: ^7.0.13
-        version: 7.0.13
+        specifier: ^8.0.0
+        version: 8.0.0
       nodemailer-express-handlebars:
         specifier: ^7.0.0
-        version: 7.0.0(express-handlebars@8.0.3)(nodemailer@7.0.13)
+        version: 7.0.0(express-handlebars@8.0.3)(nodemailer@8.0.0)
       nodemon:
         specifier: ^3.1.11
         version: 3.1.11
@@ -515,14 +515,14 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       mongoose:
-        specifier: ^9.1.5
-        version: 9.1.5
+        specifier: ^9.1.6
+        version: 9.1.6
       nodemailer:
-        specifier: ^7.0.13
-        version: 7.0.13
+        specifier: ^8.0.0
+        version: 8.0.0
       nodemailer-express-handlebars:
         specifier: ^7.0.0
-        version: 7.0.0(express-handlebars@8.0.3)(nodemailer@7.0.13)
+        version: 7.0.0(express-handlebars@8.0.3)(nodemailer@8.0.0)
       p-limit:
         specifier: ^7.3.0
         version: 7.3.0
@@ -606,8 +606,8 @@ importers:
   packages/mongodb-schema:
     dependencies:
       mongoose:
-        specifier: ^9.1.5
-        version: 9.1.5
+        specifier: ^9.1.6
+        version: 9.1.6
 
 packages:
 
@@ -5104,8 +5104,8 @@ packages:
   mongoose-to-swagger@1.5.1:
     resolution: {integrity: sha512-gwEr0NhA+DyGswtgypIoV/iR0RGX4jY/SE9zmYYk6qpG2C83urcQfYJWzm7PsDPo3snMm8XjBYiAtLyYAqirXA==}
 
-  mongoose@9.1.5:
-    resolution: {integrity: sha512-N6gypEO+wLmZp8kCYNQmrEWxVMT0KhyHvVttBZoKA/1ngY7aUsBjqHzCPtDgz+i8JAnqMOiEKmuJIDEQu1b9Dw==}
+  mongoose@9.1.6:
+    resolution: {integrity: sha512-ZrtgRsJKtW3od36TVXtAnrNHOO3rqhsqfVut6IzyWyJeLLeLTqW66qej/0qB37GZd5jL06nHfAceTikkfnSqbA==}
     engines: {node: '>=20.19.0'}
 
   morgan@1.10.1:
@@ -5226,8 +5226,8 @@ packages:
       express-handlebars: '>= 8.0.0'
       nodemailer: '>= 6.0.0'
 
-  nodemailer@7.0.13:
-    resolution: {integrity: sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==}
+  nodemailer@8.0.0:
+    resolution: {integrity: sha512-xvVJf/f0bzmNpnRIbhCp/IKxaHgJ6QynvUbLXzzMRPG3LDQr5oXkYuw4uDFyFYs8cge8agwwrJAXZsd4hhMquw==}
     engines: {node: '>=6.0.0'}
 
   nodemon@3.1.11:
@@ -12348,7 +12348,7 @@ snapshots:
 
   mongoose-to-swagger@1.5.1: {}
 
-  mongoose@9.1.5:
+  mongoose@9.1.6:
     dependencies:
       kareem: 3.0.0
       mongodb: 7.0.0
@@ -12476,12 +12476,12 @@ snapshots:
 
   node-releases@2.0.27: {}
 
-  nodemailer-express-handlebars@7.0.0(express-handlebars@8.0.3)(nodemailer@7.0.13):
+  nodemailer-express-handlebars@7.0.0(express-handlebars@8.0.3)(nodemailer@8.0.0):
     dependencies:
       express-handlebars: 8.0.3
-      nodemailer: 7.0.13
+      nodemailer: 8.0.0
 
-  nodemailer@7.0.13: {}
+  nodemailer@8.0.0: {}
 
   nodemon@3.1.11:
     dependencies:
