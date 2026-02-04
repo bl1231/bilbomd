@@ -233,7 +233,8 @@ const prepareFoXSInputs = async (
 ): Promise<string[]> => {
   const jobDir = path.join(config.uploadDir, DBjob.uuid)
   const foxsDir = path.join(jobDir, 'foxs')
-  const mdDir = path.join(jobDir, 'md')
+  const mdDir = path.join(jobDir, 'md') // OpenMM structure
+  const charmmMdDir = path.join(jobDir, 'charmm', 'md') // CHARMM structure
 
   const listDirs = (base: string): string[] => {
     if (!fs.existsSync(base)) return []
@@ -264,15 +265,24 @@ const prepareFoXSInputs = async (
     return foxsSubDirs
   }
 
-  // 2) If none found, look for OpenMM md/rg_* directories and mirror them into foxs via symlinks
-  const mdSubDirs = listDirs(mdDir).filter(hasPdbs)
+  // 2) If none found, look for OpenMM md/rg_* directories OR CHARMM charmm/md/rg_* directories and mirror them into foxs via symlinks
+  let mdSubDirs = listDirs(mdDir).filter(hasPdbs) // OpenMM structure
+  let sourceMdDir = mdDir
+
+  // If no OpenMM directories found, try CHARMM structure
   if (mdSubDirs.length === 0) {
-    logger.warn('No PDB files found in either foxs/ or md/ directories')
+    mdSubDirs = listDirs(charmmMdDir).filter(hasPdbs) // CHARMM structure
+    sourceMdDir = charmmMdDir
+  }
+
+  if (mdSubDirs.length === 0) {
+    logger.warn('No PDB files found in foxs/, md/, or charmm/md/ directories')
     return []
   }
 
+  const mdStructureType = sourceMdDir === mdDir ? 'OpenMM' : 'CHARMM'
   logger.info(
-    `Found ${mdSubDirs.length} MD directories with PDB files, creating FoXS mirrors`
+    `Found ${mdSubDirs.length} MD directories with PDB files in ${mdStructureType} structure (${sourceMdDir}), creating FoXS mirrors`
   )
 
   // Ensure foxs directory exists
