@@ -174,7 +174,11 @@ const cleanupJob = async (
     await DBjob.save()
 
     // Skip email for anonymous jobs
-    if (!DBjob.user) {
+    if (
+      !DBjob.user ||
+      !DBjob.user._id ||
+      Object.keys(DBjob.user).length === 0
+    ) {
       logger.info(`Skipping email for anonymous job: ${DBjob.uuid}`)
       return
     }

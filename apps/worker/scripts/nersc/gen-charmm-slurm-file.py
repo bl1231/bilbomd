@@ -373,9 +373,9 @@ def create_status_file(workdir, params):
     # Add pipeline-specific steps at the beginning
     pipeline_type = params.get("__t")
     if pipeline_type == "BilboMdAlphaFold":
-        steps = ["alphafold", "pae2constraints", "pdb2crd", "meld"] + steps
+        steps = ["alphafold", "pae", "pae2constraints", "pdb2crd", "meld"] + steps
     elif pipeline_type == "BilboMdAuto":
-        steps = ["pae2constraints", "pdb2crd", "meld"] + steps
+        steps = ["pae","pae2constraints", "pdb2crd", "meld"] + steps
     elif pipeline_type == "BilboMdPDB":
         steps = ["pdb2crd", "meld"] + steps
 
@@ -564,6 +564,7 @@ def generate_pae2const_section(config, params):
 # --------------------------------------------------------------------------------------
 # Generate CHARMM const.inp from PAE/PDB
 update_status pae2constraints Running
+update_status pae Running
 echo "Generating const.inp from PAE..."
 srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
@@ -581,6 +582,7 @@ srun --ntasks=1 \\
 PAE2CONS_EXIT=$?
 check_exit_code $PAE2CONS_EXIT pae2constraints
 update_status pae2constraints Success
+update_status pae Success
 """
     return section
 

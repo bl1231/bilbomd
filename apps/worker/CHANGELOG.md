@@ -1,5 +1,12 @@
 # @bilbomd/worker
 
+## 2.3.2
+
+### Patch Changes
+
+- 55965cf: Fix error when trying to send email for anonymous jobs
+  Add extra redundent `pae` step for slurm-generated `status.txt` files
+
 ## 2.3.1
 
 ### Patch Changes
