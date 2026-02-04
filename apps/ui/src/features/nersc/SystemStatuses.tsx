@@ -33,17 +33,21 @@ const NerscSystemStatuses = () => {
     'spin',
     'ldap',
     'iris',
-    'community_filesystem'
+    'community_filesystem',
+    'container_runtimes'
   ]
   if (isSuccess) {
-    // console.log('nerscStatuses:', nerscStatuses)
+    console.log('nerscStatuses:', nerscStatuses)
     content = (
       <Box>
         <Grid sx={{ mx: 1, display: 'flex', alignItems: 'center' }}>
           {nerscStatuses
             ?.filter((system) => systemsOfInterest.includes(system.name))
             .map((system) => (
-              <NerscStatusChip key={system.name} system={system} />
+              <NerscStatusChip
+                key={system.name}
+                system={system}
+              />
             ))}
           <Typography sx={{ ml: 2 }}>
             (mouseover the status chips for details)
