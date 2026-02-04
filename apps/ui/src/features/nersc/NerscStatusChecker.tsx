@@ -29,7 +29,7 @@ const NerscStatusChecker: React.FC<NerscStatusCheckerProps> = ({
   const systemStatus = nerscStatIsSuccess
     ? nerscStat.find((system) => system.name === systemName)
     : null
-
+  // console.log('systemStatus:', systemStatus)
   // Determine if the system is unavailable
   const isUnavailable = systemStatus?.status === 'unavailable'
 
@@ -45,14 +45,14 @@ const NerscStatusChecker: React.FC<NerscStatusCheckerProps> = ({
       )}
 
       {isUnavailable && (
-        <Alert severity='warning'>
+        <Alert severity="warning">
           {systemName} is currently unavailable:{' '}
           <b>{systemStatus.description}</b>
         </Alert>
       )}
 
       {nerscStatError && (
-        <Alert severity='error'>
+        <Alert severity="error">
           {isFetchBaseQueryError(nerscStatError)
             ? `Error: ${nerscStatError.status} - ${nerscStatError.data}`
             : isSerializedError(nerscStatError)
