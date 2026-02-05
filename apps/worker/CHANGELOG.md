@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.3.5
+
+### Patch Changes
+
+- 296a257: Make sure we use the full `pdb2crd_chain_` prefix
+
 ## 2.3.4
 
 ### Patch Changes
