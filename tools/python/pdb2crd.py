@@ -207,7 +207,9 @@ def write_pdb_2_crd_inp_files(chains, output_dir, pdb_file_path):
     for chain_id, chain_data in chains.items():
         molecule_type = chain_data["type"]
         # our little hack to always use lower case file name for CHARMM
-        suffix = "_uc" if chain_id.isupper() else ""
+        # Extract the actual chain character (last character of the key)
+        chain_char = chain_id[-1]
+        suffix = "_uc" if chain_char.isupper() else ""
         # input filename:
         input_filename = os.path.basename(pdb_file_path)
         # Get the base filename without extension
@@ -365,8 +367,10 @@ def write_meld_chain_crd_files(chains, output_dir, pdb_file_path):
             # but should probably make this work for Protein and DNA/RNA
             # CAR is for uppercase Chain IDs A-Z
             # CAL is for lowercase Chain IDs a-z
+            # Extract the actual chain character (last character of the key)
+            chain_char = chain_id[-1]
             if molecule_type == "CAR":
-                carb_suffix = "R" if chain_id.isupper() else "L"
+                carb_suffix = "R" if chain_char.isupper() else "L"
                 charmmgui_chain_id = f"CA{carb_suffix}{chain_data['chainid'].upper()}"
             else:
                 charmmgui_chain_id = f"{molecule_type}{chain_data['chainid']}"
