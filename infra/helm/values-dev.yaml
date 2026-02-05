@@ -54,7 +54,7 @@ ui:
     user: null
     repository: bilbomd-ui
     build: null
-    tag: 2.5.0
+    tag: 2.5.2
     pullPolicy: Always
     secret: ghcr
 
@@ -78,6 +78,6 @@ worker:
     user: null
     repository: bilbomd-worker
     build: null
-    tag: pr-338-a22eda1b
+    tag: 2.3.3
     pullPolicy: Always
     secret: ghcr
