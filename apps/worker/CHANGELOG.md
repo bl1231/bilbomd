@@ -1,5 +1,13 @@
 # @bilbomd/worker
 
+## 2.3.3
+
+### Patch Changes
+
+- 0e38e5a: Fix the dcd2pdb logic for BilboMD SANS jobs to look in `charmm/md` for `*.dcd` files.
+- f4f450d: Fix initfox step to look in proper place for `minimization_output.pdb` file.
+- d1823f6: Adjust workers to use new CHARMM subdirectory organization
+
 ## 2.3.2
 
 ### Patch Changes
