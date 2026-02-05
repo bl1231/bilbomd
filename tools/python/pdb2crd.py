@@ -61,15 +61,23 @@ def get_chain_filename(chain_id, pdb_filename):
     for uppercase chain IDs to differentiate from lowercase ones, since CHARMM
     requires lowercase filenames in all input files.
 
-    :param chain_id: The chain ID from the PDB file.
+    :param chain_id: The chain ID from the PDB file (single char or full key like 'pdb2crd_chain_A').
     :param pdb_filename: The original PDB filename.
-    :param output_dir: The output directory for the chain files.
     :return: A string representing the filename for the chain file.
     """
-    # Check if the chain ID is uppercase and append '_uc' if true
-    suffix = "_uc" if chain_id.isupper() else ""
-    # Construct the filename using the lowercase chain ID and suffix if applicable
-    chain_filename = f"{chain_id.lower()}{suffix}_{pdb_filename.split('/')[-1].lower()}"
+    # Extract the actual chain character (last character if it's a key, or the whole thing if single char)
+    chain_char = chain_id[-1] if len(chain_id) > 1 else chain_id
+
+    # Construct full key with prefix if needed
+    if len(chain_id) == 1:
+        full_key = f"pdb2crd_chain_{chain_id}"
+    else:
+        full_key = chain_id
+
+    # Check if the chain character is uppercase and append '_uc' if true
+    suffix = "_uc" if chain_char.isupper() else ""
+    # Construct the filename using the lowercase full key and suffix if applicable
+    chain_filename = f"{full_key.lower()}{suffix}_{pdb_filename.split('/')[-1].lower()}"
     return chain_filename
 
 
@@ -481,7 +489,7 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
         # CHARMM will not tolerate HETATM lines
         processed_lines = replace_hetatm(processed_lines)
 
-        chain_filename = get_chain_filename(chain_data['chainid'], pdb_file_path)
+        chain_filename = get_chain_filename(chain_id, pdb_file_path)
 
         with open(
             output_dir + "/" + chain_filename, "w", encoding="utf-8"
