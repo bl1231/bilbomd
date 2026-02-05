@@ -42,7 +42,7 @@ const runSingleFoXS = async (DBjob: IJob): Promise<void> => {
 
     let inputPDB: string
     if (!DBjob.md_engine || DBjob.md_engine === 'CHARMM') {
-      inputPDB = 'minimization_output.pdb'
+      inputPDB = 'charmm/minimize/minimization_output.pdb'
     } else if (DBjob.md_engine === 'OpenMM') {
       inputPDB = 'minimize/minimized.pdb'
     } else {
@@ -92,7 +92,8 @@ const runSingleFoXS = async (DBjob: IJob): Promise<void> => {
                 logger.info(`FoXS analysis success with exit code: ${code}`)
                 status = {
                   status: 'Success',
-                  message: 'Initial FoXS Calculations have completed successfully.'
+                  message:
+                    'Initial FoXS Calculations have completed successfully.'
                 }
                 updateStepStatus(DBjob, 'initfoxs', status).then(resolve)
               } else {
@@ -102,7 +103,9 @@ const runSingleFoXS = async (DBjob: IJob): Promise<void> => {
                   message: `FoXS analysis error with exit code: ${code}`
                 }
                 updateStepStatus(DBjob, 'initfoxs', status).then(() =>
-                  reject(new Error(`FoXS analysis error with exit code: ${code}`))
+                  reject(
+                    new Error(`FoXS analysis error with exit code: ${code}`)
+                  )
                 )
               }
             })
