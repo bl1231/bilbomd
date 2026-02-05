@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.3.4
+
+### Patch Changes
+
+- 4a7803a: Fix bug where uppercase carbohydrate chain IDs were being treated as lowercase durin PDB to CRD conversion.
+
 ## 2.3.3
 
 ### Patch Changes
