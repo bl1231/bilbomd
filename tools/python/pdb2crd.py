@@ -481,7 +481,7 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
         # CHARMM will not tolerate HETATM lines
         processed_lines = replace_hetatm(processed_lines)
 
-        chain_filename = get_chain_filename(chain_id, pdb_file_path)
+        chain_filename = get_chain_filename(chain_data['chainid'], pdb_file_path)
 
         with open(
             output_dir + "/" + chain_filename, "w", encoding="utf-8"
