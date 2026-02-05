@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.5.2
+
+### Patch Changes
+
+- cbf125a: Display the NERSC System Status rather than Notes in the tooltip
+
 ## 2.5.1
 
 ### Patch Changes
