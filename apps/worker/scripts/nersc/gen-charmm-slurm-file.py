@@ -33,7 +33,7 @@ def setup_environment(uuid):
     template_dir = f"{cfs_base}/{env_dir}/templates"
 
     # Docker images
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.28"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.29"
     af_worker = "bilbomd/bilbomd-colabfold:0.0.9"
 
     # Number of cores
@@ -375,7 +375,7 @@ def create_status_file(workdir, params):
     if pipeline_type == "BilboMdAlphaFold":
         steps = ["alphafold", "pae", "pae2constraints", "pdb2crd", "meld"] + steps
     elif pipeline_type == "BilboMdAuto":
-        steps = ["pae","pae2constraints", "pdb2crd", "meld"] + steps
+        steps = ["pae", "pae2constraints", "pdb2crd", "meld"] + steps
     elif pipeline_type == "BilboMdPDB":
         steps = ["pdb2crd", "meld"] + steps
 
