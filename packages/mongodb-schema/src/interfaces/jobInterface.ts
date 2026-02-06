@@ -1,14 +1,10 @@
 import { Document, Types } from 'mongoose'
 import { IUser } from './userInterface'
 import { IOpenMMParameters } from './openmmInterface'
+import { ICHARMMParameters } from './charmmInterface'
 import { IAssets } from './assetsInterface'
-
-export const StepStatus = {
-  Waiting: 'Waiting',
-  Running: 'Running',
-  Success: 'Success',
-  Error: 'Error'
-} as const
+import { IJobResults } from './resultsInterface'
+import { IBilboMDSteps, IStepStatus } from './jobStepInterface'
 
 export const JobStatus = {
   Submitted: 'Submitted',
@@ -39,36 +35,10 @@ export const MDEngine = {
   OpenMM: 'OpenMM'
 } as const
 
-interface IStepStatus {
-  status: StepStatusEnum
-  message: string
-}
-
-// Interface for steps status
-interface IBilboMDSteps {
-  alphafold?: IStepStatus
-  pdb2crd?: IStepStatus
-  pae?: IStepStatus
-  autorg?: IStepStatus
-  minimize?: IStepStatus
-  initfoxs?: IStepStatus
-  heat?: IStepStatus
-  md?: IStepStatus
-  dcd2pdb?: IStepStatus
-  pdb_remediate?: IStepStatus
-  movies?: IStepStatus
-  foxs?: IStepStatus
-  pepsisans?: IStepStatus
-  multifoxs?: IStepStatus
-  gasans?: IStepStatus
-  copy_results_to_cfs?: IStepStatus
-  results?: IStepStatus
-  email?: IStepStatus
-  nersc_prepare_slurm_batch?: IStepStatus
-  nersc_submit_slurm_batch?: IStepStatus
-  nersc_job_status?: IStepStatus
-  nersc_copy_results_to_cfs?: IStepStatus
-}
+export const AccessMode = {
+  User: 'user',
+  Anonymous: 'anonymous'
+} as const
 
 interface IAlphaFoldEntity {
   name: string
@@ -142,15 +112,19 @@ interface IJob extends Document {
     | 'BilboMdSANS'
   title: string
   uuid: string
+  access_mode: AccessModeEnum
+  public_id?: string
+  client_ip_hash?: string
   status: JobStatusEnum
   data_file: string
   md_engine?: MDEngineEnum
   openmm_parameters?: IOpenMMParameters
+  charmm_parameters?: ICHARMMParameters
   md_constraints?: IMDConstraints
   time_submitted: Date
   time_started?: Date
   time_completed?: Date
-  user: IUser | Types.ObjectId
+  user?: IUser | Types.ObjectId
   resubmitted_from?: IJob | Types.ObjectId
   steps?: IBilboMDSteps
   progress: number
@@ -158,6 +132,7 @@ interface IJob extends Document {
   assets?: IAssets
   nersc?: INerscInfo
   cleanup_in_progress: boolean
+  results?: IJobResults
 }
 
 interface IBilboMDPDBJob extends IJob {
@@ -216,30 +191,17 @@ interface IBilboMDAlphaFoldJob extends IJob {
   rg_max?: number
 }
 
-interface IBilboMDSANSJob extends IJob {
-  __t: 'BilboMdSANS'
-  pdb_file: string
-  psf_file?: string
-  crd_file?: string
-  const_inp_file: string
-  conformational_sampling: number
-  d2o_fraction: number
-  rg: number
-  rg_min: number
-  rg_max: number
-  deuteration_fractions: Map<string, number>
-}
-
 interface IBilboMDScoperJob extends IJob {
   __t: 'BilboMdScoper'
   pdb_file: string
   fixc1c2: boolean
+  foxs_top_file?: string
 }
 
 export type JobStatusEnum = (typeof JobStatus)[keyof typeof JobStatus]
 export type NerscStatusEnum = (typeof NerscStatus)[keyof typeof NerscStatus]
-export type StepStatusEnum = (typeof StepStatus)[keyof typeof StepStatus]
 export type MDEngineEnum = (typeof MDEngine)[keyof typeof MDEngine]
+export type AccessModeEnum = (typeof AccessMode)[keyof typeof AccessMode]
 
 export {
   IStepStatus,
@@ -257,6 +219,5 @@ export {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
-  IBilboMDSANSJob,
   IBilboMDScoperJob
 }

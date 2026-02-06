@@ -2,7 +2,11 @@ import { Request, Response } from 'express'
 import { allQueues } from './allQueues.js'
 
 const failQueueJob = async (req: Request, res: Response): Promise<void> => {
-  const { queueName, jobId } = req.params
+  const { queueName: rawQueueName, jobId: rawJobId } = req.params
+
+  // Ensure parameters are strings
+  const queueName = Array.isArray(rawQueueName) ? rawQueueName[0] : rawQueueName
+  const jobId = Array.isArray(rawJobId) ? rawJobId[0] : rawJobId
 
   const queue = allQueues[queueName]
   if (!queue) {
@@ -24,9 +28,14 @@ const failQueueJob = async (req: Request, res: Response): Promise<void> => {
 
     res
       .status(200)
-      .json({ message: `Job "${jobId}" in queue "${queueName}" marked as failed` })
+      .json({
+        message: `Job "${jobId}" in queue "${queueName}" marked as failed`
+      })
   } catch (error) {
-    console.error(`Failed to fail job "${jobId}" in queue "${queueName}"`, error)
+    console.error(
+      `Failed to fail job "${jobId}" in queue "${queueName}"`,
+      error
+    )
     res.status(500).json({
       message: `Failed to fail job "${jobId}" in queue "${queueName}"`,
       error: (error as Error).message

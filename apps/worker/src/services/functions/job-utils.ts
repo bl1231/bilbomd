@@ -10,34 +10,26 @@ import { logger } from '../../helpers/loggers.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { config } from '../../config/config.js'
 import fs from 'fs-extra'
-// import { CharmmDCD2PDBParams, CharmmParams } from '../../types/index.js'
 import path from 'path'
 import { spawn, ChildProcess } from 'node:child_process'
 import Handlebars from 'handlebars'
 import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
+import { Types } from 'mongoose'
 
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
 const initializeJob = async (MQJob: BullMQJob, DBjob: IJob): Promise<void> => {
   try {
-    // Make sure the user exists in MongoDB
-    const foundUser = await User.findById(DBjob.user).lean().exec()
-    if (!foundUser) {
-      throw new Error(`No user found for: ${DBjob.uuid}`)
-    }
-
     // Clear the BullMQ Job logs in the case this job is being re-run
     await MQJob.clearLogs()
 
-    // Set MongoDB status to Running when we are submitting to Slurm at NERSC
-    // Does this need to be set to Running when we are running locally?6
+    // Set MongoDB status to Running when we start processing the job
     DBjob.status = 'Running'
-    // DBjob.time_started = new Date()
+    DBjob.time_started = new Date()
     await DBjob.save()
   } catch (error) {
-    // Handle and log the error
-    logger.error(`Error in initializeJob: ${error}`)
+    logger.error(`Error in initializeJob: ${getErrorMessage(error)}`)
     throw error
   }
 }
@@ -47,17 +39,22 @@ const cleanupJob = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
     // Mark job as completed in the database
     await markJobAsCompleted(DBjob)
 
-    // Fetch user associated with the job
+    // Fetch user associated with the job (may be null for anonymous jobs)
     const user = await fetchJobUser(DBjob)
+
     if (!user) {
-      logger.error(`No user found for: ${DBjob.uuid}`)
+      logger.info(
+        `cleanupJob: no user associated with job uuid=${DBjob.uuid}, skipping email notification`
+      )
+      DBjob.progress = 100
+      await DBjob.save()
       return
     }
 
-    // Handle email notifications
+    // Handle email notifications for jobs with a valid user
     await handleJobEmailNotification(MQjob, DBjob, user)
   } catch (error) {
-    logger.error(`Error in cleanupJob: ${error}`)
+    logger.error(`Error in cleanupJob: ${getErrorMessage(error)}`)
     throw error
   }
 }
@@ -71,6 +68,16 @@ const markJobAsCompleted = async (DBjob: IJob): Promise<void> => {
 
 // Fetch user associated with the job
 const fetchJobUser = async (DBjob: IJob): Promise<IUser | null> => {
+  if (!DBjob.user) {
+    return null
+  }
+  if (typeof DBjob.user === 'object' && '_id' in DBjob.user) {
+    // Already populated IUser document
+    return DBjob.user as IUser
+  }
+  if (!Types.ObjectId.isValid(DBjob.user)) {
+    return null
+  }
   return User.findById(DBjob.user).lean<IUser>().exec()
 }
 
@@ -80,6 +87,12 @@ const handleJobEmailNotification = async (
   DBjob: IJob,
   user: IUser
 ): Promise<void> => {
+  if (!user.email) {
+    logger.info(
+      `Skipping email notification: user email is undefined for job uuid=${DBjob.uuid}`
+    )
+    return
+  }
   if (config.sendEmailNotifications) {
     let status: IStepStatus = {
       status: 'Running',
@@ -91,7 +104,7 @@ const handleJobEmailNotification = async (
       sendJobCompleteEmail(
         user.email,
         config.bilbomdUrl,
-        DBjob.id,
+        DBjob._id.toString(),
         DBjob.title,
         false
       )
@@ -114,7 +127,9 @@ const handleJobEmailNotification = async (
       await updateStepStatus(DBjob, 'email', status)
     }
   } else {
-    logger.info(`Skipping email notification for ${user.email}`)
+    logger.info(
+      `Skipping email notification for job uuid=${DBjob.uuid} (email notifications disabled)`
+    )
   }
 }
 
@@ -132,7 +147,7 @@ const generateDCD2PDBInpFile = async (
   rg: number,
   run: number
 ) => {
-  params.in_dcd = `dynamics_rg${rg}_run${run}.dcd`
+  params.in_dcd = path.join('charmm', 'md', `dynamics_rg${rg}_run${run}.dcd`)
   await generateInputFile(params)
 }
 
@@ -307,12 +322,14 @@ const handleError = async (
 
   // Log job details for context
   logger.error(
-    `Job context: jobId=${DBjob.id}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}`
+    `Job context: jobId=${DBjob._id.toString()}, jobUuid=${DBjob.uuid}, jobTitle=${DBjob.title}, jobType=${DBjob.__t}, currentStatus=${DBjob.status}`
   )
 
   try {
     // Updates primary status in MongoDB
-    logger.debug(`Updating job status to 'Error' for job ${DBjob.id}`)
+    logger.debug(
+      `Updating job status to 'Error' for job ${DBjob._id.toString()}`
+    )
     await updateJobStatus(DBjob, 'Error')
     logger.debug(`Successfully updated job status to 'Error'`)
   } catch (updateError) {
@@ -337,46 +354,6 @@ const handleError = async (
   } else {
     logger.error(`Step not provided when handling error. Error: ${errorMsg}`)
   }
-
-  // Log to MQ job
-  // try {
-  //   await MQjob.log(`ERROR: ${errorMsg}`)
-  //   if (stackTrace) {
-  //     await MQjob.log(`Stack trace: ${stackTrace}`)
-  //   }
-  //   logger.debug(`Successfully logged error to MQ job`)
-  // } catch (mqLogError) {
-  //   logger.error(`Failed to log to MQ job: ${mqLogError}`)
-  // }
-
-  // Send job completion email and log the notification
-  // logger.info(`Failed Attempts: ${MQjob.attemptsMade}`)
-
-  // try {
-  //   const recipientEmail = (DBjob.user as IUser).email
-  //   logger.debug(`Recipient email: ${recipientEmail}`)
-
-  //   if (MQjob.attemptsMade >= 3) {
-  //     if (config.sendEmailNotifications) {
-  //       logger.debug(`Sending failure email notification to ${recipientEmail}`)
-  //       await sendJobCompleteEmail(
-  //         recipientEmail,
-  //         config.bilbomdUrl,
-  //         DBjob.id,
-  //         DBjob.title,
-  //         true
-  //       )
-  //       logger.warn(`Email notification sent to ${recipientEmail}`)
-  //       await MQjob.log(`Email notification sent to ${recipientEmail}`)
-  //     } else {
-  //       logger.debug(`Email notifications are disabled`)
-  //     }
-  //   } else {
-  //     logger.debug(`Not sending email - attempts (${MQjob.attemptsMade}) < 3`)
-  //   }
-  // } catch (emailError) {
-  //   logger.error(`Failed to send email notification: ${emailError}`)
-  // }
 
   // Create a more descriptive error to throw
   const finalError = new Error(

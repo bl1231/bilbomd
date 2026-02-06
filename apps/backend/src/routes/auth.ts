@@ -1,5 +1,5 @@
 import express from 'express'
-import { otp, refresh, logout } from '../controllers/authController.js'
+import { otp, refresh, logout } from '../controllers/auth/authController.js'
 import { handleOrcidLogin } from '../controllers/auth/handleOrcidLogin.js'
 import { handleOrcidCallback } from '../controllers/auth/handleOrcidCallback.js'
 import { loginLimiter } from '../middleware/loginLimiter.js'

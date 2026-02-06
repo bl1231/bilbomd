@@ -43,6 +43,8 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
+import type { BilboMDCRDDTO, BilboMDPDBDTO } from '@bilbomd/bilbomd-types'
+import MdEngineField from 'components/MdEngineField'
 
 const ResubmitJobForm = () => {
   useTitle('BilboMD: Resubmit Classic Job')
@@ -59,6 +61,7 @@ const ResubmitJobForm = () => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
 
   // RTK Query to fetch the configuration
   const {
@@ -77,8 +80,8 @@ const ResubmitJobForm = () => {
   })
 
   // RTK Query to check if the files are still on disk and available for reuse
-  const fileCheckQuery = useCheckJobFilesQuery(jobdata?.id ?? '', {
-    skip: !jobdata?.id
+  const fileCheckQuery = useCheckJobFilesQuery(jobdata?.mongo.id ?? '', {
+    skip: !jobdata?.mongo.id
   })
 
   // Are we running on NERSC?
@@ -98,15 +101,15 @@ const ResubmitJobForm = () => {
     }
     // Error states
     if (configError) {
-      return <Alert severity='error'>Error loading configuration</Alert>
+      return <Alert severity="error">Error loading configuration</Alert>
     }
     if (jobIsError) {
-      return <Alert severity='error'>Error retrieving parent job info</Alert>
+      return <Alert severity="error">Error retrieving parent job info</Alert>
     }
     if (fileCheckQuery.error) {
       const fileCheckError = fileCheckQuery.error
       return (
-        <Alert severity='error'>
+        <Alert severity="error">
           Error checking job files:{' '}
           {'message' in fileCheckError
             ? fileCheckError.message
@@ -116,49 +119,64 @@ const ResubmitJobForm = () => {
     }
   }
 
-  const job = jobdata.mongo
+  const job = jobdata
   const fileCheckData = fileCheckQuery.data
 
   const selectedMode: 'pdb' | 'crd_psf' =
-    job?.__t === 'BilboMdCRD' ? 'crd_psf' : 'pdb'
+    job?.mongo.jobType === 'crd' ? 'crd_psf' : 'pdb'
 
   // console.log('job', job)
 
+  let jobMongo: BilboMDCRDDTO | BilboMDPDBDTO
+  if (job.mongo.jobType === 'crd') {
+    jobMongo = job.mongo as BilboMDCRDDTO
+  } else if (job.mongo.jobType === 'pdb') {
+    jobMongo = job.mongo as BilboMDPDBDTO
+  } else {
+    throw new Error(`Unsupported job type: ${job.mongo.jobType}`)
+  }
+
   let initialValues: BilboMDClassicJobFormValues
 
-  switch (job.__t) {
-    case 'BilboMdCRD':
+  switch (job.mongo.jobType) {
+    case 'crd':
       initialValues = {
         bilbomd_mode: 'crd_psf',
-        title: 'resubmit_' + job.title,
-        psf_file: job.psf_file ?? '',
-        crd_file: job.crd_file ?? '',
+        title: 'resubmit_' + jobMongo.title,
+        psf_file: jobMongo.psf_file ?? '',
+        crd_file: jobMongo.crd_file ?? '',
         pdb_file: '',
-        inp_file: job.const_inp_file ?? '',
-        dat_file: job.data_file ?? '',
-        num_conf: job.conformational_sampling?.toString() ?? '',
-        rg: job.rg?.toString() ?? '',
-        rg_min: job.rg_min?.toString() ?? '',
-        rg_max: job.rg_max?.toString() ?? ''
+        inp_file: jobMongo.const_inp_file ?? '',
+        dat_file: jobMongo.data_file ?? '',
+        num_conf: jobMongo.conformational_sampling?.toString() ?? '',
+        rg: jobMongo.rg?.toString() ?? '',
+        rg_min: jobMongo.rg_min?.toString() ?? '',
+        rg_max: jobMongo.rg_max?.toString() ?? '',
+        md_engine:
+          (jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
+          'charmm'
       }
       break
-    case 'BilboMdPDB':
+    case 'pdb':
       initialValues = {
         bilbomd_mode: 'pdb',
-        title: 'resubmit_' + job.title,
+        title: 'resubmit_' + jobMongo.title,
         psf_file: '',
         crd_file: '',
-        pdb_file: job.pdb_file ?? '',
-        inp_file: job.const_inp_file ?? '',
-        dat_file: job.data_file ?? '',
-        num_conf: job.conformational_sampling?.toString() ?? '',
-        rg: job.rg?.toString() ?? '',
-        rg_min: job.rg_min?.toString() ?? '',
-        rg_max: job.rg_max?.toString() ?? ''
+        pdb_file: jobMongo.pdb_file ?? '',
+        inp_file: jobMongo.const_inp_file ?? '',
+        dat_file: jobMongo.data_file ?? '',
+        num_conf: jobMongo.conformational_sampling?.toString() ?? '',
+        rg: jobMongo.rg?.toString() ?? '',
+        rg_min: jobMongo.rg_min?.toString() ?? '',
+        rg_max: jobMongo.rg_max?.toString() ?? '',
+        md_engine:
+          (jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
+          'charmm'
       }
       break
     default:
-      throw new Error(`Unsupported job type: ${job.__t}`)
+      throw new Error(`Unsupported job type: ${job.mongo.jobType}`)
   }
 
   const onSubmit = async (
@@ -168,9 +186,10 @@ const ResubmitJobForm = () => {
     const form = new FormData()
     form.append('bilbomd_mode', values.bilbomd_mode)
     form.append('title', values.title)
+    form.append('md_engine', values.md_engine)
     form.append('resubmit', 'true')
-    if (job?.id) {
-      form.append('original_job_id', job.id)
+    if (job?.mongo.id) {
+      form.append('original_job_id', job.mongo.id)
     }
 
     if (values.psf_file instanceof File) {
@@ -282,12 +301,19 @@ const ResubmitJobForm = () => {
   }
 
   const content = (
-    <Grid container spacing={2}>
+    <Grid
+      container
+      spacing={2}
+    >
       <Grid size={{ xs: 12 }}>
         <NewJobFormInstructions />
       </Grid>
 
-      <PipelineSchematic isDarkMode={isDarkMode} pipeline={selectedMode} />
+      <PipelineSchematic
+        isDarkMode={isDarkMode}
+        pipeline={selectedMode}
+        mdEngine={mdEngine}
+      />
 
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
@@ -296,16 +322,16 @@ const ResubmitJobForm = () => {
 
         <Paper sx={{ p: 2 }}>
           {isSuccess ? (
-            <Alert severity='success'>
+            <Alert severity="success">
               <AlertTitle>Woot!</AlertTitle>
               <Typography>
                 Your job has been submitted. Check out the{' '}
-                <RouterLink to='../jobs'>details</RouterLink>.
+                <RouterLink to="../jobs">details</RouterLink>.
               </Typography>
             </Alert>
           ) : (
             <>
-              <Alert severity='warning'>
+              <Alert severity="warning">
                 Make adjustments to run parameters or input files before
                 resubmitting your job.
               </Alert>
@@ -333,22 +359,25 @@ const ResubmitJobForm = () => {
                     <Grid
                       container
                       columns={12}
-                      direction='column'
+                      direction="column"
                       sx={{ display: 'flex' }}
                     >
                       {useNersc && (
                         <NerscStatusChecker
-                          systemName='perlmutter'
+                          systemName="perlmutter"
                           onStatusCheck={handleStatusCheck}
                         />
                       )}
-                      <Divider textAlign='left' sx={{ my: 1 }}>
+                      <Divider
+                        textAlign="left"
+                        sx={{ my: 1 }}
+                      >
                         Model Inputs
                       </Divider>
                       <Grid
                         container
-                        direction='row'
-                        alignItems='center'
+                        direction="row"
+                        alignItems="center"
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
@@ -367,10 +396,10 @@ const ResubmitJobForm = () => {
                                     validateForm,
                                     touched
                                   )}
-                                  name='pdb_inputs'
+                                  name="pdb_inputs"
                                 />
                               }
-                              label='PDB file'
+                              label="PDB file"
                             />
                             <FormControlLabel
                               control={
@@ -382,30 +411,33 @@ const ResubmitJobForm = () => {
                                     validateForm,
                                     touched
                                   )}
-                                  name='crd_psf_inputs'
+                                  name="crd_psf_inputs"
                                 />
                               }
-                              label='CRD/PSF files'
+                              label="CRD/PSF files"
                             />
                           </FormGroup>
                         </Grid>
                         <Grid size={{ xs: 6 }}>
-                          <Alert severity='info'>
+                          <Alert severity="info">
                             If you used CHARMM-GUI to parameterize your inputs
                             then please select the CRD/PSF option
                           </Alert>
                         </Grid>
                       </Grid>
-                      <Divider textAlign='left' sx={{ my: 1 }}>
+                      <Divider
+                        textAlign="left"
+                        sx={{ my: 1 }}
+                      >
                         Job Form
                       </Divider>
                       <Grid sx={{ my: 2, width: '520px' }}>
                         <Field
                           fullWidth
-                          label='Title'
-                          name='title'
-                          id='title'
-                          type='text'
+                          label="Title"
+                          name="title"
+                          id="title"
+                          type="text"
                           disabled={isSubmitting}
                           as={TextField}
                           onChange={handleChange}
@@ -417,11 +449,22 @@ const ResubmitJobForm = () => {
                           value={values.title || ''}
                         />
                       </Grid>
+                      {/* MD Engine selection */}
+                      <Grid sx={{ width: '520px', mb: 1 }}>
+                        <MdEngineField
+                          value={values.md_engine as 'charmm' | 'openmm'}
+                          onChange={(val) => {
+                            void setFieldValue('md_engine', val)
+                            setMdEngine(val)
+                          }}
+                          disabled={isSubmitting}
+                        />
+                      </Grid>
                       {values.bilbomd_mode === 'crd_psf' && (
                         <>
                           <Grid
                             container
-                            direction='row'
+                            direction="row"
                             sx={{
                               display: 'flex',
                               justifyContent: 'space-between',
@@ -430,13 +473,13 @@ const ResubmitJobForm = () => {
                           >
                             <Grid>
                               <Field
-                                name='crd_file'
-                                id='crd-file-upload'
+                                name="crd_file"
+                                id="crd-file-upload"
                                 as={FileSelect}
-                                title='Select File'
+                                title="Select File"
                                 existingFileName={
                                   fileCheckData?.crd_file
-                                    ? job?.crd_file
+                                    ? jobMongo.crd_file
                                     : undefined
                                 }
                                 disabled={isSubmitting}
@@ -446,14 +489,14 @@ const ResubmitJobForm = () => {
                                 errorMessage={
                                   errors.crd_file ? errors.crd_file : ''
                                 }
-                                fileType='CHARMM-GUI *.crd'
-                                fileExt='.crd'
+                                fileType="CHARMM-GUI *.crd"
+                                fileExt=".crd"
                               />
                             </Grid>
                           </Grid>
                           <Grid
                             container
-                            direction='row'
+                            direction="row"
                             sx={{
                               display: 'flex',
                               justifyContent: 'space-between',
@@ -462,13 +505,13 @@ const ResubmitJobForm = () => {
                           >
                             <Grid>
                               <Field
-                                name='psf_file'
-                                id='psf-file-upload'
+                                name="psf_file"
+                                id="psf-file-upload"
                                 as={FileSelect}
-                                title='Select File'
+                                title="Select File"
                                 existingFileName={
                                   fileCheckData?.psf_file
-                                    ? job?.psf_file
+                                    ? jobMongo.psf_file
                                     : undefined
                                 }
                                 disabled={isSubmitting}
@@ -478,8 +521,8 @@ const ResubmitJobForm = () => {
                                 errorMessage={
                                   errors.psf_file ? errors.psf_file : ''
                                 }
-                                fileType='CHARMM-GUI *.psf'
-                                fileExt='.psf'
+                                fileType="CHARMM-GUI *.psf"
+                                fileExt=".psf"
                               />
                             </Grid>
                           </Grid>
@@ -489,7 +532,7 @@ const ResubmitJobForm = () => {
                         <>
                           <Grid
                             container
-                            direction='row'
+                            direction="row"
                             sx={{
                               display: 'flex',
                               justifyContent: 'space-between',
@@ -498,13 +541,13 @@ const ResubmitJobForm = () => {
                           >
                             <Grid>
                               <Field
-                                name='pdb_file'
-                                id='pdb-file-upload'
+                                name="pdb_file"
+                                id="pdb-file-upload"
                                 as={FileSelect}
-                                title='Select File'
+                                title="Select File"
                                 existingFileName={
                                   fileCheckData?.pdb_file
-                                    ? job?.pdb_file
+                                    ? jobMongo.pdb_file
                                     : undefined
                                 }
                                 disabled={isSubmitting}
@@ -514,8 +557,8 @@ const ResubmitJobForm = () => {
                                 errorMessage={
                                   errors.pdb_file ? errors.pdb_file : ''
                                 }
-                                fileType=' *.pdb'
-                                fileExt='.pdb'
+                                fileType=" *.pdb"
+                                fileExt=".pdb"
                               />
                             </Grid>
                           </Grid>
@@ -523,7 +566,7 @@ const ResubmitJobForm = () => {
                       )}
                       <Grid
                         container
-                        direction='row'
+                        direction="row"
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
@@ -532,13 +575,13 @@ const ResubmitJobForm = () => {
                       >
                         <Grid>
                           <Field
-                            name='inp_file'
-                            id='inp_file-file-upload'
+                            name="inp_file"
+                            id="inp_file-file-upload"
                             as={FileSelect}
-                            title='Select File'
+                            title="Select File"
                             existingFileName={
                               fileCheckData?.inp_file
-                                ? job?.const_inp_file
+                                ? jobMongo.const_inp_file
                                 : undefined
                             }
                             disabled={isSubmitting}
@@ -549,22 +592,22 @@ const ResubmitJobForm = () => {
                             errorMessage={
                               errors.inp_file ? errors.inp_file : ''
                             }
-                            fileType='const.inp'
-                            fileExt='.inp'
+                            fileType="const.inp"
+                            fileExt=".inp"
                           />
                         </Grid>
                       </Grid>
                       <Grid
                         container
-                        direction='row'
+                        direction="row"
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
                           width: '520px'
                         }}
                       >
-                        <Alert severity='info'>
-                          <Typography component='div'>
+                        <Alert severity="info">
+                          <Typography component="div">
                             Be sure to verify that the chain identifiers (
                             <b>segid</b>) and residue numbering in your{' '}
                             <b>const.inp</b> are consistent with your{' '}
@@ -593,7 +636,7 @@ const ResubmitJobForm = () => {
                       </Grid>
                       <Grid
                         container
-                        direction='row'
+                        direction="row"
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
@@ -602,13 +645,13 @@ const ResubmitJobForm = () => {
                       >
                         <Grid>
                           <Field
-                            name='dat_file'
-                            id='dat_file-file-upload'
+                            name="dat_file"
+                            id="dat_file-file-upload"
                             as={FileSelect}
-                            title='Select File'
+                            title="Select File"
                             existingFileName={
                               fileCheckData?.dat_file
-                                ? job?.data_file
+                                ? jobMongo.data_file
                                 : undefined
                             }
                             disabled={isSubmitting}
@@ -618,8 +661,8 @@ const ResubmitJobForm = () => {
                             errorMessage={
                               errors.dat_file ? errors.dat_file : ''
                             }
-                            fileType='experimental SAXS data'
-                            fileExt='.dat'
+                            fileType="experimental SAXS data"
+                            fileExt=".dat"
                             onFileChange={async (selectedFile: File) => {
                               const isExpdataValid =
                                 await expdataSchema.isValid(selectedFile)
@@ -659,11 +702,11 @@ const ResubmitJobForm = () => {
                       )}
                       <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
                         <Field
-                          label='Rg Min'
+                          label="Rg Min"
                           fullWidth
-                          id='rg_min'
-                          name='rg_min'
-                          type='text'
+                          id="rg_min"
+                          name="rg_min"
+                          type="text"
                           disabled={isSubmitting || isLoading}
                           as={TextField}
                           onChange={handleChange}
@@ -678,11 +721,11 @@ const ResubmitJobForm = () => {
                       </Grid>
                       <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
                         <Field
-                          label='Rg Max'
+                          label="Rg Max"
                           fullWidth
-                          id='rg_max'
-                          name='rg_max'
-                          type='text'
+                          id="rg_max"
+                          name="rg_max"
+                          type="text"
                           disabled={isSubmitting || isLoading}
                           as={TextField}
                           error={errors.rg_max && touched.rg_max}
@@ -697,10 +740,10 @@ const ResubmitJobForm = () => {
                       </Grid>
                       <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
                         <TextField
-                          label='Conformations per Rg'
-                          variant='outlined'
-                          id='num_conf'
-                          name='num_conf'
+                          label="Conformations per Rg"
+                          variant="outlined"
+                          id="num_conf"
+                          name="num_conf"
                           select
                           value={values.num_conf}
                           sx={{ width: '520px' }}
@@ -713,16 +756,28 @@ const ResubmitJobForm = () => {
                               : 'Number of conformations to sample per Rg'
                           }
                         >
-                          <MenuItem key={1} value={1}>
+                          <MenuItem
+                            key={1}
+                            value={1}
+                          >
                             200
                           </MenuItem>
-                          <MenuItem key={2} value={2}>
+                          <MenuItem
+                            key={2}
+                            value={2}
+                          >
                             400
                           </MenuItem>
-                          <MenuItem key={3} value={3}>
+                          <MenuItem
+                            key={3}
+                            value={3}
+                          >
                             600
                           </MenuItem>
-                          <MenuItem key={4} value={4}>
+                          <MenuItem
+                            key={4}
+                            value={4}
+                          >
                             800
                           </MenuItem>
                         </TextField>
@@ -732,23 +787,26 @@ const ResubmitJobForm = () => {
                           <LinearProgress />
                         </Box>
                       )}
-                      <Grid size={{ xs: 6 }} sx={{ my: 2 }}>
+                      <Grid
+                        size={{ xs: 6 }}
+                        sx={{ my: 2 }}
+                      >
                         <Button
-                          type='submit'
+                          type="submit"
                           disabled={
                             !isFormValid(values, fileCheckData) || !isValid
                           }
                           loading={isSubmitting}
                           endIcon={<SendIcon />}
-                          loadingPosition='end'
-                          variant='contained'
+                          loadingPosition="end"
+                          variant="contained"
                           sx={{ width: '110px' }}
                         >
                           <span>Submit</span>
                         </Button>
 
                         {isSuccess ? (
-                          <Alert severity='success'>{status}</Alert>
+                          <Alert severity="success">{status}</Alert>
                         ) : (
                           ''
                         )}

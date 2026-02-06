@@ -1,8 +1,8 @@
 import { createEntityAdapter } from '@reduxjs/toolkit'
 import { apiSlice } from 'app/api/apiSlice'
-import { IUser } from '@bilbomd/mongodb-schema'
+import type { UserDTO } from '@bilbomd/bilbomd-types'
 
-type NormalizedUser = IUser & { id: string }
+type NormalizedUser = UserDTO
 
 const usersAdapter = createEntityAdapter<NormalizedUser>()
 
@@ -20,12 +20,42 @@ export const usersApiSlice = apiSlice.injectEndpoints({
       }),
       transformResponse: (responseData: {
         success: boolean
-        data: IUser[]
+        data: Array<{
+          _id: string
+          username: string
+          email: string
+          roles: string[]
+          firstName?: string | null
+          lastName?: string | null
+          active?: boolean
+          isActive?: boolean
+          createdAt: string | Date
+          updatedAt: string | Date
+          UUID?: string
+          [key: string]: unknown
+        }>
       }) => {
-        const loadedUsers = responseData.data.map((user) => ({
-          ...(user as IUser),
-          id: user._id.toString()
-        })) as NormalizedUser[]
+        const loadedUsers: NormalizedUser[] = responseData.data.map((user) => ({
+          id: String(user._id),
+          username: user.username,
+          email: user.email,
+          roles: user.roles as UserDTO['roles'],
+          firstName: user.firstName ?? undefined,
+          lastName: user.lastName ?? undefined,
+          active:
+            (typeof user.active === 'boolean'
+              ? user.active
+              : (user as { isActive?: boolean }).isActive) ?? false,
+          createdAt:
+            typeof user.createdAt === 'string'
+              ? user.createdAt
+              : user.createdAt.toISOString(),
+          updatedAt:
+            typeof user.updatedAt === 'string'
+              ? user.updatedAt
+              : user.updatedAt.toISOString(),
+          UUID: user.UUID
+        }))
         return usersAdapter.setAll(initialState, loadedUsers)
       },
       transformErrorResponse: (response: { status: string | number }) => {

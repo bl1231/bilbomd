@@ -6,6 +6,22 @@ import type { AppStore, RootState } from 'app/store'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { ThemeProvider, createTheme, Theme } from '@mui/material'
 
+// Set up global location for tests
+Object.defineProperty(globalThis, 'location', {
+  value: {
+    origin: 'http://localhost:3002',
+    href: 'http://localhost:3002',
+    protocol: 'http:',
+    host: 'localhost:3002',
+    hostname: 'localhost',
+    port: '3002',
+    pathname: '/',
+    search: '',
+    hash: ''
+  },
+  writable: true
+})
+
 // This type interface extends the default options for render from RTL, as well
 // as allows the user to specify other things such as initialState, store. For
 // future dependencies, such as wanting to test with react-router, you can extend
@@ -47,14 +63,11 @@ function renderWithProviders(
     }
   )
   // Wrapper for testing with providers
-  function Wrapper(): JSX.Element {
+  function Wrapper(): React.JSX.Element {
     return (
       <Provider store={store}>
         <ThemeProvider theme={customTheme}>
-          <RouterProvider
-            router={router}
-            future={{ v7_startTransition: true }}
-          />
+          <RouterProvider router={router} />
         </ThemeProvider>
       </Provider>
     )

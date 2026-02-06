@@ -9,14 +9,17 @@ const getEnvVar = (name: string): string => {
   return value
 }
 
+const toBoolean = (value?: string): boolean =>
+  value === 'true' || value === '1' || value?.toLowerCase() === 'yes'
+
 const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
   return process.env[name] || defaultValue
 }
 
 export const config = {
-  sendEmailNotifications: process.env.SEND_EMAIL_NOTIFICATIONS === 'true',
+  sendEmailNotifications: toBoolean(process.env.SEND_EMAIL_NOTIFICATIONS),
   bilbomdUrl: getEnvVar('BILBOMD_URL'),
-  runOnNERSC: process.env.USE_NERSC === 'true',
+  runOnNERSC: toBoolean(process.env.USE_NERSC),
   nerscBaseAPI: getEnvVar('SFAPI_URL'),
   nerscScriptDir: getEnvVar('SCRIPT_DIR'),
   nerscUploadDir: getEnvVar('UPLOAD_DIR'),
@@ -33,5 +36,11 @@ export const config = {
     prepareOMMSlurmScript: getEnvVar('PREPARE_OMM_SLURM_SCRIPT'),
     copyFromScratchToCFSScript: getEnvVar('CP2CFS_SCRIPT'),
     dockerBuildScript: 'docker-build.sh'
+  },
+  bilbomd: {
+    SANSEnabled: toBoolean(process.env.ENABLE_BILBOMD_SANS),
+    AlphaFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_ALPHAFOLD),
+    MultiEnabled: toBoolean(process.env.ENABLE_BILBOMD_MULTI),
+    ScoperEnabled: toBoolean(process.env.ENABLE_BILBOMD_SCOPER)
   }
 }

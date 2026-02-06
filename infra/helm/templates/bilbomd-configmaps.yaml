@@ -18,6 +18,7 @@ data:
   SEND_EMAIL_NOTIFICATIONS: 'true'
   SEND_EMAIL_USER: bilbomd@lbl.gov
   DATA_VOL: /bilbomd/uploads
+  EXAMPLE_DATA: /app/examples
   BILBOMD_LOGS: /bilbomd/logs
   NODE_ENV: '{{ .Values.env.NODE_ENV }}'
   BILBOMD_ENV: '{{ .Values.env.BILBOMD_ENV }}'
@@ -29,11 +30,12 @@ data:
   SCRIPT_DIR: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}'
   UPLOAD_DIR: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.uploads }}'
   WORK_DIR: '{{ .Values.pscratch }}/{{ .Values.working_dir }}'
-  PREPARE_CHARMM_SLURM_SCRIPT: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-bilbomd-slurm-file.sh'
+  PREPARE_CHARMM_SLURM_SCRIPT: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-charmm-slurm-file.py'
   PREPARE_OMM_SLURM_SCRIPT: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/gen-openmm-slurm-file.py'
   CP2CFS_SCRIPT: '{{ .Values.cfs_dir }}/{{ .Values.nersc_repo }}/{{ .Values.scripts }}/copy-back-to-cfs.sh'
   ENABLE_BILBOMD_SANS: 'false'
   ENABLE_BILBOMD_MULTI: 'false'
+  ENABLE_BILBOMD_ALPHAFOLD: 'true'
   ENABLE_HOME_PAGE_ALERT: 'false'
   CHARMM_TOPOLOGY: /app/scripts/bilbomd_top_par_files.str
   CHARMM_TEMPLATES: /app/build/templates/bilbomd

@@ -1,0 +1,17 @@
+close
+open auto2.pdb name auto2
+set bg white
+graphics silhouettes true
+lighting depthCue f
+color wheat
+color /A:3-115 goldenrod
+color /A:118-156 goldenrod
+color /A:163-188 goldenrod
+color /A:222-359 dodger blue
+color /A:369-668 dodger blue
+color /A:682-805 dodger blue
+
+# Position mol in view window so that it is vissible for the entire trajectory
+# then use `view matrix` to get these values
+view matrix camera 0.82098,-0.49838,0.27858,69.88,0.18771,0.69639,0.69268,214,-0.53922,-0.51638,0.66528,187.82
+view matrix models #1,1,0,0,0,0,1,0,0,0,0,1,0

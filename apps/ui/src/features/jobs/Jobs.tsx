@@ -44,40 +44,137 @@ import BullMQSummary from '../bullmq/BullMQSummary'
 import NerscStatus from '../nersc/NerscStatus'
 import HeaderBox from 'components/HeaderBox'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
-import {
-  INerscInfo,
-  IJob
-} from '@bilbomd/mongodb-schema/frontend'
+import { INerscInfo } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import { useNavigate } from 'react-router'
 import { JobActionsMenu } from './JobActionsMenu'
 import { useSnackbar } from 'notistack'
 
-const getRunTimeInHours = (nersc: INerscInfo | undefined) => {
-  if (!nersc?.time_started) return ''
-  const start = parseDateSafe(nersc.time_started)
-  const end = nersc.time_completed
-    ? parseDateSafe(nersc.time_completed)
-    : new Date()
-  if (!start || !end) return ''
-  const diffMs = end.getTime() - start.getTime()
+const getRunTimeInHours = (
+  nersc: INerscInfo | undefined,
+  jobStatus?: string
+) => {
+  if (!nersc) return ''
+
+  // Check if job has actually started (not just epoch placeholder)
+  const actualStartTime = nersc.time_started
+    ? parseDateSafe(nersc.time_started)
+    : null
+  const isEpochPlaceholder = actualStartTime && actualStartTime.getTime() === 0 // Unix epoch = not started
+
+  if (!actualStartTime || isEpochPlaceholder) {
+    // Job hasn't genuinely started yet
+    return ''
+  }
+
+  let end: Date | null = null
+
+  if (nersc.time_completed) {
+    // Job has completed, use actual completion time
+    end = parseDateSafe(nersc.time_completed)
+  } else if (jobStatus === 'Running' || nersc.state === 'RUNNING') {
+    // Job is still running, use current time
+    end = new Date()
+  } else {
+    // Job is not running and has no completion time (likely pending/failed)
+    return ''
+  }
+
+  if (!end) return ''
+
+  const diffMs = end.getTime() - actualStartTime.getTime()
+
+  // Validate that the time difference makes sense
+  if (diffMs < 0) {
+    console.warn('Invalid NERSC runtime: end time before start time', {
+      jobid: nersc.jobid,
+      time_started: nersc.time_started,
+      time_completed: nersc.time_completed,
+      status: jobStatus,
+      is_epoch: isEpochPlaceholder
+    })
+    return 'Invalid'
+  }
+
   const totalMinutes = Math.round(diffMs / 60000)
   const hrs = Math.floor(totalMinutes / 60)
   const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
   return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
 }
 
-const getHoursInQueue = (nersc: INerscInfo | undefined) => {
+const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
   if (!nersc?.time_submitted) return ''
+
   const start = parseDateSafe(nersc.time_submitted)
-  const end = nersc.time_started
+  if (!start) return ''
+
+  let end: Date | null = null
+
+  // Check if job has actually started (not just epoch placeholder)
+  const actualStartTime = nersc.time_started
     ? parseDateSafe(nersc.time_started)
-    : new Date()
-  if (!start || !end) return ''
+    : null
+  const isEpochPlaceholder = actualStartTime && actualStartTime.getTime() === 0 // Unix epoch = not started
+
+  if (actualStartTime && !isEpochPlaceholder) {
+    // Job has genuinely started, use actual start time
+    end = actualStartTime
+  } else if (jobStatus === 'Pending' || nersc.state === 'PENDING') {
+    // Job is still pending (or has epoch placeholder), use current time
+    end = new Date()
+  } else if (jobStatus === 'Running' || nersc.state === 'RUNNING') {
+    // Job is running but no real start time recorded - this shouldn't happen
+    console.warn('Job is running but no valid NERSC start time recorded', {
+      jobid: nersc.jobid,
+      status: jobStatus,
+      nersc_state: nersc.state,
+      time_started: nersc.time_started,
+      is_epoch: isEpochPlaceholder
+    })
+    return 'Unknown'
+  } else {
+    // Job failed, cancelled, or other status before starting
+    console.log('Queue time debug - job not pending/running:', {
+      jobid: nersc.jobid,
+      jobStatus,
+      nersc_state: nersc.state,
+      time_submitted: nersc.time_submitted,
+      time_started: nersc.time_started,
+      is_epoch: isEpochPlaceholder
+    })
+    return ''
+  }
+
+  if (!end) return ''
+
   const diffMs = end.getTime() - start.getTime()
+
+  // Debug logging for negative times (should be rare now)
+  if (diffMs < 0) {
+    const now = new Date()
+    console.warn('Invalid NERSC queue time: negative duration detected', {
+      jobid: nersc.jobid,
+      jobStatus,
+      nersc_state: nersc.state,
+      time_submitted: nersc.time_submitted,
+      time_started: nersc.time_started,
+      parsed_start: start.toISOString(),
+      parsed_end: end.toISOString(),
+      current_time: now.toISOString(),
+      diff_ms: diffMs,
+      diff_hours: diffMs / (1000 * 60 * 60),
+      is_epoch: isEpochPlaceholder
+    })
+    return 'Invalid'
+  }
+
   const totalMinutes = Math.round(diffMs / 60000)
   const hrs = Math.floor(totalMinutes / 60)
   const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
   return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
 }
 
@@ -99,12 +196,13 @@ const filteredJobCountChip = (count: number) => {
 }
 
 const jobTypeToRoute: Record<string, string> = {
-  BilboMdPDB: 'classic',
-  BilboMdCRD: 'classic',
-  BilboMdAuto: 'auto',
-  BilboMdScoper: 'scoper',
-  BilboMdAlphaFold: 'alphafold',
-  BilboMdSANS: 'sans'
+  pdb: 'classic',
+  crd: 'classic',
+  auto: 'auto',
+  scoper: 'scoper',
+  alphafold: 'alphafold',
+  sans: 'sans',
+  multi: 'multi'
 }
 
 const Jobs = () => {
@@ -174,7 +272,7 @@ const Jobs = () => {
     isError,
     error
   } = useGetJobsQuery('jobsList', {
-    pollingInterval: 60000,
+    pollingInterval: 30000,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
@@ -239,8 +337,8 @@ const Jobs = () => {
     // console.log('showStaleWarning', showStaleWarning)
 
     const availableJobTypes = Array.from(
-      new Set(allJobs.map((job) => job.mongo?.__t).filter(Boolean))
-    ) as IJob['__t'][]
+      new Set(allJobs.map((job) => job.mongo?.jobType).filter(Boolean))
+    ) as string[]
 
     jobTypes = ['All', ...availableJobTypes]
 
@@ -253,17 +351,23 @@ const Jobs = () => {
     )
 
     jobTypeFilterDropdown = (
-      <FormControl sx={{ m: 2, minWidth: 200 }} size='small'>
-        <InputLabel id='job-type-select-label'>Job Type</InputLabel>
+      <FormControl
+        sx={{ m: 2, minWidth: 200 }}
+        size="small"
+      >
+        <InputLabel id="job-type-select-label">Job Type</InputLabel>
         <Select
-          labelId='job-type-select-label'
-          id='job-type-select'
+          labelId="job-type-select-label"
+          id="job-type-select"
           value={typeFilter}
-          label='Job Type'
+          label="Job Type"
           onChange={handleTypeChange}
         >
           {jobTypes.map((type) => (
-            <MenuItem key={type} value={type}>
+            <MenuItem
+              key={type}
+              value={type}
+            >
               {type}
             </MenuItem>
           ))}
@@ -272,17 +376,23 @@ const Jobs = () => {
     )
 
     statusFilterDropdown = (
-      <FormControl sx={{ m: 2, minWidth: 200 }} size='small'>
-        <InputLabel id='status-select-label'>Status</InputLabel>
+      <FormControl
+        sx={{ m: 2, minWidth: 200 }}
+        size="small"
+      >
+        <InputLabel id="status-select-label">Status</InputLabel>
         <Select
-          labelId='status-select-label'
-          id='status-select'
+          labelId="status-select-label"
+          id="status-select"
           value={statusFilter}
-          label='Status'
+          label="Status"
           onChange={handleStatusChange}
         >
           {['All', ...availableStatuses].map((status) => (
-            <MenuItem key={status} value={status}>
+            <MenuItem
+              key={status}
+              value={status}
+            >
               {status}
             </MenuItem>
           ))}
@@ -291,17 +401,23 @@ const Jobs = () => {
     )
 
     userFilterDropdown = (isAdmin || isManager) && (
-      <FormControl sx={{ m: 2, minWidth: 200 }} size='small'>
-        <InputLabel id='user-select-label'>User</InputLabel>
+      <FormControl
+        sx={{ m: 2, minWidth: 200 }}
+        size="small"
+      >
+        <InputLabel id="user-select-label">User</InputLabel>
         <Select
-          labelId='user-select-label'
-          id='user-select'
+          labelId="user-select-label"
+          id="user-select"
           value={userFilter}
-          label='User'
+          label="User"
           onChange={handleUserChange}
         >
           {['All', ...availableUsers].map((user) => (
-            <MenuItem key={user} value={user}>
+            <MenuItem
+              key={user}
+              value={user}
+            >
               {user}
             </MenuItem>
           ))}
@@ -316,7 +432,9 @@ const Jobs = () => {
     }
 
     if (typeFilter !== 'All') {
-      filteredJobs = filteredJobs.filter((job) => job.mongo?.__t === typeFilter)
+      filteredJobs = filteredJobs.filter(
+        (job) => job.mongo?.jobType === typeFilter
+      )
     }
 
     if (statusFilter !== 'All') {
@@ -332,12 +450,11 @@ const Jobs = () => {
     const rows = filteredJobs.map((job) => {
       const nerscJobid = job.mongo.nersc?.jobid || ''
       const nerscStatus = job.mongo.nersc?.state || ''
-      const queueHours = getHoursInQueue(job.mongo.nersc)
-      const runTimeHours = getRunTimeInHours(job.mongo.nersc)
+      const queueHours = getHoursInQueue(job.mongo.nersc, job.mongo.status)
+      const runTimeHours = getRunTimeInHours(job.mongo.nersc, job.mongo.status)
 
       return {
         ...job.mongo,
-        position: job.bullmq?.queuePosition ?? '',
         username: job.username,
         nerscJobid: nerscJobid,
         nerscStatus: nerscStatus,
@@ -370,7 +487,13 @@ const Jobs = () => {
             {
               field: 'queueHours',
               headerName: 'Queue Time',
-              width: 100
+              width: 100,
+              cellClassName: (params: GridCellParams) => {
+                const value = params.value as string
+                return clsx('nersc', {
+                  error: value === 'Invalid' || value === 'Unknown'
+                })
+              }
             },
             {
               field: 'runTimeHours',
@@ -378,8 +501,10 @@ const Jobs = () => {
               width: 100,
               cellClassName: (params: GridCellParams) => {
                 const status = params.row.status
+                const value = params.value as string
                 return clsx('nersc', {
-                  running: status === 'Running'
+                  running: status === 'Running',
+                  error: value === 'Invalid' || value === 'Unknown'
                 })
               }
             }
@@ -388,6 +513,11 @@ const Jobs = () => {
       ...(isAdmin
         ? [{ field: 'username', headerName: 'User', width: 100 }]
         : []),
+      {
+        field: 'md_engine',
+        headerName: 'Engine',
+        width: 110
+      },
       {
         field: 'status',
         headerName: 'Status',
@@ -429,11 +559,14 @@ const Jobs = () => {
               }}
             >
               <LinearProgress
-                variant='determinate'
+                variant="determinate"
                 value={displayProgress}
                 sx={{ width: '100%', marginRight: 1 }}
               />
-              <Typography variant='body2' sx={{ minWidth: 35 }}>
+              <Typography
+                variant="body2"
+                sx={{ minWidth: 35 }}
+              >
                 {`${displayProgress}%`}
               </Typography>
             </Box>
@@ -453,13 +586,7 @@ const Jobs = () => {
               width: 110
             }
           ]
-        : [
-            {
-              field: 'position',
-              headerName: 'Position',
-              width: 80
-            }
-          ]),
+        : []),
       {
         field: 'actions',
         type: 'actions',
@@ -471,13 +598,16 @@ const Jobs = () => {
           const isOpen = Boolean(anchorEl) && menuJobId === id
 
           return [
-            <JobDetails key={`${id}-details`} id={id} />,
+            <JobDetails
+              key={`${id}-details`}
+              id={id}
+            />,
             <Button
               key={`${id}-menu-btn`}
-              variant='outlined'
+              variant="outlined"
               disableElevation
-              size='small'
-              className='job-details-button'
+              size="small"
+              className="job-details-button"
               onClick={(e) => handleMenuOpen(e, id)}
               endIcon={<KeyboardArrowDownIcon />}
             >
@@ -486,7 +616,7 @@ const Jobs = () => {
             <JobActionsMenu
               key={`${id}-menu`}
               jobId={id}
-              jobType={params.row.__t}
+              jobType={params.row.jobType}
               jobTitle={params.row.title}
               jobStatus={params.row.status}
               anchorEl={anchorEl}
@@ -501,7 +631,10 @@ const Jobs = () => {
     ]
 
     content = (
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         {!useNersc && (
           <Grid size={{ xs: 12 }}>
             <BullMQSummary />
@@ -521,7 +654,11 @@ const Jobs = () => {
 
           <Item>
             {showStaleWarning && (
-              <Alert severity='error' variant='outlined' sx={{ mb: 2 }}>
+              <Alert
+                severity="error"
+                variant="outlined"
+                sx={{ mb: 2 }}
+              >
                 <AlertTitle>Backend unavailable</AlertTitle>
                 Job data may be stale.
               </Alert>
@@ -530,8 +667,8 @@ const Jobs = () => {
             {statusFilterDropdown}
             {userFilterDropdown}
             <Button
-              variant='contained'
-              color='primary'
+              variant="contained"
+              color="primary"
               onClick={resetFilters}
               sx={{ m: 2, height: '36px' }}
             >
@@ -600,9 +737,9 @@ const Jobs = () => {
                       </Button>
                       <Button
                         onClick={handleDeleteConfirm}
-                        color='error'
+                        color="error"
                         disabled={isDeleting}
-                        variant='contained'
+                        variant="contained"
                       >
                         {isDeleting ? 'Deleting...' : 'Delete'}
                       </Button>
@@ -611,7 +748,11 @@ const Jobs = () => {
                 </Box>
               </Box>
             ) : (
-              <Alert severity='info' variant='outlined' sx={{ mt: 2 }}>
+              <Alert
+                severity="info"
+                variant="outlined"
+                sx={{ mt: 2 }}
+              >
                 <AlertTitle>No Jobs found.</AlertTitle>Try adjusting the filters
                 or running some jobs.
               </Alert>
@@ -647,7 +788,10 @@ const Jobs = () => {
 
     content = (
       <Box>
-        <Alert severity={severity} variant='outlined'>
+        <Alert
+          severity={severity}
+          variant="outlined"
+        >
           <AlertTitle>{errorMessage}</AlertTitle>
         </Alert>
       </Box>

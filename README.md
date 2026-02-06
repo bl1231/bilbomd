@@ -6,10 +6,6 @@ An advances Small Angle X-Ray Scattering (SAXS) modelling pipeline.
 
 BilboMD is a webapp developed at the [SIBYLS beamline](https://sibyls.als.lbl.gov). It uses Molecular Dynamics from [CHARMM](https://academiccharmm.org/) or [OpenMM](https://openmm.org/) to generate an array of possible molecular models. The ensemble of models is used to calculate theoretical SAXS curves using [FoXS](https://modbase.compbio.ucsf.edu/foxs/about), and compared with experimental SAXS data using [MultiFoXS](https://modbase.compbio.ucsf.edu/multifoxs/about) to find an ensemble of models that best explains your SAXS data.
 
-## High level architecture
-
-![BilboMD Design](docs/bilbomd-architecture.drawio.png)
-
 ## Pipelines
 
 There are several different SAXS modeling pipelines available.

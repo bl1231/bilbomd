@@ -41,6 +41,30 @@ const BilboMDNerscStep = ({
           friendlyName: 'Scoper',
           tooltipMessage: 'In this step we run Scoper. Details are below.'
         }
+      case 'reduce':
+        return {
+          friendlyName: 'Reduce',
+          tooltipMessage:
+            'In this step Hydrogen atoms are added to your RNA molecule.'
+        }
+      case 'rnaview':
+        return {
+          friendlyName: 'RNAView',
+          tooltipMessage:
+            'RNAView identifies base pairs that are formed in nucleic acid structures and classifies them according to the system of Leontis and Westhof'
+        }
+      case 'kgs':
+        return {
+          friendlyName: 'KGS',
+          tooltipMessage:
+            'KGS (Kino-Geometric Sampling) is an engine that generates conformational perturbations in biomolecules (protein, RNA, or ligands alike) by maintaining user-specified non-local constraints. '
+        }
+      case 'ionnet':
+        return {
+          friendlyName: 'IonNet',
+          tooltipMessage:
+            'IonNet is a deep learning model that predicts the locations of divalent cation binding sites on RNA structures.'
+        }
       case 'alphafold':
         return {
           friendlyName: 'AlphaFold2',

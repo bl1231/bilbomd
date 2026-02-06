@@ -1,7 +1,6 @@
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 import readline from 'node:readline'
-// import { FileCopyParams } from '../../types/index.js'
 import {
   IBilboMDPDBJob,
   IBilboMDCRDJob,
@@ -30,7 +29,7 @@ const prepareResults = async (
   try {
     const jobDir = path.join(config.uploadDir, DBjob.uuid)
     const multiFoxsDir = path.join(jobDir, 'multifoxs')
-    const logFile = path.join(multiFoxsDir, 'multi_foxs.log')
+    const multiFoxsLogFile = path.join(multiFoxsDir, 'multi_foxs.log')
     const resultsDir = path.join(jobDir, 'results')
 
     // Create new empty results directory
@@ -42,14 +41,27 @@ const prepareResults = async (
 
     {
       const baseDataName = DBjob.data_file.split('.')[0]
-      const charmmPdb = path.join(jobDir, 'minimization_output.pdb')
-      const openmmPdb = path.join(jobDir, 'minimize', 'minimized.pdb')
+      const openmmPdb = path.join(
+        jobDir,
+        'openmm',
+        'minimization',
+        'minimized.pdb'
+      )
+      const charmmNewPdb = path.join(
+        jobDir,
+        'charmm',
+        'minimize',
+        'minimization_output.pdb'
+      )
+      const charmmOldPdb = path.join(jobDir, 'minimization_output.pdb')
 
       const pdbSource = (await fs.pathExists(openmmPdb))
         ? openmmPdb
-        : (await fs.pathExists(charmmPdb))
-          ? charmmPdb
-          : null
+        : (await fs.pathExists(charmmNewPdb))
+          ? charmmNewPdb
+          : (await fs.pathExists(charmmOldPdb))
+            ? charmmOldPdb
+            : null
 
       if (pdbSource) {
         await copyFiles({
@@ -65,21 +77,30 @@ const prepareResults = async (
       }
 
       // --- Copy the DAT file for the minimized PDB (supports both layouts)
-      const charmmDat = path.join(
-        jobDir,
-        `minimization_output_${baseDataName}.dat`
-      )
       const openmmDat = path.join(
         jobDir,
-        'minimize',
+        'openmm',
+        'minimization',
         `minimized_${baseDataName}.dat`
+      )
+      const charmmNewDat = path.join(
+        jobDir,
+        'charmm',
+        'minimize',
+        `minimization_output_${baseDataName}.dat`
+      )
+      const charmmOldDat = path.join(
+        jobDir,
+        `minimization_output_${baseDataName}.dat`
       )
 
       const datSource = (await fs.pathExists(openmmDat))
         ? openmmDat
-        : (await fs.pathExists(charmmDat))
-          ? charmmDat
-          : null
+        : (await fs.pathExists(charmmNewDat))
+          ? charmmNewDat
+          : (await fs.pathExists(charmmOldDat))
+            ? charmmOldDat
+            : null
 
       if (datSource) {
         await copyFiles({
@@ -181,19 +202,17 @@ const prepareResults = async (
     }
 
     // Only want to add N best PDBs equal to number_of_states N in logfile.
-    const numEnsembles = await getNumEnsembles(logFile)
+    const numEnsembles = await getNumEnsembles(multiFoxsLogFile)
     logger.info(`prepareResults numEnsembles: ${numEnsembles}`)
 
     if (numEnsembles) {
       await assembleEnsemblePdbFiles({
-        numEnsembles,
-        multiFoxsDir,
-        jobDir,
-        resultsDir
+        DBjob
       })
     }
 
     // Write the DBjob to a JSON file
+    // We might consider doing this later? since it does not contain feedback data yet?
     try {
       const dbJobJsonPath = path.join(resultsDir, 'bilbomd_job.json')
       await fs.writeFile(dbJobJsonPath, JSON.stringify(DBjob, null, 2), 'utf8')

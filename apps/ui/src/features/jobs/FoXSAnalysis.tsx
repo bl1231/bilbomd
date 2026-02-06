@@ -3,9 +3,21 @@ import FoXSChart from 'features/scoperjob/FoXSChart'
 import { Alert, AlertTitle } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import { useGetFoxsAnalysisByIdQuery } from 'slices/jobsApiSlice'
+import { useGetPublicFoxsDataQuery } from 'slices/publicJobsApiSlice'
 import CircularProgress from '@mui/material/CircularProgress'
 import FoXSEnsembleCharts from 'features/foxs/FoXSEnsembleCharts'
 import Item from 'themes/components/Item'
+import { FoxsData, FoxsDataPoint } from '@bilbomd/bilbomd-types'
+
+// Define types
+type CombinedFoxsData = {
+  q: number
+  exp_intensity: number
+} & Record<string, number>
+
+type ScoperFoXSAnalysisProps = {
+  id: string
+}
 
 // Allows dynamic keys like model_intensity_1, residual_1, etc., without using `any`
 type CombinedFoxsDataDynamic = CombinedFoxsData &
@@ -91,19 +103,48 @@ const calculateResiduals = (dataPoints: FoxsDataPoint[]) => {
 
 /**
  * FoXSAnalysis component
- * @param id - Job ID
+ * @param id - Job ID (for protected usage)
+ * @param publicId - Public ID (for public usage, optional)
+ * @param isPublic - If true, uses public query; otherwise, uses protected query
  * @param active - (optional) If false, data fetching is skipped. Defaults to true for backwards compatibility.
  */
 const FoXSAnalysis = ({
   id,
+  publicId,
+  isPublic = false,
   active = true
-}: ScoperFoXSAnalysisProps & { active?: boolean }) => {
-  const { data, isLoading, isError } = useGetFoxsAnalysisByIdQuery(id, {
+}: Omit<ScoperFoXSAnalysisProps, 'id'> & {
+  id?: string
+  publicId?: string
+  isPublic?: boolean
+  active?: boolean
+}) => {
+  // Conditionally use the appropriate query
+  const protectedQuery = useGetFoxsAnalysisByIdQuery(id, {
     pollingInterval: 0,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true,
-    skip: !active
+    skip: !active || isPublic // Skip if public or inactive
   })
+  const publicQuery = useGetPublicFoxsDataQuery(publicId || '', {
+    skip: !active || !isPublic || !publicId // Skip if not public, inactive, or no publicId
+  })
+
+  // console.log(
+  //   'FoXSAnalysis: isPublic=',
+  //   isPublic,
+  //   'publicId=',
+  //   publicId,
+  //   'active=',
+  //   active,
+  //   'skip public=',
+  //   !active || !isPublic || !publicId
+  // )
+
+  // Select the active query result
+  const { data, isLoading, isError } = isPublic ? publicQuery : protectedQuery
+
+  // console.log('FoXSAnalysis data:', data)
 
   const foxsData = useMemo(
     () => (Array.isArray(data) ? (data as FoxsData[]) : []),

@@ -16,13 +16,19 @@ const NerscStatusChip: React.FC<NerscStatusChipProps> = ({ system }) => {
   const color = system.status === 'active' ? 'success' : 'warning'
   // console.log(system.notes[0])
   let toolTipMessage = 'OK'
-  if (system.notes[0]) {
-    toolTipMessage = system.notes[0]
+  if (system.status) {
+    toolTipMessage = system.status
   }
   return (
     <Grid sx={{ mx: 0.5, display: 'flex', alignItems: 'center' }}>
-      <Tooltip title={toolTipMessage} arrow>
-        <Chip label={`${system.full_name}`} color={color} />
+      <Tooltip
+        title={toolTipMessage}
+        arrow
+      >
+        <Chip
+          label={`${system.full_name}`}
+          color={color}
+        />
       </Tooltip>
     </Grid>
   )

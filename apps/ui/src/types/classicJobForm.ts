@@ -10,4 +10,5 @@ export type BilboMDClassicJobFormValues = {
   rg: string
   rg_min: string
   rg_max: string
+  md_engine: 'charmm' | 'openmm'
 }

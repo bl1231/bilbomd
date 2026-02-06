@@ -1,8 +1,9 @@
-process.env.BILBOMD_URL = process.env.BILBOMD_URL || 'http://localhost:3000'
 import dotenv from 'dotenv'
-dotenv.config({ path: './test/.env.test' })
+dotenv.config({ path: './.env.test' })
+console.log('*** backend test setup loaded ***')
+
 import { logger } from '../src/middleware/loggers.js'
-import { MongoMemoryServer } from 'mongodb-memory-server'
+// import { MongoMemoryServer } from 'mongodb-memory-server'
 import mongoose from 'mongoose'
 import { vi, beforeAll, Mock } from 'vitest'
 import fs from 'fs-extra'
@@ -37,11 +38,13 @@ beforeAll(() => {
   })
 })
 
-// Setup MongoDB Memory Server
-export const mongoServer = await MongoMemoryServer.create()
-const uri = mongoServer.getUri()
+console.log('*** Connecting to in-memory MongoDB for tests ***')
 
-await mongoose.connect(uri)
+// Setup MongoDB Memory Server
+// export const mongoServer = await MongoMemoryServer.create()
+// const uri = mongoServer.getUri()
+
+// await mongoose.connect(uri)
 
 // Mock bullmq queues with real classes for Vitest v4 compatibility
 class MockQueue {
@@ -91,6 +94,7 @@ const { __useMock, __sendMailMock } = vi.hoisted(() => ({
 // Attach mocks to the global object for access in all tests
 globalThis.__useMock = __useMock
 globalThis.__sendMailMock = __sendMailMock
+globalThis.__sendMailMock.mockResolvedValue(undefined)
 
 vi.mock('nodemailer', () => {
   const createTransport = vi.fn(() => ({

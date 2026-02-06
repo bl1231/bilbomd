@@ -25,13 +25,6 @@ import {
   createPdb2CrdCharmmInpFiles,
   spawnPdb2CrdCharmm
 } from './pdb-to-crd.js'
-// import {
-//   CharmmParams,
-//   MultiFoxsParams,
-//   PaeParams,
-//   CharmmHeatParams,
-//   CharmmMDParams
-// } from '../../types/index.js'
 import { updateStepStatus } from './mongo-utils.js'
 import {
   makeDir,
@@ -768,8 +761,13 @@ const runMinimize = async (
     | IBilboMDSANSJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
+  const charmmMinimizeDir = path.join(outputDir, 'charmm', 'minimize')
+
+  // Create the charmm/minimize directory
+  await makeDir(charmmMinimizeDir)
+
   const params: CharmmParams = {
-    out_dir: outputDir,
+    out_dir: charmmMinimizeDir,
     charmm_template: 'minimize',
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: 'minimize.inp',
@@ -805,8 +803,13 @@ const runHeat = async (
     | IBilboMDSANSJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
+  const charmmHeatDir = path.join(outputDir, 'charmm', 'heat')
+
+  // Create the charmm/heat directory
+  await makeDir(charmmHeatDir)
+
   const params: CharmmHeatParams = {
-    out_dir: outputDir,
+    out_dir: charmmHeatDir,
     charmm_template: 'heat',
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: 'heat.inp',
@@ -843,8 +846,13 @@ const runMolecularDynamics = async (
     | IBilboMDSANSJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
+  const charmmMdDir = path.join(outputDir, 'charmm', 'md')
+
+  // Create the charmm/md directory
+  await makeDir(charmmMdDir)
+
   const params: CharmmMDParams = {
-    out_dir: outputDir,
+    out_dir: charmmMdDir,
     charmm_template: 'dynamics',
     charmm_topo_dir: config.charmmTopoDir,
     charmm_inp_file: '',
@@ -867,8 +875,14 @@ const runMolecularDynamics = async (
     }
     await updateStepStatus(DBjob, 'md', status)
     const molecularDynamicsTasks = []
-    const step = Math.max(Math.round((params.rg_max - params.rg_min) / 5), 1)
-    for (let rg = params.rg_min; rg <= params.rg_max; rg += step) {
+    let rgyrList: number[] = []
+    if (
+      'charmm_parameters' in DBjob &&
+      Array.isArray(DBjob.charmm_parameters?.md?.rgyr)
+    ) {
+      rgyrList = DBjob.charmm_parameters.md.rgyr
+    }
+    for (const rg of rgyrList) {
       params.charmm_inp_file = `${params.charmm_template}_rg${rg}.inp`
       params.charmm_out_file = `${params.charmm_template}_rg${rg}.out`
       params.inp_basename = `${params.charmm_template}_rg${rg}`

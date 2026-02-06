@@ -1,34 +1,81 @@
-import { BilboMDJob } from 'types/interfaces'
+import type { PartialDeep } from 'type-fest'
+import type { BilboMDJobDTO, BilboMDPDBDTO } from '@bilbomd/bilbomd-types'
+
+type BilboMDJob = BilboMDJobDTO & {
+  bullmq: {
+    position: number
+    queuePosition: string
+    bilbomdStep: Record<string, string | number>
+    bilbomdLastStep: string
+    bullmq: {
+      id: number
+      progress: string
+      name: string
+      data: Record<string, unknown>
+    }
+  }
+}
 
 export const createMockBilboMDJob = (
-  overrides: Partial<BilboMDJob> = {}
+  overrides: PartialDeep<BilboMDJob> = {}
 ): BilboMDJob => {
   const baseJob: BilboMDJob = {
+    id: '123',
+    username: 'testuser',
     mongo: {
       id: '123',
-      __t: 'BilboMdPDB',
+      jobType: 'pdb',
+      title: 'Mock PDB Job',
+      access_mode: 'anonymous',
+      public_id: 'public-123',
+      status: 'Completed',
       uuid: 'abc-123',
       time_submitted: new Date(),
       time_started: new Date(),
       time_completed: new Date(),
       data_file: 'example.dat',
-      pdb_file: 'example.pdb',
-      psf_file: 'example.psf',
-      crd_file: 'example.crd',
+      pdb_file: '',
+      psf_file: '',
+      crd_file: '',
       const_inp_file: 'const.inp',
       rg: 25,
       rg_min: 20,
       rg_max: 30,
-      conformational_sampling: 1
-    },
+      conformational_sampling: 1,
+      md_engine: 'OpenMM',
+      md_constraints: {},
+      openmm_parameters: {}
+    } as BilboMDPDBDTO,
     bullmq: {
-      status: 'completed',
-      progress: 100
+      position: 1,
+      queuePosition: '1',
+      bilbomdStep: {
+        minimize: 'completed',
+        heat: 'completed',
+        md: 'completed',
+        foxs: 'completed',
+        multifoxs: 'completed',
+        results: 'completed',
+        email: 'completed',
+        numEnsembles: 1
+      },
+      bilbomdLastStep: 'results',
+      bullmq: {
+        id: 1,
+        progress: '100',
+        name: 'test',
+        data: { type: 'pdb', title: 't', uuid: '123' }
+      }
     }
   }
 
   return {
-    mongo: { ...baseJob.mongo, ...(overrides.mongo || {}) },
-    bullmq: { ...baseJob.bullmq, ...(overrides.bullmq || {}) }
+    ...baseJob,
+    ...overrides,
+    mongo: { ...baseJob.mongo, ...(overrides.mongo ?? {}) } as BilboMDPDBDTO,
+    bullmq: {
+      ...baseJob.bullmq,
+      ...(overrides.bullmq ?? {})
+    } as BilboMDJob['bullmq']
   }
 }

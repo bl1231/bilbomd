@@ -105,21 +105,15 @@ const generateFoxsRunDirs = (
     | IBilboMDAlphaFoldJob
 ): FoxsRunDir[] => {
   const foxsRunDirs: FoxsRunDir[] = []
+  let rgyrList: number[] = []
   if (
-    typeof DBjob.rg_min !== 'number' ||
-    typeof DBjob.rg_max !== 'number' ||
-    typeof DBjob.conformational_sampling !== 'number'
+    'charmm_parameters' in DBjob &&
+    Array.isArray(DBjob.charmm_parameters?.md?.rgyr)
   ) {
-    throw new Error(
-      'DBjob.rg_min, rg_max, and conformational_sampling must be defined numbers'
-    )
+    rgyrList = DBjob.charmm_parameters.md.rgyr
   }
-  const rgMin: number = DBjob.rg_min
-  const rgMax: number = DBjob.rg_max
   const conformationalSampling: number = DBjob.conformational_sampling
-  const step: number = Math.max(Math.round((rgMax - rgMin) / 5), 1)
-
-  for (let rg: number = rgMin; rg <= rgMax; rg += step) {
+  for (const rg of rgyrList) {
     for (let run: number = 1; run <= conformationalSampling; run++) {
       const foxsRunDir: string = path.join(analysisDir, `rg${rg}_run${run}`)
       foxsRunDirs.push({ dir: foxsRunDir, rg, run })

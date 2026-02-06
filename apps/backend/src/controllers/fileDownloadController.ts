@@ -6,7 +6,11 @@ import { config } from '../config/config.js'
 import { Request, Response } from 'express'
 
 const getFile = async (req: Request, res: Response) => {
-  const { id, filename } = req.params
+  const { id: rawId, filename: rawFilename } = req.params
+
+  // Ensure parameters are strings
+  const id = Array.isArray(rawId) ? rawId[0] : rawId
+  const filename = Array.isArray(rawFilename) ? rawFilename[0] : rawFilename
 
   try {
     // Validate job ID and fetch the job
@@ -30,7 +34,10 @@ const getFile = async (req: Request, res: Response) => {
 
     // Log and serve the file
     logger.info(`Serving file ${sanitizedFilename} for job ${id}`)
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedFilename}"`)
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${sanitizedFilename}"`
+    )
     res.sendFile(filePath)
   } catch (error) {
     logger.error(`Error retrieving file for job ${id}: ${error}`)

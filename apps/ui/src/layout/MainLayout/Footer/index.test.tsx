@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import Footer from './index'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { version } from '../../../../package.json'
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query/react'
+import { renderWithProviders } from 'test/test-utils'
 
 // Mock the RTK Query hook
 vi.mock('slices/configsApiSlice', () => ({
@@ -45,7 +46,7 @@ describe('Footer Component', () => {
     }
 
     useGetConfigsQueryMock.mockReturnValue(loadingState)
-    render(<Footer />)
+    renderWithProviders(<Footer />)
     expect(screen.getByText('Loading config data...')).toBeInTheDocument()
   })
 
@@ -70,7 +71,7 @@ describe('Footer Component', () => {
     }
 
     useGetConfigsQueryMock.mockReturnValue(errorState)
-    render(<Footer />)
+    renderWithProviders(<Footer />)
     expect(
       screen.getByText('Error loading configuration data')
     ).toBeInTheDocument()
@@ -97,7 +98,7 @@ describe('Footer Component', () => {
     }
 
     useGetConfigsQueryMock.mockReturnValue(noConfigState)
-    render(<Footer />)
+    renderWithProviders(<Footer />)
     expect(
       screen.getByText('No configuration data available')
     ).toBeInTheDocument()
@@ -124,16 +125,14 @@ describe('Footer Component', () => {
     }
 
     useGetConfigsQueryMock.mockReturnValue(successState)
-    const currentYear = new Date().getFullYear()
-    render(<Footer />)
+
+    renderWithProviders(<Footer />)
 
     expect(
       screen.getByText('"dynamicity... the essence of BilboMD"')
     ).toBeInTheDocument()
     expect(screen.getByText(/Copyright ©/)).toBeInTheDocument()
-    expect(
-      screen.getByText(currentYear.toString(), { exact: false })
-    ).toBeInTheDocument()
+    expect(screen.getByText('2025', { exact: false })).toBeInTheDocument()
 
     const link = screen.getByText('SIBYLS Beamline')
     expect(link).toHaveAttribute('href', 'https://bl1231.als.lbl.gov')

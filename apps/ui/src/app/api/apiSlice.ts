@@ -8,7 +8,8 @@ import {
 import { setCredentials } from '../../slices/authSlice'
 import type { RootState } from '../store'
 
-const baseURL = '/api/v1'
+const baseURL =
+  process.env.NODE_ENV === 'test' ? 'http://localhost:3003/api/v1' : '/api/v1'
 
 const baseQuery = fetchBaseQuery({
   baseUrl: baseURL,
@@ -75,7 +76,8 @@ export const apiSlice = createApi({
     'Token',
     'AdminQueue',
     'Af2PaeViz',
-    'MovieAsset'
+    'MovieAsset',
+    'Analytics'
   ],
   endpoints: () => ({})
 })

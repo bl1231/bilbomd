@@ -3,9 +3,9 @@ import { Box, Container } from '@mui/system'
 import { version } from '../../../../package.json'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { blue } from '@mui/material/colors'
+import { Link as RouterLink } from 'react-router'
 
 const Footer = () => {
-  const currentYear = new Date().getFullYear()
   const {
     data: config,
     error: configError,
@@ -55,7 +55,14 @@ const Footer = () => {
             variant="caption"
             sx={{ wordBreak: 'break-all' }}
           >
-            Copyright ©{currentYear}.{' '}
+            <Link
+              component={RouterLink}
+              to="/copyright"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Copyright ©2025
+            </Link>
+            {' • '}
             <Link
               href="https://bl1231.als.lbl.gov"
               target="_blank"
@@ -63,8 +70,8 @@ const Footer = () => {
               sx={{ fontWeight: 'bold' }}
             >
               SIBYLS Beamline
-            </Link>{' '}
-            - BilboMD v{version}-{gitHash}
+            </Link>
+            {' • '} BilboMD v{version}-{gitHash}
           </Typography>
 
           <Typography sx={{ wordBreak: 'break-all' }}>
@@ -91,6 +98,35 @@ const Footer = () => {
                 }}
               />
               GitHub
+            </Link>
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{ ml: 2 }}
+          >
+            <Link
+              component={RouterLink}
+              to="/privacy"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Privacy Policy
+            </Link>
+            {' • '}
+            <Link
+              component={RouterLink}
+              to="/funding"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Funding
+            </Link>
+            {' • '}
+            <Link
+              component={RouterLink}
+              to="/terms"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Terms and Conditions
             </Link>
           </Typography>
         </Box>

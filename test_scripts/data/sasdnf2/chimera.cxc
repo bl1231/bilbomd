@@ -1,0 +1,16 @@
+close
+open sasdnf2.pdb name sasdnf2
+set bg white
+graphics silhouettes true
+lighting depthCue f
+color wheat
+color /B:70-143 goldenrod
+color /B:146-196 goldenrod
+color /A:2-294 dodger blue
+color /B:18-39 dodger blue
+
+
+# Position mol in view window so that it is vissible for the entire trajectory
+# then use `view matrix` to get these values
+view matrix camera 0.46253,-0.88454,0.060495,6.0332,-0.31049,-0.097693,0.94554,203.35,-0.83046,-0.45613,-0.31983,-61.645
+view matrix models #1,1,0,0,0,0,1,0,0,0,0,1,0

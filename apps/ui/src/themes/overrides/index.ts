@@ -39,7 +39,7 @@ export default function ComponentsOverrides(theme: Theme) {
     BackGround(theme),
     BilboMdPipeline(theme),
     CardContent(),
-    Checkbox(theme),
+    Checkbox(),
     Chip(theme),
     DataGrid(theme),
     Dialog(theme),

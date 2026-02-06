@@ -1,5 +1,124 @@
 # @bilbomd/md-utils
 
+## 1.1.0
+
+### Minor Changes
+
+- 673e173: Bump Node.js from v22 to v24
+
+### Patch Changes
+
+- 72f4ea4: Update dependencies.
+  Improve pipeline instructions.
+  Update instructions to reference OpenMM in addition to CHARMM.
+- Updated dependencies [72f4ea4]
+- Updated dependencies [673e173]
+  - @bilbomd/mongodb-schema@2.4.0
+
+## 1.0.20
+
+### Patch Changes
+
+- 1d0c4f5: Update nodejs
+  Update pnpm
+  Update all deps
+  Fix some typescript errors that surfaced.
+- Updated dependencies [1d0c4f5]
+  - @bilbomd/mongodb-schema@2.3.5
+
+## 1.0.19
+
+### Patch Changes
+
+- 0daf2a4: improved cicd pipeline
+- Updated dependencies [0daf2a4]
+  - @bilbomd/mongodb-schema@2.3.4
+
+## 1.0.18
+
+### Patch Changes
+
+- 34ef235: Update all dependencies with minor or patch level bumps
+- 690bed9: Update mongoose from v8 to v9.
+  Split `backend` tests into unit and integration
+- Updated dependencies [690bed9]
+  - @bilbomd/mongodb-schema@2.3.3
+
+## 1.0.17
+
+### Patch Changes
+
+- Updated dependencies [16f7879]
+  - @bilbomd/mongodb-schema@2.3.2
+
+## 1.0.16
+
+### Patch Changes
+
+- Updated dependencies [da97649]
+  - @bilbomd/mongodb-schema@2.3.1
+
+## 1.0.15
+
+### Patch Changes
+
+- Updated dependencies [5145c75]
+  - @bilbomd/mongodb-schema@2.3.0
+
+## 1.0.14
+
+### Patch Changes
+
+- Updated dependencies [53937de]
+  - @bilbomd/mongodb-schema@2.2.0
+
+## 1.0.13
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+
+## 1.0.12
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/mongodb-schema@2.1.1
+
+## 1.0.11
+
+### Patch Changes
+
+- Updated dependencies [bdc6d1d]
+- Updated dependencies [2ff4c96]
+  - @bilbomd/mongodb-schema@2.1.0
+
+## 1.0.10
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+
+## 1.0.9
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+
+## 1.0.8
+
+### Patch Changes
+
+- Updated dependencies [f514114]
+  - @bilbomd/mongodb-schema@2.0.0
+
 ## 1.0.7
 
 ### Patch Changes

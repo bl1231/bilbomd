@@ -3,19 +3,19 @@ import { Box, Container } from '@mui/system'
 import { version } from '../../../../package.json'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { blue } from '@mui/material/colors'
-// import { useTheme } from '@mui/material/styles'
+import { Link as RouterLink } from 'react-router'
 
 const Footer = () => {
-  // const theme = useTheme()
-  const currentYear = new Date().getFullYear()
   const {
     data: config,
     error: configError,
     isLoading: configIsLoading
   } = useGetConfigsQuery('configData')
+
   if (configIsLoading) return <div>Loading config data...</div>
   if (configError) return <div>Error loading configuration data</div>
   if (!config) return <div>No configuration data available</div>
+
   const gitHash = config.uiGitHash || ''
 
   return (
@@ -46,11 +46,23 @@ const Footer = () => {
             flexGrow: 1,
             justifyContent: 'center',
             display: 'flex',
+            alignItems: 'center',
+            gap: 1,
             mb: 1
           }}
         >
-          <Typography sx={{ wordBreak: 'break-all' }}>
-            Copyright ©{currentYear}.{' '}
+          <Typography
+            variant="caption"
+            sx={{ wordBreak: 'break-all' }}
+          >
+            <Link
+              component={RouterLink}
+              to="/copyright"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Copyright ©2025
+            </Link>
+            {' • '}
             <Link
               href="https://bl1231.als.lbl.gov"
               target="_blank"
@@ -58,9 +70,10 @@ const Footer = () => {
               sx={{ fontWeight: 'bold' }}
             >
               SIBYLS Beamline
-            </Link>{' '}
-            - BilboMD v{version}-{gitHash}
+            </Link>
+            {' • '}BilboMD v{version}-{gitHash}
           </Typography>
+
           <Typography sx={{ wordBreak: 'break-all' }}>
             <Link
               href="https://github.com/bl1231/bilbomd"
@@ -85,6 +98,35 @@ const Footer = () => {
                 }}
               />
               GitHub
+            </Link>
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{ ml: 2 }}
+          >
+            <Link
+              component={RouterLink}
+              to="/privacy"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Privacy Policy
+            </Link>
+            {' • '}
+            <Link
+              component={RouterLink}
+              to="/funding"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Funding
+            </Link>
+            {' • '}
+            <Link
+              component={RouterLink}
+              to="/terms"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Terms and Conditions
             </Link>
           </Typography>
         </Box>

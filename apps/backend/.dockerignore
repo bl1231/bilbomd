@@ -18,4 +18,5 @@ uploads
 imp-2.18.0.tar.gz
 .env
 test
+!test_scripts/data/**
 test.rest

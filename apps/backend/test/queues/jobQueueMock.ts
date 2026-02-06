@@ -16,21 +16,19 @@ class MockQueue {
   }
   async add(name: string, data: BullMQData) {
     // Simulate adding a job
-    const mockJob: BullMQJob = {
+    const mockJob = {
       id: `${Date.now()}`,
       name,
       data,
       opts: { attempts: 3 },
       timestamp: Date.now(),
-      finishedOn: null,
-      processedOn: null,
+      finishedOn: undefined,
+      processedOn: undefined,
       progress: 0,
       attemptsMade: 0,
-      stacktrace: null,
-      returnvalue: null,
-      state: 'waiting',
-      optsJob: {}
-    }
+      stacktrace: [],
+      returnvalue: null
+    } as unknown as BullMQJob
     mockQueue.push(mockJob)
     return mockJob
   }

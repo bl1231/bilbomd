@@ -9,6 +9,7 @@ import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import { useTheme, Divider } from '@mui/material'
 import PeopleIcon from '@mui/icons-material/People'
 import {
@@ -25,6 +26,7 @@ import useAuth from 'hooks/useAuth'
 import Header from './Header'
 import Breadcrumbs from './Breadcrumbs'
 import Footer from './Footer'
+import CookieConsent from 'components/CookieConsent'
 
 const drawerWidth = 190
 
@@ -44,9 +46,9 @@ export default function ClippedDrawer() {
 
   if (configIsLoading) return <CircularProgress />
   if (configError)
-    return <Alert severity='error'>Error loading configuration data</Alert>
+    return <Alert severity="error">Error loading configuration data</Alert>
   if (!config)
-    return <Alert severity='warning'>No configuration data available</Alert>
+    return <Alert severity="warning">No configuration data available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
   const enableBilboMdSANS = config.enableBilboMdSANS?.toLowerCase() === 'true'
@@ -142,6 +144,14 @@ export default function ClippedDrawer() {
       divider: true
     },
     {
+      text: 'Help',
+      icon: <HelpOutlineIcon />,
+      path: '/dashboard/help',
+      onclick: () => navigate('/dashboard/help'),
+      roles: ['user'],
+      divider: false
+    },
+    {
       text: 'About',
       icon: <InfoOutlined />,
       path: '/dashboard/about',
@@ -214,7 +224,7 @@ export default function ClippedDrawer() {
       <Box sx={{ display: 'flex', flexGrow: 1 }}>
         {!isSettingsPage && (
           <Drawer
-            variant='permanent'
+            variant="permanent"
             sx={{
               width: drawerWidth,
               flexShrink: 0,
@@ -231,7 +241,10 @@ export default function ClippedDrawer() {
             </Box>
           </Drawer>
         )}
-        <Box component='main' sx={{ flexGrow: 1, p: 3 }}>
+        <Box
+          component="main"
+          sx={{ flexGrow: 1, p: 3 }}
+        >
           {showBreadcrumbs && <Breadcrumbs />}
           <Outlet />
         </Box>
@@ -239,6 +252,7 @@ export default function ClippedDrawer() {
 
       <Box sx={{ width: '100vw' }}>
         <Footer />
+        <CookieConsent />
       </Box>
     </Box>
   )

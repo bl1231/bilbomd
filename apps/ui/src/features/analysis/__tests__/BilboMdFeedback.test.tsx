@@ -1,10 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import BilboMdFeedback from '../BilboMdFeedback'
 import { IFeedbackData } from '@bilbomd/mongodb-schema'
+import { renderWithProviders } from 'test/test-utils'
 
 const mockFeedback: IFeedbackData = {
   best_model: 'Model A',
+  best_model_dat_file: 'model_a.dat',
+  best_ensemble_pdb_file: 'ensemble.pdb',
   overall_chi_square: 1.5,
   mw_saxs: 50,
   mw_model: 55,
@@ -22,12 +25,14 @@ const mockFeedback: IFeedbackData = {
 
 describe('BilboMdFeedback Component', () => {
   it('renders the best model correctly', () => {
-    render(<BilboMdFeedback feedback={mockFeedback} />)
-    expect(screen.getByText(mockFeedback.best_model)).toBeInTheDocument()
+    renderWithProviders(<BilboMdFeedback feedback={mockFeedback} />)
+    expect(
+      screen.getByText(mockFeedback.best_model_dat_file)
+    ).toBeInTheDocument()
   })
 
   it('renders feedback text correctly', () => {
-    render(<BilboMdFeedback feedback={mockFeedback} />)
+    renderWithProviders(<BilboMdFeedback feedback={mockFeedback} />)
     expect(
       screen.getByText(mockFeedback.highest_chi_square_feedback)
     ).toBeInTheDocument()
@@ -44,7 +49,7 @@ describe('BilboMdFeedback Component', () => {
   })
 
   it('renders residuals of regions correctly', () => {
-    render(<BilboMdFeedback feedback={mockFeedback} />)
+    renderWithProviders(<BilboMdFeedback feedback={mockFeedback} />)
     mockFeedback.residuals_of_regions.forEach((value) => {
       const label = screen.getByText(value.toFixed(2))
       expect(label).toBeInTheDocument()

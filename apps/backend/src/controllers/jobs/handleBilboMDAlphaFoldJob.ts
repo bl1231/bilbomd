@@ -5,19 +5,22 @@ import {
   IBilboMDAlphaFoldJob,
   IAlphaFoldEntity,
   IBilboMDSteps,
-  StepStatus
+  StepStatus,
+  IUser
 } from '@bilbomd/mongodb-schema'
 import { alphafoldJobSchema } from '../../validation/index.js'
 import { ValidationError } from 'yup'
-import { IUser } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { writeJobParams, spawnAutoRgCalculator } from './index.js'
+import { getFileStats } from './utils/jobUtils.js'
 import { queueJob } from '../../queues/bilbomd.js'
 import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { config } from '../../config/config.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = config.uploadDir
 
 type AutoRgResults = {
   rg: number
@@ -28,16 +31,14 @@ type AutoRgResults = {
 const handleBilboMDAlphaFoldJob = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
-): Promise<void> => {
-  if (process.env.USE_NERSC?.toLowerCase() !== 'true') {
-    logger.warn('AlphaFold job rejected: NERSC not enabled')
-    res.status(403).json({
-      message: 'AlphaFold jobs unavailable on this deployment.'
-    })
-    return
+  user: IUser | undefined,
+  UUID: string,
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
   }
+): Promise<void> => {
   const jobDir = path.join(uploadFolder, UUID)
 
   const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
@@ -49,6 +50,16 @@ const handleBilboMDAlphaFoldJob = async (
   const files = req.files as { [fieldname: string]: Express.Multer.File[] }
   logger.info(`bilbomdMode: ${bilbomdMode}`)
   logger.info(`title: ${req.body.title}`)
+
+  // Handle example data files if no uploaded files
+  let datFile = files['dat_file']?.[0]
+  if (!datFile && req.body.dat_file) {
+    datFile = {
+      originalname: req.body.dat_file,
+      path: path.join(jobDir, req.body.dat_file),
+      size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+    } as Express.Multer.File
+  }
 
   let parsedEntities: IAlphaFoldEntity[] = []
 
@@ -67,7 +78,6 @@ const handleBilboMDAlphaFoldJob = async (
   }
 
   // Collect data for validation
-  const datFile = files['dat_file']?.[0]
   logger.info(`datFile = ${datFile?.originalname}, path = ${datFile?.path}`)
   const jobPayload = {
     title: req.body.title,
@@ -100,10 +110,9 @@ const handleBilboMDAlphaFoldJob = async (
   await createFastaFile(parsedEntities, jobDir)
 
   try {
-    const datFileName =
-      files['dat_file'] && files['dat_file'][0]
-        ? files['dat_file'][0].originalname.toLowerCase()
-        : 'missing.dat'
+    const datFileName = datFile
+      ? datFile.originalname.toLowerCase()
+      : 'missing.dat'
 
     // If the values calculated by autorg are outside of the limits set in the mongodb
     // schema then the job will not be created in mongodb and things fail in a way that
@@ -161,7 +170,9 @@ const handleBilboMDAlphaFoldJob = async (
         foxs: { status: StepStatus.Waiting, message: '' },
         multifoxs: { status: StepStatus.Waiting, message: '' },
         results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     } else {
       stepsInit = {
@@ -178,11 +189,13 @@ const handleBilboMDAlphaFoldJob = async (
         foxs: { status: StepStatus.Waiting, message: '' },
         multifoxs: { status: StepStatus.Waiting, message: '' },
         results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     }
 
-    const newJob: IBilboMDAlphaFoldJob = new BilboMdAlphaFoldJob({
+    const jobData = {
       title: req.body.title,
       uuid: UUID,
       data_file: datFileName,
@@ -198,38 +211,83 @@ const handleBilboMDAlphaFoldJob = async (
       steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
-        openmm_parameters: buildOpenMMParameters(req.body)
-      })
-    })
+        openmm_parameters: buildOpenMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
+      }),
+      ...(md_engine === 'CHARMM' && {
+        charmm_parameters: buildCHARMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
+      }),
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash: ctx.client_ip_hash }
+        : {})
+    }
+
+    const newJob: IBilboMDAlphaFoldJob = new BilboMdAlphaFoldJob(jobData)
 
     // Save the job to the database
     await newJob.save()
-    logger.info(`${bilbomdMode} Job saved to MongoDB: ${newJob.id}`)
+    logger.info(`${bilbomdMode} Job saved to MongoDB: ${newJob._id.toString()}`)
 
     // Write Job params for use by NERSC job script.
-    await writeJobParams(newJob.id)
+    await writeJobParams(newJob._id.toString())
 
     // Create BullMQ Job object
-    const jobData = {
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id,
+      jobid: newJob._id.toString(),
       md_engine
     }
 
     // Queue the job
-    const BullId = await queueJob(jobData)
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
-    res.status(200).json({
-      message: `New BilboMD AF Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid,
-      md_engine
-    })
+    // Respond with job details
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New BilboMD AF Job successfully created`,
+        jobid: newJob._id.toString(),
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD AF Job successfully created`,
+        jobid: newJob._id.toString(),
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     const msg =
       error instanceof Error

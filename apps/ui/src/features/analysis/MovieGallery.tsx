@@ -14,28 +14,13 @@ import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import DownloadIcon from '@mui/icons-material/Download'
 import MoviePlayer from './MoviePlayer'
 import Item from 'themes/components/Item'
-
-interface MovieAsset {
-  label: string
-  status: 'queued' | 'running' | 'ready' | 'failed'
-  mp4?: string
-  poster?: string
-  thumb?: string
-  meta?: {
-    width?: number
-    height?: number
-    stride?: number
-    fps?: number
-    ray?: boolean
-  }
-  error?: string
-}
+import { JobAssetsDTO } from '@bilbomd/bilbomd-types'
 
 interface MovieGalleryProps {
-  movies: MovieAsset[]
+  data: JobAssetsDTO
 }
 
-const MovieGallery = ({ movies }: MovieGalleryProps) => {
+const MovieGallery = ({ data }: MovieGalleryProps) => {
   const [playingIndex, setPlayingIndex] = useState<number | null>(null)
 
   const handleMovieClick = (index: number) => {
@@ -57,14 +42,14 @@ const MovieGallery = ({ movies }: MovieGalleryProps) => {
     }
   }
 
-  const readyMovies = movies.filter(
+  const readyMovies = data.movies.filter(
     (movie) => movie.status === 'ready' && movie.mp4
   )
-  const otherMovies = movies.filter(
+  const otherMovies = data.movies.filter(
     (movie) => movie.status !== 'ready' || !movie.mp4
   )
 
-  if (movies.length === 0) {
+  if (data.movies.length === 0) {
     return <Alert severity="info">No movies available for this job.</Alert>
   }
 

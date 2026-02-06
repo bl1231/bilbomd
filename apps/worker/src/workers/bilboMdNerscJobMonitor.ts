@@ -19,6 +19,11 @@ import {
   prepareBilboMDResults,
   sendBilboMDEmail
 } from '../services/functions/job-monitor-functions.js'
+import {
+  recordWorkerUsageEvent,
+  buildContext
+} from '../services/functions/usage-events.js'
+import { discriminatorToPipeline } from '@bilbomd/md-utils'
 
 const fetchIncompleteJobs = async (): Promise<IJob[]> => {
   return DBJob.find({
@@ -162,8 +167,43 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
       await updateJobStateInMongoDB(job, nerscState)
 
       // Step 3: Handle the job based on its NERSC state
+      const pipeline = discriminatorToPipeline(job.__t)
+      const context = buildContext({ access_mode: 'user', user: job.user })
+      const started =
+        job.nersc?.time_started && job.nersc.time_started.getTime() > 0
+          ? job.nersc.time_started
+          : undefined
+      const completed =
+        job.nersc?.time_completed && job.nersc.time_completed.getTime() > 0
+          ? job.nersc.time_completed
+          : undefined
+      const duration_ms =
+        started && completed
+          ? completed.getTime() - started.getTime()
+          : undefined
+
       switch (nerscState.state) {
         case 'COMPLETED':
+          await recordWorkerUsageEvent({
+            uuid: job.uuid,
+            pipeline,
+            eventType: 'job_completed',
+            jobId: job._id,
+            context,
+            nersc: {
+              jobid: job.nersc?.jobid,
+              qos: nerscState.qos ?? undefined
+            },
+            durationMs: duration_ms,
+            metadata: {
+              stage: 'monitor',
+              source: 'sacct',
+              state: nerscState.state,
+              time_submitted: job.nersc?.time_submitted,
+              time_started: job.nersc?.time_started,
+              time_completed: job.nersc?.time_completed
+            }
+          })
           await markJobAsCompleted(job)
           break
 
@@ -175,12 +215,36 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
           logger.warn(
             `Job ${job.nersc?.jobid} failed with state: ${nerscState.state}`
           )
+          await recordWorkerUsageEvent({
+            uuid: job.uuid,
+            pipeline,
+            eventType: 'job_failed',
+            jobId: job._id,
+            context,
+            nersc: {
+              jobid: job.nersc?.jobid,
+              qos: nerscState.qos ?? undefined
+            },
+            metadata: { stage: 'monitor', reason: nerscState.state }
+          })
           await markJobAsFailed(job)
           break
 
         case 'CANCELLED':
         case 'PREEMPTED':
           logger.info(`Job ${job.nersc?.jobid} was cancelled or preempted.`)
+          await recordWorkerUsageEvent({
+            uuid: job.uuid,
+            pipeline,
+            eventType: 'job_cancelled',
+            jobId: job._id,
+            context,
+            nersc: {
+              jobid: job.nersc?.jobid,
+              qos: nerscState.qos ?? undefined
+            },
+            metadata: { stage: 'monitor' }
+          })
           await markJobAsCancelled(job)
           break
 
@@ -189,6 +253,18 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
           break
 
         case 'RUNNING':
+          await recordWorkerUsageEvent({
+            uuid: job.uuid,
+            pipeline,
+            eventType: 'job_started',
+            jobId: job._id,
+            context,
+            nersc: {
+              jobid: job.nersc?.jobid,
+              qos: nerscState.qos ?? undefined
+            },
+            metadata: { stage: 'monitor' }
+          })
           await markJobAsRunning(job)
           break
 

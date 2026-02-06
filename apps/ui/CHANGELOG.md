@@ -1,5 +1,328 @@
 # @bilbomd/ui
 
+## 2.5.2
+
+### Patch Changes
+
+- cbf125a: Display the NERSC System Status rather than Notes in the tooltip
+
+## 2.5.1
+
+### Patch Changes
+
+- c541a29: Update dependencies
+- bbb3c2e: Fix bug in NERSC Queue Time and Run Time calculations that was resulting in negative values
+
+## 2.5.0
+
+### Minor Changes
+
+- 673e173: Bump Node.js from v22 to v24
+
+### Patch Changes
+
+- 72f4ea4: Update dependencies.
+  Improve pipeline instructions.
+  Update instructions to reference OpenMM in addition to CHARMM.
+- Updated dependencies [72f4ea4]
+- Updated dependencies [673e173]
+  - @bilbomd/mongodb-schema@2.4.0
+
+## 2.4.7
+
+### Patch Changes
+
+- 3ac5725: Update Terms and Conditions, Privacy, and Copyright as per LBNL IPO.
+- 1d0c4f5: Update nodejs
+  Update pnpm
+  Update all deps
+  Fix some typescript errors that surfaced.
+- Updated dependencies [1d0c4f5]
+  - @bilbomd/mongodb-schema@2.3.5
+
+## 2.4.6
+
+### Patch Changes
+
+- 0daf2a4: improved cicd pipeline
+- Updated dependencies [0daf2a4]
+  - @bilbomd/bilbomd-types@1.3.3
+  - @bilbomd/mongodb-schema@2.3.4
+
+## 2.4.5
+
+### Patch Changes
+
+- 34ef235: Update all dependencies with minor or patch level bumps
+- 690bed9: Update mongoose from v8 to v9.
+  Split `backend` tests into unit and integration
+- Updated dependencies [690bed9]
+  - @bilbomd/bilbomd-types@1.3.2
+  - @bilbomd/mongodb-schema@2.3.3
+
+## 2.4.4
+
+### Patch Changes
+
+- cec10f2: Add `md_engine` to the Jobs table.
+
+## 2.4.3
+
+### Patch Changes
+
+- 955c712: Add tests for RTK Query
+
+## 2.4.2
+
+### Patch Changes
+
+- f3afd62: Fix `Rg` validation issue for example data. `rg` must be defined.
+
+## 2.4.1
+
+### Patch Changes
+
+- fe076f2: Prevent users from selecting values from `num_conf` pulldown when `OpenMM` is the `md_engine`
+
+## 2.4.0
+
+### Minor Changes
+
+- 16f7879: # Usage Analytics & Admin Dashboard
+
+  **Branch:** `238-store-job-stats-in-mongodb`
+  **Target:** `main`
+
+  ## 🎯 Core Feature: Usage Analytics & Admin Dashboard
+
+  Added comprehensive usage analytics infrastructure across the BilboMD stack:
+  - **📊 Analytics Dashboard:** New admin UI with interactive charts and KPI cards displaying job success rates, pipeline trends, duration statistics, and access mode splits
+  - **📝 Usage Event Tracking:** Job lifecycle events (submitted/started/completed/failed) stored in MongoDB with user context, IP hashing, and NERSC metadata
+  - **🔌 Backend Analytics API:** Protected endpoints for aggregating usage statistics with role-based access control (Admin/Manager only)
+  - **⚡ Worker Pipeline Integration:** All job pipelines (auto/crd/pdb/sans/multi/scoper) now emit structured usage events
+
+  ## 🏗️ Technical Implementation
+
+  ### Database & Schema
+  - New `UsageEvent` MongoDB collection with optimized indexes for analytics queries
+  - Usage event interfaces and DTOs in shared packages
+
+  ### Backend
+  - 9 new analytics controller endpoints under `/admin/analytics`
+  - Usage event service for centralized event recording
+  - Job submission tracking for both authenticated and anonymous users
+
+  ### Frontend
+  - New RTK Query `analyticsApiSlice` for data fetching
+  - Responsive analytics dashboard with time-range filtering
+  - Complete test coverage for all analytics components
+
+  ### Worker & Services
+  - Usage event emission across all pipeline services
+  - NERSC job monitoring with status tracking
+
+  ## 🧪 Testing & Quality
+  - **Comprehensive test suite** for all new analytics components
+  - **Unit tests** for utility functions (dates, PDB utilities)
+  - **Component tests** using Vitest with proper mocking patterns
+  - **Follows project standards** with functional components and TypeScript strict typing
+
+  ## 📚 Documentation
+  - Usage analytics aggregation guide with MongoDB pipeline examples
+  - Updated Copilot instructions with testing best practices
+  - Detailed changeset documentation for future reference
+
+### Patch Changes
+
+- Updated dependencies [16f7879]
+  - @bilbomd/mongodb-schema@2.3.2
+  - @bilbomd/bilbomd-types@1.3.1
+
+## 2.3.2
+
+### Patch Changes
+
+- 9ab656e: Enforce `CHARMM` for BilboMD Classic with CRD/PSF inputs
+
+## 2.3.1
+
+### Patch Changes
+
+- da97649: Refresh dependencies across the workspace to pick up recent bug fixes and minor improvements. No schema/API changes and no expected breaking changes.
+  - Backend/Worker/Scoper: `bullmq@5.66`, `mongoose@8.20.3`, `winston@3.19`, `cron@4.4`
+  - UI: `react@19.2.3`, `react-dom@19.2.3`, `@mui/x-data-grid@8.22`, `recharts@3.6`, `molstar@5.4.2`
+  - Tooling: `vite@7.3`, `@vitejs/plugin-react@5.1.2`, `vite-tsconfig-paths@6.0.1`, `jsdom@27.3`, `sass-embedded@1.96`, `eslint@9.39.2`, `@typescript-eslint@8.50`, `@types/node@25`
+  - Lint/tests: small cleanups to silence unused vars/imports in a few UI tests; no behavioral changes.
+
+- a572783: Improved layout and feedback for jobs submitted anonymously.
+- 321d808: Remove @ant-design/colors dependency from UI
+- Updated dependencies [da97649]
+  - @bilbomd/mongodb-schema@2.3.1
+
+## 2.3.0
+
+### Minor Changes
+
+- 5145c75: **Add comprehensive OpenMM support with MD engine selection across the platform.**
+
+  ## Frontend (UI)
+  - Add `MdEngineField` component with CHARMM/OpenMM radio button selector
+  - Integrate MD engine selection into all job forms: Classic PDB/CRD, Auto, AlphaFold, and SANS
+  - Update form schemas with `md_engine` validation (Yup schema enforcement)
+  - Add TypeScript types for `md_engine` field across all job form interfaces
+  - Include comprehensive unit tests for MD engine selector component and form integration
+  - Fix Vitest coverage configuration with setup file and proper Turbo integration
+
+  ## Backend
+  - Extend job controllers to handle `md_engine` parameter and route to appropriate parameter builders
+  - Add OpenMM and CHARMM parameter building utilities for SANS jobs
+  - Update job DTO mapping to include MD engine information
+  - Add comprehensive test coverage for new job handling logic
+
+  ## Worker
+  - Enhance SANS pipeline to support both CHARMM and OpenMM execution paths
+  - Update SANS functions with engine-specific parameter handling and execution logic
+  - Implement OpenMM-specific molecular dynamics simulation workflows
+
+  ## Schema & Types
+  - Create dedicated SANS job interface (`IBilboMDSANSJob`) with engine-specific parameters
+  - Add `md_engine` field to base job interfaces and MongoDB schema
+  - Support for both `charmm_parameters` and `openmm_parameters` in job documents
+  - Include deuteration fraction handling and SANS-specific fields
+
+  ## Infrastructure
+  - Update Helm production values for deployment configuration
+  - Add comprehensive test fixtures and validation for new functionality
+
+  This enables users to choose between CHARMM and OpenMM molecular dynamics engines across all BilboMD job types, with full backend processing support and comprehensive test coverage.
+
+### Patch Changes
+
+- Updated dependencies [5145c75]
+  - @bilbomd/mongodb-schema@2.3.0
+
+## 2.2.0
+
+### Minor Changes
+
+- 53937de: Add optional charmm params to mongo job schema
+  Add helper function in backend to calculate Rg range for md runs
+  Replace the per-job Rg range calculation with the pre-calculated Rg range from Mongo Job document
+  Enhance the `BilboMDJobDTO` to support richer information for MongoDB Detail component
+
+### Patch Changes
+
+- Updated dependencies [53937de]
+  - @bilbomd/mongodb-schema@2.2.0
+  - @bilbomd/bilbomd-types@1.3.0
+
+## 2.1.3
+
+### Patch Changes
+
+- 1c71d30: Update npm dependencies
+- Updated dependencies [1c71d30]
+  - @bilbomd/mongodb-schema@2.1.2
+
+## 2.1.2
+
+### Patch Changes
+
+- b107fdb: Manually trigger patch to all packages
+- Updated dependencies [b107fdb]
+  - @bilbomd/bilbomd-types@1.2.1
+  - @bilbomd/mongodb-schema@2.1.1
+
+## 3.0.0
+
+### Major Changes
+
+- 3b0da23: Add Example Data option for Alphafold jobs
+  Adjust all `config.ts` to support boolean toggles for pipeline availability
+
+### Patch Changes
+
+- 6611da5: Add nginx config for proper ip address tracking in req.headers
+
+## 2.1.0
+
+### Minor Changes
+
+- bdc6d1d: Implement structured Data Transfer Object (DTO) to decouple mongodb entries from frontend logic.
+  Added a new package for shared types `bilbomd-types`.
+  Added `results` to MongoDB Job schema.
+  Extensive refactoring of `ui` React components.
+
+### Patch Changes
+
+- 2ff4c96: Refactor `Scoper` results and steps to align with new DTO mindset
+- Updated dependencies [bdc6d1d]
+- Updated dependencies [2ff4c96]
+  - @bilbomd/mongodb-schema@2.1.0
+  - @bilbomd/bilbomd-types@1.2.0
+
+## 2.0.6
+
+### Patch Changes
+
+- a4082e0: update for CVE-2025-64756
+- Updated dependencies [a4082e0]
+  - @bilbomd/mongodb-schema@2.0.2
+
+## 2.0.5
+
+### Patch Changes
+
+- 6846821: Remove some deprecated Typescript config settings in prep for Typescript 6.x
+  This required a bit of fiddling with `bilbomd-ui` types and interfaces
+
+## 2.0.4
+
+### Patch Changes
+
+- a591ec7: Use `bilbomd@lbl.gov` support email.
+  Fix some broken tests
+  Enable a bare bones minimal `/settings/safety` landing page for users to request account deletion.
+
+## 2.0.3
+
+### Patch Changes
+
+- c417040: Update all pnpm dependencies
+- Updated dependencies [c417040]
+  - @bilbomd/mongodb-schema@2.0.1
+
+## 2.0.2
+
+### Patch Changes
+
+- 0ccfbb3: Add `Help` to the main layout/routes
+  Added a Back button to User Settings Nav drawer
+
+## 2.0.1
+
+### Patch Changes
+
+- 899b5ce: Added pipeline figures to the Help page.
+
+## 2.0.0
+
+### Major Changes
+
+- f514114: Allow public unauthenticated BilboMD job submission
+  Add new public endpoints to `bilbomd-backend`
+  Add Help component
+  Add Cookie consent
+  Add PublicJobPage to display job results for unauthenticated users
+  Add Privacy Policy Component
+  Add new shared `bilbomd-types` package for Typescript types/interfaces
+
+### Patch Changes
+
+- Updated dependencies [f514114]
+  - @bilbomd/mongodb-schema@2.0.0
+  - @bilbomd/bilbomd-types@1.1.0
+
 ## 1.24.5
 
 ### Patch Changes

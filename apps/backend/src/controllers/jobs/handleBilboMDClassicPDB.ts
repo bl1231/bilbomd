@@ -4,12 +4,12 @@ import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
 import {
   IBilboMDPDBJob,
-  IUser,
   JobStatus,
   StepStatus,
   BilboMdPDBJob,
   BilboMdCRDJob,
-  IBilboMDSteps
+  IBilboMDSteps,
+  IUser
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
@@ -28,14 +28,21 @@ import {
   extractConstraintsFromYaml
 } from '@bilbomd/md-utils'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
+import { config } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = config.uploadDir
 
 const handleBilboMDClassicPDB = async (
   req: Request,
   res: Response,
-  user: IUser,
-  UUID: string
+  user: IUser | undefined,
+  UUID: string,
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
 ) => {
   try {
     const isResubmission = Boolean(
@@ -122,6 +129,29 @@ const handleBilboMDClassicPDB = async (
       inpFile = files['inp_file']?.[0] || files['omm_const_file']?.[0] // Accept either file type
       datFile = files['dat_file']?.[0]
 
+      // Handle example data files if no uploaded files
+      if (!pdbFile && req.body.pdb_file) {
+        pdbFile = {
+          originalname: req.body.pdb_file,
+          path: path.join(jobDir, req.body.pdb_file),
+          size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
+        } as Express.Multer.File
+      }
+      if (!inpFile && req.body.inp_file) {
+        inpFile = {
+          originalname: req.body.inp_file,
+          path: path.join(jobDir, req.body.inp_file),
+          size: getFileStats(path.join(jobDir, req.body.inp_file)).size
+        } as Express.Multer.File
+      }
+      if (!datFile && req.body.dat_file) {
+        datFile = {
+          originalname: req.body.dat_file,
+          path: path.join(jobDir, req.body.dat_file),
+          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+        } as Express.Multer.File
+      }
+
       pdbFileName = pdbFile?.originalname.toLowerCase()
       inpFileName = inpFile?.originalname.toLowerCase()
       datFileName = datFile?.originalname.toLowerCase()
@@ -194,7 +224,9 @@ const handleBilboMDClassicPDB = async (
         foxs: { status: StepStatus.Waiting, message: '' },
         multifoxs: { status: StepStatus.Waiting, message: '' },
         results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     } else {
       stepsInit = {
@@ -208,12 +240,14 @@ const handleBilboMDClassicPDB = async (
         foxs: { status: StepStatus.Waiting, message: '' },
         multifoxs: { status: StepStatus.Waiting, message: '' },
         results: { status: StepStatus.Waiting, message: '' },
-        email: { status: StepStatus.Waiting, message: '' }
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     }
 
     // Initialize BilboMdPDBJob Job Data
-    const newJob: IBilboMDPDBJob = new BilboMdPDBJob({
+    const jobData = {
       title: req.body.title,
       uuid: UUID,
       status: JobStatus.Submitted,
@@ -225,22 +259,44 @@ const handleBilboMDClassicPDB = async (
       rg_min,
       rg_max,
       time_submitted: new Date(),
-      user,
       progress: 0,
       cleanup_in_progress: false,
       steps: stepsInit,
       md_engine,
       ...(md_engine === 'OpenMM' && {
-        openmm_parameters: buildOpenMMParameters(req.body)
+        openmm_parameters: buildOpenMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
+      }),
+      ...(md_engine === 'CHARMM' && {
+        charmm_parameters: buildCHARMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
       }),
       ...(isResubmission && originalJobId
         ? { resubmitted_from: originalJobId }
+        : {}),
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash: ctx.client_ip_hash }
         : {})
-    })
+    }
+
+    const newJob: IBilboMDPDBJob = new BilboMdPDBJob(jobData)
 
     // Save the job to the database
     await newJob.save()
-    logger.info(`BilboMD-${bilbomdMode} Job saved to MongoDB: ${newJob.id}`)
+    logger.info(
+      `BilboMD-${bilbomdMode} Job saved to MongoDB: ${newJob._id.toString()}`
+    )
 
     // Store MD constraints in MongoDB if constraint file was processed
     if (!isResubmission && inpFile) {
@@ -265,10 +321,12 @@ const handleBilboMDClassicPDB = async (
         // Update the job with MD constraints
         newJob.md_constraints = mdConstraints
         await newJob.save()
-        logger.info(`MD constraints stored in MongoDB for job ${newJob.id}`)
+        logger.info(
+          `MD constraints stored in MongoDB for job ${newJob._id.toString()}`
+        )
       } catch (constraintError) {
         logger.warn(
-          `Failed to store MD constraints for job ${newJob.id}:`,
+          `Failed to store MD constraints for job ${newJob._id.toString()}:`,
           constraintError
         )
         // Don't fail the job creation if constraint storage fails
@@ -276,30 +334,53 @@ const handleBilboMDClassicPDB = async (
     }
 
     // Write Job params for use by NERSC job script.
-    await writeJobParams(newJob.id)
+    await writeJobParams(newJob._id.toString())
 
     // Create BullMQ Job object
-    const jobData = {
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id,
+      jobid: newJob._id.toString(),
       md_engine
     }
 
     // Queue the job
-    const BullId = await queueJob(jobData)
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
     // Respond with job details
-    res.status(200).json({
-      message: `New BilboMD Classic w/PDB Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid,
-      md_engine
-    })
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New BilboMD Classic w/PDB Job successfully created`,
+        jobid: newJob._id.toString(),
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD Classic w/PDB Job successfully created`,
+        jobid: newJob._id.toString(),
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     const msg =
       error instanceof Error

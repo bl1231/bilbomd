@@ -70,7 +70,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common parallel && \
     add-apt-repository ppa:salilab/ppa && \
     apt-get update && \
-    apt-get install -y --no-install-recommends imp=2.23.0-1~jammy && \
+    apt-get install -y --no-install-recommends imp && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy conda from build-conda stage

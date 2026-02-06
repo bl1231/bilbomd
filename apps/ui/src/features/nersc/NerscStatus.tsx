@@ -55,19 +55,23 @@ const NerscStatusList = () => {
         <Typography>NERSC Status</Typography>
       </HeaderBox>
       <Item sx={{ p: 2 }}>
-        <Grid container spacing={1} direction='column'>
+        <Grid
+          container
+          spacing={1}
+          direction="column"
+        >
           <NerscSystemStatuses />
           {showAlert && upcomingOutage && (
             <Alert
-              severity='info'
+              severity="info"
               action={
                 <IconButton
-                  aria-label='close'
-                  color='inherit'
-                  size='small'
+                  aria-label="close"
+                  color="inherit"
+                  size="small"
                   onClick={handleCloseAlert}
                 >
-                  <CloseIcon fontSize='inherit' />
+                  <CloseIcon fontSize="inherit" />
                 </IconButton>
               }
             >
