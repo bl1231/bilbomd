@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.3.7
+
+### Patch Changes
+
+- 4dab2a7: Update NERSC slurm python scripts to use `bilbomd-perlmutter-worker:0.0.29`
+
 ## 2.3.6
 
 ### Patch Changes
