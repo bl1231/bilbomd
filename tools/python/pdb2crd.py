@@ -221,7 +221,7 @@ def write_pdb_2_crd_inp_files(chains, output_dir, pdb_file_path):
         # CAR is for uppercase Chain IDs
         # CAL is for lowercase Chain IDs
         if molecule_type == "CAR":
-            carb_suffix = "R" if chain_id.isupper() else "L"
+            carb_suffix = "R" if chain_char.isupper() else "L"
 
             charmmgui_chain_id = f"CA{carb_suffix}{chain_data['chainid'].upper()}"
         else:
