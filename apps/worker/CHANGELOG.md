@@ -1,5 +1,19 @@
 # @bilbomd/worker
 
+## 2.3.6
+
+### Patch Changes
+
+- e53e045: Hopefully fixed the pdb2crd upper/lowercase CAR CAL bug
+- 7eeef80: changing MW_ERR_CUTOFF for the feedback script
+- e497ffc: Apparently Python sets have non-deterministic iteration order. This was makign our `pdb2crd.py` script produce inconsistent results.
+
+## 2.3.5
+
+### Patch Changes
+
+- 296a257: Make sure we use the full `pdb2crd_chain_` prefix
+
 ## 2.3.4
 
 ### Patch Changes
