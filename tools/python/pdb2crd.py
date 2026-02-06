@@ -49,6 +49,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
 import argparse
 import os
+import sys
 
 from pdb_utils import determine_molecule_type_details
 
@@ -477,9 +478,26 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
         )
         chain_data["molinfo"] = molinfo
         types_present = molinfo.get("types_present", set())
+        first_type = molinfo.get("first_residue_type", "UNKNOWN")
+
+        # Determine the chain type consistently using first_residue_type
+        # This avoids non-deterministic set iteration order
         chain_data["type"] = (
-            "PRO" if types_present == {"PRO"} else next(iter(types_present), "UNKNOWN")
+            "PRO" if types_present == {"PRO"} else first_type
         )
+
+        # Warn if chain contains mixed types or unknown residues
+        if len(types_present) > 1:
+            print(
+                f"WARNING: Chain {chain_data['chainid']} contains mixed residue types: {types_present}. "
+                f"Using {chain_data['type']} (first residue type)",
+                file=sys.stderr
+            )
+        elif "UNKNOWN" in types_present:
+            print(
+                f"WARNING: Chain {chain_data['chainid']} contains unrecognized residues (type={chain_data['type']})",
+                file=sys.stderr
+            )
 
     # Process and write each chain to a separate file
     for chain_id, chain_data in chains.items():
