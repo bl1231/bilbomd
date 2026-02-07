@@ -197,6 +197,54 @@ describe('Jobs table', () => {
     expect(screen.getByText(/10min/i)).toBeInTheDocument()
   })
 
+  it('handles NERSC jobs with epoch placeholder for time_completed', async () => {
+    vi.mocked(useGetConfigsQuery).mockReturnValue({
+      data: { useNersc: 'true' },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn()
+    })
+
+    const nerscTimesWithEpoch: INerscInfo = {
+      time_submitted: new Date('2025-01-01T00:00:00Z'),
+      time_started: new Date('2025-01-01T00:05:00Z'),
+      time_completed: new Date(0), // Epoch placeholder - job not completed
+      jobid: '12345',
+      state: 'RUNNING',
+      qos: 'debug'
+    }
+
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([
+          createMockJobDTO({
+            mongo: createMockPdbMongo({
+              status: 'Running',
+              nersc: nerscTimesWithEpoch
+            })
+          })
+        ])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    // Headers present
+    expect(
+      await screen.findByRole('columnheader', { name: /queue time/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('columnheader', { name: /run time/i })
+    ).toBeInTheDocument()
+
+    // Queue time should show (5 minutes from submit to start)
+    expect(await screen.findByText(/5min/i)).toBeInTheDocument()
+
+    // Run time should NOT show 'Invalid' - it should calculate from start to now
+    // Since the job is Running, it uses current time as end
+    expect(screen.queryByText(/invalid/i)).not.toBeInTheDocument()
+  })
+
   describe('with multiple jobs', () => {
     const job1 = createMockJobDTO({
       mongo: createMockPdbMongo({
