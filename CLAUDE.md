@@ -11,12 +11,14 @@ BilboMD is a SAXS (Small Angle X-ray Scattering) modeling platform that uses mol
 Turborepo + pnpm workspaces. Node v24.13.0 (see `.nvmrc`).
 
 **Apps:**
+
 - `apps/backend` (`@bilbomd/backend`) — Express.js REST API with MongoDB + Redis, JWT auth, BullMQ job queue
 - `apps/ui` (`@bilbomd/ui`) — React SPA with RTK Query, Material-UI, Formik, Recharts, Molstar
 - `apps/worker` (`@bilbomd/worker`) — Node.js BullMQ job processor running MD simulations, supports both local (Hyperion) and NERSC/Perlmutter (Slurm) execution
 - `apps/scoper` (`@bilbomd/scoper`) — Specialized worker for Mg2+ ion prediction in RNA
 
 **Packages:**
+
 - `packages/bilbomd-types` (`@bilbomd/bilbomd-types`) — Shared TypeScript type definitions
 - `packages/mongodb-schema` (`@bilbomd/mongodb-schema`) — Mongoose schemas with dual exports: `@bilbomd/mongodb-schema` (full, for backend/worker) and `@bilbomd/mongodb-schema/frontend` (frontend-safe subset)
 - `packages/md-utils` (`@bilbomd/md-utils`) — Molecular dynamics constraint utilities
