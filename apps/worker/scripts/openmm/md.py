@@ -83,8 +83,6 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
             )
 
         # Load PAE restraints
-        import os
-
         pae_restraints_path = os.path.join(
             config["output"]["output_dir"], pae_restraints_file
         )
