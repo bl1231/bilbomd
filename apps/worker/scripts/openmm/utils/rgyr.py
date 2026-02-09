@@ -3,6 +3,7 @@ from openmm import CustomCVForce, CustomCentroidBondForce
 from openmm.unit import nanometer, dalton, angstroms
 import csv
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class MinimalReporter:
@@ -146,6 +147,68 @@ def compute_radius_of_gyration(positions, atom_indices, masses):
     squared_dists = np.sum((coords - com) ** 2, axis=1)
     rg2 = np.sum(mass_array * squared_dists) / total_mass
     return np.sqrt(rg2)
+
+
+def plot_rg_convergence(csv_file, target_rg_nm=None, output_file=None):
+    """
+    Plot radius of gyration vs MD step to visualize convergence.
+
+    Parameters:
+        csv_file (str): Path to rgyr.csv file
+        target_rg_nm (float): Target Rg value in nm (optional, will draw horizontal line)
+        output_file (str): Path to save plot (optional, default: csv_file with .png extension)
+
+    Returns:
+        None (displays or saves plot)
+    """
+    # Read CSV file
+    steps = []
+    rg_values = []
+
+    with open(csv_file, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            steps.append(int(row['Step']))
+            rg_values.append(float(row['Radius_of_Gyration_nm']))
+
+    # Create plot
+    plt.figure(figsize=(10, 6))
+    plt.plot(steps, rg_values, 'b-', linewidth=1.5, label='Rg trajectory')
+
+    # Add target line if provided
+    if target_rg_nm is not None:
+        plt.axhline(y=target_rg_nm, color='r', linestyle='--', linewidth=2,
+                    label=f'Target Rg = {target_rg_nm:.2f} nm')
+
+    plt.xlabel('MD Step', fontsize=12)
+    plt.ylabel('Radius of Gyration (nm)', fontsize=12)
+    plt.title('Rg Convergence During MD Simulation', fontsize=14, fontweight='bold')
+    plt.grid(True, alpha=0.3)
+    plt.legend(loc='best')
+    plt.tight_layout()
+
+    # Save or show plot
+    if output_file is None:
+        output_file = csv_file.replace('.csv', '.png')
+
+    plt.savefig(output_file, dpi=150, bbox_inches='tight')
+    print(f"Saved Rg convergence plot to: {output_file}")
+
+    # Also show convergence statistics
+    if len(rg_values) > 0:
+        mean_rg = np.mean(rg_values)
+        std_rg = np.std(rg_values)
+        final_rg = rg_values[-1]
+
+        print(f"\nRg Statistics:")
+        print(f"  Initial Rg: {rg_values[0]:.3f} nm")
+        print(f"  Final Rg:   {final_rg:.3f} nm")
+        print(f"  Mean Rg:    {mean_rg:.3f} ± {std_rg:.3f} nm")
+
+        if target_rg_nm is not None:
+            deviation = abs(final_rg - target_rg_nm)
+            print(f"  Target Rg:  {target_rg_nm:.3f} nm")
+            print(f"  Deviation:  {deviation:.3f} nm ({100*deviation/target_rg_nm:.1f}%)")
 
 
 def add_radius_of_gyration_restraint(
