@@ -59,7 +59,7 @@ def identify_representative_atoms(topology, modeller):
     return atom_map
 
 
-def apply_pae_distance_restraints(system, modeller, restraints_config):
+def apply_pae_distance_restraints(system, modeller, restraints_config, force_scale=1.0):
     """
     Apply PAE-weighted distance restraints using CustomBondForce.
 
@@ -70,9 +70,10 @@ def apply_pae_distance_restraints(system, modeller, restraints_config):
       system: OpenMM System object
       modeller: OpenMM Modeller object
       restraints_config: Dictionary from load_pae_restraints()
+      force_scale: Runtime scaling factor for force constants (default: 1.0)
     """
     # Get parameters
-    k_base = float(restraints_config.get("distance_k", 100.0))  # kJ/mol/nm^2
+    k_base = float(restraints_config.get("distance_k", 100.0)) * force_scale  # kJ/mol/nm^2
     sigma = float(restraints_config.get("sigma", 5.0))  # Angstroms
     distance_restraints = restraints_config.get("distance_restraints", [])
 
@@ -129,7 +130,7 @@ def apply_pae_distance_restraints(system, modeller, restraints_config):
     print(f"[pae_restraints] Applied {added_count} distance restraints")
 
 
-def apply_plddt_positional_restraints(system, modeller, positions, restraints_config):
+def apply_plddt_positional_restraints(system, modeller, positions, restraints_config, force_scale=1.0):
     """
     Apply pLDDT-weighted positional restraints using CustomExternalForce.
 
@@ -141,9 +142,10 @@ def apply_plddt_positional_restraints(system, modeller, positions, restraints_co
       modeller: OpenMM Modeller object
       positions: OpenMM positions (from modeller.positions)
       restraints_config: Dictionary from load_pae_restraints()
+      force_scale: Runtime scaling factor for force constants (default: 1.0)
     """
     # Get parameters
-    k_base = float(restraints_config.get("position_k", 50.0))  # kJ/mol/nm^2
+    k_base = float(restraints_config.get("position_k", 50.0)) * force_scale  # kJ/mol/nm^2
     positional_restraints = restraints_config.get("positional_restraints", [])
 
     if not positional_restraints:

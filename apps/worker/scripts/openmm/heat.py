@@ -87,13 +87,24 @@ if constraint_mode == "pae_restraints":
     print(f"Loading PAE restraints from {pae_restraints_path}")
     pae_restraints_config = load_pae_restraints(pae_restraints_path)
 
-    # Apply PAE-based restraints
+    # Get optional force scaling parameters (default to 1.0 = no scaling)
+    distance_scale = float(constraints_config.get("distance_force_scale", 1.0))
+    position_scale = float(constraints_config.get("position_force_scale", 1.0))
+
+    # Log scaling if non-default
+    if distance_scale != 1.0 or position_scale != 1.0:
+        print(f"Applying force scaling: distance={distance_scale:.2f}x, position={position_scale:.2f}x")
+
+    # Apply PAE-based restraints WITH SCALING
     print("Applying PAE distance restraints...")
-    apply_pae_distance_restraints(system, modeller, pae_restraints_config)
+    apply_pae_distance_restraints(
+        system, modeller, pae_restraints_config, force_scale=distance_scale
+    )
 
     print("Applying pLDDT positional restraints...")
     apply_plddt_positional_restraints(
-        system, modeller, modeller.positions, pae_restraints_config
+        system, modeller, modeller.positions, pae_restraints_config,
+        force_scale=position_scale
     )
 
 else:  # Default: rigid_bodies mode
