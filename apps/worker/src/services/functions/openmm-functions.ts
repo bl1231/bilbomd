@@ -101,28 +101,43 @@ const prepareOpenMMConfig = async (
   const workDir = path.join(config.uploadDir, DBjob.uuid)
   const cfg = buildOpenMMConfigForJob(DBjob, workDir)
 
-  // Load constraints from openmm_const.yml if it exists
-  const constYamlPath = path.join(workDir, 'openmm_const.yml')
-  if (await fs.pathExists(constYamlPath)) {
+  // Check for PAE restraints first (new approach)
+  const paeRestraintsPath = path.join(workDir, 'pae_restraints.yaml')
+  if (await fs.pathExists(paeRestraintsPath)) {
     try {
-      const constYamlRaw = await fs.readFile(constYamlPath, 'utf8')
-      const constCfg = YAML.parse(constYamlRaw)
-
-      // Handle both wrapped and unwrapped constraint formats
-      if (constCfg?.constraints) {
-        // New wrapped format: { constraints: { fixed_bodies: [...], rigid_bodies: [...] } }
-        cfg.constraints = constCfg.constraints
-        logger.info('Loaded constraints from wrapped format')
-      } else if (constCfg?.fixed_bodies || constCfg?.rigid_bodies) {
-        // Current flat format: { fixed_bodies: [...], rigid_bodies: [...] }
-        cfg.constraints = {
-          ...(constCfg.fixed_bodies && { fixed_bodies: constCfg.fixed_bodies }),
-          ...(constCfg.rigid_bodies && { rigid_bodies: constCfg.rigid_bodies })
-        }
-        logger.info('Loaded constraints from flat format')
+      logger.info('Found pae_restraints.yaml - using PAE restraints mode')
+      cfg.constraints = {
+        mode: 'pae_restraints',
+        pae_restraints_file: 'pae_restraints.yaml'
       }
     } catch (error) {
-      logger.warn(`Error loading constraints from ${constYamlPath}: ${error}`)
+      logger.warn(`Error checking PAE restraints file ${paeRestraintsPath}: ${error}`)
+    }
+  } else {
+    // Fall back to traditional rigid bodies constraints
+    const constYamlPath = path.join(workDir, 'openmm_const.yml')
+    if (await fs.pathExists(constYamlPath)) {
+      try {
+        const constYamlRaw = await fs.readFile(constYamlPath, 'utf8')
+        const constCfg = YAML.parse(constYamlRaw)
+
+        // Handle both wrapped and unwrapped constraint formats
+        if (constCfg?.constraints) {
+          // New wrapped format: { constraints: { fixed_bodies: [...], rigid_bodies: [...] } }
+          cfg.constraints = constCfg.constraints
+          logger.info('Loaded constraints from wrapped format')
+        } else if (constCfg?.fixed_bodies || constCfg?.rigid_bodies) {
+          // Current flat format: { fixed_bodies: [...], rigid_bodies: [...] }
+          cfg.constraints = {
+            mode: 'rigid_bodies',
+            ...(constCfg.fixed_bodies && { fixed_bodies: constCfg.fixed_bodies }),
+            ...(constCfg.rigid_bodies && { rigid_bodies: constCfg.rigid_bodies })
+          }
+          logger.info('Loaded constraints from flat format')
+        }
+      } catch (error) {
+        logger.warn(`Error loading constraints from ${constYamlPath}: ${error}`)
+      }
     }
   }
 

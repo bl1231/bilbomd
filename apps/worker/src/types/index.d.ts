@@ -15,6 +15,13 @@ type PaeParams = Params & {
   emit_constraints?: EmitConstraintsMode
   no_const?: boolean
 
+  /** PAE restraints options (alternative to rigid bodies) */
+  emit_pae_restraints?: boolean
+  pae_restraint_cutoff?: number
+  distance_k?: number
+  position_k?: number
+  pae_sigma?: number
+
   /** Optional overrides (sensible defaults provided) */
   python_bin?: string
   script_path?: string

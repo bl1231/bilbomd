@@ -422,6 +422,13 @@ class PAEConfig:
     charmm_const_file: Optional[str] = "const.inp"
     no_const: bool = False  # Flag to skip const.inp
 
+    # PAE restraints settings
+    pae_restraints_file: Optional[str] = None  # Path for PAE restraints YAML output
+    pae_restraint_cutoff: float = 12.0  # PAE threshold for distance restraints (Angstroms)
+    distance_k: float = 100.0  # Base force constant for distance restraints (kJ/mol/nm^2)
+    position_k: float = 50.0  # Base force constant for positional restraints (kJ/mol/nm^2)
+    pae_sigma: float = 5.0  # Exponential decay parameter for PAE->force constant mapping
+
     def __post_init__(self):
         """Validate user-provided configuration values.
         These checks mirror expected numeric ranges for PAE/plddt units and guard
@@ -932,6 +939,152 @@ class PAEProcessor:
                     f"  > RigidBody {rb_idx} median-of-domains = {overall_med:.2f} Å mean-of-domains = {overall_mean:.2f} Å avg_pLDDT-of-domains = {overall_avg_plddt:.2f}"
                 )
 
+    def generate_pae_restraints(self):
+        """
+        Generate PAE-based restraints for OpenMM molecular dynamics.
+
+        Creates two types of restraints:
+        1. Distance restraints between residue pairs with PAE < cutoff
+        2. Positional restraints for each residue based on pLDDT
+
+        Returns a dictionary suitable for YAML export.
+        """
+        if not isinstance(self.input_handler, PDBHandler):
+            raise ValueError("PAE restraints generation currently only supports PDB input files")
+
+        if not self.input_handler.pdb_index_to_res:
+            raise RuntimeError("PDB mappings not prepared")
+
+        # Build full PAE numpy matrix
+        if "predicted_aligned_error" in self.pae_data:
+            pae_full = np.array(
+                self.pae_data["predicted_aligned_error"], dtype=np.float32
+            )
+        elif "pae" in self.pae_data:
+            pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        else:
+            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+
+        # Parse PDB to get atom positions and identify representative atoms
+        representative_atoms = {}  # (chain_id, resseq) -> (atom_name, position)
+
+        with open(self.input_file, "r", encoding="utf-8") as fh:
+            for line in fh:
+                if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                    continue
+
+                chain_id = line[21].strip() or " "
+                resseq_str = line[22:26].strip()
+                atom_name = line[12:16].strip()
+                resname = line[17:20].strip()
+
+                if not resseq_str:
+                    continue
+                try:
+                    resseq = int(resseq_str)
+                except ValueError:
+                    continue
+
+                # Extract coordinates
+                try:
+                    x = float(line[30:38].strip())
+                    y = float(line[38:46].strip())
+                    z = float(line[46:54].strip())
+                except ValueError:
+                    continue
+
+                key = (chain_id, resseq)
+
+                # Select representative atom based on residue type
+                # Protein: CA, DNA/RNA: P, Others: first heavy atom
+                is_nucleic = resname in ["A", "C", "G", "T", "U", "DA", "DC", "DG", "DT"]
+
+                if is_nucleic and atom_name == "P":
+                    representative_atoms[key] = (atom_name, [x, y, z])
+                elif not is_nucleic and atom_name == "CA":
+                    representative_atoms[key] = (atom_name, [x, y, z])
+                elif key not in representative_atoms and atom_name[0] != "H":
+                    # Fallback: use first heavy atom if specific atom not found
+                    representative_atoms[key] = (atom_name, [x, y, z])
+
+        # Generate distance restraints
+        distance_restraints = []
+        cutoff = self.config.pae_restraint_cutoff
+
+        for i, (chain_i, res_i) in enumerate(self.input_handler.pdb_index_to_res):
+            for j, (chain_j, res_j) in enumerate(self.input_handler.pdb_index_to_res):
+                if j <= i:  # Only upper triangle
+                    continue
+
+                pae_val = float(pae_full[i, j])
+
+                if pae_val > cutoff:
+                    continue
+
+                # Get representative atoms and positions
+                key_i = (chain_i, res_i)
+                key_j = (chain_j, res_j)
+
+                if key_i not in representative_atoms or key_j not in representative_atoms:
+                    continue
+
+                atom_i, pos_i = representative_atoms[key_i]
+                atom_j, pos_j = representative_atoms[key_j]
+
+                # Calculate distance
+                dx = pos_i[0] - pos_j[0]
+                dy = pos_i[1] - pos_j[1]
+                dz = pos_i[2] - pos_j[2]
+                distance = (dx*dx + dy*dy + dz*dz) ** 0.5
+
+                distance_restraints.append({
+                    "residue_i": int(res_i),
+                    "residue_j": int(res_j),
+                    "chain_i": str(chain_i),
+                    "chain_j": str(chain_j),
+                    "atom_i": atom_i,
+                    "atom_j": atom_j,
+                    "pae": round(pae_val, 2),
+                    "distance": round(distance, 2)
+                })
+
+        # Generate positional restraints
+        positional_restraints = []
+
+        for chain_id, resseq in self.input_handler.pdb_index_to_res:
+            key = (chain_id, resseq)
+
+            if key not in representative_atoms:
+                continue
+
+            atom_name, position = representative_atoms[key]
+
+            # Get pLDDT (average B-factor for this residue)
+            plddt_values = self.input_handler.pdb_res_plddt.get(key, [])
+            plddt = sum(plddt_values) / len(plddt_values) if plddt_values else 0.0
+
+            positional_restraints.append({
+                "residue": int(resseq),
+                "chain": str(chain_id),
+                "atom": atom_name,
+                "plddt": round(plddt, 2),
+                "position": [round(position[0], 3), round(position[1], 3), round(position[2], 3)]
+            })
+
+        print(f"[pae_restraints] Generated {len(distance_restraints)} distance restraints (PAE < {cutoff} Å)")
+        print(f"[pae_restraints] Generated {len(positional_restraints)} positional restraints")
+
+        return {
+            "pae_restraints": {
+                "pae_cutoff": float(self.config.pae_restraint_cutoff),
+                "distance_k": float(self.config.distance_k),
+                "position_k": float(self.config.position_k),
+                "sigma": float(self.config.pae_sigma),
+                "distance_restraints": distance_restraints,
+                "positional_restraints": positional_restraints
+            }
+        }
+
     def generate_visualization_artifacts(self):
         # 1) Build full PAE numpy matrix
         if "predicted_aligned_error" in self.pae_data:
@@ -1313,6 +1466,13 @@ class PAEProcessor:
             self._write_constraints_yaml(
                 sorted_rigid_bodies, self.config.openmm_const_file
             )
+
+        # Write PAE restraints if requested
+        if self.config.pae_restraints_file:
+            pae_restraints_data = self.generate_pae_restraints()
+            with open(self.config.pae_restraints_file, "w", encoding="utf-8") as fh:
+                yaml.safe_dump(pae_restraints_data, fh, sort_keys=False, default_flow_style=False)
+            print(f"[info] Wrote PAE restraints to {self.config.pae_restraints_file}")
 
     @staticmethod
     def _write_constraints_yaml(rigid_body_list: list, output_path: str):
@@ -1876,6 +2036,35 @@ if __name__ == "__main__":
         action="store_true",
         help="If set, do not write const.inp",
     )
+    parser.add_argument(
+        "--pae-restraints-file",
+        type=str,
+        help="If set, write PAE-based restraints YAML for OpenMM (alternative to rigid bodies)",
+    )
+    parser.add_argument(
+        "--pae-restraint-cutoff",
+        type=float,
+        default=12.0,
+        help="PAE threshold for including distance restraints (Angstroms, default: 12.0)",
+    )
+    parser.add_argument(
+        "--distance-k",
+        type=float,
+        default=100.0,
+        help="Base force constant for distance restraints (kJ/mol/nm^2, default: 100.0)",
+    )
+    parser.add_argument(
+        "--position-k",
+        type=float,
+        default=50.0,
+        help="Base force constant for positional restraints (kJ/mol/nm^2, default: 50.0)",
+    )
+    parser.add_argument(
+        "--pae-sigma",
+        type=float,
+        default=5.0,
+        help="Exponential decay parameter for PAE->force constant mapping (default: 5.0)",
+    )
 
     args = parser.parse_args()
 
@@ -1900,6 +2089,11 @@ if __name__ == "__main__":
         openmm_const_file=args.openmm_const_file,
         charmm_const_file=args.charmm_const_file,
         no_const=args.no_const,
+        pae_restraints_file=args.pae_restraints_file,
+        pae_restraint_cutoff=args.pae_restraint_cutoff,
+        distance_k=args.distance_k,
+        position_k=args.position_k,
+        pae_sigma=args.pae_sigma,
     )
 
     # Instantiate processor first

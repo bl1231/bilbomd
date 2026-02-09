@@ -246,6 +246,22 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
   if (params.no_const) {
     optionalFlags.push('--no-const')
   }
+  // PAE restraints options
+  if (params.emit_pae_restraints) {
+    optionalFlags.push('--pae-restraints-file', 'pae_restraints.yaml')
+    if (params.pae_restraint_cutoff !== undefined) {
+      optionalFlags.push('--pae-restraint-cutoff', String(params.pae_restraint_cutoff))
+    }
+    if (params.distance_k !== undefined) {
+      optionalFlags.push('--distance-k', String(params.distance_k))
+    }
+    if (params.position_k !== undefined) {
+      optionalFlags.push('--position-k', String(params.position_k))
+    }
+    if (params.pae_sigma !== undefined) {
+      optionalFlags.push('--pae-sigma', String(params.pae_sigma))
+    }
+  }
   logger.debug(`Optional flags: ${JSON.stringify(optionalFlags)}`)
 
   const args = [af2paeScript, ...fileFlag, ...optionalFlags, params.in_pae]

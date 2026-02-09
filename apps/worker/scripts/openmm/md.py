@@ -16,6 +16,11 @@ from openmm.app import (
 )
 from openmm.unit import angstroms
 from utils.fixed_bodies import apply_fixed_body_constraints
+from utils.pae_restraints import (
+    load_pae_restraints,
+    apply_pae_distance_restraints,
+    apply_plddt_positional_restraints,
+)
 from utils.pdb_writer import PDBFrameWriter
 from utils.rgyr import RadiusOfGyrationReporter
 from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
@@ -54,16 +59,8 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     forcefield = ForceField(*config["input"]["forcefield"])
     modeller = Modeller(pdb.topology, pdb.positions)
 
-    fixed_bodies_config = config["constraints"]["fixed_bodies"]
-    rigid_bodies_configs = config["constraints"]["rigid_bodies"]
-
-    # Get all rigid bodies from the modeller based on our configurations.
-    rigid_bodies = get_rigid_bodies(modeller, rigid_bodies_configs)
-    for name, atoms in rigid_bodies.items():
-        print(
-            f"[GPU {gpu_id}] Rigid body '{name}': {len(atoms)} atoms — indices: "
-            f"{atoms[:10]}{'...' if len(atoms) > 10 else ''}"
-        )
+    # Check constraint mode
+    constraint_mode = config["constraints"].get("mode", "rigid_bodies")
 
     # ⚙️ Build system
     system = forcefield.createSystem(
@@ -76,12 +73,45 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
         removeCMMotion=False,
     )
 
-    # 🔒 Apply fixed body constraints and rigid bodies
-    print(f"[GPU {gpu_id}] Applying fixed body constraints...")
-    apply_fixed_body_constraints(system, modeller, fixed_bodies_config)
+    # 🔒 Apply constraints based on mode
+    if constraint_mode == "pae_restraints":
+        print(f"[GPU {gpu_id}] Using PAE-based restraints mode")
+        pae_restraints_file = config["constraints"].get("pae_restraints_file")
+        if not pae_restraints_file:
+            raise ValueError("pae_restraints_file must be specified when mode is 'pae_restraints'")
 
-    print(f"[GPU {gpu_id}] Applying rigid body constraints...")
-    create_rigid_bodies(system, modeller.positions, list(rigid_bodies.values()))
+        # Load PAE restraints
+        import os
+        pae_restraints_path = os.path.join(config["output"]["output_dir"], pae_restraints_file)
+        print(f"[GPU {gpu_id}] Loading PAE restraints from {pae_restraints_path}")
+        pae_restraints_config = load_pae_restraints(pae_restraints_path)
+
+        # Apply PAE-based restraints
+        print(f"[GPU {gpu_id}] Applying PAE distance restraints...")
+        apply_pae_distance_restraints(system, modeller, pae_restraints_config)
+
+        print(f"[GPU {gpu_id}] Applying pLDDT positional restraints...")
+        apply_plddt_positional_restraints(system, modeller, modeller.positions, pae_restraints_config)
+
+    else:  # Default: rigid_bodies mode
+        print(f"[GPU {gpu_id}] Using rigid bodies mode")
+        fixed_bodies_config = config["constraints"]["fixed_bodies"]
+        rigid_bodies_configs = config["constraints"]["rigid_bodies"]
+
+        # Get all rigid bodies from the modeller based on our configurations.
+        rigid_bodies = get_rigid_bodies(modeller, rigid_bodies_configs)
+        for name, atoms in rigid_bodies.items():
+            print(
+                f"[GPU {gpu_id}] Rigid body '{name}': {len(atoms)} atoms — indices: "
+                f"{atoms[:10]}{'...' if len(atoms) > 10 else ''}"
+            )
+
+        # Apply fixed body constraints and rigid bodies
+        print(f"[GPU {gpu_id}] Applying fixed body constraints...")
+        apply_fixed_body_constraints(system, modeller, fixed_bodies_config)
+
+        print(f"[GPU {gpu_id}] Applying rigid body constraints...")
+        create_rigid_bodies(system, modeller.positions, list(rigid_bodies.values()))
 
     # ⛓️ RG restraint
     k_rg_yaml = float(config["steps"]["md"]["rgyr"]["k_rg"])  # kcal/mol/Å^2 from YAML
