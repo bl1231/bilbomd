@@ -16,6 +16,11 @@ from openmm.app import (
 from openmm.openmm import XmlSerializer
 from openmm.unit import kelvin, nanometer, picoseconds
 from utils.fixed_bodies import apply_fixed_body_constraints
+from utils.pae_restraints import (
+    apply_pae_distance_restraints,
+    apply_plddt_positional_restraints,
+    load_pae_restraints,
+)
 from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
 
 if len(sys.argv) != 2:
@@ -54,13 +59,9 @@ pdb = PDBFile(file=input_pdb_file)
 forcefield = ForceField(*config["input"]["forcefield"])
 modeller = Modeller(pdb.topology, pdb.positions)
 
-fixed_bodies_config = config["constraints"]["fixed_bodies"]
-rigid_bodies_configs = config["constraints"]["rigid_bodies"]
-
-# ⚙️ Get all rigid bodies from the modeller based on our configurations.
-rigid_bodies = get_rigid_bodies(modeller, rigid_bodies_configs)
-
-print(f"Found {len(rigid_bodies)} rigid bodies to apply constraints.")
+# Check constraint mode (with safe default handling)
+constraints_config = config.get("constraints", {})
+constraint_mode = constraints_config.get("mode", "rigid_bodies")
 
 # ⚙️ Build system
 system = forcefield.createSystem(
@@ -72,13 +73,47 @@ system = forcefield.createSystem(
     solventDielectric=78.5,
 )
 
-# 🔒 Apply fixed body constraints
-print("Applying fixed body constraints...")
-apply_fixed_body_constraints(system, modeller, fixed_bodies_config)
+# 🔒 Apply constraints based on mode
+if constraint_mode == "pae_restraints":
+    print("Using PAE-based restraints mode")
+    pae_restraints_file = constraints_config.get("pae_restraints_file")
+    if not pae_restraints_file:
+        raise ValueError(
+            "pae_restraints_file must be specified when mode is 'pae_restraints'"
+        )
 
-# 🔒 Apply rigid body constraints
-print("Applying rigid body constraints...")
-create_rigid_bodies(system, modeller.positions, list(rigid_bodies.values()))
+    # Load PAE restraints
+    pae_restraints_path = os.path.join(output_dir, pae_restraints_file)
+    print(f"Loading PAE restraints from {pae_restraints_path}")
+    pae_restraints_config = load_pae_restraints(pae_restraints_path)
+
+    # Apply PAE-based restraints
+    print("Applying PAE distance restraints...")
+    apply_pae_distance_restraints(system, modeller, pae_restraints_config)
+
+    print("Applying pLDDT positional restraints...")
+    apply_plddt_positional_restraints(
+        system, modeller, modeller.positions, pae_restraints_config
+    )
+
+else:  # Default: rigid_bodies mode
+    print("Using rigid bodies mode")
+    fixed_bodies_config = constraints_config.get("fixed_bodies", [])
+    rigid_bodies_configs = constraints_config.get("rigid_bodies", [])
+
+    # Get all rigid bodies from the modeller based on our configurations.
+    rigid_bodies = get_rigid_bodies(modeller, rigid_bodies_configs)
+    print(f"Found {len(rigid_bodies)} rigid bodies to apply constraints.")
+
+    # Apply fixed body constraints
+    if fixed_bodies_config:
+        print("Applying fixed body constraints...")
+        apply_fixed_body_constraints(system, modeller, fixed_bodies_config)
+
+    # Apply rigid body constraints
+    if rigid_bodies:
+        print("Applying rigid body constraints...")
+        create_rigid_bodies(system, modeller.positions, list(rigid_bodies.values()))
 
 
 # 🔥 Heating
