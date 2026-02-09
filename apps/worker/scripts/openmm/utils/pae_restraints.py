@@ -1,9 +1,9 @@
 """PAE-based restraints for OpenMM molecular dynamics"""
 
 import math
+
 import yaml
 from openmm import CustomBondForce, CustomExternalForce
-from openmm.unit import kilojoule_per_mole, nanometer, angstrom
 
 
 def load_pae_restraints(yaml_path):
@@ -107,7 +107,9 @@ def apply_pae_distance_restraints(system, modeller, restraints_config):
         key_j = (chain_j, res_j, atom_j_name)
 
         if key_i not in atom_map or key_j not in atom_map:
-            print(f"[pae_restraints] Warning: Could not find atoms for restraint {chain_i}:{res_i}-{chain_j}:{res_j}")
+            print(
+                f"[pae_restraints] Warning: Could not find atoms for restraint {chain_i}:{res_i}-{chain_j}:{res_j}"
+            )
             continue
 
         atom_idx_i = atom_map[key_i]
@@ -170,14 +172,16 @@ def apply_plddt_positional_restraints(system, modeller, positions, restraints_co
         # Find atom index
         key = (chain, res, atom_name)
         if key not in atom_map:
-            print(f"[pae_restraints] Warning: Could not find atom for positional restraint {chain}:{res}:{atom_name}")
+            print(
+                f"[pae_restraints] Warning: Could not find atom for positional restraint {chain}:{res}:{atom_name}"
+            )
             continue
 
         atom_idx = atom_map[key]
 
         # Calculate effective force constant: k_eff = k_base * (pLDDT/100)^2
         plddt_fraction = plddt / 100.0
-        k_eff = k_base * (plddt_fraction ** 2)
+        k_eff = k_base * (plddt_fraction**2)
 
         # Convert position from Angstroms to nanometers
         x0 = position[0] / 10.0  # Å -> nm
