@@ -5,7 +5,21 @@
       "Bash(pnpm -F @bilbomd/mongodb-schema build:*)",
       "Bash(pnpm build:*)",
       "Bash(pnpm -F @bilbomd/worker build:*)",
-      "Bash(pnpm -F @bilbomd/backend build:*)"
+      "Bash(pnpm -F @bilbomd/backend build:*)",
+      "Bash(pnpm outdated:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm install:*)",
+      "Bash(npm view:*)",
+      "Bash(git checkout:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm changeset:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(pnpm -C apps/backend run test)",
+      "Bash(pnpm -C apps/ui run test:*)",
+      "Bash(pnpm -C apps/worker run test:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh pr checks:*)"
     ]
   }
 }
