@@ -63,6 +63,7 @@ export default defineConfig({
     coverage: {
       enabled: true,
       provider: 'v8',
+      reporter: ['text', 'json-summary', 'html'],
       reportsDirectory: 'coverage',
       exclude: [
         'node_modules/',
