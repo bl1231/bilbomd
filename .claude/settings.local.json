@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm -F @bilbomd/ui build:*)",
+      "Bash(pnpm -F @bilbomd/mongodb-schema build:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm -F @bilbomd/worker build:*)",
+      "Bash(pnpm -F @bilbomd/backend build:*)"
+    ]
+  }
+}
