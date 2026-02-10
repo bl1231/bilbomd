@@ -69,9 +69,16 @@ const getRunTimeInHours = (
 
   let end: Date | null = null
 
-  if (nersc.time_completed) {
+  // Check if job has actually completed (not just epoch placeholder)
+  const actualCompletionTime = nersc.time_completed
+    ? parseDateSafe(nersc.time_completed)
+    : null
+  const isCompletionEpoch =
+    actualCompletionTime && actualCompletionTime.getTime() === 0
+
+  if (actualCompletionTime && !isCompletionEpoch) {
     // Job has completed, use actual completion time
-    end = parseDateSafe(nersc.time_completed)
+    end = actualCompletionTime
   } else if (jobStatus === 'Running' || nersc.state === 'RUNNING') {
     // Job is still running, use current time
     end = new Date()

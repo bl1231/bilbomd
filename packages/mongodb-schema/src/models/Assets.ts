@@ -1,4 +1,4 @@
-import { Schema } from 'mongoose'
+import { Schema, type SchemaDefinition } from 'mongoose'
 
 // ──────────────────────────────────────────────
 // Enums
@@ -49,7 +49,7 @@ export const movieAssetSchema = new Schema({
 // ──────────────────────────────────────────────
 // Assets container schema (room to grow later)
 // ──────────────────────────────────────────────
-export const assetsSchema = new Schema(
+export const assetsSchema: Schema = new Schema(
   {
     movies: { type: [movieAssetSchema], default: [] }
   },
