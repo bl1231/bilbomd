@@ -1,0 +1,50 @@
+constraints:
+  mode: pae_restraints
+  pae_restraints_file: pae_restraints.yaml
+  distance_force_scale: 0.1
+  position_force_scale: 0.0
+input:
+  dir: ./
+  forcefield:
+    - charmm36.xml
+    - implicit/hct.xml
+  pdb_file: auto2.pdb
+output:
+  heat_dir: heat
+  md_dir: md
+  min_dir: minimize
+  output_dir: ./
+steps:
+  heating:
+    output_pdb: heated.pdb
+    output_restart: heated.xml
+    parameters:
+      final_temp: 300
+      nsteps: 10000
+      start_temp: 100
+      timestep: 0.001
+  md:
+    output_dcd: md.dcd
+    output_pdb: md.pdb
+    output_restart: md.xml
+    parameters:
+      friction: 0.1
+      nsteps: 100000
+      temperature: 300
+      timestep: 0.001
+    pdb_report_interval: 500
+    rgyr:
+      filename: rgyr.csv
+      k_rg: 10
+      report_interval: 500
+      rgs:
+        - 39
+        - 45
+        - 50
+        - 56
+        - 61
+        - 67
+  minimization:
+    output_pdb: minimized.pdb
+    parameters:
+      max_iterations: 1000

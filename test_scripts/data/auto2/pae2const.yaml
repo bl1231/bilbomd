@@ -1,0 +1,34 @@
+input_file: auto2.pdb
+mode: pdb
+first_residue: 1
+last_residue: 809
+chain_segments: []
+config:
+  plddt_cutoff: 50
+  graph_sim: exp
+  sigma: 10.0
+  linear_T: 30.0
+  knn: 0
+  knn_mode: union
+  pae_cutoff: 10.0
+  min_seq_sep: 4
+  interchain_cutoff: 5.0
+  leiden_resolution: 0.35
+  leiden_iters: 10
+  merge_tau: 7.0
+  merge_coverage: 0.6
+  cross_merge_tau: 15.0
+  cross_merge_coverage: 0.6
+  cross_merge_mode: any
+  min_segment_len: 10
+  openmm_const_file: null
+  charmm_const_file: const.inp
+  no_const: false
+  pae_restraints_file: pae_restraints.yaml
+  pae_restraint_cutoff: 12.0
+  distance_k: 100.0
+  position_k: 50.0
+  pae_sigma: 5.0
+summary:
+  num_clusters: 12
+  num_rigid_bodies: 3
