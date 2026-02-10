@@ -1,4 +1,4 @@
-import { Schema } from 'mongoose'
+import { Schema, type SchemaDefinition } from 'mongoose'
 
 const jobSummarySchema = new Schema({
   ensemble_size: { type: Number, required: false },
@@ -55,7 +55,7 @@ const scoperResultsSchema = new Schema({
   multifoxs_score: { type: Number, required: false }
 })
 
-export const resultsSchema = new Schema({
+export const resultsSchema: Schema = new Schema({
   summary: { type: jobSummarySchema, required: false },
   classic: { type: classicResultsSchema, required: false },
   auto: { type: Schema.Types.Mixed, required: false },

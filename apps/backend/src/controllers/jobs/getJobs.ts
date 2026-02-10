@@ -7,6 +7,7 @@ import {
   MultiJob,
   IMultiJob
 } from '@bilbomd/mongodb-schema'
+import { Types } from 'mongoose'
 import { Request, Response } from 'express'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobDTOMapper.js'
@@ -14,6 +15,7 @@ import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobDTOMapper.js'
 // Helper to resolve username from user field
 type UserField =
   | IUser
+  | Types.ObjectId
   | { _id?: unknown; $oid?: string }
   | { $oid: string }
   | string
@@ -111,6 +113,7 @@ const getAllJobs = async (req: Request, res: Response) => {
     // Helper to resolve username from user field
     type UserField =
       | IUser
+      | Types.ObjectId
       | { _id?: unknown; $oid?: string }
       | { $oid: string }
       | string
