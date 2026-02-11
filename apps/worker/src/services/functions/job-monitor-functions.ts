@@ -4,6 +4,7 @@ import {
   IBilboMDSteps,
   StepStatusEnum
 } from '@bilbomd/mongodb-schema'
+import { Types } from 'mongoose'
 import { logger } from '../../helpers/loggers.js'
 import { config } from '../../config/config.js'
 import {
@@ -174,17 +175,16 @@ const cleanupJob = async (
     await DBjob.save()
 
     // Skip email for anonymous jobs
-    if (
-      !DBjob.user ||
-      !DBjob.user._id ||
-      Object.keys(DBjob.user).length === 0
-    ) {
+    if (!DBjob.user) {
       logger.info(`Skipping email for anonymous job: ${DBjob.uuid}`)
       return
     }
 
+    // Get user ID - handles both ObjectId and populated user object
+    const userId = DBjob.user instanceof Types.ObjectId ? DBjob.user : DBjob.user._id
+
     // Retrieve the user email from the associated User model
-    const user = await User.findById(DBjob.user).lean().exec()
+    const user = await User.findById(userId).lean().exec()
     if (!user) {
       logger.error(`No user found for registered job: ${DBjob.uuid}`)
       return

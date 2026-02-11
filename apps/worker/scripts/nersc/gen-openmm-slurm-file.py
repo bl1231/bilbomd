@@ -37,7 +37,7 @@ def setup_environment(uuid):
 
     # Docker images
     openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.11"
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.28"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.29"
     af_worker = "bilbomd/bilbomd-colabfold:0.0.9"
 
     # Number of cores
@@ -296,9 +296,9 @@ def create_status_file(workdir, params):
     # Add pipeline-specific steps at the beginning
     pipeline_type = params.get("__t")
     if pipeline_type == "BilboMdAlphaFold":
-        steps = ["alphafold", "pae","pae2constraints", "consmerge"] + steps
+        steps = ["alphafold", "pae", "pae2constraints", "consmerge"] + steps
     elif pipeline_type == "BilboMdAuto":
-        steps = ["pae","pae2constraints", "consmerge"] + steps
+        steps = ["pae", "pae2constraints", "consmerge"] + steps
 
     with open(status_file, "w") as f:
         for step in steps:

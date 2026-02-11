@@ -1,5 +1,30 @@
 # @bilbomd/worker
 
+## 2.3.8
+
+### Patch Changes
+
+- a8a0abb: Add test coverage display to README
+  - Add json-summary reporter to backend and worker vitest configs
+  - Add json-summary reporter to UI vite config
+  - Create coverage update script for GitHub Actions
+  - Add coverage-report job to CI workflow
+  - Add test coverage table to README with automatic updates on main branch pushes
+
+- cebfddb: bump nodejs to v24.13.1
+- 624082c: Fix TypeScript build errors related to schema type inference and ObjectId type handling. Added explicit type annotations to assetsSchema and resultsSchema to resolve BSON dependency issues. Updated worker and backend to properly handle user field as either ObjectId or populated IUser object.
+- Updated dependencies [cebfddb]
+- Updated dependencies [624082c]
+- Updated dependencies [190fe68]
+  - @bilbomd/mongodb-schema@2.4.1
+  - @bilbomd/md-utils@1.1.1
+
+## 2.3.7
+
+### Patch Changes
+
+- 4dab2a7: Update NERSC slurm python scripts to use `bilbomd-perlmutter-worker:0.0.29`
+
 ## 2.3.6
 
 ### Patch Changes

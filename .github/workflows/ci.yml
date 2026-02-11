@@ -1012,3 +1012,48 @@ jobs:
             fi
           done
           echo "All required jobs succeeded"
+
+  coverage-report:
+    name: Update Coverage in README
+    runs-on: ubuntu-22.04
+    needs: [backend-unit-tests, ui-unit-tests, worker-unit-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dependencies
+        run: pnpm build
+
+      - name: Run backend tests with coverage
+        run: pnpm -C apps/backend run test
+
+      - name: Run ui tests with coverage
+        run: pnpm -C apps/ui run test
+
+      - name: Run worker tests with coverage
+        run: pnpm -C apps/worker run test
+
+      - name: Update README with coverage
+        run: node .github/scripts/update-coverage-readme.js
+
+      - name: Commit coverage update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update test coverage in README [skip ci]"
+          git push
