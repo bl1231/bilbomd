@@ -3,8 +3,9 @@ import fs from 'fs-extra'
 import path from 'path'
 import { logger } from '../../middleware/loggers.js'
 import { Job } from '@bilbomd/mongodb-schema'
+import { getEnvVar } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const downloadPublicJobResultFile = async (req: Request, res: Response) => {
   const { publicId: rawPublicId, filename: rawFilename } = req.params

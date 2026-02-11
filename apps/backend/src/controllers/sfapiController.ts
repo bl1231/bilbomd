@@ -79,7 +79,7 @@ async function makeSFApiRequest<T>({
     // TypeScript 4.4 and later requires catch clauses to use the type 'unknown'
     // Check if the error is an AxiosError
     if (axios.isAxiosError(error)) {
-      console.error(`Error making SF API request to ${endpoint}:`, error)
+      logger.error(`Error making SF API request to ${endpoint}:`, error)
       // Now that we've narrowed the type to AxiosError, we can safely access error.response
       return {
         success: false,
@@ -87,7 +87,7 @@ async function makeSFApiRequest<T>({
       }
     } else {
       // Handle non-Axios errors
-      console.error('An unexpected error occurred:', error)
+      logger.error('An unexpected error occurred:', error)
       return {
         success: false,
         error: 'An unexpected error occurred'
@@ -116,7 +116,7 @@ async function makeUnauthenticatedSFApiRequest<T>({
     // TypeScript 4.4 and later requires catch clauses to use the type 'unknown'
     // Check if the error is an AxiosError
     if (axios.isAxiosError(error)) {
-      console.error(`Error making SF API request to ${endpoint}:`, error)
+      logger.error(`Error making SF API request to ${endpoint}:`, error)
       // Now that we've narrowed the type to AxiosError, we can safely access error.response
       return {
         success: false,
@@ -124,7 +124,7 @@ async function makeUnauthenticatedSFApiRequest<T>({
       }
     } else {
       // Handle non-Axios errors
-      console.error('An unexpected error occurred:', error)
+      logger.error('An unexpected error occurred:', error)
       return {
         success: false,
         error: 'An unexpected error occurred'
@@ -221,7 +221,7 @@ const getProjectHours = async (req: Request, res: Response) => {
     logger.info(`Project ${projectName} hours: ${JSON.stringify(response)}`)
     res.json(response)
   } catch (error) {
-    console.error(`Error fetching project hours for ${projectName}:`, error)
+    logger.error(`Error fetching project hours for ${projectName}:`, error)
     res.status(500).json({ error: 'Failed to fetch project hours.' })
   }
 }

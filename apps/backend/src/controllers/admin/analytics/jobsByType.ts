@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { Job as DBJob } from '@bilbomd/mongodb-schema'
 import { discriminatorToPipeline } from '@bilbomd/md-utils'
+import { logger } from '../../../middleware/loggers.js'
 
 export const getJobsByType = async (req: Request, res: Response) => {
   try {
@@ -26,7 +27,7 @@ export const getJobsByType = async (req: Request, res: Response) => {
       }))
     )
   } catch (error) {
-    console.error(error)
+    logger.error(`Failed to compute jobs by type: ${error}`)
     res.status(500).json({ error: `Failed to compute jobs by type: ${error}` })
   }
 }

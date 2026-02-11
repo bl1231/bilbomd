@@ -10,7 +10,6 @@ const getQueues = async (req: Request, res: Response): Promise<void> => {
         return { name, jobCounts: counts, isPaused }
       })
     )
-    // console.log(JSON.stringify(result, null, 2))
     res.json(result)
   } catch (err: unknown) {
     if (err instanceof Error) {

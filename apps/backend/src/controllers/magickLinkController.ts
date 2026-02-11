@@ -1,10 +1,11 @@
 import { logger } from '../middleware/loggers.js'
-import { config } from '../config/config.js'
+import { config, getEnvVar } from '../config/config.js'
 import crypto from 'crypto'
 import { User } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { sendMagickLinkEmail } from '../config/nodemailerConfig.js'
-const bilboMdUrl: string = process.env.BILBOMD_URL ?? ''
+
+const bilboMdUrl = getEnvVar('BILBOMD_URL')
 
 const generateMagickLink = async (req: Request, res: Response) => {
   const { email } = req.body

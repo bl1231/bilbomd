@@ -4,8 +4,9 @@ import path from 'path'
 import { Job, IJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
 import { FoxsData, FoxsDataPoint } from '../types/foxs.js'
 import { Request, Response } from 'express'
+import { getEnvVar } from '../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const downloadPDB = async (req: Request, res: Response) => {
   const rawJobId = req.params.id
@@ -74,7 +75,7 @@ const getFoxsData = async (req: Request, res: Response) => {
       await getFoxsBilboData(job, res)
     }
   } catch (error) {
-    console.error(`Error getting FoXS data: ${error}`)
+    logger.error(`Error getting FoXS data: ${error}`)
     res.status(500).json({ message: 'Error processing FoXS data.' })
   }
 }
@@ -269,7 +270,7 @@ const createDataObject = async (
 
     return foxsData
   } catch (error) {
-    console.error('Failed to create data object:', error)
+    logger.error(`Failed to create data object: ${error}`)
     throw new Error(`Failed to process the data object: ${error}`)
   }
 }
@@ -299,7 +300,6 @@ const extractC1C2 = async (
 const readTopKNum = async (file: string) => {
   try {
     const content = (await fs.readFile(file, 'utf-8')).trim()
-    // console.log(content)
     const match = content.match(/newpdb_(\d+)/)
     const pdbNumber = match ? parseInt(match[1], 10) : null
     return pdbNumber

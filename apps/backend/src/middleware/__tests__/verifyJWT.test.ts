@@ -186,8 +186,7 @@ describe('verifyJWT middleware', () => {
 
       expect(statusSpy).toHaveBeenCalledWith(403)
       expect(jsonSpy).toHaveBeenCalledWith({
-        message: 'Forbidden - ',
-        error: mockError
+        message: 'Forbidden'
       })
       expect(mockNext).not.toHaveBeenCalled()
     })
@@ -216,8 +215,7 @@ describe('verifyJWT middleware', () => {
 
       expect(statusSpy).toHaveBeenCalledWith(403)
       expect(jsonSpy).toHaveBeenCalledWith({
-        message: 'Forbidden - ',
-        error: mockError
+        message: 'Forbidden'
       })
       expect(mockNext).not.toHaveBeenCalled()
     })
@@ -291,7 +289,7 @@ describe('verifyJWT middleware', () => {
 
       expect(jwt.verify).toHaveBeenCalledWith(
         token,
-        'test-secret',
+        'xxxxxxxxxxx',
         { algorithms: ['HS256'] },
         expect.any(Function)
       )

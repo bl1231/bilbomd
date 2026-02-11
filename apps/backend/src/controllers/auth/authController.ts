@@ -3,8 +3,9 @@ import jwt from 'jsonwebtoken'
 import { User, IUser } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { issueTokensAndSetCookie } from './authTokens.js'
+import { getEnvVar } from '../../config/config.js'
 
-const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET ?? ''
+const refreshTokenSecret = getEnvVar('REFRESH_TOKEN_SECRET')
 
 interface BilboMDJwtPayload {
   username: string
@@ -15,7 +16,6 @@ interface BilboMDJwtPayload {
 const otp = async (req: Request, res: Response) => {
   try {
     const { otp: code } = req.body
-    // logger.info(`Received OTP: ${code}`)
 
     if (!code) {
       res.status(400).json({ message: 'OTP required.' })
@@ -99,7 +99,7 @@ const logout = (req: Request, res: Response) => {
   const isProduction = process.env.BILBOMD_ENV === 'production'
   res.clearCookie('jwt', {
     httpOnly: true,
-    sameSite: isProduction ? 'lax' : 'lax',
+    sameSite: 'lax',
     secure: isProduction
   })
   res.json({ message: 'Cookie cleared' })

@@ -37,7 +37,8 @@ export default defineConfig({
       PREPARE_OMM_SLURM_SCRIPT: 'gen-sbatch-omm.py',
       CP2CFS_SCRIPT: 'copy2cfs.sh',
       ACCESS_TOKEN_SECRET: 'xxxxxxxxxxx',
-      REFRESH_TOKEN_SECRET: 'xxxxxxxxxxx'
+      REFRESH_TOKEN_SECRET: 'xxxxxxxxxxx',
+      SESSION_SECRET: 'xxxxxxxxxxx'
     },
     coverage: {
       provider: 'v8',
