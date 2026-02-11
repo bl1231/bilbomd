@@ -33,14 +33,17 @@ describe('connectDB', () => {
     expect(mongoose.connect).toHaveBeenCalledWith(expectedUrl)
   })
 
-  it('handles connection errors gracefully', async () => {
-    ;(mongoose.connect as unknown as Mock).mockImplementationOnce(() => {
+  it('retries connection and throws after all attempts fail', async () => {
+    ;(mongoose.connect as unknown as Mock).mockImplementation(() => {
       throw new Error('connection failed')
     })
     // 👇 Dynamic import after setting env
     const { connectDB } = await import('../db.js')
-    const result = await connectDB()
-    expect(result).toBeUndefined() // because connectDB returns nothing
-    expect(mongoose.connect).toHaveBeenCalled()
+
+    // Should throw after all retries fail
+    await expect(connectDB(3, 100)).rejects.toThrow('connection failed')
+
+    // Should have attempted 3 times
+    expect(mongoose.connect).toHaveBeenCalledTimes(3)
   })
 })

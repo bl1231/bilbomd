@@ -16,6 +16,34 @@ const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
   return process.env[name] || defaultValue
 }
 
+const validateRequiredEnvVars = (): void => {
+  const required = [
+    'BILBOMD_URL',
+    'SFAPI_URL',
+    'SCRIPT_DIR',
+    'UPLOAD_DIR',
+    'WORK_DIR',
+    'DATA_VOL',
+    'CHARMM_TOPOLOGY',
+    'CHARMM_TEMPLATES',
+    'CHARMM',
+    'FOXS',
+    'MULTIFOXS',
+    'PREPARE_CHARMM_SLURM_SCRIPT',
+    'PREPARE_OMM_SLURM_SCRIPT',
+    'CP2CFS_SCRIPT'
+  ]
+  const missing = required.filter((name) => !process.env[name])
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}`
+    )
+  }
+}
+
+// Validate required environment variables at module initialization
+validateRequiredEnvVars()
+
 export const config = {
   sendEmailNotifications: toBoolean(process.env.SEND_EMAIL_NOTIFICATIONS),
   bilbomdUrl: getEnvVar('BILBOMD_URL'),

@@ -55,5 +55,6 @@ export const bilboMdHandler = async (job: Job<WorkerJob>) => {
     }
   } catch (error) {
     logger.error(`Error processing job ${job.id}: ${error}`)
+    throw error // Re-throw to mark job as failed in BullMQ
   }
 }
