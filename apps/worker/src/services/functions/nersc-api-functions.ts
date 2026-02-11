@@ -5,6 +5,13 @@ import qs from 'qs'
 import { logger } from '../../helpers/loggers.js'
 import { config } from '../../config/config.js'
 import {
+  STEP_WEIGHTS,
+  PROGRESS,
+  NERSC_RETRY,
+  INTERVALS,
+  NERSC_PATHS
+} from '../../config/constants.js'
+import {
   IBilboMDSteps,
   IJob,
   IStepStatus,
@@ -17,29 +24,11 @@ import { Job as BullMQJob } from 'bullmq'
 
 const environment: string = process.env.NODE_ENV || 'development'
 
-const stepWeights: { [key: string]: number } = {
-  alphafold: 20,
-  pdb2crd: 5,
-  pae: 5,
-  autorg: 5,
-  minimize: 10,
-  initfoxs: 5,
-  heat: 10,
-  md: 30,
-  dcd2pdb: 10,
-  foxs: 10,
-  multifoxs: 10,
-  copy_results_to_cfs: 5,
-  results: 3,
-  email: 1,
-  nersc_prepare_slurm_batch: 5,
-  nersc_submit_slurm_batch: 5,
-  nersc_job_status: 5,
-  nersc_copy_results_to_cfs: 5
-}
-
 // Configure axios to retry on failure
-axiosRetry(axios, { retries: 11, retryDelay: axiosRetry.exponentialDelay })
+axiosRetry(axios, {
+  retries: NERSC_RETRY.MAX_ATTEMPTS,
+  retryDelay: axiosRetry.exponentialDelay
+})
 
 const executeNerscScript = async (
   scriptName: string,
@@ -55,8 +44,7 @@ const executeNerscScript = async (
     Authorization: `Bearer ${token}`
   }
   const scriptBaseName = path.basename(scriptName)
-  // /global/homes/${username_first_letter}/${username}/script-logs/${scriptBaseName}-${new Date().toISOString()}.log
-  const logFile = `/global/homes/s/sclassen/script-logs/${scriptBaseName}-${new Date().toISOString()}.log`
+  const logFile = `${NERSC_PATHS.SCRIPT_LOGS_DIR}/${scriptBaseName}-${new Date().toISOString()}.log`
   const cmd = `ENVIRONMENT=${environment} ${scriptName} ${scriptArgs} > ${logFile} 2>&1`
   logger.info(`Executing command: ${cmd}`)
 
@@ -152,7 +140,7 @@ const monitorTaskAtNERSC = async (
 
   do {
     await makeRequest()
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await new Promise((resolve) => setTimeout(resolve, INTERVALS.NERSC_TASK_POLL))
   } while (status !== 'completed' && status !== 'failed')
 
   if (!statusResponse) {
@@ -177,8 +165,8 @@ const monitorJobAtNERSC = async (
     api_error: ''
   }
 
-  const maxRetries = 10 // Maximum number of retries for failed attempts
-  const maxIterations = 1440 // 1440 x 60s = 24 hours
+  const maxRetries = NERSC_RETRY.MAX_JOB_RETRIES
+  const maxIterations = NERSC_RETRY.MAX_ITERATIONS
   let retryCount = 0
   let iterationCount = 0
 
@@ -234,7 +222,7 @@ const monitorJobAtNERSC = async (
           logger.error(`Max retries reached for job ${jobID}`)
           throw new Error(`Max retries reached for job ${jobID}`)
         }
-        await new Promise((resolve) => setTimeout(resolve, 60000)) // Wait before retrying
+        await new Promise((resolve) => setTimeout(resolve, NERSC_RETRY.RETRY_DELAY))
         continue // Retry the request
       }
     }
@@ -258,7 +246,7 @@ const monitorJobAtNERSC = async (
         break
       default:
         iterationCount++
-        await new Promise((resolve) => setTimeout(resolve, 60000)) // Continue polling otherwise
+        await new Promise((resolve) => setTimeout(resolve, INTERVALS.NERSC_JOB_POLL))
         break
     }
   }
@@ -372,7 +360,7 @@ const updateStatus = async (MQjob: BullMQJob, DBJob: IJob) => {
 const calculateProgress = (steps: IBilboMDSteps): number => {
   if (!steps || Object.keys(steps).length === 0) {
     logger.warn('Steps are empty or undefined.')
-    return 20 // Minimum progress
+    return PROGRESS.MIN
   }
 
   logger.info('Printing all steps and their statuses:')
@@ -384,25 +372,25 @@ const calculateProgress = (steps: IBilboMDSteps): number => {
     )
   }
 
-  const totalWeight = Object.values(stepWeights).reduce(
+  const totalWeight = Object.values(STEP_WEIGHTS).reduce(
     (acc, weight) => acc + weight,
     0
   )
   if (totalWeight === 0) {
-    logger.error('Total weight is zero. Check stepWeights configuration.')
-    return 20 // Minimum progress
+    logger.error('Total weight is zero. Check STEP_WEIGHTS configuration.')
+    return PROGRESS.MIN
   }
 
   let completedWeight = 0
 
-  // Iterate only over valid keys in `steps` that exist in `stepWeights`
-  for (const step of Object.keys(steps).filter((key) => key in stepWeights)) {
+  // Iterate only over valid keys in `steps` that exist in `STEP_WEIGHTS`
+  for (const step of Object.keys(steps).filter((key) => key in STEP_WEIGHTS)) {
     const status = steps[step as keyof IBilboMDSteps]?.status
 
     logger.info(`Step: ${step}, Status: ${status}`)
 
     if (status === 'Success') {
-      const weight = stepWeights[step] || 0
+      const weight = STEP_WEIGHTS[step] || 0
       completedWeight += weight
     }
   }
@@ -412,8 +400,9 @@ const calculateProgress = (steps: IBilboMDSteps): number => {
   )
 
   // Calculate progress
-  const progress = (completedWeight / totalWeight) * 70 + 20 // Scale between 20% and 90%
-  return Math.min(progress, 90) // Ensure it doesn't exceed 90%
+  const progress =
+    (completedWeight / totalWeight) * PROGRESS.SCALE_FACTOR + PROGRESS.MIN
+  return Math.min(progress, PROGRESS.MAX)
 }
 
 export {
