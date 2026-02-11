@@ -6,8 +6,9 @@ import { Request, Response } from 'express'
 import { v4 as uuid } from 'uuid'
 // import { User } from '@bilbomd/mongodb-schema'
 import { spawn } from 'node:child_process'
+import { getEnvVar } from '../config/config.js'
 
-const uploadFolder: string = process.env.DATA_VOL ?? '/bilbomd/uploads'
+const uploadFolder = getEnvVar('DATA_VOL')
 
 // New helper function: Adapted from spawnPaeToConst in the worker app.
 // Directly spawns pae2const.py with --pdb_file (no CRD needed).

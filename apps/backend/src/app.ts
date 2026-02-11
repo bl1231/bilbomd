@@ -14,6 +14,7 @@ import { connectDB } from './config/dbConn.js'
 import { initOrcidClient } from './controllers/auth/orcidClientConfig.js'
 import { CronJob } from 'cron'
 import { deleteOldJobs } from './middleware/jobCleaner.js'
+import { getEnvVar } from './config/config.js'
 import sfapiRoutes from './routes/sfapi.js'
 import registerRoutes from './routes/register.js'
 import verifyRoutes from './routes/verify.js'
@@ -75,7 +76,7 @@ app.use(cookieParser())
 app.use(
   session({
     name: 'bilbomd-session',
-    secret: process.env.SESSION_SECRET || 'bilbomd-session-secret',
+    secret: getEnvVar('SESSION_SECRET'),
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -163,7 +164,6 @@ app.get('/healthcheck', (req: Request, res: Response) => {
 
 // cron
 new CronJob('11 1 * * *', deleteOldJobs, null, true, 'America/Los_Angeles')
-// job.start()
 
 app.all(/.*/, (req, res) => {
   res.status(404)
@@ -177,11 +177,7 @@ app.all(/.*/, (req, res) => {
 })
 
 mongoose.connection.on('error', (err) => {
-  console.log('mongoose error: ', err)
-  logger.error(
-    `${err.no}: ${err.code}\t${err.syscall}\t${err.hostname}`,
-    'mongo_error.log'
-  )
+  logger.error(`mongoose error: ${err.no}: ${err.code}\t${err.syscall}\t${err.hostname}`)
 })
 
 export default app

@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken'
 import { Response } from 'express'
 import { IUser } from '@bilbomd/mongodb-schema'
+import { getEnvVar } from '../../config/config.js'
 
-const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET ?? ''
-const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET ?? ''
+const accessTokenSecret = getEnvVar('ACCESS_TOKEN_SECRET')
+const refreshTokenSecret = getEnvVar('REFRESH_TOKEN_SECRET')
 
 export async function issueTokensAndSetCookie(
   user: IUser,
@@ -34,7 +35,7 @@ export async function issueTokensAndSetCookie(
   const isProduction = process.env.BILBOMD_ENV === 'production'
   res.cookie('jwt', refreshToken, {
     httpOnly: true,
-    sameSite: isProduction ? 'lax' : 'lax',
+    sameSite: 'lax',
     secure: isProduction,
     maxAge: 7 * 24 * 60 * 60 * 1000
   })

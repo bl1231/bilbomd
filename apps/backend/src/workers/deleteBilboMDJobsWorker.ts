@@ -3,8 +3,9 @@ import { Job as MongoJob, MultiJob } from '@bilbomd/mongodb-schema'
 import path from 'path'
 import fs from 'fs-extra'
 import { logger } from '../middleware/loggers.js'
+import { getEnvVar } from '../config/config.js'
 
-const uploadFolder = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const connection = {
   host: 'redis',

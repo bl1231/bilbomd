@@ -63,7 +63,7 @@ async function getAccessToken(clientAssertion: string): Promise<AccessToken> {
       expiresIn: Math.floor(Date.now() / 1000) + response.data.expires_in - 10
     }
   } catch (error) {
-    console.error('Error fetching access token:', error)
+    logger.error(`Error fetching access token: ${error}`)
     throw error
   }
 }

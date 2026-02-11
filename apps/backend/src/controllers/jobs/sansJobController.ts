@@ -18,8 +18,9 @@ import { Request, Response } from 'express'
 import { BilboMDDispatchContext } from '../../types/bilbomd.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
 import { handleBilboMDSANSJob } from './handleBilboMDSANSJob.js'
+import { getEnvVar } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const createSANSJob = async (req: Request, res: Response) => {
   const UUID = uuid()

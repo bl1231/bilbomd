@@ -3,8 +3,9 @@ import path from 'path'
 import fs from 'fs-extra'
 import { Job } from '@bilbomd/mongodb-schema'
 import { logger } from '../../middleware/loggers.js'
+import { getEnvVar } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const downloadPublicJobResults = async (req: Request, res: Response) => {
   try {

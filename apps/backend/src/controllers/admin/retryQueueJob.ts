@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { Job } from 'bullmq'
 import { allQueues } from './allQueues.js'
+import { logger } from '../../middleware/loggers.js'
 
 const retryQueueJob = async (req: Request, res: Response): Promise<void> => {
   const { queueName: rawQueueName, jobId: rawJobId } = req.params
@@ -31,10 +32,7 @@ const retryQueueJob = async (req: Request, res: Response): Promise<void> => {
         message: `Job "${jobId}" retried successfully in queue "${queueName}"`
       })
   } catch (error) {
-    console.error(
-      `Failed to retry job "${jobId}" in queue "${queueName}":`,
-      error
-    )
+    logger.error(`Failed to retry job "${jobId}" in queue "${queueName}": ${error}`)
     res.status(500).json({ error: 'Failed to retry job' })
   }
 }

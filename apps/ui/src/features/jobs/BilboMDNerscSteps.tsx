@@ -17,8 +17,6 @@ interface BilboMDStepsProps {
 }
 
 const BilboMDNerscSteps = ({ job }: BilboMDStepsProps) => {
-  // console.log('BilboMDNerscSteps: job:', job)
-
   let stepsToHide: string[] = []
   if (job.mongo.jobType === 'crd') {
     stepsToHide = ['autorg', 'pdb2crd', 'pae', 'alphafold', '_id']

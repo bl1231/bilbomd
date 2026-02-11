@@ -7,15 +7,11 @@ const verifyRoles = (...allowedRoles: string[]): RequestHandler => {
       return
     }
     const rolesArray = [...allowedRoles]
-    // Need to read up on these Higher Order Functions.
-    const result = req.roles
-      .map((role) => rolesArray.includes(role))
-      .find((val) => val === true)
+    const result = req.roles.some((role) => rolesArray.includes(role))
     if (!result) {
       res.sendStatus(401) // Unauthorized
       return
     }
-    // console.log(rolesArray)
     next()
   }
 }

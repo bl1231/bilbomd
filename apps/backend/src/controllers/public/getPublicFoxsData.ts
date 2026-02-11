@@ -33,7 +33,6 @@ const getPublicFoxsData = async (req: Request, res: Response) => {
     //   await getFoxsBilboData(job, res)
     // }
   } catch (error) {
-    console.error(`Error getting FoXS data: ${error}`)
     logger.error(`Error getting FoXS data: ${error}`)
     res.status(500).json({ message: 'Error processing FoXS data.' })
   }

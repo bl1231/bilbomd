@@ -1,5 +1,6 @@
 import mongoose, { Types } from 'mongoose'
 import type { IUsageEvent } from '@bilbomd/mongodb-schema'
+import { logger } from '../middleware/loggers.js'
 
 type PipelineType =
   | 'pdb'
@@ -77,6 +78,6 @@ export const recordUsageEvent = async (params: {
     })
   } catch (err) {
     // Swallow errors to avoid impacting job submission
-    console.warn('UsageEvent recording failed:', err)
+    logger.warn(`UsageEvent recording failed: ${err}`)
   }
 }
