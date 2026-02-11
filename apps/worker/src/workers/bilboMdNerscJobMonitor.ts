@@ -24,6 +24,7 @@ import {
   buildContext
 } from '../services/functions/usage-events.js'
 import { discriminatorToPipeline } from '@bilbomd/md-utils'
+import pLimit from 'p-limit'
 
 const fetchIncompleteJobs = async (): Promise<IJob[]> => {
   return DBJob.find({
@@ -154,35 +155,40 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
   try {
     logger.info('Starting job monitoring and cleanup...')
 
-    // Step 1: Fetch all jobs where nersc.state is not null
-    //  from MongoDB
+    // Step 1: Fetch all jobs where nersc.state is not null from MongoDB
     const jobs = await fetchIncompleteJobs()
     logger.info(`Found ${jobs.length} jobs in with non-Completed state.`)
 
-    for (const job of jobs) {
-      const nerscState = await queryNERSCForJobState(job)
-      if (!nerscState) continue // Skip if NERSC state could not be fetched
+    // Process jobs in parallel with concurrency limit of 10
+    const limit = pLimit(10)
 
-      // Step 2: Update the job state in MongoDB
-      await updateJobStateInMongoDB(job, nerscState)
+    await Promise.all(
+      jobs.map((job) =>
+        limit(async () => {
+          const nerscState = await queryNERSCForJobState(job)
+          if (!nerscState) return // Skip if NERSC state could not be fetched
 
-      // Step 3: Handle the job based on its NERSC state
-      const pipeline = discriminatorToPipeline(job.__t)
-      const context = buildContext({ access_mode: 'user', user: job.user })
-      const started =
-        job.nersc?.time_started && job.nersc.time_started.getTime() > 0
-          ? job.nersc.time_started
-          : undefined
-      const completed =
-        job.nersc?.time_completed && job.nersc.time_completed.getTime() > 0
-          ? job.nersc.time_completed
-          : undefined
-      const duration_ms =
-        started && completed
-          ? completed.getTime() - started.getTime()
-          : undefined
+          // Step 2: Update the job state in MongoDB
+          await updateJobStateInMongoDB(job, nerscState)
 
-      switch (nerscState.state) {
+          // Step 3: Handle the job based on its NERSC state
+          const pipeline = discriminatorToPipeline(job.__t)
+          const context = buildContext({ access_mode: 'user', user: job.user })
+          const started =
+            job.nersc?.time_started && job.nersc.time_started.getTime() > 0
+              ? job.nersc.time_started
+              : undefined
+          const completed =
+            job.nersc?.time_completed &&
+            job.nersc.time_completed.getTime() > 0
+              ? job.nersc.time_completed
+              : undefined
+          const duration_ms =
+            started && completed
+              ? completed.getTime() - started.getTime()
+              : undefined
+
+          switch (nerscState.state) {
         case 'COMPLETED':
           await recordWorkerUsageEvent({
             uuid: job.uuid,
@@ -278,8 +284,10 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
             `Job ${job.nersc?.jobid} is in an unexpected state: ${nerscState.state}`
           )
           break
-      }
-    }
+          }
+        })
+      )
+    )
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     logger.error(`Error during job monitoring: ${msg}`)

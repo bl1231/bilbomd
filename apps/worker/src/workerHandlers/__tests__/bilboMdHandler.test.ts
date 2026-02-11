@@ -76,6 +76,22 @@ describe('bilboMdHandler', () => {
     )
   })
 
+  it('should throw error for unknown job types', async () => {
+    const { bilboMdHandler } = await import('../bilboMdHandler.js')
+
+    const mockJob = {
+      id: 'test-job-id',
+      name: 'test-job',
+      data: {
+        type: 'unknown_type',
+        jobid: 'mongo-job-id'
+      },
+      log: vi.fn()
+    } as unknown as Job
+
+    await expect(bilboMdHandler(mockJob)).rejects.toThrow(/Unknown job type/)
+  })
+
   it('should process pdb job successfully', async () => {
     const { processBilboMDPDBJob } = await import(
       '../../services/pipelines/bilbomd-pdb.js'
@@ -96,5 +112,71 @@ describe('bilboMdHandler', () => {
 
     await expect(bilboMdHandler(mockJob)).resolves.toBeUndefined()
     expect(processBilboMDPDBJob).toHaveBeenCalledWith(mockJob)
+  })
+
+  it('should process crd_psf job successfully', async () => {
+    const { processBilboMDCRDJob } = await import(
+      '../../services/pipelines/bilbomd-crd.js'
+    )
+    const { bilboMdHandler } = await import('../bilboMdHandler.js')
+
+    vi.mocked(processBilboMDCRDJob).mockResolvedValueOnce(undefined)
+
+    const mockJob = {
+      id: 'test-job-id',
+      name: 'test-job',
+      data: {
+        type: 'crd_psf',
+        jobid: 'mongo-job-id'
+      },
+      log: vi.fn()
+    } as unknown as Job
+
+    await expect(bilboMdHandler(mockJob)).resolves.toBeUndefined()
+    expect(processBilboMDCRDJob).toHaveBeenCalledWith(mockJob)
+  })
+
+  it('should process auto job successfully', async () => {
+    const { processBilboMDAutoJob } = await import(
+      '../../services/pipelines/bilbomd-auto.js'
+    )
+    const { bilboMdHandler } = await import('../bilboMdHandler.js')
+
+    vi.mocked(processBilboMDAutoJob).mockResolvedValueOnce(undefined)
+
+    const mockJob = {
+      id: 'test-job-id',
+      name: 'test-job',
+      data: {
+        type: 'auto',
+        jobid: 'mongo-job-id'
+      },
+      log: vi.fn()
+    } as unknown as Job
+
+    await expect(bilboMdHandler(mockJob)).resolves.toBeUndefined()
+    expect(processBilboMDAutoJob).toHaveBeenCalledWith(mockJob)
+  })
+
+  it('should process sans job successfully', async () => {
+    const { processBilboMDSANSJob } = await import(
+      '../../services/pipelines/bilbomd-sans.js'
+    )
+    const { bilboMdHandler } = await import('../bilboMdHandler.js')
+
+    vi.mocked(processBilboMDSANSJob).mockResolvedValueOnce(undefined)
+
+    const mockJob = {
+      id: 'test-job-id',
+      name: 'test-job',
+      data: {
+        type: 'sans',
+        jobid: 'mongo-job-id'
+      },
+      log: vi.fn()
+    } as unknown as Job
+
+    await expect(bilboMdHandler(mockJob)).resolves.toBeUndefined()
+    expect(processBilboMDSANSJob).toHaveBeenCalledWith(mockJob)
   })
 })
