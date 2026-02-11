@@ -11,5 +11,6 @@ export const multiMdHandler = async (job: BullMQJob<WorkerJob>) => {
     logger.info(`Finish job: ${job.name}`)
   } catch (error) {
     logger.error(`Error processing job ${job.id}: ${error}`)
+    throw error // Re-throw to mark job as failed in BullMQ
   }
 }

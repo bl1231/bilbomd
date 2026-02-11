@@ -85,12 +85,16 @@ const startWorkers = async () => {
 // Define the workers array
 const workers = [
   { getWorker: () => bilboMdWorker, name: 'BilboMD Worker' },
-  { getWorker: () => movieWorker, name: 'Movie Worker' }
+  { getWorker: () => movieWorker, name: 'Movie Worker' },
+  { getWorker: () => multimdWorker, name: 'MultiMD Worker' }
 ]
+
+// Store interval IDs for cleanup
+const intervals: NodeJS.Timeout[] = []
 
 if (config.runOnNERSC) {
   // Setup periodic NERSC token validation
-  setInterval(async () => {
+  const tokenCheckInterval = setInterval(async () => {
     if (await checkNERSC()) {
       // Start workers if they are not initialized
       if (!bilboMdWorker || !movieWorker) {
@@ -116,11 +120,12 @@ if (config.runOnNERSC) {
       }
     }
   }, 300000) // Check every 300 seconds i.e. 5 minutes
+  intervals.push(tokenCheckInterval)
 
   // Start monitoring and cleanup process
   logger.info('Starting the monitoring and cleanup process...')
   let isMonitoring = false
-  setInterval(async () => {
+  const monitoringInterval = setInterval(async () => {
     if (isMonitoring) {
       logger.info('Monitoring already in progress, skipping this interval.')
       return
@@ -136,10 +141,56 @@ if (config.runOnNERSC) {
       isMonitoring = false
     }
   }, 60000)
+  intervals.push(monitoringInterval)
 }
 
+// Graceful shutdown handler
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`${signal} received, shutting down gracefully...`)
+
+  // Clear all intervals
+  intervals.forEach((interval) => clearInterval(interval))
+  logger.info('Cleared all intervals')
+
+  // Close workers
+  try {
+    if (bilboMdWorker) {
+      await bilboMdWorker.close()
+      logger.info('BilboMD Worker closed')
+    }
+    if (movieWorker) {
+      await movieWorker.close()
+      logger.info('Movie Worker closed')
+    }
+    if (multimdWorker) {
+      await multimdWorker.close()
+      logger.info('MultiMD Worker closed')
+    }
+  } catch (error) {
+    logger.error(`Error closing workers: ${getErrorMessage(error)}`)
+  }
+
+  // Close Redis connection
+  try {
+    await redis.quit()
+    logger.info('Redis connection closed')
+  } catch (error) {
+    logger.error(`Error closing Redis: ${getErrorMessage(error)}`)
+  }
+
+  logger.info('Graceful shutdown complete')
+  process.exit(0)
+}
+
+// Register signal handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+
 // Start the workers initially
-startWorkers()
+startWorkers().catch((error) => {
+  logger.error(`Failed to start workers: ${getErrorMessage(error)}`)
+  process.exit(1)
+})
 
 const app = express()
 
