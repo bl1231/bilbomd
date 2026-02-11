@@ -91,6 +91,51 @@ pnpm changeset        # Select packages, choose semver bump, write summary
 
 Changesets are applied on merge to `main`, producing git tags and Docker image semver tags. `updateInternalDependencies: "patch"` is enabled — bumping an internal package auto-bumps dependents.
 
+## Git Branch Naming Convention
+
+Use standardized branch prefixes to indicate the type of work. Branch names should use kebab-case (lowercase with hyphens).
+
+### Core Prefixes
+
+- `feature/` — New features and enhancements
+  - Examples: `feature/user-auth`, `feature/saxs-export`, `feature/backend/new-api`
+- `fix/` — Bug fixes
+  - Examples: `fix/login-redirect`, `fix/job-timeout`, `fix/ui/chart-rendering`
+- `refactor/` — Code refactoring without functional changes
+  - Examples: `refactor/clean-old-code`, `refactor/backend/simplify-middleware`
+- `docs/` — Documentation-only changes
+  - Examples: `docs/update-readme`, `docs/api-guide`, `docs/add-deployment-notes`
+
+### Additional Prefixes
+
+- `test/` — Adding or updating tests
+  - Examples: `test/add-middleware-tests`, `test/ui/job-form-validation`
+- `chore/` — Maintenance tasks, dependency updates, build changes
+  - Examples: `chore/update-deps`, `chore/configure-prettier`
+- `perf/` — Performance improvements
+  - Examples: `perf/optimize-query`, `perf/worker/reduce-memory-usage`
+- `ci/` — CI/CD pipeline changes
+  - Examples: `ci/add-coverage-report`, `ci/fix-build-cache`
+
+### Naming Guidelines
+
+1. **Format**: Use kebab-case for the descriptive part (lowercase with hyphens)
+   - ✅ Good: `feature/add-user-roles`
+   - ❌ Bad: `feature/Add_User_Roles`, `feature/addUserRoles`
+
+2. **Scope (optional)**: Include package scope when it adds clarity in the monorepo
+   - With scope: `feature/backend/job-queue-retry`
+   - Without scope: `feature/job-queue-retry`
+   - Common scopes: `backend`, `ui`, `worker`, `scoper`
+
+3. **Description**: Keep it concise but descriptive
+   - ✅ Good: `fix/job-status-update`
+   - ❌ Too vague: `fix/bug`
+   - ❌ Too verbose: `fix/issue-with-job-status-not-updating-correctly-in-database`
+
+4. **Issue tracking (optional)**: Include issue numbers when applicable
+   - Example: `fix/job-timeout-issue-123` or `feature/add-export-399`
+
 ## Architecture Details
 
 ### Job Processing Flow
