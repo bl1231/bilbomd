@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.5.4
+
+### Patch Changes
+
+- 4128024: Remove dead code and debug statements to improve code quality. Removed unused nerscAdapter and initialState, active debug console.log statements, and commented-out console.log statements across multiple components.
+
 ## 2.5.3
 
 ### Patch Changes

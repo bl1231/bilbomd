@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.5.3
+
+### Patch Changes
+
+- bb0acc6: Fix critical security vulnerabilities and improve code quality. Replace unsafe environment variable fallbacks with getEnvVar() to prevent empty JWT/session secrets. Update all console.log statements to use winston logger for consistent structured logging. Remove JWT error exposure in API responses and fix inefficient code patterns.
+
 ## 2.5.2
 
 ### Patch Changes
