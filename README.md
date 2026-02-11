@@ -9,7 +9,7 @@
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED?logo=docker)](https://github.com/bl1231?tab=packages&repo_name=bilbomd)
 [![Last Commit](https://img.shields.io/github/last-commit/bl1231/bilbomd)](https://github.com/bl1231/bilbomd/commits/main/)
 
-An advances Small Angle X-Ray Scattering (SAXS) modelling pipeline.
+An advanced Small Angle X-Ray Scattering (SAXS) modelling pipeline.
 
 ## Description
 
