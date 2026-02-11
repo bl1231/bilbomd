@@ -1,16 +1,38 @@
 import { apiSlice } from 'app/api/apiSlice'
 import { logOut, setCredentials } from 'slices/authSlice'
 
+interface LoginCredentials {
+  otp: string
+}
+
+interface AuthResponse {
+  accessToken: string
+}
+
+interface OrcidSessionResponse {
+  givenName: string
+  familyName: string
+  email: string
+  orcidId: string
+}
+
+interface OrcidFinalizeRequest {
+  givenName: string
+  familyName: string
+  email: string
+  orcidId: string
+}
+
 export const authApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    login: builder.mutation({
+    login: builder.mutation<AuthResponse, LoginCredentials>({
       query: (credentials) => ({
         url: '/auth/otp',
         method: 'POST',
         body: { ...credentials }
       })
     }),
-    sendLogout: builder.mutation({
+    sendLogout: builder.mutation<void, void | Record<string, never>>({
       query: () => ({
         url: '/auth/logout',
         method: 'POST'
@@ -29,7 +51,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
         }
       }
     }),
-    refresh: builder.mutation({
+    refresh: builder.mutation<AuthResponse, void | Record<string, never>>({
       query: () => ({
         url: '/auth/refresh',
         method: 'GET'
@@ -45,13 +67,13 @@ export const authApiSlice = apiSlice.injectEndpoints({
         }
       }
     }),
-    getOrcidSession: builder.query({
+    getOrcidSession: builder.query<OrcidSessionResponse, string | void>({
       query: () => ({
         url: '/auth/orcid/confirmation',
         method: 'GET'
       })
     }),
-    finalizeOrcid: builder.mutation({
+    finalizeOrcid: builder.mutation<void, OrcidFinalizeRequest>({
       query: (body) => ({
         url: '/auth/orcid/finalize',
         method: 'POST',

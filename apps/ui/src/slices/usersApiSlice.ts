@@ -1,8 +1,37 @@
-import { createEntityAdapter } from '@reduxjs/toolkit'
+import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit'
 import { apiSlice } from 'app/api/apiSlice'
-import type { UserDTO } from '@bilbomd/bilbomd-types'
+import type {
+  UserDTO,
+  CreateUserDTO,
+  UpdateUserDTO
+} from '@bilbomd/bilbomd-types'
 
 type NormalizedUser = UserDTO
+
+interface APITokenInfo {
+  _id?: string
+  id?: string
+  tokenHash?: string
+  label: string
+  createdAt: string | Date
+  expiresAt?: string | Date
+  token?: string
+}
+
+interface APITokensResponse {
+  tokens: APITokenInfo[]
+}
+
+interface CreateAPITokenRequest {
+  username: string
+  label: string
+  expiresAt?: string
+}
+
+interface DeleteAPITokenRequest {
+  username: string
+  id: string
+}
 
 const usersAdapter = createEntityAdapter<NormalizedUser>()
 
@@ -10,7 +39,7 @@ const initialState = usersAdapter.getInitialState()
 
 export const usersApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getUsers: builder.query({
+    getUsers: builder.query<EntityState<NormalizedUser, string>, string | void>({
       query: () => ({
         url: '/users',
         method: 'GET',
@@ -69,7 +98,7 @@ export const usersApiSlice = apiSlice.injectEndpoints({
             ]
           : [{ type: 'User', id: 'LIST' }]
     }),
-    addNewUser: builder.mutation({
+    addNewUser: builder.mutation<UserDTO, CreateUserDTO>({
       query: (initialUserData) => ({
         url: '/users',
         method: 'POST',
@@ -79,7 +108,7 @@ export const usersApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'User', id: 'LIST' }]
     }),
-    updateUser: builder.mutation({
+    updateUser: builder.mutation<UserDTO, UpdateUserDTO>({
       query: (initialUserData) => ({
         url: '/users',
         method: 'PATCH',
@@ -89,15 +118,15 @@ export const usersApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, arg) => [{ type: 'User', id: arg.id }]
     }),
-    deleteUser: builder.mutation({
+    deleteUser: builder.mutation<void, { id: string }>({
       query: ({ id }) => ({
         url: `/users/${id}`,
         method: 'DELETE'
       }),
       invalidatesTags: (_result, _error, arg) => [{ type: 'User', id: arg.id }]
     }),
-    getAPITokens: builder.query({
-      query: (username: string) => ({
+    getAPITokens: builder.query<APITokensResponse, string>({
+      query: (username) => ({
         url: `/users/${username}/tokens`,
         method: 'GET'
       }),
@@ -105,7 +134,7 @@ export const usersApiSlice = apiSlice.injectEndpoints({
         { type: 'Token', id: username }
       ]
     }),
-    createAPIToken: builder.mutation({
+    createAPIToken: builder.mutation<APITokenInfo, CreateAPITokenRequest>({
       query: ({ username, label, expiresAt }) => ({
         url: `/users/${username}/tokens`,
         method: 'POST',
@@ -115,7 +144,7 @@ export const usersApiSlice = apiSlice.injectEndpoints({
         { type: 'Token', id: username }
       ]
     }),
-    deleteAPIToken: builder.mutation({
+    deleteAPIToken: builder.mutation<void, DeleteAPITokenRequest>({
       query: ({ username, id }) => ({
         url: `/users/${username}/tokens/${id}`,
         method: 'DELETE'

@@ -1,8 +1,35 @@
-import { createEntityAdapter, createSelector, EntityId } from '@reduxjs/toolkit'
+import {
+  createEntityAdapter,
+  createSelector,
+  EntityId,
+  type EntityState
+} from '@reduxjs/toolkit'
 import { apiSlice } from '../app/api/apiSlice'
 import type { BilboMDJobDTO, JobAssetsDTO } from '@bilbomd/bilbomd-types'
 import { FileCheckResult } from '../types/jobCheckResults'
 import { RootState } from '../app/store'
+
+interface FoxsData {
+  [key: string]: unknown
+}
+
+interface AutoRgResponse {
+  rg?: number
+  i0?: number
+  [key: string]: unknown
+}
+
+interface Af2PaeResponse {
+  uuid: string
+  status: string
+  [key: string]: unknown
+}
+
+interface Af2PaeStatusResponse {
+  status: string
+  progress?: number
+  [key: string]: unknown
+}
 
 const jobsAdapter = createEntityAdapter<BilboMDJobDTO>()
 
@@ -10,7 +37,7 @@ const initialState = jobsAdapter.getInitialState()
 
 export const jobsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getJobs: builder.query({
+    getJobs: builder.query<EntityState<BilboMDJobDTO, string>, string | void>({
       query: () => ({
         url: '/jobs',
         method: 'GET'
@@ -36,7 +63,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
             ]
           : [{ type: 'Job', id: 'LIST' }]
     }),
-    getJobById: builder.query({
+    getJobById: builder.query<BilboMDJobDTO, string>({
       query: (id) => ({
         url: `/jobs/${id}`,
         method: 'GET'
@@ -46,14 +73,14 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       },
       providesTags: (_, __, id) => [{ type: 'Job', id }]
     }),
-    getFoxsAnalysisById: builder.query({
+    getFoxsAnalysisById: builder.query<FoxsData, string>({
       query: (id) => ({
         url: `/jobs/${id}/results/foxs`,
         method: 'GET'
       }),
       providesTags: (_, __, id) => [{ type: 'FoxsAnalysis', id }]
     }),
-    addNewJob: builder.mutation({
+    addNewJob: builder.mutation<BilboMDJobDTO, FormData>({
       query: (newJob) => ({
         url: '/jobs',
         method: 'POST',
@@ -61,7 +88,10 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    updateJob: builder.mutation({
+    updateJob: builder.mutation<
+      BilboMDJobDTO,
+      Partial<BilboMDJobDTO> & { id: string }
+    >({
       query: (initialJob) => ({
         url: '/jobs',
         method: 'PATCH',
@@ -71,7 +101,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (_, __, arg) => [{ type: 'Job', id: arg.id }]
     }),
-    deleteJob: builder.mutation({
+    deleteJob: builder.mutation<void, { id: string }>({
       query: ({ id }) => ({
         url: `/jobs/${id}`,
         method: 'DELETE'
@@ -102,14 +132,14 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         method: 'GET'
       })
     }),
-    calculateAutoRg: builder.mutation({
-      query: (formData: FormData) => ({
+    calculateAutoRg: builder.mutation<AutoRgResponse, FormData>({
+      query: (formData) => ({
         url: '/autorg',
         method: 'POST',
         body: formData
       })
     }),
-    addNewAutoJob: builder.mutation({
+    addNewAutoJob: builder.mutation<BilboMDJobDTO, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-auto',
         method: 'POST',
@@ -117,7 +147,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    addNewAlphaFoldJob: builder.mutation({
+    addNewAlphaFoldJob: builder.mutation<BilboMDJobDTO, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-alphafold',
         method: 'POST',
@@ -125,7 +155,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    addNewSANSJob: builder.mutation({
+    addNewSANSJob: builder.mutation<BilboMDJobDTO, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-sans',
         method: 'POST',
@@ -133,7 +163,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    addNewScoperJob: builder.mutation({
+    addNewScoperJob: builder.mutation<BilboMDJobDTO, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-scoper',
         method: 'POST',
@@ -141,7 +171,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    addNewMultiJob: builder.mutation({
+    addNewMultiJob: builder.mutation<BilboMDJobDTO, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-multi',
         method: 'POST',
@@ -149,8 +179,8 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    af2PaeJiffy: builder.mutation({
-      query: (formData: FormData) => ({
+    af2PaeJiffy: builder.mutation<Af2PaeResponse, FormData>({
+      query: (formData) => ({
         url: '/af2pae',
         method: 'POST',
         body: formData
@@ -166,8 +196,8 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         return baseQueryReturnValue
       }
     }),
-    getAf2PaeStatus: builder.query({
-      query: (uuid: string) => ({
+    getAf2PaeStatus: builder.query<Af2PaeStatusResponse, string>({
+      query: (uuid) => ({
         url: `/af2pae/status?uuid=${uuid}`,
         method: 'GET'
       })
