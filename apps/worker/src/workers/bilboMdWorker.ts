@@ -2,25 +2,28 @@ import { bilboMdHandler } from '../workerHandlers/bilboMdHandler.js'
 import { Worker, WorkerOptions } from 'bullmq'
 import { logger } from '../helpers/loggers.js'
 
-let bilboMdActiveJobsCount = 0
-
 export const createBilboMdWorker = (options: WorkerOptions): Worker => {
   const bilboMdWorker = new Worker('bilbomd', bilboMdHandler, options)
   logger.info(`BilboMD Worker started`)
 
+  // Use closure to encapsulate counter instead of module-level state
+  let activeJobsCount = 0
+
   bilboMdWorker.on('active', () => {
-    bilboMdActiveJobsCount++
-    logger.info(`BilboMD Worker Active Jobs: ${bilboMdActiveJobsCount}`)
+    activeJobsCount++
+    logger.info(`BilboMD Worker Active Jobs: ${activeJobsCount}`)
   })
 
   bilboMdWorker.on('completed', () => {
-    bilboMdActiveJobsCount--
-    logger.info(`BilboMD Worker Active Jobs after completion: ${bilboMdActiveJobsCount}`)
+    activeJobsCount--
+    logger.info(
+      `BilboMD Worker Active Jobs after completion: ${activeJobsCount}`
+    )
   })
 
   bilboMdWorker.on('failed', () => {
-    bilboMdActiveJobsCount--
-    logger.info(`BilboMD Worker Active Jobs after failure: ${bilboMdActiveJobsCount}`)
+    activeJobsCount--
+    logger.info(`BilboMD Worker Active Jobs after failure: ${activeJobsCount}`)
   })
 
   return bilboMdWorker
