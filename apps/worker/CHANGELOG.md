@@ -1,5 +1,16 @@
 # @bilbomd/worker
 
+## 2.4.0
+
+### Minor Changes
+
+- eab35ef: Improve worker code quality, maintainability, and performance. Consolidate duplicated progress tracking into a reusable helper function (reducing ~178 lines of code). Refactor handler switch statements to use configuration-driven approach for better maintainability. Remove module-level mutable state in favor of BullMQ's built-in metrics API. Parallelize NERSC job monitoring with concurrency limit of 10 for up to 10x performance improvement when processing multiple jobs.
+- 5248e04: Enhance worker code quality with centralized configuration and comprehensive test coverage. Extract all magic numbers to config/constants.ts (worker concurrency, polling intervals, retry settings, progress calculation). Consolidate duplicated error handling into shared helpers/errors.ts utility. Add 100% test coverage for mongo-utils.ts and workerControl.ts, plus 63% coverage for job-utils.ts (39 new tests total). Improve runPythonStep.ts coverage from 88% to 92%. Remove dead/commented code across worker files.
+
+### Patch Changes
+
+- 5c22961: Improve worker reliability and error handling. Add graceful shutdown handling for SIGTERM/SIGINT signals to properly close workers and Redis connections. Implement connection retry logic for MongoDB (5 attempts with 5s delay) to handle transient connection failures. Add startup validation for required environment variables to fail-fast on misconfiguration. Include multimdWorker in pause/resume logic for NERSC token validation. Make error throwing explicit in all job handlers (bilboMd, multiMd, movie) to ensure BullMQ correctly marks failed jobs. Add comprehensive test coverage for config validation and worker handlers.
+
 ## 2.3.8
 
 ### Patch Changes
