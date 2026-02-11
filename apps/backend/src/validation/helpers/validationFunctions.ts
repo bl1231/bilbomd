@@ -53,44 +53,36 @@ const isPsfData = async (file: Express.Multer.File): Promise<boolean> => {
       /^\s*\d+\s+[A-Z]{4}\s+\d+\s+[A-Z]{3,}\s+[a-zA-Z0-9_']+\s+[a-zA-Z0-9_']+\s+-?\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+/
 
     if (!lines[0].includes('PSF')) {
-      // console.log('first line does not contain PSF')
       return false
     }
 
     if (!lines.some((line) => line.trim().endsWith('!NTITLE'))) {
-      // console.log('NTITLE missing')
       return false
     }
 
     const natomLineIndex = lines.findIndex((line) => /\d+\s+!NATOM/.test(line))
     if (natomLineIndex === -1) {
-      // console.log('!NATOM line not found')
       return false
     }
 
     const natomResult = lines[natomLineIndex].match(/(\d+)\s+!NATOM/)
     if (!natomResult) {
-      // console.log('Failed to capture number of atoms')
       return false
     }
 
     const natom = parseInt(natomResult[1], 10)
-    // console.log('natom expected = ', natom)
     if (isNaN(natom)) {
       return false
     }
 
     // Check for atom lines directly following the !NATOM line
     const atomLines = lines.slice(natomLineIndex + 1, natomLineIndex + 1 + natom)
-    // console.log('num atom lines = ', atomLines.length)
     if (atomLines.length !== natom) {
-      // console.log('Incorrect number of atom lines')
       return false
     }
 
     for (const line of atomLines) {
       if (!atomRegex.test(line)) {
-        // console.log('Failed atom regex:', line)
         return false
       }
     }
@@ -105,7 +97,6 @@ const noSpaces = (file: File): Promise<boolean> => {
   const spaces = /\s/
   return new Promise((resolve) => {
     if (spaces.test(file.name)) {
-      // console.log('false', file.name)
       resolve(false)
     }
     resolve(true)

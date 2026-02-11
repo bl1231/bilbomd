@@ -4,8 +4,9 @@ import path from 'path'
 import mongoose from 'mongoose'
 import { Job, MultiJob, JobStatus } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
+import { getEnvVar } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const downloadJobResults = async (req: Request, res: Response) => {
   const { id } = req.params

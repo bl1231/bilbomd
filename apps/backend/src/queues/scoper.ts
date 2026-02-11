@@ -51,27 +51,17 @@ const getAllBullMQScoperJobs = async (): Promise<BullMQJob[]> => {
 
 const getWaitingJobs = async (): Promise<BullMQJob[]> => {
   const waitingJobs = await scoperQueue.getJobs(['waiting'], 0, -1, true)
-  // logger.info(`waiting jobs ${JSON.stringify(waitingJobs)}`)
-
-  // waitingJobs.forEach((job) => {
-  //   console.log('WAITING: ', job.name, job.data.uuid)
-  // })
   return waitingJobs
 }
 
 const getWaitingPosition = async (bullmq: BullMQJob): Promise<number> => {
   const waitingJobs = await getWaitingJobs()
-  // logger.info(`number of waiting jobs is: ${waitingJobs.length}`)
-  // logger.info(`checking job UUID: ${bullmq.data.uuid}`)
   let position = 0
 
   for (let i = 0; i < waitingJobs.length; i++) {
     if (waitingJobs[i].data.uuid === bullmq.data.uuid) {
       position = i + 1
-      // console.log('waiting: ', waitingJobs[i].name, position)
       break
-    } else {
-      // console.log('not waiting: ', waitingJobs[i].name)
     }
   }
 

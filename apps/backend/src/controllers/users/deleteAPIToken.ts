@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { User } from '@bilbomd/mongodb-schema'
+import { logger } from '../../middleware/loggers.js'
 
 const deleteAPIToken = async (req: Request, res: Response): Promise<void> => {
   const { username, id } = req.params
@@ -27,7 +28,7 @@ const deleteAPIToken = async (req: Request, res: Response): Promise<void> => {
     await user.save()
     res.status(200).json({ message: 'API token revoked successfully' })
   } catch (err) {
-    console.error('Error deleting API token:', err)
+    logger.error(`Error deleting API token: ${err}`)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

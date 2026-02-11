@@ -4,8 +4,9 @@ import path from 'path'
 import fs from 'fs-extra'
 import { Job, MultiJob } from '@bilbomd/mongodb-schema'
 import { logger } from './loggers.js'
+import { getEnvVar } from '../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 export const deleteOldJobs = async () => {
   try {

@@ -25,8 +25,9 @@ import {
   MultiJob,
   JobStatus
 } from '@bilbomd/mongodb-schema'
+import { getEnvVar } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const createNewJob = async (req: Request, res: Response) => {
   const UUID = uuid()

@@ -149,8 +149,7 @@ const getMovies = async (
     return res.json(response)
   } catch (err: unknown) {
     // Avoid leaking internal errors; provide a minimal message
-    logger.error('Error fetching movies:', err)
-    console.error('Error fetching movies:', err)
+    logger.error(`Error fetching movies: ${err}`)
     return res.status(500).json({ error: 'Failed to fetch movies' })
   }
 }

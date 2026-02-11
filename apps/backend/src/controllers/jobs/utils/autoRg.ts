@@ -8,8 +8,9 @@ import { Request, Response } from 'express'
 import { ChildProcess } from 'child_process'
 import { spawn } from 'child_process'
 import { AutoRgResults } from '../../../types/bilbomd.js'
+import { getEnvVar } from '../../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const getAutoRg = async (req: Request, res: Response) => {
   const UUID = uuid()
