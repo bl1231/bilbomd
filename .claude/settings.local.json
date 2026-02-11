@@ -19,7 +19,10 @@
       "Bash(pnpm -C apps/ui run test:*)",
       "Bash(pnpm -C apps/worker run test:*)",
       "Bash(gh run view:*)",
-      "Bash(gh pr checks:*)"
+      "Bash(gh pr checks:*)",
+      "Bash(pnpm -F @bilbomd/worker test:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git fetch:*)"
     ]
   }
 }
