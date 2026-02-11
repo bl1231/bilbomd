@@ -1,5 +1,12 @@
 # @bilbomd/mongodb-schema
 
+## 2.4.1
+
+### Patch Changes
+
+- cebfddb: bump nodejs to v24.13.1
+- 624082c: Fix TypeScript build errors related to schema type inference and ObjectId type handling. Added explicit type annotations to assetsSchema and resultsSchema to resolve BSON dependency issues. Updated worker and backend to properly handle user field as either ObjectId or populated IUser object.
+
 ## 2.4.0
 
 ### Minor Changes

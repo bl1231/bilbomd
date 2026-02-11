@@ -1,5 +1,14 @@
 # @bilbomd/scoper
 
+## 1.6.1
+
+### Patch Changes
+
+- cebfddb: bump nodejs to v24.13.1
+- Updated dependencies [cebfddb]
+- Updated dependencies [624082c]
+  - @bilbomd/mongodb-schema@2.4.1
+
 ## 1.6.0
 
 ### Minor Changes
