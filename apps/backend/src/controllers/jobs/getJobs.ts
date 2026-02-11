@@ -7,6 +7,7 @@ import {
   MultiJob,
   IMultiJob
 } from '@bilbomd/mongodb-schema'
+import { Types } from 'mongoose'
 import { Request, Response } from 'express'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobDTOMapper.js'
@@ -14,6 +15,7 @@ import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobDTOMapper.js'
 // Helper to resolve username from user field
 type UserField =
   | IUser
+  | Types.ObjectId
   | { _id?: unknown; $oid?: string }
   | { $oid: string }
   | string
@@ -108,53 +110,6 @@ const getAllJobs = async (req: Request, res: Response) => {
     // Combine both job types
     const allJobs: BilboMDJobDTO[] = []
 
-    // Helper to resolve username from user field
-    type UserField =
-      | IUser
-      | { _id?: unknown; $oid?: string }
-      | { $oid: string }
-      | string
-      | null
-      | undefined
-    const resolveUsername = async (userField: UserField): Promise<string> => {
-      if (!userField) return 'anonymous'
-      // If populated with username
-      if (
-        typeof userField === 'object' &&
-        userField !== null &&
-        'username' in userField &&
-        (userField as IUser).username
-      ) {
-        return (userField as IUser).username!
-      }
-      // If only _id or ObjectId
-      let userId: unknown = null
-      if (
-        typeof userField === 'object' &&
-        userField !== null &&
-        '_id' in userField
-      ) {
-        userId = (userField as { _id: unknown })._id
-      } else if (
-        typeof userField === 'object' &&
-        userField !== null &&
-        '$oid' in userField
-      ) {
-        userId = userField as { $oid: string }
-      } else if (typeof userField === 'string') {
-        userId = userField
-      }
-      if (userId) {
-        try {
-          const userDoc = await User.findById(userId).lean<IUser>()
-          return userDoc?.username || 'anonymous'
-        } catch (e) {
-          logger.warn('Failed to fetch user for job', e)
-        }
-      }
-      return 'anonymous'
-    }
-
     // Map Job collection docs → DTOs
     for (const mongoJob of DBjobs) {
       try {
@@ -210,8 +165,7 @@ const getAllJobs = async (req: Request, res: Response) => {
 
     res.status(200).json(allJobs)
   } catch (error) {
-    logger.error(error)
-    console.log(error)
+    logger.error('Error in getAllJobs:', error)
     res.status(500).json({ message: 'Internal Server Error - getAllJobs' })
   }
 }

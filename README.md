@@ -34,6 +34,21 @@ This pipeline is designed to run Alphafold2 on your provided protein sequence an
 
 ![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
 
+## Test Coverage
+
+Current test coverage across BilboMD apps:
+
+<!-- COVERAGE-TABLE:START -->
+| App | Statements | Branches | Functions | Lines |
+|-----|-----------|----------|-----------|-------|
+| Backend | 75.85% | 60.93% | 69.04% | 76.38% |
+| UI | 65.56% | 55.56% | 62.64% | 67.14% |
+| Worker | 89.65% | 73.49% | 93.93% | 89.23% |
+| Scoper | N/A | N/A | N/A | N/A |
+<!-- COVERAGE-TABLE:END -->
+
+*Coverage is automatically updated on each push to main.*
+
 ## Deployment
 
 There are 2 instances of BilboMD available. Each deployment has a different selection of pipelines available. This is primarily because of access to high performance NVIDIA GPUs at NERSC which are unavailable at the SIBYLS beamline on Hyperion.
