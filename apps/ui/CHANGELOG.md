@@ -1,5 +1,23 @@
 # @bilbomd/ui
 
+## 2.5.3
+
+### Patch Changes
+
+- a8a0abb: Add test coverage display to README
+  - Add json-summary reporter to backend and worker vitest configs
+  - Add json-summary reporter to UI vite config
+  - Create coverage update script for GitHub Actions
+  - Add coverage-report job to CI workflow
+  - Add test coverage table to README with automatic updates on main branch pushes
+
+- cebfddb: bump nodejs to v24.13.1
+- 40504d9: Fix bug with NERSC Run Time showing invalid
+- 4917c41: Fix React Fast Refresh linting warnings in Molstar Viewport by separating component exports from non-component exports into separate files
+- Updated dependencies [cebfddb]
+- Updated dependencies [624082c]
+  - @bilbomd/mongodb-schema@2.4.1
+
 ## 2.5.2
 
 ### Patch Changes
