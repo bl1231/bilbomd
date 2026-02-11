@@ -2,6 +2,7 @@ import { apiSlice } from 'app/api/apiSlice'
 import { logOut, setCredentials } from 'slices/authSlice'
 
 interface LoginCredentials {
+  email?: string
   otp: string
 }
 
@@ -17,10 +18,12 @@ interface OrcidSessionResponse {
 }
 
 interface OrcidFinalizeRequest {
-  givenName: string
-  familyName: string
-  email: string
-  orcidId: string
+  givenName?: string
+  familyName?: string
+  email?: string
+  orcidId?: string
+  code?: string
+  state?: string
 }
 
 export const authApiSlice = apiSlice.injectEndpoints({
@@ -32,7 +35,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
         body: { ...credentials }
       })
     }),
-    sendLogout: builder.mutation<void, void | Record<string, never>>({
+    sendLogout: builder.mutation<void, unknown>({
       query: () => ({
         url: '/auth/logout',
         method: 'POST'
@@ -51,7 +54,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
         }
       }
     }),
-    refresh: builder.mutation<AuthResponse, void | Record<string, never>>({
+    refresh: builder.mutation<AuthResponse, unknown>({
       query: () => ({
         url: '/auth/refresh',
         method: 'GET'
@@ -67,7 +70,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
         }
       }
     }),
-    getOrcidSession: builder.query<OrcidSessionResponse, string | void>({
+    getOrcidSession: builder.query<OrcidSessionResponse, unknown>({
       query: () => ({
         url: '/auth/orcid/confirmation',
         method: 'GET'

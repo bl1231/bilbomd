@@ -9,7 +9,7 @@ interface Stats {
 
 export const statsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getStats: builder.query<Stats, string | void>({
+    getStats: builder.query<Stats, unknown>({
       query: () => ({
         url: '/stats',
         method: 'GET'

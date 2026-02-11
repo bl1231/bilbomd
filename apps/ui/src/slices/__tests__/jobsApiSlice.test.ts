@@ -98,7 +98,7 @@ describe('jobsApiSlice', () => {
   describe('getJobs', () => {
     it('should fetch jobs and transform them using entity adapter', async () => {
       const result = await storeRef.store.dispatch(
-        jobsApiSlice.endpoints.getJobs.initiate({})
+        jobsApiSlice.endpoints.getJobs.initiate(undefined)
       )
 
       expect(result.data?.entities).toBeDefined()
@@ -123,7 +123,7 @@ describe('jobsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        jobsApiSlice.endpoints.getJobs.initiate({})
+        jobsApiSlice.endpoints.getJobs.initiate(undefined)
       )
 
       expect(result.data?.ids).toHaveLength(0)
@@ -197,14 +197,17 @@ describe('jobsApiSlice', () => {
 
   describe('addNewJob', () => {
     it('should create new job', async () => {
-      const newJobData = { title: 'New Test Job', jobType: 'auto' }
+      const newJobData = new FormData()
+      newJobData.append('title', 'New Test Job')
+      newJobData.append('jobType', 'auto')
 
       const promise = storeRef.store.dispatch(
         jobsApiSlice.endpoints.addNewJob.initiate(newJobData)
       )
 
       const result = await promise
-      expect(result.data).toMatchObject(newJobData)
+      expect(result.data).toBeDefined()
+      expect(result.error).toBeUndefined()
     })
 
     it('should invalidate job list tags', () => {
@@ -224,8 +227,11 @@ describe('jobsApiSlice', () => {
         })
       )
 
+      const invalidData = new FormData()
+      invalidData.append('invalidData', 'true')
+
       const result = await storeRef.store.dispatch(
-        jobsApiSlice.endpoints.addNewJob.initiate({ invalidData: true })
+        jobsApiSlice.endpoints.addNewJob.initiate(invalidData)
       )
 
       // RTK Query returns errors in the result object, not as thrown exceptions
@@ -340,7 +346,7 @@ describe('jobsApiSlice', () => {
 
       try {
         await storeRef.store.dispatch(
-          jobsApiSlice.endpoints.getJobs.initiate({})
+          jobsApiSlice.endpoints.getJobs.initiate(undefined)
         )
         expect.fail('Expected query to throw')
       } catch (error) {
@@ -359,7 +365,7 @@ describe('jobsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        jobsApiSlice.endpoints.getJobs.initiate({})
+        jobsApiSlice.endpoints.getJobs.initiate(undefined)
       )
 
       // RTK Query returns errors in the result object, not as thrown exceptions

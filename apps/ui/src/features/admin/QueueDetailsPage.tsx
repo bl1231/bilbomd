@@ -101,7 +101,7 @@ const QueueDetailsPage = () => {
     setAnchorEl(null)
     setMenuJobId(null)
   }
-  const { data: queues, isLoading, error } = useGetQueuesQuery({})
+  const { data: queues, isLoading, error } = useGetQueuesQuery(undefined)
   const {
     data: jobs,
     isLoading: jobsLoading,

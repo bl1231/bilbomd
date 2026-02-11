@@ -8,7 +8,7 @@ interface ConfigResponse {
 
 export const configApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getConfigs: builder.query<ConfigResponse, string | void>({
+    getConfigs: builder.query<ConfigResponse, unknown>({
       query: () => ({
         url: '/configs',
         method: 'GET'

@@ -27,7 +27,7 @@ interface QueueMutationParams {
 
 export const adminApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getQueues: builder.query<QueueInfo[], string | void>({
+    getQueues: builder.query<QueueInfo[], unknown>({
       query: () => '/admin/queues',
       providesTags: ['AdminQueue']
     }),

@@ -37,7 +37,7 @@ const initialState = jobsAdapter.getInitialState()
 
 export const jobsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getJobs: builder.query<EntityState<BilboMDJobDTO, string>, string | void>({
+    getJobs: builder.query<EntityState<BilboMDJobDTO, string>, unknown>({
       query: () => ({
         url: '/jobs',
         method: 'GET'
