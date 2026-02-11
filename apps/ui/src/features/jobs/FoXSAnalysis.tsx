@@ -130,21 +130,8 @@ const FoXSAnalysis = ({
     skip: !active || !isPublic || !publicId // Skip if not public, inactive, or no publicId
   })
 
-  // console.log(
-  //   'FoXSAnalysis: isPublic=',
-  //   isPublic,
-  //   'publicId=',
-  //   publicId,
-  //   'active=',
-  //   active,
-  //   'skip public=',
-  //   !active || !isPublic || !publicId
-  // )
-
   // Select the active query result
   const { data, isLoading, isError } = isPublic ? publicQuery : protectedQuery
-
-  // console.log('FoXSAnalysis data:', data)
 
   const foxsData = useMemo(
     () => (Array.isArray(data) ? (data as FoxsData[]) : []),
@@ -225,8 +212,6 @@ const FoXSAnalysis = ({
   const origChiSq = foxsData[0].chisq
   const origC1 = foxsData[0].c1
   const origC2 = foxsData[0].c2
-
-  // console.log('data:', data)
 
   return (
     <Item>
