@@ -1,5 +1,14 @@
 # BilboMD
 
+![CI Status](https://github.com/bl1231/bilbomd/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/License-Berkeley%20Lab%20Non--Commercial-blue.svg)
+![Node](https://img.shields.io/badge/node-v24.13.0-brightgreen?logo=node.js)
+![pnpm](https://img.shields.io/badge/pnpm-10.29.2-orange?logo=pnpm)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
+![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-blueviolet?logo=turborepo)
+![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED?logo=docker)
+![Last Commit](https://img.shields.io/github/last-commit/bl1231/bilbomd)
+
 An advances Small Angle X-Ray Scattering (SAXS) modelling pipeline.
 
 ## Description
