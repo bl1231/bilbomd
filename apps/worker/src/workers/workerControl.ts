@@ -28,16 +28,6 @@ export const resumeProcessing = async (workers: WorkerInfo[]) => {
 
 export const checkNERSC = async () => {
   try {
-    // Eventually could have various checks here.
-
-    // Perlmutter status
-    // const response = await someAPI.healthCheck()
-    // if (response.status !== 'ok') {
-    //   throw new Error('API is not healthy')
-    // }
-
-    // Valid client
-
     // Able to get access token
     const token: string = await ensureValidToken()
     if (typeof token === 'string' && token.length > 10) {

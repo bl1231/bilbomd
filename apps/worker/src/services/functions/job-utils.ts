@@ -14,10 +14,8 @@ import path from 'path'
 import { spawn, ChildProcess } from 'node:child_process'
 import Handlebars from 'handlebars'
 import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
+import { getErrorMessage } from '../../helpers/errors.js'
 import { Types } from 'mongoose'
-
-const getErrorMessage = (e: unknown): string =>
-  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
 const initializeJob = async (MQJob: BullMQJob, DBjob: IJob): Promise<void> => {
   try {
