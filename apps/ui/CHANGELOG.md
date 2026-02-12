@@ -1,5 +1,15 @@
 # @bilbomd/ui
 
+## 2.6.0
+
+### Minor Changes
+
+- 45825fb: Add comprehensive TypeScript types to RTK Query endpoints. Previously, 36 out of 69 RTK Query endpoints (52%) lacked explicit type parameters, causing result types to default to `any` and bypass TypeScript's type safety. This change adds proper generic type parameters `<ResultType, ArgType>` to all untyped endpoints across authApiSlice, configsApiSlice, statsApiSlice, adminApiSlice, usersApiSlice, and jobsApiSlice. Benefits include compile-time type safety, better IDE autocomplete, and self-documenting API contracts.
+
+### Patch Changes
+
+- f8df12b: Fix job submission error by correcting API response type handling. The job creation endpoints return a flat response structure with jobid, uuid, and md_engine fields, but the frontend was expecting a nested BilboMDJobDTO structure. Added JobCreationResponse interface and updated all job form components to handle the correct response structure.
+
 ## 2.5.4
 
 ### Patch Changes
