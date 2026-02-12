@@ -123,7 +123,6 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
     // console.log(values)
     await updateUser({
       id: user.id,
-      username: values.username,
       roles: values.roles,
       active: values.active,
       email: values.email

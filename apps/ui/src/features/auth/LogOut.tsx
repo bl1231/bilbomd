@@ -14,7 +14,7 @@ const LogOut = () => {
 
   const onClickLogout = async () => {
     setOpen(false)
-    await sendLogout({})
+    await sendLogout(undefined)
     void navigate('/')
   }
 

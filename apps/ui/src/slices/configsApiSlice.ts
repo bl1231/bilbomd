@@ -1,8 +1,14 @@
 import { apiSlice } from 'app/api/apiSlice'
 
+export interface ConfigResponse {
+  useNersc?: string
+  enableBilboMdAlphaFold?: string
+  [key: string]: string | undefined
+}
+
 export const configApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getConfigs: builder.query({
+    getConfigs: builder.query<ConfigResponse, unknown>({
       query: () => ({
         url: '/configs',
         method: 'GET'

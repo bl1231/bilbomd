@@ -61,6 +61,8 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
             <Alert severity="info">Loading system configuration...</Alert>
           ) : configError ? (
             <Alert severity="error">Failed to load system configuration.</Alert>
+          ) : !config ? (
+            <Alert severity="error">Configuration not available.</Alert>
           ) : (
             <Box>
               <Typography sx={{ m: 0 }}>

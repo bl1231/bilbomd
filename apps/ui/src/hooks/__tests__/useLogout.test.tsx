@@ -37,7 +37,7 @@ describe('useLogout', () => {
       await result.current()
     })
 
-    expect(mockSendLogout).toHaveBeenCalledWith({})
+    expect(mockSendLogout).toHaveBeenCalledWith(undefined)
     expect(mockNavigate).toHaveBeenCalledWith('/')
   })
 
@@ -58,7 +58,7 @@ describe('useLogout', () => {
     })
 
     // Assert: Verify sendLogout was called, but navigation did not occur
-    expect(mockSendLogout).toHaveBeenCalledWith({})
+    expect(mockSendLogout).toHaveBeenCalledWith(undefined)
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 })

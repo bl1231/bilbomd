@@ -42,7 +42,27 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [addNewPublicJob, { isSuccess: isAnonSuccess, data: anonJobResponse }] =
     useAddNewPublicJobMutation()
   const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
-  const jobResponse = mode === 'anonymous' ? anonJobResponse : authJobResponse
+
+  // Transform responses to expected shape
+  const publicJobResponse =
+    anonJobResponse && mode === 'anonymous'
+      ? {
+          resultUrl: anonJobResponse.resultUrl,
+          publicId: anonJobResponse.publicId,
+          md_engine: anonJobResponse.md_engine
+        }
+      : undefined
+
+  const authSuccessResponse =
+    authJobResponse && mode === 'authenticated'
+      ? {
+          message: 'Job submitted successfully',
+          jobid: authJobResponse.id,
+          uuid: authJobResponse.mongo.uuid,
+          md_engine: authJobResponse.mongo.md_engine
+        }
+      : undefined
+
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
@@ -61,6 +81,8 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   if (configIsLoading) return <LinearProgress />
   if (configError)
     return <Alert severity="error">Error loading configuration</Alert>
+  if (!config)
+    return <Alert severity="error">Configuration not available</Alert>
 
   // Are we running on NERSC?
   const useNersc = config.useNersc?.toLowerCase() === 'true'
@@ -74,10 +96,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     md_engine: 'charmm'
   }
 
-  const onSubmit = async (
-    values: BilboMDAutoJobFormValues,
-    { setStatus }: { setStatus: (status: string) => void }
-  ) => {
+  const onSubmit = async (values: BilboMDAutoJobFormValues) => {
     setSubmitError(null)
     const form = new FormData()
     form.append('title', values.title)
@@ -91,11 +110,9 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     }
 
     try {
-      const newJob =
-        mode === 'anonymous'
-          ? await addNewPublicJob(form).unwrap()
-          : await addNewJob(form).unwrap()
-      setStatus(newJob)
+      await (mode === 'anonymous'
+        ? addNewPublicJob(form).unwrap()
+        : addNewJob(form).unwrap())
     } catch (error) {
       console.error('rejected', error)
       setSubmitError(
@@ -138,17 +155,17 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
           <Paper sx={{ p: 2 }}>
             {isSuccess ? (
-              mode === 'anonymous' ? (
+              mode === 'anonymous' && publicJobResponse ? (
                 <PublicJobSuccessAlert
-                  jobResponse={jobResponse}
+                  jobResponse={publicJobResponse}
                   jobType="Auto"
                 />
-              ) : (
+              ) : authSuccessResponse ? (
                 <JobSuccessAlert
-                  jobResponse={jobResponse}
+                  jobResponse={authSuccessResponse}
                   jobType="Auto"
                 />
-              )
+              ) : null
             ) : (
               <Formik
                 initialValues={initialValues}

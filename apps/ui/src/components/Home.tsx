@@ -35,7 +35,7 @@ const Home = ({ title = 'BilboMD' }) => {
   useEffect(() => {
     const verifyRefreshToken = async () => {
       try {
-        await refresh({})
+        await refresh(undefined)
         setTrueSuccess(true)
       } catch (error) {
         console.error('verifyRefreshToken error:', error)

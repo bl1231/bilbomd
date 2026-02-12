@@ -120,11 +120,11 @@ const FoXSAnalysis = ({
   active?: boolean
 }) => {
   // Conditionally use the appropriate query
-  const protectedQuery = useGetFoxsAnalysisByIdQuery(id, {
+  const protectedQuery = useGetFoxsAnalysisByIdQuery(id!, {
     pollingInterval: 0,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true,
-    skip: !active || isPublic // Skip if public or inactive
+    skip: !active || isPublic || !id // Skip if public, inactive, or no id
   })
   const publicQuery = useGetPublicFoxsDataQuery(publicId || '', {
     skip: !active || !isPublic || !publicId // Skip if not public, inactive, or no publicId

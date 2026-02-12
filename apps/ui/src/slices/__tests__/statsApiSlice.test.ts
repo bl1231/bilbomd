@@ -47,7 +47,7 @@ describe('statsApiSlice', () => {
   describe('getStats', () => {
     it('should fetch stats successfully', async () => {
       const result = await storeRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate({})
+        statsApiSlice.endpoints.getStats.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -64,7 +64,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate({})
+        statsApiSlice.endpoints.getStats.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()
@@ -83,7 +83,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate({})
+        statsApiSlice.endpoints.getStats.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()
@@ -107,7 +107,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate({})
+        statsApiSlice.endpoints.getStats.initiate(undefined)
       )
 
       expect(result.data).toBeNull()
@@ -126,7 +126,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate({})
+        statsApiSlice.endpoints.getStats.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()
@@ -150,7 +150,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate({})
+        statsApiSlice.endpoints.getStats.initiate(undefined)
       )
 
       expect(result.data).toBeUndefined()
@@ -177,7 +177,7 @@ describe('statsApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        statsApiSlice.endpoints.getStats.initiate({})
+        statsApiSlice.endpoints.getStats.initiate(undefined)
       )
 
       expect(result.data?.jobTypes).toEqual({})

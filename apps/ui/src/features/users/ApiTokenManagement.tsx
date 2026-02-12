@@ -28,7 +28,7 @@ const APITokenManager = () => {
   const { username } = useAuth()
   const { enqueueSnackbar } = useSnackbar()
   const { data, refetch, isLoading, error } = useGetAPITokensQuery(username)
-  const tokens: IAPIToken[] = data?.tokens || []
+  const tokens = (data?.tokens || []) as IAPIToken[]
   const [createToken] = useCreateAPITokenMutation()
   const [deleteToken] = useDeleteAPITokenMutation()
   const [newToken, setNewToken] = useState<string | null>(null)
@@ -123,7 +123,7 @@ const APITokenManager = () => {
         label,
         expiresAt: expiresAt.toISOString()
       }).unwrap()
-      setNewToken(res.token)
+      setNewToken(res.token ?? null)
       enqueueSnackbar(`${label} Token created.`, { variant: 'default' })
       void refetch()
     } catch (err) {

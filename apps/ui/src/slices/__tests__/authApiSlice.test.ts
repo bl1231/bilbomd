@@ -14,8 +14,10 @@ const mockRefreshResponse = {
 }
 
 const mockOrcidSessionResponse = {
-  orcidId: '0000-0000-0000-0000',
-  sessionId: 'session-123'
+  givenName: 'Test',
+  familyName: 'User',
+  email: 'test@example.com',
+  orcidId: '0000-0000-0000-0000'
 }
 
 describe('authApiSlice', () => {
@@ -90,7 +92,7 @@ describe('authApiSlice', () => {
   describe('sendLogout', () => {
     it('should send logout request and clear state', async () => {
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.sendLogout.initiate({})
+        authApiSlice.endpoints.sendLogout.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -105,7 +107,7 @@ describe('authApiSlice', () => {
       )
 
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.sendLogout.initiate({})
+        authApiSlice.endpoints.sendLogout.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()
@@ -116,7 +118,7 @@ describe('authApiSlice', () => {
   describe('refresh', () => {
     it('should refresh access token', async () => {
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.refresh.initiate({})
+        authApiSlice.endpoints.refresh.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -131,7 +133,7 @@ describe('authApiSlice', () => {
       )
 
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.refresh.initiate({})
+        authApiSlice.endpoints.refresh.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()
@@ -142,7 +144,7 @@ describe('authApiSlice', () => {
   describe('getOrcidSession', () => {
     it('should fetch ORCID session information', async () => {
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.getOrcidSession.initiate({})
+        authApiSlice.endpoints.getOrcidSession.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()

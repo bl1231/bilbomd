@@ -81,6 +81,72 @@ Environment: copy `infra/.env.example` to `infra/.env.local`.
 - All modules use ESM (`"type": "module"`)
 - TypeScript target: ES2022, module: NodeNext
 
+## Development Workflow
+
+**IMPORTANT**: When working on code changes, always follow this workflow:
+
+### 1. Create a New Git Branch
+
+Before starting any code changes, create a new branch using the appropriate naming convention:
+
+```bash
+git checkout -b <prefix>/<descriptive-name>
+# Examples:
+git checkout -b feature/add-user-roles
+git checkout -b fix/job-timeout
+git checkout -b refactor/add-rtk-query-types
+```
+
+See [Git Branch Naming Convention](#git-branch-naming-convention) for prefix guidelines.
+
+### 2. Verify All Checks Pass Before Completion
+
+**Before considering work complete**, ensure all of the following pass without errors:
+
+```bash
+# 1. Linting - must pass with zero warnings/errors
+pnpm lint
+
+# 2. Build - must complete successfully
+pnpm build
+
+# 3. Tests - all tests must pass
+pnpm test
+```
+
+**For package-specific work**, run the checks filtered to that package:
+
+```bash
+# Example for UI package
+pnpm -F @bilbomd/ui lint
+pnpm -F @bilbomd/ui build
+pnpm -F @bilbomd/ui test
+
+# Example for backend package
+pnpm -F @bilbomd/backend lint
+pnpm -F @bilbomd/backend build
+pnpm -F @bilbomd/backend test
+```
+
+### 3. Fix Any Issues
+
+If any of the checks fail:
+- **Linting errors**: Fix ESLint warnings and errors before committing
+- **Build errors**: Resolve TypeScript errors and build issues
+- **Test failures**: Fix failing tests or update tests if behavior changed intentionally
+
+**Do not commit or push code that fails any of these checks.**
+
+### 4. Commit and Push
+
+Once all checks pass:
+
+```bash
+git add -A
+git commit -m "descriptive commit message"
+git push origin <branch-name>
+```
+
 ## Versioning
 
 Uses **Changesets** for per-package versioning. After code changes:
