@@ -73,10 +73,10 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const authSuccessResponse =
     authJobResponse && mode === 'authenticated'
       ? {
-          message: 'Job submitted successfully',
-          jobid: authJobResponse.id,
-          uuid: authJobResponse.mongo.uuid,
-          md_engine: authJobResponse.mongo.md_engine
+          message: authJobResponse.message || 'Job submitted successfully',
+          jobid: authJobResponse.jobid,
+          uuid: authJobResponse.uuid,
+          md_engine: authJobResponse.md_engine
         }
       : undefined
 
