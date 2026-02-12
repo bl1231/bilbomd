@@ -29,7 +29,7 @@ const validationSchema = Yup.object().shape({
 })
 
 export default function OrcidConfirmation() {
-  const { data: profile, isLoading, isError } = useGetOrcidSessionQuery({})
+  const { data: profile, isLoading, isError } = useGetOrcidSessionQuery(undefined)
   const [finalizeOrcid] = useFinalizeOrcidMutation()
 
   const formik = useFormik({

@@ -42,7 +42,6 @@ export default function ClippedDrawer() {
   const location = useLocation()
   const theme = useTheme()
   const isSettingsPage = location.pathname.startsWith('/settings')
-  const showBreadcrumbs = config?.showBreadcrumbs?.toLowerCase() === 'true'
 
   if (configIsLoading) return <CircularProgress />
   if (configError)
@@ -50,6 +49,7 @@ export default function ClippedDrawer() {
   if (!config)
     return <Alert severity="warning">No configuration data available</Alert>
 
+  const showBreadcrumbs = config.showBreadcrumbs?.toLowerCase() === 'true'
   const useNersc = config.useNersc?.toLowerCase() === 'true'
   const enableBilboMdSANS = config.enableBilboMdSANS?.toLowerCase() === 'true'
   const enableBilboMdMulti = config.enableBilboMdMulti?.toLowerCase() === 'true'

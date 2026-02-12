@@ -46,7 +46,27 @@ const NewScoperJobForm = ({
   const [addNewPublicJob, { isSuccess: isAnonSuccess, data: anonJobResponse }] =
     useAddNewPublicJobMutation()
   const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
-  const jobResponse = mode === 'anonymous' ? anonJobResponse : authJobResponse
+
+  // Transform responses to expected shape
+  const publicJobResponse =
+    anonJobResponse && mode === 'anonymous'
+      ? {
+          resultUrl: anonJobResponse.resultUrl,
+          publicId: anonJobResponse.publicId,
+          md_engine: anonJobResponse.md_engine
+        }
+      : undefined
+
+  const authSuccessResponse =
+    authJobResponse && mode === 'authenticated'
+      ? {
+          message: authJobResponse.message || 'Job submitted successfully',
+          jobid: authJobResponse.jobid,
+          uuid: authJobResponse.uuid,
+          md_engine: authJobResponse.md_engine
+        }
+      : undefined
+
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -176,17 +196,17 @@ const NewScoperJobForm = ({
 
           <Paper sx={{ p: 2 }}>
             {isSuccess ? (
-              mode === 'anonymous' ? (
+              mode === 'anonymous' && publicJobResponse ? (
                 <PublicJobSuccessAlert
-                  jobResponse={jobResponse}
+                  jobResponse={publicJobResponse}
                   jobType="Auto"
                 />
-              ) : (
+              ) : authSuccessResponse ? (
                 <JobSuccessAlert
-                  jobResponse={jobResponse}
+                  jobResponse={authSuccessResponse}
                   jobType="Auto"
                 />
-              )
+              ) : null
             ) : (
               <Formik
                 initialValues={initialValues}

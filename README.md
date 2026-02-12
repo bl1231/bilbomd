@@ -9,7 +9,7 @@
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED?logo=docker)](https://github.com/bl1231?tab=packages&repo_name=bilbomd)
 [![Last Commit](https://img.shields.io/github/last-commit/bl1231/bilbomd)](https://github.com/bl1231/bilbomd/commits/main/)
 
-An advances Small Angle X-Ray Scattering (SAXS) modelling pipeline.
+An advanced Small Angle X-Ray Scattering (SAXS) modelling pipeline.
 
 ## Description
 
@@ -50,9 +50,9 @@ Current test coverage across BilboMD apps:
 <!-- COVERAGE-TABLE:START -->
 | App | Statements | Branches | Functions | Lines |
 |-----|-----------|----------|-----------|-------|
-| Backend | 75.85% | 60.93% | 69.04% | 76.38% |
-| UI | 65.56% | 55.56% | 62.64% | 67.14% |
-| Worker | 89.65% | 73.49% | 93.93% | 89.23% |
+| Backend | 80.00% | 64.15% | 71.73% | 80.50% |
+| UI | 65.58% | 55.56% | 62.64% | 67.16% |
+| Worker | 82.40% | 71.34% | 83.09% | 82.48% |
 | Scoper | N/A | N/A | N/A | N/A |
 <!-- COVERAGE-TABLE:END -->
 
