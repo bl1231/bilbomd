@@ -526,10 +526,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     md_engine: 'charmm'
   }
 
-  const onSubmit = async (
-    values: NewAlphaFoldJobFormValues,
-    { setStatus }: { setStatus: (status: string) => void }
-  ) => {
+  const onSubmit = async (values: NewAlphaFoldJobFormValues) => {
     setSubmitError(null)
     const form = new FormData()
     form.append('title', values.title)

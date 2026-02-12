@@ -121,10 +121,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     md_engine: 'charmm'
   }
 
-  const onSubmit = async (
-    values: BilboMDClassicJobFormValues,
-    { setStatus }: { setStatus: (status: string) => void }
-  ) => {
+  const onSubmit = async (values: BilboMDClassicJobFormValues) => {
     setSubmitError(null)
     const form = new FormData()
     form.append('bilbomd_mode', values.bilbomd_mode)

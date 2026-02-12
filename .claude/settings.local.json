@@ -22,7 +22,12 @@
       "Bash(gh pr checks:*)",
       "Bash(pnpm -F @bilbomd/worker test:*)",
       "Bash(gh pr view:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(pnpm vitest:*)",
+      "Bash(grep:*)",
+      "Bash(done)",
+      "Bash(pnpm tsc:*)",
+      "Bash(git restore:*)"
     ]
   }
 }

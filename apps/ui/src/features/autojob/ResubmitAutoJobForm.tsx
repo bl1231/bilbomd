@@ -125,10 +125,7 @@ const ResubmitAutoJobForm = () => {
       (jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ?? 'charmm'
   }
 
-  const onSubmit = async (
-    values: BilboMDAutoJobFormValues,
-    { setStatus }: { setStatus: (status: string) => void }
-  ) => {
+  const onSubmit = async (values: BilboMDAutoJobFormValues) => {
     const form = new FormData()
     form.append('bilbomd_mode', values.bilbomd_mode)
     form.append('title', values.title)
@@ -160,7 +157,7 @@ const ResubmitAutoJobForm = () => {
     try {
       const newJob = await addNewAutoJob(form).unwrap()
       // Navigate to the new job page
-      navigate(`/dashboard/jobs/${newJob.id}`)
+      void navigate(`/dashboard/jobs/${newJob.id}`)
     } catch (error) {
       console.error('rejected', error)
     }

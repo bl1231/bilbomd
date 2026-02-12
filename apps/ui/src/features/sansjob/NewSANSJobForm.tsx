@@ -132,10 +132,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     md_engine: 'charmm'
   }
 
-  const onSubmit = async (
-    values: NewSANSJobFormValues,
-    { setStatus }: { setStatus: (status: string | null) => void }
-  ) => {
+  const onSubmit = async (values: NewSANSJobFormValues) => {
     const form = new FormData()
     form.append('title', values.title)
     form.append('pdb_file', values.pdb_file)

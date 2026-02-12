@@ -1,6 +1,6 @@
 import { FallbackProps } from 'react-error-boundary'
 
-const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
+const ErrorFallback = ({ error }: FallbackProps) => {
   const errorMessage =
     error instanceof Error ? error.message : 'An unknown error occurred'
 

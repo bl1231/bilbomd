@@ -38,17 +38,11 @@ const mockJob: BilboMDJobDTO = {
   }
 }
 
-const mockJobsResponse: BilboMDJobDTO[] = [mockJob]
-
 const mockFoxsAnalysis = {
   chi_sq: 1.23,
   rg: 25.4,
   dmax: 80.5,
   excluded_points: []
-}
-
-const mockMDMovies = {
-  movies: ['movie1.mp4', 'movie2.mp4']
 }
 
 const mockFileCheckResult = {

@@ -50,27 +50,31 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
     refetchOnMountOrArgChange: true
   })
 
-  const foxsData: FoxsData[] = (data ?? []) as FoxsData[]
+  // Memoize foxsData to prevent unnecessary re-renders
+  const foxsData = useMemo(
+    () => ((data ?? []) as FoxsData[]),
+    [data]
+  )
 
   // Prepare original data to reduce the number of digits after the decimal point
   // and filter out negative values
   const origData = useMemo(
-    () => (foxsData ? prepData(foxsData[0].data) : []),
+    () => (foxsData.length > 0 ? prepData(foxsData[0].data) : []),
     [foxsData]
   )
   const scopData = useMemo(
-    () => (foxsData ? prepData(foxsData[1].data) : []),
+    () => (foxsData.length > 1 ? prepData(foxsData[1].data) : []),
     [foxsData]
   )
 
   // Calculate residual values for both datasets
   const origResiduals = useMemo(
-    () => (foxsData ? calculateResiduals(origData) : []),
-    [origData, foxsData]
+    () => (origData.length > 0 ? calculateResiduals(origData) : []),
+    [origData]
   )
   const scopResiduals = useMemo(
-    () => (foxsData ? calculateResiduals(scopData) : []),
-    [scopData, foxsData]
+    () => (scopData.length > 0 ? calculateResiduals(scopData) : []),
+    [scopData]
   )
 
   // Define a Memoized calculation for min and max Y axis values

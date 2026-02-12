@@ -181,10 +181,7 @@ const ResubmitJobForm = () => {
       throw new Error(`Unsupported job type: ${job.mongo.jobType}`)
   }
 
-  const onSubmit = async (
-    values: BilboMDClassicJobFormValues,
-    { setStatus }: { setStatus: (status: string) => void }
-  ) => {
+  const onSubmit = async (values: BilboMDClassicJobFormValues) => {
     const form = new FormData()
     form.append('bilbomd_mode', values.bilbomd_mode)
     form.append('title', values.title)
@@ -230,7 +227,7 @@ const ResubmitJobForm = () => {
     try {
       const newJob = await addNewJob(form).unwrap()
       // Navigate to the new job page
-      navigate(`/dashboard/jobs/${newJob.id}`)
+      void navigate(`/dashboard/jobs/${newJob.id}`)
     } catch (error) {
       console.error('rejected', error)
     }
