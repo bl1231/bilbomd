@@ -25,9 +25,9 @@ This document tracks progress on adding comprehensive test coverage to the Bilbo
 
 **Commit:** 737c4993 - "test: add Phase 1 critical business logic tests for UI"
 
-### 🔄 Phase 2: Job Management Components (In Progress - 6 of 15 files)
+### 🔄 Phase 2: Job Management Components (In Progress - 11 of 15 files)
 
-**Status:** 6 files tested with 100% coverage, all tests passing
+**Status:** 11 files tested, all tests passing, lint and build verified
 
 **Files Tested:**
 1. ✅ `features/jobs/JobDBDisplayProperties.ts` - Job display properties (100% coverage, 16 tests)
@@ -36,25 +36,26 @@ This document tracks progress on adding comprehensive test coverage to the Bilbo
 4. ✅ `features/jobs/JobDetails.tsx` - Job details navigation button (100% coverage, 14 tests)
 5. ✅ `features/jobs/BilboMDStep.tsx` - Pipeline step status chips (100% coverage, 39 tests)
 6. ✅ `features/jobs/NewJobFormInstructions.tsx` - Instructions accordion (100% coverage, 21 tests)
+7. ✅ `features/jobs/BilboMDNerscStep.tsx` - NERSC step display (71.87% coverage, 41 tests)
+8. ✅ `features/jobs/BilboMDMongoSteps.tsx` - MongoDB step container (100% coverage, 18 tests)
+9. ✅ `features/jobs/BilboMDNerscSteps.tsx` - NERSC step container (100% coverage, 20 tests)
+10. ✅ `features/jobs/JobActionsMenu.tsx` - Job actions menu (100% coverage, 39 tests)
+11. ✅ `features/jobs/FoXSAnalysis.tsx` - FoXS analysis display (94.28% coverage, 20 tests)
 
-**Total:** 118 tests across 6 files
+**Total:** 256 tests across 11 files
 
 **Commits:**
 - 6808cc4c - "test: add Phase 2 job management component tests (partial)"
 - 2928c712 - "test: add Phase 2 job management component tests (continued)"
+- [Current] - "test: add Phase 2 job management tests for NERSC steps, actions menu, and FoXS analysis"
 
 ## Remaining Phases
 
-### Phase 2: Job Management Components (9 remaining files)
+### Phase 2: Job Management Components (4 remaining files)
 High-priority job lifecycle components still to test:
-- `features/jobs/JobActionsMenu.tsx`
 - `features/jobs/SingleJobPage.tsx`
 - `features/jobs/NewJobForm.tsx`
 - `features/jobs/ResubmitJobForm.tsx`
-- `features/jobs/FoXSAnalysis.tsx`
-- `features/jobs/BilboMDMongoSteps.tsx`
-- `features/jobs/BilboMDNerscStep.tsx`
-- `features/jobs/BilboMDNerscSteps.tsx`
 - `features/jobs/PipelineSchematic.tsx`
 
 ### Phase 3: Job Type Forms (10 files)
