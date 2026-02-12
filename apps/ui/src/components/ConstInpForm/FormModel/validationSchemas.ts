@@ -193,10 +193,10 @@ const validationSchemas = [
                       return false
                     }
                     const chainStart = ctx.from[2].value.chains.find(
-                      (x) => x.id === ctx.parent.chainid
+                      (x: Chain) => x.id === ctx.parent.chainid
                     ).first_res
                     const chainEnd = ctx.from[2].value.chains.find(
-                      (x) => x.id === ctx.parent.chainid
+                      (x: Chain) => x.id === ctx.parent.chainid
                     ).last_res
                     if (value >= chainStart && value <= chainEnd) {
                       return true

@@ -80,6 +80,7 @@ const SingleJobPage = () => {
 
   const handleDeleteJob = async () => {
     // console.log('Deleting job with ID:', id)
+    if (!id) return
     try {
       await deleteJob({ id })
       void navigate('/dashboard/jobs')

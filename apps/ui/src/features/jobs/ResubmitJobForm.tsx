@@ -15,7 +15,7 @@ import {
   LinearProgress
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import { Link as RouterLink, useParams } from 'react-router'
+import { Link as RouterLink, useParams, useNavigate } from 'react-router'
 import {
   Form,
   Formik,
@@ -53,6 +53,7 @@ const ResubmitJobForm = () => {
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
   const { id } = useParams()
+  const navigate = useNavigate()
 
   // State, RTK mutations and queries
   const [addNewJob, { isSuccess }] = useAddNewJobMutation()
@@ -75,7 +76,7 @@ const ResubmitJobForm = () => {
     data: jobdata,
     isLoading: jobIsLoading,
     isError: jobIsError
-  } = useGetJobByIdQuery(id, {
+  } = useGetJobByIdQuery(id!, {
     skip: !id
   })
 
@@ -85,7 +86,7 @@ const ResubmitJobForm = () => {
   })
 
   // Are we running on NERSC?
-  const useNersc = config.useNersc?.toLowerCase() === 'true'
+  const useNersc = config?.useNersc?.toLowerCase() === 'true'
 
   // Grouped early return for loading and error states
   {
@@ -94,6 +95,7 @@ const ResubmitJobForm = () => {
       configIsLoading ||
       jobIsLoading ||
       !jobdata ||
+      !config ||
       !fileCheckQuery ||
       !fileCheckQuery.data
     ) {
@@ -227,7 +229,8 @@ const ResubmitJobForm = () => {
 
     try {
       const newJob = await addNewJob(form).unwrap()
-      setStatus(newJob)
+      // Navigate to the new job page
+      navigate(`/dashboard/jobs/${newJob.id}`)
     } catch (error) {
       console.error('rejected', error)
     }

@@ -9,7 +9,7 @@ import {
   Paper
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import { Link as RouterLink, useParams } from 'react-router'
+import { Link as RouterLink, useParams, useNavigate } from 'react-router'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
 import {
@@ -39,6 +39,7 @@ const ResubmitAutoJobForm = () => {
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
   const { id } = useParams()
+  const navigate = useNavigate()
 
   // State, RTK mutations and queries
   const [addNewAutoJob, { isSuccess }] = useAddNewAutoJobMutation()
@@ -60,7 +61,7 @@ const ResubmitAutoJobForm = () => {
     data: jobdata,
     isLoading: jobIsLoading,
     isError: jobIsError
-  } = useGetJobByIdQuery(id, {
+  } = useGetJobByIdQuery(id!, {
     skip: !id
   })
 
@@ -70,7 +71,7 @@ const ResubmitAutoJobForm = () => {
   })
 
   // Are we running on NERSC?
-  const useNersc = config.useNersc?.toLowerCase() === 'true'
+  const useNersc = config?.useNersc?.toLowerCase() === 'true'
 
   // Grouped early return for loading and error states
   {
@@ -79,6 +80,7 @@ const ResubmitAutoJobForm = () => {
       configIsLoading ||
       jobIsLoading ||
       !jobdata ||
+      !config ||
       !fileCheckQuery ||
       !fileCheckQuery.data
     ) {
@@ -157,7 +159,8 @@ const ResubmitAutoJobForm = () => {
 
     try {
       const newJob = await addNewAutoJob(form).unwrap()
-      setStatus(newJob)
+      // Navigate to the new job page
+      navigate(`/dashboard/jobs/${newJob.id}`)
     } catch (error) {
       console.error('rejected', error)
     }

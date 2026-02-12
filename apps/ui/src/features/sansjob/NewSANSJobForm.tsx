@@ -75,7 +75,27 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     { isSuccess: isAnonSuccess, data: anonJobResponse }
   ] = useAddNewPublicSANSJobMutation()
   const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
-  const jobResponse = mode === 'anonymous' ? anonJobResponse : authJobResponse
+
+  // Transform responses to expected shape
+  const publicJobResponse =
+    anonJobResponse && mode === 'anonymous'
+      ? {
+          resultUrl: anonJobResponse.resultUrl,
+          publicId: anonJobResponse.publicId,
+          md_engine: anonJobResponse.md_engine
+        }
+      : undefined
+
+  const authSuccessResponse =
+    authJobResponse && mode === 'authenticated'
+      ? {
+          message: 'Job submitted successfully',
+          jobid: authJobResponse.id,
+          uuid: authJobResponse.mongo.uuid,
+          md_engine: authJobResponse.mongo.md_engine
+        }
+      : undefined
+
   const [calculateAutoRg, { isLoading }] = useCalculateAutoRgMutation()
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const [chainIds, setChainIds] = useState<string[]>([])
@@ -91,6 +111,8 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
   if (configError)
     return <Alert severity="error">Error loading configuration</Alert>
+  if (!config)
+    return <Alert severity="error">Configuration not available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
 
@@ -135,11 +157,9 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     })
 
     try {
-      const newJob =
-        mode === 'anonymous'
-          ? await addNewPublicSANSJob(form).unwrap()
-          : await addNewSANSJob(form).unwrap()
-      setStatus(newJob)
+      await (mode === 'anonymous'
+        ? addNewPublicSANSJob(form).unwrap()
+        : addNewSANSJob(form).unwrap())
     } catch (error) {
       console.error('rejected', error)
     }
@@ -206,17 +226,17 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         </HeaderBox>
         <Paper sx={{ p: 2 }}>
           {isSuccess ? (
-            mode === 'anonymous' ? (
+            mode === 'anonymous' && publicJobResponse ? (
               <PublicJobSuccessAlert
-                jobResponse={jobResponse}
+                jobResponse={publicJobResponse}
                 jobType="Auto"
               />
-            ) : (
+            ) : authSuccessResponse ? (
               <JobSuccessAlert
-                jobResponse={jobResponse}
+                jobResponse={authSuccessResponse}
                 jobType="Auto"
               />
-            )
+            ) : null
           ) : (
             <Formik<NewSANSJobFormValues>
               initialValues={initialValues}

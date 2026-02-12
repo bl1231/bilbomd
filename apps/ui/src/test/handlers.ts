@@ -151,22 +151,44 @@ export const handlers = [
   }),
 
   http.post('http://localhost:3003/api/v1/jobs', async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>
-    if (body?.invalidData) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Validation error'
-        }),
-        {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json'
+    // Check content type to handle both JSON and FormData
+    const contentType = request.headers.get('content-type') || ''
+
+    if (contentType.includes('application/json')) {
+      const body = (await request.json()) as Record<string, unknown>
+      if (body?.invalidData) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Validation error'
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json'
+            }
           }
+        )
+      }
+      return new Response(JSON.stringify({ ...mockJob, ...body }), {
+        headers: {
+          'Content-Type': 'application/json'
         }
-      )
+      })
     }
-    return new Response(JSON.stringify({ ...mockJob, ...body }), {
+
+    // Handle FormData (from actual endpoint)
+    if (contentType.includes('multipart/form-data')) {
+      // Just return the mock job for FormData requests
+      return new Response(JSON.stringify(mockJob), {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+    }
+
+    // Default: return mockJob
+    return new Response(JSON.stringify(mockJob), {
       headers: {
         'Content-Type': 'application/json'
       }

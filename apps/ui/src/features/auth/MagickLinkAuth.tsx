@@ -24,6 +24,10 @@ const MagickLinkAuth = () => {
     let timeoutId: NodeJS.Timeout
 
     const authenticateOTP = async () => {
+      if (!otp) {
+        setAuthErrorMsg('No OTP provided')
+        return
+      }
       try {
         const { accessToken } = await login({ otp }).unwrap()
         dispatch(setCredentials({ accessToken }))

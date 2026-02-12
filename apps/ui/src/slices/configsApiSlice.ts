@@ -1,9 +1,9 @@
 import { apiSlice } from 'app/api/apiSlice'
 
-interface ConfigResponse {
+export interface ConfigResponse {
   useNersc?: string
-  enableAlphaFold?: string
-  [key: string]: unknown
+  enableBilboMdAlphaFold?: string
+  [key: string]: string | undefined
 }
 
 export const configApiSlice = apiSlice.injectEndpoints({

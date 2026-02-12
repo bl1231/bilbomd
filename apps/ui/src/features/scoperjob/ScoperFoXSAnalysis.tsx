@@ -50,7 +50,7 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
     refetchOnMountOrArgChange: true
   })
 
-  const foxsData: FoxsData[] = data as FoxsData[]
+  const foxsData: FoxsData[] = (data ?? []) as FoxsData[]
 
   // Prepare original data to reduce the number of digits after the decimal point
   // and filter out negative values

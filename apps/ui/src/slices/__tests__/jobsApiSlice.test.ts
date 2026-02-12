@@ -61,34 +61,7 @@ describe('jobsApiSlice', () => {
   const storeRef = setupApiStore()
 
   beforeEach(() => {
-    server.use(
-      http.get('/api/v1/jobs', () => {
-        return HttpResponse.json(mockJobsResponse)
-      }),
-      http.get('/api/v1/jobs/:id', ({ params: _params }) => {
-        return HttpResponse.json(mockJob)
-      }),
-      http.get('/api/v1/jobs/:id/results/foxs', () => {
-        return HttpResponse.json(mockFoxsAnalysis)
-      }),
-      http.post('/api/v1/jobs', async ({ request }) => {
-        const body = (await request.json()) as Partial<BilboMDJobDTO>
-        return HttpResponse.json({ ...mockJob, ...body })
-      }),
-      http.patch('/api/v1/jobs', async ({ request }) => {
-        const body = (await request.json()) as Partial<BilboMDJobDTO>
-        return HttpResponse.json({ ...mockJob, ...body })
-      }),
-      http.delete('/api/v1/jobs/:id', () => {
-        return HttpResponse.json({ success: true })
-      }),
-      http.get('/api/v1/jobs/:id/check', () => {
-        return HttpResponse.json(mockFileCheckResult)
-      }),
-      http.get('/api/v1/jobs/:id/movies', () => {
-        return HttpResponse.json(mockMDMovies)
-      })
-    )
+    // No additional handlers needed - using global handlers from test/handlers.ts
   })
 
   afterEach(() => {
@@ -219,7 +192,7 @@ describe('jobsApiSlice', () => {
 
     it('should handle validation errors', async () => {
       server.use(
-        http.post('http://localhost:3002/api/v1/jobs', () => {
+        http.post('http://localhost:3003/api/v1/jobs', () => {
           return HttpResponse.json(
             { error: 'Validation failed' },
             { status: 400 }

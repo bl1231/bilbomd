@@ -15,7 +15,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     /*MUI suggestions*/
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "noImplicitThis": true,
     "strictNullChecks": true,
     "allowSyntheticDefaultImports": true,
