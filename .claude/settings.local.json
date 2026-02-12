@@ -27,7 +27,8 @@
       "Bash(grep:*)",
       "Bash(done)",
       "Bash(pnpm tsc:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(pnpm:*)"
     ]
   }
 }
