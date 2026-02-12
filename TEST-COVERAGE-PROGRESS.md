@@ -25,35 +25,37 @@ This document tracks progress on adding comprehensive test coverage to the Bilbo
 
 **Commit:** 737c4993 - "test: add Phase 1 critical business logic tests for UI"
 
-### 🔄 Phase 2: Job Management Components (In Progress - 3 of 15 files)
+### 🔄 Phase 2: Job Management Components (In Progress - 6 of 15 files)
 
-**Status:** Initial files tested with 100% coverage, all tests passing
+**Status:** 6 files tested with 100% coverage, all tests passing
 
 **Files Tested:**
 1. ✅ `features/jobs/JobDBDisplayProperties.ts` - Job display properties (100% coverage, 16 tests)
 2. ✅ `features/jobs/JobSuccessAlert.tsx` - Success notification (100% coverage, 17 tests)
 3. ✅ `features/jobs/JobError.tsx` - Error display with async fetching (100% coverage, 11 tests)
+4. ✅ `features/jobs/JobDetails.tsx` - Job details navigation button (100% coverage, 14 tests)
+5. ✅ `features/jobs/BilboMDStep.tsx` - Pipeline step status chips (100% coverage, 39 tests)
+6. ✅ `features/jobs/NewJobFormInstructions.tsx` - Instructions accordion (100% coverage, 21 tests)
 
-**Total:** 44 tests across 3 files
+**Total:** 118 tests across 6 files
 
-**Commit:** 6808cc4c - "test: add Phase 2 job management component tests (partial)"
+**Commits:**
+- 6808cc4c - "test: add Phase 2 job management component tests (partial)"
+- 2928c712 - "test: add Phase 2 job management component tests (continued)"
 
 ## Remaining Phases
 
-### Phase 2: Job Management Components (12 remaining files)
+### Phase 2: Job Management Components (9 remaining files)
 High-priority job lifecycle components still to test:
-- `features/jobs/JobDetails.tsx`
 - `features/jobs/JobActionsMenu.tsx`
 - `features/jobs/SingleJobPage.tsx`
 - `features/jobs/NewJobForm.tsx`
 - `features/jobs/ResubmitJobForm.tsx`
 - `features/jobs/FoXSAnalysis.tsx`
-- `features/jobs/BilboMDStep.tsx`
 - `features/jobs/BilboMDMongoSteps.tsx`
 - `features/jobs/BilboMDNerscStep.tsx`
 - `features/jobs/BilboMDNerscSteps.tsx`
 - `features/jobs/PipelineSchematic.tsx`
-- `features/jobs/NewJobFormInstructions.tsx`
 
 ### Phase 3: Job Type Forms (10 files)
 Job submission forms for different pipeline types:
