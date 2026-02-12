@@ -19,6 +19,14 @@ interface AutoRgResponse {
   [key: string]: unknown
 }
 
+interface JobCreationResponse {
+  message: string
+  jobid: string
+  uuid: string
+  md_engine: string
+  [key: string]: unknown
+}
+
 interface Af2PaeResponse {
   uuid: string
   status: string
@@ -80,7 +88,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       providesTags: (_, __, id) => [{ type: 'FoxsAnalysis', id }]
     }),
-    addNewJob: builder.mutation<BilboMDJobDTO, FormData>({
+    addNewJob: builder.mutation<JobCreationResponse, FormData>({
       query: (newJob) => ({
         url: '/jobs',
         method: 'POST',
@@ -139,7 +147,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         body: formData
       })
     }),
-    addNewAutoJob: builder.mutation<BilboMDJobDTO, FormData>({
+    addNewAutoJob: builder.mutation<JobCreationResponse, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-auto',
         method: 'POST',
@@ -147,7 +155,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    addNewAlphaFoldJob: builder.mutation<BilboMDJobDTO, FormData>({
+    addNewAlphaFoldJob: builder.mutation<JobCreationResponse, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-alphafold',
         method: 'POST',
@@ -155,7 +163,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    addNewSANSJob: builder.mutation<BilboMDJobDTO, FormData>({
+    addNewSANSJob: builder.mutation<JobCreationResponse, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-sans',
         method: 'POST',
@@ -163,7 +171,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    addNewScoperJob: builder.mutation<BilboMDJobDTO, FormData>({
+    addNewScoperJob: builder.mutation<JobCreationResponse, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-scoper',
         method: 'POST',
@@ -171,7 +179,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
-    addNewMultiJob: builder.mutation<BilboMDJobDTO, FormData>({
+    addNewMultiJob: builder.mutation<JobCreationResponse, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-multi',
         method: 'POST',
