@@ -15,11 +15,9 @@ import path from 'path'
 import { updateStepStatus } from './mongo-utils.js'
 import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
+import { getErrorMessage } from '../../helpers/errors.js'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
-
-const getErrorMessage = (e: unknown): string =>
-  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
 interface FoxsRunDir {
   dir: string
@@ -213,7 +211,6 @@ const writeSegidToChainid = async (inputFile: string): Promise<void> => {
 
     // Join the modified lines and overwrite the original file
     await fs.promises.writeFile(inputFile, modifiedLines.join('\n'), 'utf-8')
-    // logger.info(`Processed PDB file saved as ${inputFile}`)
   } catch (error: unknown) {
     logger.error('Error processing the PDB file:', error)
   }

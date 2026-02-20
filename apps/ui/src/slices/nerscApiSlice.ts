@@ -1,4 +1,3 @@
-import { createEntityAdapter } from '@reduxjs/toolkit'
 import { superfacilityApiSlice } from 'app/api/sfapiSlice'
 
 interface NerscSystemStatus {
@@ -31,11 +30,6 @@ interface ProjectHours {
 
 type NerscSystemStatuses = NerscSystemStatus[]
 type NerscPlannedOutages = NerscPlannedOutage[]
-
-const nerscAdapter = createEntityAdapter({})
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const initialState = nerscAdapter.getInitialState()
 
 export const nerscApiSlice = superfacilityApiSlice.injectEndpoints({
   endpoints: (builder) => ({

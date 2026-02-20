@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { allQueues } from './allQueues.js'
+import { logger } from '../../middleware/loggers.js'
 
 const deleteQueueJob = async (req: Request, res: Response): Promise<void> => {
   const { queueName: rawQueueName, jobId: rawJobId } = req.params
@@ -28,10 +29,7 @@ const deleteQueueJob = async (req: Request, res: Response): Promise<void> => {
       .status(200)
       .json({ message: `Job ID "${jobId}" removed from queue "${queueName}"` })
   } catch (error) {
-    console.error(
-      `Failed to remove job "${jobId}" from queue "${queueName}":`,
-      error
-    )
+    logger.error(`Failed to remove job "${jobId}" from queue "${queueName}": ${error}`)
     res.status(500).json({ error: 'Failed to remove job from queue' })
   }
 }

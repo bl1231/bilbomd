@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { allQueues } from './allQueues.js'
+import { logger } from '../../middleware/loggers.js'
 
 const drainQueue = async (req: Request, res: Response): Promise<void> => {
   const rawQueueName = req.params.queueName
@@ -19,7 +20,7 @@ const drainQueue = async (req: Request, res: Response): Promise<void> => {
       .status(200)
       .json({ message: `Queue "${queueName}" drained successfully` })
   } catch (error) {
-    console.error(`Failed to drain queue "${queueName}":`, error)
+    logger.error(`Failed to drain queue "${queueName}": ${error}`)
     res.status(500).json({ error: 'Failed to drain queue' })
   }
 }

@@ -1,5 +1,48 @@
 # @bilbomd/ui
 
+## 2.6.1
+
+### Patch Changes
+
+- 0b7440c: Add comprehensive test coverage for Phase 1 critical business logic (API slices and state management). Achieves 100% coverage on authSlice, alphafoldPaeVizSlice, sfapiSlice, and bullmqApiSlice, plus 95.65% on apiSlice including base query reauth logic.
+- 0b7440c: Add test coverage for Phase 2 job management components (partial). Achieves 100% coverage on JobDBDisplayProperties, JobError, and JobSuccessAlert components with comprehensive unit and integration tests.
+- 0b7440c: Add test coverage for additional Phase 2 job management components. Achieves 100% coverage on JobDetails, BilboMDStep, and NewJobFormInstructions with comprehensive user interaction and accessibility tests.
+- 0b7440c: Add comprehensive test coverage for Phase 2 job management components (batch 4). Achieves 256 total tests across 11 files with high coverage on JobActionsMenu (100%), FoXSAnalysis (94.28%), BilboMDNerscSteps (100%), BilboMDMongoSteps (100%), and BilboMDNerscStep (71.87%). Tests cover NERSC step workflows, FoXS data processing, job action menus, and complex data transformations.
+
+## 2.6.0
+
+### Minor Changes
+
+- 45825fb: Add comprehensive TypeScript types to RTK Query endpoints. Previously, 36 out of 69 RTK Query endpoints (52%) lacked explicit type parameters, causing result types to default to `any` and bypass TypeScript's type safety. This change adds proper generic type parameters `<ResultType, ArgType>` to all untyped endpoints across authApiSlice, configsApiSlice, statsApiSlice, adminApiSlice, usersApiSlice, and jobsApiSlice. Benefits include compile-time type safety, better IDE autocomplete, and self-documenting API contracts.
+
+### Patch Changes
+
+- f8df12b: Fix job submission error by correcting API response type handling. The job creation endpoints return a flat response structure with jobid, uuid, and md_engine fields, but the frontend was expecting a nested BilboMDJobDTO structure. Added JobCreationResponse interface and updated all job form components to handle the correct response structure.
+
+## 2.5.4
+
+### Patch Changes
+
+- 4128024: Remove dead code and debug statements to improve code quality. Removed unused nerscAdapter and initialState, active debug console.log statements, and commented-out console.log statements across multiple components.
+
+## 2.5.3
+
+### Patch Changes
+
+- a8a0abb: Add test coverage display to README
+  - Add json-summary reporter to backend and worker vitest configs
+  - Add json-summary reporter to UI vite config
+  - Create coverage update script for GitHub Actions
+  - Add coverage-report job to CI workflow
+  - Add test coverage table to README with automatic updates on main branch pushes
+
+- cebfddb: bump nodejs to v24.13.1
+- 40504d9: Fix bug with NERSC Run Time showing invalid
+- 4917c41: Fix React Fast Refresh linting warnings in Molstar Viewport by separating component exports from non-component exports into separate files
+- Updated dependencies [cebfddb]
+- Updated dependencies [624082c]
+  - @bilbomd/mongodb-schema@2.4.1
+
 ## 2.5.2
 
 ### Patch Changes

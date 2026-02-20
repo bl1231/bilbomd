@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { allQueues } from './allQueues.js'
+import { logger } from '../../middleware/loggers.js'
 
 const failQueueJob = async (req: Request, res: Response): Promise<void> => {
   const { queueName: rawQueueName, jobId: rawJobId } = req.params
@@ -32,10 +33,7 @@ const failQueueJob = async (req: Request, res: Response): Promise<void> => {
         message: `Job "${jobId}" in queue "${queueName}" marked as failed`
       })
   } catch (error) {
-    console.error(
-      `Failed to fail job "${jobId}" in queue "${queueName}"`,
-      error
-    )
+    logger.error(`Failed to fail job "${jobId}" in queue "${queueName}": ${error}`)
     res.status(500).json({
       message: `Failed to fail job "${jobId}" in queue "${queueName}"`,
       error: (error as Error).message

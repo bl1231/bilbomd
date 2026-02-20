@@ -1,11 +1,12 @@
 import { Request, Response } from 'express'
 import crypto from 'crypto'
 import { User, IAPIToken } from '@bilbomd/mongodb-schema'
+import { logger } from '../../middleware/loggers.js'
 
 const createAPIToken = async (req: Request, res: Response): Promise<void> => {
   const { username } = req.params
   const { label, expiresAt } = req.body
-  console.log('Creating API token for user:', username)
+  logger.info(`Creating API token for user: ${username}`)
   if (!req.user || req.user !== username) {
     res.status(403).json({ message: 'Unauthorized to create token for this user' })
     return
@@ -33,7 +34,7 @@ const createAPIToken = async (req: Request, res: Response): Promise<void> => {
 
     res.status(201).json({ token }) // Only show raw token once
   } catch (err) {
-    console.error('Error creating API token:', err)
+    logger.error(`Error creating API token: ${err}`)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

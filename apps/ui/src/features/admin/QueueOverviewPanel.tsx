@@ -32,7 +32,7 @@ const QueueOverviewPanel = () => {
     error,
     isFetching
   } = useGetQueuesQuery(
-    {},
+    undefined,
     {
       pollingInterval: pollingEnabled ? 5000 : 0
     }

@@ -101,7 +101,7 @@ const QueueDetailsPage = () => {
     setAnchorEl(null)
     setMenuJobId(null)
   }
-  const { data: queues, isLoading, error } = useGetQueuesQuery({})
+  const { data: queues, isLoading, error } = useGetQueuesQuery(undefined)
   const {
     data: jobs,
     isLoading: jobsLoading,
@@ -138,7 +138,8 @@ const QueueDetailsPage = () => {
 
   console.log('Jobs:', jobs)
 
-  const typedJobs: FrontendBullMQJob<BilboMDJobData>[] = jobs?.jobs ?? []
+  const typedJobs: FrontendBullMQJob<BilboMDJobData>[] = (jobs?.jobs ??
+    []) as unknown as FrontendBullMQJob<BilboMDJobData>[]
 
   const filteredJobs = typedJobs.filter((job) => {
     const matchesType = typeFilter === 'All' || job.data?.type === typeFilter

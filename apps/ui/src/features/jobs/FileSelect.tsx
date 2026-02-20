@@ -60,7 +60,6 @@ const FileSelect = (props: FileSelectProps) => {
   }
 
   const handleBlur = () => {
-    console.log('onBlur triggered')
     props.setFieldTouched(props.name, true)
   }
 

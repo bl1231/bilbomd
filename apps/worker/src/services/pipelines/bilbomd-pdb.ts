@@ -25,6 +25,8 @@ import {
   recordWorkerUsageEvent,
   buildContext
 } from '../functions/usage-events.js'
+import { createProgressTracker } from '../functions/progress-tracker.js'
+
 type StepRunners = {
   minimize: (MQjob: BullMQJob, job: IBilboMDPDBJob) => Promise<void>
   heat: (MQjob: BullMQJob, job: IBilboMDPDBJob) => Promise<void>
@@ -40,9 +42,9 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
   if (!foundJob) {
     throw new Error(`No job found for: ${MQjob.data.jobid}`)
   }
-  await MQjob.updateProgress(5)
-  foundJob.progress = 5
-  await foundJob.save()
+
+  const progress = createProgressTracker(MQjob, foundJob)
+  await progress.update(5)
 
   // Record job start
   await recordWorkerUsageEvent({
@@ -77,9 +79,7 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
 
   // Initialize
   await initializeJob(MQjob, foundJob)
-  await MQjob.updateProgress(10)
-  foundJob.progress = 10
-  await foundJob.save()
+  await progress.update(10)
 
   if (engine === 'CHARMM') {
     // PDB to CRD/PSF for 'pdb' mode
@@ -92,50 +92,38 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
     await prepareOpenMMConfig(foundJob)
     await MQjob.log('end openmm-config')
   }
-  await MQjob.updateProgress(15)
-  foundJob.progress = 15
-  await foundJob.save()
+  await progress.update(15)
 
   // Minimize
   await MQjob.log('start minimize')
   await runners.minimize(MQjob, foundJob)
   await MQjob.log('end minimize')
-  await MQjob.updateProgress(25)
-  foundJob.progress = 25
-  await foundJob.save()
+  await progress.update(25)
 
   // FoXS calculations on minimization_output.pdb
   await MQjob.log('start initfoxs')
   await runSingleFoXS(foundJob)
   await MQjob.log('end initfoxs')
-  await MQjob.updateProgress(30)
-  foundJob.progress = 30
-  await foundJob.save()
+  await progress.update(30)
 
   // Heat
   await MQjob.log('start heat')
   await runners.heat(MQjob, foundJob)
   await MQjob.log('end heat')
-  await MQjob.updateProgress(40)
-  foundJob.progress = 40
-  await foundJob.save()
+  await progress.update(40)
 
   // Molecular Dynamics
   await MQjob.log('start md')
   await runners.md(MQjob, foundJob)
   await MQjob.log('end md')
-  await MQjob.updateProgress(50)
-  foundJob.progress = 50
-  await foundJob.save()
+  await progress.update(50)
 
   // Extract PDBs from DCDs
   if (engine === 'CHARMM') {
     await MQjob.log('start dcd2pdb')
     await extractPDBFilesFromDCD(MQjob, foundJob)
     await MQjob.log('end dcd2pdb')
-    await MQjob.updateProgress(60)
-    foundJob.progress = 60
-    await foundJob.save()
+    await progress.update(60)
   }
 
   // Remediate PDB files
@@ -143,40 +131,30 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
     await MQjob.log('start remediate')
     await remediatePDBFiles(foundJob)
     await MQjob.log('end remediate')
-    await MQjob.updateProgress(70)
-    foundJob.progress = 70
-    await foundJob.save()
+    await progress.update(70)
   }
 
   // Calculate FoXS profiles
   await MQjob.log('start foxs')
   await runFoXS(MQjob, foundJob)
   await MQjob.log('end foxs')
-  await MQjob.updateProgress(80)
-  foundJob.progress = 80
-  await foundJob.save()
+  await progress.update(80)
 
   // MultiFoXS
   await MQjob.log('start multifoxs')
   await runMultiFoxs(MQjob, foundJob)
   await MQjob.log('end multifoxs')
-  await MQjob.updateProgress(95)
-  foundJob.progress = 95
-  await foundJob.save()
+  await progress.update(95)
 
   // Prepare results
   await MQjob.log('start results')
   await prepareBilboMDResults(foundJob)
   await MQjob.log('end results')
-  await MQjob.updateProgress(99)
-  foundJob.progress = 99
-  await foundJob.save()
+  await progress.update(99)
 
   // Cleanup & send email
   await cleanupJob(MQjob, foundJob)
-  await MQjob.updateProgress(100)
-  foundJob.progress = 100
-  await foundJob.save()
+  await progress.update(100)
 
   // Record job completion with duration if available
   const durationMs =

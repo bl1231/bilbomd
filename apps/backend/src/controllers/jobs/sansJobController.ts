@@ -18,8 +18,9 @@ import { Request, Response } from 'express'
 import { BilboMDDispatchContext } from '../../types/bilbomd.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
 import { handleBilboMDSANSJob } from './handleBilboMDSANSJob.js'
+import { getEnvVar } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const createSANSJob = async (req: Request, res: Response) => {
   const UUID = uuid()
@@ -170,7 +171,7 @@ const createPublicSANSJob = async (req: Request, res: Response) => {
           status: { $in: activeStatuses },
           access_mode: 'anonymous'
         }
-        const activeJobsCount = await Promise.all([
+        const counts = await Promise.all([
           BilboMdPDBJob.countDocuments(quotaQuery),
           BilboMdCRDJob.countDocuments(quotaQuery),
           BilboMdAutoJob.countDocuments(quotaQuery),
@@ -178,7 +179,8 @@ const createPublicSANSJob = async (req: Request, res: Response) => {
           BilboMdAlphaFoldJob.countDocuments(quotaQuery),
           BilboMdScoperJob.countDocuments(quotaQuery),
           MultiJob.countDocuments(quotaQuery)
-        ]).then((counts) => counts.reduce((sum, count) => sum + count, 0))
+        ])
+        const activeJobsCount = counts.reduce((sum, count) => sum + count, 0)
 
         logger.info(
           `Active jobs for client IP hash ${client_ip_hash}: ${activeJobsCount}`

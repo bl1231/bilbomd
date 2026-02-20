@@ -1,5 +1,49 @@
 # @bilbomd/backend
 
+## 2.5.3
+
+### Patch Changes
+
+- bb0acc6: Fix critical security vulnerabilities and improve code quality. Replace unsafe environment variable fallbacks with getEnvVar() to prevent empty JWT/session secrets. Update all console.log statements to use winston logger for consistent structured logging. Remove JWT error exposure in API responses and fix inefficient code patterns.
+
+## 2.5.2
+
+### Patch Changes
+
+- c4a1f47: Add comprehensive unit tests for verifyJWT and jobCleaner middleware functions
+  - Add 9 tests for verifyJWT middleware covering authentication flows, error handling, and token validation
+  - Add 9 tests for jobCleaner middleware covering database cleanup, filesystem operations, and error handling
+  - Achieve 98.46% statement coverage and 87.5% branch coverage for middleware
+  - All tests use proper TypeScript types with zero `any` usage
+
+- a8a0abb: Add test coverage display to README
+  - Add json-summary reporter to backend and worker vitest configs
+  - Add json-summary reporter to UI vite config
+  - Create coverage update script for GitHub Actions
+  - Add coverage-report job to CI workflow
+  - Add test coverage table to README with automatic updates on main branch pushes
+
+- 73bde5f: Convert promise chains to async/await for better readability
+  - Converted `.then()` chains to async/await in job controller files
+  - Updated createJob.ts: replaced Promise.all().then() with separate await and reduce
+  - Updated sansJobController.ts: replaced Promise.all().then() with separate await and reduce
+  - Added comprehensive tests for job quota checking logic (6 tests, 100% passing)
+  - Improves code readability by using modern async/await patterns instead of promise chaining
+
+- cebfddb: bump nodejs to v24.13.1
+- 624082c: Fix TypeScript build errors related to schema type inference and ObjectId type handling. Added explicit type annotations to assetsSchema and resultsSchema to resolve BSON dependency issues. Updated worker and backend to properly handle user field as either ObjectId or populated IUser object.
+- 654aa2c: Refactor getJobs.ts to remove duplicate code and improve test coverage
+  - Removed duplicate resolveUsername helper function (was defined twice in the same file)
+  - Replaced console.log with proper logger.error in error handling
+  - Added comprehensive test coverage for getAllJobs and getJobById functions (22 tests, 87% line coverage)
+  - Fixed TypeScript type safety in test mocks
+
+- Updated dependencies [cebfddb]
+- Updated dependencies [624082c]
+- Updated dependencies [190fe68]
+  - @bilbomd/mongodb-schema@2.4.1
+  - @bilbomd/md-utils@1.1.1
+
 ## 2.5.1
 
 ### Patch Changes

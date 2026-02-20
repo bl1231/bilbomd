@@ -8,7 +8,9 @@ import {
   sendDeleteAccountSuccessEmail
 } from '../config/nodemailerConfig.js'
 import crypto from 'crypto'
-const bilboMdUrl: string = process.env.BILBOMD_URL ?? ''
+import { getEnvVar } from '../config/config.js'
+
+const bilboMdUrl = getEnvVar('BILBOMD_URL')
 
 // Helper function to validate email format
 const isValidEmail = (email: string): boolean => {

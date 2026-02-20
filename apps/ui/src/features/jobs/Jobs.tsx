@@ -69,9 +69,16 @@ const getRunTimeInHours = (
 
   let end: Date | null = null
 
-  if (nersc.time_completed) {
+  // Check if job has actually completed (not just epoch placeholder)
+  const actualCompletionTime = nersc.time_completed
+    ? parseDateSafe(nersc.time_completed)
+    : null
+  const isCompletionEpoch =
+    actualCompletionTime && actualCompletionTime.getTime() === 0
+
+  if (actualCompletionTime && !isCompletionEpoch) {
     // Job has completed, use actual completion time
-    end = parseDateSafe(nersc.time_completed)
+    end = actualCompletionTime
   } else if (jobStatus === 'Running' || nersc.state === 'RUNNING') {
     // Job is still running, use current time
     end = new Date()
@@ -136,14 +143,6 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
     return 'Unknown'
   } else {
     // Job failed, cancelled, or other status before starting
-    console.log('Queue time debug - job not pending/running:', {
-      jobid: nersc.jobid,
-      jobStatus,
-      nersc_state: nersc.state,
-      time_submitted: nersc.time_submitted,
-      time_started: nersc.time_started,
-      is_epoch: isEpochPlaceholder
-    })
     return ''
   }
 
@@ -276,7 +275,6 @@ const Jobs = () => {
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
-  // console.log('jobs data --->', jobs)
 
   const allJobs = useSelector(selectAllJobs)
 
@@ -334,7 +332,6 @@ const Jobs = () => {
 
   if ((isSuccess && jobs) || (isError && allJobs.length > 0)) {
     const showStaleWarning = isError && allJobs.length > 0
-    // console.log('showStaleWarning', showStaleWarning)
 
     const availableJobTypes = Array.from(
       new Set(allJobs.map((job) => job.mongo?.jobType).filter(Boolean))

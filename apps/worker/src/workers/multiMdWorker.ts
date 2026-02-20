@@ -2,28 +2,29 @@ import { multiMdHandler } from '../workerHandlers/multiMdHandler.js'
 import { Worker, WorkerOptions } from 'bullmq'
 import { logger } from '../helpers/loggers.js'
 
-let multiMdActiveJobsCount = 0
-
 export const createMultiMDWorker = (options: WorkerOptions): Worker => {
   const multiMdWorker = new Worker('multimd', multiMdHandler, options)
   logger.info(`BilboMD Multi Worker started`)
 
+  // Use closure to encapsulate counter instead of module-level state
+  let activeJobsCount = 0
+
   multiMdWorker.on('active', () => {
-    multiMdActiveJobsCount++
-    logger.info(`BilboMD Multi Worker Active Jobs: ${multiMdActiveJobsCount}`)
+    activeJobsCount++
+    logger.info(`BilboMD Multi Worker Active Jobs: ${activeJobsCount}`)
   })
 
   multiMdWorker.on('completed', () => {
-    multiMdActiveJobsCount--
+    activeJobsCount--
     logger.info(
-      `BilboMD Multi Worker Active Jobs after completion: ${multiMdActiveJobsCount}`
+      `BilboMD Multi Worker Active Jobs after completion: ${activeJobsCount}`
     )
   })
 
   multiMdWorker.on('failed', () => {
-    multiMdActiveJobsCount--
+    activeJobsCount--
     logger.info(
-      `BilboMD Multi Worker Active Jobs after failure: ${multiMdActiveJobsCount}`
+      `BilboMD Multi Worker Active Jobs after failure: ${activeJobsCount}`
     )
   })
 

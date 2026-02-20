@@ -1,5 +1,15 @@
 # @bilbomd/md-utils
 
+## 1.1.1
+
+### Patch Changes
+
+- cebfddb: bump nodejs to v24.13.1
+- 190fe68: Update dependencies and fix ESLint preserve-caught-error rule violations by adding error cause to re-thrown errors
+- Updated dependencies [cebfddb]
+- Updated dependencies [624082c]
+  - @bilbomd/mongodb-schema@2.4.1
+
 ## 1.1.0
 
 ### Minor Changes

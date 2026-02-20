@@ -3,7 +3,7 @@ import { setupApiStore } from '../../test/testUtils'
 import { usersApiSlice } from '../usersApiSlice'
 import { server } from '../../test/server'
 import { http, HttpResponse } from 'msw'
-import type { UserDTO } from '@bilbomd/bilbomd-types'
+import type { UserDTO, UserRole } from '@bilbomd/bilbomd-types'
 
 type MongoUser = {
   _id: string
@@ -49,7 +49,7 @@ const mockUsersResponse = {
 const mockNewUserData = {
   username: 'newuser',
   email: 'newuser@example.com',
-  roles: ['User'],
+  roles: ['User'] as UserRole[],
   firstName: 'New',
   lastName: 'User',
   institution: 'New University'
@@ -57,7 +57,7 @@ const mockNewUserData = {
 
 const mockUserUpdate = {
   id: 'user-123',
-  roles: ['Manager']
+  roles: ['Manager'] as UserRole[]
 }
 
 describe('usersApiSlice', () => {
@@ -89,7 +89,7 @@ describe('usersApiSlice', () => {
   describe('getUsers', () => {
     it('should fetch users and transform them using entity adapter', async () => {
       const result = await storeRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate({})
+        usersApiSlice.endpoints.getUsers.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -129,7 +129,7 @@ describe('usersApiSlice', () => {
     it('should handle different response statuses correctly', async () => {
       // Test successful response
       const result = await storeRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate({})
+        usersApiSlice.endpoints.getUsers.initiate(undefined)
       )
 
       // Should handle the response without throwing errors
@@ -153,7 +153,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate({})
+        usersApiSlice.endpoints.getUsers.initiate(undefined)
       )
 
       expect(result.data).toBeDefined()
@@ -174,7 +174,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate({})
+        usersApiSlice.endpoints.getUsers.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()
@@ -193,7 +193,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate({})
+        usersApiSlice.endpoints.getUsers.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()
@@ -213,7 +213,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate({})
+        usersApiSlice.endpoints.getUsers.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()
@@ -401,7 +401,7 @@ describe('usersApiSlice', () => {
 
       try {
         await freshStoreRef.store.dispatch(
-          usersApiSlice.endpoints.getUsers.initiate({})
+          usersApiSlice.endpoints.getUsers.initiate(undefined)
         )
         expect.fail('Expected query to throw')
       } catch (error) {
@@ -421,7 +421,7 @@ describe('usersApiSlice', () => {
       )
 
       const result = await freshStoreRef.store.dispatch(
-        usersApiSlice.endpoints.getUsers.initiate({})
+        usersApiSlice.endpoints.getUsers.initiate(undefined)
       )
 
       expect(result.error).toBeDefined()

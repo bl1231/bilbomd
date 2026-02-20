@@ -1,10 +1,11 @@
 import { logger } from '../middleware/loggers.js'
-import { config } from '../config/config.js'
+import { config, getEnvVar } from '../config/config.js'
 import { User } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { sendVerificationEmail } from '../config/nodemailerConfig.js'
+
 const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-const bilboMdUrl: string = process.env.BILBOMD_URL ?? ''
+const bilboMdUrl = getEnvVar('BILBOMD_URL')
 
 const verifyNewUser = async (req: Request, res: Response) => {
   try {

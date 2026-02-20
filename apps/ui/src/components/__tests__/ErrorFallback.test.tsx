@@ -3,10 +3,16 @@ import ErrorFallback from '../ErrorFallback'
 
 test('renders error message and alert role', () => {
   // Mock error object
-  const error = { message: 'Test error message' }
+  const error = new Error('Test error message')
+  const resetErrorBoundary = vi.fn()
 
   // Render the component with the mock error
-  const { getByRole, getByText } = render(<ErrorFallback error={error} />)
+  const { getByRole, getByText } = render(
+    <ErrorFallback
+      error={error}
+      resetErrorBoundary={resetErrorBoundary}
+    />
+  )
 
   // Check if the alert role is present
   expect(getByRole('alert')).toBeInTheDocument()

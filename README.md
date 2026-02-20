@@ -1,6 +1,15 @@
 # BilboMD
 
-An advances Small Angle X-Ray Scattering (SAXS) modelling pipeline.
+[![CI Status](https://github.com/bl1231/bilbomd/actions/workflows/ci.yml/badge.svg)](https://github.com/bl1231/bilbomd/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-Berkeley%20Lab%20Non--Commercial-blue.svg)](https://github.com/bl1231/bilbomd/blob/main/LICENSE.txt)
+[![Node](https://img.shields.io/badge/node-v24.13.0-brightgreen?logo=node.js)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-10.29.2-orange?logo=pnpm)](https://pnpm.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-blueviolet?logo=turborepo)](https://turbo.build/)
+[![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED?logo=docker)](https://github.com/bl1231?tab=packages&repo_name=bilbomd)
+[![Last Commit](https://img.shields.io/github/last-commit/bl1231/bilbomd)](https://github.com/bl1231/bilbomd/commits/main/)
+
+An advanced Small Angle X-Ray Scattering (SAXS) modelling pipeline.
 
 ## Description
 
@@ -33,6 +42,21 @@ This pipeline is designed to take Alphafold models and a Per residue Alignment E
 This pipeline is designed to run Alphafold2 on your provided protein sequence and then run the Auto pipeline above.
 
 ![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
+
+## Test Coverage
+
+Current test coverage across BilboMD apps:
+
+<!-- COVERAGE-TABLE:START -->
+| App | Statements | Branches | Functions | Lines |
+|-----|-----------|----------|-----------|-------|
+| Backend | 80.00% | 64.15% | 71.73% | 80.50% |
+| UI | 65.58% | 55.56% | 62.64% | 67.16% |
+| Worker | 82.40% | 71.34% | 83.09% | 82.48% |
+| Scoper | N/A | N/A | N/A | N/A |
+<!-- COVERAGE-TABLE:END -->
+
+*Coverage is automatically updated on each push to main.*
 
 ## Deployment
 
