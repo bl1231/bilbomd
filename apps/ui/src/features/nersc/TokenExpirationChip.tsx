@@ -22,8 +22,8 @@ const TokenExpirationChip = () => {
 
   const expirationDate = parseDateSafe(data?.tokenExpires)
 
-  let chipColor = 'green'
-  let chipLabel = ''
+  let chipColor: string
+  let chipLabel: string
 
   if (!expirationDate) {
     chipColor = 'gray'
@@ -42,6 +42,8 @@ const TokenExpirationChip = () => {
         chipColor = 'darkorange' // within 2 days
       } else if (!isBefore(now, oneWeekBeforeExp)) {
         chipColor = 'orange' // within 1 week
+      } else {
+        chipColor = 'green' // more than 1 week away
       }
     }
   }
