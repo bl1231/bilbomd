@@ -26,7 +26,7 @@
   ],
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
-    "fs-extra": "^11.3.3",
+    "fs-extra": "^11.3.4",
     "yaml": "^2.8.2"
   },
   "devDependencies": {
