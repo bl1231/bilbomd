@@ -153,16 +153,25 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
       path.extname(job.data_file)
     )
     // Try all possible file names for the original .dat file
-    // The OpenMM option does end up outputting to a subdirectory
+    // Covers: old CHARMM (jobDir), new CHARMM (charmm/minimize/), OpenMM,
+    // and results/ as a final fallback (worker copies it there).
     const possibleDatFiles = [
       path.join(jobDir, `minimization_output_${datFileBase}.dat`),
+      path.join(
+        jobDir,
+        'charmm',
+        'minimize',
+        `minimization_output_${datFileBase}.dat`
+      ),
       path.join(jobDir, `minimized_${datFileBase}.dat`),
       path.join(
         jobDir,
         'openmm',
         'minimization',
         `minimized_${datFileBase}.dat`
-      )
+      ),
+      path.join(resultsDir, `minimization_output_${datFileBase}.dat`),
+      path.join(resultsDir, `minimized_${datFileBase}.dat`)
     ]
 
     let foundDatFile = null
