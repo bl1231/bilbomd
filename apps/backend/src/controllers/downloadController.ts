@@ -194,18 +194,23 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
       )
     }
 
-    const filePattern = /^multi_state_model_\d+_1_1\.dat$/
-    for (const file of files) {
-      if (filePattern.test(file)) {
-        const filename = path.join(resultsDir, file)
-        try {
-          data.push(await createDataObject(filename, jobDir))
-          ensembleCount += 1
-        } catch (e) {
-          logger.warn(
-            `Skipping unreadable FoXS ensemble file ${filename}: ${(e as Error).message}`
-          )
-        }
+    const filePattern = /^multi_state_model_(\d+)_1_1\.dat$/
+    const matchingFiles = files
+      .filter((file) => filePattern.test(file))
+      .sort((a, b) => {
+        const aNum = parseInt(a.match(/multi_state_model_(\d+)_/)![1], 10)
+        const bNum = parseInt(b.match(/multi_state_model_(\d+)_/)![1], 10)
+        return aNum - bNum
+      })
+    for (const file of matchingFiles) {
+      const filename = path.join(resultsDir, file)
+      try {
+        data.push(await createDataObject(filename, jobDir))
+        ensembleCount += 1
+      } catch (e) {
+        logger.warn(
+          `Skipping unreadable FoXS ensemble file ${filename}: ${(e as Error).message}`
+        )
       }
     }
 
