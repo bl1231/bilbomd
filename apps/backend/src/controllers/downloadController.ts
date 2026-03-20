@@ -164,6 +164,7 @@ const getFoxsBilboData = async (job: IJob, res: Response) => {
         `minimization_output_${datFileBase}.dat`
       ),
       path.join(jobDir, `minimized_${datFileBase}.dat`),
+      path.join(jobDir, 'minimize', `minimized_${datFileBase}.dat`),
       path.join(
         jobDir,
         'openmm',
