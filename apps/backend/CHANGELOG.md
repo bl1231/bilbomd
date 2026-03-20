@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.5.5
+
+### Patch Changes
+
+- bb4c436: fix FoXS Analysis bug where the 1-state model is not being displayed.
+
 ## 2.5.4
 
 ### Patch Changes
