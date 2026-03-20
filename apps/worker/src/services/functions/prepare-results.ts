@@ -87,8 +87,7 @@ const prepareResults = async (
       )
       const openmmNerscDat = path.join(
         jobDir,
-        'openmm',
-        'minimization',
+        'minimize',
         `minimized_${baseDataName}.dat`
       )
       const charmmNewDat = path.join(
