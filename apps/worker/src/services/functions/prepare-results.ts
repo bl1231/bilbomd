@@ -41,7 +41,8 @@ const prepareResults = async (
 
     {
       const baseDataName = DBjob.data_file.split('.')[0]
-      const openmmPdb = path.join(
+      const openmmLocalPdb = path.join(jobDir, 'minimize', 'minimized.pdb')
+      const openmmNerscPdb = path.join(
         jobDir,
         'openmm',
         'minimization',
@@ -55,13 +56,15 @@ const prepareResults = async (
       )
       const charmmOldPdb = path.join(jobDir, 'minimization_output.pdb')
 
-      const pdbSource = (await fs.pathExists(openmmPdb))
-        ? openmmPdb
-        : (await fs.pathExists(charmmNewPdb))
-          ? charmmNewPdb
-          : (await fs.pathExists(charmmOldPdb))
-            ? charmmOldPdb
-            : null
+      const pdbSource = (await fs.pathExists(openmmLocalPdb))
+        ? openmmLocalPdb
+        : (await fs.pathExists(openmmNerscPdb))
+          ? openmmNerscPdb
+          : (await fs.pathExists(charmmNewPdb))
+            ? charmmNewPdb
+            : (await fs.pathExists(charmmOldPdb))
+              ? charmmOldPdb
+              : null
 
       if (pdbSource) {
         await copyFiles({
@@ -77,7 +80,12 @@ const prepareResults = async (
       }
 
       // --- Copy the DAT file for the minimized PDB (supports both layouts)
-      const openmmDat = path.join(
+      const openmmLocalDat = path.join(
+        jobDir,
+        'minimize',
+        `minimized_${baseDataName}.dat`
+      )
+      const openmmNerscDat = path.join(
         jobDir,
         'openmm',
         'minimization',
@@ -94,13 +102,15 @@ const prepareResults = async (
         `minimization_output_${baseDataName}.dat`
       )
 
-      const datSource = (await fs.pathExists(openmmDat))
-        ? openmmDat
-        : (await fs.pathExists(charmmNewDat))
-          ? charmmNewDat
-          : (await fs.pathExists(charmmOldDat))
-            ? charmmOldDat
-            : null
+      const datSource = (await fs.pathExists(openmmLocalDat))
+        ? openmmLocalDat
+        : (await fs.pathExists(openmmNerscDat))
+          ? openmmNerscDat
+          : (await fs.pathExists(charmmNewDat))
+            ? charmmNewDat
+            : (await fs.pathExists(charmmOldDat))
+              ? charmmOldDat
+              : null
 
       if (datSource) {
         await copyFiles({
