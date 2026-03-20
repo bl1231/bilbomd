@@ -1,5 +1,12 @@
 # @bilbomd/backend
 
+## 2.5.7
+
+### Patch Changes
+
+- 976468f: Fix OpenMM base dat file path so the minimized PDB FoXS result is correctly found and copied to results/. This restores the 1-state ensemble model in the FoXS Ensemble Chi² residuals chart for OpenMM jobs.
+- 976468f: Refactor FoXS data layer: split downloadController into foxsController + foxsDataService + foxsParser, decouple business logic from HTTP, eliminate duplicate type definitions, add unit tests.
+
 ## 2.5.6
 
 ### Patch Changes
