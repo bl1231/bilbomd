@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.5.6
+
+### Patch Changes
+
+- c14c67c: Fix OpenMM base dat file path so the minimized PDB FoXS result is correctly found and copied to results/. This restores the 1-state ensemble model in the FoXS Ensemble Chi² residuals chart for OpenMM jobs.
+
 ## 2.5.5
 
 ### Patch Changes
