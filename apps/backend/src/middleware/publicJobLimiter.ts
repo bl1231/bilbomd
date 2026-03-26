@@ -1,12 +1,14 @@
-import rateLimit from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import { logger } from './loggers.js'
 
 const publicJobLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 5, // 5 anon submissions per 10 minutes per IP
   keyGenerator: (req) => {
-    // Use CF-Connecting-IP if available, otherwise fall back to req.ip
-    return (req.headers['cf-connecting-ip'] as string) || req.ip || 'unknown'
+    // Use CF-Connecting-IP if available, otherwise fall back to req.ip.
+    // ipKeyGenerator normalizes IPv6 addresses to prevent bypass.
+    const ip = (req.headers['cf-connecting-ip'] as string) || req.ip || 'unknown'
+    return ipKeyGenerator(ip)
   },
   message: {
     message:
