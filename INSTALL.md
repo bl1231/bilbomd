@@ -288,11 +288,3 @@ Double-check that your `.env.local` has all required variables set.
 Make sure `UID` and `GID` in `.env.local` match the user running Docker on your
 host (`id -u` / `id -g`).
 
-**ORCID login fails**
-Verify that `ORCID_REDIRECT_URI` in `.env.local` exactly matches the redirect URI
-registered in your ORCID developer application. The backend port (default `3501`)
-must appear in the URI.
-
-**Worker exits immediately**
-Check `docker compose -p bilbomd-local logs worker`. Ensure the `CHARMM_VER` in
-`.env.local` matches the version baked into the pulled worker image.
