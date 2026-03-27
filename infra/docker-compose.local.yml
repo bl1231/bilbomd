@@ -108,6 +108,15 @@ services:
     pull_policy: always
     deploy:
       replicas: 1
+      resources:
+        limits:
+          cpus: "16"
+          memory: "32g"
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     env_file:
       - .env.local
     networks:
