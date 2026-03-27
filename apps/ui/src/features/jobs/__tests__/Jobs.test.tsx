@@ -238,7 +238,7 @@ describe('Jobs table', () => {
     ).toBeInTheDocument()
 
     // Queue time should show (5 minutes from submit to start)
-    expect(await screen.findByText(/5min/i)).toBeInTheDocument()
+    expect(await screen.findByText('5min')).toBeInTheDocument()
 
     // Run time should NOT show 'Invalid' - it should calculate from start to now
     // Since the job is Running, it uses current time as end
