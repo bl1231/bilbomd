@@ -105,6 +105,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     return <Alert severity="error">Configuration not available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
+  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
 
   const initialValues: BilboMDClassicJobFormValues = {
     bilbomd_mode: 'pdb',
@@ -118,7 +119,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     rg: '',
     rg_min: '',
     rg_max: '',
-    md_engine: 'charmm'
+    md_engine: charmmEnabled ? 'charmm' : 'openmm'
   }
 
   const onSubmit = async (values: BilboMDClassicJobFormValues) => {
@@ -477,6 +478,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         disabled={
                           isSubmitting || values.bilbomd_mode === 'crd_psf'
                         }
+                        disableCharmm={!charmmEnabled}
                       />
                     </Grid>
 

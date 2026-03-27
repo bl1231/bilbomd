@@ -53,8 +53,8 @@ cd infra
 Example output:
 
 ```
-bilbomd-backend   2.5.7    2026-03-20 11:29:19 PDT    ghcr.io/bl1231/bilbomd-backend:2.5.7
-bilbomd-ui.       2.6.2    2026-03-19 15:34:27 PDT    ghcr.io/bl1231/bilbomd-ui:2.6.2
+bilbomd-backend   2.5.9    2026-03-20 11:29:19 PDT    ghcr.io/bl1231/bilbomd-backend:2.5.7
+bilbomd-ui.       2.6.3    2026-03-19 15:34:27 PDT    ghcr.io/bl1231/bilbomd-ui:2.6.2
 bilbomd-worker    2.4.2    2026-03-20 11:29:59 PDT    ghcr.io/bl1231/bilbomd-worker:2.4.2
 bilbomd-scoper    1.6.1    2026-02-10 16:31:43 PST    ghcr.io/bl1231/bilbomd-scoper:1.6.1
 ```
@@ -176,6 +176,7 @@ ENABLE_BILBOMD_MULTI=true
 ENABLE_BILBOMD_ALPHAFOLD=false   # requires GPU / NERSC
 ENABLE_BILBOMD_SCOPER=false      # scoper is commented out in the local compose
 ENABLE_HOME_PAGE_ALERT=false
+ENABLE_CHARMM_ENGINE=false
 ```
 
 ### NERSC
