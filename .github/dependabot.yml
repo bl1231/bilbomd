@@ -24,6 +24,11 @@ updates:
       timezone: 'America/Los_Angeles'
     open-pull-requests-limit: 5
     versioning-strategy: 'increase'
+    # eslint v10 blocked until eslint-plugin-react and eslint-plugin-react-hooks
+    # ship stable releases with v10 peer dep support
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       root-prod:
         dependency-type: 'production'
@@ -43,6 +48,9 @@ updates:
       timezone: 'America/Los_Angeles'
     open-pull-requests-limit: 5
     versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       backend-prod:
         dependency-type: 'production'
@@ -60,6 +68,9 @@ updates:
       timezone: 'America/Los_Angeles'
     open-pull-requests-limit: 5
     versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       worker-prod:
         dependency-type: 'production'
@@ -77,6 +88,9 @@ updates:
       timezone: 'America/Los_Angeles'
     open-pull-requests-limit: 5
     versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       scoper-prod:
         dependency-type: 'production'
@@ -94,6 +108,9 @@ updates:
       timezone: 'America/Los_Angeles'
     open-pull-requests-limit: 5
     versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       ui-prod:
         dependency-type: 'production'
@@ -111,6 +128,9 @@ updates:
       timezone: 'America/Los_Angeles'
     open-pull-requests-limit: 5
     versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       bilbomd-types-prod:
         dependency-type: 'production'
@@ -128,6 +148,9 @@ updates:
       timezone: 'America/Los_Angeles'
     open-pull-requests-limit: 5
     versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       eslint-config-prod:
         dependency-type: 'production'
@@ -145,6 +168,9 @@ updates:
       timezone: 'America/Los_Angeles'
     open-pull-requests-limit: 5
     versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       md-utils-prod:
         dependency-type: 'production'
@@ -162,6 +188,9 @@ updates:
       timezone: 'America/Los_Angeles'
     open-pull-requests-limit: 5
     versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       mongodb-schema-prod:
         dependency-type: 'production'
