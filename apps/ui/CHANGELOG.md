@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.6.5
+
+### Patch Changes
+
+- 267894b: Refactor sidebar nav to use group-based dividers. Dividers are now structural separators between item groups (navigation, job forms, utilities, info) rather than properties on individual items, so filtering items like Scoper, SANS, or Multi no longer removes adjacent dividers.
+
 ## 2.6.4
 
 ### Patch Changes
