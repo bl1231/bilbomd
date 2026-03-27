@@ -20,11 +20,18 @@ vi.mock('../../../slices/publicJobsApiSlice', () => ({
     { isSuccess: false }
   ]
 }))
+const mockUseGetConfigsQuery = vi.fn()
 vi.mock('../../../slices/configsApiSlice', () => ({
-  useGetConfigsQuery: () => ({ data: { useNersc: 'false' }, isLoading: false })
+  useGetConfigsQuery: (...args: unknown[]) => mockUseGetConfigsQuery(...args)
 }))
 
 describe('NewJobForm md_engine', () => {
+  beforeEach(() => {
+    mockUseGetConfigsQuery.mockReturnValue({
+      data: { useNersc: 'false' },
+      isLoading: false
+    })
+  })
   it('renders CHARMM and OpenMM options and defaults to CHARMM', async () => {
     render(<NewJobForm />)
     const charmm = screen.getByLabelText(/CHARMM/i)
@@ -40,5 +47,21 @@ describe('NewJobForm md_engine', () => {
     const openmm = screen.getByLabelText(/OpenMM/i)
     await user.click(openmm)
     expect((openmm as HTMLInputElement).checked).toBe(true)
+  })
+
+  it('disables CRD/PSF checkbox when CHARMM engine is disabled', () => {
+    mockUseGetConfigsQuery.mockReturnValue({
+      data: { useNersc: 'false', enableCharmmEngine: 'false' },
+      isLoading: false
+    })
+    render(<NewJobForm />)
+    const crdPsfCheckbox = screen.getByRole('checkbox', { name: /CRD\/PSF files/i })
+    expect(crdPsfCheckbox).toBeDisabled()
+  })
+
+  it('CRD/PSF checkbox is enabled when CHARMM engine is enabled', () => {
+    render(<NewJobForm />)
+    const crdPsfCheckbox = screen.getByRole('checkbox', { name: /CRD\/PSF files/i })
+    expect(crdPsfCheckbox).toBeEnabled()
   })
 })

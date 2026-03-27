@@ -45,6 +45,8 @@ export default function ClippedDrawer() {
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
   const enableBilboMdSANS = config.enableBilboMdSANS?.toLowerCase() === 'true'
+  const enableBilboMdScoper =
+    config.enableBilboMdScoper?.toLowerCase() === 'true'
 
   let menuItems = [
     {
@@ -121,7 +123,7 @@ export default function ClippedDrawer() {
     }
   ]
 
-  if (useNersc) {
+  if (useNersc || !enableBilboMdScoper) {
     menuItems = menuItems.filter((item) => item.text !== 'Scoper')
   }
 
