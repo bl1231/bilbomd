@@ -1,5 +1,12 @@
 # @bilbomd/ui
 
+## 2.6.4
+
+### Patch Changes
+
+- 32a084e: Disable CRD/PSF input toggle when CHARMM engine is disabled. When ENABLE_CHARMM_ENGINE=false, the CRD/PSF mode checkbox is now greyed out alongside the CHARMM md_engine option since CRD/PSF inputs are only used with CHARMM.
+- 906e57a: Hide Scoper sidebar item when ENABLE_BILBOMD_SCOPER is false.
+
 ## 2.6.3
 
 ### Patch Changes
