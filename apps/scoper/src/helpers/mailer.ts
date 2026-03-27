@@ -6,6 +6,13 @@ import { logger } from './loggers.js'
 
 const user = process.env.SEND_EMAIL_USER
 const name = process.env.BILBOMD_FQDN
+const mailHost = process.env.BILBOMD_MAILER_HOST || 'smtp-relay.gmail.com'
+const mailPort = process.env.BILBOMD_MAILER_PORT
+  ? parseInt(process.env.BILBOMD_MAILER_PORT)
+  : 25
+const mailSecure = process.env.BILBOMD_MAILER_SECURE === 'true'
+const mailUser = process.env.BILBOMD_MAILER_USER
+const mailPass = process.env.BILBOMD_MAILER_PASS
 // Get the directory of the current module file
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -13,9 +20,10 @@ const viewPath = path.resolve(__dirname, '../templates/mailer/')
 
 const transporter = nodemailer.createTransport({
   name: name,
-  host: 'smtp-relay.gmail.com',
-  port: 25,
-  secure: false
+  host: mailHost,
+  port: mailPort,
+  secure: mailSecure,
+  ...(mailUser && mailPass ? { auth: { user: mailUser, pass: mailPass } } : {})
 })
 
 const sendJobCompleteEmail = (
