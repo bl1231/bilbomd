@@ -115,6 +115,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     return <Alert severity="error">Configuration not available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
+  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
 
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
@@ -129,7 +130,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     rg_max: 0,
     inp_file: '',
     d2o_fraction: 100,
-    md_engine: 'charmm'
+    md_engine: charmmEnabled ? 'charmm' : 'openmm'
   }
 
   const onSubmit = async (values: NewSANSJobFormValues) => {

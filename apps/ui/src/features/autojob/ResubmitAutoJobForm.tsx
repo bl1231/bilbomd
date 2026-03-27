@@ -72,6 +72,7 @@ const ResubmitAutoJobForm = () => {
 
   // Are we running on NERSC?
   const useNersc = config?.useNersc?.toLowerCase() === 'true'
+  const charmmEnabled = config?.enableCharmmEngine?.toLowerCase() !== 'false'
 
   // Grouped early return for loading and error states
   {
@@ -121,8 +122,10 @@ const ResubmitAutoJobForm = () => {
     pdb_file: jobMongo.pdb_file ?? '',
     pae_file: jobMongo.pae_file ?? '',
     dat_file: jobMongo.data_file ?? '',
-    md_engine:
-      (jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ?? 'charmm'
+    md_engine: !charmmEnabled
+      ? 'openmm'
+      : ((jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
+        'charmm')
   }
 
   const onSubmit = async (values: BilboMDAutoJobFormValues) => {
@@ -258,6 +261,7 @@ const ResubmitAutoJobForm = () => {
                           setMdEngine(val)
                         }}
                         disabled={isSubmitting}
+                        disableCharmm={!charmmEnabled}
                       />
                     </Grid>
 

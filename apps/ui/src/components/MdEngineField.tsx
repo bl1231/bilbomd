@@ -10,9 +10,15 @@ type MdEngineFieldProps = {
   value: 'charmm' | 'openmm'
   onChange: (value: 'charmm' | 'openmm') => void
   disabled?: boolean
+  disableCharmm?: boolean
 }
 
-const MdEngineField = ({ value, onChange, disabled }: MdEngineFieldProps) => (
+const MdEngineField = ({
+  value,
+  onChange,
+  disabled,
+  disableCharmm
+}: MdEngineFieldProps) => (
   <FormControl
     component="fieldset"
     sx={{ my: 2 }}
@@ -31,6 +37,7 @@ const MdEngineField = ({ value, onChange, disabled }: MdEngineFieldProps) => (
         value="charmm"
         control={<Radio />}
         label="CHARMM"
+        disabled={disableCharmm}
       />
       <FormControlLabel
         value="openmm"

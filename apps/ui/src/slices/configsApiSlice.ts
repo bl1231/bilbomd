@@ -3,6 +3,7 @@ import { apiSlice } from 'app/api/apiSlice'
 export interface ConfigResponse {
   useNersc?: string
   enableBilboMdAlphaFold?: string
+  enableCharmmEngine?: string
   [key: string]: string | undefined
 }
 

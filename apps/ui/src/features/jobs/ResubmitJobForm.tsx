@@ -87,6 +87,7 @@ const ResubmitJobForm = () => {
 
   // Are we running on NERSC?
   const useNersc = config?.useNersc?.toLowerCase() === 'true'
+  const charmmEnabled = config?.enableCharmmEngine?.toLowerCase() !== 'false'
 
   // Grouped early return for loading and error states
   {
@@ -154,9 +155,10 @@ const ResubmitJobForm = () => {
         rg: jobMongo.rg?.toString() ?? '',
         rg_min: jobMongo.rg_min?.toString() ?? '',
         rg_max: jobMongo.rg_max?.toString() ?? '',
-        md_engine:
-          (jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
-          'charmm'
+        md_engine: !charmmEnabled
+          ? 'openmm'
+          : ((jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
+            'charmm')
       }
       break
     case 'pdb':
@@ -172,9 +174,10 @@ const ResubmitJobForm = () => {
         rg: jobMongo.rg?.toString() ?? '',
         rg_min: jobMongo.rg_min?.toString() ?? '',
         rg_max: jobMongo.rg_max?.toString() ?? '',
-        md_engine:
-          (jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
-          'charmm'
+        md_engine: !charmmEnabled
+          ? 'openmm'
+          : ((jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
+            'charmm')
       }
       break
     default:
@@ -458,6 +461,7 @@ const ResubmitJobForm = () => {
                             setMdEngine(val)
                           }}
                           disabled={isSubmitting}
+                          disableCharmm={!charmmEnabled}
                         />
                       </Grid>
                       {values.bilbomd_mode === 'crd_psf' && (
