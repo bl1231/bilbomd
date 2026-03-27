@@ -317,6 +317,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             label="PDB file"
                           />
                           <FormControlLabel
+                            disabled={!charmmEnabled}
                             control={
                               <Checkbox
                                 checked={values.bilbomd_mode === 'crd_psf'}
@@ -326,6 +327,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   setUseExampleData
                                 )}
                                 name="crd_psf_inputs"
+                                disabled={!charmmEnabled}
                               />
                             }
                             label="CRD/PSF files"
