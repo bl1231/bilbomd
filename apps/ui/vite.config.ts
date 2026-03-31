@@ -1,11 +1,13 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 console.log('Starting Vite configuration...')
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react()],
+  resolve: {
+    tsconfigPaths: true
+  },
   server: {
     host: 'localhost',
     port: 3002,
