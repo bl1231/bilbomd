@@ -6,7 +6,10 @@ console.log('Starting Vite configuration...')
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    tsconfigPaths: true
+    tsconfigPaths: true,
+    // Force a single React instance across all chunks to prevent Rolldown
+    // CJS/ESM interop from creating multiple React copies across chunk boundaries
+    dedupe: ['react', 'react-dom', 'react/jsx-runtime']
   },
   server: {
     host: 'localhost',

@@ -1,6 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router'
-import PulseLoader from 'react-spinners/PulseLoader'
 import useTitle from 'hooks/useTitle'
 import {
   Button,
@@ -145,7 +144,7 @@ const SingleJobPage = () => {
   }
 
   if (isLoading) {
-    return <PulseLoader color={'#ffffff'} />
+    return <CircularProgress />
   }
 
   if (isError) {
