@@ -1,5 +1,14 @@
 # @bilbomd/ui
 
+## 2.7.1
+
+### Patch Changes
+
+- f7f8268: Fix React error #130 caused by Vite 8/Rolldown auto-splitting vendor deps into 130+ micro-chunks, producing broken cross-chunk default export resolution. Restored a correct pnpm-aware `manualChunks` implementation that consolidates all vendor deps into a stable `vendor` chunk and isolates the 3 MB Molstar library into its own `vendor-molstar` chunk. MolstarViewer is lazily imported in SingleJobPage and PublicJobPage to ensure it loads on demand.
+- cd8cdb8: Fix two Vite build warnings: replace vite-tsconfig-paths plugin with Vite's native resolve.tsconfigPaths option, and convert About component to lazy import in AnonRoutes to resolve ineffective dynamic import warning.
+- 6e67e04: Resolve react-refresh lint warning in FoXSEnsembleCharts component.
+- 1e4e745: Remove broken manualChunks configuration and let Vite 8 handle automatic code splitting. The previous manualChunks function collapsed all pnpm dependencies into a single 4.7MB chunk; automatic splitting now correctly defers the large Molstar library to a lazy chunk loaded only when viewing job results.
+
 ## 2.7.0
 
 ### Minor Changes
