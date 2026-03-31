@@ -1,8 +1,8 @@
 import { lazy } from 'react'
 import Loadable from 'components/Loadable'
 import AnonLayout from 'layout/AnonLayout'
-import About from 'features/about/About'
 
+const About = Loadable(lazy(() => import('features/about/About')))
 const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
 const NewJobForm = Loadable(lazy(() => import('features/jobs/NewJobForm')))
 const PublicJobPage = Loadable(
