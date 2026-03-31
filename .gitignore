@@ -41,6 +41,9 @@ build/Release
 node_modules/
 jspm_packages/
 
+# npm lockfile — this repo uses pnpm (pnpm-lock.yaml); npm lockfiles are stale and trigger false Dependabot alerts
+package-lock.json
+
 # TypeScript v1 declaration files
 typings/
 
