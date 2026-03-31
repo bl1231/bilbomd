@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import FoXSEnsembleCharts, {
-  getEnsembleSizeLabel
-} from '../FoXSEnsembleCharts'
+import FoXSEnsembleCharts from '../FoXSEnsembleCharts'
+import { getEnsembleSizeLabel } from '../foxsUtils'
 import type { FoxsData } from '@bilbomd/bilbomd-types'
 
 const makeDataPoint = () => ({
