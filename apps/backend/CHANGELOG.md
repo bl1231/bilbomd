@@ -1,5 +1,55 @@
 # @bilbomd/backend
 
+## 2.5.10
+
+### Patch Changes
+
+- 0537640: Upgrade major npm dependencies: TypeScript 6.0, Vite 8, @vitejs/plugin-react 6, jsdom 29, @types/supertest 7.
+  - Update `vite.config.ts` to use `rolldownOptions` (renamed from `rollupOptions` in Vite 8)
+  - Fix `vi.mock` factory JSX hoisting incompatibility introduced by @vitejs/plugin-react 6
+  - Update eslint-config peer dependency to accept TypeScript 5 or 6
+
+- Updated dependencies [0537640]
+  - @bilbomd/md-utils@1.1.2
+
+## 2.5.9
+
+### Patch Changes
+
+- be1e0a5: Make SMTP mail settings fully configurable via environment variables. Adds support for `BILBOMD_MAILER_SECURE` (TLS toggle) and optional `BILBOMD_MAILER_USER`/`BILBOMD_MAILER_PASS` (SMTP auth) in all three apps. Worker and Scoper now respect `BILBOMD_MAILER_HOST` and `BILBOMD_MAILER_PORT` from env instead of hard-coded values. Existing deployments are unaffected — all new vars default to current behavior.
+- 8a65390: Add `ENABLE_CHARMM_ENGINE` env var to allow deployments to disable the CHARMM md_engine option in all job forms. When set to `false`, the CHARMM radio button is disabled and forms default to OpenMM.
+
+## 2.5.8
+
+### Patch Changes
+
+- 2cb627a: Fix two startup crashes: use `ipKeyGenerator` helper in `publicJobLimiter` to satisfy express-rate-limit v8 IPv6 validation, and demote swagger JSON write failure from fatal (`process.exit`) to a non-fatal warning (the file is not used at runtime).
+
+## 2.5.7
+
+### Patch Changes
+
+- 976468f: Fix OpenMM base dat file path so the minimized PDB FoXS result is correctly found and copied to results/. This restores the 1-state ensemble model in the FoXS Ensemble Chi² residuals chart for OpenMM jobs.
+- 976468f: Refactor FoXS data layer: split downloadController into foxsController + foxsDataService + foxsParser, decouple business logic from HTTP, eliminate duplicate type definitions, add unit tests.
+
+## 2.5.6
+
+### Patch Changes
+
+- c14c67c: Fix OpenMM base dat file path so the minimized PDB FoXS result is correctly found and copied to results/. This restores the 1-state ensemble model in the FoXS Ensemble Chi² residuals chart for OpenMM jobs.
+
+## 2.5.5
+
+### Patch Changes
+
+- bb4c436: fix FoXS Analysis bug where the 1-state model is not being displayed.
+
+## 2.5.4
+
+### Patch Changes
+
+- 6414ada: Fix FoXS Analysis tab not displaying 1-state ensemble correctly. Backend now sorts multi_state_model files numerically before serving, so filesystem order no longer affects the result. Frontend now derives ensemble size labels from the filename instead of the array index.
+
 ## 2.5.3
 
 ### Patch Changes

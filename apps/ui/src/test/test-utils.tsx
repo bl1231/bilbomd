@@ -45,23 +45,12 @@ function renderWithProviders(
     ...renderOptions
   }: ExtendedRenderOptions = {}
 ) {
-  const router = createBrowserRouter(
-    [
-      {
-        path: route,
-        element: ui
-      }
-    ],
+  const router = createBrowserRouter([
     {
-      future: {
-        v7_fetcherPersist: true,
-        v7_skipActionErrorRevalidation: true,
-        v7_partialHydration: true,
-        v7_normalizeFormMethod: true,
-        v7_relativeSplatPath: true
-      }
+      path: route,
+      element: ui
     }
-  )
+  ])
   // Wrapper for testing with providers
   function Wrapper(): React.JSX.Element {
     return (

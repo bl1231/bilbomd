@@ -48,6 +48,11 @@ const colors = [
 const getUniqueColor = (index: number) => {
   return colors[index % colors.length]
 }
+
+export const getEnsembleSizeLabel = (filename: string): string => {
+  const match = filename.match(/multi_state_model_(\d+)_/)
+  return match ? `Ens. Size ${match[1]}` : `Ens. Size ${filename}`
+}
 const FoXSEnsembleCharts = ({
   combinedData,
   minYAxis,
@@ -108,14 +113,14 @@ const FoXSEnsembleCharts = ({
             activeDot={{ r: 8 }}
             dot={{ strokeWidth: 1 }}
           />
-          {foxsData.map((_, index) => (
+          {foxsData.map((item, index) => (
             <Fragment key={index}>
               {visibility[index] && (
                 <Line
                   yAxisId="left"
                   type="monotone"
                   dataKey={`model_intensity_${index}`}
-                  name={`Ens. Size ${index}`}
+                  name={getEnsembleSizeLabel(item.filename)}
                   stroke={getUniqueColor(index)}
                   dot={{ strokeWidth: 1 }}
                 />
@@ -149,13 +154,13 @@ const FoXSEnsembleCharts = ({
             layout="horizontal"
             align="center"
           />
-          {foxsData.map((_, index) => (
+          {foxsData.map((item, index) => (
             <Fragment key={index}>
               {visibility[index] && (
                 <Line
                   type="monotone"
                   dataKey={`residual_${index}`}
-                  name={`Ens. Size ${index}`}
+                  name={getEnsembleSizeLabel(item.filename)}
                   stroke={getUniqueColor(index)}
                 />
               )}

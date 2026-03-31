@@ -9,7 +9,7 @@ import {
 } from '../controllers/jobs/index.js'
 import { createSANSJob } from '../controllers/jobs/sansJobController.js'
 import { createNewMultiJob } from '../controllers/jobs/multiMdController.js'
-import { downloadPDB, getFoxsData } from '../controllers/downloadController.js'
+import { downloadPDB, getFoxsData } from '../controllers/foxsController.js'
 import { getFile } from '../controllers/fileDownloadController.js'
 import getMovies from '../controllers/movies/getMovies.js'
 import streamVideo from '../controllers/movies/streamVideo.js'

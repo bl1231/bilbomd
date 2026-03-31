@@ -45,113 +45,120 @@ export default function ClippedDrawer() {
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
   const enableBilboMdSANS = config.enableBilboMdSANS?.toLowerCase() === 'true'
+  const enableBilboMdScoper =
+    config.enableBilboMdScoper?.toLowerCase() === 'true'
 
-  let menuItems = [
+  let jobFormsGroup = [
     {
       text: 'BilboMD Classic',
       icon: <AddCircleOutlineOutlined />,
       path: '/jobs/classic/new',
       onclick: () => navigate('jobs/classic/new'),
-      roles: ['user', 'manager'],
-      divider: false
+      roles: ['user', 'manager']
     },
     {
       text: 'BilboMD Auto',
       icon: <AddCircleOutlineOutlined />,
       path: '/jobs/auto/new',
       onclick: () => navigate('jobs/auto/new'),
-      roles: ['user', 'manager'],
-      divider: false
+      roles: ['user', 'manager']
     },
     {
       text: 'BilboMD AF',
       icon: <AddCircleOutlineOutlined />,
       path: '/jobs/alphafold/new',
       onclick: () => navigate('jobs/alphafold/new'),
-      roles: ['user', 'manager'],
-      divider: false
+      roles: ['user', 'manager']
     },
     {
       text: 'BilboMD SANS',
       icon: <AddCircleOutlineOutlined />,
       path: '/jobs/sans/new',
       onclick: () => navigate('jobs/sans/new'),
-      roles: ['user', 'manager'],
-      divider: false
+      roles: ['user', 'manager']
     },
     {
       text: 'Scoper',
       icon: <AddCircleOutlineOutlined />,
       path: '/jobs/scoper/new',
       onclick: () => navigate('jobs/scoper/new'),
-      roles: ['user', 'manager'],
-      divider: true
-    },
+      roles: ['user', 'manager']
+    }
+  ]
+
+  if (useNersc || !enableBilboMdScoper) {
+    jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'Scoper')
+  }
+  if (!enableBilboMdSANS) {
+    jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'BilboMD SANS')
+  }
+
+  const utilitiesGroup = [
     {
       text: 'inp Jiffy™',
       icon: <AutoAwesome />,
       path: '/jiffy/inp',
       onclick: () => navigate('jiffy/inp'),
-      roles: ['user', 'manager'],
-      divider: false
+      roles: ['user', 'manager']
     },
     {
       text: 'PAE Jiffy™',
       icon: <AutoAwesome />,
       path: '/jiffy/pae',
       onclick: () => navigate('jiffy/pae'),
-      roles: ['user'],
-      divider: false
-    },
+      roles: ['user']
+    }
+  ]
+
+  const infoGroup = [
     {
       text: 'Help',
       icon: <InfoOutlined />,
       path: '/help',
       onclick: () => navigate('/help'),
-      roles: ['user'],
-      divider: false
+      roles: ['user']
     },
     {
       text: 'About',
       icon: <InfoOutlined />,
       path: '/about',
       onclick: () => navigate('/about'),
-      roles: ['user'],
-      divider: false
+      roles: ['user']
     }
   ]
 
-  if (useNersc) {
-    menuItems = menuItems.filter((item) => item.text !== 'Scoper')
-  }
-
-  if (!enableBilboMdSANS) {
-    menuItems = menuItems.filter((item) => item.text !== 'BilboMD SANS')
-  }
+  const menuGroups = [jobFormsGroup, utilitiesGroup, infoGroup].filter(
+    (group) => group.length > 0
+  )
 
   const buttonContent = (
     <>
-      {menuItems.map((item) => (
-        <React.Fragment key={item.text}>
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={item.onclick}
-              sx={{
-                backgroundColor:
-                  location.pathname === item.path
-                    ? theme.palette.mode === 'light'
-                      ? theme.palette.grey[200]
-                      : theme.palette.grey[600]
-                    : null,
-                display:
-                  item.roles.includes('admin') && !isAdmin ? 'none' : 'flex'
-              }}
+      {menuGroups.map((group, groupIndex) => (
+        <React.Fragment key={groupIndex}>
+          {group.map((item) => (
+            <ListItem
+              key={item.text}
+              disablePadding
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText sx={{ ml: 1 }}>{item.text}</ListItemText>
-            </ListItemButton>
-          </ListItem>
-          {item.divider && <Divider />}
+              <ListItemButton
+                onClick={item.onclick}
+                sx={{
+                  backgroundColor:
+                    location.pathname === item.path
+                      ? theme.palette.mode === 'light'
+                        ? theme.palette.grey[200]
+                        : theme.palette.grey[600]
+                      : null,
+                  display:
+                    item.roles.includes('admin') && !isAdmin ? 'none' : 'flex'
+                }}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText sx={{ ml: 1 }}>{item.text}</ListItemText>
+              </ListItemButton>
+            </ListItem>
+          ))}
+          {groupIndex < menuGroups.length - 1 && <Divider />}
         </React.Fragment>
       ))}
     </>

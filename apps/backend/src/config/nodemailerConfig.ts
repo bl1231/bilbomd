@@ -8,6 +8,9 @@ const mailHost = process.env.BILBOMD_MAILER_HOST || 'smtp-relay.gmail.com'
 const mailPort = process.env.BILBOMD_MAILER_PORT
   ? parseInt(process.env.BILBOMD_MAILER_PORT)
   : 25
+const mailSecure = process.env.BILBOMD_MAILER_SECURE === 'true'
+const mailUser = process.env.BILBOMD_MAILER_USER
+const mailPass = process.env.BILBOMD_MAILER_PASS
 const viewPath =
   process.env.BILBOMD_MAILER_TEMPLATES || '/app/dist/templates/mailer/'
 
@@ -15,7 +18,8 @@ const transporter = nodemailer.createTransport({
   name: name,
   host: mailHost,
   port: mailPort,
-  secure: false
+  secure: mailSecure,
+  ...(mailUser && mailPass ? { auth: { user: mailUser, pass: mailPass } } : {})
 })
 
 const sendVerificationEmail = (email: string, url: string, code: string) => {

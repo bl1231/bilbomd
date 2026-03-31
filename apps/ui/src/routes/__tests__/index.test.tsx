@@ -13,14 +13,14 @@ vi.mock('react-router', () => ({
 vi.mock('../LoginRoutes', () => ({
   LoginRoutes: {
     path: '/login',
-    element: <div>Login Route</div>
+    element: null
   }
 }))
 
 vi.mock('../MainRoutes', () => ({
   ProtectedMainRoutes: {
     path: '/',
-    element: <div>Protected Main Route</div>
+    element: null
   }
 }))
 

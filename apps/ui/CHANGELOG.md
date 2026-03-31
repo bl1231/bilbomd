@@ -1,5 +1,39 @@
 # @bilbomd/ui
 
+## 2.7.0
+
+### Minor Changes
+
+- 0537640: Upgrade major npm dependencies: TypeScript 6.0, Vite 8, @vitejs/plugin-react 6, jsdom 29, @types/supertest 7.
+  - Update `vite.config.ts` to use `rolldownOptions` (renamed from `rollupOptions` in Vite 8)
+  - Fix `vi.mock` factory JSX hoisting incompatibility introduced by @vitejs/plugin-react 6
+  - Update eslint-config peer dependency to accept TypeScript 5 or 6
+
+## 2.6.5
+
+### Patch Changes
+
+- 267894b: Refactor sidebar nav to use group-based dividers. Dividers are now structural separators between item groups (navigation, job forms, utilities, info) rather than properties on individual items, so filtering items like Scoper, SANS, or Multi no longer removes adjacent dividers.
+
+## 2.6.4
+
+### Patch Changes
+
+- 32a084e: Disable CRD/PSF input toggle when CHARMM engine is disabled. When ENABLE_CHARMM_ENGINE=false, the CRD/PSF mode checkbox is now greyed out alongside the CHARMM md_engine option since CRD/PSF inputs are only used with CHARMM.
+- 906e57a: Hide Scoper sidebar item when ENABLE_BILBOMD_SCOPER is false.
+
+## 2.6.3
+
+### Patch Changes
+
+- 8a65390: Add `ENABLE_CHARMM_ENGINE` env var to allow deployments to disable the CHARMM md_engine option in all job forms. When set to `false`, the CHARMM radio button is disabled and forms default to OpenMM.
+
+## 2.6.2
+
+### Patch Changes
+
+- 6414ada: Fix FoXS Analysis tab not displaying 1-state ensemble correctly. Backend now sorts multi_state_model files numerically before serving, so filesystem order no longer affects the result. Frontend now derives ensemble size labels from the filename instead of the array index.
+
 ## 2.6.1
 
 ### Patch Changes

@@ -509,6 +509,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
   const useAlphaFold = config.enableBilboMdAlphaFold?.toLowerCase() === 'true'
   const useNersc = config.useNersc?.toLowerCase() === 'true'
+  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
 
   const initialValues: NewAlphaFoldJobFormValues = {
     title: '',
@@ -523,7 +524,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         seq_length: 0
       }
     ],
-    md_engine: 'charmm'
+    md_engine: charmmEnabled ? 'charmm' : 'openmm'
   }
 
   const onSubmit = async (values: NewAlphaFoldJobFormValues) => {
@@ -743,6 +744,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           setMdEngine(val)
                         }}
                         disabled={isSubmitting}
+                        disableCharmm={!charmmEnabled}
                       />
                     </Grid>
                     {useExampleData && (
