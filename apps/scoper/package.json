@@ -44,9 +44,13 @@
     "mongoose": "^9.3.3",
     "nodemailer": "^8.0.4",
     "nodemailer-express-handlebars": "^7.0.0",
-    "nodemon": "^3.1.14",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^7.0.11",
+    "@types/nodemailer-express-handlebars": "^4.0.6",
+    "nodemon": "^3.1.14"
   },
   "_moduleAliases": {
     "@services": "build/services",
