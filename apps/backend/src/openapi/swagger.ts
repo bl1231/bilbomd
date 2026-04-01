@@ -156,13 +156,12 @@ swaggerSpec.security = [{ bearerAuth: [] }]
 
 export default swaggerSpec
 
-// My understanding is that this json file is written purely as an archival or
-// historical record of the API. It is not used by the application at runtime.
+// This json file is written purely as an archival record of the API.
+// It is not used by the application at runtime, so failure is non-fatal.
 try {
   const outputPath = path.resolve('dist/openapi/v1/swagger_v1.json')
   fs.writeFileSync(outputPath, JSON.stringify(swaggerSpec, null, 2))
   logger.info(`Swagger file written to ${outputPath}`)
 } catch (err) {
-  logger.error('Failed to write Swagger JSON:', err)
-  process.exit(1)
+  logger.warn('Failed to write Swagger JSON (non-fatal):', err)
 }

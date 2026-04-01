@@ -10,14 +10,7 @@ export default [
         tsconfigRootDir: import.meta.dirname
       }
     },
-    // Package-specific overrides (if needed)
-    rules: {
-      // Since this is a Node.js package, disable React rules
-      'react/jsx-uses-react': 'off',
-      'react/react-in-jsx-scope': 'off',
-      'react-hooks/rules-of-hooks': 'off',
-      'react-hooks/exhaustive-deps': 'off'
-    }
+    rules: {}
   },
   {
     // Config files don't need TypeScript project parsing

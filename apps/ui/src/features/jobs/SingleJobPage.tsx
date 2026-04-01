@@ -1,6 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router'
-import PulseLoader from 'react-spinners/PulseLoader'
 import useTitle from 'hooks/useTitle'
 import {
   Button,
@@ -33,7 +32,7 @@ import BilboMDMongoSteps from './BilboMDMongoSteps'
 import HeaderBox from 'components/HeaderBox'
 import JobDBDetails from './JobDBDetails'
 import MultiMDJobDBDetails from 'features/multimd/MultiMDJobDBDetails'
-import MolstarViewer from 'features/molstar/Viewer'
+const MolstarViewer = lazy(() => import('features/molstar/Viewer'))
 import ScoperFoXSAnalysis from 'features/scoperjob/ScoperFoXSAnalysis'
 const FoXSAnalysis = lazy(() => import('./FoXSAnalysis'))
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
@@ -145,7 +144,7 @@ const SingleJobPage = () => {
   }
 
   if (isLoading) {
-    return <PulseLoader color={'#ffffff'} />
+    return <CircularProgress />
   }
 
   if (isError) {
@@ -462,11 +461,13 @@ const SingleJobPage = () => {
                   </Box>
                 </Typography>
               </HeaderBox>
-              <MolstarViewer
-                id={id ?? ''}
-                jobType={job.mongo.jobType}
-                results={job.mongo.results}
-              />
+              <Suspense fallback={<CircularProgress />}>
+                <MolstarViewer
+                  id={id ?? ''}
+                  jobType={job.mongo.jobType}
+                  results={job.mongo.results}
+                />
+              </Suspense>
             </Grid>
           )}
 

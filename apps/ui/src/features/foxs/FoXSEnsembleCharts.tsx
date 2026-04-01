@@ -20,6 +20,7 @@ import {
   ReferenceLine
 } from 'recharts'
 import { FoxsData } from '@bilbomd/bilbomd-types'
+import { getEnsembleSizeLabel } from './foxsUtils'
 
 type CombinedFoxsData = {
   q: number
@@ -48,6 +49,7 @@ const colors = [
 const getUniqueColor = (index: number) => {
   return colors[index % colors.length]
 }
+
 const FoXSEnsembleCharts = ({
   combinedData,
   minYAxis,
@@ -108,14 +110,14 @@ const FoXSEnsembleCharts = ({
             activeDot={{ r: 8 }}
             dot={{ strokeWidth: 1 }}
           />
-          {foxsData.map((_, index) => (
+          {foxsData.map((item, index) => (
             <Fragment key={index}>
               {visibility[index] && (
                 <Line
                   yAxisId="left"
                   type="monotone"
                   dataKey={`model_intensity_${index}`}
-                  name={`Ens. Size ${index}`}
+                  name={getEnsembleSizeLabel(item.filename)}
                   stroke={getUniqueColor(index)}
                   dot={{ strokeWidth: 1 }}
                 />
@@ -149,13 +151,13 @@ const FoXSEnsembleCharts = ({
             layout="horizontal"
             align="center"
           />
-          {foxsData.map((_, index) => (
+          {foxsData.map((item, index) => (
             <Fragment key={index}>
               {visibility[index] && (
                 <Line
                   type="monotone"
                   dataKey={`residual_${index}`}
-                  name={`Ens. Size ${index}`}
+                  name={getEnsembleSizeLabel(item.filename)}
                   stroke={getUniqueColor(index)}
                 />
               )}

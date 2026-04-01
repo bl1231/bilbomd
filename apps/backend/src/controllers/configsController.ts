@@ -66,7 +66,8 @@ export const getConfigsStuff = async (
       'ENABLE_BILBOMD_MULTI',
       'ENABLE_BILBOMD_ALPHAFOLD',
       'ENABLE_BILBOMD_SCOPER',
-      'ENABLE_HOME_PAGE_ALERT'
+      'ENABLE_HOME_PAGE_ALERT',
+      'ENABLE_CHARMM_ENGINE'
     ]
 
     envVars.forEach((envVar) => {
@@ -86,6 +87,7 @@ export const getConfigsStuff = async (
       enableBilboMdAlphaFold: process.env.ENABLE_BILBOMD_ALPHAFOLD || 'false',
       enableBilboMdScoper: process.env.ENABLE_BILBOMD_SCOPER || 'false',
       enableHomePageAlert: process.env.ENABLE_HOME_PAGE_ALERT || 'false',
+      enableCharmmEngine: process.env.ENABLE_CHARMM_ENGINE || 'true',
       backendVersion: process.env.BILBOMD_BACKEND_VERSION || '0.0.0',
       backendGitHash: process.env.BILBOMD_BACKEND_GIT_HASH || 'abc123',
       workerVersion: workerInfo.version || '0.0.0',

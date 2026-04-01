@@ -86,6 +86,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
   // Are we running on NERSC?
   const useNersc = config.useNersc?.toLowerCase() === 'true'
+  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
 
   const initialValues: BilboMDAutoJobFormValues = {
     bilbomd_mode: 'auto',
@@ -93,7 +94,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     pdb_file: '',
     pae_file: '',
     dat_file: '',
-    md_engine: 'charmm'
+    md_engine: charmmEnabled ? 'charmm' : 'openmm'
   }
 
   const onSubmit = async (values: BilboMDAutoJobFormValues) => {
@@ -271,6 +272,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             setMdEngine(val)
                           }}
                           disabled={isSubmitting}
+                          disableCharmm={!charmmEnabled}
                         />
                       </Grid>
 

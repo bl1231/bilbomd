@@ -67,7 +67,7 @@ const getRunTimeInHours = (
     return ''
   }
 
-  let end: Date | null = null
+  let end: Date | null
 
   // Check if job has actually completed (not just epoch placeholder)
   const actualCompletionTime = nersc.time_completed
@@ -117,7 +117,7 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
   const start = parseDateSafe(nersc.time_submitted)
   if (!start) return ''
 
-  let end: Date | null = null
+  let end: Date | null
 
   // Check if job has actually started (not just epoch placeholder)
   const actualStartTime = nersc.time_started
@@ -319,12 +319,12 @@ const Jobs = () => {
     void navigate(`/dashboard/jobs/${routeSegment}/resubmit/${id}`)
   }
 
-  let jobTypes: string[] = []
-  let availableStatuses: string[] = []
-  let availableUsers: string[] = []
-  let jobTypeFilterDropdown: ReactNode = null
-  let statusFilterDropdown: ReactNode = null
-  let userFilterDropdown: ReactNode = null
+  let jobTypes: string[]
+  let availableStatuses: string[]
+  let availableUsers: string[]
+  let jobTypeFilterDropdown: ReactNode
+  let statusFilterDropdown: ReactNode
+  let userFilterDropdown: ReactNode
 
   let content: ReactNode
 
@@ -759,8 +759,8 @@ const Jobs = () => {
       </Grid>
     )
   } else if (isError) {
-    let errorMessage: string = ''
-    let severity: 'error' | 'warning' | 'info' = 'info'
+    let errorMessage: string
+    let severity: 'error' | 'warning' | 'info'
 
     if (error && 'status' in error) {
       if (error.status === 204) {
@@ -770,6 +770,7 @@ const Jobs = () => {
         errorMessage = 'User not found. Please contact support.'
         severity = 'error'
       } else {
+        severity = 'error'
         if ('error' in error && error.error) {
           errorMessage = error.error
         } else if ('data' in error && error.data) {

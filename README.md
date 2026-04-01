@@ -23,7 +23,7 @@ There are several different SAXS modeling pipelines available.
 
 This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided PDB file and experimental SAXS data.
 
-![Classic PDB](apps/ui/public/images/bilbomd-classic-pdb-schematic-dark.png)
+![Classic PDB](apps/ui/public/images/bilbomd-classic-pdb-schematic-openmm-dark.png)
 
 ### BilboMD Classic w/CRD inputs
 
@@ -35,13 +35,13 @@ This pipeline offers the classic BilboMD from years past where you can upload a 
 
 This pipeline is designed to take Alphafold models and a Per residue Alignment Error (PAE) matrix in combination with your experimental SAXS data.
 
-![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
+![Auto](apps/ui/public/images/bilbomd-auto-schematic-openmm-dark.png)
 
 ### BilboMD AF
 
 This pipeline is designed to run Alphafold2 on your provided protein sequence and then run the Auto pipeline above.
 
-![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
+![Auto](apps/ui/public/images/bilbomd-af-schematic-openmm-dark.png)
 
 ## Test Coverage
 
@@ -50,9 +50,9 @@ Current test coverage across BilboMD apps:
 <!-- COVERAGE-TABLE:START -->
 | App | Statements | Branches | Functions | Lines |
 |-----|-----------|----------|-----------|-------|
-| Backend | 80.00% | 64.15% | 71.73% | 80.50% |
-| UI | 65.58% | 55.56% | 62.64% | 67.16% |
-| Worker | 82.40% | 71.34% | 83.09% | 82.48% |
+| Backend | 84.53% | 69.71% | 78.33% | 84.95% |
+| UI | 67.86% | 57.71% | 65.92% | 69.17% |
+| Worker | 82.52% | 70.83% | 83.09% | 82.60% |
 | Scoper | N/A | N/A | N/A | N/A |
 <!-- COVERAGE-TABLE:END -->
 

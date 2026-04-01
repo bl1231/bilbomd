@@ -29,6 +29,32 @@ vi.mock('../../middleware/loggers.js', () => ({
 import * as mailer from '../nodemailerConfig.js'
 import nodemailer from 'nodemailer'
 
+describe('transporter configuration', () => {
+  it('uses secure: false by default', () => {
+    const createTransportMock = nodemailer.createTransport as Mock
+    const config = createTransportMock.mock.calls[0]?.[0]
+    expect(config.secure).toBe(false)
+  })
+
+  it('omits auth when BILBOMD_MAILER_USER/PASS are not set', () => {
+    const createTransportMock = nodemailer.createTransport as Mock
+    const config = createTransportMock.mock.calls[0]?.[0]
+    expect(config.auth).toBeUndefined()
+  })
+
+  it('uses smtp-relay.gmail.com as default host', () => {
+    const createTransportMock = nodemailer.createTransport as Mock
+    const config = createTransportMock.mock.calls[0]?.[0]
+    expect(config.host).toBe('smtp-relay.gmail.com')
+  })
+
+  it('uses port 25 as default', () => {
+    const createTransportMock = nodemailer.createTransport as Mock
+    const config = createTransportMock.mock.calls[0]?.[0]
+    expect(config.port).toBe(25)
+  })
+})
+
 describe('nodemailerConfig', () => {
   let mockTransporter: MockTransporter
 
