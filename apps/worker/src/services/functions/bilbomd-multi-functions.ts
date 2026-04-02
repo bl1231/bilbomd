@@ -292,6 +292,8 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
     // Create tar.gz archive
     const archiveName = `results-${DBjob.uuid.split('-')[0]}.tar.gz`
     await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+    DBjob.results_ready = true
+    await DBjob.save()
   } catch (error) {
     logger.error(`Error in prepareResults: ${getErrorMessage(error)}`)
     throw error

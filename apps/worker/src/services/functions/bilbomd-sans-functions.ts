@@ -782,6 +782,8 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
     const uuidPrefix = DBjob.uuid.split('-')[0]
     const archiveName = `results-${uuidPrefix}.tar.gz`
     await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+    DBjob.results_ready = true
+    await DBjob.save()
   } catch (error) {
     logger.error(`Error preparing results: ${error}`)
     throw error // Rethrow to handle further up the call stack if needed

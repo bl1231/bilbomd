@@ -82,6 +82,7 @@ export const mapJobMongoToDTO = (job: IJob) => {
     time_completed: job.time_completed ?? undefined,
     progress: job.progress ?? 0,
     cleanup_in_progress: job.cleanup_in_progress ?? false,
+    results_ready: job.results_ready,
     md_engine: job.md_engine,
     openmm_parameters: job.openmm_parameters,
     charmm_parameters: job.charmm_parameters,
@@ -245,7 +246,8 @@ export const mapMultiJobMongoToDTO = (
     time_completed: multiJob.time_completed ?? undefined,
     progress: multiJob.progress ?? 0,
     steps: multiJob.steps,
-    nersc: multiJob.nersc
+    nersc: multiJob.nersc,
+    results_ready: multiJob.results_ready
   } as BilboMDMongoJobDTO
 }
 
