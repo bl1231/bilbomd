@@ -246,7 +246,11 @@ const prepareResults = async (
       const uuidPrefix = DBjob.uuid.split('-')[0]
       const archiveName = `results-${uuidPrefix}.tar.gz`
       await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+      DBjob.results_ready = true
+      await DBjob.save()
     } catch (error) {
+      DBjob.results_ready = false
+      await DBjob.save()
       logger.error(`Error creating tar file: ${error}`)
       throw error // Critical error, rethrow or handle specifically if necessary
     }

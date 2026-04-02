@@ -71,6 +71,7 @@ const SingleJobPage = () => {
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
   const [tabValue, setTabValue] = useState(0)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [deleteJob] = useDeleteJobMutation()
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -205,10 +206,15 @@ const SingleJobPage = () => {
         link.click()
         link.parentNode?.removeChild(link)
       } else {
-        console.error('No data to download')
+        setDownloadError(
+          'No data received from server. Please try again or contact support.'
+        )
       }
     } catch (error) {
       console.error('Download results error:', error)
+      setDownloadError(
+        'Download failed. The results archive may be unavailable. Please try again or contact support.'
+      )
     }
   }
 
@@ -478,8 +484,28 @@ const SingleJobPage = () => {
               <Typography>Results</Typography>
             </HeaderBox>
             <Item>
+              {job.mongo.results_ready === false && (
+                <Alert
+                  severity="warning"
+                  sx={{ mb: 2 }}
+                >
+                  Results archive packaging failed for this job. The BilboMD
+                  data is available on the server, but the download archive
+                  could not be created. Please contact support.
+                </Alert>
+              )}
+              {downloadError && (
+                <Alert
+                  severity="error"
+                  onClose={() => setDownloadError(null)}
+                  sx={{ mb: 2 }}
+                >
+                  {downloadError}
+                </Alert>
+              )}
               <Button
                 variant="contained"
+                disabled={job.mongo.results_ready === false}
                 onClick={() => {
                   void handleDownload(job.mongo.id)
                 }}
