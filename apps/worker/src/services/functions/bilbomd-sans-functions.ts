@@ -17,13 +17,6 @@ import { spawnCharmm } from './job-utils.js'
 
 const execPromise = promisify(exec)
 
-interface FileCopyParams {
-  source: string
-  destination: string
-  filename: string
-  isCritical: boolean
-}
-
 interface CharmmDCD2PDBParams {
   out_dir: string
   charmm_template: string
