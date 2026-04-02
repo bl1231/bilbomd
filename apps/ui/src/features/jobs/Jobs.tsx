@@ -13,6 +13,7 @@ import {
   selectAllJobs
 } from 'slices/jobsApiSlice'
 import { useSelector } from 'react-redux'
+import { selectCurrentToken } from 'slices/authSlice'
 import useTitle from 'hooks/useTitle'
 import { clsx } from 'clsx'
 import { Box } from '@mui/system'
@@ -209,6 +210,7 @@ const Jobs = () => {
   useTitle('BilboMD: Jobs List')
 
   const { username, isManager, isAdmin } = useAuth()
+  const token = useSelector(selectCurrentToken)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -323,7 +325,10 @@ const Jobs = () => {
   const handleDownload = async (id: string) => {
     try {
       const response = await axiosInstance.get(`jobs/${id}/results`, {
-        responseType: 'blob'
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       })
       if (response && response.data) {
         const contentDisposition = response.headers['content-disposition']
