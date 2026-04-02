@@ -233,7 +233,7 @@ const prepareFoXSInputs = async (
 ): Promise<string[]> => {
   const jobDir = path.join(config.uploadDir, DBjob.uuid)
   const foxsDir = path.join(jobDir, 'foxs')
-  const mdDir = path.join(jobDir, 'md') // OpenMM structure
+  const mdDir = path.join(jobDir, 'openmm', 'md') // OpenMM structure
   const charmmMdDir = path.join(jobDir, 'charmm', 'md') // CHARMM structure
 
   const listDirs = (base: string): string[] => {
@@ -276,7 +276,7 @@ const prepareFoXSInputs = async (
   }
 
   if (mdSubDirs.length === 0) {
-    logger.warn('No PDB files found in foxs/, md/, or charmm/md/ directories')
+    logger.warn('No PDB files found in foxs/, openmm/md/, or charmm/md/ directories')
     return []
   }
 

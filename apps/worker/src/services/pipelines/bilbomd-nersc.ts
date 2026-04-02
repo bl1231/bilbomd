@@ -1,7 +1,6 @@
 import { Job as BullMQJob } from 'bullmq'
 import { Job } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
-// import { initializeNerscJob } from '../functions/job-utils.js'
 import {
   updateNerscSpecificSteps,
   makeBilboMDSlurm,
@@ -25,14 +24,7 @@ const processBilboMDJobNersc = async (MQjob: BullMQJob) => {
     }
     await MQjob.updateProgress(5)
 
-    // Initialize
-    try {
-      // await initializeNerscJob(MQjob, foundJob)
-      await MQjob.updateProgress(10)
-    } catch (error) {
-      logger.error(`Failed to initialize job: ${MQjob.data.uuid}`)
-      throw error
-    }
+    await MQjob.updateProgress(10)
 
     // Add any missing NERSC-specific job steps
     try {

@@ -409,7 +409,7 @@ const copyFiles = async ({
   destination,
   filename,
   isCritical
-}: FileCopyParamsNew): Promise<void> => {
+}: FileCopyParams): Promise<void> => {
   try {
     await execPromise(`cp ${source} ${destination}`)
   } catch (error) {

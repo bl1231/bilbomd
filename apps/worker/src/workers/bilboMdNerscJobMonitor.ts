@@ -17,7 +17,8 @@ import { getSlurmStatusFile } from '../services/functions/nersc-api-functions.js
 import {
   copyBilboMDResults,
   prepareBilboMDResults,
-  sendBilboMDEmail
+  sendBilboMDEmail,
+  updateSingleJobStep
 } from '../services/functions/job-monitor-functions.js'
 import {
   recordWorkerUsageEvent,
@@ -347,16 +348,7 @@ const updateJobNerscState = async (
 
 // Normalizes raw Slurm state to your internal enum
 const normalizeState = (state: string): NerscStatusEnum => {
-  const map: Record<string, NerscStatusEnum> = {
-    NODE_FAIL: NerscStatus.FAILED,
-    OUT_OF_MEMORY: NerscStatus.FAILED,
-    PREEMPTED: NerscStatus.FAILED
-  }
-
-  return (
-    map[state] ||
-    (NerscStatus[state as keyof typeof NerscStatus] ?? NerscStatus.UNKNOWN)
-  )
+  return NerscStatus[state as keyof typeof NerscStatus] ?? NerscStatus.UNKNOWN
 }
 
 // Cleans and validates Slurm state string (main helper)
@@ -488,25 +480,6 @@ const calculateProgress = async (steps?: IBilboMDSteps): Promise<number> => {
 
   // Calculate the percentage of completed steps
   return Math.round((completedSteps / totalSteps) * 100)
-}
-
-const updateSingleJobStep = async (
-  DBJob: IJob,
-  stepName: keyof IBilboMDSteps,
-  status: StepStatusEnum,
-  message: string
-): Promise<void> => {
-  try {
-    if (!DBJob.steps) {
-      DBJob.steps = {} as IBilboMDSteps
-    }
-    DBJob.steps[stepName] = { status, message }
-    await DBJob.save()
-  } catch (error) {
-    logger.error(
-      `Error updating step status for job ${DBJob.uuid} in step ${stepName}: ${error}`
-    )
-  }
 }
 
 const updateJobStepsFromSlurmStatusFile = async (
