@@ -485,8 +485,11 @@ const SingleJobPage = () => {
             </HeaderBox>
             <Item>
               {job.mongo.results_ready === false && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  Results archive packaging failed for this job. The science
+                <Alert
+                  severity="warning"
+                  sx={{ mb: 2 }}
+                >
+                  Results archive packaging failed for this job. The BilboMD
                   data is available on the server, but the download archive
                   could not be created. Please contact support.
                 </Alert>
