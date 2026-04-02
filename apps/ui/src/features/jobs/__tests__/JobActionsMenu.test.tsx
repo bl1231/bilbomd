@@ -216,7 +216,7 @@ describe('JobActionsMenu', () => {
       expect(downloadButton).toHaveClass('Mui-disabled')
     })
 
-    it('should be disabled when resultsReady is undefined', () => {
+    it('should be enabled when resultsReady is undefined (legacy job)', () => {
       renderWithProviders(
         <JobActionsMenu
           {...defaultProps}
@@ -226,7 +226,7 @@ describe('JobActionsMenu', () => {
       )
 
       const downloadButton = screen.getByText('Download Results').closest('li')
-      expect(downloadButton).toHaveClass('Mui-disabled')
+      expect(downloadButton).not.toHaveClass('Mui-disabled')
     })
 
     it('should be disabled when status is not Completed', () => {

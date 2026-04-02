@@ -63,7 +63,7 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
       <MenuItem
         onClick={handleDownloadClick}
         disableRipple
-        disabled={jobStatus !== 'Completed' || resultsReady !== true}
+        disabled={jobStatus !== 'Completed' || resultsReady === false}
       >
         <DownloadIcon />
         Download Results
