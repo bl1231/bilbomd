@@ -813,20 +813,6 @@ sacct --format=JobID,JobName,Account,AllocCPUS,State,Elapsed,ExitCode,DerivedExi
     return section
 
 
-def generate_copy_section(config):
-    section = """
-# --------------------------------------------------------------------------------------
-# Copy results back to CFS
-update_status copy2cfs Running
-echo "Copying results back to CFS..."
-cp -nR $WORKDIR/* $UPLOAD_DIR
-CP_EXIT=$?
-check_exit_code $CP_EXIT copy2cfs
-update_status copy2cfs Success
-"""
-    return section
-
-
 # -----------------------------
 # Main Assembly
 # -----------------------------
@@ -854,7 +840,6 @@ def main():
     slurm_sections.append(add_helper_functions())
     if params.get("__t") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
-        # slurm_sections.append(generate_pae2const_prep_section(config))
         slurm_sections.append(select_best_alphafold_model(config))
         slurm_sections.append(generate_pae2const_section(config, params))
     if params.get("__t") == "BilboMdAuto":
