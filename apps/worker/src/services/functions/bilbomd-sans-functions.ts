@@ -785,6 +785,8 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
     DBjob.results_ready = true
     await DBjob.save()
   } catch (error) {
+    DBjob.results_ready = false
+    await DBjob.save()
     logger.error(`Error preparing results: ${error}`)
     throw error // Rethrow to handle further up the call stack if needed
   }

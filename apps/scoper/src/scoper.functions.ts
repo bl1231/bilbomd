@@ -577,6 +577,8 @@ const prepareResultsArchiveFile = async (
     DBjob.results_ready = true
     await DBjob.save()
   } catch (err) {
+    DBjob.results_ready = false
+    await DBjob.save()
     MQjob.log(`tar failed: ${err}`)
     logger.error(`Failed to create results *.tar.gz file: ${err}`)
   }
