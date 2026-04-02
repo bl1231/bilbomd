@@ -129,8 +129,8 @@ def prepare_openmm_config(config, params):
         },
         "output": {
             "output_dir": "/bilbomd/work/openmm",
-            "min_dir": "minimization",
-            "heat_dir": "heating",
+            "min_dir": "minimize",
+            "heat_dir": "heat",
             "md_dir": "md",
         },
         "constraints": {"fixed_bodies": [], "rigid_bodies": []},
@@ -585,7 +585,7 @@ def generate_initial_foxs_analysis_section(config, params):
     max_c1 = 1.05
     min_c2 = -0.50
     max_c2 = 2.00
-    minimized_pdb = os.path.join(".", "openmm/minimization/minimized.pdb")
+    minimized_pdb = os.path.join(".", "openmm/minimize/minimized.pdb")
     saxs_data_in_container = os.path.join(".", params.get("data_file"))
 
     # build foxs args as a list, each argument separate

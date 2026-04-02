@@ -77,8 +77,8 @@ const enqueueMakeMovie = async (
   //    (adapt these to your actual filesystem layout)
   const workDir = path.join(config.uploadDir, DBJob.uuid)
 
-  // Discover md runs under workDir/md/rg_*/
-  const mdDir = path.join(workDir, 'md')
+  // Discover md runs under workDir/openmm/md/rg_*/
+  const mdDir = path.join(workDir, 'openmm', 'md')
   const outDirBase = path.join(workDir, 'assets', 'movies')
 
   const foundPairs: Array<{
