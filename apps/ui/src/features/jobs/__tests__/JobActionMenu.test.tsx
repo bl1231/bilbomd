@@ -7,11 +7,13 @@ const baseProps = {
   jobType: 'BilboMdPDB',
   jobTitle: 'Test Job',
   jobStatus: 'Completed',
+  resultsReady: true,
   anchorEl: document.createElement('div'),
   open: true,
   onClose: vi.fn(),
   onResubmit: vi.fn(),
-  onDelete: vi.fn()
+  onDelete: vi.fn(),
+  onDownload: vi.fn()
 }
 
 describe('JobActionsMenu', () => {

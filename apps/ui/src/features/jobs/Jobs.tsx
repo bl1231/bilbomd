@@ -33,6 +33,7 @@ import {
   SelectChangeEvent
 } from '@mui/material'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import { axiosInstance } from 'app/api/axios'
 import {
   Dialog,
   DialogTitle,
@@ -317,6 +318,36 @@ const Jobs = () => {
     const routeSegment = jobTypeToRoute[jobType]
     if (!routeSegment) return
     void navigate(`/dashboard/jobs/${routeSegment}/resubmit/${id}`)
+  }
+
+  const handleDownload = async (id: string) => {
+    try {
+      const response = await axiosInstance.get(`jobs/${id}/results`, {
+        responseType: 'blob'
+      })
+      if (response && response.data) {
+        const contentDisposition = response.headers['content-disposition']
+        let filename = 'download.tar.gz'
+        if (contentDisposition) {
+          const matches = /filename="?([^"]+)"?/.exec(contentDisposition)
+          if (matches && matches.length > 1) {
+            filename = matches[1]
+          }
+        }
+        const url = window.URL.createObjectURL(response.data)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+        link.click()
+        link.parentNode?.removeChild(link)
+      }
+    } catch (err) {
+      console.error('Download failed:', err)
+      enqueueSnackbar('Failed to download results. Please try again.', {
+        variant: 'error'
+      })
+    }
   }
 
   let jobTypes: string[]
@@ -616,11 +647,13 @@ const Jobs = () => {
               jobType={params.row.jobType}
               jobTitle={params.row.title}
               jobStatus={params.row.status}
+              resultsReady={params.row.results_ready}
               anchorEl={anchorEl}
               open={isOpen}
               onClose={handleMenuClose}
               onResubmit={handleResubmit}
               onDelete={openDeleteDialog}
+              onDownload={(jobId) => void handleDownload(jobId)}
             />
           ]
         }
