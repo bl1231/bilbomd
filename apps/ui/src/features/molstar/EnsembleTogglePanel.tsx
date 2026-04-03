@@ -50,7 +50,7 @@ const EnsembleTogglePanel = ({
         size='small'
         variant='outlined'
         onClick={() => onToggleAll(allVisible ? 'hide' : 'show')}
-        sx={{ textTransform: 'none', minWidth: 72 }}
+        sx={{ textTransform: 'none', minWidth: 72, alignSelf: 'stretch' }}
       >
         {allVisible ? 'Hide All' : 'Show All'}
       </Button>
