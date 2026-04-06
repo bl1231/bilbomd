@@ -1,5 +1,14 @@
 # @bilbomd/ui
 
+## 2.8.1
+
+### Patch Changes
+
+- eeb1eed: Fix Dependabot PRs failing CI due to pnpm frozen lockfile mismatch. CI now skips --frozen-lockfile when the PR author is dependabot[bot].
+- fc1be50: Move the supported PDB residue list to a single constant (`SUPPORTED_PDB_RESIDUES`) in `@bilbomd/bilbomd-types`, shared by both the backend validator and the frontend `hasAllowedResiduesOnly` check. Eliminates the risk of the two lists diverging silently. Also adds common ions (MG, CA, ZN, etc.) and HSD to the allowed set, and adds the missing `pdbCheck()` to the Auto job form schema.
+- Updated dependencies [fc1be50]
+  - @bilbomd/bilbomd-types@1.4.1
+
 ## 2.8.0
 
 ### Minor Changes

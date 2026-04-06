@@ -1,5 +1,18 @@
 # @bilbomd/worker
 
+## 2.5.1
+
+### Patch Changes
+
+- eeb1eed: Fix Dependabot PRs failing CI due to pnpm frozen lockfile mismatch. CI now skips --frozen-lockfile when the PR author is dependabot[bot].
+- 48dfcdc: Fix three related bugs in the NERSC job submission and monitoring path.
+  1. `makeBilboMDSlurm` was silently swallowing errors, allowing the pipeline to proceed to Slurm submission even when the batch file was never prepared.
+  2. `submitBilboMDSlurm` was not validating the NERSC-returned job ID, writing `nersc.jobid = null` to MongoDB and marking the BullMQ job as completed — causing jobs to appear permanently stuck.
+  3. The job monitor was calling `updateJobStepsFromSlurmStatusFile` for PENDING jobs, but `status.txt` does not exist until the Slurm job starts running, causing the monitor to mark healthy jobs as Error on every cycle.
+
+- Updated dependencies [fc1be50]
+  - @bilbomd/bilbomd-types@1.4.1
+
 ## 2.5.0
 
 ### Minor Changes
