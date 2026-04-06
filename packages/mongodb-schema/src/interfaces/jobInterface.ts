@@ -132,6 +132,7 @@ interface IJob extends Document {
   assets?: IAssets
   nersc?: INerscInfo
   cleanup_in_progress: boolean
+  results_ready?: boolean
   results?: IJobResults
 }
 

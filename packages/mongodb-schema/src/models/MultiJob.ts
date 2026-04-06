@@ -23,6 +23,7 @@ const multiJobSchema = new Schema(
     progress: { type: Number, min: 0, max: 100, default: 0 },
     nersc: { type: nerscInfoSchema, required: false },
     cleanup_in_progress: { type: Boolean, default: false },
+    results_ready: { type: Boolean },
     results: { type: resultsSchema, required: false }
   },
   {

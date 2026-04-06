@@ -226,4 +226,4 @@ const updateSingleJobStep = async (
   }
 }
 
-export { copyBilboMDResults, prepareBilboMDResults, sendBilboMDEmail }
+export { copyBilboMDResults, prepareBilboMDResults, sendBilboMDEmail, updateSingleJobStep }

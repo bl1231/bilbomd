@@ -1,5 +1,33 @@
 # @bilbomd/backend
 
+## 2.5.12
+
+### Patch Changes
+
+- eeb1eed: Fix Dependabot PRs failing CI due to pnpm frozen lockfile mismatch. CI now skips --frozen-lockfile when the PR author is dependabot[bot].
+- fc1be50: Add PDB residue validation to reject unsupported residues at job submission time. PDB files containing residue names not handled by pdb2crd.py now return a clear error message listing the offending residues, rather than silently failing during job processing.
+- fc1be50: Move the supported PDB residue list to a single constant (`SUPPORTED_PDB_RESIDUES`) in `@bilbomd/bilbomd-types`, shared by both the backend validator and the frontend `hasAllowedResiduesOnly` check. Eliminates the risk of the two lists diverging silently. Also adds common ions (MG, CA, ZN, etc.) and HSD to the allowed set, and adds the missing `pdbCheck()` to the Auto job form schema.
+- Updated dependencies [fc1be50]
+  - @bilbomd/bilbomd-types@1.4.1
+
+## 2.5.11
+
+### Patch Changes
+
+- 474cef7: Add results_ready flag to track results packaging outcome independently of job status.
+
+  Jobs that complete all MD science steps but fail during final tar.gz creation now remain
+  Completed rather than Failed. A new results_ready boolean field (false by default) is set
+  to true only after a successful archive is created, making the packaging outcome observable.
+
+  The UI disables the Download Results button and shows a warning when results_ready is false,
+  and surfaces download errors to the user via an Alert instead of silently logging to console.
+
+- Updated dependencies [474cef7]
+  - @bilbomd/mongodb-schema@2.5.0
+  - @bilbomd/bilbomd-types@1.4.0
+  - @bilbomd/md-utils@1.1.3
+
 ## 2.5.10
 
 ### Patch Changes

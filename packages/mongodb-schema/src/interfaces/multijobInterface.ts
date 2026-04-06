@@ -33,6 +33,7 @@ interface IMultiJob extends Document {
   )[]
   steps: IBilboMDSteps
   nersc?: INerscInfo
+  results_ready?: boolean
   results?: IJobResults
 }
 

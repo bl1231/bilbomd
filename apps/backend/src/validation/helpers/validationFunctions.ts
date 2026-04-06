@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import { SUPPORTED_PDB_RESIDUES } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
 
 const fromCharmmGui = async (file: Express.Multer.File): Promise<boolean> => {
@@ -225,6 +226,38 @@ const isRNA = async (
   }
 }
 
+
+const checkPdbResidues = async (
+  file: Express.Multer.File
+): Promise<{ valid: boolean; message?: string }> => {
+  try {
+    const text = await fs.readFile(file.path, 'utf8')
+    const lines = text.split('\n')
+    const unsupported = new Set<string>()
+
+    for (const line of lines) {
+      if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+        const residue = line.slice(17, 20).trim()
+        if (residue && !SUPPORTED_PDB_RESIDUES.has(residue)) {
+          unsupported.add(residue)
+        }
+      }
+    }
+
+    if (unsupported.size > 0) {
+      const list = [...unsupported].sort().join(', ')
+      return {
+        valid: false,
+        message: `PDB contains unsupported residues: ${list}. These cannot be processed by BilboMD.`
+      }
+    }
+
+    return { valid: true }
+  } catch {
+    return { valid: false, message: 'Error reading PDB file.' }
+  }
+}
+
 const isValidConstInpFile = async (
   file: Express.Multer.File,
   mode: string
@@ -282,5 +315,6 @@ export {
   isSaxsData,
   isRNA,
   containsChainId,
+  checkPdbResidues,
   isValidConstInpFile
 }

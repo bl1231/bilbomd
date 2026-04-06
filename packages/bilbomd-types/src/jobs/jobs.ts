@@ -1,13 +1,13 @@
-import { OpenMMParametersDTO } from './openmm'
-import { CHARMMParametersDTO } from './charmm'
-import { AlphafoldEntityDTO } from './alphafold'
-import { UserSummaryDTO } from '../users/user'
-import { MDConstraintsDTO } from './mdConstraints'
-import { JobStepsDTO } from './jobSteps'
-import { JobFeedbackDTO } from './feedback'
-import { JobAssetsDTO } from './mdMovie'
-import { NerscInfoDTO } from './nersc'
-import { JobResultsDTO } from './results'
+import { OpenMMParametersDTO } from './openmm.js'
+import { CHARMMParametersDTO } from './charmm.js'
+import { AlphafoldEntityDTO } from './alphafold.js'
+import { UserSummaryDTO } from '../users/user.js'
+import { MDConstraintsDTO } from './mdConstraints.js'
+import { JobStepsDTO } from './jobSteps.js'
+import { JobFeedbackDTO } from './feedback.js'
+import { JobAssetsDTO } from './mdMovie.js'
+import { NerscInfoDTO } from './nersc.js'
+import { JobResultsDTO } from './results.js'
 
 export type JobType =
   | 'pdb'
@@ -56,6 +56,7 @@ export interface BaseJobDTO {
   assets?: JobAssetsDTO
   nersc?: NerscInfoDTO
   cleanup_in_progress: boolean
+  results_ready?: boolean
   results?: JobResultsDTO
 }
 

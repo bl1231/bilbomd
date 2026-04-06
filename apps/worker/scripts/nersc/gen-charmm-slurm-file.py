@@ -1269,33 +1269,6 @@ update_status multifoxs Success
     return section
 
 
-def generate_analysis_section(config):
-    section = f"""
-# --------------------------------------------------------------------------------------
-# Additional Analysis
-update_status analysis Running
-echo "Running additional analysis..."
-ANALYSIS_DIR=$WORKDIR/analysis
-mkdir -p $ANALYSIS_DIR
-srun --ntasks=1 \\
-     --cpus-per-task={config["num_cores"]} \\
-     --cpu-bind=cores \\
-     --job-name analysis \\
-     podman-hpc run --rm \\
-        -v $WORKDIR:/bilbomd/work \\
-        $BILBOMD_WORKER /bin/bash -c "
-            set -e
-            cd /bilbomd/work/analysis &&
-            python /app/scripts/openmm/plot_rgyrs.py /bilbomd/work/openmm/md
-        "
-ANALYSIS_EXIT=$?
-check_exit_code $ANALYSIS_EXIT analysis
-echo "Additional analysis complete."
-update_status analysis Success
-"""
-    return section
-
-
 def generate_end_matters(config):
     section = f"""
 # --------------------------------------------------------------------------------------

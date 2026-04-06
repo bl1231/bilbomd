@@ -174,6 +174,7 @@ const jobSchema = new Schema(
     assets: { type: assetsSchema, required: false },
     nersc: { type: nerscInfoSchema, required: false },
     cleanup_in_progress: { type: Boolean, default: false },
+    results_ready: { type: Boolean },
     results: { type: resultsSchema, required: false }
   },
   {

@@ -1,4 +1,5 @@
-import { useEffect, useRef, createRef } from 'react'
+import { useEffect, useRef, useState, createRef } from 'react'
+import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import { axiosInstance } from 'app/api/axios'
 import { useSelector } from 'react-redux'
@@ -22,7 +23,9 @@ import { PluginSpec } from 'molstar/lib/mol-plugin/spec'
 import { PluginBehaviors } from 'molstar/lib/mol-plugin/behavior'
 import { renderReact18 } from 'molstar/lib/mol-plugin-ui/react18'
 import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context'
+
 import { ViewportComponent } from './Viewport'
+import EnsembleTogglePanel from './EnsembleTogglePanel'
 import { ShowButtons } from './presets'
 import { BuiltInTrajectoryFormat } from 'molstar/lib/mol-plugin-state/formats/trajectory'
 import 'molstar/lib/mol-plugin-ui/skin/light.scss'
@@ -40,6 +43,7 @@ type LoadParams = {
   fileName: string
   isBinary?: boolean
   assemblyId: number
+  ensembleSize?: number
 }
 
 type PDBsToLoad = LoadParams[]
@@ -87,6 +91,11 @@ const MolstarViewer = ({
   publicId
 }: MolstarViewerProps) => {
   const token = useSelector(selectCurrentToken)
+  const [ensembleVisibility, setEnsembleVisibility] = useState<
+    Record<number, boolean>
+  >({})
+  const ensembleStructureRefs = useRef<Map<number, string[]>>(new Map())
+  const ensembleVisibilityRef = useRef<Record<number, boolean>>({})
 
   const createLoadParamsArray = async (
     id: string,
@@ -99,7 +108,11 @@ const MolstarViewer = ({
     const loadParamsMap = new Map<string, LoadParams[]>()
 
     // Helper function to add LoadParams to the Map
-    const addFilesToLoadParams = (fileName: string, numModels: number) => {
+    const addFilesToLoadParams = (
+      fileName: string,
+      numModels: number,
+      ensembleSize?: number
+    ) => {
       // console.log(
       //   `Adding file to load params: ${fileName} with ${numModels} models`
       // )
@@ -118,7 +131,8 @@ const MolstarViewer = ({
           url: url,
           format: 'pdb',
           fileName: fileName,
-          assemblyId: assemblyId
+          assemblyId: assemblyId,
+          ensembleSize: ensembleSize
         })
       }
     }
@@ -172,7 +186,7 @@ const MolstarViewer = ({
 
         // Use the ensemble size as the number of models to load
         // This corresponds to the number of MODEL records in the ensemble PDB file
-        addFilesToLoadParams(fileName, ensemble.size)
+        addFilesToLoadParams(fileName, ensemble.size, ensemble.size)
       }
     }
 
@@ -224,6 +238,10 @@ const MolstarViewer = ({
 
   const parent = createRef<HTMLDivElement>()
 
+  useEffect(() => {
+    ensembleVisibilityRef.current = ensembleVisibility
+  }, [ensembleVisibility])
+
   // Attempt to prevent React Strictmode from loading molstar twice in dev mode.
   const hasRun = useRef(false)
 
@@ -233,6 +251,8 @@ const MolstarViewer = ({
     }
     hasRun.current = true
     const showButtons = true
+
+    const refsMap = ensembleStructureRefs.current
 
     async function init() {
       if (window.molstar) {
@@ -322,7 +342,7 @@ const MolstarViewer = ({
       const loadParamsArray = await createLoadParamsArray(id, jobType, results)
       // console.log(loadParamsArray)
       for (const loadParamsGroup of loadParamsArray) {
-        const { url, format, fileName } = loadParamsGroup[0] // All items in group have same url, format, fileName
+        const { url, format, fileName, ensembleSize } = loadParamsGroup[0] // All items in group have same url, format, fileName
         const pdbData = await fetchPdbData(url)
 
         for (const { assemblyId } of loadParamsGroup) {
@@ -346,6 +366,11 @@ const MolstarViewer = ({
           const struct =
             await window.molstar.builders.structure.createStructure(model)
           // console.log('struct: ', struct)
+          if (ensembleSize !== undefined) {
+            const refs = ensembleStructureRefs.current.get(ensembleSize) ?? []
+            refs.push(struct.ref)
+            ensembleStructureRefs.current.set(ensembleSize, refs)
+          }
           await window.molstar.builders.structure.representation.addRepresentation(
             struct,
             {
@@ -357,6 +382,58 @@ const MolstarViewer = ({
           )
         }
       }
+
+      const sizes = Array.from(ensembleStructureRefs.current.keys()).sort(
+        (a, b) => a - b
+      )
+      if (sizes.length > 0) {
+        const firstSize = sizes[0]
+        setEnsembleVisibility(
+          Object.fromEntries(sizes.map((s) => [s, s === firstSize]))
+        )
+        if (window.molstar) {
+          const allStructures =
+            window.molstar.managers.structure.hierarchy.current.structures
+          for (const size of sizes) {
+            if (size !== firstSize) {
+              const refs = ensembleStructureRefs.current.get(size) ?? []
+              const targets = allStructures.filter((s) =>
+                refs.includes(s.cell.transform.ref)
+              )
+              if (targets.length > 0) {
+                window.molstar.managers.structure.hierarchy.toggleVisibility(
+                  targets,
+                  'hide'
+                )
+              }
+            }
+          }
+
+          // Register callback so preset buttons can re-apply visibility after rebuilding representations
+          ;(window.molstar.customState as Record<string, unknown>).reapplyVisibility =
+            () => {
+              const plugin = window.molstar
+              if (!plugin) return
+              const allStructs =
+                plugin.managers.structure.hierarchy.current.structures
+              for (const [sizeStr, visible] of Object.entries(
+                ensembleVisibilityRef.current
+              )) {
+                const sz = Number(sizeStr)
+                const refs = refsMap.get(sz) ?? []
+                const targets = allStructs.filter((s) =>
+                  refs.includes(s.cell.transform.ref)
+                )
+                if (targets.length > 0) {
+                  plugin.managers.structure.hierarchy.toggleVisibility(
+                    targets,
+                    visible ? 'show' : 'hide'
+                  )
+                }
+              }
+            }
+        }
+      }
     }
 
     void init()
@@ -365,21 +442,60 @@ const MolstarViewer = ({
       window.molstar?.dispose()
       window.molstar = undefined
       hasRun.current = false
+      refsMap.clear()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const toggleAllEnsembles = (action: 'show' | 'hide') => {
+    const plugin = window.molstar
+    if (!plugin) return
+    const allRefs = Array.from(ensembleStructureRefs.current.values()).flat()
+    const targets = plugin.managers.structure.hierarchy.current.structures.filter(
+      (s) => allRefs.includes(s.cell.transform.ref)
+    )
+    if (targets.length > 0) {
+      plugin.managers.structure.hierarchy.toggleVisibility(targets, action)
+    }
+    const sizes = Array.from(ensembleStructureRefs.current.keys())
+    setEnsembleVisibility(
+      Object.fromEntries(sizes.map((s) => [s, action === 'show']))
+    )
+  }
+
+  const toggleEnsemble = (size: number) => {
+    const plugin = window.molstar
+    if (!plugin) return
+    const refs = ensembleStructureRefs.current.get(size) ?? []
+    const action = ensembleVisibility[size] ? 'hide' : 'show'
+    const targets = plugin.managers.structure.hierarchy.current.structures.filter(
+      (s) => refs.includes(s.cell.transform.ref)
+    )
+    if (targets.length > 0) {
+      plugin.managers.structure.hierarchy.toggleVisibility(targets, action)
+    }
+    setEnsembleVisibility((prev) => ({ ...prev, [size]: !prev[size] }))
+  }
+
   return (
     <Item>
       <Grid container>
-        <div
-          ref={parent}
-          style={{
-            width: '100%',
-            height: '600px',
-            position: 'relative'
-          }}
-        />
+        <Box sx={{ width: '100%' }}>
+          <EnsembleTogglePanel
+            ensembleSizes={Object.keys(ensembleVisibility).map(Number)}
+            visibility={ensembleVisibility}
+            onToggle={toggleEnsemble}
+            onToggleAll={toggleAllEnsembles}
+          />
+          <div
+            ref={parent}
+            style={{
+              width: '100%',
+              height: '600px',
+              position: 'relative'
+            }}
+          />
+        </Box>
       </Grid>
     </Item>
   )

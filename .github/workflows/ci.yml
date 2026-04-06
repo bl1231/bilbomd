@@ -146,7 +146,12 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       # Lint
       - name: Lint all apps and packages
@@ -546,7 +551,12 @@ jobs:
           jq -r '.packageManager' package.json
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build schema
         run: pnpm -C packages/mongodb-schema run build
@@ -626,7 +636,12 @@ jobs:
           jq -r '.packageManager' package.json
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build dependencies
         run: pnpm -C packages/mongodb-schema run build
@@ -693,7 +708,12 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared packages
         run: |
@@ -759,7 +779,12 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build
@@ -810,7 +835,12 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build
@@ -864,7 +894,12 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build
@@ -936,7 +971,12 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build

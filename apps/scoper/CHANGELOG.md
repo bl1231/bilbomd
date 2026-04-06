@@ -1,5 +1,29 @@
 # @bilbomd/scoper
 
+## 1.7.1
+
+### Patch Changes
+
+- eeb1eed: Fix Dependabot PRs failing CI due to pnpm frozen lockfile mismatch. CI now skips --frozen-lockfile when the PR author is dependabot[bot].
+
+## 1.7.0
+
+### Minor Changes
+
+- 474cef7: Add results_ready flag to track results packaging outcome independently of job status.
+
+  Jobs that complete all MD science steps but fail during final tar.gz creation now remain
+  Completed rather than Failed. A new results_ready boolean field (false by default) is set
+  to true only after a successful archive is created, making the packaging outcome observable.
+
+  The UI disables the Download Results button and shows a warning when results_ready is false,
+  and surfaces download errors to the user via an Alert instead of silently logging to console.
+
+### Patch Changes
+
+- Updated dependencies [474cef7]
+  - @bilbomd/mongodb-schema@2.5.0
+
 ## 1.6.2
 
 ### Patch Changes

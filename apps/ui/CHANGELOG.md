@@ -1,5 +1,35 @@
 # @bilbomd/ui
 
+## 2.8.1
+
+### Patch Changes
+
+- eeb1eed: Fix Dependabot PRs failing CI due to pnpm frozen lockfile mismatch. CI now skips --frozen-lockfile when the PR author is dependabot[bot].
+- fc1be50: Move the supported PDB residue list to a single constant (`SUPPORTED_PDB_RESIDUES`) in `@bilbomd/bilbomd-types`, shared by both the backend validator and the frontend `hasAllowedResiduesOnly` check. Eliminates the risk of the two lists diverging silently. Also adds common ions (MG, CA, ZN, etc.) and HSD to the allowed set, and adds the missing `pdbCheck()` to the Auto job form schema.
+- Updated dependencies [fc1be50]
+  - @bilbomd/bilbomd-types@1.4.1
+
+## 2.8.0
+
+### Minor Changes
+
+- 408a810: Add toggle buttons to show/hide ensemble structures in the Molstar viewer. A dedicated panel above the 3D canvas renders one button per ensemble size (e.g. "Size 1", "Size 2", "Size 3"), allowing users to independently show or hide each ensemble. Closes #251.
+- 474cef7: Add results_ready flag to track results packaging outcome independently of job status.
+
+  Jobs that complete all MD science steps but fail during final tar.gz creation now remain
+  Completed rather than Failed. A new results_ready boolean field (false by default) is set
+  to true only after a successful archive is created, making the packaging outcome observable.
+
+  The UI disables the Download Results button and shows a warning when results_ready is false,
+  and surfaces download errors to the user via an Alert instead of silently logging to console.
+
+### Patch Changes
+
+- ada4522: Remove eslint-plugin-react dependency. With the automatic JSX transform (`react-jsx`) and TypeScript, the plugin's rules are unnecessary — the two rules it provided (`react/react-in-jsx-scope`, `react/prop-types`) were already disabled. Hook linting is retained via eslint-plugin-react-hooks.
+- Updated dependencies [474cef7]
+  - @bilbomd/mongodb-schema@2.5.0
+  - @bilbomd/bilbomd-types@1.4.0
+
 ## 2.7.1
 
 ### Patch Changes

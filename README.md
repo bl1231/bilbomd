@@ -2,8 +2,8 @@
 
 [![CI Status](https://github.com/bl1231/bilbomd/actions/workflows/ci.yml/badge.svg)](https://github.com/bl1231/bilbomd/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Berkeley%20Lab%20Non--Commercial-blue.svg)](https://github.com/bl1231/bilbomd/blob/main/LICENSE.txt)
-[![Node](https://img.shields.io/badge/node-v24.13.0-brightgreen?logo=node.js)](https://nodejs.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-10.29.2-orange?logo=pnpm)](https://pnpm.io/)
+[![Node](https://img.shields.io/badge/node-v24.14.1-brightgreen?logo=node.js)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-10.33.0-orange?logo=pnpm)](https://pnpm.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-blueviolet?logo=turborepo)](https://turbo.build/)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED?logo=docker)](https://github.com/bl1231?tab=packages&repo_name=bilbomd)
@@ -50,9 +50,9 @@ Current test coverage across BilboMD apps:
 <!-- COVERAGE-TABLE:START -->
 | App | Statements | Branches | Functions | Lines |
 |-----|-----------|----------|-----------|-------|
-| Backend | 84.53% | 69.71% | 78.33% | 84.95% |
-| UI | 67.86% | 57.71% | 65.92% | 69.17% |
-| Worker | 82.52% | 70.83% | 83.09% | 82.60% |
+| Backend | 93.08% | 85.04% | 93.43% | 93.24% |
+| UI | 67.91% | 58.95% | 67.69% | 69.18% |
+| Worker | 86.71% | 73.45% | 88.05% | 86.74% |
 | Scoper | N/A | N/A | N/A | N/A |
 <!-- COVERAGE-TABLE:END -->
 

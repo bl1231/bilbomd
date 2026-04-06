@@ -8,17 +8,20 @@ describe('JobActionsMenu', () => {
   const mockOnClose = vi.fn()
   const mockOnResubmit = vi.fn()
   const mockOnDelete = vi.fn()
+  const mockOnDownload = vi.fn()
 
   const defaultProps = {
     jobId: 'job-123',
     jobType: 'BilboMdPDB',
     jobTitle: 'Test Job',
     jobStatus: 'Completed',
+    resultsReady: true,
     anchorEl: document.createElement('div'),
     open: true,
     onClose: mockOnClose,
     onResubmit: mockOnResubmit,
-    onDelete: mockOnDelete
+    onDelete: mockOnDelete,
+    onDownload: mockOnDownload
   }
 
   beforeEach(() => {
@@ -26,10 +29,11 @@ describe('JobActionsMenu', () => {
   })
 
   describe('rendering', () => {
-    it('should render menu with Resubmit and Delete actions', () => {
+    it('should render menu with Resubmit, Download Results, and Delete actions', () => {
       renderWithProviders(<JobActionsMenu {...defaultProps} />)
 
       expect(screen.getByText('Resubmit')).toBeInTheDocument()
+      expect(screen.getByText('Download Results')).toBeInTheDocument()
       expect(screen.getByText('Delete')).toBeInTheDocument()
     })
 
@@ -182,6 +186,71 @@ describe('JobActionsMenu', () => {
 
         expect(mockOnClose).toHaveBeenCalledTimes(1)
       })
+    })
+  })
+
+  describe('Download Results button', () => {
+    it('should be enabled when status is Completed and resultsReady is true', () => {
+      renderWithProviders(
+        <JobActionsMenu
+          {...defaultProps}
+          jobStatus="Completed"
+          resultsReady={true}
+        />
+      )
+
+      const downloadButton = screen.getByText('Download Results').closest('li')
+      expect(downloadButton).not.toHaveClass('Mui-disabled')
+    })
+
+    it('should be disabled when resultsReady is false', () => {
+      renderWithProviders(
+        <JobActionsMenu
+          {...defaultProps}
+          jobStatus="Completed"
+          resultsReady={false}
+        />
+      )
+
+      const downloadButton = screen.getByText('Download Results').closest('li')
+      expect(downloadButton).toHaveClass('Mui-disabled')
+    })
+
+    it('should be enabled when resultsReady is undefined (legacy job)', () => {
+      renderWithProviders(
+        <JobActionsMenu
+          {...defaultProps}
+          jobStatus="Completed"
+          resultsReady={undefined}
+        />
+      )
+
+      const downloadButton = screen.getByText('Download Results').closest('li')
+      expect(downloadButton).not.toHaveClass('Mui-disabled')
+    })
+
+    it('should be disabled when status is not Completed', () => {
+      renderWithProviders(
+        <JobActionsMenu
+          {...defaultProps}
+          jobStatus="Running"
+          resultsReady={true}
+        />
+      )
+
+      const downloadButton = screen.getByText('Download Results').closest('li')
+      expect(downloadButton).toHaveClass('Mui-disabled')
+    })
+
+    it('should call onDownload with jobId and close menu on click', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<JobActionsMenu {...defaultProps} />)
+
+      const downloadButton = screen.getByText('Download Results')
+      await user.click(downloadButton)
+
+      expect(mockOnDownload).toHaveBeenCalledWith('job-123')
+      expect(mockOnClose).toHaveBeenCalledTimes(1)
     })
   })
 
