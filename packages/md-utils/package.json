@@ -33,7 +33,7 @@
     "@bilbomd/eslint-config": "workspace:*",
     "@types/fs-extra": "^11.0.4",
     "@vitest/coverage-v8": "^4.1.2",
-    "eslint": "^10.1.0",
+    "eslint": "^10.2.0",
     "typescript": "^6.0.2",
     "uuid": "^13.0.0",
     "vitest": "^4.1.2"
