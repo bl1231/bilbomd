@@ -28,6 +28,10 @@ export class ViewportComponent extends PluginUIComponent {
   ) {
     await this.plugin.managers.structure.component.clear(structures)
     await this.plugin.managers.structure.component.applyPreset(structures, preset)
+    const reapply = (
+      this.plugin.customState as Record<string, unknown>
+    ).reapplyVisibility
+    if (typeof reapply === 'function') reapply()
   }
 
   set = async (preset: StructureRepresentationPresetProvider) => {
