@@ -11,6 +11,7 @@ import {
   psfCheck,
   crdCheck,
   chainIdCheck,
+  pdbResidueCheck,
   constInpCheck,
   jsonFileCheck
 } from '../fileValidators.js'
@@ -24,7 +25,8 @@ vi.mock('../validationFunctions.js', () => ({
   isCRD: vi.fn(),
   isPsfData: vi.fn(),
   isValidConstInpFile: vi.fn(),
-  containsChainId: vi.fn()
+  containsChainId: vi.fn(),
+  checkPdbResidues: vi.fn()
 }))
 
 vi.mock('fs/promises', () => ({
@@ -219,6 +221,35 @@ describe('chainIdCheck', () => {
     vi.mocked(validationFunctions.containsChainId).mockResolvedValue(false)
     const schema = yup.object({ file: chainIdCheck() })
     await expect(schema.validate({ file: multerFile() })).rejects.toThrow('Chain ID')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// pdbResidueCheck
+// ---------------------------------------------------------------------------
+describe('pdbResidueCheck', () => {
+  it('passes when checkPdbResidues returns valid', async () => {
+    vi.mocked(validationFunctions.checkPdbResidues).mockResolvedValue({ valid: true })
+    const schema = yup.object({ file: pdbResidueCheck() })
+    await expect(schema.validate({ file: multerFile() })).resolves.toBeDefined()
+  })
+
+  it('fails with message when checkPdbResidues returns invalid', async () => {
+    vi.mocked(validationFunctions.checkPdbResidues).mockResolvedValue({
+      valid: false,
+      message: 'PDB contains unsupported residues: MSE, UNK.'
+    })
+    const schema = yup.object({ file: pdbResidueCheck() })
+    await expect(schema.validate({ file: multerFile() })).rejects.toThrow(
+      'PDB contains unsupported residues: MSE, UNK.'
+    )
+  })
+
+  it('passes (skips check) when file has no path', async () => {
+    const schema = yup.object({ file: pdbResidueCheck() })
+    await expect(
+      schema.validate({ file: multerFile({ path: undefined as never }) })
+    ).resolves.toBeDefined()
   })
 })
 

@@ -1,5 +1,5 @@
-import { JobResultsDTO } from './results'
-import { JobType, JobStatusEnum } from './jobs'
+import { JobResultsDTO } from './results.js'
+import { JobType, JobStatusEnum } from './jobs.js'
 
 export type PublicJobStatus = {
   publicId: string
