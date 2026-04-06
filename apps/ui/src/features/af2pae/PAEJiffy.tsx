@@ -266,8 +266,8 @@ const Alphafold2PAEJiffy = () => {
       const reader = new FileReader()
       reader.onload = (e) => {
         const content = e.target?.result as string
-        const isCif = originalFiles.pdb_file!.name
-          .toLowerCase()
+        const isCif = originalFiles
+          .pdb_file!.name.toLowerCase()
           .endsWith('.cif')
         const { data, chainBoundaries } = isCif
           ? parsePLDDTFromCIF(content)
@@ -543,7 +543,7 @@ const Alphafold2PAEJiffy = () => {
                           setFieldTouched={setFieldTouched}
                           error={errors.pdb_file && touched.pdb_file}
                           errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                          fileType="AlphaFold2 *.pdb or *.cif"
+                          fileType="AlphaFold *.pdb or *.cif"
                           fileExt=".pdb,.cif"
                           onFileChange={(file: FileWithDeets) => {
                             void setFieldValue('pdb_file', file)
@@ -563,7 +563,7 @@ const Alphafold2PAEJiffy = () => {
                           setFieldTouched={setFieldTouched}
                           error={errors.pae_file && touched.pae_file}
                           errorMessage={errors.pae_file ? errors.pae_file : ''}
-                          fileType="AlphaFold2 PAE *.json"
+                          fileType="AlphaFold PAE *.json"
                           fileExt=".json"
                           onFileChange={(file: FileWithDeets) => {
                             void setFieldValue('pae_file', file)
