@@ -164,6 +164,7 @@ const makeBilboMDSlurm = async (
       `Failed to prepare Slurm batch file: ${errorMessage}`
     )
     logger.error(`Error during preparation of Slurm batch: ${errorMessage}`)
+    throw error
   }
 }
 
@@ -187,6 +188,11 @@ const submitBilboMDSlurm = async (
 
     const submitResultObject = JSON.parse(submitResult.result)
     const nerscJobID = submitResultObject.jobid
+    if (!nerscJobID) {
+      throw new Error(
+        `NERSC submission task completed but returned no job ID. Full result: ${submitResult.result}`
+      )
+    }
     logger.info(`NERSC JOBID: ${nerscJobID}`)
 
     // Populate the `nersc` field in the `DBjob`
