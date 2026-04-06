@@ -1,5 +1,12 @@
 # @bilbomd/md-utils
 
+## 1.1.3
+
+### Patch Changes
+
+- Updated dependencies [474cef7]
+  - @bilbomd/mongodb-schema@2.5.0
+
 ## 1.1.2
 
 ### Patch Changes
