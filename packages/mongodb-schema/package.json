@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/mongodb-schema",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "BilboMD Mongoose Schema",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
