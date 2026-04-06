@@ -7,7 +7,8 @@ import {
   noSpacesTest,
   saxsCheck,
   jsonFileCheck,
-  chainIdCheck
+  chainIdCheck,
+  pdbResidueCheck
 } from './helpers/fileValidators.js'
 
 export const autoJobSchema = yup.object({
@@ -16,6 +17,7 @@ export const autoJobSchema = yup.object({
   email: yup.string().email('Invalid email address').optional(),
   pdb_file: requiredFile('A PDB file is required')
     .concat(chainIdCheck())
+    .concat(pdbResidueCheck())
     .concat(fileExtTest('pdb'))
     .concat(fileSizeTest(10_000_000))
     .concat(noSpacesTest())

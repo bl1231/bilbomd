@@ -225,6 +225,63 @@ const isRNA = async (
   }
 }
 
+// Residues that pdb2crd.py can process (standard + explicitly handled non-standard).
+// Anything outside this set will fail PDB validation before the job is submitted.
+const SUPPORTED_PDB_RESIDUES = new Set([
+  // Standard amino acids
+  'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS',
+  'ILE', 'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP',
+  'TYR', 'VAL',
+  // Phosphorylated amino acids — renamed to standard residue + CHARMM patch
+  'SEP', 'TPO', 'PTR',
+  // DNA nucleotides
+  'DA', 'DC', 'DG', 'DT', 'DI',
+  // RNA nucleotides
+  'A', 'C', 'G', 'U', 'I',
+  // Nucleotide aliases recognised by pdb_utils
+  'ADE', 'CYT', 'GUA', 'THY',
+  // Carbohydrates (union of pdb_utils.py + pdb2crd.py rename map)
+  'AFL', 'ALL', 'ALT', 'BMA', 'BGC', 'BOG', 'FCA', 'FCB', 'FMF',
+  'FUC', 'FUL', 'G4S', 'GAL', 'GLA', 'GLB', 'GLC', 'GLS', 'GSA',
+  'GUL', 'IDO', 'LAK', 'LAT', 'MAF', 'MAL', 'MAN', 'NAG', 'NAN',
+  'NGA', 'RHM', 'RIB', 'SIA', 'SLB', 'TAL', 'XYL',
+  // Other supported ligands
+  'HEM',
+  // Water — removed by pdb2crd.py, not an error
+  'HOH',
+])
+
+const checkPdbResidues = async (
+  file: Express.Multer.File
+): Promise<{ valid: boolean; message?: string }> => {
+  try {
+    const text = await fs.readFile(file.path, 'utf8')
+    const lines = text.split('\n')
+    const unsupported = new Set<string>()
+
+    for (const line of lines) {
+      if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+        const residue = line.slice(17, 20).trim()
+        if (residue && !SUPPORTED_PDB_RESIDUES.has(residue)) {
+          unsupported.add(residue)
+        }
+      }
+    }
+
+    if (unsupported.size > 0) {
+      const list = [...unsupported].sort().join(', ')
+      return {
+        valid: false,
+        message: `PDB contains unsupported residues: ${list}. These cannot be processed by BilboMD.`
+      }
+    }
+
+    return { valid: true }
+  } catch {
+    return { valid: false, message: 'Error reading PDB file.' }
+  }
+}
+
 const isValidConstInpFile = async (
   file: Express.Multer.File,
   mode: string
@@ -282,5 +339,6 @@ export {
   isSaxsData,
   isRNA,
   containsChainId,
+  checkPdbResidues,
   isValidConstInpFile
 }

@@ -7,6 +7,7 @@ import {
   noSpaces,
   isSaxsData,
   containsChainId,
+  checkPdbResidues,
   isRNA,
   isValidConstInpFile
 } from '../validationFunctions.js'
@@ -252,6 +253,86 @@ describe('containsChainId', () => {
   it('returns false on fs error', async () => {
     vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'))
     expect(await containsChainId(mockFile())).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// checkPdbResidues
+// ---------------------------------------------------------------------------
+const atomLine = (residue: string, record = 'ATOM  ') =>
+  `${record}    1  CA  ${residue} A   1       1.000   2.000   3.000  1.00  0.00           C`
+
+describe('checkPdbResidues', () => {
+  it('returns valid:true for all-standard amino acids', async () => {
+    const content = ['ALA', 'GLY', 'SER', 'TYR', 'VAL']
+      .map((r) => atomLine(r.padEnd(3)))
+      .join('\n')
+    mockReadFile(content)
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(true)
+  })
+
+  it('returns valid:true for phosphorylated residues SEP, TPO, PTR', async () => {
+    const content = ['SEP', 'TPO', 'PTR'].map((r) => atomLine(r)).join('\n')
+    mockReadFile(content)
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(true)
+  })
+
+  it('returns valid:true for nucleotide residues (DNA/RNA)', async () => {
+    const content = ['DA ', 'DC ', 'DG ', 'DT ', 'A  ', 'C  ', 'G  ', 'U  ']
+      .map((r) => atomLine(r))
+      .join('\n')
+    mockReadFile(content)
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(true)
+  })
+
+  it('returns valid:true for supported carbohydrate residues', async () => {
+    const content = ['NAG', 'BMA', 'MAN', 'GAL', 'SIA']
+      .map((r) => atomLine(r))
+      .join('\n')
+    mockReadFile(content)
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(true)
+  })
+
+  it('returns valid:true for HOH (water is removed by pdb2crd.py)', async () => {
+    mockReadFile(atomLine('HOH'))
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(true)
+  })
+
+  it('returns valid:true for HETATM lines with supported residues', async () => {
+    mockReadFile(atomLine('NAG', 'HETATM'))
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(true)
+  })
+
+  it('returns valid:false with message listing unsupported residues', async () => {
+    const content = [atomLine('ALA'), atomLine('TPO'), atomLine('UNK'), atomLine('MSE')].join(
+      '\n'
+    )
+    mockReadFile(content)
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(false)
+    expect(result.message).toMatch(/MSE/)
+    expect(result.message).toMatch(/UNK/)
+    expect(result.message).not.toMatch(/ALA/)
+    expect(result.message).not.toMatch(/TPO/)
+  })
+
+  it('returns valid:false and message on fs error', async () => {
+    vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'))
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(false)
+    expect(result.message).toBe('Error reading PDB file.')
+  })
+
+  it('ignores non-ATOM/HETATM lines', async () => {
+    mockReadFile('REMARK  some remark\nHEADER  some header\nEND\n')
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(true)
   })
 })
 
