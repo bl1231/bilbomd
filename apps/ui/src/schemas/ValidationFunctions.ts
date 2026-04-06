@@ -1,4 +1,9 @@
-import { SUPPORTED_PDB_RESIDUES } from '@bilbomd/bilbomd-types'
+import {
+  SUPPORTED_PDB_RESIDUES,
+  parseCifAtomSite,
+  cifContainsChainId as cifContainsChainIdUtil,
+  cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil
+} from '@bilbomd/bilbomd-types'
 
 const hasAllowedResiduesOnly = (
   file: File
@@ -404,6 +409,49 @@ const isValidConstInpFile = (
   })
 }
 
+const cifContainsChainId = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const parsed = parseCifAtomSite(text)
+      resolve(parsed !== null && cifContainsChainIdUtil(parsed))
+    }
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
+const cifHasAllowedResiduesOnly = (
+  file: File
+): Promise<{ valid: boolean; unsupportedResidues: string[] }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const parsed = parseCifAtomSite(text)
+      if (!parsed) {
+        resolve({
+          valid: false,
+          unsupportedResidues: ['(no _atom_site block found in CIF)']
+        })
+        return
+      }
+      resolve(cifHasAllowedResiduesOnlyUtil(parsed))
+    }
+    reader.onerror = () => reject(new Error('Error reading file'))
+    reader.readAsText(file)
+  })
+}
+
 export {
   fromCharmmGui,
   isCRD,
@@ -412,6 +460,8 @@ export {
   isSaxsData,
   isRNA,
   containsChainId,
+  cifContainsChainId,
+  cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines,
   isValidConstInpFile,
   hasAllowedResiduesOnly

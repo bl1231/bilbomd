@@ -305,8 +305,8 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           setFieldTouched={setFieldTouched}
                           error={errors.pdb_file && touched.pdb_file}
                           errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                          fileType="AlphaFold2 *.pdb"
-                          fileExt=".pdb"
+                          fileType="AlphaFold *.pdb or *.cif"
+                          fileExt=".pdb,.cif"
                           existingFileName={
                             useExampleData ? 'example-auto.pdb' : undefined
                           }

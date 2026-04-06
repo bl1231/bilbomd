@@ -41,7 +41,10 @@ vi.mock('../fieldTests/fieldTests', () => ({
   pdbCheck: () => mixed(),
   chainIdCheck: () => mixed(),
   pdbLineStartCheck: () => mixed(),
-  constInpCheck: () => mixed()
+  constInpCheck: () => mixed(),
+  pdbOrCifExtTest: () => mixed(),
+  pdbOrCifChainIdCheck: () => mixed(),
+  pdbOrCifResidueCheck: () => mixed()
 }))
 
 const makeFile = (name: string, size = 100): File => {

@@ -9,6 +9,8 @@ import {
   isPsfData,
   isCRD,
   containsChainId,
+  cifContainsChainId,
+  cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines
 } from '../ValidationFunctions'
 
@@ -163,5 +165,87 @@ describe('ValidationFunctions', () => {
   it('isCRD fails when EXT is missing after header', async () => {
     const badContent = ['* a', '* b', '* c', '* d'].join('\n')
     expect(await isCRD(makeFile('no-ext.crd', badContent))).toBe(false)
+  })
+})
+
+// Minimal valid _atom_site loop used across CIF tests
+const MINIMAL_CIF = [
+  'data_test',
+  'loop_',
+  '_atom_site.group_PDB',
+  '_atom_site.id',
+  '_atom_site.label_comp_id',
+  '_atom_site.label_asym_id',
+  '_atom_site.auth_asym_id',
+  '_atom_site.auth_seq_id',
+  '_atom_site.Cartn_x',
+  '_atom_site.Cartn_y',
+  '_atom_site.Cartn_z',
+  'ATOM 1 ASN A A 1 12.3 4.5 6.7',
+  'ATOM 2 GLY A A 2 13.3 5.5 7.7',
+  '#'
+].join('\n')
+
+describe('cifContainsChainId', () => {
+  it('returns true for a CIF file with a valid auth_asym_id', async () => {
+    expect(await cifContainsChainId(makeFile('model.cif', MINIMAL_CIF))).toBe(
+      true
+    )
+  })
+
+  it('returns false when auth_asym_id column is missing', async () => {
+    const noChainCif = [
+      'data_test',
+      'loop_',
+      '_atom_site.group_PDB',
+      '_atom_site.id',
+      '_atom_site.label_comp_id',
+      'ATOM 1 ASN',
+      '#'
+    ].join('\n')
+    expect(
+      await cifContainsChainId(makeFile('nochain.cif', noChainCif))
+    ).toBe(false)
+  })
+
+  it('returns false for a non-CIF file', async () => {
+    const notCif = 'ATOM      1  N   MET A   1\nEND\n'
+    expect(await cifContainsChainId(makeFile('model.cif', notCif))).toBe(false)
+  })
+})
+
+describe('cifHasAllowedResiduesOnly', () => {
+  it('returns valid for a CIF with only standard amino acids', async () => {
+    const result = await cifHasAllowedResiduesOnly(
+      makeFile('model.cif', MINIMAL_CIF)
+    )
+    expect(result.valid).toBe(true)
+    expect(result.unsupportedResidues).toHaveLength(0)
+  })
+
+  it('returns invalid for a CIF with an unknown residue', async () => {
+    const badCif = [
+      'data_test',
+      'loop_',
+      '_atom_site.group_PDB',
+      '_atom_site.id',
+      '_atom_site.label_comp_id',
+      '_atom_site.auth_asym_id',
+      'ATOM 1 UNK A',
+      '#'
+    ].join('\n')
+    const result = await cifHasAllowedResiduesOnly(
+      makeFile('bad.cif', badCif)
+    )
+    expect(result.valid).toBe(false)
+    expect(result.unsupportedResidues).toContain('UNK')
+  })
+
+  it('returns invalid when no _atom_site block is found', async () => {
+    const empty = 'data_test\n#\n'
+    const result = await cifHasAllowedResiduesOnly(
+      makeFile('empty.cif', empty)
+    )
+    expect(result.valid).toBe(false)
   })
 })
