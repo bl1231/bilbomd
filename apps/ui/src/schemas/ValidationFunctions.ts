@@ -1,124 +1,8 @@
+import { SUPPORTED_PDB_RESIDUES } from '@bilbomd/bilbomd-types'
+
 const hasAllowedResiduesOnly = (
   file: File
 ): Promise<{ valid: boolean; unsupportedResidues: string[] }> => {
-  const allowedResidues = new Set([
-    // Protein
-    'ALA',
-    'CYS',
-    'ASP',
-    'GLU',
-    'PHE',
-    'GLY',
-    'HIS',
-    'HSD',
-    'ILE',
-    'LYS',
-    'LEU',
-    'MET',
-    'ASN',
-    'PRO',
-    'GLN',
-    'ARG',
-    'SER',
-    'THR',
-    'VAL',
-    'TRP',
-    'TYR',
-    // Modified Amino Acids
-    'SEP',
-    'TPO',
-    'PTR',
-    // DNA
-    'DA',
-    'DC',
-    'DG',
-    'DT',
-    'DI',
-    'ADE',
-    'CYT',
-    'GUA',
-    'THY',
-    // RNA
-    'A',
-    'C',
-    'G',
-    'U',
-    'I',
-    // Carbohydrates
-    'AFL',
-    'ALL',
-    'ALT',
-    'BMA',
-    'BGC',
-    'FUC',
-    'FUL',
-    'GAL',
-    'GLC',
-    'GUL',
-    'IDO',
-    'NAG',
-    'RHM',
-    'RIB',
-    'SIA',
-    'TAL',
-    'XYL',
-    'MAN',
-    // MISC removed in pdb2crd.py
-    'HOH'
-  ])
-
-  const allowedIons = new Set([
-    // Alkali metals
-    'LI',
-    'NA',
-    'K',
-    'RB',
-    'CS',
-
-    // Alkaline earth metals
-    'MG',
-    'CA',
-    'SR',
-    'BA',
-
-    // Transition metals
-    'SC',
-    'TI',
-    'V',
-    'CR',
-    'MN',
-    'FE',
-    'CO',
-    'NI',
-    'CU',
-    'ZN',
-    'MO',
-    'CD',
-    'HG',
-
-    // Post-transition/metalloids
-    'AL',
-    'GA',
-    'IN',
-    'SN',
-    'PB',
-
-    // Metalloids and others
-    'B',
-    'SE',
-    'AS',
-
-    // Non-metal anions commonly found as ions
-    'CL',
-    'BR',
-    'I',
-    'F',
-    'SO4',
-    'PO4',
-    'NO3',
-    'CN'
-  ])
-
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
 
@@ -135,7 +19,7 @@ const hasAllowedResiduesOnly = (
       for (const line of lines) {
         if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
           const resName = line.substring(17, 20).trim().toUpperCase()
-          if (!allowedResidues.has(resName) && !allowedIons.has(resName)) {
+          if (!SUPPORTED_PDB_RESIDUES.has(resName)) {
             unsupportedResidues.add(resName)
           }
         }

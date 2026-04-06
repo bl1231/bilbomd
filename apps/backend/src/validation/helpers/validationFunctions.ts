@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import { SUPPORTED_PDB_RESIDUES } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
 
 const fromCharmmGui = async (file: Express.Multer.File): Promise<boolean> => {
@@ -225,31 +226,6 @@ const isRNA = async (
   }
 }
 
-// Residues that pdb2crd.py can process (standard + explicitly handled non-standard).
-// Anything outside this set will fail PDB validation before the job is submitted.
-const SUPPORTED_PDB_RESIDUES = new Set([
-  // Standard amino acids
-  'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS',
-  'ILE', 'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP',
-  'TYR', 'VAL',
-  // Phosphorylated amino acids — renamed to standard residue + CHARMM patch
-  'SEP', 'TPO', 'PTR',
-  // DNA nucleotides
-  'DA', 'DC', 'DG', 'DT', 'DI',
-  // RNA nucleotides
-  'A', 'C', 'G', 'U', 'I',
-  // Nucleotide aliases recognised by pdb_utils
-  'ADE', 'CYT', 'GUA', 'THY',
-  // Carbohydrates (union of pdb_utils.py + pdb2crd.py rename map)
-  'AFL', 'ALL', 'ALT', 'BMA', 'BGC', 'BOG', 'FCA', 'FCB', 'FMF',
-  'FUC', 'FUL', 'G4S', 'GAL', 'GLA', 'GLB', 'GLC', 'GLS', 'GSA',
-  'GUL', 'IDO', 'LAK', 'LAT', 'MAF', 'MAL', 'MAN', 'NAG', 'NAN',
-  'NGA', 'RHM', 'RIB', 'SIA', 'SLB', 'TAL', 'XYL',
-  // Other supported ligands
-  'HEM',
-  // Water — removed by pdb2crd.py, not an error
-  'HOH',
-])
 
 const checkPdbResidues = async (
   file: Express.Multer.File

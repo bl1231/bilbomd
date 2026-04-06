@@ -322,6 +322,19 @@ describe('checkPdbResidues', () => {
     expect(result.message).not.toMatch(/TPO/)
   })
 
+  it('returns valid:true for common ion residues (MG, CA, ZN)', async () => {
+    const content = [atomLine('MG '), atomLine('CA '), atomLine('ZN ')].join('\n')
+    mockReadFile(content)
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(true)
+  })
+
+  it('returns valid:true for HSD (CHARMM HIS variant)', async () => {
+    mockReadFile(atomLine('HSD'))
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(true)
+  })
+
   it('returns valid:false and message on fs error', async () => {
     vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'))
     const result = await checkPdbResidues(mockFile())
