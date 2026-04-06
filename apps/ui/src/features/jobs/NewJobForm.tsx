@@ -314,7 +314,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 name="pdb_inputs"
                               />
                             }
-                            label="PDB file"
+                            label="PDB or CIF file"
                           />
                           <FormControlLabel
                             disabled={!charmmEnabled}
