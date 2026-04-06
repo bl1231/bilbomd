@@ -342,8 +342,18 @@ const updateJobNerscState = async (
     `NERSC job status: ${nerscState.state}`
   )
 
-  // Update the job steps from the Slurm status file
-  await updateJobStepsFromSlurmStatusFile(job)
+  // Update the job steps from the Slurm status file.
+  // status.txt is written by the Slurm job during execution and does not exist
+  // while the job is PENDING in the queue — skip it in that state.
+  if (nerscState.state !== NerscStatus.PENDING) {
+    try {
+      await updateJobStepsFromSlurmStatusFile(job)
+    } catch (error) {
+      logger.warn(
+        `status.txt not yet available for job ${job.uuid} (state: ${nerscState.state}): ${error}`
+      )
+    }
+  }
 }
 
 // Normalizes raw Slurm state to your internal enum
