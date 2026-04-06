@@ -6,7 +6,8 @@ import {
   isCRD,
   isPsfData,
   isValidConstInpFile,
-  containsChainId
+  containsChainId,
+  checkPdbResidues
 } from './validationFunctions.js'
 import { logger } from '../../middleware/loggers.js'
 
@@ -94,6 +95,15 @@ export const chainIdCheck = () =>
     const pdbFile = file as Express.Multer.File | undefined
     if (!pdbFile?.path) return true
     return containsChainId(pdbFile)
+  })
+
+export const pdbResidueCheck = () =>
+  mixed().test('pdb-residue-check', 'PDB contains unsupported residues', async function (value) {
+    const file = value as Express.Multer.File | undefined
+    if (!file?.path) return true
+    const result = await checkPdbResidues(file)
+    if (result.valid) return true
+    return this.createError({ message: result.message })
   })
 
 export const constInpCheck = () =>

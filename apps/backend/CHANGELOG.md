@@ -1,5 +1,15 @@
 # @bilbomd/backend
 
+## 2.5.12
+
+### Patch Changes
+
+- eeb1eed: Fix Dependabot PRs failing CI due to pnpm frozen lockfile mismatch. CI now skips --frozen-lockfile when the PR author is dependabot[bot].
+- fc1be50: Add PDB residue validation to reject unsupported residues at job submission time. PDB files containing residue names not handled by pdb2crd.py now return a clear error message listing the offending residues, rather than silently failing during job processing.
+- fc1be50: Move the supported PDB residue list to a single constant (`SUPPORTED_PDB_RESIDUES`) in `@bilbomd/bilbomd-types`, shared by both the backend validator and the frontend `hasAllowedResiduesOnly` check. Eliminates the risk of the two lists diverging silently. Also adds common ions (MG, CA, ZN, etc.) and HSD to the allowed set, and adds the missing `pdbCheck()` to the Auto job form schema.
+- Updated dependencies [fc1be50]
+  - @bilbomd/bilbomd-types@1.4.1
+
 ## 2.5.11
 
 ### Patch Changes

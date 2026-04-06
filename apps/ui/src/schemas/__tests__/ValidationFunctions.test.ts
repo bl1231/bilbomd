@@ -60,6 +60,19 @@ describe('ValidationFunctions', () => {
     expect(result.valid).toBe(true)
   })
 
+  it('hasAllowedResiduesOnly returns valid for common ions (MG, ZN)', async () => {
+    const content = `HETATM    1 MG   MG  A   1\nHETATM    2 ZN   ZN  A   2\nEND\n`
+    const result = await hasAllowedResiduesOnly(makeFile('model.pdb', content))
+    expect(result.valid).toBe(true)
+  })
+
+  it('hasAllowedResiduesOnly returns invalid for truly unknown residues', async () => {
+    const content = `ATOM      1  CA  UNK A   1\nEND\n`
+    const result = await hasAllowedResiduesOnly(makeFile('model.pdb', content))
+    expect(result.valid).toBe(false)
+    expect(result.unsupportedResidues).toContain('UNK')
+  })
+
   it('containsChainId detects presence of chain ID in column 22', async () => {
     const withChain = `ATOM      1  N   MET A   1\nEND\n`
     const noChain = `ATOM      1  N   MET     1\nEND\n`

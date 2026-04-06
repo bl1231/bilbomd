@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.7.1
+
+### Patch Changes
+
+- eeb1eed: Fix Dependabot PRs failing CI due to pnpm frozen lockfile mismatch. CI now skips --frozen-lockfile when the PR author is dependabot[bot].
+
 ## 1.7.0
 
 ### Minor Changes
