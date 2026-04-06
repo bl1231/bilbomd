@@ -152,6 +152,44 @@ const markJobAsRunning = async (job: IJob): Promise<void> => {
   }
 }
 
+// Sync job.status from a known NERSC state without recording usage events.
+// Used as a fallback when the NERSC API query fails but we have a stored state.
+const syncJobStatusFromNerscState = async (
+  job: IJob,
+  state: NerscStatusEnum
+): Promise<void> => {
+  switch (state) {
+    case 'COMPLETED':
+      await markJobAsCompleted(job)
+      break
+    case 'FAILED':
+    case 'TIMEOUT':
+    case 'OUT_OF_MEMORY':
+    case 'NODE_FAIL':
+      await markJobAsFailed(job)
+      break
+    case 'CANCELLED':
+    case 'PREEMPTED':
+      await markJobAsCancelled(job)
+      break
+    case 'PENDING':
+      await markJobAsPending(job)
+      break
+    case 'RUNNING':
+      await markJobAsRunning(job)
+      break
+    case 'SUSPENDED':
+      logger.warn(`Job ${job.uuid} is suspended (from stored state).`)
+      break
+    case 'UNKNOWN':
+    default:
+      logger.warn(
+        `Job ${job.uuid} has unresolvable state: ${state}. Manual intervention may be required.`
+      )
+      break
+  }
+}
+
 const monitorAndCleanupJobs = async (): Promise<void> => {
   try {
     logger.info('Starting job monitoring and cleanup...')
@@ -167,7 +205,20 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
       jobs.map((job) =>
         limit(async () => {
           const nerscState = await queryNERSCForJobState(job)
-          if (!nerscState) return // Skip if NERSC state could not be fetched
+          if (!nerscState) {
+            // NERSC query failed (null jobid or API error). Fall back to syncing
+            // job.status from whatever nersc.state is already stored in MongoDB.
+            // This ensures manual state edits and previously-stored states are
+            // always reflected in job.status without requiring a live NERSC query.
+            const storedState = job.nersc?.state
+            if (storedState) {
+              logger.info(
+                `Job ${job.uuid}: NERSC query unavailable, syncing job.status from stored state: ${storedState}`
+              )
+              await syncJobStatusFromNerscState(job, storedState)
+            }
+            return
+          }
 
           // Step 2: Update the job state in MongoDB
           await updateJobStateInMongoDB(job, nerscState)
@@ -190,101 +241,102 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
               : undefined
 
           switch (nerscState.state) {
-        case 'COMPLETED':
-          await recordWorkerUsageEvent({
-            uuid: job.uuid,
-            pipeline,
-            eventType: 'job_completed',
-            jobId: job._id,
-            context,
-            nersc: {
-              jobid: job.nersc?.jobid,
-              qos: nerscState.qos ?? undefined
-            },
-            durationMs: duration_ms,
-            metadata: {
-              stage: 'monitor',
-              source: 'sacct',
-              state: nerscState.state,
-              time_submitted: job.nersc?.time_submitted,
-              time_started: job.nersc?.time_started,
-              time_completed: job.nersc?.time_completed
-            }
-          })
-          await markJobAsCompleted(job)
-          break
+            case 'COMPLETED':
+              await recordWorkerUsageEvent({
+                uuid: job.uuid,
+                pipeline,
+                eventType: 'job_completed',
+                jobId: job._id,
+                context,
+                nersc: {
+                  jobid: job.nersc?.jobid,
+                  qos: nerscState.qos ?? undefined
+                },
+                durationMs: duration_ms,
+                metadata: {
+                  stage: 'monitor',
+                  source: 'sacct',
+                  state: nerscState.state,
+                  time_submitted: job.nersc?.time_submitted,
+                  time_started: job.nersc?.time_started,
+                  time_completed: job.nersc?.time_completed
+                }
+              })
+              await markJobAsCompleted(job)
+              break
 
-        case 'FAILED':
-        case 'TIMEOUT':
-        case 'OUT_OF_MEMORY':
-        case 'NODE_FAIL':
-          // Maybe resubmit job if it times out?
-          logger.warn(
-            `Job ${job.nersc?.jobid} failed with state: ${nerscState.state}`
-          )
-          await recordWorkerUsageEvent({
-            uuid: job.uuid,
-            pipeline,
-            eventType: 'job_failed',
-            jobId: job._id,
-            context,
-            nersc: {
-              jobid: job.nersc?.jobid,
-              qos: nerscState.qos ?? undefined
-            },
-            metadata: { stage: 'monitor', reason: nerscState.state }
-          })
-          await markJobAsFailed(job)
-          break
+            case 'FAILED':
+            case 'TIMEOUT':
+            case 'OUT_OF_MEMORY':
+            case 'NODE_FAIL':
+              logger.warn(
+                `Job ${job.nersc?.jobid} failed with state: ${nerscState.state}`
+              )
+              await recordWorkerUsageEvent({
+                uuid: job.uuid,
+                pipeline,
+                eventType: 'job_failed',
+                jobId: job._id,
+                context,
+                nersc: {
+                  jobid: job.nersc?.jobid,
+                  qos: nerscState.qos ?? undefined
+                },
+                metadata: { stage: 'monitor', reason: nerscState.state }
+              })
+              await markJobAsFailed(job)
+              break
 
-        case 'CANCELLED':
-        case 'PREEMPTED':
-          logger.info(`Job ${job.nersc?.jobid} was cancelled or preempted.`)
-          await recordWorkerUsageEvent({
-            uuid: job.uuid,
-            pipeline,
-            eventType: 'job_cancelled',
-            jobId: job._id,
-            context,
-            nersc: {
-              jobid: job.nersc?.jobid,
-              qos: nerscState.qos ?? undefined
-            },
-            metadata: { stage: 'monitor' }
-          })
-          await markJobAsCancelled(job)
-          break
+            case 'CANCELLED':
+            case 'PREEMPTED':
+              logger.info(`Job ${job.nersc?.jobid} was cancelled or preempted.`)
+              await recordWorkerUsageEvent({
+                uuid: job.uuid,
+                pipeline,
+                eventType: 'job_cancelled',
+                jobId: job._id,
+                context,
+                nersc: {
+                  jobid: job.nersc?.jobid,
+                  qos: nerscState.qos ?? undefined
+                },
+                metadata: { stage: 'monitor' }
+              })
+              await markJobAsCancelled(job)
+              break
 
-        case 'PENDING':
-          await markJobAsPending(job)
-          break
+            case 'PENDING':
+              await markJobAsPending(job)
+              break
 
-        case 'RUNNING':
-          await recordWorkerUsageEvent({
-            uuid: job.uuid,
-            pipeline,
-            eventType: 'job_started',
-            jobId: job._id,
-            context,
-            nersc: {
-              jobid: job.nersc?.jobid,
-              qos: nerscState.qos ?? undefined
-            },
-            metadata: { stage: 'monitor' }
-          })
-          await markJobAsRunning(job)
-          break
+            case 'RUNNING':
+              await recordWorkerUsageEvent({
+                uuid: job.uuid,
+                pipeline,
+                eventType: 'job_started',
+                jobId: job._id,
+                context,
+                nersc: {
+                  jobid: job.nersc?.jobid,
+                  qos: nerscState.qos ?? undefined
+                },
+                metadata: { stage: 'monitor' }
+              })
+              await markJobAsRunning(job)
+              break
 
-        case 'SUSPENDED':
-          logger.warn(`Job ${job.nersc?.jobid} is suspended. Will retry later.`)
-          break
+            case 'SUSPENDED':
+              logger.warn(
+                `Job ${job.nersc?.jobid} is suspended. Will retry later.`
+              )
+              break
 
-        case 'UNKNOWN':
-        default:
-          logger.error(
-            `Job ${job.nersc?.jobid} is in an unexpected state: ${nerscState.state}`
-          )
-          break
+            case 'UNKNOWN':
+            default:
+              logger.error(
+                `Job ${job.nersc?.jobid} is in an unexpected state: ${nerscState.state}`
+              )
+              break
           }
         })
       )
