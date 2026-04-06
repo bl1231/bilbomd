@@ -20,6 +20,7 @@ import {
   ReferenceLine
 } from 'recharts'
 import { FoxsData } from '@bilbomd/bilbomd-types'
+import { getEnsembleSizeLabel } from './foxsUtils'
 
 type CombinedFoxsData = {
   q: number
@@ -49,10 +50,6 @@ const getUniqueColor = (index: number) => {
   return colors[index % colors.length]
 }
 
-export const getEnsembleSizeLabel = (filename: string): string => {
-  const match = filename.match(/multi_state_model_(\d+)_/)
-  return match ? `Ens. Size ${match[1]}` : `Ens. Size ${filename}`
-}
 const FoXSEnsembleCharts = ({
   combinedData,
   minYAxis,

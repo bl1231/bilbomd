@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/worker",
-  "version": "2.4.4",
+  "version": "2.5.0",
   "description": "Worker app to process BilboMD jobs from BullMQ queue",
   "main": "dist/worker.js",
   "files": [
@@ -34,9 +34,9 @@
     "@bilbomd/mongodb-schema": "workspace:*",
     "axios": "^1.14.0",
     "axios-retry": "^4.5.0",
-    "bullmq": "^5.71.1",
+    "bullmq": "^5.72.1",
     "csv-parser": "^3.2.0",
-    "dotenv": "^17.3.1",
+    "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "fs-extra": "^11.3.4",
     "glob": "^13.0.6",
@@ -55,6 +55,10 @@
     "yaml": "^2.8.3"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/nodemailer": "^7.0.11",
+    "@types/nodemailer-express-handlebars": "^4.0.6",
     "@types/qs": "^6.15.0"
   },
   "_moduleAliases": {

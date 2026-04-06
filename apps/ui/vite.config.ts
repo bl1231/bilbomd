@@ -1,11 +1,16 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 console.log('Starting Vite configuration...')
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react()],
+  resolve: {
+    tsconfigPaths: true,
+    // Force a single React instance across all chunks to prevent Rolldown
+    // CJS/ESM interop from creating multiple React copies across chunk boundaries
+    dedupe: ['react', 'react-dom', 'react/jsx-runtime']
+  },
   server: {
     host: 'localhost',
     port: 3002,
@@ -37,13 +42,19 @@ export default defineConfig({
     rolldownOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules')) {
-            return id
-              .toString()
-              .split('node_modules/')[1]
-              .split('/')[0]
-              .toString()
-          }
+          if (!id.includes('node_modules')) return undefined
+          // pnpm paths: .../.pnpm/pkg@version/node_modules/pkg/file.js
+          // Use the segment after the LAST node_modules/ to get the real pkg name
+          const afterNodeModules = id.split('node_modules/').at(-1) ?? ''
+          const parts = afterNodeModules.split('/')
+          const pkg = parts[0].startsWith('@')
+            ? `${parts[0]}/${parts[1]}`
+            : parts[0]
+          if (!pkg || pkg.startsWith('.')) return undefined
+          // Molstar is ~3 MB and lazy-loaded — keep it in its own chunk
+          if (pkg === 'molstar') return 'vendor-molstar'
+          // Everything else in one stable vendor chunk
+          return 'vendor'
         }
       }
     }

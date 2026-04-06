@@ -56,6 +56,7 @@ export interface BaseJobDTO {
   assets?: JobAssetsDTO
   nersc?: NerscInfoDTO
   cleanup_in_progress: boolean
+  results_ready?: boolean
   results?: JobResultsDTO
 }
 

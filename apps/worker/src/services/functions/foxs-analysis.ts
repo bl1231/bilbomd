@@ -44,7 +44,7 @@ const runSingleFoXS = async (DBjob: IJob): Promise<void> => {
     if (!DBjob.md_engine || DBjob.md_engine === 'CHARMM') {
       inputPDB = 'charmm/minimize/minimization_output.pdb'
     } else if (DBjob.md_engine === 'OpenMM') {
-      inputPDB = 'minimize/minimized.pdb'
+      inputPDB = 'openmm/minimize/minimized.pdb'
     } else {
       inputPDB = 'minimization_output.pdb' // fallback for unknown engine
     }

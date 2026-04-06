@@ -1,6 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router'
-import PulseLoader from 'react-spinners/PulseLoader'
 import useTitle from 'hooks/useTitle'
 import {
   Button,
@@ -33,7 +32,7 @@ import BilboMDMongoSteps from './BilboMDMongoSteps'
 import HeaderBox from 'components/HeaderBox'
 import JobDBDetails from './JobDBDetails'
 import MultiMDJobDBDetails from 'features/multimd/MultiMDJobDBDetails'
-import MolstarViewer from 'features/molstar/Viewer'
+const MolstarViewer = lazy(() => import('features/molstar/Viewer'))
 import ScoperFoXSAnalysis from 'features/scoperjob/ScoperFoXSAnalysis'
 const FoXSAnalysis = lazy(() => import('./FoXSAnalysis'))
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
@@ -72,6 +71,7 @@ const SingleJobPage = () => {
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
   const [tabValue, setTabValue] = useState(0)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [deleteJob] = useDeleteJobMutation()
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -145,7 +145,7 @@ const SingleJobPage = () => {
   }
 
   if (isLoading) {
-    return <PulseLoader color={'#ffffff'} />
+    return <CircularProgress />
   }
 
   if (isError) {
@@ -206,10 +206,15 @@ const SingleJobPage = () => {
         link.click()
         link.parentNode?.removeChild(link)
       } else {
-        console.error('No data to download')
+        setDownloadError(
+          'No data received from server. Please try again or contact support.'
+        )
       }
     } catch (error) {
       console.error('Download results error:', error)
+      setDownloadError(
+        'Download failed. The results archive may be unavailable. Please try again or contact support.'
+      )
     }
   }
 
@@ -462,11 +467,13 @@ const SingleJobPage = () => {
                   </Box>
                 </Typography>
               </HeaderBox>
-              <MolstarViewer
-                id={id ?? ''}
-                jobType={job.mongo.jobType}
-                results={job.mongo.results}
-              />
+              <Suspense fallback={<CircularProgress />}>
+                <MolstarViewer
+                  id={id ?? ''}
+                  jobType={job.mongo.jobType}
+                  results={job.mongo.results}
+                />
+              </Suspense>
             </Grid>
           )}
 
@@ -477,8 +484,28 @@ const SingleJobPage = () => {
               <Typography>Results</Typography>
             </HeaderBox>
             <Item>
+              {job.mongo.results_ready === false && (
+                <Alert
+                  severity="warning"
+                  sx={{ mb: 2 }}
+                >
+                  Results archive packaging failed for this job. The BilboMD
+                  data is available on the server, but the download archive
+                  could not be created. Please contact support.
+                </Alert>
+              )}
+              {downloadError && (
+                <Alert
+                  severity="error"
+                  onClose={() => setDownloadError(null)}
+                  sx={{ mb: 2 }}
+                >
+                  {downloadError}
+                </Alert>
+              )}
               <Button
                 variant="contained"
+                disabled={job.mongo.results_ready === false}
                 onClick={() => {
                   void handleDownload(job.mongo.id)
                 }}

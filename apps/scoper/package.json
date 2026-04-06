@@ -1,7 +1,7 @@
 {
   "name": "@bilbomd/scoper",
   "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "main": "build/scoper.js",
   "files": [
     "build",
@@ -31,12 +31,14 @@
     "start": "npm run build && node build/scoper.js",
     "dev": "nodemon --watch src --ext ts,ejs --verbose --exec npm run start",
     "lint": "eslint",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "test": "vitest --run --coverage",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
-    "bullmq": "^5.71.1",
-    "dotenv": "^17.3.1",
+    "bullmq": "^5.72.1",
+    "dotenv": "^17.4.0",
     "fs-extra": "^11.3.4",
     "handlebars": "^4.7.9",
     "ioredis": "^5.10.1",
@@ -44,9 +46,16 @@
     "mongoose": "^9.3.3",
     "nodemailer": "^8.0.4",
     "nodemailer-express-handlebars": "^7.0.0",
-    "nodemon": "^3.1.14",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/nodemailer": "^7.0.11",
+    "@types/nodemailer-express-handlebars": "^4.0.6",
+    "@vitest/coverage-v8": "^4.1.2",
+    "nodemon": "^3.1.14",
+    "vitest": "^4.1.2"
   },
   "_moduleAliases": {
     "@services": "build/services",

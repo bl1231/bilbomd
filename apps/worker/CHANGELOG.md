@@ -1,5 +1,31 @@
 # @bilbomd/worker
 
+## 2.5.0
+
+### Minor Changes
+
+- 8849e8b: Standardize MD engine output directory layout across all pipelines and deployments.
+
+  All OpenMM steps now write to `openmm/minimize/`, `openmm/heat/`, and `openmm/md/` (previously used a flat `minimize/`, `heat/`, `md/` layout locally, and `openmm/minimization/`, `openmm/heating/`, `openmm/md/` at NERSC). CHARMM layout (`charmm/minimize/`, `charmm/heat/`, `charmm/md/`) is unchanged.
+
+  Also fixes a bug in `prepare-results.ts` where the NERSC OpenMM DAT file fallback path was identical to the local OpenMM path and would never find the NERSC file.
+
+- 474cef7: Add results_ready flag to track results packaging outcome independently of job status.
+
+  Jobs that complete all MD science steps but fail during final tar.gz creation now remain
+  Completed rather than Failed. A new results_ready boolean field (false by default) is set
+  to true only after a successful archive is created, making the packaging outcome observable.
+
+  The UI disables the Download Results button and shows a warning when results_ready is false,
+  and surfaces download errors to the user via an Alert instead of silently logging to console.
+
+### Patch Changes
+
+- Updated dependencies [474cef7]
+  - @bilbomd/mongodb-schema@2.5.0
+  - @bilbomd/bilbomd-types@1.4.0
+  - @bilbomd/md-utils@1.1.3
+
 ## 2.4.4
 
 ### Patch Changes

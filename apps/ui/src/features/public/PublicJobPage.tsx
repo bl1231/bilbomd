@@ -1,5 +1,5 @@
 import { useParams } from 'react-router'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import {
   Alert,
   AlertTitle,
@@ -20,7 +20,7 @@ import Item from 'themes/components/Item'
 import { getStatusColors } from 'features/shared/StatusColors'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import PublicJobAnalysisSection from 'features/public/PublicJobAnalysisSection'
-import MolstarViewer from 'features/molstar/Viewer'
+const MolstarViewer = lazy(() => import('features/molstar/Viewer'))
 import PublicDownloadResultsSection from 'features/public/PublicDownloadResultsSection'
 
 import CopyableChip from 'components/CopyableChip'
@@ -271,13 +271,15 @@ const PublicJobPage = () => {
                 </Box>
               </Typography>
             </HeaderBox>
-            <MolstarViewer
-              id={job.jobId}
-              jobType={job.jobType}
-              results={job.results}
-              isPublic={true}
-              publicId={job.publicId}
-            />
+            <Suspense fallback={<CircularProgress />}>
+              <MolstarViewer
+                id={job.jobId}
+                jobType={job.jobType}
+                results={job.results}
+                isPublic={true}
+                publicId={job.publicId}
+              />
+            </Suspense>
           </Grid>
         )}
 

@@ -49,7 +49,7 @@ const buildOpenMMConfigForJob = (
       forcefield: ['charmm36.xml', 'implicit/hct.xml']
     },
     output: {
-      output_dir: workDir,
+      output_dir: path.join(workDir, 'openmm'),
       min_dir: 'minimize',
       heat_dir: 'heat',
       md_dir: 'md'

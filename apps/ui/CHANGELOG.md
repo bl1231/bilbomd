@@ -1,5 +1,35 @@
 # @bilbomd/ui
 
+## 2.8.0
+
+### Minor Changes
+
+- 408a810: Add toggle buttons to show/hide ensemble structures in the Molstar viewer. A dedicated panel above the 3D canvas renders one button per ensemble size (e.g. "Size 1", "Size 2", "Size 3"), allowing users to independently show or hide each ensemble. Closes #251.
+- 474cef7: Add results_ready flag to track results packaging outcome independently of job status.
+
+  Jobs that complete all MD science steps but fail during final tar.gz creation now remain
+  Completed rather than Failed. A new results_ready boolean field (false by default) is set
+  to true only after a successful archive is created, making the packaging outcome observable.
+
+  The UI disables the Download Results button and shows a warning when results_ready is false,
+  and surfaces download errors to the user via an Alert instead of silently logging to console.
+
+### Patch Changes
+
+- ada4522: Remove eslint-plugin-react dependency. With the automatic JSX transform (`react-jsx`) and TypeScript, the plugin's rules are unnecessary — the two rules it provided (`react/react-in-jsx-scope`, `react/prop-types`) were already disabled. Hook linting is retained via eslint-plugin-react-hooks.
+- Updated dependencies [474cef7]
+  - @bilbomd/mongodb-schema@2.5.0
+  - @bilbomd/bilbomd-types@1.4.0
+
+## 2.7.1
+
+### Patch Changes
+
+- f7f8268: Fix React error #130 caused by Vite 8/Rolldown auto-splitting vendor deps into 130+ micro-chunks, producing broken cross-chunk default export resolution. Restored a correct pnpm-aware `manualChunks` implementation that consolidates all vendor deps into a stable `vendor` chunk and isolates the 3 MB Molstar library into its own `vendor-molstar` chunk. MolstarViewer is lazily imported in SingleJobPage and PublicJobPage to ensure it loads on demand.
+- cd8cdb8: Fix two Vite build warnings: replace vite-tsconfig-paths plugin with Vite's native resolve.tsconfigPaths option, and convert About component to lazy import in AnonRoutes to resolve ineffective dynamic import warning.
+- 6e67e04: Resolve react-refresh lint warning in FoXSEnsembleCharts component.
+- 1e4e745: Remove broken manualChunks configuration and let Vite 8 handle automatic code splitting. The previous manualChunks function collapsed all pnpm dependencies into a single 4.7MB chunk; automatic splitting now correctly defers the large Molstar library to a lazy chunk loaded only when viewing job results.
+
 ## 2.7.0
 
 ### Minor Changes

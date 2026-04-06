@@ -936,6 +936,5 @@ export {
   runMolecularDynamics,
   runMultiFoxs,
   generateDCD2PDBInpFile,
-  spawnCharmm,
-  storeConstraintsInMongoDB
+  spawnCharmm
 }

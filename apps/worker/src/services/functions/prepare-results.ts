@@ -41,11 +41,10 @@ const prepareResults = async (
 
     {
       const baseDataName = DBjob.data_file.split('.')[0]
-      const openmmLocalPdb = path.join(jobDir, 'minimize', 'minimized.pdb')
-      const openmmNerscPdb = path.join(
+      const openmmPdb = path.join(
         jobDir,
         'openmm',
-        'minimization',
+        'minimize',
         'minimized.pdb'
       )
       const charmmNewPdb = path.join(
@@ -56,15 +55,13 @@ const prepareResults = async (
       )
       const charmmOldPdb = path.join(jobDir, 'minimization_output.pdb')
 
-      const pdbSource = (await fs.pathExists(openmmLocalPdb))
-        ? openmmLocalPdb
-        : (await fs.pathExists(openmmNerscPdb))
-          ? openmmNerscPdb
-          : (await fs.pathExists(charmmNewPdb))
-            ? charmmNewPdb
-            : (await fs.pathExists(charmmOldPdb))
-              ? charmmOldPdb
-              : null
+      const pdbSource = (await fs.pathExists(openmmPdb))
+        ? openmmPdb
+        : (await fs.pathExists(charmmNewPdb))
+          ? charmmNewPdb
+          : (await fs.pathExists(charmmOldPdb))
+            ? charmmOldPdb
+            : null
 
       if (pdbSource) {
         await copyFiles({
@@ -80,13 +77,9 @@ const prepareResults = async (
       }
 
       // --- Copy the DAT file for the minimized PDB (supports both layouts)
-      const openmmLocalDat = path.join(
+      const openmmDat = path.join(
         jobDir,
-        'minimize',
-        `minimized_${baseDataName}.dat`
-      )
-      const openmmNerscDat = path.join(
-        jobDir,
+        'openmm',
         'minimize',
         `minimized_${baseDataName}.dat`
       )
@@ -101,15 +94,13 @@ const prepareResults = async (
         `minimization_output_${baseDataName}.dat`
       )
 
-      const datSource = (await fs.pathExists(openmmLocalDat))
-        ? openmmLocalDat
-        : (await fs.pathExists(openmmNerscDat))
-          ? openmmNerscDat
-          : (await fs.pathExists(charmmNewDat))
-            ? charmmNewDat
-            : (await fs.pathExists(charmmOldDat))
-              ? charmmOldDat
-              : null
+      const datSource = (await fs.pathExists(openmmDat))
+        ? openmmDat
+        : (await fs.pathExists(charmmNewDat))
+          ? charmmNewDat
+          : (await fs.pathExists(charmmOldDat))
+            ? charmmOldDat
+            : null
 
       if (datSource) {
         await copyFiles({
@@ -255,7 +246,11 @@ const prepareResults = async (
       const uuidPrefix = DBjob.uuid.split('-')[0]
       const archiveName = `results-${uuidPrefix}.tar.gz`
       await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+      DBjob.results_ready = true
+      await DBjob.save()
     } catch (error) {
+      DBjob.results_ready = false
+      await DBjob.save()
       logger.error(`Error creating tar file: ${error}`)
       throw error // Critical error, rethrow or handle specifically if necessary
     }

@@ -2,8 +2,8 @@
 
 [![CI Status](https://github.com/bl1231/bilbomd/actions/workflows/ci.yml/badge.svg)](https://github.com/bl1231/bilbomd/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Berkeley%20Lab%20Non--Commercial-blue.svg)](https://github.com/bl1231/bilbomd/blob/main/LICENSE.txt)
-[![Node](https://img.shields.io/badge/node-v24.13.0-brightgreen?logo=node.js)](https://nodejs.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-10.29.2-orange?logo=pnpm)](https://pnpm.io/)
+[![Node](https://img.shields.io/badge/node-v24.14.1-brightgreen?logo=node.js)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-10.33.0-orange?logo=pnpm)](https://pnpm.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-blueviolet?logo=turborepo)](https://turbo.build/)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED?logo=docker)](https://github.com/bl1231?tab=packages&repo_name=bilbomd)
@@ -23,7 +23,7 @@ There are several different SAXS modeling pipelines available.
 
 This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided PDB file and experimental SAXS data.
 
-![Classic PDB](apps/ui/public/images/bilbomd-classic-pdb-schematic-dark.png)
+![Classic PDB](apps/ui/public/images/bilbomd-classic-pdb-schematic-openmm-dark.png)
 
 ### BilboMD Classic w/CRD inputs
 
@@ -35,13 +35,13 @@ This pipeline offers the classic BilboMD from years past where you can upload a 
 
 This pipeline is designed to take Alphafold models and a Per residue Alignment Error (PAE) matrix in combination with your experimental SAXS data.
 
-![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
+![Auto](apps/ui/public/images/bilbomd-auto-schematic-openmm-dark.png)
 
 ### BilboMD AF
 
 This pipeline is designed to run Alphafold2 on your provided protein sequence and then run the Auto pipeline above.
 
-![Auto](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
+![Auto](apps/ui/public/images/bilbomd-af-schematic-openmm-dark.png)
 
 ## Test Coverage
 
@@ -50,9 +50,9 @@ Current test coverage across BilboMD apps:
 <!-- COVERAGE-TABLE:START -->
 | App | Statements | Branches | Functions | Lines |
 |-----|-----------|----------|-----------|-------|
-| Backend | 84.53% | 69.71% | 78.33% | 84.95% |
-| UI | 67.64% | 57.86% | 65.43% | 69.11% |
-| Worker | 82.52% | 70.83% | 83.09% | 82.60% |
+| Backend | 92.80% | 84.59% | 93.12% | 92.98% |
+| UI | 67.84% | 58.82% | 67.69% | 69.14% |
+| Worker | 86.71% | 73.45% | 88.05% | 86.74% |
 | Scoper | N/A | N/A | N/A | N/A |
 <!-- COVERAGE-TABLE:END -->
 
