@@ -43,7 +43,11 @@ import ConstInpFile from './ConstInpFile'
 import PAEMatrixPlot from './PAEMatrixPlot'
 import PAEMatrixPlotExplanation from './PAEMatrixPlotExplanation'
 import PLDDTPlot from './PLDDTPlot'
-import { parsePLDDTFromPDB, PLDDTData } from '../../utils/pdbUtils'
+import {
+  parsePLDDTFromPDB,
+  parsePLDDTFromCIF,
+  PLDDTData
+} from '../../utils/pdbUtils'
 
 interface FileWithDeets extends File {
   name: string
@@ -259,11 +263,15 @@ const Alphafold2PAEJiffy = () => {
 
   useEffect(() => {
     if (status === 'completed' && originalFiles.pdb_file) {
-      // Assuming you can read the PDB file content; adjust if needed
       const reader = new FileReader()
       reader.onload = (e) => {
         const content = e.target?.result as string
-        const { data, chainBoundaries } = parsePLDDTFromPDB(content)
+        const isCif = originalFiles.pdb_file!.name
+          .toLowerCase()
+          .endsWith('.cif')
+        const { data, chainBoundaries } = isCif
+          ? parsePLDDTFromCIF(content)
+          : parsePLDDTFromPDB(content)
         setPlddtData(data)
         setChainBoundaries(chainBoundaries)
       }
@@ -535,8 +543,8 @@ const Alphafold2PAEJiffy = () => {
                           setFieldTouched={setFieldTouched}
                           error={errors.pdb_file && touched.pdb_file}
                           errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                          fileType="AlphaFold2 PDB *.pdb"
-                          fileExt=".pdb"
+                          fileType="AlphaFold2 *.pdb or *.cif"
+                          fileExt=".pdb,.cif"
                           onFileChange={(file: FileWithDeets) => {
                             void setFieldValue('pdb_file', file)
                             setOriginalFiles({
