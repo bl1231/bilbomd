@@ -1,5 +1,11 @@
 # @bilbomd/eslint-config
 
+## 1.0.2
+
+### Patch Changes
+
+- ddce8b0: Upgrade ESLint peer dependency from v9 to v10.
+
 ## 1.0.1
 
 ### Patch Changes
