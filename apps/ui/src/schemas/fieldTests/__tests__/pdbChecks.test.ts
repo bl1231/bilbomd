@@ -78,4 +78,33 @@ describe('PDB validators', () => {
     )
     await expect(schema.isValid(multiModel)).resolves.toBe(false)
   })
+
+  it('singleModelCheck passes for a CIF file with one model', async () => {
+    const schema = singleModelCheck()
+    // In mmCIF, data rows are plain values (no ATOM prefix) aligned to column order
+    const cifContent = [
+      'loop_',
+      '_atom_site.id',
+      '_atom_site.auth_asym_id',
+      '_atom_site.pdbx_PDB_model_num',
+      '1 A 1',
+      '2 A 1'
+    ].join('\n')
+    const singleCif = makeFile('model.cif', cifContent)
+    await expect(schema.isValid(singleCif)).resolves.toBe(true)
+  })
+
+  it('singleModelCheck fails for a CIF file with multiple models', async () => {
+    const schema = singleModelCheck()
+    const cifContent = [
+      'loop_',
+      '_atom_site.id',
+      '_atom_site.auth_asym_id',
+      '_atom_site.pdbx_PDB_model_num',
+      '1 A 1',
+      '2 A 2'
+    ].join('\n')
+    const multiCif = makeFile('model.cif', cifContent)
+    await expect(schema.isValid(multiCif)).resolves.toBe(false)
+  })
 })

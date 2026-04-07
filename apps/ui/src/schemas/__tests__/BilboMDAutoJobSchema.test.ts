@@ -19,7 +19,8 @@ vi.mock('../ValidationFunctions', () => ({
   containsChainId: async () => true,
   cifContainsChainId: async () => true,
   noLeadingSpaceOnPDBLines: async () => true,
-  isSingleModel: async () => true
+  isSingleModel: async () => true,
+  cifIsSingleModel: async () => true
 }))
 
 const makeFile = (name: string, size = 100, content = 'x'): File => {

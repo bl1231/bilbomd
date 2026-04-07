@@ -7,6 +7,7 @@ import {
   isPsfData,
   isCRD,
   isSingleModel,
+  cifIsSingleModel,
   containsChainId,
   cifContainsChainId,
   cifHasAllowedResiduesOnly,
@@ -129,11 +130,12 @@ export const pdbLineStartCheck = () =>
 
 export const singleModelCheck = () =>
   mixed().test(
-    'pdb-single-model-check',
-    'PDB file contains multiple models (MODEL/ENDMDL records). Please provide a single-model PDB file.',
+    'single-model-check',
+    'File contains multiple models. Please provide a single-model file.',
     async (file) => {
-      if (file instanceof File) return isSingleModel(file)
-      return true
+      if (!(file instanceof File)) return true
+      const isCif = file.name.toLowerCase().endsWith('.cif')
+      return isCif ? cifIsSingleModel(file) : isSingleModel(file)
     }
   )
 
