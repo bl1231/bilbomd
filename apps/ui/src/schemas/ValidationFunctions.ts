@@ -329,6 +329,35 @@ const isRNA = (file: File): Promise<{ valid: boolean; message?: string }> => {
   })
 }
 
+const isSingleModel = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+
+      let modelCount = 0
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith('MODEL')) {
+          modelCount++
+          if (modelCount > 1) {
+            resolve(false)
+            return
+          }
+        }
+      }
+
+      resolve(true)
+    }
+
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
 const isValidConstInpFile = (
   file: File,
   mode: string
@@ -411,6 +440,7 @@ export {
   noSpaces,
   isSaxsData,
   isRNA,
+  isSingleModel,
   containsChainId,
   noLeadingSpaceOnPDBLines,
   isValidConstInpFile,

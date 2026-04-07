@@ -13,7 +13,8 @@ vi.mock('../ValidationFunctions', () => ({
   isPsfData: async () => true,
   isCRD: async () => true,
   containsChainId: async () => true,
-  noLeadingSpaceOnPDBLines: async () => true
+  noLeadingSpaceOnPDBLines: async () => true,
+  isSingleModel: async () => true
 }))
 
 const makeFile = (name: string, size = 100, content = 'x'): File => {

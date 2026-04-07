@@ -41,6 +41,7 @@ vi.mock('../fieldTests/fieldTests', () => ({
   pdbCheck: () => mixed(),
   chainIdCheck: () => mixed(),
   pdbLineStartCheck: () => mixed(),
+  singleModelCheck: () => mixed(),
   constInpCheck: () => mixed()
 }))
 

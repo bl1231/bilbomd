@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { chainIdCheck, pdbLineStartCheck } from '../fieldTests'
+import { chainIdCheck, pdbLineStartCheck, singleModelCheck } from '../fieldTests'
 
 const makeFile = (name: string, content: string, type = 'text/plain') => {
   const blob = new Blob([content], { type })
@@ -50,5 +50,32 @@ describe('PDB validators', () => {
       ' ATOM      1  N   MET A   1\nEND\n'
     )
     await expect(schema.isValid(invalidPdb)).resolves.toBe(false)
+  })
+
+  it('singleModelCheck passes when no MODEL records present', async () => {
+    const schema = singleModelCheck()
+    const singleModel = makeFile(
+      'model.pdb',
+      'ATOM      1  N   MET A   1       1.000   2.000   3.000\nEND\n'
+    )
+    await expect(schema.isValid(singleModel)).resolves.toBe(true)
+  })
+
+  it('singleModelCheck passes when exactly one MODEL record present', async () => {
+    const schema = singleModelCheck()
+    const singleModel = makeFile(
+      'model.pdb',
+      'MODEL        1\nATOM      1  N   MET A   1       1.000   2.000   3.000\nENDMDL\nEND\n'
+    )
+    await expect(schema.isValid(singleModel)).resolves.toBe(true)
+  })
+
+  it('singleModelCheck fails when multiple MODEL records present', async () => {
+    const schema = singleModelCheck()
+    const multiModel = makeFile(
+      'model.pdb',
+      'MODEL        1\nATOM      1  N   MET A   1       1.000   2.000   3.000\nENDMDL\nMODEL        2\nATOM      1  N   MET A   1       4.000   5.000   6.000\nENDMDL\nEND\n'
+    )
+    await expect(schema.isValid(multiModel)).resolves.toBe(false)
   })
 })

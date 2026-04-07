@@ -6,6 +6,7 @@ import {
   hasAllowedResiduesOnly,
   isPsfData,
   isCRD,
+  isSingleModel,
   containsChainId,
   noLeadingSpaceOnPDBLines
 } from '../ValidationFunctions'
@@ -120,6 +121,16 @@ export const pdbLineStartCheck = () =>
     'PDB file contains lines with invalid leading spaces (e.g., " ATOM" instead of "ATOM")',
     async (file) => {
       if (file instanceof File) return noLeadingSpaceOnPDBLines(file)
+      return true
+    }
+  )
+
+export const singleModelCheck = () =>
+  mixed().test(
+    'pdb-single-model-check',
+    'PDB file contains multiple models (MODEL/ENDMDL records). Please provide a single-model PDB file.',
+    async (file) => {
+      if (file instanceof File) return isSingleModel(file)
       return true
     }
   )
