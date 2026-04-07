@@ -314,7 +314,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 name="pdb_inputs"
                               />
                             }
-                            label="PDB file"
+                            label="PDB or CIF file"
                           />
                           <FormControlLabel
                             disabled={!charmmEnabled}
@@ -572,8 +572,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               errorMessage={
                                 errors.pdb_file ? errors.pdb_file : ''
                               }
-                              fileType=" *.pdb"
-                              fileExt=".pdb"
+                              fileType=" *.pdb or *.cif"
+                              fileExt=".pdb,.cif"
                               existingFileName={
                                 useExampleData ? 'example.pdb' : undefined
                               }
@@ -626,7 +626,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           <b>segid</b>) and residue numbering in your{' '}
                           <b>const.inp</b> are consistent with your{' '}
                           <b>
-                            {values.bilbomd_mode === 'pdb' ? `*.pdb` : `*.crd`}
+                            {values.bilbomd_mode === 'pdb'
+                              ? `*.pdb / *.cif`
+                              : `*.crd`}
                           </b>{' '}
                           file.
                           {values.bilbomd_mode === 'pdb' ? (

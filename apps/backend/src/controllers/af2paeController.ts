@@ -13,7 +13,7 @@ const uploadFolder = getEnvVar('DATA_VOL')
 // New helper function: Adapted from spawnPaeToConst in the worker app.
 // Directly spawns pae2const.py with --pdb_file (no CRD needed).
 const spawnPaeToConstDirect = async (params: {
-  in_pdb: string
+  in_structure: string
   in_pae: string
   out_dir: string
   pae_power?: number
@@ -32,8 +32,10 @@ const spawnPaeToConstDirect = async (params: {
   const pythonBin = '/miniforge3/bin/python'
   const af2paeScript = '/app/scripts/pae2const.py'
 
-  // Build args: pae_file is positional, then --pdb_file
-  const args = [af2paeScript, params.in_pae, '--pdb_file', params.in_pdb]
+  // Build args: pae_file is positional, then structure file flag
+  const isCif = params.in_structure.toLowerCase().endsWith('.cif')
+  const structureFlag = isCif ? '--cif_file' : '--pdb_file'
+  const args = [af2paeScript, params.in_pae, structureFlag, params.in_structure]
   if (params.plddt_cutoff !== undefined) {
     args.push('--plddt_cutoff', String(params.plddt_cutoff))
   }
@@ -154,7 +156,7 @@ const createNewConstFile = async (req: Request, res: Response) => {
 
         // Directly run PAE to const conversion
         await spawnPaeToConstDirect({
-          in_pdb: pdbFilePath,
+          in_structure: pdbFilePath,
           in_pae: paeFilePath,
           out_dir: jobDir,
           plddt_cutoff: plddt_cutoff ? parseFloat(plddt_cutoff) : undefined,

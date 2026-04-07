@@ -8,10 +8,11 @@ import {
   saxsCheck,
   psfCheck,
   crdCheck,
-  pdbCheck,
-  chainIdCheck,
   pdbLineStartCheck,
-  constInpCheck
+  constInpCheck,
+  pdbOrCifExtTest,
+  pdbOrCifChainIdCheck,
+  pdbOrCifResidueCheck
 } from './fieldTests/fieldTests'
 
 const BilboMDClassicJobSchema = object().shape({
@@ -49,14 +50,14 @@ const BilboMDClassicJobSchema = object().shape({
   pdb_file: mixed().when('bilbomd_mode', {
     is: 'pdb',
     then: () =>
-      requiredFile('A PDB file is required')
-        .concat(chainIdCheck())
-        .concat(fileExtTest('pdb'))
+      requiredFile('A PDB or CIF file is required')
+        .concat(pdbOrCifChainIdCheck())
+        .concat(pdbOrCifExtTest())
         .concat(fileSizeTest(10_000_000))
         .concat(noSpacesTest())
         .concat(fileNameLengthTest())
         .concat(pdbLineStartCheck())
-        .concat(pdbCheck()),
+        .concat(pdbOrCifResidueCheck()),
     otherwise: () => mixed().notRequired()
   }),
   inp_file: mixed()

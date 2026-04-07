@@ -10,9 +10,14 @@ vi.mock('../ValidationFunctions', () => ({
     valid: true,
     unsupportedResidues: []
   }),
+  cifHasAllowedResiduesOnly: async () => ({
+    valid: true,
+    unsupportedResidues: []
+  }),
   isPsfData: async () => true,
   isCRD: async () => true,
   containsChainId: async () => true,
+  cifContainsChainId: async () => true,
   noLeadingSpaceOnPDBLines: async () => true
 }))
 
