@@ -9,7 +9,8 @@ import {
   jsonFileCheck,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
-  pdbOrCifResidueCheck
+  pdbOrCifResidueCheck,
+  singleModelCheck
 } from './fieldTests/fieldTests'
 
 const BilboMDAutoJobSchema = object().shape({
@@ -23,6 +24,7 @@ const BilboMDAutoJobSchema = object().shape({
     .matches(/^[\w\s-]+$/, 'no spaces or special characters allowed'),
   pdb_file: requiredFile('A PDB or CIF file is required')
     .concat(pdbOrCifChainIdCheck())
+    .concat(singleModelCheck())
     .concat(pdbOrCifResidueCheck())
     .concat(pdbOrCifExtTest())
     .concat(fileSizeTest(10_000_000))

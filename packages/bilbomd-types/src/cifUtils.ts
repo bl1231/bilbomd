@@ -84,6 +84,24 @@ export const cifContainsChainId = (parsed: CifAtomSiteParsed): boolean => {
 }
 
 /**
+ * Returns true if the parsed _atom_site block contains only one unique
+ * pdbx_PDB_model_num value (or if the column is absent, implying a single model).
+ */
+export const cifIsSingleModel = (parsed: CifAtomSiteParsed): boolean => {
+  const idx = parsed.columnNames.indexOf('pdbx_PDB_model_num')
+  if (idx === -1) return true // no model column → single model
+  const seen = new Set<string>()
+  for (const row of parsed.dataRows) {
+    const val = row[idx]
+    if (val && val !== '.' && val !== '?') {
+      seen.add(val)
+      if (seen.size > 1) return false
+    }
+  }
+  return true
+}
+
+/**
  * Checks every unique residue name in the _atom_site block against
  * SUPPORTED_PDB_RESIDUES. Returns valid: true if all residues are supported,
  * or valid: false with the list of unsupported residue names.

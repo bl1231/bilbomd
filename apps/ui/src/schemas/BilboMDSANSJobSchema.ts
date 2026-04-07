@@ -1,5 +1,5 @@
 import { mixed, object, string, number, TestContext } from 'yup'
-import { noSpaces, isSaxsData } from './ValidationFunctions'
+import { noSpaces, isSaxsData, isSingleModel } from './ValidationFunctions'
 
 // const isAminoAcidSequence = (sequence: string) => {
 //   const aminoAcidRegex = /^[ACDEFGHIKLMNPQRSTVWY]+$/i
@@ -54,6 +54,14 @@ const BilboMDSANSJobSchema = object().shape({
         if (file && (file as File).name.length <= 30) {
           return true
         }
+        return false
+      }
+    )
+    .test(
+      'pdb-single-model-check',
+      'PDB file contains multiple models (MODEL/ENDMDL records). Please provide a single-model PDB file.',
+      async (file) => {
+        if (file) return isSingleModel(file as File)
         return false
       }
     ),

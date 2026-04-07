@@ -4,7 +4,8 @@ import * as ValidationFunctions from '../ValidationFunctions'
 
 vi.mock('../ValidationFunctions', () => ({
   noSpaces: vi.fn().mockResolvedValue(true),
-  isSaxsData: vi.fn().mockResolvedValue({ valid: true })
+  isSaxsData: vi.fn().mockResolvedValue({ valid: true }),
+  isSingleModel: vi.fn().mockResolvedValue(true)
 }))
 
 const makeFile = (name: string, size = 100): File => {

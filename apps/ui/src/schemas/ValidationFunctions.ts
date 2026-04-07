@@ -2,7 +2,8 @@ import {
   SUPPORTED_PDB_RESIDUES,
   parseCifAtomSite,
   cifContainsChainId as cifContainsChainIdUtil,
-  cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil
+  cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
+  cifIsSingleModel as cifIsSingleModelUtil
 } from '@bilbomd/bilbomd-types'
 
 const hasAllowedResiduesOnly = (
@@ -334,6 +335,35 @@ const isRNA = (file: File): Promise<{ valid: boolean; message?: string }> => {
   })
 }
 
+const isSingleModel = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+
+      let modelCount = 0
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith('MODEL')) {
+          modelCount++
+          if (modelCount > 1) {
+            resolve(false)
+            return
+          }
+        }
+      }
+
+      resolve(true)
+    }
+
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
 const isValidConstInpFile = (
   file: File,
   mode: string
@@ -452,6 +482,27 @@ const cifHasAllowedResiduesOnly = (
   })
 }
 
+const cifIsSingleModel = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const parsed = parseCifAtomSite(text)
+      if (!parsed) {
+        resolve(true) // no _atom_site block — let other checks catch it
+        return
+      }
+      resolve(cifIsSingleModelUtil(parsed))
+    }
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
 export {
   fromCharmmGui,
   isCRD,
@@ -459,6 +510,8 @@ export {
   noSpaces,
   isSaxsData,
   isRNA,
+  isSingleModel,
+  cifIsSingleModel,
   containsChainId,
   cifContainsChainId,
   cifHasAllowedResiduesOnly,

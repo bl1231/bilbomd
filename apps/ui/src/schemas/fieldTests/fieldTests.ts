@@ -6,6 +6,8 @@ import {
   hasAllowedResiduesOnly,
   isPsfData,
   isCRD,
+  isSingleModel,
+  cifIsSingleModel,
   containsChainId,
   cifContainsChainId,
   cifHasAllowedResiduesOnly,
@@ -123,6 +125,17 @@ export const pdbLineStartCheck = () =>
     async (file) => {
       if (file instanceof File) return noLeadingSpaceOnPDBLines(file)
       return true
+    }
+  )
+
+export const singleModelCheck = () =>
+  mixed().test(
+    'single-model-check',
+    'File contains multiple models. Please provide a single-model file.',
+    async (file) => {
+      if (!(file instanceof File)) return true
+      const isCif = file.name.toLowerCase().endsWith('.cif')
+      return isCif ? cifIsSingleModel(file) : isSingleModel(file)
     }
   )
 
