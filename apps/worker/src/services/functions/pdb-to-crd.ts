@@ -155,4 +155,61 @@ const spawnPdb2CrdCharmm = (
   return Promise.all(promises)
 }
 
-export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm }
+interface CifToPdbData {
+  uuid: string
+  pdb_file: string
+}
+
+/**
+ * Convert an mmCIF file to PDB format using biopython.
+ * Returns the basename of the output PDB file (the .cif extension replaced with .pdb).
+ */
+const runCifToPdb = (data: CifToPdbData): Promise<string> => {
+  const workingDir = path.join(uploadFolder, data.uuid)
+  const inputCif = path.join(workingDir, data.pdb_file)
+  const outputPdbName = data.pdb_file.replace(/\.cif$/i, '.pdb')
+  const outputPdb = path.join(workingDir, outputPdbName)
+  const logFile = path.join(workingDir, 'cif_to_pdb.log')
+  const errorFile = path.join(workingDir, 'cif_to_pdb_error.log')
+  const logStream = fs.createWriteStream(logFile)
+  const errorStream = fs.createWriteStream(errorFile)
+  const script = '/app/scripts/cif_to_pdb.py'
+  const args = [script, inputCif, outputPdb]
+
+  logger.info(`runCifToPdb: converting ${data.pdb_file} -> ${outputPdbName}`)
+
+  return new Promise<string>((resolve, reject) => {
+    const proc = spawn('/opt/envs/base/bin/python', args, { cwd: workingDir })
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      logStream.write(chunk.toString())
+    })
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      const msg = chunk.toString().trim()
+      logger.error(`runCifToPdb stderr: ${msg}`)
+      errorStream.write(msg + '\n')
+    })
+
+    proc.on('error', (error) => {
+      logger.error(`runCifToPdb spawn error: ${error}`)
+      reject(error)
+    })
+
+    proc.on('close', (code) => {
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).then(() => {
+        if (code === 0) {
+          logger.info(`runCifToPdb succeeded: ${outputPdbName}`)
+          resolve(outputPdbName)
+        } else {
+          reject(new Error(`cif_to_pdb.py exited with code ${code}`))
+        }
+      }).catch(reject)
+    })
+  })
+}
+
+export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runCifToPdb }

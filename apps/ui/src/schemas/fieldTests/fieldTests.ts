@@ -8,6 +8,8 @@ import {
   isCRD,
   isSingleModel,
   containsChainId,
+  cifContainsChainId,
+  cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines
 } from '../ValidationFunctions'
 
@@ -164,3 +166,40 @@ export const jsonFileCheck = () =>
       return typeof file === 'string' // allow reuse of existing string
     }
   )
+
+export const pdbOrCifExtTest = () =>
+  mixed().test(
+    'file-type-check',
+    'Only accepts a *.pdb or *.cif file.',
+    (file) => {
+      if (file instanceof File) {
+        const ext = file.name.split('.').pop()?.toLowerCase()
+        return ext === 'pdb' || ext === 'cif'
+      }
+      return typeof file === 'string'
+    }
+  )
+
+export const pdbOrCifChainIdCheck = () =>
+  mixed().test(
+    'pdb-or-cif-chainid-check',
+    'Missing Chain ID',
+    async (file) => {
+      if (!(file instanceof File)) return true
+      const isCif = file.name.toLowerCase().endsWith('.cif')
+      return isCif ? cifContainsChainId(file) : containsChainId(file)
+    }
+  )
+
+export const pdbOrCifResidueCheck = () =>
+  mixed().test('pdb-or-cif-residue-check', '', async function (file) {
+    if (!(file instanceof File)) return true
+    const isCif = file.name.toLowerCase().endsWith('.cif')
+    const result = isCif
+      ? await cifHasAllowedResiduesOnly(file)
+      : await hasAllowedResiduesOnly(file)
+    if (result.valid) return true
+    return this.createError({
+      message: `Unsupported residues found: ${result.unsupportedResidues.join(', ')} Please ask Scott to add them to the list of supported residues.`
+    })
+  })

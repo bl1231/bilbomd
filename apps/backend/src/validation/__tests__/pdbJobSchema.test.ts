@@ -11,7 +11,10 @@ vi.mock('../helpers/fileValidators.js', () => ({
   saxsCheck: () => mixed(),
   constInpCheck: () => mixed(),
   chainIdCheck: () => mixed(),
-  pdbResidueCheck: () => mixed()
+  pdbResidueCheck: () => mixed(),
+  pdbOrCifExtTest: () => mixed(),
+  pdbOrCifChainIdCheck: () => mixed(),
+  pdbOrCifResidueCheck: () => mixed()
 }))
 
 import { pdbJobSchema } from '../pdbJobSchema.js'
@@ -134,6 +137,9 @@ describe('pdbJobSchema - required files', () => {
     ).resolves.toBeDefined()
     await expect(
       pdbJobSchema.validateAt('pdb_file', { pdb_file: multerFile('model.pdb') })
+    ).resolves.toBeDefined()
+    await expect(
+      pdbJobSchema.validateAt('pdb_file', { pdb_file: multerFile('model.cif') })
     ).resolves.toBeDefined()
   })
 })
