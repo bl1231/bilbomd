@@ -4,32 +4,61 @@ import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
 import {
   IBilboMDPDBJob,
-  IUser,
   JobStatus,
   StepStatus,
   BilboMdPDBJob,
   BilboMdCRDJob,
-  IBilboMDSteps
+  IBilboMDSteps,
+  IUser
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
-import { writeJobParams, sanitizeConstInpFile, getFileStats } from './utils/jobUtils.js'
+import {
+  writeJobParams,
+  sanitizeConstInpFile,
+  getFileStats
+} from './utils/jobUtils.js'
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { pdbJobSchema } from '../../validation/index.js'
+import {
+  convertInpToYaml,
+  convertYamlToInp,
+  validateYamlConstraints,
+  validateInpConstraints,
+  extractConstraintsFromYaml
+} from '@bilbomd/md-utils'
+import { buildOpenMMParameters } from './utils/openmmParams.js'
+import { buildCHARMMParameters } from './utils/charmmParams.js'
+import { config } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = config.uploadDir
 
-const handleBilboMDClassicPDB = async (req: Request, res: Response, user: IUser, UUID: string) => {
+const handleBilboMDClassicPDB = async (
+  req: Request,
+  res: Response,
+  user: IUser | undefined,
+  UUID: string,
+  ctx: {
+    accessMode: 'user' | 'anonymous'
+    publicId?: string
+    client_ip_hash?: string
+  }
+) => {
   try {
-    const isResubmission = Boolean(req.body.resubmit === true || req.body.resubmit === 'true')
+    const isResubmission = Boolean(
+      req.body.resubmit === true || req.body.resubmit === 'true'
+    )
     const originalJobId = req.body.original_job_id || null
-    logger.info(`isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`)
+    logger.info(
+      `isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`
+    )
 
     const { bilbomd_mode: bilbomdMode } = req.body
 
     // Normalize md_engine (default to 'charmm' if not provided/unknown)
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-    const md_engine: 'CHARMM' | 'OpenMM' = mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+    const md_engine: 'CHARMM' | 'OpenMM' =
+      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
     logger.info(`Selected md_engine: ${md_engine}`)
 
     let { rg, rg_min, rg_max } = req.body
@@ -59,13 +88,24 @@ const handleBilboMDClassicPDB = async (req: Request, res: Response, user: IUser,
       datFileName = originalJob.data_file
       pdbFileName = originalJob.pdb_file
 
-      await fs.copy(path.join(originalDir, inpFileName), path.join(jobDir, inpFileName))
-      await fs.copy(path.join(originalDir, datFileName), path.join(jobDir, datFileName))
-      await fs.copy(path.join(originalDir, pdbFileName), path.join(jobDir, pdbFileName))
+      await fs.copy(
+        path.join(originalDir, inpFileName),
+        path.join(jobDir, inpFileName)
+      )
+      await fs.copy(
+        path.join(originalDir, datFileName),
+        path.join(jobDir, datFileName)
+      )
+      await fs.copy(
+        path.join(originalDir, pdbFileName),
+        path.join(jobDir, pdbFileName)
+      )
+
       logger.info(
         `Resubmission: Copied files from original job ${originalJobId} to new job ${UUID}`
       )
-      // Need to construct this synthetic Multer File object to appease validation functions.
+
+      // Need to construct synthetic Multer File objects
       datFile = {
         originalname: datFileName,
         path: path.join(jobDir, datFileName),
@@ -86,17 +126,37 @@ const handleBilboMDClassicPDB = async (req: Request, res: Response, user: IUser,
     } else {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] }
       pdbFile = files['pdb_file']?.[0]
-      inpFile = files['inp_file']?.[0]
+      inpFile = files['inp_file']?.[0] || files['omm_const_file']?.[0] // Accept either file type
       datFile = files['dat_file']?.[0]
+
+      // Handle example data files if no uploaded files
+      if (!pdbFile && req.body.pdb_file) {
+        pdbFile = {
+          originalname: req.body.pdb_file,
+          path: path.join(jobDir, req.body.pdb_file),
+          size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
+        } as Express.Multer.File
+      }
+      if (!inpFile && req.body.inp_file) {
+        inpFile = {
+          originalname: req.body.inp_file,
+          path: path.join(jobDir, req.body.inp_file),
+          size: getFileStats(path.join(jobDir, req.body.inp_file)).size
+        } as Express.Multer.File
+      }
+      if (!datFile && req.body.dat_file) {
+        datFile = {
+          originalname: req.body.dat_file,
+          path: path.join(jobDir, req.body.dat_file),
+          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+        } as Express.Multer.File
+      }
+
       pdbFileName = pdbFile?.originalname.toLowerCase()
       inpFileName = inpFile?.originalname.toLowerCase()
       datFileName = datFile?.originalname.toLowerCase()
-
-      const constInpFilePath = path.join(jobDir, inpFileName)
-      const constInpOrigFilePath = path.join(jobDir, `${inpFileName}.orig`)
-      await fs.copyFile(constInpFilePath, constInpOrigFilePath)
-      await sanitizeConstInpFile(constInpFilePath)
     }
+
     // Calculate rg values if not provided
     const resolvedRgValues = await maybeAutoCalculateRg(
       { rg, rg_min, rg_max },
@@ -109,11 +169,6 @@ const handleBilboMDClassicPDB = async (req: Request, res: Response, user: IUser,
     rg_min = resolvedRgValues.rg_min
     rg_max = resolvedRgValues.rg_max
 
-    // Debugging info
-    logger.info(
-      `pdbFileName: ${pdbFileName}, constInpFile: ${inpFileName}, datFileName: ${datFileName}`
-    )
-
     // Collect data for validation
     const jobPayload = {
       title: req.body.title,
@@ -124,11 +179,11 @@ const handleBilboMDClassicPDB = async (req: Request, res: Response, user: IUser,
       pdb_file: pdbFile,
       rg,
       rg_min,
-      rg_max
+      rg_max,
+      md_engine
     }
-    // logger.info(`Job payload for validation: ${JSON.stringify(jobPayload)}`)
 
-    // Validate
+    // Validate FIRST (before processing constraint files)
     try {
       await pdbJobSchema.validate(jobPayload, { abortEarly: false })
     } catch (validationErr) {
@@ -146,32 +201,53 @@ const handleBilboMDClassicPDB = async (req: Request, res: Response, user: IUser,
       }
     }
 
-    // Build default steps, allow minor tweaks based on md_engine
-    const stepsInit: IBilboMDSteps = {
-      pdb2crd: { status: StepStatus.Waiting, message: '' },
-      minimize: { status: StepStatus.Waiting, message: '' },
-      initfoxs: { status: StepStatus.Waiting, message: '' },
-      heat: { status: StepStatus.Waiting, message: '' },
-      md: { status: StepStatus.Waiting, message: '' },
-      dcd2pdb: { status: StepStatus.Waiting, message: '' },
-      pdb_remediate: { status: StepStatus.Waiting, message: '' },
-      foxs: { status: StepStatus.Waiting, message: '' },
-      multifoxs: { status: StepStatus.Waiting, message: '' },
-      results: { status: StepStatus.Waiting, message: '' },
-      email: { status: StepStatus.Waiting, message: '' }
-    } as const
+    // Handle constraint file processing AFTER validation
+    if (!isResubmission && inpFile) {
+      const standardizedFileName = await processConstraintFile({
+        md_engine,
+        jobDir,
+        inpFile,
+        inpFileName
+      })
+      // Update inpFileName to reflect the standardized output filename
+      inpFileName = standardizedFileName
+    }
 
-    // If using OpenMM, note that pdb2crd is not needed and will be skipped downstream.
-    const stepsAdjusted = {
-      ...stepsInit,
-      pdb2crd: {
-        ...stepsInit.pdb2crd,
-        message: md_engine === 'OpenMM' ? 'Skipped for OpenMM md_engine' : ''
+    let stepsInit: IBilboMDSteps
+
+    if (md_engine === 'OpenMM') {
+      stepsInit = {
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
+      }
+    } else {
+      stepsInit = {
+        pdb2crd: { status: StepStatus.Waiting, message: '' },
+        minimize: { status: StepStatus.Waiting, message: '' },
+        initfoxs: { status: StepStatus.Waiting, message: '' },
+        heat: { status: StepStatus.Waiting, message: '' },
+        md: { status: StepStatus.Waiting, message: '' },
+        dcd2pdb: { status: StepStatus.Waiting, message: '' },
+        pdb_remediate: { status: StepStatus.Waiting, message: '' },
+        foxs: { status: StepStatus.Waiting, message: '' },
+        multifoxs: { status: StepStatus.Waiting, message: '' },
+        results: { status: StepStatus.Waiting, message: '' },
+        ...(ctx.accessMode === 'user' && {
+          email: { status: StepStatus.Waiting, message: '' }
+        })
       }
     }
 
     // Initialize BilboMdPDBJob Job Data
-    const newJob: IBilboMDPDBJob = new BilboMdPDBJob({
+    const jobData = {
       title: req.body.title,
       uuid: UUID,
       status: JobStatus.Submitted,
@@ -183,43 +259,128 @@ const handleBilboMDClassicPDB = async (req: Request, res: Response, user: IUser,
       rg_min,
       rg_max,
       time_submitted: new Date(),
-      user,
       progress: 0,
       cleanup_in_progress: false,
-      steps: stepsAdjusted,
+      steps: stepsInit,
       md_engine,
-      ...(isResubmission && originalJobId ? { resubmitted_from: originalJobId } : {})
-    })
+      ...(md_engine === 'OpenMM' && {
+        openmm_parameters: buildOpenMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
+      }),
+      ...(md_engine === 'CHARMM' && {
+        charmm_parameters: buildCHARMMParameters({
+          ...req.body,
+          rg_min,
+          rg_max
+        })
+      }),
+      ...(isResubmission && originalJobId
+        ? { resubmitted_from: originalJobId }
+        : {}),
+      access_mode: ctx.accessMode,
+      ...(user ? { user } : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { public_id: ctx.publicId }
+        : {}),
+      ...(ctx.accessMode === 'anonymous' && ctx.publicId
+        ? { client_ip_hash: ctx.client_ip_hash }
+        : {})
+    }
+
+    const newJob: IBilboMDPDBJob = new BilboMdPDBJob(jobData)
 
     // Save the job to the database
     await newJob.save()
-    logger.info(`BilboMD-${bilbomdMode} Job saved to MongoDB: ${newJob.id}`)
+    logger.info(
+      `BilboMD-${bilbomdMode} Job saved to MongoDB: ${newJob._id.toString()}`
+    )
+
+    // Store MD constraints in MongoDB if constraint file was processed
+    if (!isResubmission && inpFile) {
+      try {
+        const constraintFilePath = path.join(jobDir, inpFileName)
+        const isYamlConstraint = inpFileName.endsWith('.yml')
+
+        let yamlContent: string
+        if (isYamlConstraint) {
+          // Read and validate YAML constraint file
+          await validateYamlConstraints(constraintFilePath)
+          yamlContent = await fs.readFile(constraintFilePath, 'utf8')
+        } else {
+          // Convert INP to YAML for consistent storage
+          await validateInpConstraints(constraintFilePath)
+          yamlContent = await convertInpToYaml(constraintFilePath, logger)
+        }
+
+        // Parse YAML content to structured object
+        const mdConstraints = extractConstraintsFromYaml(yamlContent)
+
+        // Update the job with MD constraints
+        newJob.md_constraints = mdConstraints
+        await newJob.save()
+        logger.info(
+          `MD constraints stored in MongoDB for job ${newJob._id.toString()}`
+        )
+      } catch (constraintError) {
+        logger.warn(
+          `Failed to store MD constraints for job ${newJob._id.toString()}:`,
+          constraintError
+        )
+        // Don't fail the job creation if constraint storage fails
+      }
+    }
 
     // Write Job params for use by NERSC job script.
-    await writeJobParams(newJob.id)
+    await writeJobParams(newJob._id.toString())
 
     // Create BullMQ Job object
-    const jobData = {
+    const jobDataForQueue = {
       type: bilbomdMode,
       title: newJob.title,
       uuid: newJob.uuid,
-      jobid: newJob.id,
+      jobid: newJob._id.toString(),
       md_engine
     }
 
     // Queue the job
-    const BullId = await queueJob(jobData)
+    const BullId = await queueJob(jobDataForQueue)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 
     // Respond with job details
-    res.status(200).json({
-      message: `New ${bilbomdMode} Job successfully created`,
-      jobid: newJob.id,
-      uuid: newJob.uuid,
-      md_engine
-    })
+    if (ctx.accessMode === 'anonymous') {
+      // Prefer an explicit public/frontend base URL, then the Origin header (e.g. http://localhost:3002),
+      // and only fall back to the backend host as a last resort.
+      const origin = req.get('origin')
+      const baseUrl =
+        process.env.PUBLIC_BASE_URL ||
+        origin ||
+        `${req.protocol}://${req.get('host')}`
+
+      const resultPath = `/results/${ctx.publicId}`
+      const resultUrl = `${baseUrl}${resultPath}`
+
+      res.status(200).json({
+        message: `New BilboMD Classic w/PDB Job successfully created`,
+        jobid: newJob._id.toString(),
+        uuid: newJob.uuid,
+        md_engine,
+        publicId: ctx.publicId,
+        resultUrl,
+        resultPath
+      })
+    } else {
+      res.status(200).json({
+        message: `New BilboMD Classic w/PDB Job successfully created`,
+        jobid: newJob._id.toString(),
+        uuid: newJob.uuid,
+        md_engine
+      })
+    }
   } catch (error) {
     const msg =
       error instanceof Error
@@ -231,6 +392,82 @@ const handleBilboMDClassicPDB = async (req: Request, res: Response, user: IUser,
     logger.error('handleBilboMDClassicPDB error:', error)
     res.status(500).json({ message: msg })
   }
+}
+
+// Helper function to process constraint files based on MD engine
+async function processConstraintFile({
+  md_engine,
+  jobDir,
+  inpFile,
+  inpFileName
+}: {
+  md_engine: 'CHARMM' | 'OpenMM'
+  jobDir: string
+  inpFile: Express.Multer.File
+  inpFileName: string
+}): Promise<string> {
+  const filePath = inpFile.path // Use the actual uploaded file path
+
+  // Determine standardized output filename based on MD engine
+  const standardizedFileName =
+    md_engine === 'OpenMM' ? 'openmm_const.yml' : 'const.inp'
+  const finalPath = path.join(jobDir, standardizedFileName)
+  const originalFilePath = path.join(jobDir, `${inpFileName}.orig`)
+
+  // Always keep original - copy from uploaded location with original name + .orig extension
+  await fs.copyFile(filePath, originalFilePath)
+
+  // Determine file type by extension or content
+  const isYamlFile =
+    inpFileName.endsWith('.yaml') || inpFileName.endsWith('.yml')
+
+  if (md_engine === 'OpenMM') {
+    if (!isYamlFile) {
+      // Convert CHARMM INP to YAML for OpenMM
+      logger.info('Converting INP file to YAML for OpenMM')
+      await validateInpConstraints(filePath)
+      const yamlContent = await convertInpToYaml(filePath, logger)
+
+      // Write YAML content to standardized filename
+      await fs.writeFile(finalPath, yamlContent)
+      logger.info(
+        `INP file converted to YAML for OpenMM: ${standardizedFileName}`
+      )
+    } else {
+      // Validate YAML file and copy to standardized filename
+      logger.info('Validating YAML constraints file for OpenMM')
+      await validateYamlConstraints(filePath)
+      await fs.copyFile(filePath, finalPath)
+      logger.info(
+        `YAML constraints file validated for OpenMM: ${standardizedFileName}`
+      )
+    }
+  } else if (md_engine === 'CHARMM') {
+    if (isYamlFile) {
+      // Convert YAML to INP for CHARMM
+      logger.info('Converting YAML file to INP for CHARMM')
+      await validateYamlConstraints(filePath)
+      const inpContent = await convertYamlToInp(filePath)
+
+      // Write INP content to standardized filename
+      await fs.writeFile(finalPath, inpContent)
+      await sanitizeConstInpFile(finalPath)
+      logger.info(
+        `YAML file converted to INP for CHARMM: ${standardizedFileName}`
+      )
+    } else {
+      // Process INP file for CHARMM
+      logger.info('Processing INP file for CHARMM')
+      await validateInpConstraints(filePath)
+
+      // Copy to standardized filename and then sanitize
+      await fs.copyFile(filePath, finalPath)
+      await sanitizeConstInpFile(finalPath)
+      logger.info(`INP file processed for CHARMM: ${standardizedFileName}`)
+    }
+  }
+
+  return standardizedFileName
 }
 
 export { handleBilboMDClassicPDB }

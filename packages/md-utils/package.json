@@ -1,0 +1,41 @@
+{
+  "name": "@bilbomd/md-utils",
+  "version": "1.1.4",
+  "description": "Molecular dynamics constraint utilities for BilboMD",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "homepage": "https://bilbomd.bl1231.als.lbl.gov",
+  "author": {
+    "name": "Scott Classen",
+    "email": "sclassen@lbl.gov"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest --run --coverage",
+    "lint": "eslint"
+  },
+  "keywords": [
+    "molecular-dynamics",
+    "constraints",
+    "charmm",
+    "openmm"
+  ],
+  "dependencies": {
+    "@bilbomd/mongodb-schema": "workspace:*",
+    "fs-extra": "^11.3.4",
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@bilbomd/eslint-config": "workspace:*",
+    "@types/fs-extra": "^11.0.4",
+    "@vitest/coverage-v8": "^4.1.2",
+    "eslint": "^10.2.0",
+    "typescript": "^6.0.2",
+    "uuid": "^13.0.0",
+    "vitest": "^4.1.2"
+  }
+}

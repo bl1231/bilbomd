@@ -4,9 +4,8 @@ FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Pick the OpenMM version and install prefix at build-time
-# ARG OPENMM_VERSION=8.1.2
-ARG OPENMM_BRANCH=main
-ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_BRANCH}
+ARG OPENMM_TAG=8.4.0
+ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_TAG}
 
 # Basic build deps + SWIG for Python wrappers + Python headers
 RUN apt-get update && \
@@ -27,7 +26,11 @@ ENV PATH=/miniforge3/bin:${PATH}
 RUN conda clean -a -y
 
 RUN conda update -y -n base -c defaults conda && \
-    conda create -y -n openmm python=3.12 numpy doxygen pip cython && \
+    conda create -y -n openmm python=3.12 \
+    numpy \
+    doxygen \
+    cython \
+    pyyaml && \
     conda clean -afy
 
 # Ensure the env is first on PATH for CMake to find the intended Python
@@ -37,6 +40,7 @@ ENV PATH=/miniforge3/envs/openmm/bin:/miniforge3/bin:${PATH}
 WORKDIR /tmp
 RUN git clone https://github.com/openmm/openmm.git && \
     cd openmm && \
+    git checkout ${OPENMM_TAG} && \
     mkdir build && cd build && \
     cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
@@ -57,15 +61,11 @@ RUN git clone https://github.com/openmm/pdbfixer.git && \
     cd pdbfixer && \
     python setup.py install
 
-# --- Install other Python packages ---
-RUN conda install -y -n openmm pyyaml && \
-    conda clean -afy
-
 # --- Runtime stage: slim image with CUDA runtime + OpenMM + conda env ---
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
-ARG OPENMM_BRANCH=main
-ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_BRANCH}
+ARG OPENMM_TAG=8.4.0
+ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_TAG}
 
 # Copy the conda env and the compiled OpenMM install from the builder
 COPY --from=builder /miniforge3 /miniforge3
@@ -82,7 +82,9 @@ ENV LD_LIBRARY_PATH=${OPENMM_PREFIX}/lib:${LD_LIBRARY_PATH}
 RUN echo "${OPENMM_PREFIX}/lib" > /etc/ld.so.conf.d/openmm.conf && ldconfig
 
 # copy in the bilbomd worker code
-COPY scripts/openmm /app/scripts/openmm
+COPY apps/worker/scripts/openmm /app/scripts/openmm
 
 # (Optional) verify python import during build
 RUN python -c "import openmm, sys; print('OpenMM', openmm.__version__, 'Python', sys.version)"
+
+

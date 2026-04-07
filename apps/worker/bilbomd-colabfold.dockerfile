@@ -1,6 +1,6 @@
 # Use an official NVIDIA image as a parent image
-FROM nvidia/cuda:12.2.2-devel-ubuntu22.04
-ARG USER_ID
+# FROM nvidia/cuda:12.2.2-devel-ubuntu22.04
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -36,8 +36,3 @@ RUN wget https://raw.githubusercontent.com/YoshitakaMo/localcolabfold/main/insta
 
 # Update the PATH environment variable
 ENV PATH="/app/localcolabfold/colabfold-conda/bin:/app/scripts:$PATH"
-
-COPY scripts/nersc/gen-bilbomd-slurm-file.sh scripts/
-COPY scripts/pdb2crd.py scripts/
-
-RUN chown -R $USER_ID:0 /app

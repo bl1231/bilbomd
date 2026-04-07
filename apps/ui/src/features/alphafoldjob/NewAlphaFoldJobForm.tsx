@@ -5,7 +5,6 @@ import {
   TextField,
   Typography,
   Alert,
-  AlertTitle,
   Paper,
   IconButton,
   Button,
@@ -16,7 +15,6 @@ import { Add, Delete } from '@mui/icons-material'
 import Grid from '@mui/material/Grid'
 import { grey } from '@mui/material/colors'
 import { Theme } from '@mui/material/styles'
-import { Link as RouterLink } from 'react-router'
 import {
   Form,
   Formik,
@@ -27,6 +25,7 @@ import {
 } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
 import { useAddNewAlphaFoldJobMutation } from 'slices/jobsApiSlice'
+import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import { BilboMDAlphaFoldJobSchema } from 'schemas/BilboMDAlphaFoldJobSchema'
 import { Debug } from 'components/Debug'
@@ -38,6 +37,13 @@ import NewAlphaFoldJobFormInstructions from './NewAlphaFoldJobFormInstructions'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
+import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
+import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import MdEngineField from 'components/MdEngineField'
+
+type NewJobFormProps = {
+  mode?: 'authenticated' | 'anonymous'
+}
 
 function chunkSequenceHTML(seq: string): string {
   if (!seq) return ''
@@ -80,7 +86,9 @@ function AminoAcidField(props: {
   }, [rawValue])
 
   const handleFocus = () => {
-    setIsFocused(true)
+    if (!disabled) {
+      setIsFocused(true)
+    }
   }
 
   const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
@@ -100,7 +108,7 @@ function AminoAcidField(props: {
         <TextField
           fullWidth
           multiline
-          variant='outlined'
+          variant="outlined"
           label={label}
           name={name}
           value={displayValue}
@@ -119,26 +127,31 @@ function AminoAcidField(props: {
     return (
       <Box sx={{ width: '100%' }}>
         <Box
-          tabIndex={0}
+          tabIndex={disabled ? -1 : 0}
           onFocus={handleFocus}
-          onClick={() => setIsFocused(true)}
+          onClick={() => !disabled && setIsFocused(true)}
           sx={{
             minHeight: '54px',
             border: `1px solid ${grey[300]}`,
             borderRadius: '4px',
             p: 1,
-            cursor: 'text',
+            cursor: disabled ? 'default' : 'text',
             fontFamily: 'monospace',
             whiteSpace: 'pre-wrap',
             letterSpacing: '0.08em',
             fontSize: '0.9rem',
-            color: 'text.primary'
+            color: disabled ? 'text.disabled' : 'text.primary',
+            opacity: disabled ? 0.6 : 1
           }}
           dangerouslySetInnerHTML={{ __html: chunkedHTML }}
         />
         {/* Show error below if needed */}
         {error && touched && (
-          <Typography variant='body2' color='error' sx={{ mt: 0.5 }}>
+          <Typography
+            variant="body2"
+            color="error"
+            sx={{ mt: 0.5 }}
+          >
             {error}
           </Typography>
         )}
@@ -153,7 +166,13 @@ const Instructions = () => (
   </Grid>
 )
 
-const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
+const PipelineSchematic = ({
+  isDarkMode,
+  mdEngine
+}: {
+  isDarkMode: boolean
+  mdEngine: 'charmm' | 'openmm'
+}) => (
   <Grid size={{ xs: 12 }}>
     <HeaderBox>
       <Typography>BilboMD AF Schematic</Typography>
@@ -162,10 +181,10 @@ const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
       <img
         src={
           isDarkMode
-            ? '/images/bilbomd-af-schematic-dark.png'
-            : '/images/bilbomd-af-schematic.png'
+            ? `/images/bilbomd-af-schematic-${mdEngine}-dark.png`
+            : `/images/bilbomd-af-schematic-${mdEngine}.png`
         }
-        alt='Overview of BilboMD AF pipeline'
+        alt="Overview of BilboMD AF pipeline"
         style={{ maxWidth: '100%', height: 'auto' }}
       />
     </Paper>
@@ -184,7 +203,8 @@ const EntitiesFieldArray = ({
   touched,
   handleChange,
   handleBlur,
-  setFieldValue
+  setFieldValue,
+  useExampleData
 }: {
   values: NewAlphaFoldJobFormValues
   errors: FormikErrors<NewAlphaFoldJobFormValues>
@@ -196,10 +216,11 @@ const EntitiesFieldArray = ({
     value: string | number,
     shouldValidate?: boolean
   ) => void
+  useExampleData: boolean
 }) => {
   const theme = useTheme()
   return (
-    <FieldArray name='entities'>
+    <FieldArray name="entities">
       {({ push, remove }) => {
         // Helper to generate name based on type + id
         const generateName = (type: string, id: string) => {
@@ -223,7 +244,10 @@ const EntitiesFieldArray = ({
         )
 
         return (
-          <Grid container direction='column'>
+          <Grid
+            container
+            direction="column"
+          >
             <Box>
               {values.entities.map((entity, index) => {
                 const seqError =
@@ -238,15 +262,21 @@ const EntitiesFieldArray = ({
                   (touched.entities[index] as FormikTouched<Entity>).sequence
 
                 return (
-                  <Box key={index} mb={2} display='flex' alignItems='start'>
+                  <Box
+                    key={index}
+                    mb={2}
+                    display="flex"
+                    alignItems="start"
+                  >
                     {/* Molecule Type */}
                     <TextField
                       select
                       name={`entities.${index}.type`}
-                      label='Molecule Type'
+                      label="Molecule Type"
                       fullWidth
-                      variant='outlined'
+                      variant="outlined"
                       value={entity.type || 'Protein'}
+                      disabled={useExampleData}
                       onChange={(e) => {
                         handleChange(e)
                         const newName = generateName(e.target.value, entity.id)
@@ -261,11 +291,17 @@ const EntitiesFieldArray = ({
                         }
                       }}
                     >
-                      <MenuItem value='Protein'>Protein</MenuItem>
-                      <MenuItem value='DNA' disabled>
+                      <MenuItem value="Protein">Protein</MenuItem>
+                      <MenuItem
+                        value="DNA"
+                        disabled
+                      >
                         DNA - pending AF3 availability
                       </MenuItem>
-                      <MenuItem value='RNA' disabled>
+                      <MenuItem
+                        value="RNA"
+                        disabled
+                      >
                         RNA - pending AF3 availability
                       </MenuItem>
                     </TextField>
@@ -274,14 +310,15 @@ const EntitiesFieldArray = ({
                     <Field
                       as={TextField}
                       name={`entities.${index}.copies`}
-                      label='Copies'
-                      type='number'
+                      label="Copies"
+                      type="number"
+                      disabled={useExampleData}
                       InputProps={{
                         inputProps: { min: 1, step: 1 },
                         sx: { height: '100%' } // Ensure full height usage
                       }}
                       fullWidth
-                      variant='outlined'
+                      variant="outlined"
                       onChange={handleChange}
                       onBlur={handleBlur}
                       value={entity.copies || 1}
@@ -289,7 +326,10 @@ const EntitiesFieldArray = ({
                     />
 
                     {/* AminoAcidField */}
-                    <Box flex={1} marginRight={2}>
+                    <Box
+                      flex={1}
+                      marginRight={2}
+                    >
                       <AminoAcidField
                         label={`Amino Acid Sequence (${
                           entity.sequence?.length || 0
@@ -298,6 +338,7 @@ const EntitiesFieldArray = ({
                         rawValue={entity.sequence || ''}
                         error={seqError as string}
                         touched={Boolean(seqTouched)}
+                        disabled={useExampleData}
                         // Pass the raw value to Formik
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
                           const newSeq = e.target.value
@@ -339,8 +380,8 @@ const EntitiesFieldArray = ({
               })}
 
               <Button
-                variant='contained'
-                color='primary'
+                variant="contained"
+                color="primary"
                 startIcon={<Add />}
                 onClick={() =>
                   push({
@@ -359,7 +400,7 @@ const EntitiesFieldArray = ({
             <Box>
               <Chip
                 label={`Token count: ${totalCharactersWithCopies}`}
-                variant='outlined'
+                variant="outlined"
                 sx={{
                   mt: 1,
                   height: '36px',
@@ -385,7 +426,7 @@ const SubmitButton = ({
   isSubmitting,
   isValid,
   isFormValid,
-  status
+  status: _status
 }: {
   isSubmitting: boolean
   isValid: boolean
@@ -394,28 +435,64 @@ const SubmitButton = ({
 }) => (
   <Grid sx={{ mt: 2 }}>
     <Button
-      type='submit'
+      type="submit"
       disabled={!isValid || isSubmitting || !isFormValid}
       loading={isSubmitting}
       endIcon={<SendIcon />}
-      loadingPosition='end'
-      variant='contained'
+      loadingPosition="end"
+      variant="contained"
       sx={{ width: '110px', mb: 2 }}
     >
       <span>Submit</span>
     </Button>
-    {status?.startsWith('Error') ? (
-      <Alert severity='error'>{status.replace('Error: ', '')}</Alert>
-    ) : (
-      status && <Alert severity='success'>{status}</Alert>
-    )}
   </Grid>
 )
 
-const NewAlphaFoldJob = () => {
-  useTitle('BilboMD: New AlphaFold Job')
-  const [addNewAlphaFoldJob, { isSuccess }] = useAddNewAlphaFoldJobMutation()
+const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
+  useTitle(
+    mode === 'anonymous'
+      ? 'BilboMD: New AlphaFold Job (anonymous)'
+      : 'BilboMD: New AlphaFold Job'
+  )
+  // theme and dark mode detection
+  const theme = useTheme()
+  const isDarkMode = theme.palette.mode === 'dark'
+
+  const [
+    addNewAlphaFoldJob,
+    { isSuccess: isAuthSuccess, data: authJobResponse }
+  ] = useAddNewAlphaFoldJobMutation()
+  const [addNewPublicJob, { isSuccess: isAnonSuccess, data: anonJobResponse }] =
+    useAddNewPublicJobMutation()
+  const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
+
+  // Transform responses to expected shape
+  const publicJobResponse =
+    anonJobResponse && mode === 'anonymous'
+      ? {
+          resultUrl: anonJobResponse.resultUrl,
+          publicId: anonJobResponse.publicId,
+          md_engine: anonJobResponse.md_engine
+        }
+      : undefined
+
+  const authSuccessResponse =
+    authJobResponse && mode === 'authenticated'
+      ? {
+          message: authJobResponse.message || 'Job submitted successfully',
+          jobid: authJobResponse.jobid,
+          uuid: authJobResponse.uuid,
+          md_engine: authJobResponse.md_engine
+        }
+      : undefined
+
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
+  const handleStatusCheck = (isUnavailable: boolean) => {
+    setIsPerlmutterUnavailable(isUnavailable)
+  }
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
+  const [useExampleData, setUseExampleData] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Fetch configuration object
   const {
@@ -424,19 +501,15 @@ const NewAlphaFoldJob = () => {
     isLoading: configIsLoading
   } = useGetConfigsQuery('configData')
 
-  const theme = useTheme()
-  const isDarkMode = theme.palette.mode === 'dark'
-
   if (configIsLoading) return <LinearProgress />
   if (configError)
-    return <Alert severity='error'>Error loading configuration</Alert>
+    return <Alert severity="error">Error loading configuration</Alert>
+  if (!config)
+    return <Alert severity="error">Configuration not available</Alert>
 
+  const useAlphaFold = config.enableBilboMdAlphaFold?.toLowerCase() === 'true'
   const useNersc = config.useNersc?.toLowerCase() === 'true'
-
-  const handleStatusCheck = (isUnavailable: boolean) => {
-    // Update the state based on the system's availability
-    setIsPerlmutterUnavailable(isUnavailable)
-  }
+  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
 
   const initialValues: NewAlphaFoldJobFormValues = {
     title: '',
@@ -450,17 +523,17 @@ const NewAlphaFoldJob = () => {
         copies: 1,
         seq_length: 0
       }
-    ]
+    ],
+    md_engine: charmmEnabled ? 'charmm' : 'openmm'
   }
 
-  const onSubmit = async (
-    values: NewAlphaFoldJobFormValues,
-    { setStatus }: { setStatus: (status: string) => void }
-  ) => {
+  const onSubmit = async (values: NewAlphaFoldJobFormValues) => {
+    setSubmitError(null)
     const form = new FormData()
     form.append('title', values.title)
     form.append('dat_file', values.dat_file)
     form.append('bilbomd_mode', 'alphafold')
+    form.append('md_engine', values.md_engine)
     values.entities.forEach((entity, index) => {
       form.append(`entities[${index}][id]`, entity.id)
       form.append(`entities[${index}][name]`, entity.name)
@@ -468,27 +541,20 @@ const NewAlphaFoldJob = () => {
       form.append(`entities[${index}][type]`, entity.type)
       form.append(`entities[${index}][copies]`, entity.copies.toString())
     })
+    if (useExampleData) {
+      form.append('useExampleData', 'true')
+    }
+
     try {
-      const newJob = await addNewAlphaFoldJob(form).unwrap()
-      setStatus(`Job Submitted: ${newJob.jobid}`)
-    } catch (error: unknown) {
-      console.error('Job submission failed:', error)
-
-      let backendMessage = 'Submission failed due to server error.'
-
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'data' in error &&
-        typeof (error as Record<string, unknown>).data === 'object' &&
-        error.data !== null &&
-        'message' in (error.data as Record<string, unknown>) &&
-        typeof (error.data as Record<string, unknown>).message === 'string'
-      ) {
-        backendMessage = (error.data as { message: string }).message
-      }
-
-      setStatus(`Error: ${backendMessage}`)
+      await (mode === 'anonymous'
+        ? addNewPublicJob(form).unwrap()
+        : addNewAlphaFoldJob(form).unwrap())
+    } catch (error) {
+      console.error('rejected', error)
+      setSubmitError(
+        (error as { data?: { message?: string } }).data?.message ||
+          'An error occurred during submission.'
+      )
     }
   }
 
@@ -499,39 +565,52 @@ const NewAlphaFoldJob = () => {
   }
 
   const content = (
-    <Grid container spacing={2}>
+    <Grid
+      container
+      spacing={2}
+    >
       <Instructions />
-      <PipelineSchematic isDarkMode={isDarkMode} />
+      <PipelineSchematic
+        isDarkMode={isDarkMode}
+        mdEngine={mdEngine}
+      />
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
           <Typography>BilboMD AF Job Form</Typography>
         </HeaderBox>
+
         <Paper sx={{ p: 2 }}>
-          {!useNersc ? (
-            <Alert severity='warning'>
+          {!useAlphaFold ? (
+            <Alert severity="warning">
               If you would like to run <b>BilboMD AF</b> which requires GPU
               compute capabilities, please head over to BilboMD running on{' '}
               <b>NERSC</b>:{' '}
               <Link
-                href='https://bilbomd-nersc.bl1231.als.lbl.gov'
-                target='_blank'
-                rel='noopener noreferrer'
+                href="https://bilbomd-nersc.bl1231.als.lbl.gov"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <b>bilbomd-nersc.bl1231.als.lbl.gov</b>.
               </Link>
             </Alert>
           ) : isSuccess ? (
-            <Alert severity='success'>
-              <AlertTitle>Woot!</AlertTitle>
-              <Typography>
-                Your job has been submitted. Check out the{' '}
-                <RouterLink to='../jobs'>details</RouterLink>.
-              </Typography>
-            </Alert>
+            mode === 'anonymous' && publicJobResponse ? (
+              <PublicJobSuccessAlert
+                jobResponse={publicJobResponse}
+                jobType="AF"
+              />
+            ) : authSuccessResponse ? (
+              <JobSuccessAlert
+                jobResponse={authSuccessResponse}
+                jobType="AF"
+              />
+            ) : null
           ) : (
             <Formik<NewAlphaFoldJobFormValues>
               initialValues={initialValues}
-              validationSchema={BilboMDAlphaFoldJobSchema}
+              validationSchema={
+                useExampleData ? undefined : BilboMDAlphaFoldJobSchema
+              }
               onSubmit={onSubmit}
             >
               {({
@@ -544,37 +623,150 @@ const NewAlphaFoldJob = () => {
                 handleBlur,
                 status,
                 setFieldValue,
-                setFieldTouched
+                setFieldTouched,
+                validateForm
               }) => (
                 <Form>
-                  <Grid container direction='column'>
+                  <Grid
+                    container
+                    direction="column"
+                  >
                     {useNersc && (
                       <NerscStatusChecker
-                        systemName='perlmutter'
+                        systemName="perlmutter"
                         onStatusCheck={handleStatusCheck}
                       />
                     )}
-                    {/* Title */}
-                    <Grid sx={{ my: 2, width: '520px' }}>
-                      <Field
-                        fullWidth
-                        label='Title'
-                        name='title'
-                        id='title'
-                        type='text'
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        my: 1
+                      }}
+                    >
+                      {/* Title */}
+                      <Box sx={{ minWidth: '520px' }}>
+                        <Field
+                          fullWidth
+                          label="Title"
+                          name="title"
+                          id="title"
+                          type="text"
+                          disabled={isSubmitting}
+                          as={TextField}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={errors.title && touched.title}
+                          helperText={
+                            errors.title && touched.title ? errors.title : ''
+                          }
+                          value={values.title || ''}
+                        />
+                      </Box>
+                      <Box sx={{ ml: 8, minWidth: 'fit-content' }}>
+                        <Button
+                          variant={useExampleData ? 'outlined' : 'contained'}
+                          onClick={() => {
+                            setUseExampleData(!useExampleData)
+                            if (!useExampleData) {
+                              void setFieldValue(
+                                'title',
+                                'example-alphafold-job'
+                              )
+                              // Set example dat_file
+                              void setFieldValue('dat_file', 'example-saxs.dat')
+                              // Set example entities data
+                              void setFieldValue('entities', [
+                                {
+                                  id: '1',
+                                  name: 'pro-1',
+                                  sequence: [
+                                    'MGKKRTKGKTVPIDDSSETLEPVCRHIRKGLEQGNLKKALVNVEWNICQDCKTDNKVKDKAEEETEEKPSVWLCLKCGHQ',
+                                    'GCGRNSQEQHALKHYLTPRSEPHCLVLSLDNWSVWCYVCDNEVQYCSSNQLGQVVDYVRKQASITTPKPAEKDNGNIELE',
+                                    'NKKLEKESKNEQEREKKENMAKENPPMNSPCQITVKGLSNLGNTCFFNAVMQNLSQTPVLRELLKEVKMSGTIVKIEPPD',
+                                    'LALTEPLEINLEPPGPLTLAMSQFLNEMQETKKGVVTPKELFSQVCKKAVRFKGYQQQDSQELLRYLLDGMRAEEHQRVS',
+                                    'KGILKAFGNSTEKLDEELKNKVKDYEKKKSMPSFVDRIFGGELTSMIMCDQCRTVSLVHESFLDLSLPVLDDQSGKKSVN',
+                                    'DKNLKKTVEDEDQDSEEEKDNDSYIKERSDIPSGTSKHLQKKAKKQAKKQAKNQRRQQKIQGKVLHLNDICTIDHPEDSE',
+                                    'YEAEMSLQGEVNIKSNHISQEGVMHKEYCVNQKDLNGQAKMIESVTDNQKSTEEVDMKNINMDNDLEVLTSSPTRNLNGA',
+                                    'YLTEGSNGEVDISNGFKNLNLNAALHPDEINIEILNDSHTPGTKVYEVVNEDPETAFCTLANREVFNTDECSIQHCLYQF',
+                                    'TRNEKLRDANKLLCEVCTRRQCNGPKANIKGERKHVYTNAKKQMLISLAPPVLTLHLKRFQQAGFNLRKVNKHIKFPEIL',
+                                    'DLAPFCTLKCKNVAEENTRVLYSLYGVVEHSGTMRSGHYTAYAKARTANSHLSNLVLHGDIPQDFEMESKGQWFHISDTH',
+                                    'VQAVPTTKVLNSQAYLLFYERIL'
+                                  ].join(''),
+                                  type: 'Protein',
+                                  copies: 1,
+                                  seq_length: 823
+                                }
+                              ])
+                            } else {
+                              void setFieldValue('title', '')
+                              void setFieldValue('dat_file', '')
+                              // Reset to initial empty entity
+                              void setFieldValue('entities', [
+                                {
+                                  id: '1',
+                                  name: 'pro-1',
+                                  sequence: '',
+                                  type: 'Protein',
+                                  copies: 1,
+                                  seq_length: 0
+                                }
+                              ])
+                            }
+                            // Delay validation to ensure form state has been updated
+                            // Force validation after state update
+                            setTimeout(async () => {
+                              await validateForm()
+                            }, 100)
+                          }}
+                        >
+                          {useExampleData
+                            ? 'Use Custom Data'
+                            : 'Load Example Data'}
+                        </Button>
+                      </Box>
+                      <Box sx={{ ml: 2, minWidth: 'fit-content' }}>
+                        <Button
+                          variant="contained"
+                          href={'/api/v1/public/examples/af'}
+                        >
+                          Download Example Data
+                        </Button>
+                      </Box>
+                    </Box>
+
+                    {/* MD Engine selection */}
+                    <Grid sx={{ width: '520px' }}>
+                      <MdEngineField
+                        value={values.md_engine as 'charmm' | 'openmm'}
+                        onChange={(val) => {
+                          void setFieldValue('md_engine', val)
+                          setMdEngine(val)
+                        }}
                         disabled={isSubmitting}
-                        as={TextField}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={errors.title && touched.title}
-                        helperText={
-                          errors.title && touched.title ? errors.title : ''
-                        }
-                        value={values.title || ''}
+                        disableCharmm={!charmmEnabled}
                       />
                     </Grid>
+                    {useExampleData && (
+                      <Alert
+                        severity="warning"
+                        sx={{ my: 1 }}
+                      >
+                        Using example data for Auto mode
+                      </Alert>
+                    )}
+
+                    {submitError && (
+                      <Alert
+                        severity="error"
+                        sx={{ my: 1 }}
+                      >
+                        {submitError}
+                      </Alert>
+                    )}
+
                     {/* Entities */}
-                    <Grid>
+                    <Grid sx={{ my: 2 }}>
                       <EntitiesFieldArray
                         values={values}
                         errors={errors}
@@ -582,6 +774,7 @@ const NewAlphaFoldJob = () => {
                         handleChange={handleChange}
                         handleBlur={handleBlur}
                         setFieldValue={setFieldValue}
+                        useExampleData={useExampleData}
                       />
 
                       {/* Conditionally display error messages for alphafold_entities */}
@@ -590,19 +783,22 @@ const NewAlphaFoldJob = () => {
                         ? (errors.entities as FormikErrors<Entity>[]).map(
                             (error, idx) =>
                               error && (
-                                <Box key={idx} sx={{ my: 2 }}>
+                                <Box
+                                  key={idx}
+                                  sx={{ my: 2 }}
+                                >
                                   {error.sequence && (
-                                    <Alert severity='error'>{`Entity ${
+                                    <Alert severity="error">{`Entity ${
                                       idx + 1
                                     } sequence: ${error.sequence}`}</Alert>
                                   )}
                                   {error.type && (
-                                    <Alert severity='error'>{`Entity ${
+                                    <Alert severity="error">{`Entity ${
                                       idx + 1
                                     } type: ${error.type}`}</Alert>
                                   )}
                                   {error.copies && (
-                                    <Alert severity='error'>{`Entity ${
+                                    <Alert severity="error">{`Entity ${
                                       idx + 1
                                     } copies: ${error.copies}`}</Alert>
                                   )}
@@ -615,17 +811,20 @@ const NewAlphaFoldJob = () => {
                     {/* SAXS dat file */}
                     <Grid>
                       <Field
-                        name='dat_file'
-                        id='dat-file-upload'
+                        name="dat_file"
+                        id="dat-file-upload"
                         as={FileSelect}
-                        title='Select File'
-                        disabled={isSubmitting}
+                        title="Select File"
+                        disabled={isSubmitting || useExampleData}
                         setFieldValue={setFieldValue}
                         setFieldTouched={setFieldTouched}
                         error={errors.dat_file && touched.dat_file}
                         errorMessage={errors.dat_file ? errors.dat_file : ''}
-                        fileType='experimental SAXS data *.dat'
-                        fileExt='.dat'
+                        fileType="experimental SAXS data *.dat"
+                        fileExt=".dat"
+                        existingFileName={
+                          useExampleData ? 'example-saxs.dat' : undefined
+                        }
                       />
                     </Grid>
 
@@ -639,12 +838,12 @@ const NewAlphaFoldJob = () => {
                     {/* Submit Button */}
                     <SubmitButton
                       isSubmitting={isSubmitting}
-                      isValid={isValid}
+                      isValid={useExampleData ? true : isValid}
                       isFormValid={isFormValid(values)}
                       status={status}
                     />
                   </Grid>
-                  {process.env.NODE_ENV === 'development' ? <Debug /> : ''}
+                  {import.meta.env.MODE === 'development' ? <Debug /> : ''}
                 </Form>
               )}
             </Formik>

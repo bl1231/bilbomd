@@ -2,8 +2,7 @@ name: BilboMD CI
 
 on:
   push:
-    branches:
-      [main, "feature/**", "fix/**", "hotfix/**", "release/**", "monorepo/**"]
+    branches: [main]
     paths-ignore:
       - "README.md"
       - "docs/**/*.md"
@@ -20,31 +19,34 @@ on:
 
 permissions:
   contents: read
-  packages: write
   pull-requests: read
 
 jobs:
   changes:
     name: Detect changes
-    runs-on: [self-hosted, linux, x64]
+    runs-on: [ubuntu-22.04]
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       ui: ${{ steps.filter.outputs.ui }}
       worker: ${{ steps.filter.outputs.worker }}
       scoper: ${{ steps.filter.outputs.scoper }}
       schema: ${{ steps.filter.outputs.schema }}
+      md-utils: ${{ steps.filter.outputs.md-utils }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Paths filter
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           filters: |
             backend:
               - 'apps/backend/**'
+              - 'tools/python/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/md-utils/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
@@ -52,13 +54,17 @@ jobs:
             ui:
               - 'apps/ui/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
               - 'apps/ui/bilbomd-ui.dockerfile'
             worker:
               - 'apps/worker/**'
+              - 'tools/python/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/md-utils/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
@@ -66,34 +72,115 @@ jobs:
             scoper:
               - 'apps/scoper/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
               - 'apps/scoper/bilbomd-scoper.dockerfile'
             schema:
               - 'packages/mongodb-schema/**'
+              - 'packages/eslint-config/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+            md-utils:
+              - 'packages/md-utils/**'
+              - 'packages/mongodb-schema/**'
+              - 'packages/eslint-config/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
 
+  lint:
+    name: Lint
+    runs-on: [ubuntu-22.04]
+    needs: [changes]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v5
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install deps
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
+
+      # Lint
+      - name: Lint all apps and packages
+        run: |
+          echo "Running lint across the entire monorepo..."
+          pnpm -r run lint --cache
+
   backend:
     name: Build & Push backend
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
-    runs-on: [self-hosted, linux, x64]
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    permissions:
+      contents: read
+      packages: write
     concurrency:
       group: backend-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -102,23 +189,10 @@ jobs:
       - name: Read version from package.json
         run: echo "VERSION=$(jq -r .version 'apps/backend/package.json')" >> $GITHUB_ENV
 
-      - name: Compute branch + short sha
+      - name: Compute short sha
         run: |
-          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-
-      - name: Resolve PR number for this branch (if any)
-        id: pr
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner, repo} = context.repo;
-            const branch = context.ref.replace('refs/heads/', '');
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
-            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
 
       - name: Detect version bump (backend)
         id: bump
@@ -135,7 +209,7 @@ jobs:
 
       - name: Docker metadata (tags/labels)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-backend
           tags: |
@@ -143,22 +217,17 @@ jobs:
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # main: short sha for traceability
-            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
             # pull requests: single concise tag
-            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
-
-      - name: Prep local buildx cache (backend)
-        run: |
-          sudo mkdir -p /scr/buildkit-cache/backend
-          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/backend
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Build & Push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/backend/bilbomd-backend.dockerfile
-          push: true
+          push: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }}
@@ -168,26 +237,27 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             BACKEND_GIT_HASH=${{ github.sha }}
             BACKEND_VERSION=${{ env.VERSION }}
-          cache-from: |
-            type=local,src=/scr/buildkit-cache/backend
-          cache-to: |
-            type=local,dest=/scr/buildkit-cache/backend,mode=max
+          # Removed local cache-from/cache-to for GitHub-hosted runners
 
   ui:
     name: Build & Push ui
     if: needs.changes.outputs.ui == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
-    runs-on: [self-hosted, linux, x64]
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    permissions:
+      contents: read
+      packages: write
     concurrency:
       group: ui-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -196,23 +266,10 @@ jobs:
       - name: Read version
         run: echo "VERSION=$(jq -r .version 'apps/ui/package.json')" >> $GITHUB_ENV
 
-      - name: Compute branch + short sha
+      - name: Compute short sha
         run: |
-          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-
-      - name: Resolve PR number for this branch (if any)
-        id: pr
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner, repo} = context.repo;
-            const branch = context.ref.replace('refs/heads/', '');
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
-            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
 
       - name: Detect version bump (ui)
         id: bump
@@ -229,7 +286,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-ui
           tags: |
@@ -237,22 +294,19 @@ jobs:
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # main: short sha for traceability
-            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
             # pull requests: single concise tag
-            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
 
-      - name: Prep local buildx cache (ui)
-        run: |
-          sudo mkdir -p /scr/buildkit-cache/ui
-          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/ui
+      # Removed local buildx cache setup for GitHub-hosted runners
 
       - name: Build & Push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/ui/bilbomd-ui.dockerfile
-          push: true
+          push: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+          cache-from: type=gha,scope=ui
+          cache-to: type=gha,mode=max,scope=ui
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }}
@@ -260,28 +314,29 @@ jobs:
           build-args: |
             USER_ID=${{ vars.USER_ID || '1001' }}
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
-            UI_GIT_HASH=${{ env.SHORT_SHA }}
+            UI_GIT_HASH=${{ github.sha }}
             UI_VERSION=${{ env.VERSION }}
-          cache-from: |
-            type=local,src=/scr/buildkit-cache/ui
-          cache-to: |
-            type=local,dest=/scr/buildkit-cache/ui,mode=max
+          # Removed local cache-from/cache-to for GitHub-hosted runners
 
   worker:
     name: Build & Push worker
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
-    runs-on: [self-hosted, linux, x64]
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    permissions:
+      contents: read
+      packages: write
     concurrency:
       group: worker-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -290,23 +345,10 @@ jobs:
       - name: Read version
         run: echo "VERSION=$(jq -r .version 'apps/worker/package.json')" >> $GITHUB_ENV
 
-      - name: Compute branch + short sha
+      - name: Compute short sha
         run: |
-          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-
-      - name: Resolve PR number for this branch (if any)
-        id: pr
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner, repo} = context.repo;
-            const branch = context.ref.replace('refs/heads/', '');
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
-            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
 
       - name: Detect version bump (worker)
         id: bump
@@ -323,7 +365,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-worker
           tags: |
@@ -331,22 +373,19 @@ jobs:
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # main: short sha for traceability
-            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
             # pull requests: single concise tag
-            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
 
-      - name: Prep local buildx cache (worker)
-        run: |
-          sudo mkdir -p /scr/buildkit-cache/worker
-          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/worker
+      # Removed local buildx cache setup for GitHub-hosted runners
 
       - name: Build & Push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/worker/bilbomd-worker.dockerfile
-          push: true
+          push: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }}
@@ -356,26 +395,27 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             WORKER_GIT_HASH=${{ github.sha }}
             WORKER_VERSION=${{ env.VERSION }}
-          cache-from: |
-            type=local,src=/scr/buildkit-cache/worker
-          cache-to: |
-            type=local,dest=/scr/buildkit-cache/worker,mode=max
+          # Removed local cache-from/cache-to for GitHub-hosted runners
 
   scoper:
     name: Build & Push scoper
     if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
-    runs-on: [self-hosted, linux, x64]
+    needs: [changes, lint, scoper-typecheck]
+    runs-on: [ubuntu-22.04]
+    permissions:
+      contents: read
+      packages: write
     concurrency:
       group: scoper-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -384,23 +424,10 @@ jobs:
       - name: Read version
         run: echo "VERSION=$(jq -r .version 'apps/scoper/package.json')" >> $GITHUB_ENV
 
-      - name: Compute branch + short sha
+      - name: Compute short sha
         run: |
-          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]#-#g')
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-
-      - name: Resolve PR number for this branch (if any)
-        id: pr
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {owner, repo} = context.repo;
-            const branch = context.ref.replace('refs/heads/', '');
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
-            core.setOutput('number', prs.data.length ? String(prs.data[0].number) : '');
 
       - name: Detect version bump (scoper)
         id: bump
@@ -417,7 +444,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/bilbomd-scoper
           tags: |
@@ -425,22 +452,19 @@ jobs:
             type=raw,value=${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/main' && env.SHOULD_SEMVER == 'true' }}
             # main: always add 'latest' tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # main: short sha for traceability
-            type=raw,value=${{ env.SHORT_SHA }},enable=${{ github.ref == 'refs/heads/main' }}
             # pull requests: single concise tag
-            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ env.SHORT_SHA }},enable=${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
 
-      - name: Prep local buildx cache (scoper)
-        run: |
-          sudo mkdir -p /scr/buildkit-cache/scoper
-          sudo chown -R "$USER":"sibyls" /scr/buildkit-cache/scoper
+      # Removed local buildx cache setup for GitHub-hosted runners
 
       - name: Build & Push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/scoper/bilbomd-scoper.dockerfile
-          push: true
+          push: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+          cache-from: type=gha,scope=scoper
+          cache-to: type=gha,mode=max,scope=scoper
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }}
@@ -450,24 +474,21 @@ jobs:
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             SCOPER_GIT_HASH=${{ github.sha }}
             SCOPER_VERSION=${{ env.VERSION }}
-          cache-from: |
-            type=local,src=/scr/buildkit-cache/scoper
-          cache-to: |
-            type=local,dest=/scr/buildkit-cache/scoper,mode=max
+          # Removed local cache-from/cache-to for GitHub-hosted runners
 
   schema:
-    name: Build schema
+    name: Build mongodb-schema
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
-    needs: changes
-    runs-on: [self-hosted, linux, x64]
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
       # 1) Setup Node from .nvmrc (NO pnpm cache here)
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -484,15 +505,37 @@ jobs:
       - name: Activate pnpm
         run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
 
-      - name: Prep local pnpm store (schema)
-        run: |
-          sudo mkdir -p /scr/pnpm-store
-          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
-          pnpm config set store-dir /scr/pnpm-store
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v5
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
 
       # Only cache TS incremental build info for schema package (keep pnpm store local)
       - name: Cache TS incremental (schema)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             packages/mongodb-schema/tsconfig.tsbuildinfo
@@ -508,22 +551,499 @@ jobs:
           jq -r '.packageManager' package.json
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build schema
         run: pnpm -C packages/mongodb-schema run build
 
+  md-utils:
+    name: Build & Test md-utils
+    if: needs.changes.outputs.md-utils == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      # 1) Setup Node from .nvmrc (NO pnpm cache here)
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      # 2) Activate exact pnpm via Corepack
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v5
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # Only cache TS incremental build info for md-utils package (keep pnpm store local)
+      - name: Cache TS incremental (md-utils)
+        uses: actions/cache@v5
+        with:
+          path: |
+            packages/md-utils/tsconfig.tsbuildinfo
+          key: md-utils-tsbuild-${{ runner.os }}-${{ hashFiles('packages/md-utils/tsconfig.json', 'packages/md-utils/src/**/*.ts') }}
+          restore-keys: |
+            md-utils-tsbuild-${{ runner.os }}-
+
+      # Debug versions
+      - name: Show tool versions
+        run: |
+          node -v
+          pnpm -v
+          jq -r '.packageManager' package.json
+
+      - name: Install deps
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
+
+      - name: Build dependencies
+        run: pnpm -C packages/mongodb-schema run build
+
+      - name: Build md-utils
+        run: pnpm -C packages/md-utils run build
+
+      - name: Test md-utils
+        run: pnpm -C packages/md-utils run test
+
+  scoper-typecheck:
+    name: Scoper typecheck
+    if: needs.changes.outputs.scoper == 'true'
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v5
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install deps
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
+
+      - name: Build shared packages
+        run: |
+          pnpm -C packages/mongodb-schema run build
+          pnpm -C packages/bilbomd-types run build
+
+      - name: Typecheck scoper
+        run: pnpm exec tsc -p apps/scoper/tsconfig.json --noEmit
+
+  ui-unit-tests:
+    name: Test ui (unit)
+    if: needs.changes.outputs.ui == 'true'
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v5
+        with:
+          path: |
+            .turbo
+            apps/backend/.turbo
+            apps/ui/.turbo
+            apps/worker/.turbo
+            apps/scoper/.turbo
+            packages/bilbomd-types/.turbo
+            packages/md-utils/.turbo
+            packages/mongodb-schema/.turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install deps
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
+
+      - name: Build shared schema
+        run: pnpm -C packages/mongodb-schema run build
+
+      - name: Build shared types
+        run: pnpm -C packages/bilbomd-types run build
+
+      - name: Run ui unit tests
+        run: pnpm -C apps/ui run test
+
+  worker-unit-tests:
+    name: Test worker (unit)
+    if: needs.changes.outputs.worker == 'true'
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install deps
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
+
+      - name: Build shared schema
+        run: pnpm -C packages/mongodb-schema run build
+
+      - name: Build shared types
+        run: pnpm -C packages/bilbomd-types run build
+
+      - name: Build md-utils (depends on schema)
+        run: pnpm -C packages/md-utils run build
+
+      - name: Run worker unit tests
+        run: pnpm -C apps/worker run test
+
+  backend-unit-tests:
+    name: Test backend (unit)
+    if: needs.changes.outputs.backend == 'true'
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install deps
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
+
+      - name: Build shared schema
+        run: pnpm -C packages/mongodb-schema run build
+
+      - name: Build shared types
+        run: pnpm -C packages/bilbomd-types run build
+
+      - name: Build md-utils (depends on schema)
+        run: pnpm -C packages/md-utils run build
+
+      - name: Run backend unit tests
+        run: pnpm -C apps/backend run test
+
+  backend-integration-tests:
+    name: Test backend (integration)
+    if: needs.changes.outputs.backend == 'true'
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-start-period=30s
+          --health-retries=30
+    env:
+      # Override integration test DB to use the service
+      MONGODB_TEST_URI: mongodb://127.0.0.1:27017/bilbomd-test
+      # Secrets used by auth middleware during integration tests
+      ACCESS_TOKEN_SECRET: test-access-secret
+      REFRESH_TOKEN_SECRET: test-refresh-secret
+      BILBOMD_API_TOKEN: test-external-api-token
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install deps
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
+
+      - name: Build shared schema
+        run: pnpm -C packages/mongodb-schema run build
+
+      - name: Build shared types
+        run: pnpm -C packages/bilbomd-types run build
+
+      - name: Build md-utils (depends on schema)
+        run: pnpm -C packages/md-utils run build
+
+      - name: Wait for Mongo to be ready
+        run: |
+          echo "Waiting for MongoDB port and ping..."
+          for i in {1..60}; do
+            if (echo > /dev/tcp/127.0.0.1/27017) >/dev/null 2>&1; then
+              echo "MongoDB TCP port open";
+              CONTAINER_ID=$(docker ps -q --filter "ancestor=mongo:7" | head -n1)
+              if [ -n "$CONTAINER_ID" ]; then
+                if docker exec "$CONTAINER_ID" mongosh --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; then
+                  echo "MongoDB ping OK"; break;
+                fi
+              fi
+            fi
+            echo "Waiting for Mongo..."; sleep 2;
+          done
+
+      - name: Run backend integration tests
+        run: pnpm -C apps/backend run test:integration
+
   gate:
     name: Branch Protection Gate
-    runs-on: [self-hosted, linux, x64]
-    needs: [backend, ui, worker, scoper, schema]
+    runs-on: [ubuntu-22.04]
+    needs:
+      [
+        lint,
+        backend,
+        ui,
+        worker,
+        scoper,
+        schema,
+        md-utils,
+        backend-unit-tests,
+        ui-unit-tests,
+        worker-unit-tests,
+        scoper-typecheck,
+        backend-integration-tests,
+      ]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    env:
+      LINT: ${{ needs.lint.result }}
+      BACKEND: ${{ needs.backend.result }}
+      UI: ${{ needs.ui.result }}
+      WORKER: ${{ needs.worker.result }}
+      SCOPER: ${{ needs.scoper.result }}
+      SCHEMA: ${{ needs.schema.result }}
+      MDUTILS: ${{ needs['md-utils'].result }}
+      BACKEND_UNIT: ${{ needs['backend-unit-tests'].result }}
+      UI_UNIT: ${{ needs['ui-unit-tests'].result }}
+      WORKER_UNIT: ${{ needs['worker-unit-tests'].result }}
+      SCOPER_TYPE: ${{ needs['scoper-typecheck'].result }}
+      BACKEND_INT: ${{ needs['backend-integration-tests'].result }}
     steps:
       - name: Check build results
         run: |
           set -e
-          for job in backend ui worker scoper schema; do
-            result="${{ needs[job].result }}"
+          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT UI_UNIT WORKER_UNIT SCOPER_TYPE BACKEND_INT; do
+            result="${!job}"
             echo "$job result: $result"
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               echo "Job $job failed or was cancelled"
@@ -531,3 +1051,48 @@ jobs:
             fi
           done
           echo "All required jobs succeeded"
+
+  coverage-report:
+    name: Update Coverage in README
+    runs-on: ubuntu-22.04
+    needs: [backend-unit-tests, ui-unit-tests, worker-unit-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dependencies
+        run: pnpm build
+
+      - name: Run backend tests with coverage
+        run: pnpm -C apps/backend run test
+
+      - name: Run ui tests with coverage
+        run: pnpm -C apps/ui run test
+
+      - name: Run worker tests with coverage
+        run: pnpm -C apps/worker run test
+
+      - name: Update README with coverage
+        run: node .github/scripts/update-coverage-readme.js
+
+      - name: Commit coverage update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update test coverage in README [skip ci]"
+          git push

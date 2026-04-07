@@ -1,4 +1,4 @@
-import { Job as BullMQJob, Queue } from 'bullmq'
+import { Job as BullMQJob } from 'bullmq'
 
 interface BullMQData {
   type: string
@@ -9,44 +9,43 @@ interface BullMQData {
 
 const mockQueue: BullMQJob[] = []
 
-const mockBilbomdQueue = new Queue('bilbomd')
-
-const mockQueueJob = async (data: BullMQData) => {
-  try {
-    console.log(`${data.type} Job "${data.title}" about to be added to queue`)
-
-    const mockJob: BullMQJob = {
-      id: `${Date.now()}`, // Simulating a unique job ID
-      name: data.title,
+class MockQueue {
+  name: string
+  constructor(name: string) {
+    this.name = name
+  }
+  async add(name: string, data: BullMQData) {
+    // Simulate adding a job
+    const mockJob = {
+      id: `${Date.now()}`,
+      name,
       data,
-      opts: {
-        attempts: 3
-      },
+      opts: { attempts: 3 },
       timestamp: Date.now(),
-      finishedOn: null,
-      processedOn: null,
+      finishedOn: undefined,
+      processedOn: undefined,
       progress: 0,
       attemptsMade: 0,
-      stacktrace: null,
-      returnvalue: null,
-      state: 'waiting', // Job state: 'waiting', 'active', 'completed', 'failed'
-      optsJob: {}
-    }
-
+      stacktrace: [],
+      returnvalue: null
+    } as unknown as BullMQJob
     mockQueue.push(mockJob)
-
-    return mockJob.id
-  } catch (error) {
-    console.error('Error adding job to queue:', error)
-    throw error
+    return mockJob
   }
+  async getWaiting() {
+    return mockQueue
+  }
+  // Add other methods as needed
+}
+
+const mockQueueJob = async (data: BullMQData) => {
+  const queue = new MockQueue('bilbomd')
+  const job = await queue.add(data.title, data)
+  return job.id
 }
 
 const mockGetWaitingJobs = async (): Promise<BullMQJob[]> => {
-  // For simplicity, the mock implementation returns all jobs
   return mockQueue
 }
 
-// Implement other mock functions as needed...
-
-export { mockQueueJob, mockBilbomdQueue, mockGetWaitingJobs }
+export { mockQueueJob, MockQueue as Queue, mockGetWaitingJobs }

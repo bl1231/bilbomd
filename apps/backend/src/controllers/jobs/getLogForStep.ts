@@ -3,19 +3,26 @@ import fs from 'fs-extra'
 import path from 'path'
 import { Job } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
+import { getEnvVar } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const getLogForStep = async (req: Request, res: Response) => {
-  if (!req?.params?.id) res.status(400).json({ message: 'Job ID required.' })
-  // Check if req.params.id is a valid ObjectId
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+  if (!req?.params?.id) {
+    res.status(400).json({ message: 'Job ID required.' })
+    return
+  }
+
+  // Ensure id is a string and validate ObjectId format
+  const jobId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
+  if (!mongoose.Types.ObjectId.isValid(jobId)) {
     res.status(400).json({ message: 'Invalid Job ID format.' })
     return
   }
-  const job = await Job.findOne({ _id: req.params.id }).exec()
+
+  const job = await Job.findOne({ _id: jobId }).exec()
   if (!job) {
-    res.status(204).json({ message: `No job matches ID ${req.params.id}.` })
+    res.status(204).json({ message: `No job matches ID ${jobId}.` })
     return
   }
   const step = req.query.step

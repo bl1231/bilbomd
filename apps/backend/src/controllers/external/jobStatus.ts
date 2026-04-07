@@ -6,7 +6,10 @@ import { logger } from '../../middleware/loggers.js'
 export const getApiJobStatus = async (req: Request, res: Response) => {
   try {
     const user = req.apiUser
-    const { id } = req.params
+    const rawId = req.params.id
+
+    // Ensure id is a string
+    const id = Array.isArray(rawId) ? rawId[0] : rawId
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       res.status(400).json({ message: 'Invalid job ID format' })
@@ -24,9 +27,24 @@ export const getApiJobStatus = async (req: Request, res: Response) => {
       return
     }
 
+    if (!job.user) {
+      res
+        .status(403)
+        .json({ message: 'Forbidden: job does not belong to user' })
+      return
+    }
+
     // Check that the job belongs to the requesting API user
-    if (job.user.toString() !== user._id.toString()) {
-      res.status(403).json({ message: 'Forbidden: job does not belong to user' })
+    // Handle both populated user object and ObjectId reference (backwards compatibility)
+    const jobUserId =
+      typeof job.user === 'object' && job.user !== null && '_id' in job.user
+        ? job.user._id.toString()
+        : (job.user as mongoose.Types.ObjectId).toString()
+
+    if (jobUserId !== user._id.toString()) {
+      res
+        .status(403)
+        .json({ message: 'Forbidden: job does not belong to user' })
       return
     }
 

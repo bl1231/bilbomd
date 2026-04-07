@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import { SUPPORTED_PDB_RESIDUES } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
 
 const fromCharmmGui = async (file: Express.Multer.File): Promise<boolean> => {
@@ -53,44 +54,36 @@ const isPsfData = async (file: Express.Multer.File): Promise<boolean> => {
       /^\s*\d+\s+[A-Z]{4}\s+\d+\s+[A-Z]{3,}\s+[a-zA-Z0-9_']+\s+[a-zA-Z0-9_']+\s+-?\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+/
 
     if (!lines[0].includes('PSF')) {
-      // console.log('first line does not contain PSF')
       return false
     }
 
     if (!lines.some((line) => line.trim().endsWith('!NTITLE'))) {
-      // console.log('NTITLE missing')
       return false
     }
 
     const natomLineIndex = lines.findIndex((line) => /\d+\s+!NATOM/.test(line))
     if (natomLineIndex === -1) {
-      // console.log('!NATOM line not found')
       return false
     }
 
     const natomResult = lines[natomLineIndex].match(/(\d+)\s+!NATOM/)
     if (!natomResult) {
-      // console.log('Failed to capture number of atoms')
       return false
     }
 
     const natom = parseInt(natomResult[1], 10)
-    // console.log('natom expected = ', natom)
     if (isNaN(natom)) {
       return false
     }
 
     // Check for atom lines directly following the !NATOM line
     const atomLines = lines.slice(natomLineIndex + 1, natomLineIndex + 1 + natom)
-    // console.log('num atom lines = ', atomLines.length)
     if (atomLines.length !== natom) {
-      // console.log('Incorrect number of atom lines')
       return false
     }
 
     for (const line of atomLines) {
       if (!atomRegex.test(line)) {
-        // console.log('Failed atom regex:', line)
         return false
       }
     }
@@ -105,7 +98,6 @@ const noSpaces = (file: File): Promise<boolean> => {
   const spaces = /\s/
   return new Promise((resolve) => {
     if (spaces.test(file.name)) {
-      // console.log('false', file.name)
       resolve(false)
     }
     resolve(true)
@@ -234,6 +226,38 @@ const isRNA = async (
   }
 }
 
+
+const checkPdbResidues = async (
+  file: Express.Multer.File
+): Promise<{ valid: boolean; message?: string }> => {
+  try {
+    const text = await fs.readFile(file.path, 'utf8')
+    const lines = text.split('\n')
+    const unsupported = new Set<string>()
+
+    for (const line of lines) {
+      if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+        const residue = line.slice(17, 20).trim()
+        if (residue && !SUPPORTED_PDB_RESIDUES.has(residue)) {
+          unsupported.add(residue)
+        }
+      }
+    }
+
+    if (unsupported.size > 0) {
+      const list = [...unsupported].sort().join(', ')
+      return {
+        valid: false,
+        message: `PDB contains unsupported residues: ${list}. These cannot be processed by BilboMD.`
+      }
+    }
+
+    return { valid: true }
+  } catch {
+    return { valid: false, message: 'Error reading PDB file.' }
+  }
+}
+
 const isValidConstInpFile = async (
   file: Express.Multer.File,
   mode: string
@@ -291,5 +315,6 @@ export {
   isSaxsData,
   isRNA,
   containsChainId,
+  checkPdbResidues,
   isValidConstInpFile
 }

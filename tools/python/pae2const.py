@@ -1285,15 +1285,33 @@ class PAEProcessor:
 
         return clusters, global_merged_flags
 
+    @staticmethod
+    def _get_rigid_body_size(rigid_body: list) -> int:
+        """Calculate total number of residues in a rigid body."""
+        total = 0
+        for start, end, _, _ in rigid_body:
+            total += abs(end - start) + 1
+        return total
+
     def write_outputs(self, input_file: str):
         """Write output files: const.inp and optionally constraints.yaml."""
+        # Sort rigid bodies by size (largest first) before writing
+        if self.rigid_bodies:
+            paired = list(zip(self.rigid_bodies, self.rigid_body_flags))
+            # Sort by total residue count, descending
+            paired.sort(key=lambda x: self._get_rigid_body_size(x[0]), reverse=True)
+            sorted_rigid_bodies, sorted_flags = zip(*paired)
+            sorted_rigid_bodies = list(sorted_rigid_bodies)
+        else:
+            sorted_rigid_bodies = []
+
         if not self.config.no_const:
             self._write_const_file(
-                self.rigid_bodies, self.config.charmm_const_file, input_file
+                sorted_rigid_bodies, self.config.charmm_const_file, input_file
             )
         if self.config.openmm_const_file:
             self._write_constraints_yaml(
-                self.rigid_bodies, self.config.openmm_const_file
+                sorted_rigid_bodies, self.config.openmm_const_file
             )
 
     @staticmethod

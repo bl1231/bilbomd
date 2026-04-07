@@ -15,10 +15,9 @@ import { updateStepStatus } from './mongo-utils.js'
 import {
   executeNerscScript,
   submitJobToNersc,
-  monitorTaskAtNERSC,
-  monitorJobAtNERSC
+  monitorTaskAtNERSC
 } from './nersc-api-functions.js'
-import { prepareResults } from './bilbomd-step-functions.js'
+import { prepareResults } from './prepare-results.js'
 import { cleanupJob } from './job-utils.js'
 
 interface INerscTaskResult {
@@ -165,6 +164,7 @@ const makeBilboMDSlurm = async (
       `Failed to prepare Slurm batch file: ${errorMessage}`
     )
     logger.error(`Error during preparation of Slurm batch: ${errorMessage}`)
+    throw error
   }
 }
 
@@ -188,6 +188,11 @@ const submitBilboMDSlurm = async (
 
     const submitResultObject = JSON.parse(submitResult.result)
     const nerscJobID = submitResultObject.jobid
+    if (!nerscJobID) {
+      throw new Error(
+        `NERSC submission task completed but returned no job ID. Full result: ${submitResult.result}`
+      )
+    }
     logger.info(`NERSC JOBID: ${nerscJobID}`)
 
     // Populate the `nersc` field in the `DBjob`
@@ -225,53 +230,8 @@ const submitBilboMDSlurm = async (
   }
 }
 
-const monitorBilboMDJob = async (
-  MQjob: BullMQJob,
-  DBjob: IJob,
-  Pjob: string
-): Promise<void> => {
-  try {
-    await MQjob.log('start nersc watch job')
-    await updateJobStatus(
-      DBjob,
-      'nersc_job_status',
-      'Running',
-      'Watching BilboMD Job'
-    )
 
-    const jobResult = await monitorJobAtNERSC(MQjob, DBjob, Pjob)
-    logger.info(`jobResult: ${JSON.stringify(jobResult)}`)
-
-    await updateJobStatus(
-      DBjob,
-      'nersc_job_status',
-      'Success',
-      'BilboMD job on Perlmutter has finished successfully.'
-    )
-    await MQjob.log('end nersc watch job')
-  } catch (error) {
-    let errorMessage = 'Unknown error'
-    let errorStack = ''
-
-    if (error instanceof Error) {
-      errorMessage = error.message
-      errorStack = error.stack || ''
-    }
-
-    await updateJobStatus(
-      DBjob,
-      'nersc_job_status',
-      'Error',
-      `Failed to monitor BilboMD job: ${errorMessage}`
-    )
-    logger.error(`Error during monitoring of BilboMD job: ${errorStack}`)
-  }
-}
-
-const prepareBilboMDResults = async (
-  MQjob: BullMQJob,
-  DBjob: IJob
-): Promise<void> => {
+const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
   try {
     await updateJobStatus(
       DBjob,
@@ -287,7 +247,7 @@ const prepareBilboMDResults = async (
       isBilboMDAutoJob(DBjob) ||
       isBilboMDAlphaFoldJob(DBjob)
     ) {
-      await prepareResults(MQjob, DBjob)
+      await prepareResults(DBjob)
       await updateJobStatus(
         DBjob,
         'results',
@@ -396,7 +356,6 @@ export {
   updateNerscSpecificSteps,
   makeBilboMDSlurm,
   submitBilboMDSlurm,
-  monitorBilboMDJob,
   copyBilboMDResults,
   prepareBilboMDResults,
   sendBilboMDEmail,

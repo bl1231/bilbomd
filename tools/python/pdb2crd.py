@@ -49,6 +49,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
 import argparse
 import os
+import sys
 
 from pdb_utils import determine_molecule_type_details
 
@@ -61,15 +62,23 @@ def get_chain_filename(chain_id, pdb_filename):
     for uppercase chain IDs to differentiate from lowercase ones, since CHARMM
     requires lowercase filenames in all input files.
 
-    :param chain_id: The chain ID from the PDB file.
+    :param chain_id: The chain ID from the PDB file (single char or full key like 'pdb2crd_chain_A').
     :param pdb_filename: The original PDB filename.
-    :param output_dir: The output directory for the chain files.
     :return: A string representing the filename for the chain file.
     """
-    # Check if the chain ID is uppercase and append '_uc' if true
-    suffix = "_uc" if chain_id.isupper() else ""
-    # Construct the filename using the lowercase chain ID and suffix if applicable
-    chain_filename = f"{chain_id.lower()}{suffix}_{pdb_filename.split('/')[-1].lower()}"
+    # Extract the actual chain character (last character if it's a key, or the whole thing if single char)
+    chain_char = chain_id[-1] if len(chain_id) > 1 else chain_id
+
+    # Construct full key with prefix if needed
+    if len(chain_id) == 1:
+        full_key = f"pdb2crd_chain_{chain_id}"
+    else:
+        full_key = chain_id
+
+    # Check if the chain character is uppercase and append '_uc' if true
+    suffix = "_uc" if chain_char.isupper() else ""
+    # Construct the filename using the lowercase full key and suffix if applicable
+    chain_filename = f"{full_key.lower()}{suffix}_{pdb_filename.split('/')[-1].lower()}"
     return chain_filename
 
 
@@ -199,7 +208,9 @@ def write_pdb_2_crd_inp_files(chains, output_dir, pdb_file_path):
     for chain_id, chain_data in chains.items():
         molecule_type = chain_data["type"]
         # our little hack to always use lower case file name for CHARMM
-        suffix = "_uc" if chain_id.isupper() else ""
+        # Extract the actual chain character (last character of the key)
+        chain_char = chain_id[-1]
+        suffix = "_uc" if chain_char.isupper() else ""
         # input filename:
         input_filename = os.path.basename(pdb_file_path)
         # Get the base filename without extension
@@ -210,7 +221,7 @@ def write_pdb_2_crd_inp_files(chains, output_dir, pdb_file_path):
         # CAR is for uppercase Chain IDs
         # CAL is for lowercase Chain IDs
         if molecule_type == "CAR":
-            carb_suffix = "R" if chain_id.isupper() else "L"
+            carb_suffix = "R" if chain_char.isupper() else "L"
 
             charmmgui_chain_id = f"CA{carb_suffix}{chain_data['chainid'].upper()}"
         else:
@@ -357,8 +368,10 @@ def write_meld_chain_crd_files(chains, output_dir, pdb_file_path):
             # but should probably make this work for Protein and DNA/RNA
             # CAR is for uppercase Chain IDs A-Z
             # CAL is for lowercase Chain IDs a-z
+            # Extract the actual chain character (last character of the key)
+            chain_char = chain_id[-1]
             if molecule_type == "CAR":
-                carb_suffix = "R" if chain_id.isupper() else "L"
+                carb_suffix = "R" if chain_char.isupper() else "L"
                 charmmgui_chain_id = f"CA{carb_suffix}{chain_data['chainid'].upper()}"
             else:
                 charmmgui_chain_id = f"{molecule_type}{chain_data['chainid']}"
@@ -465,9 +478,26 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
         )
         chain_data["molinfo"] = molinfo
         types_present = molinfo.get("types_present", set())
+        first_type = molinfo.get("first_residue_type", "UNKNOWN")
+
+        # Determine the chain type consistently using first_residue_type
+        # This avoids non-deterministic set iteration order
         chain_data["type"] = (
-            "PRO" if types_present == {"PRO"} else next(iter(types_present), "UNKNOWN")
+            "PRO" if types_present == {"PRO"} else first_type
         )
+
+        # Warn if chain contains mixed types or unknown residues
+        if len(types_present) > 1:
+            print(
+                f"WARNING: Chain {chain_data['chainid']} contains mixed residue types: {types_present}. "
+                f"Using {chain_data['type']} (first residue type)",
+                file=sys.stderr
+            )
+        elif "UNKNOWN" in types_present:
+            print(
+                f"WARNING: Chain {chain_data['chainid']} contains unrecognized residues (type={chain_data['type']})",
+                file=sys.stderr
+            )
 
     # Process and write each chain to a separate file
     for chain_id, chain_data in chains.items():

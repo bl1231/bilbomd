@@ -1,9 +1,13 @@
 import { Request, Response } from 'express'
 import { allQueues } from './allQueues.js'
 import { redis as redisConn } from '../../queues/redisConn.js'
+import { logger } from '../../middleware/loggers.js'
 
 const getJobsByQueue = async (req: Request, res: Response): Promise<void> => {
-  const { queueName } = req.params
+  const rawQueueName = req.params.queueName
+
+  // Ensure queueName is a string
+  const queueName = Array.isArray(rawQueueName) ? rawQueueName[0] : rawQueueName
 
   const queue = allQueues[queueName]
   if (!queue) {
@@ -33,7 +37,11 @@ const getJobsByQueue = async (req: Request, res: Response): Promise<void> => {
           id: job.id,
           name: job.name,
           data: job.data,
-          status: job.finishedOn ? 'completed' : job.failedReason ? 'failed' : state,
+          status: job.finishedOn
+            ? 'completed'
+            : job.failedReason
+              ? 'failed'
+              : state,
           timestamp: job.timestamp,
           attemptsMade: job.attemptsMade,
           lockExpiresAt
@@ -43,7 +51,7 @@ const getJobsByQueue = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({ queueName, jobs: jobSummaries })
   } catch (error) {
-    console.error(`Failed to fetch jobs for queue "${queueName}"`, error)
+    logger.error(`Failed to fetch jobs for queue "${queueName}": ${error}`)
     res.status(500).json({
       message: `Failed to fetch jobs for queue "${queueName}"`,
       error: (error as Error).message

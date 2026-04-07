@@ -3,8 +3,9 @@ import fs from 'fs-extra'
 import path from 'path'
 import { Job } from '@bilbomd/mongodb-schema'
 import { BilboMDSteps } from '../../../types/bilbomd.js'
+import { getEnvVar } from '../../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const writeJobParams = async (jobID: string): Promise<void> => {
   try {

@@ -1,6 +1,8 @@
 import { Schema, model } from 'mongoose'
 import { IMultiJob } from '../interfaces'
-import { stepsSchema, nerscInfoSchema } from './Job'
+import { nerscInfoSchema } from './Job'
+import { resultsSchema } from './Results'
+import { stepsSchema } from './JobSteps'
 
 const multiJobSchema = new Schema(
   {
@@ -20,7 +22,9 @@ const multiJobSchema = new Schema(
     steps: { type: stepsSchema, required: true, default: {} },
     progress: { type: Number, min: 0, max: 100, default: 0 },
     nersc: { type: nerscInfoSchema, required: false },
-    cleanup_in_progress: { type: Boolean, default: false }
+    cleanup_in_progress: { type: Boolean, default: false },
+    results_ready: { type: Boolean },
+    results: { type: resultsSchema, required: false }
   },
   {
     timestamps: true,

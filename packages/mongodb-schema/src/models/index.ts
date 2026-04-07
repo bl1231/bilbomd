@@ -1,3 +1,7 @@
 export * from './Job'
 export * from './User'
 export * from './MultiJob'
+export * from './Assets'
+export * from './Results'
+export * from './UsageEvent'
+export type { UsageEventDoc, UsageEventContextDoc } from './UsageEvent'

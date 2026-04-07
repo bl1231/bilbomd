@@ -15,8 +15,8 @@ interface FoxsDataPoint {
 interface FoxsData {
   filename: string
   chisq: number
-  c1: number
-  c2: number
+  c1: string
+  c2: string
   data: FoxsDataPoint[]
 }
 
@@ -50,27 +50,31 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
     refetchOnMountOrArgChange: true
   })
 
-  const foxsData: FoxsData[] = data as FoxsData[]
+  // Memoize foxsData to prevent unnecessary re-renders
+  const foxsData = useMemo(
+    () => ((data ?? []) as FoxsData[]),
+    [data]
+  )
 
   // Prepare original data to reduce the number of digits after the decimal point
   // and filter out negative values
   const origData = useMemo(
-    () => (foxsData ? prepData(foxsData[0].data) : []),
+    () => (foxsData.length > 0 ? prepData(foxsData[0].data) : []),
     [foxsData]
   )
   const scopData = useMemo(
-    () => (foxsData ? prepData(foxsData[1].data) : []),
+    () => (foxsData.length > 1 ? prepData(foxsData[1].data) : []),
     [foxsData]
   )
 
   // Calculate residual values for both datasets
   const origResiduals = useMemo(
-    () => (foxsData ? calculateResiduals(origData) : []),
-    [origData, foxsData]
+    () => (origData.length > 0 ? calculateResiduals(origData) : []),
+    [origData]
   )
   const scopResiduals = useMemo(
-    () => (foxsData ? calculateResiduals(scopData) : []),
-    [scopData, foxsData]
+    () => (scopData.length > 0 ? calculateResiduals(scopData) : []),
+    [scopData]
   )
 
   // Define a Memoized calculation for min and max Y axis values
@@ -83,7 +87,10 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
   if (isLoading) return <div>Loading...</div>
   if (isError || !data)
     return (
-      <Alert severity='info' variant='outlined'>
+      <Alert
+        severity="info"
+        variant="outlined"
+      >
         <AlertTitle>FoXS data is unavailable for this job.</AlertTitle>
       </Alert>
     )
@@ -100,7 +107,10 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
 
   return (
     <Item>
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         <Grid size={{ xs: 6 }}>
           <FoXSChart
             title={`Original Model - ${origPDBFile}`}

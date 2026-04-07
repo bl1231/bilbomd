@@ -6,7 +6,7 @@ const useLogout = () => {
   const [sendLogout] = useSendLogoutMutation()
 
   const logout = async () => {
-    await sendLogout({})
+    await sendLogout(undefined)
     void navigate("/")
   }
 

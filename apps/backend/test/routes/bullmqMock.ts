@@ -1,7 +1,7 @@
 // bullmqMock.ts
 
 import express from 'express'
-import { getQueueStatus } from '../controllers/bullmqControllerMock' // Import the controller mock
+import { getQueueStatus } from '../controllers/bullmqControllerMock.js' // Import the controller mock
 
 const router = express.Router()
 

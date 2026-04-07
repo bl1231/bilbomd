@@ -1,0 +1,213 @@
+version: 2
+updates:
+  # 1) GitHub Actions updates (low effort, high value)
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '10:00'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+
+  # 2) Root (sometimes you have tooling deps here)
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '10:15'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    versioning-strategy: 'increase'
+    # eslint v10 blocked until eslint-plugin-react and eslint-plugin-react-hooks
+    # ship stable releases with v10 peer dep support
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+    groups:
+      root-prod:
+        dependency-type: 'production'
+        patterns: ['*']
+      root-dev:
+        dependency-type: 'development'
+        patterns: ['*']
+
+  # 3) Workspaces — add one block per workspace directory that has a package.json
+  # Example: apps/*
+  - package-ecosystem: 'npm'
+    directory: '/apps/backend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '10:30'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+    groups:
+      backend-prod:
+        dependency-type: 'production'
+        patterns: ['*']
+      backend-dev:
+        dependency-type: 'development'
+        patterns: ['*']
+
+  - package-ecosystem: 'npm'
+    directory: '/apps/worker'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '10:45'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+    groups:
+      worker-prod:
+        dependency-type: 'production'
+        patterns: ['*']
+      worker-dev:
+        dependency-type: 'development'
+        patterns: ['*']
+
+  - package-ecosystem: 'npm'
+    directory: '/apps/scoper'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '11:00'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+    groups:
+      scoper-prod:
+        dependency-type: 'production'
+        patterns: ['*']
+      scoper-dev:
+        dependency-type: 'development'
+        patterns: ['*']
+
+  - package-ecosystem: 'npm'
+    directory: '/apps/ui'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '11:15'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+    groups:
+      ui-prod:
+        dependency-type: 'production'
+        patterns: ['*']
+      ui-dev:
+        dependency-type: 'development'
+        patterns: ['*']
+
+  - package-ecosystem: 'npm'
+    directory: '/packages/bilbomd-types'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '11:30'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+    groups:
+      bilbomd-types-prod:
+        dependency-type: 'production'
+        patterns: ['*']
+      bilbomd-types-dev:
+        dependency-type: 'development'
+        patterns: ['*']
+
+  - package-ecosystem: 'npm'
+    directory: '/packages/eslint-config'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '11:35'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+    groups:
+      eslint-config-prod:
+        dependency-type: 'production'
+        patterns: ['*']
+      eslint-config-dev:
+        dependency-type: 'development'
+        patterns: ['*']
+
+  - package-ecosystem: 'npm'
+    directory: '/packages/md-utils'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '11:40'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+    groups:
+      md-utils-prod:
+        dependency-type: 'production'
+        patterns: ['*']
+      md-utils-dev:
+        dependency-type: 'development'
+        patterns: ['*']
+
+  - package-ecosystem: 'npm'
+    directory: '/packages/mongodb-schema'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '11:45'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 5
+    versioning-strategy: 'increase'
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+    groups:
+      mongodb-schema-prod:
+        dependency-type: 'production'
+        patterns: ['*']
+      mongodb-schema-dev:
+        dependency-type: 'development'
+        patterns: ['*']
+
+  # 4) Optional: Docker base image bumps (only if you want it)
+  # - package-ecosystem: 'docker'
+  #   directory: '/'
+  #   schedule:
+  #     interval: 'weekly'
+  #     day: 'monday'
+  #     time: '11:00'
+  #     timezone: 'America/Los_Angeles'
+  #   open-pull-requests-limit: 3
+  #   groups:
+  #     docker-base-images:
+  #       patterns: ['*']

@@ -1,8 +1,8 @@
-// bullmqControllerMock.ts
+import { vi } from 'vitest'
 
-const mockGetActiveCount = jest.fn().mockResolvedValue(42) // Example value
-const mockGetWaitingCount = jest.fn().mockResolvedValue(13) // Example value
-const mockGetWorkers = jest.fn().mockResolvedValue([]) // Example value
+const mockGetActiveCount = vi.fn().mockResolvedValue(42) // Example value
+const mockGetWaitingCount = vi.fn().mockResolvedValue(13) // Example value
+const mockGetWorkers = vi.fn().mockResolvedValue([]) // Example value
 
 const getQueueStatus = async () => {
   const bullmqActiveCount = await mockGetActiveCount()
@@ -17,4 +17,9 @@ const getQueueStatus = async () => {
   return queueStatus
 }
 
-export { getQueueStatus, mockGetActiveCount, mockGetWaitingCount, mockGetWorkers }
+export {
+  getQueueStatus,
+  mockGetActiveCount,
+  mockGetWaitingCount,
+  mockGetWorkers
+}

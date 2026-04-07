@@ -2,12 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "NodeNext",
-    "rootDir": "src",
     "moduleResolution": "NodeNext",
-    "baseUrl": "./src",
-    "paths": {
-      "*": ["./src/*"]
-    },
     "types": [
       "node",
       "vitest"
@@ -16,6 +11,7 @@
     "allowJs": true,
     "checkJs": false,
     "outDir": "dist",
+    "rootDir": "src",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,

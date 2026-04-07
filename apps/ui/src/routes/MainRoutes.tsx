@@ -62,6 +62,7 @@ const QueueDetailsPage = Loadable(
 )
 const Unauthorized = Loadable(lazy(() => import('components/Unauthorized')))
 const Missing = Loadable(lazy(() => import('components/Missing')))
+const Help = Loadable(lazy(() => import('features/help/Help')))
 
 // ===========================|| MAIN ROUTING ||============================ //
 
@@ -74,11 +75,11 @@ const ProtectedMainRoutes = {
       children: [
         {
           index: true,
-          element: <Welcome />
+          element: <Welcome mode="authenticated" />
         },
         {
           path: 'welcome',
-          element: <Welcome />
+          element: <Welcome mode="authenticated" />
         },
         {
           element: <RequireAuth allowedRoles={[ROLES.Admin]} />,
@@ -111,10 +112,18 @@ const ProtectedMainRoutes = {
                 {
                   path: 'dashboard',
                   children: [
-                    { path: '', element: <Welcome /> },
+                    { path: '', element: <Welcome mode="authenticated" /> },
                     {
                       path: 'about',
-                      element: <About title='BilboMD: About' />
+                      element: <About title="BilboMD: About" />
+                    },
+                    {
+                      path: 'about',
+                      element: <About title="BilboMD: About" />
+                    },
+                    {
+                      path: 'help',
+                      element: <Help title="BilboMD: Help" />
                     },
                     {
                       element: (

@@ -1,11 +1,13 @@
 # -----------------------------------------------------------------------------
 # Stage 1: deps (prefetch pnpm store for monorepo)
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /repo
 RUN corepack enable
 
 # Copy only files needed to resolve workspace dependencies (better cache)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
+COPY packages/eslint-config/ packages/eslint-config/
 COPY apps/ui/package.json apps/ui/package.json
 
 # Prefetch dependencies into pnpm store (no linking yet)
@@ -13,7 +15,7 @@ RUN pnpm fetch
 
 # -----------------------------------------------------------------------------
 # Stage 2: build (install, build UI, then prune)
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /repo
 RUN corepack enable
 
@@ -26,6 +28,7 @@ COPY . .
 # Install using the fetched store and frozen lockfile
 RUN pnpm install --frozen-lockfile
 RUN pnpm -C packages/mongodb-schema run build
+RUN pnpm -C packages/bilbomd-types run build
 RUN pnpm -C apps/ui run build
 
 # Produce a minimal, deployable output for just the UI (node_modules pruned to prod)
@@ -44,8 +47,9 @@ RUN apk add --no-cache bash
 # Copy the Vite build output (dist/build) to nginx serving directory
 COPY --from=build /repo/apps/ui/build /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY apps/ui/nginx.default.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configurations
+COPY apps/ui/nginx/nginx.default.conf /etc/nginx/conf.d/default.conf
+COPY apps/ui/nginx/nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
 

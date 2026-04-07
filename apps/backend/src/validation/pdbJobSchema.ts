@@ -7,7 +7,8 @@ import {
   noSpacesTest,
   saxsCheck,
   constInpCheck,
-  chainIdCheck
+  chainIdCheck,
+  pdbResidueCheck
 } from './helpers/fileValidators.js'
 
 export const pdbJobSchema = yup.object({
@@ -28,6 +29,7 @@ export const pdbJobSchema = yup.object({
     .concat(fileNameLengthTest()),
   pdb_file: requiredFile('PDB file is required')
     .concat(chainIdCheck())
+    .concat(pdbResidueCheck())
     .concat(fileExtTest('pdb'))
     .concat(fileSizeTest(10_000_000))
     .concat(noSpacesTest())

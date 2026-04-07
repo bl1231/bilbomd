@@ -1,18 +1,10 @@
 import { useState } from 'react'
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Alert,
-  AlertTitle,
-  Paper
-} from '@mui/material'
+import { Box, Button, TextField, Typography, Alert, Paper } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import { Link as RouterLink } from 'react-router'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
 import { useAddNewAutoJobMutation } from '../../slices/jobsApiSlice'
+import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import NewAutoJobFormInstructions from './AutoJobFormInstructions'
 import { BilboMDAutoJobSchema } from 'schemas/BilboMDAutoJobSchema'
@@ -25,20 +17,59 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
+import MdEngineField from 'components/MdEngineField'
+import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
+import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 
-const NewAutoJobForm = () => {
-  useTitle('BilboMD: New Auto Job')
+type NewJobFormProps = {
+  mode?: 'authenticated' | 'anonymous'
+}
+
+const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
+  useTitle(
+    mode === 'anonymous'
+      ? 'BilboMD: New Auto Job (anon)'
+      : 'BilboMD: New Auto Job'
+  )
 
   // Theme and routing
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
 
   // State, RTK mutations and queries
-  const [addNewAutoJob, { isSuccess }] = useAddNewAutoJobMutation()
+  const [addNewJob, { isSuccess: isAuthSuccess, data: authJobResponse }] =
+    useAddNewAutoJobMutation()
+  const [addNewPublicJob, { isSuccess: isAnonSuccess, data: anonJobResponse }] =
+    useAddNewPublicJobMutation()
+  const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
+
+  // Transform responses to expected shape
+  const publicJobResponse =
+    anonJobResponse && mode === 'anonymous'
+      ? {
+          resultUrl: anonJobResponse.resultUrl,
+          publicId: anonJobResponse.publicId,
+          md_engine: anonJobResponse.md_engine
+        }
+      : undefined
+
+  const authSuccessResponse =
+    authJobResponse && mode === 'authenticated'
+      ? {
+          message: authJobResponse.message || 'Job submitted successfully',
+          jobid: authJobResponse.jobid,
+          uuid: authJobResponse.uuid,
+          md_engine: authJobResponse.md_engine
+        }
+      : undefined
+
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
+  const [useExampleData, setUseExampleData] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // RTK Query to fetch the configuration
   const {
@@ -49,35 +80,46 @@ const NewAutoJobForm = () => {
 
   if (configIsLoading) return <LinearProgress />
   if (configError)
-    return <Alert severity='error'>Error loading configuration</Alert>
+    return <Alert severity="error">Error loading configuration</Alert>
+  if (!config)
+    return <Alert severity="error">Configuration not available</Alert>
 
   // Are we running on NERSC?
   const useNersc = config.useNersc?.toLowerCase() === 'true'
+  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
 
   const initialValues: BilboMDAutoJobFormValues = {
     bilbomd_mode: 'auto',
     title: '',
     pdb_file: '',
     pae_file: '',
-    dat_file: ''
+    dat_file: '',
+    md_engine: charmmEnabled ? 'charmm' : 'openmm'
   }
 
-  const onSubmit = async (
-    values: BilboMDAutoJobFormValues,
-    { setStatus }: { setStatus: (status: string) => void }
-  ) => {
+  const onSubmit = async (values: BilboMDAutoJobFormValues) => {
+    setSubmitError(null)
     const form = new FormData()
     form.append('title', values.title)
     form.append('pdb_file', values.pdb_file)
     form.append('dat_file', values.dat_file)
     form.append('pae_file', values.pae_file)
     form.append('bilbomd_mode', 'auto')
+    form.append('md_engine', values.md_engine)
+    if (useExampleData) {
+      form.append('useExampleData', 'true')
+    }
 
     try {
-      const newJob = await addNewAutoJob(form).unwrap()
-      setStatus(newJob)
+      await (mode === 'anonymous'
+        ? addNewPublicJob(form).unwrap()
+        : addNewJob(form).unwrap())
     } catch (error) {
       console.error('rejected', error)
+      setSubmitError(
+        (error as { data?: { message?: string } }).data?.message ||
+          'An error occurred during submission.'
+      )
     }
   }
 
@@ -85,38 +127,52 @@ const NewAutoJobForm = () => {
     return (
       !isPerlmutterUnavailable &&
       values.title !== '' &&
-      values.pdb_file !== '' &&
-      values.pae_file !== '' &&
-      values.dat_file !== ''
+      (useExampleData ||
+        (values.pdb_file !== '' &&
+          values.pae_file !== '' &&
+          values.dat_file !== ''))
     )
   }
 
   const content = (
     <>
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         <Grid size={{ xs: 12 }}>
           <NewAutoJobFormInstructions />
         </Grid>
 
-        <PipelineSchematic isDarkMode={isDarkMode} />
+        <PipelineSchematic
+          isDarkMode={isDarkMode}
+          mdEngine={mdEngine}
+        />
 
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
             <Typography>BilboMD Auto Job Form</Typography>
           </HeaderBox>
+
           <Paper sx={{ p: 2 }}>
             {isSuccess ? (
-              <Alert severity='success'>
-                <AlertTitle>Woot!</AlertTitle>
-                <Typography>
-                  Your job has been submitted. Check out the{' '}
-                  <RouterLink to='../jobs'>details</RouterLink>.
-                </Typography>
-              </Alert>
+              mode === 'anonymous' && publicJobResponse ? (
+                <PublicJobSuccessAlert
+                  jobResponse={publicJobResponse}
+                  jobType="Auto"
+                />
+              ) : authSuccessResponse ? (
+                <JobSuccessAlert
+                  jobResponse={authSuccessResponse}
+                  jobType="Auto"
+                />
+              ) : null
             ) : (
               <Formik
                 initialValues={initialValues}
-                validationSchema={BilboMDAutoJobSchema}
+                validationSchema={
+                  useExampleData ? undefined : BilboMDAutoJobSchema
+                }
                 onSubmit={onSubmit}
               >
                 {({
@@ -127,112 +183,226 @@ const NewAutoJobForm = () => {
                   isSubmitting,
                   handleChange,
                   handleBlur,
-                  status,
                   setFieldValue,
-                  setFieldTouched
+                  setFieldTouched,
+                  validateForm
                 }) => (
                   <Form>
-                    <Grid container direction='column'>
+                    <Grid
+                      container
+                      direction="column"
+                    >
                       {useNersc && (
                         <NerscStatusChecker
-                          systemName='perlmutter'
+                          systemName="perlmutter"
                           onStatusCheck={handleStatusCheck}
                         />
                       )}
-                      <Grid sx={{ my: 2, width: '520px' }}>
-                        <Field
-                          fullWidth
-                          label='Title'
-                          name='title'
-                          id='title'
-                          type='text'
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          my: 1
+                        }}
+                      >
+                        <Box sx={{ minWidth: '520px' }}>
+                          <Field
+                            label="Title"
+                            name="title"
+                            id="title"
+                            type="text"
+                            disabled={isSubmitting}
+                            as={TextField}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            error={errors.title && touched.title}
+                            helperText={
+                              errors.title && touched.title ? errors.title : ''
+                            }
+                            value={values.title || ''}
+                            sx={{ width: '100%' }}
+                          />
+                        </Box>
+                        <Box sx={{ ml: 8, minWidth: 'fit-content' }}>
+                          <Button
+                            variant={useExampleData ? 'outlined' : 'contained'}
+                            onClick={() => {
+                              setUseExampleData(!useExampleData)
+                              if (!useExampleData) {
+                                // Switching to example data: reset file fields
+                                void setFieldValue('pdb_file', '')
+                                void setFieldValue('pae_file', '')
+                                void setFieldValue('dat_file', '')
+                                // Add default for title
+                                void setFieldValue('title', 'example-auto-job')
+                              } else {
+                                // Switching to custom data: clear example defaults
+                                void setFieldValue('title', '')
+                                void setFieldValue('pdb_file', '')
+                                void setFieldValue('pae_file', '')
+                                void setFieldValue('dat_file', '')
+                              }
+                              // Delay validation to ensure form state has been updated
+                              setTimeout(() => {
+                                void validateForm()
+                              }, 0)
+                            }}
+                          >
+                            {useExampleData
+                              ? 'Use Custom Data'
+                              : 'Load Example Data'}
+                          </Button>
+                        </Box>
+                        <Box sx={{ ml: 2, minWidth: 'fit-content' }}>
+                          <Button
+                            variant="contained"
+                            href={'/api/v1/public/examples/auto'}
+                          >
+                            Download Example Data
+                          </Button>
+                        </Box>
+                      </Box>
+
+                      {/* MD Engine selection */}
+                      <Grid sx={{ width: '520px' }}>
+                        <MdEngineField
+                          value={values.md_engine as 'charmm' | 'openmm'}
+                          onChange={(val) => {
+                            void setFieldValue('md_engine', val)
+                            setMdEngine(val)
+                          }}
                           disabled={isSubmitting}
-                          as={TextField}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          error={errors.title && touched.title}
-                          helperText={
-                            errors.title && touched.title ? errors.title : ''
-                          }
-                          value={values.title || ''}
+                          disableCharmm={!charmmEnabled}
                         />
                       </Grid>
 
+                      {useExampleData && (
+                        <Alert
+                          severity="warning"
+                          sx={{ my: 1 }}
+                        >
+                          Using example data for Auto mode
+                        </Alert>
+                      )}
+
+                      {submitError && (
+                        <Alert
+                          severity="error"
+                          sx={{ my: 1 }}
+                        >
+                          {submitError}
+                        </Alert>
+                      )}
+
                       <Grid>
                         <Field
-                          name='pdb_file'
-                          id='pdb-file-upload'
+                          name="pdb_file"
+                          id="pdb-file-upload"
                           as={FileSelect}
-                          title='Select File'
-                          disabled={isSubmitting}
+                          title="Select File"
+                          disabled={isSubmitting || useExampleData}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.pdb_file && touched.pdb_file}
                           errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                          fileType='AlphaFold2 *.pdb'
-                          fileExt='.pdb'
+                          fileType="AlphaFold2 *.pdb"
+                          fileExt=".pdb"
+                          existingFileName={
+                            useExampleData ? 'example-auto.pdb' : undefined
+                          }
                         />
                       </Grid>
 
                       <Grid>
                         <Field
-                          name='pae_file'
-                          id='pae-file-upload'
+                          name="pae_file"
+                          id="pae-file-upload"
                           as={FileSelect}
-                          title='Select File'
-                          disabled={isSubmitting}
+                          title="Select File"
+                          disabled={isSubmitting || useExampleData}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.pae_file && touched.pae_file}
                           errorMessage={errors.pae_file ? errors.pae_file : ''}
-                          fileType='AlphaFold2 PAE *.json'
-                          fileExt='.json'
+                          fileType="AlphaFold2 PAE *.json"
+                          fileExt=".json"
+                          existingFileName={
+                            useExampleData ? 'example-auto-pae.json' : undefined
+                          }
                         />
                       </Grid>
+
                       <Grid>
                         <Field
-                          name='dat_file'
-                          id='dat-file-upload'
+                          name="dat_file"
+                          id="dat-file-upload"
                           as={FileSelect}
-                          title='Select File'
-                          disabled={isSubmitting}
+                          title="Select File"
+                          disabled={isSubmitting || useExampleData}
                           setFieldValue={setFieldValue}
                           setFieldTouched={setFieldTouched}
                           error={errors.dat_file && touched.dat_file}
                           errorMessage={errors.dat_file ? errors.dat_file : ''}
-                          fileType='experimental SAXS data *.dat'
-                          fileExt='.dat'
+                          fileType="experimental SAXS data *.dat"
+                          fileExt=".dat"
+                          existingFileName={
+                            useExampleData ? 'example-saxs.dat' : undefined
+                          }
                         />
                       </Grid>
 
+                      {/* Progress Bar */}
                       {isSubmitting && (
                         <Box sx={{ my: 1, width: '520px' }}>
                           <LinearProgress />
                         </Box>
                       )}
+
                       <Grid sx={{ mt: 2 }}>
                         <Button
-                          type='submit'
+                          type="submit"
                           disabled={
-                            !isValid || isSubmitting || !isFormValid(values)
+                            (!isValid && !useExampleData) ||
+                            !isFormValid(values)
                           }
                           loading={isSubmitting}
                           endIcon={<SendIcon />}
-                          loadingPosition='end'
-                          variant='contained'
+                          loadingPosition="end"
+                          variant="contained"
                           sx={{ width: '110px' }}
                         >
                           <span>Submit</span>
                         </Button>
-
-                        {isSuccess ? (
-                          <Alert severity='success'>{status}</Alert>
-                        ) : (
-                          ''
+                        {((!isValid && !useExampleData) ||
+                          !isFormValid(values)) && (
+                          <Typography
+                            variant="body2"
+                            color="error"
+                            sx={{
+                              mt: 1,
+                              fontSize: '0.75rem',
+                              whiteSpace: 'pre-line'
+                            }}
+                          >
+                            {Object.entries(errors)
+                              .filter(
+                                ([key, value]) =>
+                                  value &&
+                                  (useExampleData
+                                    ? ![
+                                        'pdb_file',
+                                        'pae_file',
+                                        'dat_file'
+                                      ].includes(key)
+                                    : true)
+                              )
+                              .map(([, value]) => value)
+                              .join('\n')}
+                          </Typography>
                         )}
                       </Grid>
                     </Grid>
-                    {process.env.NODE_ENV === 'development' ? <Debug /> : ''}
+                    {import.meta.env.MODE === 'development' ? <Debug /> : ''}
                   </Form>
                 )}
               </Formik>

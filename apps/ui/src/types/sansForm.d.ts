@@ -7,5 +7,6 @@ export interface NewSANSJobFormValues {
   rg_max: number
   inp_file: string
   d2o_fraction: number
+  md_engine: 'charmm' | 'openmm'
   [key: `deuteration_fraction_${string}`]: number
 }

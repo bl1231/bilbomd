@@ -1,7 +1,7 @@
 # --------------------------------------------------------------------------------------
 # Build stage 1 - Install Miniforge3
 # FROM node:22-slim AS bilbomd-backend-step1
-FROM node:22 AS bilbomd-backend-step1
+FROM node:24 AS bilbomd-backend-step1
 
 RUN apt-get update && \
     apt-get install -y ncat ca-certificates wget libgl1-mesa-dev && \
@@ -31,12 +31,14 @@ WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the same version you use locally
 RUN corepack enable \
-    && corepack prepare pnpm@10.16.1 --activate \
+    && corepack prepare pnpm@latest --activate \
     && pnpm config set inject-workspace-packages=true
 
 # Only copy what's needed to resolve workspaces (good cache behavior)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
+COPY packages/md-utils/package.json packages/md-utils/package.json
+COPY packages/eslint-config/ packages/eslint-config/
 COPY apps/backend/package.json apps/backend/package.json
 
 # Prefetch dependencies into pnpm store (no linking yet)
@@ -48,7 +50,7 @@ FROM bilbomd-backend-step1 AS build
 WORKDIR /repo
 
 RUN corepack enable \
-    && corepack prepare pnpm@10.15.1 --activate \
+    && corepack prepare pnpm@latest --activate \
     && pnpm config set inject-workspace-packages=true
 
 ENV HUSKY=0
@@ -66,6 +68,8 @@ COPY . .
 # Install deterministically from lockfile and build
 RUN pnpm install --frozen-lockfile
 RUN pnpm -C packages/mongodb-schema run build
+RUN pnpm -C packages/md-utils run build
+RUN pnpm -C packages/bilbomd-types run build
 RUN pnpm -C apps/backend run build
 
 # Produce a minimal deployable bundle for just the backend
@@ -94,6 +98,17 @@ WORKDIR /app
 COPY --chown=bilbo:bilbomd --from=build /out/ .
 
 COPY --chown=bilbo:bilbomd ./tools/python/ /app/scripts/
+COPY --chown=bilbo:bilbomd ./example-data/ /app/examples/
+
+# Create tarballs for example datasets
+RUN set -eux; \
+    cd /app/examples; \
+    tar czf bilbomd_classic_pdb_example.tar.gz pdb/; \
+    tar czf bilbomd_classic_crd_example.tar.gz crd/; \
+    tar czf bilbomd_auto_example.tar.gz auto/; \
+    tar czf bilbomd_af_example.tar.gz af/; \
+    tar czf bilbomd_sans_example.tar.gz sans/; \
+    tar czf scoper_example.tar.gz scoper/
 
 # Optional metadata/env from build args
 ARG BILBOMD_BACKEND_GIT_HASH

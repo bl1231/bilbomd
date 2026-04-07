@@ -1,7 +1,8 @@
+ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.7
 ########################################
 # Stage 1: deps (prefetch pnpm store)
 ########################################
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /repo
 # Enable pnpm via Corepack
 RUN corepack enable
@@ -9,6 +10,8 @@ RUN corepack enable
 # Copy only files needed to resolve workspace dependencies (better cache)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
+COPY packages/md-utils/package.json packages/md-utils/package.json
+COPY packages/eslint-config/ packages/eslint-config/
 COPY apps/worker/package.json apps/worker/package.json
 
 # Prefetch dependencies into pnpm store (no linking yet)
@@ -17,7 +20,7 @@ RUN pnpm fetch
 ########################################
 # Stage 2: build (install, build schema + worker, then prune)
 ########################################
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /repo
 RUN corepack enable
 
@@ -30,8 +33,9 @@ COPY . .
 # Install using the fetched store and frozen lockfile
 RUN pnpm install --frozen-lockfile
 
-# Build shared package first, then the worker
+# Build shared packages first, then the worker
 RUN pnpm -C packages/mongodb-schema run build
+RUN pnpm -C packages/md-utils run build
 RUN pnpm -C apps/worker run build
 
 # Produce a minimal, deployable output for just the worker (node_modules pruned to prod)
@@ -40,14 +44,14 @@ RUN pnpm deploy --filter @bilbomd/worker --prod /out
 ########################################
 # Stage 3: runtime (your existing base image)
 ########################################
-FROM ghcr.io/bl1231/bilbomd-worker-base:0.0.2 AS runtime
+FROM ${BASE_IMAGE} AS runtime
 WORKDIR /app
 
 # Install Node.js (if your base image doesn't already have it)
 # Keep your original approach here so the base remains unchanged
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get update \
-    && apt-get install -y nodejs \
+    && apt-get install -y nodejs rsync \
     && npm install -g npm@latest \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 

@@ -22,12 +22,6 @@ import { Link } from 'react-router'
 import nerscLogo from 'assets/nersc-logo.png'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 
-// interface Config {
-//   useNersc?: string
-//   mode?: string
-//   deploySite?: string
-// }
-
 interface UserMenuProps {
   anchorElUser: HTMLElement | null
   handleOpenUserMenu: (event: React.MouseEvent<HTMLElement>) => void
@@ -43,7 +37,7 @@ const UserMenu = ({
 }: UserMenuProps) => (
   <>
     <Tooltip
-      title='Open settings'
+      title="Open settings"
       sx={{ flexGrow: 1, justifyContent: 'flex-end' }}
     >
       <IconButton
@@ -57,7 +51,7 @@ const UserMenu = ({
     </Tooltip>
     <Menu
       sx={{ mt: '45px' }}
-      id='menu-appbar'
+      id="menu-appbar"
       anchorEl={anchorElUser}
       anchorOrigin={{
         vertical: 'top',
@@ -72,8 +66,11 @@ const UserMenu = ({
       onClose={handleCloseUserMenu}
     >
       {settings.map((setting) => (
-        <MenuItem key={setting.text} onClick={setting.onclick}>
-          <Typography textAlign='center'>{setting.text}</Typography>
+        <MenuItem
+          key={setting.text}
+          onClick={setting.onclick}
+        >
+          <Typography textAlign="center">{setting.text}</Typography>
         </MenuItem>
       ))}
       <MenuItem>
@@ -90,15 +87,27 @@ interface DeploySiteProps {
 const DeploySite = ({ deploySite }: DeploySiteProps) => (
   <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
     {deploySite === 'nersc' && (
-      <img src={nerscLogo} alt='NERSC Logo' style={{ height: '30px' }} />
+      <img
+        src={nerscLogo}
+        alt="NERSC Logo"
+        style={{ height: '30px' }}
+      />
     )}
     {deploySite === 'local' && (
-      <Typography variant='h5' component='span' sx={{ ml: 1 }}>
+      <Typography
+        variant="h5"
+        component="span"
+        sx={{ ml: 1 }}
+      >
         LOCAL
       </Typography>
     )}
     {deploySite === 'bl1231' && (
-      <Typography variant='h5' component='span' sx={{ ml: 1, pb: 0 }}>
+      <Typography
+        variant="h5"
+        component="span"
+        sx={{ ml: 1, pb: 0 }}
+      >
         BL12.3.1
       </Typography>
     )}
@@ -113,8 +122,8 @@ const DevMode = ({ mode }: DevModeProps) => (
   <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
     {mode === 'development' && (
       <Typography
-        variant='h5'
-        component='span'
+        variant="h5"
+        component="span"
         sx={{ ml: 1, pb: 0, color: 'yellow' }}
       >
         DEVELOPMENT
@@ -142,9 +151,9 @@ const Header = () => {
 
   if (configIsLoading) return <CircularProgress />
   if (configError)
-    return <Alert severity='error'>Error loading configuration data</Alert>
+    return <Alert severity="error">Error loading configuration data</Alert>
   if (!config)
-    return <Alert severity='warning'>No configuration data available</Alert>
+    return <Alert severity="warning">No configuration data available</Alert>
 
   const mode = config.mode || ''
   const deploySite = config.deploySite || ''
@@ -175,14 +184,17 @@ const Header = () => {
       <CssBaseline />
       <Box sx={{ flexGrow: 1 }}>
         <AppBar
-          position='fixed'
+          position="fixed"
           elevation={0}
           sx={{ height: '70px', zIndex: (theme) => theme.zIndex.drawer + 1 }}
         >
           <Toolbar sx={{ display: 'flex', alignItems: 'center', m: 0 }}>
             {/* Left Side: Logo and Mode Display */}
             <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 0 }}>
-              <Link to='/welcome' style={linkStyles}>
+              <Link
+                to="/dashboard"
+                style={linkStyles}
+              >
                 BilboMD
               </Link>
             </Box>
@@ -202,7 +214,7 @@ const Header = () => {
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <NightModeToggle sx={{ mr: 2 }} />
               <Typography
-                variant='h5'
+                variant="h5"
                 sx={{
                   display: 'flex',
                   alignItems: 'center',

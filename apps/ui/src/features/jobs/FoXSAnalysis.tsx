@@ -3,9 +3,21 @@ import FoXSChart from 'features/scoperjob/FoXSChart'
 import { Alert, AlertTitle } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import { useGetFoxsAnalysisByIdQuery } from 'slices/jobsApiSlice'
+import { useGetPublicFoxsDataQuery } from 'slices/publicJobsApiSlice'
 import CircularProgress from '@mui/material/CircularProgress'
 import FoXSEnsembleCharts from 'features/foxs/FoXSEnsembleCharts'
 import Item from 'themes/components/Item'
+import { FoxsData, FoxsDataPoint } from '@bilbomd/bilbomd-types'
+
+// Define types
+type CombinedFoxsData = {
+  q: number
+  exp_intensity: number
+} & Record<string, number>
+
+type ScoperFoXSAnalysisProps = {
+  id: string
+}
 
 // Allows dynamic keys like model_intensity_1, residual_1, etc., without using `any`
 type CombinedFoxsDataDynamic = CombinedFoxsData &
@@ -23,7 +35,9 @@ const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
 
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
   if (!Array.isArray(foxsDataArray) || foxsDataArray.length < 2) {
-    console.warn('FoXSAnalysis: Not enough data to process ensemble comparison.')
+    console.warn(
+      'FoXSAnalysis: Not enough data to process ensemble comparison.'
+    )
     return []
   }
 
@@ -37,8 +51,11 @@ const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
   let baseData: CombinedFoxsData[] = base.data.map((point, index) => {
     const q = point?.q != null ? parseFloat(point.q.toFixed(4)) : 0
     const exp_intensity =
-      point?.exp_intensity != null ? parseFloat(point.exp_intensity.toFixed(4)) : 0
-    const error = point?.error != null ? Math.max(parseFloat(point.error.toFixed(4)), 0) : 1
+      point?.exp_intensity != null
+        ? parseFloat(point.exp_intensity.toFixed(4))
+        : 0
+    const error =
+      point?.error != null ? Math.max(parseFloat(point.error.toFixed(4)), 0) : 1
 
     const combinedData: CombinedFoxsDataDynamic = {
       q,
@@ -58,7 +75,9 @@ const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
             : 0
         combinedData[modelIntensityKey] = model_intensity
         combinedData[residualKey] =
-          error !== 0 ? parseFloat(((exp_intensity - model_intensity) / error).toFixed(4)) : 0
+          error !== 0
+            ? parseFloat(((exp_intensity - model_intensity) / error).toFixed(4))
+            : 0
       }
     })
 
@@ -82,17 +101,48 @@ const calculateResiduals = (dataPoints: FoxsDataPoint[]) => {
   })
 }
 
-const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
-  const { data, isLoading, isError } = useGetFoxsAnalysisByIdQuery(id, {
+/**
+ * FoXSAnalysis component
+ * @param id - Job ID (for protected usage)
+ * @param publicId - Public ID (for public usage, optional)
+ * @param isPublic - If true, uses public query; otherwise, uses protected query
+ * @param active - (optional) If false, data fetching is skipped. Defaults to true for backwards compatibility.
+ */
+const FoXSAnalysis = ({
+  id,
+  publicId,
+  isPublic = false,
+  active = true
+}: Omit<ScoperFoXSAnalysisProps, 'id'> & {
+  id?: string
+  publicId?: string
+  isPublic?: boolean
+  active?: boolean
+}) => {
+  // Conditionally use the appropriate query
+  const protectedQuery = useGetFoxsAnalysisByIdQuery(id!, {
     pollingInterval: 0,
     refetchOnFocus: true,
-    refetchOnMountOrArgChange: true
+    refetchOnMountOrArgChange: true,
+    skip: !active || isPublic || !id // Skip if public, inactive, or no id
+  })
+  const publicQuery = useGetPublicFoxsDataQuery(publicId || '', {
+    skip: !active || !isPublic || !publicId // Skip if not public, inactive, or no publicId
   })
 
-  const foxsData = useMemo(() => (Array.isArray(data) ? (data as FoxsData[]) : []), [data])
+  // Select the active query result
+  const { data, isLoading, isError } = isPublic ? publicQuery : protectedQuery
+
+  const foxsData = useMemo(
+    () => (Array.isArray(data) ? (data as FoxsData[]) : []),
+    [data]
+  )
 
   const hasBase = useMemo(
-    () => foxsData.length > 0 && Array.isArray(foxsData[0]?.data) && foxsData[0]!.data.length > 0,
+    () =>
+      foxsData.length > 0 &&
+      Array.isArray(foxsData[0]?.data) &&
+      foxsData[0]!.data.length > 0,
     [foxsData]
   )
 
@@ -163,8 +213,6 @@ const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
   const origC1 = foxsData[0].c1
   const origC2 = foxsData[0].c2
 
-  // console.log('data:', data)
-
   return (
     <Item>
       <Grid
@@ -197,7 +245,8 @@ const FoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
               variant="outlined"
             >
               <AlertTitle>No ensemble data</AlertTitle>
-              Only a single FoXS dataset is available; ensemble comparison charts are hidden.
+              Only a single FoXS dataset is available; ensemble comparison
+              charts are hidden.
             </Alert>
           )}
         </Grid>

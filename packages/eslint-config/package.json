@@ -1,8 +1,18 @@
 {
   "name": "@bilbomd/eslint-config",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./index.mjs"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "typescript-eslint": "^8.58.0"
+  },
+  "peerDependencies": {
+    "eslint": "^10.0.0",
+    "typescript": "^5.0.0 || ^6.0.0"
   }
 }

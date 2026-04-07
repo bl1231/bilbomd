@@ -19,17 +19,26 @@ const NerscStatusChecker: React.FC<NerscStatusCheckerProps> = ({
     isLoading: nerscStatIsLoading
   } = useGetNerscStatusQuery()
 
-  const isFetchBaseQueryError = (error): error is FetchBaseQueryError =>
-    error && typeof error.status === 'number' && 'data' in error
+  const isFetchBaseQueryError = (
+    error: unknown
+  ): error is FetchBaseQueryError =>
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    typeof (error as { status: unknown }).status === 'number' &&
+    'data' in error
 
-  const isSerializedError = (error): error is SerializedError =>
-    error && typeof error.message === 'string'
+  const isSerializedError = (error: unknown): error is SerializedError =>
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as { message: unknown }).message === 'string'
 
   // If NERSC status is successfully fetched, find the relevant system
   const systemStatus = nerscStatIsSuccess
     ? nerscStat.find((system) => system.name === systemName)
     : null
-
+  // console.log('systemStatus:', systemStatus)
   // Determine if the system is unavailable
   const isUnavailable = systemStatus?.status === 'unavailable'
 
@@ -45,14 +54,14 @@ const NerscStatusChecker: React.FC<NerscStatusCheckerProps> = ({
       )}
 
       {isUnavailable && (
-        <Alert severity='warning'>
+        <Alert severity="warning">
           {systemName} is currently unavailable:{' '}
           <b>{systemStatus.description}</b>
         </Alert>
       )}
 
       {nerscStatError && (
-        <Alert severity='error'>
+        <Alert severity="error">
           {isFetchBaseQueryError(nerscStatError)
             ? `Error: ${nerscStatError.status} - ${nerscStatError.data}`
             : isSerializedError(nerscStatError)

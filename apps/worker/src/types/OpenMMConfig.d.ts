@@ -34,11 +34,11 @@ interface MinimizationStep {
 
 interface HeatingParameters {
   /** Starting temperature (K) */
-  first_temp: number
+  start_temp: number
   /** Final temperature (K) */
   final_temp: number
   /** Total integrator steps */
-  total_steps: number
+  nsteps: number
   /** Timestep (ps) */
   timestep: number
 }

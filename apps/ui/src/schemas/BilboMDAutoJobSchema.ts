@@ -7,10 +7,14 @@ import {
   noSpacesTest,
   saxsCheck,
   chainIdCheck,
+  pdbCheck,
   jsonFileCheck
 } from './fieldTests/fieldTests'
 
 const BilboMDAutoJobSchema = object().shape({
+  md_engine: string()
+    .oneOf(['charmm', 'openmm'], 'Invalid MD engine')
+    .required('Please select an MD engine'),
   title: string()
     .required('Please provide a title for your BilboMD Job.')
     .min(4, 'Title must contain at least 4 characters.')
@@ -18,6 +22,7 @@ const BilboMDAutoJobSchema = object().shape({
     .matches(/^[\w\s-]+$/, 'no spaces or special characters allowed'),
   pdb_file: requiredFile('A PDB file is required')
     .concat(chainIdCheck())
+    .concat(pdbCheck())
     .concat(fileExtTest('pdb'))
     .concat(fileSizeTest(10_000_000))
     .concat(noSpacesTest())

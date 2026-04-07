@@ -24,7 +24,7 @@ import {
 import LinearProgress from '@mui/material/LinearProgress'
 import Grid from '@mui/material/Grid'
 import SendIcon from '@mui/icons-material/Send'
-import { BilboMDJob } from 'types/interfaces'
+import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import HeaderBox from 'components/HeaderBox'
 import useTitle from 'hooks/useTitle'
 import { Instructions } from './Instructions.tsx'
@@ -133,16 +133,25 @@ const NewMultiMDJobForm: React.FC = () => {
 
   return (
     <Box>
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         <Grid size={{ xs: 12 }}>
           <Instructions />
         </Grid>
 
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
-            <Box display='flex' alignItems='center'>
+            <Box
+              display="flex"
+              alignItems="center"
+            >
               <Typography>BilboMD Multi Job Form</Typography>
-              <Typography component='span' sx={{ color: 'yellow', ml: 1 }}>
+              <Typography
+                component="span"
+                sx={{ color: 'yellow', ml: 1 }}
+              >
                 *beta - please send ideas and feedback to scott
               </Typography>
             </Box>
@@ -150,11 +159,11 @@ const NewMultiMDJobForm: React.FC = () => {
 
           <Paper sx={{ p: 2 }}>
             {isSuccess ? (
-              <Alert severity='success'>
+              <Alert severity="success">
                 <AlertTitle>Woot!</AlertTitle>
                 <Typography>
                   Your job has been submitted. Check out the{' '}
-                  <RouterLink to='../jobs'>details</RouterLink>.
+                  <RouterLink to="../jobs">details</RouterLink>.
                 </Typography>
               </Alert>
             ) : (
@@ -175,14 +184,17 @@ const NewMultiMDJobForm: React.FC = () => {
                   status
                 }) => (
                   <Form>
-                    <Grid container direction='column'>
+                    <Grid
+                      container
+                      direction="column"
+                    >
                       <Grid sx={{ my: 2, width: '520px' }}>
                         <Field
                           fullWidth
-                          label='Title'
-                          name='title'
-                          id='title'
-                          type='text'
+                          label="Title"
+                          name="title"
+                          id="title"
+                          type="text"
                           disabled={isSubmitting}
                           as={TextField}
                           onChange={handleChange}
@@ -194,7 +206,10 @@ const NewMultiMDJobForm: React.FC = () => {
                           value={values.title || ''}
                         />
                       </Grid>
-                      <Divider textAlign='left' sx={{ my: 1 }}>
+                      <Divider
+                        textAlign="left"
+                        sx={{ my: 1 }}
+                      >
                         Select at Least 2 completed BilboMD Jobs
                       </Divider>
                       <Grid>{isLoading && <CircularProgress />}</Grid>
@@ -204,7 +219,7 @@ const NewMultiMDJobForm: React.FC = () => {
                         </Box>
                       )}
                       {isError && (
-                        <Alert severity='error'>{error?.toString()}</Alert>
+                        <Alert severity="error">{error?.toString()}</Alert>
                       )}
                       {getJobsSuccess && jobs && (
                         <Box>
@@ -225,17 +240,17 @@ const NewMultiMDJobForm: React.FC = () => {
                               <TableBody>
                                 {jobs.ids
                                   .map((id) => jobs.entities[id])
-                                  .filter((job): job is BilboMDJob =>
+                                  .filter((job): job is BilboMDJobDTO =>
                                     Boolean(
                                       job &&
                                         job.username === username &&
                                         job.mongo.status === 'Completed' &&
                                         [
-                                          'BilboMdPDB',
-                                          'BilboMdCRD',
-                                          'BilboMdAuto',
-                                          'BilboMdAlphaFold'
-                                        ].includes(job.mongo.__t)
+                                          'pdb',
+                                          'crd',
+                                          'auto',
+                                          'alphafold'
+                                        ].includes(job.mongo.jobType)
                                     )
                                   )
                                   .map((job) => (
@@ -282,7 +297,7 @@ const NewMultiMDJobForm: React.FC = () => {
                                         />
                                       </TableCell>
                                       <TableCell>{job.mongo.title}</TableCell>
-                                      <TableCell>{job.mongo.__t}</TableCell>
+                                      <TableCell>{job.mongo.jobType}</TableCell>
                                       <TableCell>{job.mongo.status}</TableCell>
                                       <TableCell>
                                         {'rg' in job.mongo
@@ -302,22 +317,22 @@ const NewMultiMDJobForm: React.FC = () => {
                                 {/* Render an alert when no jobs are available */}
                                 {jobs.ids
                                   .map((id) => jobs.entities[id])
-                                  .filter((job): job is BilboMDJob =>
+                                  .filter((job): job is BilboMDJobDTO =>
                                     Boolean(
                                       job &&
                                         job.username === username &&
                                         job.mongo.status === 'Completed' &&
                                         [
-                                          'BilboMdPDB',
-                                          'BilboMdCRD',
-                                          'BilboMdAuto',
-                                          'BilboMdAlphaFold'
-                                        ].includes(job.mongo.__t)
+                                          'pdb',
+                                          'crd',
+                                          'auto',
+                                          'alphafold'
+                                        ].includes(job.mongo.jobType)
                                     )
                                   ).length === 0 && (
                                   <TableRow>
                                     <TableCell colSpan={7}>
-                                      <Alert severity='warning'>
+                                      <Alert severity="warning">
                                         Please run some BilboMD Jobs first.
                                       </Alert>
                                     </TableCell>
@@ -331,10 +346,13 @@ const NewMultiMDJobForm: React.FC = () => {
                       <Grid sx={{ mt: 2 }}>
                         {/* Backend Error Alert */}
                         {status && (
-                          <Alert severity='error' sx={{ mb: 2 }}>
+                          <Alert
+                            severity="error"
+                            sx={{ mb: 2 }}
+                          >
                             <AlertTitle>Backend Error:</AlertTitle>
-                            <Typography variant='body1'>{status}</Typography>
-                            <Typography variant='body2'>
+                            <Typography variant="body1">{status}</Typography>
+                            <Typography variant="body2">
                               This shouldn&apos;t happen. Please let Scott know
                               about this.
                             </Typography>
@@ -342,34 +360,40 @@ const NewMultiMDJobForm: React.FC = () => {
                         )}
                         {/* Form Validation Errors Alert */}
                         {Object.keys(errors).length > 0 ? (
-                          <Alert severity='error' sx={{ mb: 2 }}>
+                          <Alert
+                            severity="error"
+                            sx={{ mb: 2 }}
+                          >
                             {Object.values(errors).map((error, index) => (
                               <div key={index}>{error}</div>
                             ))}
                           </Alert>
                         ) : (
                           isFormValid(values) && (
-                            <Alert severity='success' sx={{ mb: 2 }}>
-                              <Typography variant='body2'>
+                            <Alert
+                              severity="success"
+                              sx={{ mb: 2 }}
+                            >
+                              <Typography variant="body2">
                                 All fields are valid and ready to submit!
                               </Typography>
                             </Alert>
                           )
                         )}
                         <Button
-                          type='submit'
+                          type="submit"
                           disabled={!isValid || isSubmitting}
                           loading={isSubmitting}
                           endIcon={<SendIcon />}
-                          loadingPosition='end'
-                          variant='contained'
+                          loadingPosition="end"
+                          variant="contained"
                           sx={{ width: '110px' }}
                         >
                           <span>Submit</span>
                         </Button>
 
                         {isSuccess ? (
-                          <Alert severity='success'>{status}</Alert>
+                          <Alert severity="success">{status}</Alert>
                         ) : (
                           ''
                         )}

@@ -31,6 +31,7 @@ RUN conda update -y -n base -c defaults conda && \
     python-igraph==0.11.9 \
     pyyaml \
     pandas \
+    biopython \
     && conda clean -afy
 
 # -----------------------------------------------------------------------------
@@ -69,7 +70,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common parallel && \
     add-apt-repository ppa:salilab/ppa && \
     apt-get update && \
-    apt-get install -y --no-install-recommends imp=2.23.0-1~jammy && \
+    apt-get install -y --no-install-recommends imp && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy conda from build-conda stage
@@ -86,3 +87,7 @@ ENV PATH="/miniforge3/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
 
 WORKDIR /app
+
+# ---- Smoke test script installation ----
+COPY apps/worker/scripts/smoke_test.sh /usr/local/bin/smoke_test.sh
+RUN chmod +x /usr/local/bin/smoke_test.sh

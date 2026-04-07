@@ -16,15 +16,15 @@ concurrency:
 jobs:
   release-pr:
     if: ${{ github.actor != 'github-actions[bot]' }}
-    runs-on: [self-hosted, linux, x64]
+    runs-on: [ubuntu-22.04]
     steps:
       - name: Checkout (full history)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -42,16 +42,19 @@ jobs:
           corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
           pnpm -v
 
-      - name: Prep local pnpm store (changesets)
-        run: |
-          sudo mkdir -p /scr/pnpm-store
-          sudo chown -R "$USER":"sibyls" /scr/pnpm-store
-          pnpm config set store-dir /scr/pnpm-store
+      # Removed local pnpm store setup for GitHub-hosted runners
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
+      - name: Check for pending changesets
+        id: check_changesets
+        run: |
+          count=$(find .changeset -name '*.md' ! -name 'README.md' | wc -l | tr -d ' ')
+          echo "count=$count" >> $GITHUB_OUTPUT
+
       - name: Create or update Version Packages PR
+        if: steps.check_changesets.outputs.count != '0'
         uses: changesets/action@v1
         with:
           version: pnpm changeset version

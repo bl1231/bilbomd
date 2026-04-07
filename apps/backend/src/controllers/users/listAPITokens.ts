@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { User, IAPIToken } from '@bilbomd/mongodb-schema'
+import { logger } from '../../middleware/loggers.js'
 
 const listAPITokens = async (req: Request, res: Response): Promise<void> => {
   const { username } = req.params
@@ -27,7 +28,7 @@ const listAPITokens = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({ tokens })
   } catch (err) {
-    console.error('Error listing API tokens:', err)
+    logger.error(`Error listing API tokens: ${err}`)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

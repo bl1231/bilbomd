@@ -1,23 +1,24 @@
 """run OpenMM Molecular Dynamics with CHARMM-like restraints"""
 
-import sys
 import os
+import sys
+
 import yaml
-from openmm.unit import angstroms
+from openmm import CustomCVForce, Platform, RGForce, VerletIntegrator, XmlSerializer
 from openmm.app import (
-    Simulation,
-    PDBFile,
-    Modeller,
-    ForceField,
-    StateDataReporter,
-    DCDReporter,
     CutoffNonPeriodic,
+    DCDReporter,
+    ForceField,
+    Modeller,
+    PDBFile,
+    Simulation,
+    StateDataReporter,
 )
-from openmm import VerletIntegrator, XmlSerializer, RGForce, CustomCVForce, Platform
-from utils.rigid_body import get_rigid_bodies, create_rigid_bodies
+from openmm.unit import angstroms
 from utils.fixed_bodies import apply_fixed_body_constraints
 from utils.pdb_writer import PDBFrameWriter
 from utils.rgyr import RadiusOfGyrationReporter
+from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
 
 
 def run_md_for_rg(rg, config_path, gpu_id=None):
@@ -121,7 +122,7 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
         simulation.context.setState(state)
         platform = simulation.context.getPlatform().getName()
         print(
-            f"[GPU {gpu_id}] Initialized on platform: {platform} (CudaDeviceIndex={platform_props.get('CudaDeviceIndex','-')})"
+            f"[GPU {gpu_id}] Initialized on platform: {platform} (CudaDeviceIndex={platform_props.get('CudaDeviceIndex', '-')})"
         )
     except Exception as e:
         print(f"[GPU {gpu_id}] [WARNING] CUDA not available; falling back. Error: {e}")
@@ -187,26 +188,94 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def get_available_gpu_count():
+    """Get the number of available CUDA GPUs."""
+    try:
+        cuda_platform = Platform.getPlatformByName("CUDA")
+        # Try to get device count from CUDA_VISIBLE_DEVICES if set
+        cvis = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+        if cvis:
+            # Count comma-separated device IDs
+            return len([d.strip() for d in cvis.split(",") if d.strip()])
+        else:
+            # Fall back to querying the platform (this might not work in all cases)
+            return cuda_platform.getPropertyDefaultValue("CudaDeviceIndex") + 1
+    except Exception:
+        # If CUDA is not available or any error occurs, assume 1 GPU or CPU
+        return 1
+
+
+def select_gpu_for_standalone():
+    """Select an appropriate GPU ID for standalone mode."""
+    available_gpus = get_available_gpu_count()
+    if available_gpus <= 1:
+        return 0
+
+    # For multiple GPUs, we could use various strategies:
+    # 1. Round-robin based on process ID
+    # 2. Random selection
+    # 3. Environment variable override
+
+    # Check if user specified a GPU
+    gpu_override = os.environ.get("OMM_GPU_ID")
+    if gpu_override is not None:
+        try:
+            gpu_id = int(gpu_override)
+            if 0 <= gpu_id < available_gpus:
+                return gpu_id
+            else:
+                print(
+                    f"[md.py] Warning: OMM_GPU_ID={gpu_id} out of range (0-{available_gpus - 1}), using 0"
+                )
+                return 0
+        except (ValueError, TypeError):
+            print(f"[md.py] Warning: Invalid OMM_GPU_ID='{gpu_override}', using 0")
+            return 0
+
+    # Default: use GPU 0, but this could be enhanced with load balancing
+    return 0
+
+
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Run OpenMM MD for a specific rg_set.")
+    parser = argparse.ArgumentParser(
+        description="Run OpenMM MD for a specific Rg (standalone or Slurm)."
+    )
     parser.add_argument("config_path", help="Path to openmm_config.yaml")
     parser.add_argument(
-        "--rg-set", type=int, default=0, help="Index of rg_sets to use (default: 0)"
+        "--rg-set",
+        type=int,
+        default=0,
+        help="Index of rg_sets to use (Slurm mode only; default: 0)",
     )
     args = parser.parse_args()
 
     with open(args.config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
+    # Check for standalone mode (worker app): if OMM_RG is set, run a single Rg
+    omm_rg = os.environ.get("OMM_RG")
+    if omm_rg is not None:
+        try:
+            rg = float(omm_rg)
+            gpu_id = select_gpu_for_standalone()
+            print(f"[md.py] Standalone mode: running single Rg={rg} on GPU {gpu_id}")
+            run_md_for_rg(rg, args.config_path, gpu_id=gpu_id)
+            print(f"[md.py] Standalone mode: completed Rg={rg}")
+            sys.exit(0)
+        except (ValueError, TypeError) as e:
+            print(f"[md.py] Invalid OMM_RG value '{omm_rg}': {e}")
+            sys.exit(1)
+
+    # Fallback to Slurm mode
     rg_sets = config["steps"]["md"]["rgyr"].get("rg_sets", [])
     if not rg_sets:
         print("No rg_sets found in config.")
         sys.exit(1)
     if args.rg_set < 0 or args.rg_set >= len(rg_sets):
         print(
-            f"Invalid rg_set index {args.rg_set}. Available sets: 0 to {len(rg_sets)-1}"
+            f"Invalid rg_set index {args.rg_set}. Available sets: 0 to {len(rg_sets) - 1}"
         )
         sys.exit(1)
 
@@ -229,7 +298,7 @@ if __name__ == "__main__":
     # Shard the Rg list to this task (round-robin)
     my_rgs = rgs[task_id::world_sz]
 
-    print(f"[md.py] SLURM_JOB_ID={jobid} STEP={stepid} TASK={task_id}/{world_sz-1}")
+    print(f"[md.py] SLURM_JOB_ID={jobid} STEP={stepid} TASK={task_id}/{world_sz - 1}")
     print(
         f"[md.py] CUDA_VISIBLE_DEVICES='{cvis}' -> using local GPU index {gpu_local_index}"
     )

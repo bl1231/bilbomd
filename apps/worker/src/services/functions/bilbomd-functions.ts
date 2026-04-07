@@ -2,8 +2,7 @@ import {
   makeDir,
   makeFile,
   generateDCD2PDBInpFile,
-  spawnCharmm,
-  spawnFoXS
+  spawnCharmm
 } from './job-utils.js'
 import {
   IBilboMDPDBJob,
@@ -14,14 +13,11 @@ import {
 } from '@bilbomd/mongodb-schema'
 import path from 'path'
 import { updateStepStatus } from './mongo-utils.js'
-import { CharmmDCD2PDBParams } from '../../types/index.js'
 import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
+import { getErrorMessage } from '../../helpers/errors.js'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
-
-const getErrorMessage = (e: unknown): string =>
-  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
 interface FoxsRunDir {
   dir: string
@@ -107,21 +103,15 @@ const generateFoxsRunDirs = (
     | IBilboMDAlphaFoldJob
 ): FoxsRunDir[] => {
   const foxsRunDirs: FoxsRunDir[] = []
+  let rgyrList: number[] = []
   if (
-    typeof DBjob.rg_min !== 'number' ||
-    typeof DBjob.rg_max !== 'number' ||
-    typeof DBjob.conformational_sampling !== 'number'
+    'charmm_parameters' in DBjob &&
+    Array.isArray(DBjob.charmm_parameters?.md?.rgyr)
   ) {
-    throw new Error(
-      'DBjob.rg_min, rg_max, and conformational_sampling must be defined numbers'
-    )
+    rgyrList = DBjob.charmm_parameters.md.rgyr
   }
-  const rgMin: number = DBjob.rg_min
-  const rgMax: number = DBjob.rg_max
   const conformationalSampling: number = DBjob.conformational_sampling
-  const step: number = Math.max(Math.round((rgMax - rgMin) / 5), 1)
-
-  for (let rg: number = rgMin; rg <= rgMax; rg += step) {
+  for (const rg of rgyrList) {
     for (let run: number = 1; run <= conformationalSampling; run++) {
       const foxsRunDir: string = path.join(analysisDir, `rg${rg}_run${run}`)
       foxsRunDirs.push({ dir: foxsRunDir, rg, run })
@@ -221,148 +211,9 @@ const writeSegidToChainid = async (inputFile: string): Promise<void> => {
 
     // Join the modified lines and overwrite the original file
     await fs.promises.writeFile(inputFile, modifiedLines.join('\n'), 'utf-8')
-    // logger.info(`Processed PDB file saved as ${inputFile}`)
   } catch (error: unknown) {
     logger.error('Error processing the PDB file:', error)
   }
 }
 
-const prepareFoXSInputs = async (
-  DBjob:
-    | IBilboMDPDBJob
-    | IBilboMDCRDJob
-    | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob
-): Promise<string[]> => {
-  const jobDir = path.join(config.uploadDir, DBjob.uuid)
-  const foxsDir = path.join(jobDir, 'foxs')
-  const mdDir = path.join(jobDir, 'md')
-
-  const listDirs = (base: string): string[] => {
-    if (!fs.existsSync(base)) return []
-    return fs
-      .readdirSync(base)
-      .map((name) => path.join(base, name))
-      .filter(
-        (fullPath) =>
-          fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()
-      )
-  }
-
-  const hasPdbs = (dir: string): boolean => {
-    try {
-      const files = fs.readdirSync(dir)
-      return files.some((f) => f.toLowerCase().endsWith('.pdb'))
-    } catch {
-      return false
-    }
-  }
-
-  // 1) Prefer already-prepared foxs/rg_* directories containing PDB files
-  const foxsSubDirs = listDirs(foxsDir).filter(hasPdbs)
-  if (foxsSubDirs.length > 0) return foxsSubDirs
-
-  // 2) If none found, look for OpenMM md/rg_* directories and mirror them into foxs via symlinks
-  const mdSubDirs = listDirs(mdDir).filter(hasPdbs)
-  if (mdSubDirs.length === 0) return []
-
-  // Ensure foxs directory exists
-  await fs.ensureDir(foxsDir)
-
-  const mirroredFoxsDirs: string[] = []
-  for (const srcDir of mdSubDirs) {
-    const baseName = path.basename(srcDir) // e.g., 'rg_27'
-    const destDir = path.join(foxsDir, baseName.replace('rg_', 'rg')) // normalize 'rg_27' -> 'rg27'
-    await fs.ensureDir(destDir)
-
-    // Symlink all .pdb files from md/rg_* into foxs/rg*
-    const entries = fs.readdirSync(srcDir)
-    for (const entry of entries) {
-      if (!entry.toLowerCase().endsWith('.pdb')) continue
-      if (entry.toLowerCase() === 'md.pdb') continue
-      const src = path.join(srcDir, entry)
-      const dst = path.join(destDir, entry)
-      try {
-        // Use relative symlinks when possible
-        if (!fs.existsSync(dst)) {
-          const rel = path.relative(path.dirname(dst), src)
-          await fs.ensureSymlink(rel, dst)
-        }
-      } catch (error: unknown) {
-        // If symlink fails (e.g., on some filesystems), fall back to copying
-        logger.error('Error creating symlink ', error)
-        if (!fs.existsSync(dst)) {
-          await fs.copy(src, dst)
-        }
-      }
-    }
-    if (hasPdbs(destDir)) mirroredFoxsDirs.push(destDir)
-  }
-
-  return mirroredFoxsDirs
-}
-
-const runFoXS = async (
-  MQjob: BullMQJob,
-  DBjob:
-    | IBilboMDPDBJob
-    | IBilboMDCRDJob
-    | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob
-): Promise<void> => {
-  let status: IStepStatus = {
-    status: 'Running',
-    message: 'FoXS Calculations have started.'
-  }
-  let heartbeat: NodeJS.Timeout | null = null
-  try {
-    // Update the initial status
-    await updateStepStatus(DBjob, 'foxs', status)
-
-    // Discover or prepare FoXS input directories (supports OpenMM md/rg_* layout)
-    const foxsRunDirs = await prepareFoXSInputs(DBjob)
-    if (foxsRunDirs.length === 0) {
-      throw new Error(
-        'No FoXS input directories with PDB files were found under foxs/ or md/.'
-      )
-    }
-
-    // Set up the heartbeat for monitoring
-    if (MQjob) {
-      heartbeat = setInterval(() => {
-        MQjob.updateProgress({ status: 'running', timestamp: Date.now() })
-        MQjob.log(`Heartbeat: still running runFoXS`)
-        logger.info(
-          `runFoXS Heartbeat: still running FoXS for: ${
-            DBjob.title
-          } at ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })}`
-        )
-      }, 1000)
-    }
-
-    // Run FoXS on each directory
-    const allFoxsJobs = foxsRunDirs.map((dir) => spawnFoXS(dir, MQjob))
-
-    // Wait for all FoXS jobs to complete
-    await Promise.all(allFoxsJobs)
-
-    // Update status to Success once all jobs are complete
-    status = {
-      status: 'Success',
-      message: 'FoXS Calculations have completed.'
-    }
-    await updateStepStatus(DBjob, 'foxs', status)
-  } catch (error: unknown) {
-    // Handle errors and update status to Error
-    status = {
-      status: 'Error',
-      message: `Error in FoXS Calculations: ${getErrorMessage(error)}`
-    }
-    await updateStepStatus(DBjob, 'foxs', status)
-    logger.error(`FoXS calculations failed: ${getErrorMessage(error)}`)
-  } finally {
-    if (heartbeat) clearInterval(heartbeat)
-  }
-}
-
-export { extractPDBFilesFromDCD, remediatePDBFiles, runFoXS }
+export { extractPDBFilesFromDCD, remediatePDBFiles }

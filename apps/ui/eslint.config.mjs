@@ -1,7 +1,6 @@
 import globals from 'globals'
 import pluginJs from '@eslint/js'
 import tseslint from 'typescript-eslint'
-import pluginReact from 'eslint-plugin-react'
 import pluginReactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig } from 'eslint/config'
@@ -11,10 +10,9 @@ export default defineConfig([
   { files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'] },
   { languageOptions: { globals: globals.browser } },
 
-  // Base JS + TS (non type-aware) + React
+  // Base JS + TS (non type-aware)
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
-  pluginReact.configs.flat.recommended,
 
   // Ignore build artifacts
   {
@@ -36,20 +34,16 @@ export default defineConfig([
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.app.json', './tsconfig.node.json'],
+        project: ['./tsconfig.json'],
         tsconfigRootDir: import.meta.dirname
       }
     },
     plugins: {
       'react-refresh': reactRefresh,
-      react: pluginReact,
       'react-hooks': pluginReactHooks
     },
     rules: {
-      // React sanity
-      'react/react-in-jsx-scope': 'off',
       'react-refresh/only-export-components': 'warn',
-      'react/prop-types': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
 
@@ -66,8 +60,5 @@ export default defineConfig([
         { checksVoidReturn: false }
       ]
     }
-  },
-
-  // React settings
-  { settings: { react: { version: 'detect' } } }
+  }
 ])

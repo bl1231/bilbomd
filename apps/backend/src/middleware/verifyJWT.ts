@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { Request, Response, NextFunction } from 'express'
+import { getEnvVar } from '../config/config.js'
 
 interface DecodedJWT {
   UserInfo: {
@@ -10,6 +11,8 @@ interface DecodedJWT {
   iat: number
   exp: number
 }
+
+const accessTokenSecret = getEnvVar('ACCESS_TOKEN_SECRET')
 
 const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
   // Check both 'authorization' and 'Authorization' headers and cast to string
@@ -24,11 +27,11 @@ const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
 
   jwt.verify(
     token,
-    process.env.ACCESS_TOKEN_SECRET || '',
+    accessTokenSecret,
     { algorithms: ['HS256'] },
     (error, decoded) => {
       if (error) {
-        res.status(403).json({ message: 'Forbidden - ', error })
+        res.status(403).json({ message: 'Forbidden' })
         return
       }
 

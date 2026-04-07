@@ -5,14 +5,21 @@ import hbs from 'nodemailer-express-handlebars'
 const user = process.env.SEND_EMAIL_USER
 const name = process.env.BILBOMD_FQDN
 const mailHost = process.env.BILBOMD_MAILER_HOST || 'smtp-relay.gmail.com'
-const mailPort = process.env.BILBOMD_MAILER_PORT ? parseInt(process.env.BILBOMD_MAILER_PORT) : 25
-const viewPath = process.env.BILBOMD_MAILER_TEMPLATES || '/app/dist/templates/mailer/'
+const mailPort = process.env.BILBOMD_MAILER_PORT
+  ? parseInt(process.env.BILBOMD_MAILER_PORT)
+  : 25
+const mailSecure = process.env.BILBOMD_MAILER_SECURE === 'true'
+const mailUser = process.env.BILBOMD_MAILER_USER
+const mailPass = process.env.BILBOMD_MAILER_PASS
+const viewPath =
+  process.env.BILBOMD_MAILER_TEMPLATES || '/app/dist/templates/mailer/'
 
 const transporter = nodemailer.createTransport({
   name: name,
   host: mailHost,
   port: mailPort,
-  secure: false
+  secure: mailSecure,
+  ...(mailUser && mailPass ? { auth: { user: mailUser, pass: mailPass } } : {})
 })
 
 const sendVerificationEmail = (email: string, url: string, code: string) => {
@@ -88,7 +95,7 @@ const sendMagickLinkEmail = (email: string, url: string, otp: string) => {
 }
 
 // Function to send OTP email using a template
-const sendOtpEmail = (email: string, otp: string) => {
+const sendOtpEmail = (email: string, url: string, otp: string) => {
   logger.info(`Sending OTP email to ${email} Password is ${otp}`)
   transporter.use(
     'compile',
@@ -109,7 +116,8 @@ const sendOtpEmail = (email: string, otp: string) => {
     subject: 'Your OTP Code',
     template: 'otp',
     context: {
-      onetimepasscode: otp
+      onetimepasscode: otp,
+      url: url
     }
   }
 
@@ -122,9 +130,10 @@ const sendOtpEmail = (email: string, otp: string) => {
       logger.error(`Error sending OTP email: ${error}`)
     })
 }
+
 // Function to send OTP email without using a template
 // This function is used for local development
-const sendOtpEmailLocal = (email: string, otp: string) => {
+const sendOtpEmailLocal = (email: string, url: string, otp: string) => {
   logger.info(`Sending OTP email to ${email} and otp is ${otp}`)
 
   const mailOptions = {
@@ -143,8 +152,11 @@ const sendOtpEmailLocal = (email: string, otp: string) => {
       logger.error(`Error sending OTP email: ${error}`)
     })
 }
+
 const sendUpdatedEmailMessage = (newEmail: string, oldEmail: string) => {
-  logger.info(`Sending updated email message to ${oldEmail}; new email is ${newEmail}`)
+  logger.info(
+    `Sending updated email message to ${oldEmail}; new email is ${newEmail}`
+  )
 
   // Configure the Handlebars template engine
   transporter.use(

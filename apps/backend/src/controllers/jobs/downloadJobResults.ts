@@ -4,8 +4,9 @@ import path from 'path'
 import mongoose from 'mongoose'
 import { Job, MultiJob, JobStatus } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
+import { getEnvVar } from '../../config/config.js'
 
-const uploadFolder: string = path.join(process.env.DATA_VOL ?? '')
+const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const downloadJobResults = async (req: Request, res: Response) => {
   const { id } = req.params
@@ -14,15 +15,18 @@ const downloadJobResults = async (req: Request, res: Response) => {
     res.status(400).json({ message: 'Job ID required.' })
     return
   }
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+
+  // Ensure id is a string and validate ObjectId format
+  const jobId = Array.isArray(id) ? id[0] : id
+  if (!mongoose.Types.ObjectId.isValid(jobId)) {
     res.status(400).json({ message: 'Invalid job ID format' })
     return
   }
 
   try {
     // Find the job in either Job or MultiJob collection
-    const job = await Job.findById(id).exec()
-    const multiJob = await MultiJob.findById(id).exec()
+    const job = await Job.findById(jobId).exec()
+    const multiJob = await MultiJob.findById(jobId).exec()
 
     if (!job && !multiJob) {
       res.status(404).json({ message: `No job matches that ID` })
@@ -77,12 +81,16 @@ const downloadJobResults = async (req: Request, res: Response) => {
     res.download(resultFilePath, filename, (err) => {
       if (err) {
         logger.error(`Error during file download: ${err}`)
-        res.status(500).json({ message: `Could not download the file: ${err.message}` })
+        res
+          .status(500)
+          .json({ message: `Could not download the file: ${err.message}` })
       }
     })
   } catch (error) {
     logger.error(`Error retrieving job: ${error}`)
-    res.status(500).json({ message: 'An error occurred while processing your request.' })
+    res
+      .status(500)
+      .json({ message: 'An error occurred while processing your request.' })
   }
 }
 

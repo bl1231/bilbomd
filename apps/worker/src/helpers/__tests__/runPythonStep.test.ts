@@ -79,4 +79,10 @@ describe('runPythonStep', () => {
     const result = await runPythonStep('a.py', 'b.yaml')
     expect(result).toEqual({ code: 42, signal: 'SIGUSR1' })
   })
+
+  it('throws error when spawn fails', async () => {
+    const spawnError = new Error('ENOENT: python binary not found')
+    setTimeout(() => mockChild.emit('error', spawnError), 10)
+    await expect(runPythonStep('a.py', 'b.yaml')).rejects.toThrow('ENOENT: python binary not found')
+  })
 })
