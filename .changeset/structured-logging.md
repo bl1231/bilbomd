@@ -1,7 +1,7 @@
 ---
-'@bilbomd/backend': minor
-'@bilbomd/worker': minor
-'@bilbomd/scoper': minor
+'@bilbomd/backend': patch
+'@bilbomd/worker': patch
+'@bilbomd/scoper': patch
 ---
 
 Add structured logging with JSON file output and request context propagation.
