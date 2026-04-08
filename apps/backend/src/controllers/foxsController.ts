@@ -28,7 +28,7 @@ const downloadPDB = async (req: Request, res: Response) => {
     res.status(400).json({ message: 'PDB filename required.' })
     return
   }
-  logger.info(`looking up job: ${jobId}`)
+  logger.info('Looking up job', { jobId })
   const job = await Job.findOne({ _id: jobId }).exec()
   if (!job) {
     res.status(204).json({ message: `No job matches ID ${jobId}.` })
@@ -44,11 +44,11 @@ const downloadPDB = async (req: Request, res: Response) => {
           message: 'Could not download the file . ' + err
         })
       } else {
-        logger.info(`File ${pdbFilename} sent successfully.`)
+        logger.info('File sent successfully', { pdbFilename, jobId })
       }
     })
   } catch (error) {
-    logger.error(`No ${pdbFile} available. ${error}`)
+    logger.error('PDB file not available', { pdbFile, jobId, error: String(error) })
     res.status(500).json({ message: `No ${pdbFile} available.` })
   }
 }
@@ -89,7 +89,7 @@ const getFoxsData = async (req: Request, res: Response) => {
         details: err.details
       })
     } else {
-      logger.error(`Error getting FoXS data: ${error}`)
+      logger.error('Error getting FoXS data', { jobId, error: String(error) })
       res.status(500).json({ message: 'Error processing FoXS data.' })
     }
   }
