@@ -1,5 +1,16 @@
 # @bilbomd/ui
 
+## 2.9.1
+
+### Patch Changes
+
+- a392327: Fix Molstar viewer not displaying Mg2+ ions for Scoper job results. Apply StructurePreset for Scoper structures so the polymer (cartoon) and ions (spacefill) are both rendered correctly.
+- e182790: Show KGSRNA instead of CHARMM as the MD Engine for Scoper jobs in the job details panel.
+- 7d8ebdc: Update all npm dependencies to latest minor/patch versions. Includes axios 1.15, bullmq 5.73.1, @bull-board 6.21, nodemailer 8.0.5, react 19.2.5, vite 8.0.7, vitest 4.1.3, turbo 2.9.5, and MUI 7.3.10.
+- Updated dependencies [82d0bf4]
+  - @bilbomd/mongodb-schema@2.5.2
+  - @bilbomd/bilbomd-types@1.5.1
+
 ## 2.9.0
 
 ### Minor Changes
