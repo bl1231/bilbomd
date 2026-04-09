@@ -5,7 +5,11 @@ import { renderWithProviders } from 'test/rendersWithProviders'
 import Jobs from '../Jobs'
 import { server } from 'test/server'
 import { http, HttpResponse } from 'msw'
-import type { BilboMDJobDTO, BilboMDPDBDTO } from '@bilbomd/bilbomd-types'
+import type {
+  BilboMDJobDTO,
+  BilboMDPDBDTO,
+  BilboMDScoperDTO
+} from '@bilbomd/bilbomd-types'
 import useAuth from 'hooks/useAuth'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 // Local type for mocking the configs query hook
@@ -76,6 +80,27 @@ const createMockJobDTO = (
   ...overrides
 })
 
+const createMockScoperMongo = (
+  overrides: Partial<BilboMDScoperDTO> = {}
+): BilboMDScoperDTO => ({
+  id: 'mongo-id-scoper',
+  jobType: 'scoper',
+  title: 'Mock Scoper Job',
+  uuid: 'mock-uuid-scoper',
+  access_mode: 'user',
+  public_id: 'public-scoper',
+  status: 'Completed',
+  data_file: 'mock.dat',
+  time_submitted: new Date('2025-01-01T00:00:00Z'),
+  time_started: new Date('2025-01-01T00:05:00Z'),
+  time_completed: new Date('2025-01-01T00:10:00Z'),
+  progress: 100,
+  cleanup_in_progress: false,
+  pdb_file: 'model.pdb',
+  fixc1c2: false,
+  ...overrides
+})
+
 import type { INerscInfo } from '@bilbomd/mongodb-schema/frontend'
 describe('Jobs table', () => {
   beforeEach(() => {
@@ -118,6 +143,23 @@ describe('Jobs table', () => {
 
     // Assert a cell with the engine value renders
     const engineCell = await screen.findByText('CHARMM')
+    expect(engineCell).toBeInTheDocument()
+  })
+
+  it('shows KGSRNA in Engine column for scoper jobs', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([
+          createMockJobDTO({
+            mongo: createMockScoperMongo()
+          })
+        ])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    const engineCell = await screen.findByText('KGSRNA')
     expect(engineCell).toBeInTheDocument()
   })
 

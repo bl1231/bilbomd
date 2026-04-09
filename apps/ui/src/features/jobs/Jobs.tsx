@@ -549,7 +549,9 @@ const Jobs = () => {
       {
         field: 'md_engine',
         headerName: 'Engine',
-        width: 110
+        width: 110,
+        valueGetter: (_value, row) =>
+          row.jobType === 'scoper' ? 'KGSRNA' : row.md_engine
       },
       {
         field: 'status',
