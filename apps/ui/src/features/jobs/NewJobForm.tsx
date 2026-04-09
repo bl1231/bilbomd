@@ -353,6 +353,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           variant={useExampleData ? 'outlined' : 'contained'}
                           onClick={() => {
                             setUseExampleData(!useExampleData)
+                            setSaxsData([])
+                            setGuinierRegion(null)
                             if (!useExampleData) {
                               // Switching to example data: reset file fields
                               if (values.bilbomd_mode === 'pdb') {

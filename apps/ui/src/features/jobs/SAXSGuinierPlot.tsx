@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   ReferenceArea
 } from 'recharts'
-import { Typography, Box } from '@mui/material'
+import { Typography, Box, Table, TableBody, TableRow, TableCell } from '@mui/material'
 
 interface SAXSDataPoint {
   q: number
@@ -23,7 +23,20 @@ interface SAXSGuinierPlotProps {
 }
 
 const SAXSGuinierPlot = ({ data, qmin, qmax }: SAXSGuinierPlotProps) => {
-  if (data.length === 0) return null
+  const validData = data.filter((d) => d.intensity > 0)
+  if (validData.length === 0) return null
+
+  const qValues = validData.map((d) => d.q)
+  const intensities = validData.map((d) => d.intensity)
+
+  const xDomain: [number, number] = [Math.min(...qValues), Math.max(...qValues)]
+
+  const yMin = Math.min(...intensities)
+  const yMax = Math.max(...intensities)
+  const yDomain: [number, number] = [
+    Math.pow(10, Math.floor(Math.log10(yMin))),
+    Math.pow(10, Math.ceil(Math.log10(yMax)))
+  ]
 
   return (
     <Box sx={{ mt: 1, mb: 1 }}>
@@ -32,14 +45,14 @@ const SAXSGuinierPlot = ({ data, qmin, qmax }: SAXSGuinierPlotProps) => {
         sx={{ mb: 0.5 }}
       >
         SAXS Data Preview — highlighted region shows Guinier fit range (q:{' '}
-        {qmin.toFixed(4)}–{qmax.toFixed(4)} Å⁻¹)
+        {qmin.toFixed(4)}–{qmax.toFixed(4)} Å⁻¹) used for Rg calculation.
       </Typography>
       <ResponsiveContainer
         width="100%"
         height={260}
       >
         <LineChart
-          data={data}
+          data={validData}
           margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
@@ -47,14 +60,18 @@ const SAXSGuinierPlot = ({ data, qmin, qmax }: SAXSGuinierPlotProps) => {
             dataKey="q"
             type="number"
             scale="linear"
-            domain={['auto', 'auto']}
-            label={{ value: 'q (Å⁻¹)', position: 'insideBottomRight', offset: -5 }}
+            domain={xDomain}
+            label={{
+              value: 'q (Å⁻¹)',
+              position: 'insideBottomRight',
+              offset: -5
+            }}
             tickFormatter={(v: number) => v.toFixed(3)}
           />
           <YAxis
             scale="log"
             type="number"
-            domain={['auto', 'auto']}
+            domain={yDomain}
             label={{ value: 'I(q)', angle: -90, position: 'insideLeft' }}
             tickFormatter={(v: number) => v.toExponential(1)}
             width={70}
@@ -86,6 +103,25 @@ const SAXSGuinierPlot = ({ data, qmin, qmax }: SAXSGuinierPlotProps) => {
           />
         </LineChart>
       </ResponsiveContainer>
+      <Table
+        size="small"
+        sx={{ mt: 1, width: 'auto' }}
+      >
+        <TableBody>
+          <TableRow>
+            <TableCell sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}>q min</TableCell>
+            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.75rem' }}>{xDomain[0].toFixed(4)} Å⁻¹</TableCell>
+            <TableCell sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}>I(q) min</TableCell>
+            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.75rem' }}>{yMin.toExponential(2)}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}>q max</TableCell>
+            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.75rem' }}>{xDomain[1].toFixed(4)} Å⁻¹</TableCell>
+            <TableCell sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}>I(q) max</TableCell>
+            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.75rem' }}>{yMax.toExponential(2)}</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
     </Box>
   )
 }
