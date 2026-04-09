@@ -51,7 +51,7 @@ Current test coverage across BilboMD apps:
 | App | Statements | Branches | Functions | Lines |
 |-----|-----------|----------|-----------|-------|
 | Backend | 89.32% | 81.54% | 87.75% | 89.80% |
-| UI | 68.25% | 59.44% | 67.87% | 69.56% |
+| UI | 68.25% | 59.47% | 67.87% | 69.56% |
 | Worker | 86.74% | 73.45% | 88.05% | 86.77% |
 | Scoper | N/A | N/A | N/A | N/A |
 <!-- COVERAGE-TABLE:END -->
