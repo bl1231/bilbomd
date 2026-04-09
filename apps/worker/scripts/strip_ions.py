@@ -33,6 +33,31 @@ KNOWN_IONS = frozenset([
     "SO4", "PO4", "NO3", "CN",
 ])
 
+
+def strip_water(lines):
+    """Remove HOH (water) ATOM/HETATM records."""
+    kept = []
+    removed = 0
+    for line in lines:
+        if line.startswith(("ATOM", "HETATM")) and line[17:20].strip() == "HOH":
+            removed += 1
+        else:
+            kept.append(line)
+    return kept, removed
+
+
+def strip_ions(lines):
+    """Remove metal ion and common polyatomic ion ATOM/HETATM records."""
+    kept = []
+    removed = 0
+    for line in lines:
+        if line.startswith(("ATOM", "HETATM")) and line[17:20].strip() in KNOWN_IONS:
+            removed += 1
+        else:
+            kept.append(line)
+    return kept, removed
+
+
 if len(sys.argv) != 2:
     print("Usage: strip_ions.py <pdb_file>", file=sys.stderr)
     sys.exit(1)
@@ -42,24 +67,13 @@ pdb_path = sys.argv[1]
 with open(pdb_path, encoding="utf-8") as f:
     lines = f.readlines()
 
-filtered = []
-removed_water = 0
-removed_ions = 0
-for line in lines:
-    if line.startswith(("ATOM", "HETATM")):
-        resname = line[17:20].strip()
-        if resname == "HOH":
-            removed_water += 1
-            continue
-        if resname in KNOWN_IONS:
-            removed_ions += 1
-            continue
-    filtered.append(line)
+lines, n_water = strip_water(lines)
+lines, n_ions = strip_ions(lines)
 
 with open(pdb_path, "w", encoding="utf-8") as f:
-    f.writelines(filtered)
+    f.writelines(lines)
 
 print(
-    f"strip_ions: removed {removed_water} water record(s) and "
-    f"{removed_ions} ion record(s) from {pdb_path}"
+    f"strip_ions: removed {n_water} water record(s) and "
+    f"{n_ions} ion record(s) from {pdb_path}"
 )
