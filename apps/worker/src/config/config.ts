@@ -58,6 +58,14 @@ export const config = {
   charmmBin: getEnvVar('CHARMM'),
   foxBin: getEnvVar('FOXS'),
   multifoxsBin: getEnvVar('MULTIFOXS'),
+  openmmPythonBin: getEnvVarWithDefault(
+    'OPENMM_PYTHON_BIN',
+    '/opt/envs/openmm/bin/python'
+  ),
+  basePythonBin: getEnvVarWithDefault(
+    'BASE_PYTHON_BIN',
+    '/opt/envs/base/bin/python'
+  ),
   logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info'),
   scripts: {
     prepareCHARMMSlurmScript: getEnvVar('PREPARE_CHARMM_SLURM_SCRIPT'),
