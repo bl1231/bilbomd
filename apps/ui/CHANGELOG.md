@@ -1,5 +1,15 @@
 # @bilbomd/ui
 
+## 2.10.0
+
+### Minor Changes
+
+- ba1931f: Add SAXS curve preview with Guinier region highlight to the Classic job submission form.
+
+### Patch Changes
+
+- 3a11ee6: Show KGSRNA in the Engine column for Scoper jobs in the Jobs table.
+
 ## 2.9.1
 
 ### Patch Changes

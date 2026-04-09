@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.7.4
+
+### Patch Changes
+
+- 9c95606: Fix KGS progress polling: suppress noisy ENOENT error on first poll before output directory exists, and stop polling once all conformers are generated.
+
 ## 1.7.3
 
 ### Patch Changes
