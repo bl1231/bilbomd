@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.6.2
+
+### Patch Changes
+
+- 08cdf90: Strip metal ions (ZN, MG, CA, FE, etc.) from PDB chains before CHARMM pdb2crd conversion. Fixes job failure when PDB/CIF files contain ions that CHARMM's standard topology does not recognise. Ion-only chains are silently skipped rather than passed to CHARMM.
+
 ## 2.6.1
 
 ### Patch Changes

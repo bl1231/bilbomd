@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.6.2
+
+### Patch Changes
+
+- ba1931f: Add SAXS curve preview with Guinier region highlight to the Classic job submission form.
+
 ## 2.6.1
 
 ### Patch Changes
