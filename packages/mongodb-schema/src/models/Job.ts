@@ -112,12 +112,6 @@ const jobSchema = new Schema(
       index: true
     },
     data_file: { type: String, required: true },
-    md_engine: {
-      type: String,
-      enum: mdEngineEnum,
-      default: 'CHARMM',
-      required: false
-    },
     md_constraints: { type: mdConstraintsSchema, required: false },
     openmm_parameters: { type: openmmParametersSchema, required: false },
     charmm_parameters: { type: charmmParametersSchema, required: false },
@@ -292,6 +286,12 @@ const bilboMdSANSJobSchema = new Schema<IBilboMDSANSJob>({
   psf_file: { type: String, required: false },
   crd_file: { type: String, required: false },
   const_inp_file: { type: String, required: true },
+  md_engine: {
+    type: String,
+    enum: mdEngineEnum,
+    default: 'CHARMM',
+    required: false
+  },
   conformational_sampling: {
     type: Number,
     enum: [1, 2, 3, 4],

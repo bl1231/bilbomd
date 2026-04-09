@@ -19,7 +19,7 @@ export type AnonJobResponse = {
   message: string
   jobid: string
   uuid: string
-  md_engine: string
+  md_engine?: string
   publicId?: string
   resultUrl?: string
 }

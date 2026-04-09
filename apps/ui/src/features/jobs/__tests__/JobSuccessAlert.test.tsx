@@ -78,6 +78,23 @@ describe('JobSuccessAlert', () => {
       const alert = screen.getByRole('alert')
       expect(alert).toHaveTextContent(/CHARMM/)
     })
+
+    it('should not mention Molecular Dynamics when md_engine is undefined (scoper)', () => {
+      const scoperResponse = {
+        message: 'Job created successfully',
+        jobid: 'job-456',
+        uuid: 'uuid-456'
+      }
+      renderWithProviders(
+        <JobSuccessAlert jobResponse={scoperResponse} jobType="scoper" />
+      )
+
+      const alert = screen.getByRole('alert')
+      expect(alert).toHaveTextContent(/BilboMD scoper job/)
+      expect(alert).not.toHaveTextContent(/Molecular Dynamics/)
+      expect(alert).not.toHaveTextContent(/CHARMM/)
+      expect(alert).not.toHaveTextContent(/OpenMM/)
+    })
   })
 
   describe('View Job Status button', () => {
