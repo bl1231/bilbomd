@@ -15,6 +15,10 @@ interface FoxsData {
 
 interface AutoRgResponse {
   rg?: number
+  rg_min?: number
+  rg_max?: number
+  qmin?: number
+  qmax?: number
   i0?: number
   [key: string]: unknown
 }

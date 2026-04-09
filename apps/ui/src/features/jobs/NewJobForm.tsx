@@ -23,6 +23,7 @@ import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import { expdataSchema } from 'schemas/ExpdataSchema'
 import { BilboMDClassicJobSchema } from 'schemas/BilboMDClassicJobSchema'
+import SAXSGuinierPlot from './SAXSGuinierPlot'
 import HeaderBox from 'components/HeaderBox'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import FileSelect from './FileSelect'
@@ -89,6 +90,13 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [saxsData, setSaxsData] = useState<{ q: number; intensity: number }[]>(
+    []
+  )
+  const [guinierRegion, setGuinierRegion] = useState<{
+    qmin: number
+    qmax: number
+  } | null>(null)
 
   // RTK Query to fetch the configuration
   const {
@@ -345,6 +353,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           variant={useExampleData ? 'outlined' : 'contained'}
                           onClick={() => {
                             setUseExampleData(!useExampleData)
+                            setSaxsData([])
+                            setGuinierRegion(null)
                             if (!useExampleData) {
                               // Switching to example data: reset file fields
                               if (values.bilbomd_mode === 'pdb') {
@@ -673,18 +683,59 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           isLoading={isLoading}
                           onFileChange={async (selectedFile: File) => {
                             setAutoRgError(null)
+                            setSaxsData([])
+                            setGuinierRegion(null)
+
+                            // Parse SAXS data in the browser for the preview plot
+                            try {
+                              const text = await selectedFile.text()
+                              const parsed = text
+                                .split('\n')
+                                .filter((line) => {
+                                  const trimmed = line.trim()
+                                  return (
+                                    trimmed.length > 0 &&
+                                    !trimmed.startsWith('#') &&
+                                    /^\d/.test(trimmed)
+                                  )
+                                })
+                                .map((line) => {
+                                  const cols = line.trim().split(/\s+/)
+                                  return {
+                                    q: parseFloat(cols[0] ?? '0'),
+                                    intensity: parseFloat(cols[1] ?? '0')
+                                  }
+                                })
+                                .filter(
+                                  (pt) =>
+                                    isFinite(pt.q) &&
+                                    isFinite(pt.intensity) &&
+                                    pt.intensity > 0
+                                )
+                              setSaxsData(parsed)
+                            } catch {
+                              // Non-fatal — plot just won't show
+                            }
+
                             const isExpdataValid =
                               await expdataSchema.isValid(selectedFile)
                             if (isExpdataValid) {
                               const formData = new FormData()
                               formData.append('dat_file', selectedFile)
                               try {
-                                const { rg, rg_min, rg_max } =
+                                const { rg, rg_min, rg_max, qmin, qmax } =
                                   await calculateAutoRg(formData).unwrap()
                                 void setFieldValue('rg', rg)
                                 void setFieldValue('rg_min', rg_min)
                                 void setFieldValue('rg_max', rg_max)
+                                if (
+                                  typeof qmin === 'number' &&
+                                  typeof qmax === 'number'
+                                ) {
+                                  setGuinierRegion({ qmin, qmax })
+                                }
                               } catch (error) {
+                                setSaxsData([])
                                 setAutoRgError(
                                   `Failed to calculate Rg from *.dat file. Please check the file format and try again. ${error}`
                                 )
@@ -692,6 +743,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 void setFieldValue('rg_max', '')
                               }
                             } else {
+                              setSaxsData([])
                               setAutoRgError(
                                 `Invalid *.dat file format. Please check the file format and try again.`
                               )
@@ -705,6 +757,15 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         />
                       </Grid>
                     </Grid>
+                    {saxsData.length > 0 && guinierRegion && (
+                      <Grid sx={{ width: '520px' }}>
+                        <SAXSGuinierPlot
+                          data={saxsData}
+                          qmin={guinierRegion.qmin}
+                          qmax={guinierRegion.qmax}
+                        />
+                      </Grid>
+                    )}
                     <Grid sx={{ display: 'flex', width: '520px' }}>
                       <Typography>
                         <b>Rg Min</b> and <b>Rg Max</b> will be calculated
