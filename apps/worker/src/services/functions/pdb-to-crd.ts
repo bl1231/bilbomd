@@ -139,12 +139,28 @@ const spawnPdb2CrdCharmm = (
           )
           resolve(charmmOutput)
         } else {
+          // Log the full output for debugging, but build a concise error
+          // message for the UI by extracting only CHARMM error lines.
           logger.error(
-            `CHARMM execution failed: ${inputFile}, exit code: ${code}, error: ${charmmOutput}`
+            `CHARMM execution failed: ${inputFile}, exit code: ${code}\n${charmmOutput}`
           )
+          const errorLines = charmmOutput
+            .split('\n')
+            .filter(
+              (line) =>
+                line.includes('***** ERROR') ||
+                line.includes('ABNORMAL TERMINATION') ||
+                line.trimStart().startsWith('?')
+            )
+            .map((line) => line.trim())
+            .filter(Boolean)
+          const errorSummary =
+            errorLines.length > 0
+              ? errorLines.join(' | ')
+              : 'see CHARMM log for details'
           reject(
             new Error(
-              `CHARMM execution failed: ${inputFile}, exit code: ${code}, error: ${charmmOutput}`
+              `CHARMM execution failed: ${inputFile}, exit code: ${code}. ${errorSummary}`
             )
           )
         }
