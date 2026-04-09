@@ -155,6 +155,62 @@ const spawnPdb2CrdCharmm = (
   return Promise.all(promises)
 }
 
+interface StripIonsData {
+  uuid: string
+  pdb_file: string
+}
+
+/**
+ * Strip metal ions from a PDB file in place, so that OpenMM's ForceField
+ * does not encounter residues it has no parameters for.
+ */
+const runStripIons = (data: StripIonsData): Promise<void> => {
+  const workingDir = path.join(uploadFolder, data.uuid)
+  const pdbPath = path.join(workingDir, data.pdb_file)
+  const logFile = path.join(workingDir, 'strip_ions.log')
+  const errorFile = path.join(workingDir, 'strip_ions_error.log')
+  const logStream = fs.createWriteStream(logFile)
+  const errorStream = fs.createWriteStream(errorFile)
+  const script = '/app/scripts/strip_ions.py'
+
+  logger.info(`runStripIons: stripping ions from ${data.pdb_file}`)
+
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn('/opt/envs/base/bin/python', [script, pdbPath], {
+      cwd: workingDir
+    })
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      logStream.write(chunk.toString())
+    })
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      const msg = chunk.toString().trim()
+      logger.error(`runStripIons stderr: ${msg}`)
+      errorStream.write(msg + '\n')
+    })
+
+    proc.on('error', (error) => {
+      logger.error(`runStripIons spawn error: ${error}`)
+      reject(error)
+    })
+
+    proc.on('close', (code) => {
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).then(() => {
+        if (code === 0) {
+          logger.info(`runStripIons succeeded for ${data.pdb_file}`)
+          resolve()
+        } else {
+          reject(new Error(`strip_ions.py exited with code ${code}`))
+        }
+      }).catch(reject)
+    })
+  })
+}
+
 interface CifToPdbData {
   uuid: string
   pdb_file: string
@@ -212,4 +268,4 @@ const runCifToPdb = (data: CifToPdbData): Promise<string> => {
   })
 }
 
-export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runCifToPdb }
+export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runStripIons, runCifToPdb }
