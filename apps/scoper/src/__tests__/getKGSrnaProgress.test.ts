@@ -40,8 +40,16 @@ describe('getKGSrnaProgress', () => {
     expect(await getKGSrnaProgress('/some/dir')).toBe(5)
   })
 
-  it('throws when readdir fails', async () => {
-    vi.mocked(fs.readdir).mockRejectedValue(new Error('ENOENT: no such file'))
-    await expect(getKGSrnaProgress('/nonexistent')).rejects.toThrow('ENOENT')
+  it('returns 0 when directory does not exist yet (ENOENT)', async () => {
+    const err = Object.assign(new Error('ENOENT: no such file or directory'), {
+      code: 'ENOENT'
+    })
+    vi.mocked(fs.readdir).mockRejectedValue(err)
+    expect(await getKGSrnaProgress('/nonexistent')).toBe(0)
+  })
+
+  it('throws when readdir fails with a non-ENOENT error', async () => {
+    vi.mocked(fs.readdir).mockRejectedValue(new Error('EACCES: permission denied'))
+    await expect(getKGSrnaProgress('/nonexistent')).rejects.toThrow('EACCES')
   })
 })
