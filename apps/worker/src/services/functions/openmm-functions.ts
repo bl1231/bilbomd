@@ -240,7 +240,7 @@ const runOmmStep = async (
 
     const result = await runPythonStep(scriptPath, configYamlPath, {
       cwd: opts?.cwd,
-      pythonBin: opts?.pythonBin,
+      pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
       env,
       timeoutMs: opts?.timeoutMs ?? 60 * 60 * 1000,
       onStdoutLine: (line) => {
@@ -387,7 +387,7 @@ const runOmmMD = async (
 
     const result = await runPythonStep(scriptPath, configYamlPath, {
       cwd: opts?.cwd,
-      pythonBin: opts?.pythonBin,
+      pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
       env,
       timeoutMs: opts?.timeoutMs ?? 2 * 60 * 60 * 1000, // 2h default per run
       onStdoutLine: (line) =>
