@@ -1,7 +1,13 @@
-"""Strip known metal ions and common polyatomic ions from a PDB file.
+"""Strip residues that OpenMM cannot process from a PDB file.
 
-Modifies the file in place.  Prints the number of records removed so the
-caller (Node.js worker) can surface this information in logs.
+Removes:
+  - Water molecules (HOH) — crystal waters from CIF conversion typically
+    lack hydrogen atoms and cannot be matched to any force-field template.
+  - Metal ions and common polyatomic ions — CHARMM36 has no parameters
+    for these.
+
+Modifies the file in place.  Prints a summary so the caller (Node.js
+worker) can surface the information in logs.
 
 Usage:
     python strip_ions.py <pdb_file>
@@ -37,14 +43,23 @@ with open(pdb_path, encoding="utf-8") as f:
     lines = f.readlines()
 
 filtered = []
-removed = 0
+removed_water = 0
+removed_ions = 0
 for line in lines:
-    if line.startswith(("ATOM", "HETATM")) and line[17:20].strip() in KNOWN_IONS:
-        removed += 1
-    else:
-        filtered.append(line)
+    if line.startswith(("ATOM", "HETATM")):
+        resname = line[17:20].strip()
+        if resname == "HOH":
+            removed_water += 1
+            continue
+        if resname in KNOWN_IONS:
+            removed_ions += 1
+            continue
+    filtered.append(line)
 
 with open(pdb_path, "w", encoding="utf-8") as f:
     f.writelines(filtered)
 
-print(f"strip_ions: removed {removed} ion record(s) from {pdb_path}")
+print(
+    f"strip_ions: removed {removed_water} water record(s) and "
+    f"{removed_ions} ion record(s) from {pdb_path}"
+)
