@@ -854,6 +854,62 @@ jobs:
       - name: Run worker unit tests
         run: pnpm -C apps/worker run test
 
+  scoper-unit-tests:
+    name: Test scoper (unit)
+    if: needs.changes.outputs.scoper == 'true'
+    needs: [changes, lint]
+    runs-on: [ubuntu-22.04]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install deps
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
+
+      - name: Build shared schema
+        run: pnpm -C packages/mongodb-schema run build
+
+      - name: Build shared types
+        run: pnpm -C packages/bilbomd-types run build
+
+      - name: Run scoper unit tests
+        run: pnpm -C apps/scoper run test
+
   backend-unit-tests:
     name: Test backend (unit)
     if: needs.changes.outputs.backend == 'true'
@@ -1021,6 +1077,7 @@ jobs:
         backend-unit-tests,
         ui-unit-tests,
         worker-unit-tests,
+        scoper-unit-tests,
         scoper-typecheck,
         backend-integration-tests,
       ]
@@ -1036,13 +1093,14 @@ jobs:
       BACKEND_UNIT: ${{ needs['backend-unit-tests'].result }}
       UI_UNIT: ${{ needs['ui-unit-tests'].result }}
       WORKER_UNIT: ${{ needs['worker-unit-tests'].result }}
+      SCOPER_UNIT: ${{ needs['scoper-unit-tests'].result }}
       SCOPER_TYPE: ${{ needs['scoper-typecheck'].result }}
       BACKEND_INT: ${{ needs['backend-integration-tests'].result }}
     steps:
       - name: Check build results
         run: |
           set -e
-          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT UI_UNIT WORKER_UNIT SCOPER_TYPE BACKEND_INT; do
+          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT UI_UNIT WORKER_UNIT SCOPER_UNIT SCOPER_TYPE BACKEND_INT; do
             result="${!job}"
             echo "$job result: $result"
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
@@ -1055,7 +1113,7 @@ jobs:
   coverage-report:
     name: Update Coverage in README
     runs-on: ubuntu-22.04
-    needs: [backend-unit-tests, ui-unit-tests, worker-unit-tests]
+    needs: [backend-unit-tests, ui-unit-tests, worker-unit-tests, scoper-unit-tests]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
@@ -1085,6 +1143,9 @@ jobs:
 
       - name: Run worker tests with coverage
         run: pnpm -C apps/worker run test
+
+      - name: Run scoper tests with coverage
+        run: pnpm -C apps/scoper run test
 
       - name: Update README with coverage
         run: node .github/scripts/update-coverage-readme.js
