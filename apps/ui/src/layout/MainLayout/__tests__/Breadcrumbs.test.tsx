@@ -19,8 +19,10 @@ const mockSelectUserById = vi.mocked(selectUserById)
 describe('AppBreadcrumbs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockSelectJobById.mockReturnValue(undefined)
-    mockSelectUserById.mockReturnValue(undefined)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockSelectJobById.mockReturnValue(undefined as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockSelectUserById.mockReturnValue(undefined as any)
   })
 
   it('renders a static Home link plus mapped segment labels', () => {
