@@ -55,6 +55,24 @@ from pdb_utils import determine_molecule_type_details
 
 TOPO_FILES = os.environ.get("CHARMM_TOPOLOGY", "/app/scripts/bilbomd_top_par_files.str")
 
+# Single-atom ions (and common polyatomic ions) that CHARMM's standard topology
+# does not support.  These mirror the ions already accepted by SUPPORTED_PDB_RESIDUES
+# in packages/bilbomd-types/src/pdbResidues.ts.
+KNOWN_IONS = frozenset([
+    # Alkali metals
+    "LI", "NA", "K", "RB", "CS",
+    # Alkaline earth
+    "MG", "CA", "SR", "BA",
+    # Transition metals
+    "SC", "TI", "V", "CR", "MN", "FE", "CO", "NI", "CU", "ZN", "MO", "CD", "HG",
+    # Post-transition metals / metalloids
+    "AL", "GA", "IN", "SN", "PB", "B", "SE", "AS",
+    # Halogens (as ions)
+    "CL", "BR", "F",
+    # Common polyatomic ions
+    "SO4", "PO4", "NO3", "CN",
+])
+
 
 def get_chain_filename(chain_id, pdb_filename):
     """
@@ -96,6 +114,22 @@ def remove_water(lines):
         else:
             processed_lines.append(line)  # Always append non-ATOM/HETATM lines
 
+    return processed_lines
+
+
+def remove_ions(lines):
+    """
+    Remove HETATM/ATOM lines whose residue name is a known single-atom ion
+    (or common polyatomic ion) that CHARMM cannot process.
+    """
+    processed_lines = []
+    for line in lines:
+        if line.startswith(("ATOM", "HETATM")):
+            residue_name = line[17:20].strip()
+            if residue_name not in KNOWN_IONS:
+                processed_lines.append(line)
+        else:
+            processed_lines.append(line)
     return processed_lines
 
 
@@ -499,17 +533,29 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
                 file=sys.stderr
             )
 
-    # Process and write each chain to a separate file
+    # Process and write each chain to a separate file.
+    # Track which chains still have atoms after filtering so that ion-only
+    # (or water-only) chains are excluded from the CHARMM inp files.
+    non_empty_chains = {}
     for chain_id, chain_data in chains.items():
-        # Apply any processing here, e.g., renaming residues, renumbering, etc.
-        # These could be done in a single for x in x loop if we wanted
-        # to be more efficient
         processed_lines = remove_water(chain_data["lines"])
+        processed_lines = remove_ions(processed_lines)
         processed_lines = remove_alt_conformers(processed_lines)
         processed_lines = apply_charmm_residue_names(processed_lines)
 
         # CHARMM will not tolerate HETATM lines
         processed_lines = replace_hetatm(processed_lines)
+
+        has_atoms = any(l.startswith(("ATOM", "HETATM")) for l in processed_lines)
+        if not has_atoms:
+            print(
+                f"WARNING: Chain {chain_data['chainid']} contained only ions/water "
+                f"and was skipped.",
+                file=sys.stderr,
+            )
+            continue
+
+        non_empty_chains[chain_id] = chain_data
 
         chain_filename = get_chain_filename(chain_id, pdb_file_path)
 
@@ -518,10 +564,10 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
         ) as chain_file:
             chain_file.writelines(processed_lines)
             chain_file.write("TER\n")
-    # Write individual inp files for each chain
-    write_pdb_2_crd_inp_files(chains, output_dir, pdb_file_path)
+    # Write individual inp files for each non-empty chain
+    write_pdb_2_crd_inp_files(non_empty_chains, output_dir, pdb_file_path)
     # Write file to meld them all
-    write_meld_chain_crd_files(chains, output_dir, pdb_file_path)
+    write_meld_chain_crd_files(non_empty_chains, output_dir, pdb_file_path)
 
 
 if __name__ == "__main__":
