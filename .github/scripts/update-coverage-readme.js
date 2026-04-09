@@ -11,7 +11,7 @@ const apps = [
   { name: 'Backend', path: 'apps/backend/coverage/coverage-summary.json' },
   { name: 'UI', path: 'apps/ui/coverage/coverage-summary.json' },
   { name: 'Worker', path: 'apps/worker/coverage/coverage-summary.json' },
-  { name: 'Scoper', path: null } // No tests yet
+  { name: 'Scoper', path: 'apps/scoper/coverage/coverage-summary.json' }
 ]
 
 const readCoverage = (path) => {
