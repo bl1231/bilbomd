@@ -23,9 +23,15 @@ type ScoperFoXSAnalysisProps = {
 type CombinedFoxsDataDynamic = CombinedFoxsData &
   Record<`model_intensity_${number}` | `residual_${number}`, number>
 
+type ExcludedRange = { x1: number; x2: number }
+
 const prepData = (
   data: FoxsDataPoint[]
-): { data: FoxsDataPoint[]; excludedCount: number } => {
+): {
+  data: FoxsDataPoint[]
+  excludedCount: number
+  excludedRanges: ExcludedRange[]
+} => {
   const mapped = data
     .filter((item) => item.exp_intensity > 0 && item.model_intensity > 0)
     .map((item) => ({
@@ -34,11 +40,37 @@ const prepData = (
       model_intensity: parseFloat(item.model_intensity.toFixed(4)),
       error: parseFloat(item.error.toFixed(4))
     }))
+
   // Drop points where error >= exp_intensity (SNR < 1): their lower error bar
   // would go negative, which breaks log-scale rendering and causes the
   // visual "break" reported in https://github.com/bl1231/bilbomd/issues/572
   const filtered = mapped.filter((item) => item.error < item.exp_intensity)
-  return { data: filtered, excludedCount: mapped.length - filtered.length }
+  const excluded = mapped.filter((item) => item.error >= item.exp_intensity)
+
+  // Compute typical q-step to use as a merge threshold for grouping nearby
+  // excluded points into contiguous shaded bands for the chart.
+  const qStep = mapped.length > 1 ? mapped[1].q - mapped[0].q : 0.001
+  const mergeGap = qStep * 10
+
+  const excludedRanges: ExcludedRange[] = []
+  if (excluded.length > 0) {
+    const sortedQ = excluded.map((p) => p.q).sort((a, b) => a - b)
+    let rangeStart = sortedQ[0]!
+    let rangeEnd = sortedQ[0]!
+
+    for (let i = 1; i < sortedQ.length; i++) {
+      if (sortedQ[i]! - rangeEnd <= mergeGap) {
+        rangeEnd = sortedQ[i]!
+      } else {
+        excludedRanges.push({ x1: rangeStart - qStep / 2, x2: rangeEnd + qStep / 2 })
+        rangeStart = sortedQ[i]!
+        rangeEnd = sortedQ[i]!
+      }
+    }
+    excludedRanges.push({ x1: rangeStart - qStep / 2, x2: rangeEnd + qStep / 2 })
+  }
+
+  return { data: filtered, excludedCount: excluded.length, excludedRanges }
 }
 
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
@@ -156,11 +188,15 @@ const FoXSAnalysis = ({
 
   const hasEnsemble = useMemo(() => foxsData.length > 1, [foxsData])
 
-  const { data: origData, excludedCount: origExcludedCount } = useMemo(
+  const {
+    data: origData,
+    excludedCount: origExcludedCount,
+    excludedRanges: origExcludedRanges
+  } = useMemo(
     () =>
       hasBase
         ? prepData(foxsData[0]!.data as FoxsDataPoint[])
-        : { data: [], excludedCount: 0 },
+        : { data: [], excludedCount: 0, excludedRanges: [] },
     [hasBase, foxsData]
   )
   const ensembleData = useMemo(
@@ -241,6 +277,7 @@ const FoXSAnalysis = ({
             minYAxis={minYAxis}
             maxYAxis={maxYAxis}
             excludedCount={origExcludedCount}
+            excludedRanges={origExcludedRanges}
           />
         </Grid>
         <Grid size={{ xs: 6 }}>

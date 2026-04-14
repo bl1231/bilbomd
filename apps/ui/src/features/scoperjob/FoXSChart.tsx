@@ -8,6 +8,7 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceArea,
   ErrorBar
 } from 'recharts'
 import { Typography } from '@mui/material'
@@ -24,6 +25,11 @@ interface ResidualDataPoint {
   res: number
 }
 
+interface ExcludedRange {
+  x1: number
+  x2: number
+}
+
 interface FoXSChartProps {
   title: string
   data: DataPoint[]
@@ -34,6 +40,7 @@ interface FoXSChartProps {
   minYAxis: number
   maxYAxis: number
   excludedCount?: number
+  excludedRanges?: ExcludedRange[]
 }
 
 interface CustomChartLabelProps {
@@ -119,7 +126,8 @@ const FoXSChart = ({
   c2,
   minYAxis,
   maxYAxis,
-  excludedCount = 0
+  excludedCount = 0,
+  excludedRanges = []
 }: FoXSChartProps) => {
   const labelXPosition = 75
   const labelYPosition = 20
@@ -165,6 +173,18 @@ const FoXSChart = ({
             height={30}
             layout="horizontal"
           />
+          {excludedRanges.map((range, i) => (
+            <ReferenceArea
+              key={i}
+              yAxisId="left"
+              x1={range.x1}
+              x2={range.x2}
+              fill="#ff9800"
+              fillOpacity={0.2}
+              stroke="#ff9800"
+              strokeOpacity={0.6}
+            />
+          ))}
           <Line
             yAxisId="left"
             type="monotone"
@@ -215,6 +235,17 @@ const FoXSChart = ({
             layout="horizontal"
             align="center"
           />
+          {excludedRanges.map((range, i) => (
+            <ReferenceArea
+              key={i}
+              x1={range.x1}
+              x2={range.x2}
+              fill="#ff9800"
+              fillOpacity={0.2}
+              stroke="#ff9800"
+              strokeOpacity={0.6}
+            />
+          ))}
           <Line
             type="monotone"
             dataKey="res"
