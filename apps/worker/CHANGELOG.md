@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.6.3
+
+### Patch Changes
+
+- bf1837b: Replace npm-run-all with pnpm && chaining in all build scripts. Removes an unnecessary dependency that called npm run internally rather than pnpm run.
+
 ## 2.6.2
 
 ### Patch Changes

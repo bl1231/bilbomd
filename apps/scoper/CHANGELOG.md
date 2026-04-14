@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.7.5
+
+### Patch Changes
+
+- bf1837b: Replace npm-run-all with pnpm && chaining in all build scripts. Removes an unnecessary dependency that called npm run internally rather than pnpm run.
+
 ## 1.7.4
 
 ### Patch Changes

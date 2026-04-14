@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.11.1
+
+### Patch Changes
+
+- bf1837b: Replace npm-run-all with pnpm && chaining in all build scripts. Removes an unnecessary dependency that called npm run internally rather than pnpm run.
+
 ## 2.11.0
 
 ### Minor Changes
