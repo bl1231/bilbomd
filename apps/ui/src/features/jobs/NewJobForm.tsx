@@ -90,9 +90,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [saxsData, setSaxsData] = useState<{ q: number; intensity: number }[]>(
-    []
-  )
+  const [saxsData, setSaxsData] = useState<
+    { q: number; intensity: number; error: number }[]
+  >([])
   const [guinierRegion, setGuinierRegion] = useState<{
     qmin: number
     qmax: number
@@ -703,7 +703,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   const cols = line.trim().split(/\s+/)
                                   return {
                                     q: parseFloat(cols[0] ?? '0'),
-                                    intensity: parseFloat(cols[1] ?? '0')
+                                    intensity: parseFloat(cols[1] ?? '0'),
+                                    error: parseFloat(cols[2] ?? '0')
                                   }
                                 })
                                 .filter(
