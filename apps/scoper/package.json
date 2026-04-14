@@ -25,8 +25,8 @@
   ],
   "scripts": {
     "clean": "rimraf build/*",
-    "build": "npm-run-all clean copy-assets tsc",
-    "build:ci": "npm-run-all clean copy-assets lint tsc",
+    "build": "pnpm run clean && pnpm run copy-assets && pnpm run tsc",
+    "build:ci": "pnpm run clean && pnpm run copy-assets && pnpm run lint && pnpm run tsc",
     "copy-assets": "copyfiles --all --up 1 --exclude \"./**/*.{ts,tsx}\" \"./src/**/*\" ./build",
     "start": "npm run build && node build/scoper.js",
     "dev": "nodemon --watch src --ext ts,ejs --verbose --exec npm run start",
