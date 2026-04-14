@@ -35,12 +35,13 @@ const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
     }))
 
 const calculateResiduals = (dataPoints: FoxsDataPoint[]) => {
-  return dataPoints.map((item) => ({
-    q: parseFloat(item.q.toFixed(4)),
-    res: parseFloat(
-      ((item.exp_intensity - item.model_intensity) / item.error).toFixed(4)
-    )
-  }))
+  return dataPoints.map((item) => {
+    const q = parseFloat(item.q.toFixed(4))
+    const num = item.exp_intensity - item.model_intensity
+    const denom = item.error
+    const res = denom !== 0 ? parseFloat((num / denom).toFixed(4)) : 0
+    return { q, res }
+  })
 }
 
 const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
@@ -79,8 +80,10 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
 
   // Define a Memoized calculation for min and max Y axis values
   const { minYAxis, maxYAxis } = useMemo(() => {
+    if (!origResiduals.length) return { minYAxis: -1, maxYAxis: 1 }
     const maxY = Math.max(...origResiduals.map((r) => Math.abs(r.res)))
-    return { minYAxis: -maxY, maxYAxis: maxY }
+    const safe = Number.isFinite(maxY) && maxY > 0 ? maxY : 1
+    return { minYAxis: -safe, maxYAxis: safe }
   }, [origResiduals])
 
   // Handle loading and error states
