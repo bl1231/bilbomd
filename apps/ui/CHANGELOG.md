@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.11.0
+
+### Minor Changes
+
+- afa3f90: Enhance SAXS Data Preview plot with green Guinier region and low-SNR warning bands. The Guinier fit region is now highlighted in green, and any q-ranges where σ(q) > I(q) (SNR < 1) are highlighted in red so users can see at a glance which portions of their experimental data may be unreliable.
+
 ## 2.10.1
 
 ### Patch Changes
