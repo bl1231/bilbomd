@@ -33,8 +33,11 @@ jobs:
             - name: Run Claude Code
               id: claude
               uses: anthropics/claude-code-action@v1
+              env:
+                  ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
+                  ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
               with:
-                  anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+                  anthropic_api_key: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
 
                   # Optional: Customize the trigger phrase (default: @claude)
                   # trigger_phrase: "/claude"
