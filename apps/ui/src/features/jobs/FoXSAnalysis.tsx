@@ -25,6 +25,16 @@ type CombinedFoxsDataDynamic = CombinedFoxsData &
 
 type ExcludedRange = { x1: number; x2: number }
 
+// A point is plottable when:
+//   1. exp_intensity > 0  — real measurement
+//   2. model_intensity > 0 — FoXS theoretical curve stays physical
+//   3. error < exp_intensity — SNR ≥ 1, so the lower error bar stays positive
+//      on a log scale (avoids the visual "break" in issue #572)
+const isPlottable = (item: FoxsDataPoint): boolean =>
+  item.exp_intensity > 0 &&
+  item.model_intensity > 0 &&
+  item.error < item.exp_intensity
+
 const prepData = (
   data: FoxsDataPoint[]
 ): {
@@ -32,24 +42,19 @@ const prepData = (
   excludedCount: number
   excludedRanges: ExcludedRange[]
 } => {
-  const mapped = data
-    .filter((item) => item.exp_intensity > 0 && item.model_intensity > 0)
-    .map((item) => ({
-      q: parseFloat(item.q.toFixed(4)),
-      exp_intensity: parseFloat(item.exp_intensity.toFixed(4)),
-      model_intensity: parseFloat(item.model_intensity.toFixed(4)),
-      error: parseFloat(item.error.toFixed(4))
-    }))
+  const all = data.map((item) => ({
+    q: parseFloat(item.q.toFixed(4)),
+    exp_intensity: parseFloat(item.exp_intensity.toFixed(4)),
+    model_intensity: parseFloat(item.model_intensity.toFixed(4)),
+    error: parseFloat(item.error.toFixed(4))
+  }))
 
-  // Drop points where error >= exp_intensity (SNR < 1): their lower error bar
-  // would go negative, which breaks log-scale rendering and causes the
-  // visual "break" reported in https://github.com/bl1231/bilbomd/issues/572
-  const filtered = mapped.filter((item) => item.error < item.exp_intensity)
-  const excluded = mapped.filter((item) => item.error >= item.exp_intensity)
+  const good = all.filter(isPlottable)
+  const excluded = all.filter((item) => !isPlottable(item))
 
   // Compute typical q-step to use as a merge threshold for grouping nearby
   // excluded points into contiguous shaded bands for the chart.
-  const qStep = mapped.length > 1 ? mapped[1].q - mapped[0].q : 0.001
+  const qStep = all.length > 1 ? all[1]!.q - all[0]!.q : 0.001
   const mergeGap = qStep * 10
 
   const excludedRanges: ExcludedRange[] = []
@@ -70,7 +75,7 @@ const prepData = (
     excludedRanges.push({ x1: rangeStart - qStep / 2, x2: rangeEnd + qStep / 2 })
   }
 
-  return { data: filtered, excludedCount: excluded.length, excludedRanges }
+  return { data: good, excludedCount: excluded.length, excludedRanges }
 }
 
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {

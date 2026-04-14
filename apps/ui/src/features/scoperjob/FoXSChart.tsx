@@ -145,8 +145,9 @@ const FoXSChart = ({
           variant="caption"
           sx={{ pl: 2, color: 'warning.main' }}
         >
-          {excludedCount} low-SNR point{excludedCount !== 1 ? 's' : ''} hidden
-          (error &ge; intensity)
+          {excludedCount} point{excludedCount !== 1 ? 's' : ''} excluded from
+          plot (shaded region{excludedCount !== 1 ? 's' : ''}): model &le; 0
+          or SNR &lt; 1
         </Typography>
       )}
       <ResponsiveContainer
