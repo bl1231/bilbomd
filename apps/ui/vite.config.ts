@@ -16,22 +16,22 @@ export default defineConfig({
     port: 3002,
     proxy: {
       '/api/v1': {
-        target: 'http://localhost:3502',
+        target: 'http://localhost:3501',
         changeOrigin: true,
         secure: false
       },
       '/admin/bullmq': {
-        target: 'http://localhost:3502',
+        target: 'http://localhost:3501',
         changeOrigin: true,
         secure: false
       },
       '/sfapi': {
-        target: 'http://localhost:3502',
+        target: 'http://localhost:3501',
         changeOrigin: true,
         secure: false
       },
       '/api-docs': {
-        target: 'http://localhost:3502',
+        target: 'http://localhost:3501',
         changeOrigin: true,
         secure: false
       }
