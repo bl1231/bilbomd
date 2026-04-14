@@ -249,6 +249,63 @@ const isSaxsData = (
   })
 }
 
+type SaxsQualityResult = {
+  lowSnrCount: number
+  totalCount: number
+  maxErrorRatio: number
+  warning: string | null
+}
+
+// Scan a SAXS .dat file for data points where error/I > 2 (SNR < 0.5).
+// Returns counts and a human-readable warning string when issues are found.
+// This is informational only — the data is not invalid, just noisy.
+const hasSaxsQualityIssues = (file: File): Promise<SaxsQualityResult> => {
+  const sciNotation = /-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?/g
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.readAsText(file)
+    reader.onloadend = () => {
+      const lines = (reader.result as string).split(/[\r\n]+/g)
+      let totalCount = 0
+      let lowSnrCount = 0
+      let maxErrorRatio = 0
+
+      for (const line of lines) {
+        if (line.startsWith('#') || line.trim() === '') continue
+        const numbers = line.match(sciNotation)
+        if (!numbers || numbers.length < 3) continue
+
+        const I = parseFloat(numbers[1])
+        const err = parseFloat(numbers[2])
+        if (!Number.isFinite(I) || !Number.isFinite(err) || I <= 0) continue
+
+        totalCount++
+        const ratio = err / I
+        if (ratio > maxErrorRatio) maxErrorRatio = ratio
+        if (ratio > 2) lowSnrCount++
+      }
+
+      if (lowSnrCount === 0) {
+        resolve({ lowSnrCount, totalCount, maxErrorRatio, warning: null })
+        return
+      }
+
+      const pct = totalCount > 0 ? Math.round((lowSnrCount / totalCount) * 100) : 0
+      resolve({
+        lowSnrCount,
+        totalCount,
+        maxErrorRatio,
+        warning:
+          `${lowSnrCount} of ${totalCount} data points (${pct}%) have error/I > 2. ` +
+          `These low-SNR points will be hidden in the FoXS plot. ` +
+          `Consider trimming the high-q range of your .dat file.`
+      })
+    }
+    reader.onerror = () =>
+      resolve({ lowSnrCount: 0, totalCount: 0, maxErrorRatio: 0, warning: null })
+  })
+}
+
 const containsChainId = (file: File): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -509,6 +566,7 @@ export {
   isPsfData,
   noSpaces,
   isSaxsData,
+  hasSaxsQualityIssues,
   isRNA,
   isSingleModel,
   cifIsSingleModel,
@@ -519,3 +577,4 @@ export {
   isValidConstInpFile,
   hasAllowedResiduesOnly
 }
+export type { SaxsQualityResult }

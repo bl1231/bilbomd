@@ -7,7 +7,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceLine
+  ReferenceLine,
+  ErrorBar
 } from 'recharts'
 import { Typography } from '@mui/material'
 
@@ -32,6 +33,7 @@ interface FoXSChartProps {
   c2: string
   minYAxis: number
   maxYAxis: number
+  excludedCount?: number
 }
 
 interface CustomChartLabelProps {
@@ -103,6 +105,11 @@ const ChiSquaredChartLabel = ({
   )
 }
 
+const logDomain = (dataMin: number): number => {
+  if (!Number.isFinite(dataMin) || dataMin <= 0) return 0.001
+  return Math.pow(10, Math.floor(Math.log10(dataMin)))
+}
+
 const FoXSChart = ({
   title,
   data,
@@ -111,7 +118,8 @@ const FoXSChart = ({
   c1,
   c2,
   minYAxis,
-  maxYAxis
+  maxYAxis,
+  excludedCount = 0
 }: FoXSChartProps) => {
   const labelXPosition = 75
   const labelYPosition = 20
@@ -124,6 +132,15 @@ const FoXSChart = ({
       >
         {title} - I vs. q
       </Typography>
+      {excludedCount > 0 && (
+        <Typography
+          variant="caption"
+          sx={{ pl: 2, color: 'warning.main' }}
+        >
+          {excludedCount} low-SNR point{excludedCount !== 1 ? 's' : ''} hidden
+          (error &ge; intensity)
+        </Typography>
+      )}
       <ResponsiveContainer
         width="100%"
         height={300}
@@ -139,7 +156,7 @@ const FoXSChart = ({
             yAxisId="left"
             scale="log"
             type="number"
-            domain={['auto', 'auto']}
+            domain={[logDomain, 'auto']}
           />
           <Tooltip />
           <Legend
@@ -155,7 +172,15 @@ const FoXSChart = ({
             name="Exp Intensity"
             stroke="#8884d8"
             activeDot={{ r: 8 }}
-          />
+          >
+            <ErrorBar
+              dataKey="error"
+              direction="y"
+              stroke="#8884d8"
+              strokeOpacity={0.4}
+              strokeWidth={1}
+            />
+          </Line>
           <Line
             yAxisId="left"
             type="monotone"

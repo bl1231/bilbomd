@@ -23,8 +23,10 @@ type ScoperFoXSAnalysisProps = {
 type CombinedFoxsDataDynamic = CombinedFoxsData &
   Record<`model_intensity_${number}` | `residual_${number}`, number>
 
-const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
-  data
+const prepData = (
+  data: FoxsDataPoint[]
+): { data: FoxsDataPoint[]; excludedCount: number } => {
+  const mapped = data
     .filter((item) => item.exp_intensity > 0 && item.model_intensity > 0)
     .map((item) => ({
       q: parseFloat(item.q.toFixed(4)),
@@ -32,6 +34,12 @@ const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
       model_intensity: parseFloat(item.model_intensity.toFixed(4)),
       error: parseFloat(item.error.toFixed(4))
     }))
+  // Drop points where error >= exp_intensity (SNR < 1): their lower error bar
+  // would go negative, which breaks log-scale rendering and causes the
+  // visual "break" reported in https://github.com/bl1231/bilbomd/issues/572
+  const filtered = mapped.filter((item) => item.error < item.exp_intensity)
+  return { data: filtered, excludedCount: mapped.length - filtered.length }
+}
 
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
   if (!Array.isArray(foxsDataArray) || foxsDataArray.length < 2) {
@@ -148,8 +156,11 @@ const FoXSAnalysis = ({
 
   const hasEnsemble = useMemo(() => foxsData.length > 1, [foxsData])
 
-  const origData = useMemo(
-    () => (hasBase ? prepData(foxsData[0]!.data as FoxsDataPoint[]) : []),
+  const { data: origData, excludedCount: origExcludedCount } = useMemo(
+    () =>
+      hasBase
+        ? prepData(foxsData[0]!.data as FoxsDataPoint[])
+        : { data: [], excludedCount: 0 },
     [hasBase, foxsData]
   )
   const ensembleData = useMemo(
@@ -229,6 +240,7 @@ const FoXSAnalysis = ({
             c2={origC2}
             minYAxis={minYAxis}
             maxYAxis={maxYAxis}
+            excludedCount={origExcludedCount}
           />
         </Grid>
         <Grid size={{ xs: 6 }}>
