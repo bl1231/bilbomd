@@ -1,4 +1,10 @@
-import { SUPPORTED_PDB_RESIDUES } from '@bilbomd/bilbomd-types'
+import {
+  SUPPORTED_PDB_RESIDUES,
+  parseCifAtomSite,
+  cifContainsChainId as cifContainsChainIdUtil,
+  cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
+  cifIsSingleModel as cifIsSingleModelUtil
+} from '@bilbomd/bilbomd-types'
 
 const hasAllowedResiduesOnly = (
   file: File
@@ -243,6 +249,63 @@ const isSaxsData = (
   })
 }
 
+type SaxsQualityResult = {
+  lowSnrCount: number
+  totalCount: number
+  maxErrorRatio: number
+  warning: string | null
+}
+
+// Scan a SAXS .dat file for data points where error/I > 2 (SNR < 0.5).
+// Returns counts and a human-readable warning string when issues are found.
+// This is informational only — the data is not invalid, just noisy.
+const hasSaxsQualityIssues = (file: File): Promise<SaxsQualityResult> => {
+  const sciNotation = /-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?/g
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.readAsText(file)
+    reader.onloadend = () => {
+      const lines = (reader.result as string).split(/[\r\n]+/g)
+      let totalCount = 0
+      let lowSnrCount = 0
+      let maxErrorRatio = 0
+
+      for (const line of lines) {
+        if (line.startsWith('#') || line.trim() === '') continue
+        const numbers = line.match(sciNotation)
+        if (!numbers || numbers.length < 3) continue
+
+        const I = parseFloat(numbers[1])
+        const err = parseFloat(numbers[2])
+        if (!Number.isFinite(I) || !Number.isFinite(err) || I <= 0) continue
+
+        totalCount++
+        const ratio = err / I
+        if (ratio > maxErrorRatio) maxErrorRatio = ratio
+        if (ratio > 2) lowSnrCount++
+      }
+
+      if (lowSnrCount === 0) {
+        resolve({ lowSnrCount, totalCount, maxErrorRatio, warning: null })
+        return
+      }
+
+      const pct = totalCount > 0 ? Math.round((lowSnrCount / totalCount) * 100) : 0
+      resolve({
+        lowSnrCount,
+        totalCount,
+        maxErrorRatio,
+        warning:
+          `${lowSnrCount} of ${totalCount} data points (${pct}%) have error/I > 2. ` +
+          `These low-SNR points will be hidden in the FoXS plot. ` +
+          `Consider trimming the high-q range of your .dat file.`
+      })
+    }
+    reader.onerror = () =>
+      resolve({ lowSnrCount: 0, totalCount: 0, maxErrorRatio: 0, warning: null })
+  })
+}
+
 const containsChainId = (file: File): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -329,6 +392,35 @@ const isRNA = (file: File): Promise<{ valid: boolean; message?: string }> => {
   })
 }
 
+const isSingleModel = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+
+      let modelCount = 0
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith('MODEL')) {
+          modelCount++
+          if (modelCount > 1) {
+            resolve(false)
+            return
+          }
+        }
+      }
+
+      resolve(true)
+    }
+
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
 const isValidConstInpFile = (
   file: File,
   mode: string
@@ -404,15 +496,85 @@ const isValidConstInpFile = (
   })
 }
 
+const cifContainsChainId = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const parsed = parseCifAtomSite(text)
+      resolve(parsed !== null && cifContainsChainIdUtil(parsed))
+    }
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
+const cifHasAllowedResiduesOnly = (
+  file: File
+): Promise<{ valid: boolean; unsupportedResidues: string[] }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const parsed = parseCifAtomSite(text)
+      if (!parsed) {
+        resolve({
+          valid: false,
+          unsupportedResidues: ['(no _atom_site block found in CIF)']
+        })
+        return
+      }
+      resolve(cifHasAllowedResiduesOnlyUtil(parsed))
+    }
+    reader.onerror = () => reject(new Error('Error reading file'))
+    reader.readAsText(file)
+  })
+}
+
+const cifIsSingleModel = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const parsed = parseCifAtomSite(text)
+      if (!parsed) {
+        resolve(true) // no _atom_site block — let other checks catch it
+        return
+      }
+      resolve(cifIsSingleModelUtil(parsed))
+    }
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
 export {
   fromCharmmGui,
   isCRD,
   isPsfData,
   noSpaces,
   isSaxsData,
+  hasSaxsQualityIssues,
   isRNA,
+  isSingleModel,
+  cifIsSingleModel,
   containsChainId,
+  cifContainsChainId,
+  cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines,
   isValidConstInpFile,
   hasAllowedResiduesOnly
 }
+export type { SaxsQualityResult }

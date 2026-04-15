@@ -1,5 +1,28 @@
 # @bilbomd/mongodb-schema
 
+## 2.5.3
+
+### Patch Changes
+
+- e24f1c6: Remove stale GitHub Actions workflows left over from when mongodb-schema was a standalone repo. These files (`publish.yml`, `publish-dev.yml`, `dependabot.yml`) were nested inside `src/.github/` and were never executed by GitHub Actions in the monorepo. The monorepo CI already handles building and versioning this package.
+
+## 2.5.2
+
+### Patch Changes
+
+- 82d0bf4: Remove md_engine from base job schema for scoper jobs. Scoper uses KGSRNA for
+  conformational sampling, not CHARMM or OpenMM. Moving md_engine to only the
+  discriminator schemas that use an MD engine (pdb, crd, auto, alphafold, sans).
+  Also adds md_engine explicitly to the SANS discriminator schema where it was
+  previously relying on the base schema default. The md_engine field is now
+  optional in BaseJobDTO and AnonJobResponse.
+
+## 2.5.1
+
+### Patch Changes
+
+- d9a702d: Update all dependencies. Patch/minor bumps across the board: bullmq, dotenv, mongoose, eslint, molstar, react-router, msw, vite, sass-embedded, @types/node, turbo. Bump @types/nodemailer from ^7 to ^8 to match the already-upgraded nodemailer v8 runtime.
+
 ## 2.5.0
 
 ### Minor Changes

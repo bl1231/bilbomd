@@ -15,6 +15,7 @@ import {
   runOmmMD,
   prepareOpenMMConfig
 } from '../functions/openmm-functions.js'
+import { runCifToPdb, runStripIons } from '../functions/pdb-to-crd.js'
 import {
   extractPDBFilesFromDCD,
   remediatePDBFiles
@@ -65,6 +66,16 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   // Initialize
   await initializeJob(MQjob, foundJob)
   await progress.update(10)
+
+  // Convert CIF → PDB before any engine-specific processing
+  if (foundJob.pdb_file?.toLowerCase().endsWith('.cif')) {
+    await MQjob.log('start cif-to-pdb')
+    foundJob.pdb_file = await runCifToPdb({
+      uuid: foundJob.uuid,
+      pdb_file: foundJob.pdb_file
+    })
+    await MQjob.log(`end cif-to-pdb: ${foundJob.pdb_file}`)
+  }
 
   // Use PAE to construct const.inp file
   await MQjob.log('start pae')
@@ -120,6 +131,11 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
     await MQjob.log('end remediate')
     await progress.update(70)
   } else {
+    // Strip ions before OpenMM — ForceField has no parameters for metal ions
+    await MQjob.log('start strip-ions')
+    await runStripIons({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
+    await MQjob.log('end strip-ions')
+
     // Prepare OpenMM config YAML
     await MQjob.log('start openmm-config')
     await prepareOpenMMConfig(foundJob)

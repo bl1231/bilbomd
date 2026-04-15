@@ -88,6 +88,7 @@ def get_rigid_bodies(modeller, configs):
         segments = config.get("segments", [])
 
         body_atoms = rigid_bodies.get(name, [])
+        seen_indices = set(body_atoms)
 
         for segment in segments:
             chain_id = segment["chain_id"]
@@ -95,14 +96,16 @@ def get_rigid_bodies(modeller, configs):
             if isinstance(residues_config, dict):
                 start = residues_config["start"]
                 stop = residues_config["stop"]
-                residues = set(range(start, stop))
+                residues = set(range(start, stop + 1))
             else:
                 residues = set(residues_config)
 
             for res in modeller.topology.residues():
                 if res.chain.id == chain_id and int(res.id) in residues:
                     for atom in res.atoms():
-                        body_atoms.append(atom.index)
+                        if atom.index not in seen_indices:
+                            body_atoms.append(atom.index)
+                            seen_indices.add(atom.index)
 
         if body_atoms:
             rigid_bodies[name] = body_atoms
@@ -145,6 +148,8 @@ def create_rigid_bodies(system, positions, bodies):
             system.removeConstraint(i)
 
     # Loop over rigid bodies and process them.
+
+    added_constraint_pairs: set[tuple[int, int]] = set()
 
     for particles in bodies:
         if len(particles) < 5:
@@ -191,9 +196,12 @@ def create_rigid_bodies(system, positions, bodies):
         # Add constraints between the real particles.
 
         for p1, p2 in combinations(realParticles, 2):
-            distance = unit.norm(positions[p1] - positions[p2])
             key = (min(p1, p2), max(p1, p2))
+            if key in added_constraint_pairs:
+                continue
+            distance = unit.norm(positions[p1] - positions[p2])
             system.addConstraint(p1, p2, distance)
+            added_constraint_pairs.add(key)
 
         # Select which three particles to use for defining virtual sites.
 

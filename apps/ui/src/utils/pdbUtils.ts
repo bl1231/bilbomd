@@ -1,3 +1,5 @@
+import { parseCifAtomSite } from '@bilbomd/bilbomd-types'
+
 export interface PLDDTData {
   globalIndex: number // New: Unique sequential index for plotting
   residueNumber: number // PDB residue number (may repeat across chains)
@@ -57,5 +59,70 @@ export function parsePLDDTFromPDB(pdbContent: string): {
       chainId: currentChain
     })
   }
+  return { data: plddtData, chainBoundaries }
+}
+
+export function parsePLDDTFromCIF(cifContent: string): {
+  data: PLDDTData[]
+  chainBoundaries: number[]
+} {
+  const parsed = parseCifAtomSite(cifContent)
+  if (!parsed) return { data: [], chainBoundaries: [] }
+
+  const { columnNames, dataRows } = parsed
+  const chainIdx = columnNames.indexOf('auth_asym_id')
+  const resIdx = columnNames.indexOf('auth_seq_id')
+  const bfactorIdx = columnNames.indexOf('B_iso_or_equiv')
+  const groupIdx = columnNames.indexOf('group_PDB')
+
+  if (chainIdx === -1 || resIdx === -1 || bfactorIdx === -1) {
+    return { data: [], chainBoundaries: [] }
+  }
+
+  const plddtData: PLDDTData[] = []
+  const chainBoundaries: number[] = []
+  let currentResidue = -1
+  let currentPLDDT = 0
+  let currentChain = ''
+  let globalIndex = 0
+
+  for (const row of dataRows) {
+    const group = groupIdx >= 0 ? row[groupIdx] : 'ATOM'
+    if (group !== 'ATOM') continue
+
+    const chainId = row[chainIdx] || ''
+    const residueNumber = parseInt(row[resIdx], 10)
+    const plddt = parseFloat(row[bfactorIdx])
+    if (isNaN(residueNumber) || isNaN(plddt)) continue
+
+    if (residueNumber !== currentResidue || chainId !== currentChain) {
+      if (currentResidue !== -1) {
+        plddtData.push({
+          globalIndex,
+          residueNumber: currentResidue,
+          plddt: currentPLDDT,
+          chainId: currentChain
+        })
+        globalIndex++
+      }
+      if (currentChain && chainId !== currentChain) {
+        chainBoundaries.push(globalIndex)
+      }
+      currentResidue = residueNumber
+      currentPLDDT = plddt
+      currentChain = chainId
+    } else {
+      currentPLDDT = (currentPLDDT + plddt) / 2
+    }
+  }
+  if (currentResidue !== -1) {
+    plddtData.push({
+      globalIndex,
+      residueNumber: currentResidue,
+      plddt: currentPLDDT,
+      chainId: currentChain
+    })
+  }
+
   return { data: plddtData, chainBoundaries }
 }

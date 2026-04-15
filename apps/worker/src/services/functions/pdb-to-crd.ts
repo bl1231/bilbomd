@@ -139,12 +139,28 @@ const spawnPdb2CrdCharmm = (
           )
           resolve(charmmOutput)
         } else {
+          // Log the full output for debugging, but build a concise error
+          // message for the UI by extracting only CHARMM error lines.
           logger.error(
-            `CHARMM execution failed: ${inputFile}, exit code: ${code}, error: ${charmmOutput}`
+            `CHARMM execution failed: ${inputFile}, exit code: ${code}\n${charmmOutput}`
           )
+          const errorLines = charmmOutput
+            .split('\n')
+            .filter(
+              (line) =>
+                line.includes('***** ERROR') ||
+                line.includes('ABNORMAL TERMINATION') ||
+                line.trimStart().startsWith('?')
+            )
+            .map((line) => line.trim())
+            .filter(Boolean)
+          const errorSummary =
+            errorLines.length > 0
+              ? errorLines.join(' | ')
+              : 'see CHARMM log for details'
           reject(
             new Error(
-              `CHARMM execution failed: ${inputFile}, exit code: ${code}, error: ${charmmOutput}`
+              `CHARMM execution failed: ${inputFile}, exit code: ${code}. ${errorSummary}`
             )
           )
         }
@@ -155,4 +171,117 @@ const spawnPdb2CrdCharmm = (
   return Promise.all(promises)
 }
 
-export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm }
+interface StripIonsData {
+  uuid: string
+  pdb_file: string
+}
+
+/**
+ * Strip metal ions from a PDB file in place, so that OpenMM's ForceField
+ * does not encounter residues it has no parameters for.
+ */
+const runStripIons = (data: StripIonsData): Promise<void> => {
+  const workingDir = path.join(uploadFolder, data.uuid)
+  const pdbPath = path.join(workingDir, data.pdb_file)
+  const logFile = path.join(workingDir, 'strip_ions.log')
+  const errorFile = path.join(workingDir, 'strip_ions_error.log')
+  const logStream = fs.createWriteStream(logFile)
+  const errorStream = fs.createWriteStream(errorFile)
+  const script = '/app/scripts/strip_ions.py'
+
+  logger.info(`runStripIons: stripping ions from ${data.pdb_file}`)
+
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn('/opt/envs/base/bin/python', [script, pdbPath], {
+      cwd: workingDir
+    })
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      logStream.write(chunk.toString())
+    })
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      const msg = chunk.toString().trim()
+      logger.error(`runStripIons stderr: ${msg}`)
+      errorStream.write(msg + '\n')
+    })
+
+    proc.on('error', (error) => {
+      logger.error(`runStripIons spawn error: ${error}`)
+      reject(error)
+    })
+
+    proc.on('close', (code) => {
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).then(() => {
+        if (code === 0) {
+          logger.info(`runStripIons succeeded for ${data.pdb_file}`)
+          resolve()
+        } else {
+          reject(new Error(`strip_ions.py exited with code ${code}`))
+        }
+      }).catch(reject)
+    })
+  })
+}
+
+interface CifToPdbData {
+  uuid: string
+  pdb_file: string
+}
+
+/**
+ * Convert an mmCIF file to PDB format using biopython.
+ * Returns the basename of the output PDB file (the .cif extension replaced with .pdb).
+ */
+const runCifToPdb = (data: CifToPdbData): Promise<string> => {
+  const workingDir = path.join(uploadFolder, data.uuid)
+  const inputCif = path.join(workingDir, data.pdb_file)
+  const outputPdbName = data.pdb_file.replace(/\.cif$/i, '.pdb')
+  const outputPdb = path.join(workingDir, outputPdbName)
+  const logFile = path.join(workingDir, 'cif_to_pdb.log')
+  const errorFile = path.join(workingDir, 'cif_to_pdb_error.log')
+  const logStream = fs.createWriteStream(logFile)
+  const errorStream = fs.createWriteStream(errorFile)
+  const script = '/app/scripts/cif_to_pdb.py'
+  const args = [script, inputCif, outputPdb]
+
+  logger.info(`runCifToPdb: converting ${data.pdb_file} -> ${outputPdbName}`)
+
+  return new Promise<string>((resolve, reject) => {
+    const proc = spawn('/opt/envs/base/bin/python', args, { cwd: workingDir })
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      logStream.write(chunk.toString())
+    })
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      const msg = chunk.toString().trim()
+      logger.error(`runCifToPdb stderr: ${msg}`)
+      errorStream.write(msg + '\n')
+    })
+
+    proc.on('error', (error) => {
+      logger.error(`runCifToPdb spawn error: ${error}`)
+      reject(error)
+    })
+
+    proc.on('close', (code) => {
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).then(() => {
+        if (code === 0) {
+          logger.info(`runCifToPdb succeeded: ${outputPdbName}`)
+          resolve(outputPdbName)
+        } else {
+          reject(new Error(`cif_to_pdb.py exited with code ${code}`))
+        }
+      }).catch(reject)
+    })
+  })
+}
+
+export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runStripIons, runCifToPdb }

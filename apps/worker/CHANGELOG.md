@@ -1,5 +1,64 @@
 # @bilbomd/worker
 
+## 2.6.4
+
+### Patch Changes
+
+- Updated dependencies [e24f1c6]
+  - @bilbomd/mongodb-schema@2.5.3
+  - @bilbomd/md-utils@1.1.6
+
+## 2.6.3
+
+### Patch Changes
+
+- bf1837b: Replace npm-run-all with pnpm && chaining in all build scripts. Removes an unnecessary dependency that called npm run internally rather than pnpm run.
+
+## 2.6.2
+
+### Patch Changes
+
+- 08cdf90: Strip metal ions (ZN, MG, CA, FE, etc.) from PDB chains before CHARMM pdb2crd conversion. Fixes job failure when PDB/CIF files contain ions that CHARMM's standard topology does not recognise. Ion-only chains are silently skipped rather than passed to CHARMM.
+
+## 2.6.1
+
+### Patch Changes
+
+- ec69fcd: Replace hard-coded Python binary paths with configurable environment variables. `OPENMM_PYTHON_BIN` (default: `/opt/envs/openmm/bin/python`) and `BASE_PYTHON_BIN` (default: `/opt/envs/base/bin/python`) can now be set to override paths without rebuilding the container.
+- 4923ccb: Add structured logging with JSON file output and request context propagation.
+
+  File transports now emit JSON for machine-parseable log ingestion (Loki, Elasticsearch, etc.). Console output remains colorized human-readable text.
+
+  Backend gains `AsyncLocalStorage`-based request context: every log line within an HTTP request automatically includes `requestId` without threading `req` through callers. Key controller call sites migrated from string interpolation to structured object fields.
+
+- 7d8ebdc: Update all npm dependencies to latest minor/patch versions. Includes axios 1.15, bullmq 5.73.1, @bull-board 6.21, nodemailer 8.0.5, react 19.2.5, vite 8.0.7, vitest 4.1.3, turbo 2.9.5, and MUI 7.3.10.
+- Updated dependencies [82d0bf4]
+  - @bilbomd/mongodb-schema@2.5.2
+  - @bilbomd/bilbomd-types@1.5.1
+  - @bilbomd/md-utils@1.1.5
+
+## 2.6.0
+
+### Minor Changes
+
+- f3ca090: Add support for mmCIF (.cif) file uploads in Classic/pdb and Auto job types.
+
+  Users can now upload AlphaFold 3 (or any standard mmCIF) files directly into BilboMD without manual conversion. The frontend and backend validate chain IDs and residue names from the `_atom_site` loop block using the same `SUPPORTED_PDB_RESIDUES` allowlist used for PDB validation. The worker converts CIF to PDB at pipeline start using biopython before CHARMM or OpenMM processing.
+
+### Patch Changes
+
+- Updated dependencies [f3ca090]
+  - @bilbomd/bilbomd-types@1.5.0
+
+## 2.5.2
+
+### Patch Changes
+
+- d9a702d: Update all dependencies. Patch/minor bumps across the board: bullmq, dotenv, mongoose, eslint, molstar, react-router, msw, vite, sass-embedded, @types/node, turbo. Bump @types/nodemailer from ^7 to ^8 to match the already-upgraded nodemailer v8 runtime.
+- Updated dependencies [d9a702d]
+  - @bilbomd/md-utils@1.1.4
+  - @bilbomd/mongodb-schema@2.5.1
+
 ## 2.5.1
 
 ### Patch Changes

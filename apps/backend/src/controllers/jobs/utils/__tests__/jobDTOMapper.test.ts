@@ -258,6 +258,17 @@ describe('mapJobMongoToDTO - scoper', () => {
       foxs_top_file: 'top.dat'
     })
   })
+
+  it('does not include md_engine when the scoper job has none', () => {
+    const job: IBilboMDScoperJob = {
+      ...baseJob({ __t: 'BilboMdScoper', md_engine: undefined }),
+      pdb_file: 'mol.pdb',
+      fixc1c2: false
+    } as IBilboMDScoperJob
+
+    const dto = mapJobMongoToDTO(job)
+    expect(dto.md_engine).toBeUndefined()
+  })
 })
 
 describe('mapJobMongoToDTO - multi (default)', () => {

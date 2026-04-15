@@ -12,18 +12,28 @@ vi.mock('features/scoperjob/FoXSChart', () => ({
     title,
     chisq,
     c1,
-    c2
+    c2,
+    excludedCount,
+    excludedRanges
   }: {
     title: string
     chisq: number
     c1: number
     c2: number
+    excludedCount?: number
+    excludedRanges?: Array<{ x1: number; x2: number }>
   }) => (
     <div data-testid="foxs-chart">
       <div>{title}</div>
       <div>ChiSq: {chisq}</div>
       <div>C1: {c1}</div>
       <div>C2: {c2}</div>
+      {excludedCount !== undefined && excludedCount > 0 && (
+        <div data-testid="excluded-count">Excluded: {excludedCount}</div>
+      )}
+      {excludedRanges && excludedRanges.length > 0 && (
+        <div data-testid="excluded-ranges">Ranges: {excludedRanges.length}</div>
+      )}
     </div>
   )
 }))
@@ -586,6 +596,210 @@ describe('FoXSAnalysis', () => {
 
       // Component should process and render the data
       expect(screen.getByText('Original Model')).toBeInTheDocument()
+    })
+  })
+
+  describe('SNR and model exclusion filtering', () => {
+    it('should pass excludedCount=1 and one amber range for a negative model_intensity point', async () => {
+      // Point at q=0.01 has model_intensity < 0 — fails isPlottable, gets excluded.
+      // Point at q=0.02 is fully valid.
+      const mockData: FoxsData[] = [
+        {
+          filename: 'model1.pdb',
+          chisq: 1.5,
+          c1: '1.0',
+          c2: '0.0',
+          data: [
+            {
+              q: 0.01,
+              exp_intensity: 100.0,
+              model_intensity: -5.0,
+              error: 2.0
+            },
+            {
+              q: 0.02,
+              exp_intensity: 85.0,
+              model_intensity: 84.0,
+              error: 1.5
+            }
+          ]
+        }
+      ]
+
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data: mockData,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('foxs-chart')).toBeInTheDocument()
+      })
+
+      expect(screen.getByTestId('excluded-count')).toHaveTextContent(
+        'Excluded: 1'
+      )
+      expect(screen.getByTestId('excluded-ranges')).toHaveTextContent(
+        'Ranges: 1'
+      )
+    })
+
+    it('should pass excludedCount=1 and one amber range for a low-SNR point', async () => {
+      // Point at q=0.01: error (50.0) >= exp_intensity (40.0) — SNR < 1, excluded.
+      // Point at q=0.02 is fully valid.
+      const mockData: FoxsData[] = [
+        {
+          filename: 'model1.pdb',
+          chisq: 1.5,
+          c1: '1.0',
+          c2: '0.0',
+          data: [
+            {
+              q: 0.01,
+              exp_intensity: 40.0,
+              model_intensity: 38.0,
+              error: 50.0
+            },
+            {
+              q: 0.02,
+              exp_intensity: 85.0,
+              model_intensity: 84.0,
+              error: 1.5
+            }
+          ]
+        }
+      ]
+
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data: mockData,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('foxs-chart')).toBeInTheDocument()
+      })
+
+      expect(screen.getByTestId('excluded-count')).toHaveTextContent(
+        'Excluded: 1'
+      )
+      expect(screen.getByTestId('excluded-ranges')).toHaveTextContent(
+        'Ranges: 1'
+      )
+    })
+
+    it('should pass excludedCount=2 and show ranges for a mix of negative model and low-SNR points', async () => {
+      // q=0.01: model_intensity < 0 — excluded (negative model)
+      // q=0.02: error >= exp_intensity — excluded (low SNR)
+      // q=0.03: fully valid
+      // The two excluded points are far apart in q-space (gap > 10× qStep),
+      // so they form two separate amber ranges.
+      const mockData: FoxsData[] = [
+        {
+          filename: 'model1.pdb',
+          chisq: 1.5,
+          c1: '1.0',
+          c2: '0.0',
+          data: [
+            {
+              q: 0.01,
+              exp_intensity: 100.0,
+              model_intensity: -3.0,
+              error: 2.0
+            },
+            {
+              q: 0.02,
+              exp_intensity: 30.0,
+              model_intensity: 28.0,
+              error: 35.0
+            },
+            {
+              q: 0.5,
+              exp_intensity: 85.0,
+              model_intensity: 84.0,
+              error: 1.5
+            }
+          ]
+        }
+      ]
+
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data: mockData,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('foxs-chart')).toBeInTheDocument()
+      })
+
+      expect(screen.getByTestId('excluded-count')).toHaveTextContent(
+        'Excluded: 2'
+      )
+      // The two excluded q values (0.01 and 0.02) are close together relative
+      // to the overall q range, so they merge into a single amber band.
+      expect(screen.getByTestId('excluded-ranges')).toBeInTheDocument()
+    })
+
+    it('should not render excluded-count or excluded-ranges when all data points are plottable', async () => {
+      // All three points satisfy every isPlottable condition.
+      const mockData: FoxsData[] = [
+        {
+          filename: 'model1.pdb',
+          chisq: 1.5,
+          c1: '1.0',
+          c2: '0.0',
+          data: [
+            {
+              q: 0.01,
+              exp_intensity: 100.0,
+              model_intensity: 98.0,
+              error: 2.0
+            },
+            {
+              q: 0.02,
+              exp_intensity: 85.0,
+              model_intensity: 84.0,
+              error: 1.5
+            },
+            {
+              q: 0.03,
+              exp_intensity: 70.0,
+              model_intensity: 69.0,
+              error: 1.2
+            }
+          ]
+        }
+      ]
+
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data: mockData,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('foxs-chart')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('excluded-count')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('excluded-ranges')).not.toBeInTheDocument()
     })
   })
 })

@@ -173,7 +173,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
     throw error
   }
 
-  const pythonBin = params.python_bin ?? '/opt/envs/base/bin/python'
+  const pythonBin = params.python_bin ?? config.basePythonBin
   const af2paeScript = params.script_path ?? '/app/scripts/pae2const.py'
   logger.debug(`Python binary: ${pythonBin}`)
   logger.debug(`Script path: ${af2paeScript}`)

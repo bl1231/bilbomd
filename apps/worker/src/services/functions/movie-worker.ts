@@ -1,3 +1,4 @@
+import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
 import { spawn } from 'node:child_process'
 import fs from 'fs-extra'
@@ -246,7 +247,7 @@ const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
   logger.debug(`[movie-worker] cwd: ${outDir}`)
 
   return new Promise((resolve, reject) => {
-    const pythonBinary = '/opt/envs/openmm/bin/python'
+    const pythonBinary = config.openmmPythonBin
     const pymolCommand = ['-m', 'pymol'].concat(pymolArgs)
 
     const child = spawn(pythonBinary, pymolCommand, {
