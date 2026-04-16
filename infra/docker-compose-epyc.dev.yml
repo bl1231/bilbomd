@@ -55,7 +55,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   redis:
-    image: redis:7.4.8
+    image: redis:8.6.2
     pull_policy: always
     restart: always
     healthcheck:
