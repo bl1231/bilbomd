@@ -27,7 +27,7 @@ networks:
 services:
   # ------------------------------------------------------------------------------------
   mongodb:
-    image: mongo:7.0.31
+    image: mongo:8.2.6
     restart: always
     deploy:
       resources:
@@ -55,7 +55,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   redis:
-    image: redis:7.4.8
+    image: redis:8.6.2
     restart: always
     deploy:
       resources:

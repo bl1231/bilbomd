@@ -38,7 +38,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:7.0.29
+    image: mongo:8.2.6
     pull_policy: missing
     restart: always
     healthcheck:
@@ -60,7 +60,7 @@ services:
       - app-network
 
   redis:
-    image: redis:7.4.8
+    image: redis:8.6.2
     pull_policy: missing
     restart: always
     healthcheck:
