@@ -231,4 +231,13 @@ describe('useJobProperties', () => {
     const engineProp = properties.find((p) => p.label === 'MD Engine')
     expect(engineProp?.value).toBe('CHARMM')
   })
+
+  it('should show KGSRNA as MD engine for scoper jobs', () => {
+    const job = createMockJob({ jobType: 'scoper', md_engine: undefined })
+    const { result } = renderHook(() => useJobProperties(job))
+
+    const properties = result.current
+    const engineProp = properties.find((p) => p.label === 'MD Engine')
+    expect(engineProp?.value).toBe('KGSRNA')
+  })
 })

@@ -11,8 +11,7 @@ networks:
 
 services:
   scoper:
-    # image: ghcr.io/bl1231/bilbomd-scoper:1.5.10
-    image: ghcr.io/bl1231/bilbomd-scoper:1.6.2
+    image: ghcr.io/bl1231/bilbomd-scoper:1.7.6
     pull_policy: always
     deploy:
       replicas: 1

@@ -3,13 +3,13 @@ import DailyRotateFile from 'winston-daily-rotate-file'
 import moment from 'moment-timezone'
 import { config } from '../config/config.js'
 
-const { combine, timestamp, label, printf, colorize } = format
+const { combine, timestamp, label, printf, colorize, json } = format
 const localTimezone = 'America/Los_Angeles'
 
 const customTimestamp = () =>
   moment().tz(localTimezone).format('YYYY-MM-DD HH:mm:ss')
 
-const logFormat = printf(({ level, message, label, timestamp }) => {
+const consoleLogFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp} - ${level}: [${label}] ${message}`
 })
 
@@ -31,6 +31,12 @@ if (!validLogLevels.includes(config.logLevel)) {
   console.warn(`Invalid LOG_LEVEL "${config.logLevel}", defaulting to "info"`)
 }
 
+const fileFormat = combine(
+  label({ label: 'bilbomd-worker' }),
+  timestamp({ format: customTimestamp }),
+  json()
+)
+
 const loggerTransports = [
   new DailyRotateFile({
     level: logLevel,
@@ -38,7 +44,8 @@ const loggerTransports = [
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
     maxSize: '10m',
-    maxFiles: '14d'
+    maxFiles: '14d',
+    format: fileFormat
   }),
   new DailyRotateFile({
     level: 'error',
@@ -46,21 +53,22 @@ const loggerTransports = [
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
     maxSize: '10m',
-    maxFiles: '30d'
+    maxFiles: '30d',
+    format: fileFormat
   }),
   new transports.Console({
     level: logLevel,
-    format: combine(colorize(), logFormat)
+    format: combine(
+      label({ label: 'bilbomd-worker' }),
+      timestamp({ format: customTimestamp }),
+      colorize(),
+      consoleLogFormat
+    )
   })
 ]
 
 const logger = createLogger({
   level: logLevel,
-  format: combine(
-    label({ label: 'bilbomd-worker' }),
-    timestamp({ format: customTimestamp }),
-    logFormat
-  ),
   transports: loggerTransports
 })
 

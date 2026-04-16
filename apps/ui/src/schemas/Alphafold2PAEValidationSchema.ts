@@ -3,24 +3,16 @@ import { noSpaces } from './ValidationFunctions'
 
 export const af2paeJiffySchema = object().shape({
   pdb_file: mixed()
-    .required('PDB file is required')
+    .required('Structure file is required')
     .test('file-size-check', 'Max file size is 20MB', (file) => {
       if (file && (file as File).size <= 20000000) {
-        // console.log(file.size)
         return true
       }
-      // console.log(file.size)
       return false
     })
-    .test('file-type-check', 'Only accepts a PDB file', (file) => {
-      if (
-        file &&
-        (file as File).name.split('.').pop()?.toUpperCase() === 'PDB'
-      ) {
-        // console.log(file.name.split('.').pop())
-        return true
-      }
-      return false
+    .test('file-type-check', 'Only accepts a .pdb or .cif file', (file) => {
+      const ext = file && (file as File).name.split('.').pop()?.toUpperCase()
+      return ext === 'PDB' || ext === 'CIF'
     })
     .test(
       'check-for-spaces',

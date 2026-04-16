@@ -27,20 +27,6 @@ const handleBilboMDScoperJob = async (
 ) => {
   try {
     const { bilbomd_mode: bilbomdMode, title, fixc1c2 } = req.body
-
-    // Extract md_engine and reject OpenMM early
-    const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-    const md_engine: 'CHARMM' | 'OpenMM' =
-      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
-    if (md_engine === 'OpenMM') {
-      logger.warn(
-        'handleBilboMDScoperJob: md_engine=OpenMM is not supported for this pipeline'
-      )
-      return res.status(422).json({
-        message:
-          'md_engine=OpenMM is not supported for this version of the BilboMD pipeline. Please use CHARMM.'
-      })
-    }
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
 
     // Handle example data files if no uploaded files
@@ -141,7 +127,6 @@ const handleBilboMDScoperJob = async (
         message: `New Scoper Job successfully created`,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
-        md_engine,
         publicId: ctx.publicId,
         resultUrl,
         resultPath
@@ -150,8 +135,7 @@ const handleBilboMDScoperJob = async (
       res.status(200).json({
         message: `New Scoper Job successfully created`,
         jobid: newJob._id.toString(),
-        uuid: newJob.uuid,
-        md_engine
+        uuid: newJob.uuid
       })
     }
   } catch (error) {

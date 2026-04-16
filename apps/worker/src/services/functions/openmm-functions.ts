@@ -4,13 +4,16 @@ import { Job as BullMQJob } from 'bullmq'
 import {
   IBilboMDPDBJob,
   IBilboMDAutoJob,
+  IBilboMDSteps,
   IStepStatus
 } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import { updateStepStatus } from './mongo-utils.js'
+import { handleError } from './job-utils.js'
 import fs from 'fs-extra'
 import YAML from 'yaml'
 import { runPythonStep } from '../../helpers/runPythonStep.js'
+import { convertInpToYaml } from '@bilbomd/md-utils'
 
 const writeOpenMMConfigYaml = async (
   dir: string,
@@ -101,7 +104,7 @@ const prepareOpenMMConfig = async (
   const workDir = path.join(config.uploadDir, DBjob.uuid)
   const cfg = buildOpenMMConfigForJob(DBjob, workDir)
 
-  // Load constraints from openmm_const.yml if it exists
+  // Load constraints from openmm_const.yml if it exists (auto pipeline)
   const constYamlPath = path.join(workDir, 'openmm_const.yml')
   if (await fs.pathExists(constYamlPath)) {
     try {
@@ -124,6 +127,26 @@ const prepareOpenMMConfig = async (
     } catch (error) {
       logger.warn(`Error loading constraints from ${constYamlPath}: ${error}`)
     }
+  } else if (DBjob.const_inp_file) {
+    // Classic pipeline: convert user-uploaded CHARMM const.inp to OpenMM constraints
+    const constInpPath = path.join(workDir, DBjob.const_inp_file)
+    if (await fs.pathExists(constInpPath)) {
+      try {
+        const yamlContent = await convertInpToYaml(constInpPath, logger)
+        const constCfg = YAML.parse(yamlContent)
+        if (constCfg?.constraints) {
+          cfg.constraints = constCfg.constraints
+          logger.info('Loaded constraints from CHARMM const.inp for OpenMM')
+        }
+      } catch (error) {
+        logger.warn(`Failed to convert const.inp to OpenMM constraints: ${error}`)
+      }
+    }
+  }
+
+  // Ensure constraints key always exists — heat.py and md.py require it
+  if (!cfg.constraints) {
+    cfg.constraints = { fixed_bodies: [], rigid_bodies: [] }
   }
 
   const yamlPath = await writeOpenMMConfigYaml(workDir, cfg)
@@ -217,7 +240,7 @@ const runOmmStep = async (
 
     const result = await runPythonStep(scriptPath, configYamlPath, {
       cwd: opts?.cwd,
-      pythonBin: opts?.pythonBin,
+      pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
       env,
       timeoutMs: opts?.timeoutMs ?? 60 * 60 * 1000,
       onStdoutLine: (line) => {
@@ -243,7 +266,7 @@ const runOmmStep = async (
     await updateStepStatus(DBjob, stepKey, status)
   } catch (error: unknown) {
     logger.error(`Error during ${stepName} for job ${DBjob.uuid}: ${error}`)
-    // Optional: centralized error handler if desired
+    await handleError(error, DBjob, stepKey as keyof IBilboMDSteps)
   }
 }
 
@@ -364,7 +387,7 @@ const runOmmMD = async (
 
     const result = await runPythonStep(scriptPath, configYamlPath, {
       cwd: opts?.cwd,
-      pythonBin: opts?.pythonBin,
+      pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
       env,
       timeoutMs: opts?.timeoutMs ?? 2 * 60 * 60 * 1000, // 2h default per run
       onStdoutLine: (line) =>

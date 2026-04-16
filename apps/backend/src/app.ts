@@ -177,7 +177,12 @@ app.all(/.*/, (req, res) => {
 })
 
 mongoose.connection.on('error', (err) => {
-  logger.error(`mongoose error: ${err.no}: ${err.code}\t${err.syscall}\t${err.hostname}`)
+  logger.error('mongoose connection error', {
+    no: err.no,
+    code: err.code,
+    syscall: err.syscall,
+    hostname: err.hostname
+  })
 })
 
 export default app

@@ -18,6 +18,12 @@ export const getKGSrnaProgress = async (
 
     return Math.max(...pdbNumbers)
   } catch (error) {
+    if (
+      error instanceof Error &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    ) {
+      return 0 // Directory doesn't exist yet — no conformers generated
+    }
     if (error instanceof Error) {
       console.error('Error reading directory:', error.message)
     } else {

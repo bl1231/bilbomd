@@ -26,7 +26,7 @@ import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context'
 
 import { ViewportComponent } from './Viewport'
 import EnsembleTogglePanel from './EnsembleTogglePanel'
-import { ShowButtons } from './presets'
+import { ShowButtons, StructurePreset } from './presets'
 import { BuiltInTrajectoryFormat } from 'molstar/lib/mol-plugin-state/formats/trajectory'
 import 'molstar/lib/mol-plugin-ui/skin/light.scss'
 import Item from 'themes/components/Item'
@@ -371,15 +371,31 @@ const MolstarViewer = ({
             refs.push(struct.ref)
             ensembleStructureRefs.current.set(ensembleSize, refs)
           }
-          await window.molstar.builders.structure.representation.addRepresentation(
-            struct,
-            {
-              type: 'cartoon',
-              color: 'structure-index',
-              size: 'uniform',
-              sizeParams: { value: 1.0 }
+          if (jobType === 'scoper') {
+            // For Scoper, apply StructurePreset so Mg ions (and polymer) are shown
+            const plugin = window.molstar
+            const allStructs =
+              plugin.managers.structure.hierarchy.current.structures
+            const structureRef = allStructs.find(
+              (s) => s.cell.transform.ref === struct.ref
+            )
+            if (structureRef) {
+              await plugin.managers.structure.component.applyPreset(
+                [structureRef],
+                StructurePreset
+              )
             }
-          )
+          } else {
+            await window.molstar.builders.structure.representation.addRepresentation(
+              struct,
+              {
+                type: 'cartoon',
+                color: 'structure-index',
+                size: 'uniform',
+                sizeParams: { value: 1.0 }
+              }
+            )
+          }
         }
       }
 

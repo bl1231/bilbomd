@@ -46,7 +46,9 @@ const getAutoRg = async (req: Request, res: Response) => {
           uuid: UUID,
           rg: autorgResults.rg,
           rg_min: autorgResults.rg_min,
-          rg_max: autorgResults.rg_max
+          rg_max: autorgResults.rg_max,
+          qmin: autorgResults.qmin,
+          qmax: autorgResults.qmax
         })
         // await new Promise((resolve) => setTimeout(resolve, 5000))
         // Not sure if this is a NetApp issue or a Docker issue, but sometimes this fails

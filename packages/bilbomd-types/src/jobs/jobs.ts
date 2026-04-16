@@ -41,7 +41,7 @@ export interface BaseJobDTO {
   public_id?: string
   status: JobStatusEnum
   data_file: string
-  md_engine: MDEngine
+  md_engine?: MDEngine
   openmm_parameters?: OpenMMParametersDTO
   charmm_parameters?: CHARMMParametersDTO
   md_constraints?: MDConstraintsDTO

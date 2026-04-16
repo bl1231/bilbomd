@@ -1,5 +1,89 @@
 # @bilbomd/ui
 
+## 2.11.3
+
+### Patch Changes
+
+- Updated dependencies [e24f1c6]
+  - @bilbomd/mongodb-schema@2.5.3
+
+## 2.11.2
+
+### Patch Changes
+
+- 54ad7a0: Fix NaN crash in Scoper FoXS plots by guarding against zero error values in residual calculation and empty/non-finite domain values in Y-axis — mirrors the same fix applied to FoXSAnalysis in #573.
+
+## 2.11.1
+
+### Patch Changes
+
+- bf1837b: Replace npm-run-all with pnpm && chaining in all build scripts. Removes an unnecessary dependency that called npm run internally rather than pnpm run.
+
+## 2.11.0
+
+### Minor Changes
+
+- afa3f90: Enhance SAXS Data Preview plot with green Guinier region and low-SNR warning bands. The Guinier fit region is now highlighted in green, and any q-ranges where σ(q) > I(q) (SNR < 1) are highlighted in red so users can see at a glance which portions of their experimental data may be unreliable.
+
+## 2.10.1
+
+### Patch Changes
+
+- f01ad72: Fix FoXS plot visual break caused by low-SNR data points (#572).
+  - Filter data points where error ≥ intensity (SNR < 1) before plotting; these
+    points produce negative lower error-bar bounds that break log-scale rendering
+  - Display a count of hidden low-SNR points as a caption below the chart title
+  - Add Recharts ErrorBar to the experimental-intensity line so data uncertainty
+    is visible for the remaining points
+  - Replace `domain={['auto','auto']}` on log-scale Y-axes with an explicit
+    floor-of-log10 domain function to prevent Recharts auto-domain artifacts
+  - Add `hasSaxsQualityIssues()` to ValidationFunctions for future per-form
+    data-quality warnings (infrastructure only; per-form integration is a
+    follow-up task)
+
+## 2.10.0
+
+### Minor Changes
+
+- ba1931f: Add SAXS curve preview with Guinier region highlight to the Classic job submission form.
+
+### Patch Changes
+
+- 3a11ee6: Show KGSRNA in the Engine column for Scoper jobs in the Jobs table.
+
+## 2.9.1
+
+### Patch Changes
+
+- a392327: Fix Molstar viewer not displaying Mg2+ ions for Scoper job results. Apply StructurePreset for Scoper structures so the polymer (cartoon) and ions (spacefill) are both rendered correctly.
+- e182790: Show KGSRNA instead of CHARMM as the MD Engine for Scoper jobs in the job details panel.
+- 7d8ebdc: Update all npm dependencies to latest minor/patch versions. Includes axios 1.15, bullmq 5.73.1, @bull-board 6.21, nodemailer 8.0.5, react 19.2.5, vite 8.0.7, vitest 4.1.3, turbo 2.9.5, and MUI 7.3.10.
+- Updated dependencies [82d0bf4]
+  - @bilbomd/mongodb-schema@2.5.2
+  - @bilbomd/bilbomd-types@1.5.1
+
+## 2.9.0
+
+### Minor Changes
+
+- f3ca090: Add support for mmCIF (.cif) file uploads in Classic/pdb and Auto job types.
+
+  Users can now upload AlphaFold 3 (or any standard mmCIF) files directly into BilboMD without manual conversion. The frontend and backend validate chain IDs and residue names from the `_atom_site` loop block using the same `SUPPORTED_PDB_RESIDUES` allowlist used for PDB validation. The worker converts CIF to PDB at pipeline start using biopython before CHARMM or OpenMM processing.
+
+### Patch Changes
+
+- d936a9e: Reject PDB files containing multiple MODEL/ENDMDL records on form submission. Affects Classic, Auto, and SANS job forms.
+- Updated dependencies [f3ca090]
+  - @bilbomd/bilbomd-types@1.5.0
+
+## 2.8.2
+
+### Patch Changes
+
+- d9a702d: Update all dependencies. Patch/minor bumps across the board: bullmq, dotenv, mongoose, eslint, molstar, react-router, msw, vite, sass-embedded, @types/node, turbo. Bump @types/nodemailer from ^7 to ^8 to match the already-upgraded nodemailer v8 runtime.
+- Updated dependencies [d9a702d]
+  - @bilbomd/mongodb-schema@2.5.1
+
 ## 2.8.1
 
 ### Patch Changes

@@ -75,7 +75,13 @@ export const useJobProperties = (
     const baseProperties: MongoDBProperty[] = [
       { label: 'MongoDB ID', value: job.mongo.id },
       { label: 'Pipeline', value: getJobTypeDisplayName(job.mongo.jobType) },
-      { label: 'MD Engine', value: job.mongo.md_engine ?? 'CHARMM' },
+      {
+        label: 'MD Engine',
+        value:
+          job.mongo.jobType === 'scoper'
+            ? 'KGSRNA'
+            : (job.mongo.md_engine ?? 'CHARMM')
+      },
       { label: 'Submitted', value: job.mongo.time_submitted },
       { label: 'Started', value: job.mongo.time_started },
       { label: 'Completed', value: job.mongo.time_completed },

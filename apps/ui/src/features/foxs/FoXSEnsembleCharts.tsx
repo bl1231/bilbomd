@@ -25,7 +25,13 @@ import { getEnsembleSizeLabel } from './foxsUtils'
 type CombinedFoxsData = {
   q: number
   exp_intensity: number
+  error?: number
 } & Record<string, number>
+
+const logDomain = (dataMin: number): number => {
+  if (!Number.isFinite(dataMin) || dataMin <= 0) return 0.001
+  return Math.pow(10, Math.floor(Math.log10(dataMin)))
+}
 
 type Props = {
   combinedData: CombinedFoxsData[]
@@ -91,7 +97,7 @@ const FoXSEnsembleCharts = ({
             yAxisId="left"
             scale="log"
             type="number"
-            domain={['auto', 'auto']}
+            domain={[logDomain, 'auto']}
           />
           <Tooltip />
           <Legend

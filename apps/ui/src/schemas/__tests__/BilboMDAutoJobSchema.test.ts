@@ -10,10 +10,17 @@ vi.mock('../ValidationFunctions', () => ({
     valid: true,
     unsupportedResidues: []
   }),
+  cifHasAllowedResiduesOnly: async () => ({
+    valid: true,
+    unsupportedResidues: []
+  }),
   isPsfData: async () => true,
   isCRD: async () => true,
   containsChainId: async () => true,
-  noLeadingSpaceOnPDBLines: async () => true
+  cifContainsChainId: async () => true,
+  noLeadingSpaceOnPDBLines: async () => true,
+  isSingleModel: async () => true,
+  cifIsSingleModel: async () => true
 }))
 
 const makeFile = (name: string, size = 100, content = 'x'): File => {

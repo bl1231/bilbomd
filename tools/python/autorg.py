@@ -125,7 +125,13 @@ def calculate_rg(file_path, output_file):
         rg_max = max(10, min(100, rg_max))
 
         # Create a dictionary with the results
-        result_dict = {"rg": round(rg), "rg_min": rg_min, "rg_max": rg_max}
+        result_dict = {
+            "rg": round(rg),
+            "rg_min": rg_min,
+            "rg_max": rg_max,
+            "qmin": qmin,
+            "qmax": qmax,
+        }
 
         # Write the results to the output file
         with open(output_file, "w", encoding="utf-8") as f:
