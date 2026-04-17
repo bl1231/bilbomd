@@ -1,5 +1,11 @@
 # @bilbomd/bilbomd-types
 
+## 1.5.2
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+
 ## 1.5.1
 
 ### Patch Changes

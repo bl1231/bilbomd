@@ -1,5 +1,11 @@
 # @bilbomd/eslint-config
 
+## 1.0.3
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+
 ## 1.0.2
 
 ### Patch Changes
