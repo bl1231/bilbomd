@@ -32,7 +32,7 @@ mongo:
   name: mongo
   image:
     repository: mongo
-    tag: 7.0.31
+    tag: 8.2.6
     pullPolicy: IfNotPresent
     secret: registry-nersc
   config:
@@ -42,7 +42,7 @@ redis:
   name: redis
   image:
     repository: redis
-    tag: 7.4.8
+    tag: 8.6.2
     pullPolicy: Always
     secret: registry-nersc
 
