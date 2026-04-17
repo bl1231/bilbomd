@@ -75,7 +75,7 @@ const MultiMDJobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
           alignItems: 'center'
         }}
       >
-        <Typography fontWeight="bold">UUID:</Typography>
+        <Typography sx={{ fontWeight: 'bold' }}>UUID:</Typography>
         <CopyableChip
           label="UUID"
           value={job.mongo.uuid}
@@ -88,7 +88,7 @@ const MultiMDJobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
             key={label}
             sx={{ display: 'flex', justifyContent: 'space-between' }}
           >
-            <Typography fontWeight="bold">{label}:</Typography>
+            <Typography sx={{ fontWeight: 'bold' }}>{label}:</Typography>
             {render()}
           </Box>
         ) : (
@@ -97,7 +97,7 @@ const MultiMDJobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
               key={label}
               sx={{ display: 'flex', justifyContent: 'space-between' }}
             >
-              <Typography fontWeight="bold">{label}:</Typography>
+              <Typography sx={{ fontWeight: 'bold' }}>{label}:</Typography>
               <Typography>
                 {formatDateSafe(value) || String(value)}
                 {suffix}

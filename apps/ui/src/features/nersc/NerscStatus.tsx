@@ -58,7 +58,7 @@ const NerscStatusList = () => {
         <Grid
           container
           spacing={1}
-          direction="column"
+          sx={{ flexDirection: 'column' }}
         >
           <NerscSystemStatuses />
           {showAlert && upcomingOutage && (

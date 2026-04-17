@@ -34,7 +34,7 @@ export default function PaeCutoffSlider({
       <Grid
         container
         spacing={2}
-        alignItems="center"
+        sx={{ alignItems: 'center' }}
       >
         <Grid>
           <Chip

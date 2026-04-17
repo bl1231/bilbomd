@@ -209,10 +209,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
-          <Box
-            display="flex"
-            alignItems="center"
-          >
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography>BilboMD SANS Job Form</Typography>
             <Typography
               component="span"
@@ -255,7 +252,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                 <Form>
                   <Grid
                     container
-                    direction="column"
+                    sx={{ flexDirection: 'column' }}
                   >
                     {useNersc && (
                       <NerscStatusChecker
@@ -461,7 +458,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       <Grid
                         container
                         spacing={2}
-                        alignItems="center"
+                        sx={{ alignItems: 'center' }}
                       >
                         <Grid>
                           <Chip

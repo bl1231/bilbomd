@@ -190,7 +190,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                   <Form>
                     <Grid
                       container
-                      direction="column"
+                      sx={{ flexDirection: 'column' }}
                     >
                       {useNersc && (
                         <NerscStatusChecker

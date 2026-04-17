@@ -83,7 +83,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
           alignItems: 'center'
         }}
       >
-        <Typography fontWeight="bold">UUID:</Typography>
+        <Typography sx={{ fontWeight: 'bold' }}>UUID:</Typography>
         <CopyableChip
           label="UUID"
           value={job.mongo.uuid}
@@ -98,7 +98,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
               alignItems: 'center'
             }}
           >
-            <Typography fontWeight="bold">Public UUID:</Typography>
+            <Typography sx={{ fontWeight: 'bold' }}>Public UUID:</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <CopyableChip
                 label="Public UUID"
@@ -116,7 +116,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
             key={label}
             sx={{ display: 'flex', justifyContent: 'space-between' }}
           >
-            <Typography fontWeight="bold">{label}:</Typography>
+            <Typography sx={{ fontWeight: 'bold' }}>{label}:</Typography>
             {render()}
           </Box>
         ) : (
@@ -125,7 +125,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
               key={label}
               sx={{ display: 'flex', justifyContent: 'space-between' }}
             >
-              <Typography fontWeight="bold">{label}:</Typography>
+              <Typography sx={{ fontWeight: 'bold' }}>{label}:</Typography>
               <Typography>
                 {(() => {
                   if (value instanceof Date) {

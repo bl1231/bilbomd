@@ -34,7 +34,7 @@ export default function LeidenResolutionSlider({
       <Grid
         container
         spacing={2}
-        alignItems="center"
+        sx={{ alignItems: 'center' }}
       >
         <Grid>
           <Chip

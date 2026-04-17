@@ -50,7 +50,7 @@ const ChainDeuterationSlider: React.FC<ChainDeuterationSliderProps> = ({
           >
             Deuteration Fraction for Chain {chainId}
           </Typography>
-          <Grid container spacing={2} alignItems='center'>
+          <Grid container spacing={2} sx={{ alignItems: 'center' }}>
             <Grid>
               <Chip
                 label={`${values[`deuteration_fraction_${chainId}`] || 0}%`}

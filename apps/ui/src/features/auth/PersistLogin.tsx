@@ -46,10 +46,7 @@ const PersistLogin = () => {
       <Grid
         container
         columns={12}
-        direction="row"
-        sx={{ height: '100vh' }}
-        alignItems="center"
-        justifyContent="center"
+        sx={{ height: '100vh', alignItems: 'center', justifyContent: 'center' }}
       >
         <Grid sx={{ width: '300px' }}>
           <Alert

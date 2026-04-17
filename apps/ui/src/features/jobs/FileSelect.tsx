@@ -74,7 +74,7 @@ const FileSelect = (props: FileSelectProps) => {
       <Grid
         container
         spacing={2}
-        alignItems="center"
+        sx={{ alignItems: 'center' }}
       >
         <Grid>
           <Input
