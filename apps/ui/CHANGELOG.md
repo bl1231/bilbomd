@@ -1,5 +1,18 @@
 # @bilbomd/ui
 
+## 2.12.0
+
+### Minor Changes
+
+- e99111b: Add admin-only BullMQ dashboard access. Admins can now open the bull-board queue dashboard via a new sidebar link. Protected by nginx auth_request using the session cookie, so no unauthenticated access is possible.
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+- Updated dependencies [57f8495]
+  - @bilbomd/bilbomd-types@1.5.2
+  - @bilbomd/mongodb-schema@2.5.4
+
 ## 2.11.3
 
 ### Patch Changes
