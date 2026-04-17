@@ -29,4 +29,25 @@ const allowedOrigins: AllowedOrigin[] = [
   'https://bilbomd-nersc.bl1231.als.lbl.gov'
 ]
 
+// Auto-derive the UI origin from BILBOMD_URL + BILBOMD_UI_PORT so external
+// installs work without hardcoding their host in the image.
+const bilbomdUrl = process.env.BILBOMD_URL
+const bilbomdUiPort = process.env.BILBOMD_UI_PORT
+if (bilbomdUrl) {
+  allowedOrigins.push(bilbomdUrl)
+  if (bilbomdUiPort) {
+    allowedOrigins.push(`${bilbomdUrl}:${bilbomdUiPort}`)
+  }
+}
+
+// Escape hatch for any additional origins (comma-separated).
+const extra = process.env.CORS_ALLOWED_ORIGINS
+if (extra) {
+  extra
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .forEach((o) => allowedOrigins.push(o))
+}
+
 export { allowedOrigins }
