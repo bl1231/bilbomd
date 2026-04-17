@@ -49,7 +49,7 @@ export default function PaeCutoffSlider({
         </Grid>
         <Grid sx={{ flex: 1 }}>
           <Slider
-            value={value}
+            value={Number(value)}
             valueLabelFormat={valuetext}
             getAriaValueText={valuetext}
             step={1}
