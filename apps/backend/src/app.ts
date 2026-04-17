@@ -9,6 +9,7 @@ import { logger, requestLogger, assignRequestId } from './middleware/loggers.js'
 import cookieParser from 'cookie-parser'
 import session from 'express-session'
 import { router as adminRoutes } from './routes/admin.js'
+import { bullmqAuthCheck } from './controllers/admin/bullmqAuthCheck.js'
 import mongoose from 'mongoose'
 import { connectDB } from './config/dbConn.js'
 import { initOrcidClient } from './controllers/auth/orcidClientConfig.js'
@@ -89,6 +90,8 @@ app.use(
 
 // Serve static files
 app.use('/', express.static('public'))
+
+app.get('/api/v1/admin/bullmq-auth', bullmqAuthCheck)
 
 app.use('/admin/bullmq', adminRoutes)
 

@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material'
 import SettingsIcon from '@mui/icons-material/Settings'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
+import SpeedIcon from '@mui/icons-material/Speed'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import useAuth from 'hooks/useAuth'
@@ -153,6 +154,13 @@ export default function ClippedDrawer() {
       icon: <AdminPanelSettingsIcon />,
       path: '/admin',
       onclick: () => navigate('admin'),
+      roles: ['admin']
+    },
+    {
+      text: 'BullMQ',
+      icon: <SpeedIcon />,
+      path: '/admin/bullmq',
+      onclick: () => window.open('/admin/bullmq', '_blank'),
       roles: ['admin']
     },
     {
