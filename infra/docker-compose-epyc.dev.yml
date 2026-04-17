@@ -140,7 +140,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.11.3
+    image: ghcr.io/bl1231/bilbomd-ui:2.12.0
     pull_policy: always
     env_file:
       - .env.dev
