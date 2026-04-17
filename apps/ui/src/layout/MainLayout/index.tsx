@@ -21,6 +21,7 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import SpeedIcon from '@mui/icons-material/Speed'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import useAuth from 'hooks/useAuth'
@@ -159,6 +160,7 @@ export default function ClippedDrawer() {
     {
       text: 'BullMQ',
       icon: <SpeedIcon />,
+      endIcon: <OpenInNewIcon fontSize='inherit' />,
       path: '/admin/bullmq',
       onclick: () => window.open('/admin/bullmq', '_blank'),
       roles: ['admin']
@@ -217,6 +219,7 @@ export default function ClippedDrawer() {
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText sx={{ ml: 1 }}>{item.text}</ListItemText>
+                {'endIcon' in item && item.endIcon}
               </ListItemButton>
             </ListItem>
           ))}
