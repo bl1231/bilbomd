@@ -8,7 +8,7 @@
 # - Micromamba-managed Python environment (from environment.yml)
 # - No app sources; long-lived, rarely changes
 
-FROM ubuntu:22.04 AS build-deps
+FROM ubuntu:24.04 AS build-deps
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Los_Angeles
 
@@ -43,7 +43,7 @@ RUN curl -L -o rnaview.zip https://github.com/rcsb/RNAView/archive/refs/heads/ma
     rm /usr/local/rnaview.zip
 
 # -----------------------------------------------------------------------------
-FROM ubuntu:22.04 AS bilbomd-scoper-base
+FROM ubuntu:24.04 AS bilbomd-scoper-base
 ENV DEBIAN_FRONTEND=noninteractive
 ARG TARGETOS
 ARG TARGETARCH
