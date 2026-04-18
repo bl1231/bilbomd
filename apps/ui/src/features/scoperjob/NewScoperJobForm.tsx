@@ -228,7 +228,7 @@ const NewScoperJobForm = ({
                   <Form>
                     <Grid
                       container
-                      direction="column"
+                      sx={{ flexDirection: 'column' }}
                     >
                       <Box
                         sx={{

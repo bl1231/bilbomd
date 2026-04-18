@@ -65,7 +65,7 @@ export default function OrcidConfirmation() {
           Confirm ORCID Profile
         </Typography>
         <form onSubmit={formik.handleSubmit}>
-          <Box display='flex' flexDirection='column' gap={2}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               label='First Name'
               name='givenName'

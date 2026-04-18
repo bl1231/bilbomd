@@ -159,7 +159,7 @@ const SingleJobPage = () => {
           This job could not be loaded. It may have been deleted or expired, or
           there may be a problem communicating with the backend server.
         </Typography>
-        <Box mt={2}>
+        <Box sx={{ mt: 2 }}>
           <Button
             variant="contained"
             onClick={() => navigate('/dashboard/jobs')}

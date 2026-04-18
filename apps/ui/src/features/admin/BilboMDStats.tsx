@@ -33,11 +33,7 @@ const StatsPanel = () => {
   // Loading state
   if (statsIsLoading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        mt={4}
-      >
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
       </Box>
     )
@@ -166,12 +162,7 @@ const StatsPanel = () => {
           </PieChart>
         </ResponsiveContainer>
       </Box>
-      <Box
-        display="flex"
-        justifyContent="center"
-        flexWrap="wrap"
-        mt={2}
-      >
+      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', mt: 2 }}>
         {Object.entries(jobTypes).map(([type, count], index) => (
           <Chip
             key={type}

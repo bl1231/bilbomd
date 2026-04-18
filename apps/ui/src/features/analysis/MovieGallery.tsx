@@ -10,7 +10,7 @@ import {
   Alert,
   Button
 } from '@mui/material'
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutlined'
 import DownloadIcon from '@mui/icons-material/Download'
 import MoviePlayer from './MoviePlayer'
 import Item from 'themes/components/Item'

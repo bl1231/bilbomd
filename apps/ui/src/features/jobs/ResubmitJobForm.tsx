@@ -362,8 +362,7 @@ const ResubmitJobForm = () => {
                     <Grid
                       container
                       columns={12}
-                      direction="column"
-                      sx={{ display: 'flex' }}
+                      sx={{ display: 'flex', flexDirection: 'column' }}
                     >
                       {useNersc && (
                         <NerscStatusChecker
@@ -379,10 +378,9 @@ const ResubmitJobForm = () => {
                       </Divider>
                       <Grid
                         container
-                        direction="row"
-                        alignItems="center"
                         sx={{
                           display: 'flex',
+                          alignItems: 'center',
                           justifyContent: 'space-between',
                           width: '520px'
                         }}

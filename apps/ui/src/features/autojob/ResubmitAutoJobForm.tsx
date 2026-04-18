@@ -225,7 +225,7 @@ const ResubmitAutoJobForm = () => {
                 <Form>
                   <Grid
                     container
-                    direction="column"
+                    sx={{ flexDirection: 'column' }}
                   >
                     {useNersc && (
                       <NerscStatusChecker

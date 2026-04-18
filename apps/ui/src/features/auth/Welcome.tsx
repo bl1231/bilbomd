@@ -199,11 +199,7 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
               </Box>
             </>
           ) : (
-            <Box
-              display="flex"
-              flexDirection="column"
-              width="100%"
-            >
+            <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
               <Typography
                 variant="h4"
                 gutterBottom
@@ -214,7 +210,7 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
                 Ready to submit a new BilboMD job or review your previous
                 analyses?
               </Typography>
-              <Box mt={3}>
+              <Box sx={{ mt: 3 }}>
                 <Button
                   variant="contained"
                   color="primary"
@@ -223,7 +219,7 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
                 >
                   Submit New Job
                 </Button>
-                <Box mt={2}>
+                <Box sx={{ mt: 2 }}>
                   <Button
                     variant="outlined"
                     component={RouterLink}

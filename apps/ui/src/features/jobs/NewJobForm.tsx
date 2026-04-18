@@ -285,8 +285,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                   <Grid
                     container
                     columns={12}
-                    direction="column"
-                    sx={{ display: 'flex' }}
+                    sx={{ display: 'flex', flexDirection: 'column' }}
                   >
                     {useNersc && (
                       <NerscStatusChecker

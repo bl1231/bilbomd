@@ -110,7 +110,7 @@ const QueueDetailsPage = () => {
 
   if (isLoading) {
     return (
-      <Box display='flex' justifyContent='center' mt={4}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
       </Box>
     )
@@ -353,7 +353,7 @@ const QueueDetailsPage = () => {
             Jobs in Queue:
           </Typography>
           {jobsLoading && (
-            <Box display='flex' justifyContent='center' mt={2}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <CircularProgress size={20} />
             </Box>
           )}

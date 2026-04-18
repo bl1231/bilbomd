@@ -76,7 +76,7 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
                   )}
                   <Grid sx={{ flex: '1 1 auto', alignItems: 'center' }}>
                     <Box sx={{ justifyContent: 'flex-end', m: 1 }}>
-                      <Grid container justifyContent='flex-end'>
+                      <Grid container sx={{ justifyContent: 'flex-end' }}>
                         <Grid sx={{ mx: 2 }}>
                           <Typography>
                             If you want to add another <b>Rigid Body</b> please

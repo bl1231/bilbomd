@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Formik, Form } from 'formik'
 import { userRegisterSchema } from 'schemas/ValidationSchemas'
 import { Link } from 'react-router'
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import IconButton from '@mui/material/IconButton'
 import Collapse from '@mui/material/Collapse'
@@ -81,10 +81,7 @@ const Signup = () => {
       <Grid
         container
         columns={12}
-        direction='row'
-        sx={{ height: '100vh' }}
-        alignItems='center'
-        justifyContent='center'
+        sx={{ height: '100vh', alignItems: 'center', justifyContent: 'center' }}
       >
         <Grid
           sx={{

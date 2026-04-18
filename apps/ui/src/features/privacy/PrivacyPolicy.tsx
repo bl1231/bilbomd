@@ -108,8 +108,7 @@ export default function PrivacyPolicy() {
 
             <Typography
               variant="caption"
-              display="block"
-              sx={{ mt: 4 }}
+              sx={{ display: 'block', mt: 4 }}
             >
               Last updated: 1/23/2025
             </Typography>

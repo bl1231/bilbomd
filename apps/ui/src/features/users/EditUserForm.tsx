@@ -47,10 +47,12 @@ interface EditUserFormProps {
 const ITEM_HEIGHT = 48
 const ITEM_PADDING_TOP = 8
 const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-      width: 50
+  slotProps: {
+    paper: {
+      style: {
+        maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+        width: 50
+      }
     }
   }
 }
@@ -153,7 +155,7 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
               <Form>
                 <Grid
                   container
-                  direction="column"
+                  sx={{ flexDirection: 'column' }}
                 >
                   <Grid sx={{ my: 2, width: '300px' }}>
                     <Field

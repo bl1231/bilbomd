@@ -154,10 +154,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
           {/* Chi-Square for 0.01 < q < 0.1 */}
           <Grid
             container
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ my: 0.5 }}
-            width="55%"
+            sx={{ my: 0.5, alignItems: 'center', justifyContent: 'space-between', width: '55%' }}
           >
             <Typography>
               Chi<sup>2</sup> for 0.01 &lt; q &lt; 0.1:
@@ -176,10 +173,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
           {/* Chi-Square for 0.1 < q < 0.2 */}
           <Grid
             container
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ my: 0.5 }}
-            width="55%"
+            sx={{ my: 0.5, alignItems: 'center', justifyContent: 'space-between', width: '55%' }}
           >
             <Typography>
               Chi<sup>2</sup> for 0.1 &lt; q &lt; 0.2:
@@ -198,10 +192,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
           {/* Chi-Square for 0.2 < q < 0.5 */}
           <Grid
             container
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ my: 0.5 }}
-            width="55%"
+            sx={{ my: 0.5, alignItems: 'center', justifyContent: 'space-between', width: '55%' }}
           >
             <Typography>
               Chi<sup>2</sup> for 0.2 &lt; q &lt; 0.5:
@@ -226,10 +217,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
           {/* Chi-Square for 0.01 < q < 0.1 */}
           <Grid
             container
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ my: 0.5 }}
-            width="68%"
+            sx={{ my: 0.5, alignItems: 'center', justifyContent: 'space-between', width: '68%' }}
           >
             <Typography>Mean residuals of 0.01 &lt; q &lt; 0.1:</Typography>
             <Chip
@@ -244,10 +232,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
           {/* Chi-Square for 0.1 < q < 0.2 */}
           <Grid
             container
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ my: 0.5 }}
-            width="68%"
+            sx={{ my: 0.5, alignItems: 'center', justifyContent: 'space-between', width: '68%' }}
           >
             <Typography>Mean residuals of 0.1 &lt; q &lt; 0.2:</Typography>
             <Chip
@@ -262,10 +247,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
           {/* Chi-Square for 0.2 < q < 0.5 */}
           <Grid
             container
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ my: 0.5 }}
-            width="68%"
+            sx={{ my: 0.5, alignItems: 'center', justifyContent: 'space-between', width: '68%' }}
           >
             <Typography>Mean residuals of 0.2 &lt; q &lt; 0.5:</Typography>
             <Chip

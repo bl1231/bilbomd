@@ -8,7 +8,7 @@ const OrcidError = () => {
   const reason = searchParams.get('reason') || 'unknown'
 
   return (
-    <Box maxWidth='sm' mx='auto' mt={8} textAlign='center'>
+    <Box sx={{ maxWidth: 'sm', mx: 'auto', mt: 8, textAlign: 'center' }}>
       <Alert severity='error' sx={{ mb: 3 }}>
         ORCID Authentication Failed
       </Alert>

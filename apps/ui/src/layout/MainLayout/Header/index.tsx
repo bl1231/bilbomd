@@ -70,7 +70,7 @@ const UserMenu = ({
           key={setting.text}
           onClick={setting.onclick}
         >
-          <Typography textAlign="center">{setting.text}</Typography>
+          <Typography sx={{ textAlign: 'center' }}>{setting.text}</Typography>
         </MenuItem>
       ))}
       <MenuItem>

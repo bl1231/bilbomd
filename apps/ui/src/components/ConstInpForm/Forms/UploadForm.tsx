@@ -409,7 +409,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
             <Typography>File Upload</Typography>
           </HeaderBox>
           <Paper sx={{ p: 1 }}>
-            <Grid container direction='column'>
+            <Grid container sx={{ flexDirection: 'column' }}>
               <Grid size={{ xs: 6 }}>
                 <Field
                   name='pdb_file'
