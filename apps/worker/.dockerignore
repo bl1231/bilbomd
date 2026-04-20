@@ -14,3 +14,19 @@ logs
 .eslintrc.yml
 bilbomd-test-data
 imp-2.18.0.tar.gz
+
+# Environment files
+.env
+.env.*
+.env.local
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa*
+id_ed25519*
+id_dsa*
