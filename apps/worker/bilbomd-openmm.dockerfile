@@ -4,7 +4,7 @@ FROM nvidia/cuda:12.9.1-devel-ubuntu22.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Pick the OpenMM version and install prefix at build-time
-ARG OPENMM_TAG=8.4.0
+ARG OPENMM_TAG=8.5.1
 ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_TAG}
 
 # Basic build deps + SWIG for Python wrappers + Python headers
@@ -64,7 +64,7 @@ RUN git clone https://github.com/openmm/pdbfixer.git && \
 # --- Runtime stage: slim image with CUDA runtime + OpenMM + conda env ---
 FROM nvidia/cuda:12.9.1-runtime-ubuntu22.04
 
-ARG OPENMM_TAG=8.4.0
+ARG OPENMM_TAG=8.5.1
 ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_TAG}
 
 # Copy the conda env and the compiled OpenMM install from the builder
