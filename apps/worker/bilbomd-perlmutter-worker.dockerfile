@@ -27,7 +27,7 @@ RUN conda update -y -n base -c defaults conda && \
     cython==3.1.4 \
     swig==4.3.1 \
     doxygen==1.13.2 \
-    matplotlib==3.9.1 \
+    matplotlib \
     python-igraph==0.11.9 \
     pyyaml \
     pandas \
