@@ -36,9 +36,9 @@ def setup_environment(uuid):
     workdir = f"{pscratch}/bilbomd/{env_dir}/{uuid}"
 
     # Docker images
-    openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.11"
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.29"
-    af_worker = "bilbomd/bilbomd-colabfold:0.0.9"
+    openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.12"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.30"
+    af_worker = "bilbomd/bilbomd-colabfold:0.0.10"
 
     # Number of cores
     if constraint.startswith("gpu"):

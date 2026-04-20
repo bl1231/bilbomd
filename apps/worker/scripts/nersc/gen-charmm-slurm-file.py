@@ -33,8 +33,8 @@ def setup_environment(uuid):
     template_dir = f"{cfs_base}/{env_dir}/templates"
 
     # Docker images
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.29"
-    af_worker = "bilbomd/bilbomd-colabfold:0.0.9"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.30"
+    af_worker = "bilbomd/bilbomd-colabfold:0.0.10"
 
     # Number of cores
     if constraint.startswith("gpu"):
