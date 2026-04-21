@@ -80,6 +80,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     build-essential \
+    gosu \
     libgomp1 \
     wget \
     && apt-get clean \
@@ -91,12 +92,23 @@ COPY --from=builder /root /root
 COPY --from=builder /app /app
 RUN chmod -R a+rX /root && chmod -R a+rX /app
 
+RUN printf '#!/bin/bash\nset -e\nif [ -n "${HOST_UID}" ] && [ -n "${HOST_GID}" ]; then\n    exec gosu "${HOST_UID}:${HOST_GID}" "$@"\nelse\n    exec "$@"\nfi\n' > /entrypoint.sh \
+    && chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
 # Put the venv on PATH so all foundry CLI commands work without activation.
 ENV PATH="/app/foundry/.venv/bin:$PATH"
 
 # Foundry searches FOUNDRY_CHECKPOINT_DIRS for model weights at inference time.
 # Mount a volume at /checkpoints or override this env var.
 ENV FOUNDRY_CHECKPOINT_DIRS="/checkpoints"
+
+# cuequivariance_ops and Triton write kernel/tuning caches. Without these, both
+# default to paths under $HOME (e.g. /.cache, /.triton) which don't exist and
+# aren't writable when gosu drops to a non-root user with no home directory.
+ENV XDG_CACHE_HOME="/tmp/.cache" \
+    TRITON_CACHE_DIR="/tmp/.triton"
 
 WORKDIR /app/foundry
 
