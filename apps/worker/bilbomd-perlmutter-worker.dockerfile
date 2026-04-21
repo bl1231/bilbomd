@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # Build stage 1 - Install build tools & dependencies
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
+FROM nvidia/cuda:12.9.1-devel-ubuntu22.04 AS builder
 RUN apt-get update && \
     apt-get install -y cmake gcc gfortran g++ python3 \
     libpmix-bin libpmix-dev parallel wget bzip2 ncat \
@@ -27,7 +27,7 @@ RUN conda update -y -n base -c defaults conda && \
     cython==3.1.4 \
     swig==4.3.1 \
     doxygen==1.13.2 \
-    matplotlib==3.9.1 \
+    matplotlib \
     python-igraph==0.11.9 \
     pyyaml \
     pandas \
@@ -64,7 +64,7 @@ RUN chown -R $USER_ID:0 /app
 
 # -----------------------------------------------------------------------------
 # Build stage 5 - Final runtime image
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS bilbomd-perlmutter-worker
+FROM nvidia/cuda:12.9.1-runtime-ubuntu22.04 AS bilbomd-perlmutter-worker
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common parallel && \
