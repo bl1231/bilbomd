@@ -1,0 +1,17 @@
+[
+    {
+        "name": "sasdnf2",
+        "components": [
+            {
+                "seq": "LNLDSIIGRLLEVQGSRPGKNVQLTENEIRGLCLKSREIFLSQPILLELEAPLKICGDIHGQYYDLLRLFEYGGFPPESNYLFLGDYVDRGKQSLETICLLLAYKIKYPENFFLLRGNHECASINRIYGFYDECKRRYNIKLWKTFTDCFNCLPIAAIVDEKIFCCHGGLSPDLQSMEQIRRIMRPTDVPDQGLLCDLLWSDPDKDVQGWGENDRGVSFTFGAEVVAKFLHKHDLDLICRAHQVVEDGYEFFAKRQLVTLFSAPNYCGEFDNAGAMMSVDETLMCSFQILKPADKNKGKYGQFSGLNPGGRPITPPRNSAKAKK",
+                "chain_id": "A",
+                "msa_path": "/home/classen/projects/rosettafold-stuff/sasdnf2/3465-msas/_Serine_threonine-protein_phosphatase_PP1-alpha_catalytic_subunit_PP1_.a3m"
+            },
+            {
+                "seq": "GPLGSSQNDWKCSHNQAKKRVVFADSKGLSLTAIHVFSDLPEEPAWDLQFDLLDLNDISSALKHHEEKNLILDFPQPSTDYLSFRSHFQKNFVCLENCSLQERTVTGTVKVKNVSFEKKVQIRITFDSWKNYTDVDCVYMKNVYGGTDSDTFSFAIDLPPVIPTEQKIEFCISYHANGQVFWDNNDGQNYRIVHVQWKPD",
+                "chain_id": "B",
+                "msa_path": "/home/classen/projects/rosettafold-stuff/sasdnf2/3466-msas/_Protein_phosphatase_1_regulatory_subunit_3C_PTG_.a3m"
+            }
+        ]
+    }
+]
