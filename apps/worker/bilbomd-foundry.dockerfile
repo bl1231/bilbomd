@@ -54,8 +54,7 @@ RUN git clone --branch "${FOUNDRY_REF}" \
 #   [rf3]    - RoseTTAFold3 (includes cuequivariance CUDA 12 packages)
 RUN cd /app/foundry \
     && uv venv --python 3.12 \
-    && uv pip install ".[all]" \
-    && uv cache clean
+    && uv pip install --no-cache ".[all]"
 
 # Verify the CLI entry points are available.
 RUN /app/foundry/.venv/bin/rf3 --help
