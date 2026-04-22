@@ -188,3 +188,6 @@ backend-dev-tmp
 
 # pae testing outputs
 tools/python/pae_testing/out
+
+# OpenFold example data output
+example-data/of3/out
