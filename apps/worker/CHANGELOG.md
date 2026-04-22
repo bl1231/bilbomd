@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.7.1
+
+### Patch Changes
+
+- a0acc15: build docker image from ghcr.io/bl1231/bilbomd-worker-base:0.0.8-dev5
+
 ## 2.7.0
 
 ### Minor Changes
