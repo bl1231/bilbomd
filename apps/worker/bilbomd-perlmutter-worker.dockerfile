@@ -81,6 +81,7 @@ COPY --from=bilbomd-perlmutter-worker-intermediate /app /app
 
 # Copy only the CHARMM binary and its required libs
 COPY --from=bilbomd-perlmutter-worker-intermediate /usr/local/bin/charmm /usr/local/bin/charmm
+COPY --from=build-charmm /usr/local/src/charmm/toppar /app/charmm-toppar
 
 # Set environment variables
 ENV PATH="/miniforge3/bin:${PATH}"
