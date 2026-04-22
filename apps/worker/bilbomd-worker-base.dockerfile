@@ -4,7 +4,7 @@ FROM nvidia/cuda:12.9.1-devel-ubuntu22.04 AS install-dependencies
 
 # Pin versions for better caching
 ARG CHARMM_VER=c49b2
-ARG OPENMM_VERSION=8.4.0
+ARG OPENMM_VERSION=8.5.1
 ARG PYTHON_VERSION=3.12
 
 RUN apt-get update && \
