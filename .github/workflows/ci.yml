@@ -8,6 +8,8 @@ on:
       - "docs/**/*.md"
       - "infra/**"
       - "test_scripts/**"
+      - "apps/worker/base-image-version"
+      - "apps/worker/bilbomd-worker-base.dockerfile"
   pull_request:
     branches: [main]
     paths-ignore:
@@ -15,6 +17,8 @@ on:
       - "docs/**/*.md"
       - "infra/**"
       - "test_scripts/**"
+      - "apps/worker/base-image-version"
+      - "apps/worker/bilbomd-worker-base.dockerfile"
   workflow_dispatch: {}
 
 permissions:
