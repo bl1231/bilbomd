@@ -164,6 +164,7 @@ RUN mkdir -p /bilbomd/uploads /bilbomd/logs /opt/envs/openmm /opt/envs/base
 
 # ---- Copy runtime artifacts from builder stages ----
 COPY --from=build_charmm /usr/local/src/charmm/bin/charmm /usr/local/bin/charmm
+COPY --from=build_charmm /usr/local/src/charmm/toppar /app/charmm-toppar
 COPY --from=install-sans-tools /usr/local/bin/Pepsi-SANS /usr/local/bin/Pepsi-SANS
 COPY --from=install-sans-tools /usr/local/sans /usr/local/sans
 COPY --from=install-pymol /opt/envs/openmm /opt/envs/openmm

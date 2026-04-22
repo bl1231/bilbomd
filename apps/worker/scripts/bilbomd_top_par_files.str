@@ -1,58 +1,47 @@
 * CHARMM Topology and Parameter files for BilboMD
-* March 2023
+* Updated April 2026 to use CHARMM c49b2 bundled toppar
 
-! Protein Topology and Parameter
-open read card unit 10 name /app/scripts/toppar/top_all36_prot.rtf
+! Protein Topology and Parameter (CHARMM36m)
+open read card unit 10 name /app/charmm-toppar/top_all36_prot.rtf
 read  rtf card unit 10
 
-open read card unit 20 name /app/scripts/toppar/par_all36_prot.prm
+open read card unit 20 name /app/charmm-toppar/par_all36m_prot.prm
 read para card unit 20 flex
 
 ! Nucleic Acids
-open read card unit 10 name /app/scripts/toppar/top_all36_na.rtf
+open read card unit 10 name /app/charmm-toppar/top_all36_na.rtf
 read  rtf card unit 10 append
 
-open read card unit 20 name /app/scripts/toppar/par_all36_na.prm
+open read card unit 20 name /app/charmm-toppar/par_all36_na.prm
 read para card unit 20 append flex
 
 ! Carbohydrates
-open read card unit 10 name /app/scripts/toppar/top_all36_carb.rtf
+open read card unit 10 name /app/charmm-toppar/top_all36_carb.rtf
 read  rtf card unit 10 append
 
-open read card unit 20 name /app/scripts/toppar/par_all36_carb.prm
+open read card unit 20 name /app/charmm-toppar/par_all36_carb.prm
 read para card unit 20 append flex
 
 ! CGENFF
-open read card unit 10 name /app/scripts/toppar/top_all36_cgenff.rtf
+open read card unit 10 name /app/charmm-toppar/top_all36_cgenff.rtf
 read  rtf card unit 10 append
 
-open read card unit 20 name /app/scripts/toppar/par_all36_cgenff.prm
+open read card unit 20 name /app/charmm-toppar/par_all36_cgenff.prm
 read para card unit 20 append flex
 
 ! Glycopeptide
-stream /app/scripts/toppar/toppar_all36_carb_glycopeptide.str
+stream /app/charmm-toppar/stream/carb/toppar_all36_carb_glycopeptide.str
 
-! Read additional topology and parameter file for phosphorylation
-!top_all36_prot.rtf
-!par_all36_prot.prm
-!top_all36_na.rtf
-!par_all36_na.prm
-stream /app/scripts/toppar/toppar_all36_prot_fluoro_alkanes.str 
-stream /app/scripts/toppar/toppar_all36_prot_na_combined.str
+! Protein additional parameters
+stream /app/charmm-toppar/stream/prot/toppar_all36_prot_fluoro_alkanes.str
+stream /app/charmm-toppar/stream/prot/toppar_all36_prot_na_combined.str
 
-! Read additional topology and parameter
-stream /app/scripts/toppar/toppar_all36_na_nad_ppi.str
-
-! Carbohydrate chemical modifications
-stream /app/scripts/toppar/toppar_all36_carb_chemmod.str
+! Nucleic acid additional parameters
+stream /app/charmm-toppar/stream/na/toppar_all36_na_nad_ppi.str
 
 ! Additional topologies and parameters for protein
-stream /app/scripts/toppar/toppar_all36_prot_heme.str
-stream /app/scripts/toppar/toppar_all36_prot_retinol.str
+stream /app/charmm-toppar/stream/prot/toppar_all36_prot_heme.str
+stream /app/charmm-toppar/stream/prot/toppar_all36_prot_retinol.str
 
-! Custom topology and parameter files for FAD
-open read card unit 10 name /app/scripts/toppar/fad.rtf
-read  rtf card unit 10 append
-
-open read card unit 20 name /app/scripts/toppar/fad.prm
-read para flex card unit 20 append
+! Cofactors including FAD (Aleksandrov, J. Comput. Chem. 2019)
+stream /app/charmm-toppar/stream/prot/toppar_all36_prot_cofactors.str
