@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.7.5
+
+### Patch Changes
+
+- 2c512bc: Normalize CHARMM-style DNA residue names (ADE/GUA/CYT) to standard PDB names (DA/DG/DC) before PDBFixer runs. OpenMM's pdbNames.xml maps ADE/GUA/CYT to RNA residues, causing PDBFixer to add spurious O2' atoms to DNA chains. DNA is detected by absence of the O2' ribose atom.
+
 ## 2.7.4
 
 ### Patch Changes
