@@ -6,6 +6,12 @@ import {
   IFixedBody,
   IRigidBody
 } from '@bilbomd/mongodb-schema'
+import {
+  PROTEIN_RESIDUES,
+  DNA_RESIDUES,
+  RNA_RESIDUES,
+  CARBOHYDRATE_RESIDUES
+} from '@bilbomd/bilbomd-types'
 import type { Logger } from './index.js'
 
 // Create a default no-op logger for when none is provided
@@ -36,20 +42,63 @@ export function extractConstraintsFromYaml(
   }
 }
 
-// Mapping from CHARMM segment IDs to chain IDs
-const SEGMENT_TO_CHAIN_MAP: Record<string, string> = {
-  PROA: 'A',
-  PROB: 'B',
-  PROC: 'C',
-  PROD: 'D',
-  PROE: 'E'
-  // Add more mappings as needed
+// pdb2crd assigns segids as {MOL_TYPE}{chain_id} where MOL_TYPE is one of these prefixes.
+// Carbohydrates use CAR (uppercase chain) or CAL (lowercase chain).
+const MOL_TYPE_PREFIXES = ['PRO', 'DNA', 'RNA', 'CAR', 'CAL'] as const
+
+function classifyResidue(name: string): 'PRO' | 'DNA' | 'RNA' | 'CAR' | null {
+  if (PROTEIN_RESIDUES.has(name)) return 'PRO'
+  if (DNA_RESIDUES.has(name)) return 'DNA'
+  if (RNA_RESIDUES.has(name)) return 'RNA'
+  if (CARBOHYDRATE_RESIDUES.has(name)) return 'CAR'
+  return null
 }
 
-// Reverse mapping for YAML to INP conversion
-const CHAIN_TO_SEGMENT_MAP: Record<string, string> = Object.fromEntries(
-  Object.entries(SEGMENT_TO_CHAIN_MAP).map(([seg, chain]) => [chain, seg])
-)
+/**
+ * Reads a PDB file and returns a map of chain_id → CHARMM segid, mirroring
+ * pdb2crd.py's naming convention ({MOL_TYPE}{chain_id}).
+ * Used when converting YAML constraints → CHARMM INP so that DNA/RNA chains
+ * get the correct segid (e.g. "DNAD") rather than defaulting to "PROD".
+ */
+export async function buildChainSegidMap(
+  pdbFilePath: string
+): Promise<Record<string, string>> {
+  const content = await fs.readFile(pdbFilePath, 'utf8')
+  const chainFirstType: Record<string, 'PRO' | 'DNA' | 'RNA' | 'CAR'> = {}
+
+  for (const line of content.split('\n')) {
+    if (!line.startsWith('ATOM') && !line.startsWith('HETATM')) continue
+    const chainId = line[21]
+    if (!chainId || chainId === ' ') continue
+    if (chainId in chainFirstType) continue
+
+    const resName = line.slice(17, 20).trim()
+    const molType = classifyResidue(resName)
+    if (molType) {
+      chainFirstType[chainId] = molType
+    }
+  }
+
+  const result: Record<string, string> = {}
+  for (const [chainId, molType] of Object.entries(chainFirstType)) {
+    result[chainId] = `${molType}${chainId}`
+  }
+  return result
+}
+
+/**
+ * Extracts the PDB chain ID from a pdb2crd-style CHARMM segid.
+ * e.g. "DNAD" → "D", "PROP" → "P", "RNAB" → "B", "CARG" → "G"
+ * Falls back to the raw segid if no known prefix matches.
+ */
+function segidToChainId(segid: string): string {
+  for (const prefix of MOL_TYPE_PREFIXES) {
+    if (segid.startsWith(prefix) && segid.length > prefix.length) {
+      return segid.slice(prefix.length)
+    }
+  }
+  return segid
+}
 
 /**
  * Converts CHARMM INP constraint file to YAML format for OpenMM
@@ -84,11 +133,17 @@ export async function convertInpToYaml(
 }
 
 /**
- * Converts YAML constraint file to CHARMM INP format
+ * Converts YAML constraint file to CHARMM INP format.
+ *
+ * @param chainSegidMap - Optional map of chain_id → CHARMM segid (e.g. {"D": "DNAD", "P": "PROP"}).
+ *   Build this from the PDB file when chains include DNA/RNA so that the generated
+ *   segids match what pdb2crd will produce.  Without it, all chains are assumed to
+ *   be protein (segid = "PRO" + chain_id).
  */
 export async function convertYamlToInp(
   yamlFilePath: string,
-  logger: Logger = defaultLogger
+  logger: Logger = defaultLogger,
+  chainSegidMap?: Record<string, string>
 ): Promise<string> {
   try {
     const yamlContent = await fs.readFile(yamlFilePath, 'utf8')
@@ -107,7 +162,7 @@ export async function convertYamlToInp(
       constraints = parsed as IMDConstraints
     }
 
-    const inpContent = generateInpFromConstraints(constraints)
+    const inpContent = generateInpFromConstraints(constraints, chainSegidMap)
 
     logger.info('Successfully converted YAML to INP')
     return inpContent
@@ -337,7 +392,7 @@ function parseSelectionExpression(
     const definition = definitions[defName]
     if (definition) {
       for (const def of definition) {
-        const chainId = SEGMENT_TO_CHAIN_MAP[def.segid] || def.segid
+        const chainId = segidToChainId(def.segid)
         const [start, stop] = def.resid.split(':').map(Number)
 
         segments.push({
@@ -352,11 +407,17 @@ function parseSelectionExpression(
 }
 
 // Helper function to generate INP from constraints object
-function generateInpFromConstraints(constraints: IMDConstraints): string {
+function generateInpFromConstraints(
+  constraints: IMDConstraints,
+  chainSegidMap?: Record<string, string>
+): string {
   const lines: string[] = ['! Generated constraint file']
   let defCounter = 1
 
   const { fixed_bodies, rigid_bodies } = constraints
+
+  const resolveSegid = (chain_id: string): string =>
+    chainSegidMap?.[chain_id] ?? `PRO${chain_id}`
 
   // Generate definitions and fixed constraints
   if (fixed_bodies && fixed_bodies.length > 0) {
@@ -364,8 +425,7 @@ function generateInpFromConstraints(constraints: IMDConstraints): string {
 
     for (const body of fixed_bodies) {
       for (const segment of body.segments) {
-        const segid =
-          CHAIN_TO_SEGMENT_MAP[segment.chain_id] || `PRO${segment.chain_id}`
+        const segid = resolveSegid(segment.chain_id)
         const defName = `fixed${defCounter++}`
 
         lines.push(
@@ -389,8 +449,7 @@ function generateInpFromConstraints(constraints: IMDConstraints): string {
       const defNames: string[] = []
 
       for (const segment of body.segments) {
-        const segid =
-          CHAIN_TO_SEGMENT_MAP[segment.chain_id] || `PRO${segment.chain_id}`
+        const segid = resolveSegid(segment.chain_id)
         const defName = `rigid${defCounter++}`
 
         lines.push(

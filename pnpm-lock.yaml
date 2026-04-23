@@ -543,6 +543,9 @@ importers:
 
   packages/md-utils:
     dependencies:
+      '@bilbomd/bilbomd-types':
+        specifier: workspace:*
+        version: link:../bilbomd-types
       '@bilbomd/mongodb-schema':
         specifier: workspace:*
         version: link:../mongodb-schema

@@ -1,7 +1,8 @@
 // Authoritative list of residues and ions that BilboMD's PDB validation accepts.
 // This is the single source of truth shared by the frontend and backend.
 // When pdb2crd.py gains support for a new residue, add it here only.
-export const SUPPORTED_PDB_RESIDUES = new Set<string>([
+
+export const PROTEIN_RESIDUES = new Set<string>([
   // Standard amino acids
   'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS',
   'ILE', 'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL',
@@ -9,17 +10,33 @@ export const SUPPORTED_PDB_RESIDUES = new Set<string>([
   'SEP', 'TPO', 'PTR',
   // CHARMM internal HIS variant — may appear in PDB files previously processed by CHARMM
   'HSD',
-  // DNA nucleotides
+])
+
+export const DNA_RESIDUES = new Set<string>([
+  // Standard PDB DNA nucleotides
   'DA', 'DC', 'DG', 'DT', 'DI',
-  // RNA nucleotides
+])
+
+export const RNA_RESIDUES = new Set<string>([
+  // Standard PDB RNA nucleotides
   'A', 'C', 'G', 'U', 'I',
-  // Nucleotide aliases recognised by pdb_utils
-  'ADE', 'CYT', 'GUA', 'THY',
+])
+
+export const CARBOHYDRATE_RESIDUES = new Set<string>([
   // Carbohydrates (backend-authoritative: union of pdb_utils.py + pdb2crd.py rename map)
   'AFL', 'ALL', 'ALT', 'BMA', 'BGC', 'BOG', 'FCA', 'FCB', 'FMF',
   'FUC', 'FUL', 'G4S', 'GAL', 'GLA', 'GLB', 'GLC', 'GLS', 'GSA',
   'GUL', 'IDO', 'LAK', 'LAT', 'MAF', 'MAL', 'MAN', 'NAG', 'NAN',
   'NGA', 'RHM', 'RIB', 'SIA', 'SLB', 'TAL', 'XYL',
+])
+
+export const SUPPORTED_PDB_RESIDUES = new Set<string>([
+  ...PROTEIN_RESIDUES,
+  ...DNA_RESIDUES,
+  ...RNA_RESIDUES,
+  // Nucleotide aliases recognised by pdb_utils (post-rename CHARMM names)
+  'ADE', 'CYT', 'GUA', 'THY',
+  ...CARBOHYDRATE_RESIDUES,
   // Other supported ligands
   'HEM',
   // Water — removed by pdb2crd.py, not an error
