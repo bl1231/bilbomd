@@ -110,7 +110,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.6.5
+    image: ghcr.io/bl1231/bilbomd-worker:2.7.2
     pull_policy: always
     deploy:
       replicas: 2
