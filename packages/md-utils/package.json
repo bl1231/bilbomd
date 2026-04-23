@@ -25,6 +25,7 @@
     "openmm"
   ],
   "dependencies": {
+    "@bilbomd/bilbomd-types": "workspace:*",
     "@bilbomd/mongodb-schema": "workspace:*",
     "fs-extra": "^11.3.4",
     "yaml": "^2.8.3"

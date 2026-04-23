@@ -84,6 +84,7 @@ jobs:
               - 'package.json'
             md-utils:
               - 'packages/md-utils/**'
+              - 'packages/bilbomd-types/**'
               - 'packages/mongodb-schema/**'
               - 'packages/eslint-config/**'
               - 'pnpm-workspace.yaml'
@@ -642,7 +643,9 @@ jobs:
           fi
 
       - name: Build dependencies
-        run: pnpm -C packages/mongodb-schema run build
+        run: |
+          pnpm -C packages/bilbomd-types run build
+          pnpm -C packages/mongodb-schema run build
 
       - name: Build md-utils
         run: pnpm -C packages/md-utils run build

@@ -57,6 +57,10 @@ else:
 forcefield = ForceField(*config["input"]["forcefield"])
 modeller = Modeller(fixer.topology, fixer.positions)
 
+# PDBFixer.addMissingHydrogens can miss H atoms on DNA/RNA residues;
+# Modeller.addHydrogens uses forcefield templates to fill any remaining gaps.
+modeller.addHydrogens(forcefield)
+
 # ⚙️ Build system
 system = forcefield.createSystem(
     modeller.topology,
