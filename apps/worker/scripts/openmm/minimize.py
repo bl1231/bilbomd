@@ -57,9 +57,16 @@ else:
 forcefield = ForceField(*config["input"]["forcefield"])
 modeller = Modeller(fixer.topology, fixer.positions)
 
-# PDBFixer.addMissingHydrogens can miss H atoms on DNA/RNA residues;
-# Modeller.addHydrogens uses forcefield templates to fill any remaining gaps.
-modeller.addHydrogens(forcefield)
+# PDBFixer.addMissingHydrogens can leave DNA/RNA residues partially hydrogenated
+# (some H present but not all), causing addHydrogens to fail template matching.
+# Strip all H atoms first so addHydrogens can place them from forcefield templates.
+h_atoms = [
+    atom
+    for atom in modeller.topology.atoms()
+    if atom.element is not None and atom.element.symbol == "H"
+]
+modeller.delete(h_atoms)
+modeller.addHydrogens(forcefield, pH=7.0)
 
 # ⚙️ Build system
 system = forcefield.createSystem(
