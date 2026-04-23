@@ -49,7 +49,7 @@ const buildOpenMMConfigForJob = (
     input: {
       dir: workDir,
       pdb_file: DBjob.pdb_file,
-      forcefield: ['charmm36.xml', 'implicit/hct.xml']
+      forcefield: ['amber19-all.xml', 'implicit/hct.xml']
     },
     output: {
       output_dir: path.join(workDir, 'openmm'),
@@ -139,7 +139,9 @@ const prepareOpenMMConfig = async (
           logger.info('Loaded constraints from CHARMM const.inp for OpenMM')
         }
       } catch (error) {
-        logger.warn(`Failed to convert const.inp to OpenMM constraints: ${error}`)
+        logger.warn(
+          `Failed to convert const.inp to OpenMM constraints: ${error}`
+        )
       }
     }
   }
