@@ -7,6 +7,7 @@ import {
   IBilboMDSteps,
   IStepStatus
 } from '@bilbomd/mongodb-schema'
+import { CARBOHYDRATE_RESIDUES } from '@bilbomd/bilbomd-types'
 import { logger } from '../../helpers/loggers.js'
 import { updateStepStatus } from './mongo-utils.js'
 import { handleError } from './job-utils.js'
@@ -14,6 +15,21 @@ import fs from 'fs-extra'
 import YAML from 'yaml'
 import { runPythonStep } from '../../helpers/runPythonStep.js'
 import { convertInpToYaml } from '@bilbomd/md-utils'
+
+const detectCarbohydratesInPdb = async (pdbPath: string): Promise<boolean> => {
+  try {
+    const text = await fs.readFile(pdbPath, 'utf8')
+    for (const line of text.split(/\r?\n/)) {
+      if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+        const resName = line.slice(17, 20).trim().toUpperCase()
+        if (CARBOHYDRATE_RESIDUES.has(resName)) return true
+      }
+    }
+    return false
+  } catch {
+    return false
+  }
+}
 
 const writeOpenMMConfigYaml = async (
   dir: string,
@@ -40,16 +56,29 @@ const writeOpenMMConfigYaml = async (
   return filePath
 }
 
-const buildOpenMMConfigForJob = (
+const buildOpenMMConfigForJob = async (
   DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
   workDir: string
-): OpenMMConfig => {
+): Promise<OpenMMConfig> => {
   const omm_params = DBjob.openmm_parameters || {}
+
+  const pdbPath = path.join(workDir, DBjob.pdb_file)
+  const hasCarbohydrates = await detectCarbohydratesInPdb(pdbPath)
+
+  if (hasCarbohydrates) {
+    throw new Error(
+      'Glycoprotein detected in input PDB. Full GLYCAM carbohydrate support for the ' +
+        'OpenMM engine requires a residue-renaming preprocessing step that is not yet ' +
+        'implemented. Please use the CHARMM engine for glycoprotein jobs. ' +
+        'See GitHub issue #655 for status.'
+    )
+  }
+
   return {
     input: {
       dir: workDir,
       pdb_file: DBjob.pdb_file,
-      forcefield: ['charmm36.xml', 'implicit/hct.xml']
+      forcefield: ['amber19-all.xml', 'implicit/gbn2.xml']
     },
     output: {
       output_dir: path.join(workDir, 'openmm'),
@@ -102,7 +131,7 @@ const prepareOpenMMConfig = async (
   DBjob: IBilboMDPDBJob | IBilboMDAutoJob
 ): Promise<void> => {
   const workDir = path.join(config.uploadDir, DBjob.uuid)
-  const cfg = buildOpenMMConfigForJob(DBjob, workDir)
+  const cfg = await buildOpenMMConfigForJob(DBjob, workDir)
 
   // Load constraints from openmm_const.yml if it exists (auto pipeline)
   const constYamlPath = path.join(workDir, 'openmm_const.yml')
