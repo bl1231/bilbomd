@@ -81,7 +81,7 @@ services:
       - app-network
 
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.7.1
+    image: ghcr.io/bl1231/bilbomd-backend:2.7.2
     pull_policy: always
     env_file:
       - path: .env.local
