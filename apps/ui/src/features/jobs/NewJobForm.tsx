@@ -757,9 +757,13 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               try {
                                 const { rg, rg_min, rg_max, qmin, qmax } =
                                   await calculateAutoRg(formData).unwrap()
-                                void setFieldValue('rg', rg)
-                                void setFieldValue('rg_min', rg_min)
-                                void setFieldValue('rg_max', rg_max)
+                                void setFieldValue('rg', rg, false)
+                                void setFieldValue('rg_min', rg_min, false)
+                                void setFieldValue('rg_max', rg_max, false)
+                                void setFieldTouched('rg', true, false)
+                                void setFieldTouched('rg_min', true, false)
+                                void setFieldTouched('rg_max', true, false)
+                                setTimeout(() => void validateForm(), 0)
                                 if (
                                   typeof qmin === 'number' &&
                                   typeof qmax === 'number'
