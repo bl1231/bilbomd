@@ -28,6 +28,8 @@ export const CARBOHYDRATE_RESIDUES = new Set<string>([
   'FUC', 'FUL', 'G4S', 'GAL', 'GLA', 'GLB', 'GLC', 'GLS', 'GSA',
   'GUL', 'IDO', 'LAK', 'LAT', 'MAF', 'MAL', 'MAN', 'NAG', 'NAN',
   'NGA', 'RHM', 'RIB', 'SIA', 'SLB', 'TAL', 'XYL',
+  // GLYCAM carbohydrate residues
+  'AMA', 'BGL',
 ])
 
 export const SUPPORTED_PDB_RESIDUES = new Set<string>([
@@ -38,7 +40,7 @@ export const SUPPORTED_PDB_RESIDUES = new Set<string>([
   'ADE', 'CYT', 'GUA', 'THY',
   ...CARBOHYDRATE_RESIDUES,
   // Other supported ligands
-  'HEM',
+  'FAD', 'HEM',
   // Water — removed by pdb2crd.py, not an error
   'HOH',
   // Common ions — passed through or stripped without error
