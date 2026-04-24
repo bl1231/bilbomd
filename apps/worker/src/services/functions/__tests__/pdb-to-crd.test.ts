@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runStripIons, runStripCofactors, runCifToPdb } from '../pdb-to-crd.js'
 import { logger } from '../../../helpers/loggers.js'
-import fs from 'fs-extra'
 import { spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 
@@ -34,7 +33,7 @@ const makeProc = (exitCode: number) => {
   const proc = new EventEmitter() as ReturnType<typeof spawn>
   // @ts-expect-error — minimal fake streams
   proc.stdout = new EventEmitter()
-  // @ts-expect-error
+  // @ts-expect-error — minimal fake stream
   proc.stderr = new EventEmitter()
   setTimeout(() => proc.emit('close', exitCode), 0)
   return proc
