@@ -112,14 +112,16 @@ else:
     print("No nonstandard residues found.")
 
 if has_carbohydrates:
-    # Skip addMissingAtoms for glycoproteins: PDBFixer has no carbohydrate templates
-    # and would corrupt or drop sugar atoms. GLYCAM_06j-1.xml handles carb atom types.
-    print("Glycoprotein mode: skipping PDBFixer.addMissingAtoms() to preserve sugar atoms.")
+    # Skip addMissingAtoms and addMissingHydrogens for glycoproteins: PDBFixer has no
+    # carbohydrate templates and would corrupt or drop sugar atoms, and its hydrogen
+    # placement triggers CCD downloads for GLYCAM residue names (NLN, OLS, OLT, 0MA,
+    # 0NB, etc.) whose mmCIF entries contain '?' coordinates that PDBFixer cannot parse.
+    # Hydrogens are added below via modeller.addHydrogens() using GLYCAM_06j-1.xml.
+    print("Glycoprotein mode: skipping PDBFixer.addMissingAtoms() and addMissingHydrogens().")
 else:
     fixer.findMissingAtoms()
     fixer.addMissingAtoms()
-
-fixer.addMissingHydrogens(pH=7.0)
+    fixer.addMissingHydrogens(pH=7.0)
 
 # Step 2: Build the system using configured force fields
 forcefield = ForceField(*config["input"]["forcefield"])
