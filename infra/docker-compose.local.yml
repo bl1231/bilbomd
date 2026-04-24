@@ -105,7 +105,7 @@ services:
       start_period: 10s
 
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.7.2
+    image: ghcr.io/bl1231/bilbomd-worker:2.7.5
     pull_policy: always
     deploy:
       replicas: 1
