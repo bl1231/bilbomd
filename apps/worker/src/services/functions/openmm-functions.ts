@@ -66,19 +66,23 @@ const buildOpenMMConfigForJob = async (
   const hasCarbohydrates = await detectCarbohydratesInPdb(pdbPath)
 
   if (hasCarbohydrates) {
-    throw new Error(
-      'Glycoprotein detected in input PDB. Full GLYCAM carbohydrate support for the ' +
-        'OpenMM engine requires a residue-renaming preprocessing step that is not yet ' +
-        'implemented. Please use the CHARMM engine for glycoprotein jobs. ' +
-        'See GitHub issue #655 for status.'
+    logger.info(
+      `Glycoprotein detected in ${DBjob.pdb_file} — activating GLYCAM force field ` +
+        `(amber14/GLYCAM_06j-1.xml). Unsupported cofactors (FAD, HEM, PCA, etc.) ` +
+        `will be stripped before MD.`
     )
   }
+
+  const forcefield = hasCarbohydrates
+    ? ['amber19-all.xml', 'amber14/GLYCAM_06j-1.xml', 'implicit/gbn2.xml']
+    : ['amber19-all.xml', 'implicit/gbn2.xml']
 
   return {
     input: {
       dir: workDir,
       pdb_file: DBjob.pdb_file,
-      forcefield: ['amber19-all.xml', 'implicit/gbn2.xml']
+      forcefield,
+      has_carbohydrates: hasCarbohydrates
     },
     output: {
       output_dir: path.join(workDir, 'openmm'),
@@ -189,6 +193,7 @@ interface OpenMMConfig {
     dir: string
     pdb_file: string
     forcefield: string[]
+    has_carbohydrates?: boolean
   }
   output: {
     output_dir: string

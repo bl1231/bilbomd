@@ -12,7 +12,7 @@ import {
   runOmmHeat,
   runOmmMD
 } from '../functions/openmm-functions.js'
-import { runCifToPdb, runStripIons } from '../functions/pdb-to-crd.js'
+import { runCifToPdb, runStripIons, runStripCofactors } from '../functions/pdb-to-crd.js'
 import {
   extractPDBFilesFromDCD,
   remediatePDBFiles
@@ -102,6 +102,12 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
     await MQjob.log('start strip-ions')
     await runStripIons({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
     await MQjob.log('end strip-ions')
+
+    // Strip unsupported cofactors (FAD, HEM, PCA, etc.) — no bundled Amber parameters.
+    // They are removed for MD only; the original uploaded PDB is used for FoXS.
+    await MQjob.log('start strip-cofactors')
+    await runStripCofactors({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
+    await MQjob.log('end strip-cofactors')
 
     // Prepare OpenMM config YAML instead of pdb2crd
     await MQjob.log('start openmm-config')

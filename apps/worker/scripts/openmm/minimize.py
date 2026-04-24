@@ -19,6 +19,9 @@ from openmm.app import (
 from openmm import LangevinIntegrator
 from openmm.unit import kelvin, picoseconds, nanometer
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "utils"))
+from glycam_rename import rename_glycam_residues  # noqa: E402
+
 def _normalize_charmm_nucleic_names(pdb_text: str) -> str:
     """Rename CHARMM-style DNA residue names to standard PDB convention.
 
@@ -77,20 +80,29 @@ md_dir = os.path.join(output_dir, config["output"]["md_dir"])
 
 initial_pdb_file = os.path.join(config["input"]["dir"], config["input"]["pdb_file"])
 output_pdb_file_name = config["steps"]["minimization"]["output_pdb"]
+has_carbohydrates = config["input"].get("has_carbohydrates", False)
 
 for d in [output_dir, min_dir, heat_dir, md_dir]:
     if not os.path.exists(d):
         os.makedirs(d)
 
-# Step 1: Load and fix the PDB
+# Step 1: Load (and optionally GLYCAM-rename) the PDB
 with open(initial_pdb_file, "r", encoding="utf-8") as f:
     raw_pdb = f.read()
+
+if has_carbohydrates:
+    print("Glycoprotein mode: applying GLYCAM residue renaming before PDBFixer...")
+    raw_pdb, glycam_log = rename_glycam_residues(raw_pdb)
+    log_path = os.path.join(config["input"]["dir"], "glycam_rename.log")
+    with open(log_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(glycam_log) + "\n")
+    print(f"GLYCAM rename log written to {log_path}")
+    for line in glycam_log:
+        print(line)
+
 normalized_pdb = _normalize_charmm_nucleic_names(raw_pdb)
 fixer = PDBFixer(pdbfile=StringIO(normalized_pdb))
 fixer.findMissingResidues()
-fixer.findMissingAtoms()
-fixer.addMissingAtoms()
-fixer.addMissingHydrogens(pH=7.0)
 fixer.findNonstandardResidues()
 if fixer.nonstandardResidues:
     print("Nonstandard residues found:")
@@ -98,6 +110,16 @@ if fixer.nonstandardResidues:
         print(f" - {residue}")
 else:
     print("No nonstandard residues found.")
+
+if has_carbohydrates:
+    # Skip addMissingAtoms for glycoproteins: PDBFixer has no carbohydrate templates
+    # and would corrupt or drop sugar atoms. GLYCAM_06j-1.xml handles carb atom types.
+    print("Glycoprotein mode: skipping PDBFixer.addMissingAtoms() to preserve sugar atoms.")
+else:
+    fixer.findMissingAtoms()
+    fixer.addMissingAtoms()
+
+fixer.addMissingHydrogens(pH=7.0)
 
 # Step 2: Build the system using configured force fields
 forcefield = ForceField(*config["input"]["forcefield"])
