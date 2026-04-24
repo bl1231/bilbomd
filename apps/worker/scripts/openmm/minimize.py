@@ -86,13 +86,28 @@ for d in [output_dir, min_dir, heat_dir, md_dir]:
     if not os.path.exists(d):
         os.makedirs(d)
 
-# Step 1: Load (and optionally GLYCAM-rename) the PDB
+# Step 1: Load the PDB and prepare the structure
 with open(initial_pdb_file, "r", encoding="utf-8") as f:
     raw_pdb = f.read()
 
 if has_carbohydrates:
-    print("Glycoprotein mode: applying GLYCAM residue renaming before PDBFixer...")
-    raw_pdb, glycam_log = rename_glycam_residues(raw_pdb)
+    # Fix missing residues/atoms on the original PDB BEFORE GLYCAM renaming.
+    # GLYCAM names (NLN, OLS, OLT, 0MA, 0NB, etc.) are unknown to PDBFixer's
+    # sequence aligner, causing findMissingResidues() to return {} even when
+    # chain gaps exist. Running PDBFixer first on standard names ensures gaps
+    # (e.g. missing loops) are correctly detected and repaired.
+    print("Glycoprotein mode: running PDBFixer on original PDB to fix chain gaps...")
+    pre_fixer = PDBFixer(pdbfile=StringIO(_normalize_charmm_nucleic_names(raw_pdb)))
+    pre_fixer.findMissingResidues()
+    print(f"Missing residues found by PDBFixer: {pre_fixer.missingResidues}")
+    pre_fixer.findMissingAtoms()
+    pre_fixer.addMissingAtoms()
+    fixed_pdb_io = StringIO()
+    PDBFile.writeFile(pre_fixer.topology, pre_fixer.positions, fixed_pdb_io)
+    fixed_pdb_text = fixed_pdb_io.getvalue()
+
+    print("Glycoprotein mode: applying GLYCAM residue renaming to fixed PDB...")
+    renamed_pdb, glycam_log = rename_glycam_residues(fixed_pdb_text)
     log_path = os.path.join(config["input"]["dir"], "glycam_rename.log")
     with open(log_path, "w", encoding="utf-8") as f:
         f.write("\n".join(glycam_log) + "\n")
@@ -100,29 +115,29 @@ if has_carbohydrates:
     for line in glycam_log:
         print(line)
 
-normalized_pdb = _normalize_charmm_nucleic_names(raw_pdb)
-fixer = PDBFixer(pdbfile=StringIO(normalized_pdb))
-fixer.findMissingResidues()
-print(f"Missing residues found by PDBFixer: {fixer.missingResidues}")
-fixer.findNonstandardResidues()
-if fixer.nonstandardResidues:
-    print("Nonstandard residues found:")
-    for residue in fixer.nonstandardResidues:
-        print(f" - {residue}")
-else:
-    print("No nonstandard residues found.")
-
-fixer.findMissingAtoms()
-fixer.addMissingAtoms()
-
-if has_carbohydrates:
+    fixer = PDBFixer(pdbfile=StringIO(renamed_pdb))
+    fixer.findNonstandardResidues()
+    if fixer.nonstandardResidues:
+        print("Nonstandard residues found:")
+        for residue in fixer.nonstandardResidues:
+            print(f" - {residue}")
     # Skip addMissingHydrogens: it triggers CCD downloads for GLYCAM residue names
-    # (NLN, OLS, OLT, 0MA, 0NB, etc.) whose mmCIF entries contain '?' coordinates
-    # that PDBFixer cannot parse. addMissingAtoms() is safe — PDBFixer only processes
-    # residues in its own template library, so GLYCAM residues are left untouched.
+    # whose mmCIF entries contain '?' coordinates that PDBFixer cannot parse.
     # Hydrogens are added below via modeller.addHydrogens() using GLYCAM_06j-1.xml.
     print("Glycoprotein mode: skipping PDBFixer.addMissingHydrogens() to avoid GLYCAM CCD downloads.")
 else:
+    normalized_pdb = _normalize_charmm_nucleic_names(raw_pdb)
+    fixer = PDBFixer(pdbfile=StringIO(normalized_pdb))
+    fixer.findMissingResidues()
+    fixer.findNonstandardResidues()
+    if fixer.nonstandardResidues:
+        print("Nonstandard residues found:")
+        for residue in fixer.nonstandardResidues:
+            print(f" - {residue}")
+    else:
+        print("No nonstandard residues found.")
+    fixer.findMissingAtoms()
+    fixer.addMissingAtoms()
     fixer.addMissingHydrogens(pH=7.0)
 
 # Step 2: Build the system using configured force fields
