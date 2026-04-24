@@ -23,6 +23,7 @@ import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import { expdataSchema } from 'schemas/ExpdataSchema'
 import { BilboMDClassicJobSchema } from 'schemas/BilboMDClassicJobSchema'
+import { detectStrippableCofactors } from 'schemas/ValidationFunctions'
 import SAXSGuinierPlot from './SAXSGuinierPlot'
 import HeaderBox from 'components/HeaderBox'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
@@ -90,6 +91,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [pdbWarning, setPdbWarning] = useState<string>('')
   const [saxsData, setSaxsData] = useState<
     { q: number; intensity: number; error: number }[]
   >([])
@@ -484,6 +486,22 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             if (val === 'openmm') {
                               void setFieldValue('num_conf', 3)
                             }
+                            if (val === 'charmm') {
+                              setPdbWarning('')
+                            } else if (
+                              val === 'openmm' &&
+                              values.pdb_file instanceof File
+                            ) {
+                              void detectStrippableCofactors(
+                                values.pdb_file
+                              ).then((found) => {
+                                setPdbWarning(
+                                  found.length > 0
+                                    ? `The following residues have no Amber force-field parameters and will be removed before MD: ${found.join(', ')}`
+                                    : ''
+                                )
+                              })
+                            }
                           }
                         }}
                         disabled={
@@ -581,11 +599,25 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               errorMessage={
                                 errors.pdb_file ? errors.pdb_file : ''
                               }
+                              warningMessage={pdbWarning}
                               fileType=" *.pdb or *.cif"
                               fileExt=".pdb,.cif"
                               existingFileName={
                                 useExampleData ? 'example.pdb' : undefined
                               }
+                              onFileChange={async (file: File) => {
+                                if (mdEngine !== 'openmm') {
+                                  setPdbWarning('')
+                                  return
+                                }
+                                const found =
+                                  await detectStrippableCofactors(file)
+                                setPdbWarning(
+                                  found.length > 0
+                                    ? `The following residues have no Amber force-field parameters and will be removed before MD: ${found.join(', ')}`
+                                    : ''
+                                )
+                              }}
                             />
                           </Grid>
                         </Grid>

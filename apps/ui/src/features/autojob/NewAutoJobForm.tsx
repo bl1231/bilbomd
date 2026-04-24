@@ -8,6 +8,7 @@ import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import NewAutoJobFormInstructions from './AutoJobFormInstructions'
 import { BilboMDAutoJobSchema } from 'schemas/BilboMDAutoJobSchema'
+import { detectStrippableCofactors } from 'schemas/ValidationFunctions'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
@@ -70,6 +71,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [pdbWarning, setPdbWarning] = useState<string>('')
 
   // RTK Query to fetch the configuration
   const {
@@ -270,6 +272,22 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           onChange={(val) => {
                             void setFieldValue('md_engine', val)
                             setMdEngine(val)
+                            if (val === 'charmm') {
+                              setPdbWarning('')
+                            } else if (
+                              val === 'openmm' &&
+                              values.pdb_file instanceof File
+                            ) {
+                              void detectStrippableCofactors(
+                                values.pdb_file
+                              ).then((found) => {
+                                setPdbWarning(
+                                  found.length > 0
+                                    ? `The following residues have no Amber force-field parameters and will be removed before MD: ${found.join(', ')}`
+                                    : ''
+                                )
+                              })
+                            }
                           }}
                           disabled={isSubmitting}
                           disableCharmm={!charmmEnabled}
@@ -305,11 +323,24 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           setFieldTouched={setFieldTouched}
                           error={errors.pdb_file && touched.pdb_file}
                           errorMessage={errors.pdb_file ? errors.pdb_file : ''}
+                          warningMessage={pdbWarning}
                           fileType="AlphaFold *.pdb or *.cif"
                           fileExt=".pdb,.cif"
                           existingFileName={
                             useExampleData ? 'example-auto.pdb' : undefined
                           }
+                          onFileChange={async (file: File) => {
+                            if (mdEngine !== 'openmm') {
+                              setPdbWarning('')
+                              return
+                            }
+                            const found = await detectStrippableCofactors(file)
+                            setPdbWarning(
+                              found.length > 0
+                                ? `The following residues have no Amber force-field parameters and will be removed before MD: ${found.join(', ')}`
+                                : ''
+                            )
+                          }}
                         />
                       </Grid>
 

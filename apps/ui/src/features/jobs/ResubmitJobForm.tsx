@@ -33,6 +33,7 @@ import {
 import SendIcon from '@mui/icons-material/Send'
 import { expdataSchema } from 'schemas/ExpdataSchema'
 import { BilboMDClassicJobSchema } from 'schemas/BilboMDClassicJobSchema'
+import { detectStrippableCofactors } from 'schemas/ValidationFunctions'
 import HeaderBox from 'components/HeaderBox'
 import useTitle from 'hooks/useTitle'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
@@ -63,6 +64,7 @@ const ResubmitJobForm = () => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
   const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
+  const [pdbWarning, setPdbWarning] = useState<string>('')
 
   // RTK Query to fetch the configuration
   const {
@@ -457,6 +459,22 @@ const ResubmitJobForm = () => {
                           onChange={(val) => {
                             void setFieldValue('md_engine', val)
                             setMdEngine(val)
+                            if (val === 'charmm') {
+                              setPdbWarning('')
+                            } else if (
+                              val === 'openmm' &&
+                              values.pdb_file instanceof File
+                            ) {
+                              void detectStrippableCofactors(
+                                values.pdb_file
+                              ).then((found) => {
+                                setPdbWarning(
+                                  found.length > 0
+                                    ? `The following residues have no Amber force-field parameters and will be removed before MD: ${found.join(', ')}`
+                                    : ''
+                                )
+                              })
+                            }
                           }}
                           disabled={isSubmitting}
                           disableCharmm={!charmmEnabled}
@@ -559,8 +577,22 @@ const ResubmitJobForm = () => {
                                 errorMessage={
                                   errors.pdb_file ? errors.pdb_file : ''
                                 }
+                                warningMessage={pdbWarning}
                                 fileType=" *.pdb"
                                 fileExt=".pdb"
+                                onFileChange={async (file: File) => {
+                                  if (mdEngine !== 'openmm') {
+                                    setPdbWarning('')
+                                    return
+                                  }
+                                  const found =
+                                    await detectStrippableCofactors(file)
+                                  setPdbWarning(
+                                    found.length > 0
+                                      ? `The following residues have no Amber force-field parameters and will be removed before MD: ${found.join(', ')}`
+                                      : ''
+                                  )
+                                }}
                               />
                             </Grid>
                           </Grid>

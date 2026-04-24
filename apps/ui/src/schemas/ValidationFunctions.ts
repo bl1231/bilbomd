@@ -1,5 +1,6 @@
 import {
   SUPPORTED_PDB_RESIDUES,
+  STRIPPABLE_COFACTORS,
   parseCifAtomSite,
   cifContainsChainId as cifContainsChainIdUtil,
   cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
@@ -560,6 +561,29 @@ const cifIsSingleModel = (file: File): Promise<boolean> => {
   })
 }
 
+const detectStrippableCofactors = (file: File): Promise<string[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const found = new Set<string>()
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+          const resName = line.substring(17, 20).trim().toUpperCase()
+          if (STRIPPABLE_COFACTORS.has(resName)) found.add(resName)
+        }
+      }
+      resolve(Array.from(found).sort())
+    }
+    reader.onerror = () => reject(new Error('Error reading file'))
+    reader.readAsText(file)
+  })
+}
+
 export {
   fromCharmmGui,
   isCRD,
@@ -575,6 +599,7 @@ export {
   cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines,
   isValidConstInpFile,
-  hasAllowedResiduesOnly
+  hasAllowedResiduesOnly,
+  detectStrippableCofactors
 }
 export type { SaxsQualityResult }
