@@ -103,6 +103,7 @@ if has_carbohydrates:
 normalized_pdb = _normalize_charmm_nucleic_names(raw_pdb)
 fixer = PDBFixer(pdbfile=StringIO(normalized_pdb))
 fixer.findMissingResidues()
+print(f"Missing residues found by PDBFixer: {fixer.missingResidues}")
 fixer.findNonstandardResidues()
 if fixer.nonstandardResidues:
     print("Nonstandard residues found:")
