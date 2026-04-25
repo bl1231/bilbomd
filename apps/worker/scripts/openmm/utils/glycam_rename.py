@@ -6,7 +6,7 @@ into the GLYCAM naming scheme required by amber14/GLYCAM_06j-1.xml.
 GLYCAM naming convention (3-character codes):
   - Character 1: linkage position on THIS residue (0 = reducing-end free/protein-linked,
     2/3/4/6 = which oxygen bonds to C1 of the non-reducing sugar in the chain)
-  - Character 2: sugar identity letter (N=GlcNAc, M=Man, G=Glc, A=Gal, F=Fuc, ...)
+  - Character 2: sugar identity letter (Y=GlcNAc, M=Man, G=Glc, A=Gal, F=Fuc, ...)
   - Character 3: anomeric configuration (A=alpha, B=beta)
 
 Special protein-side residue names (modified amino acids):
@@ -36,8 +36,8 @@ from typing import Optional
 # GLYCAM sugar identity letter map: PDB 3-letter code → GLYCAM letter
 # ---------------------------------------------------------------------------
 SUGAR_LETTER: dict[str, str] = {
-    "NAG": "N",  # GlcNAc (N-acetylglucosamine)
-    "NDG": "N",  # GlcNAc (alternate PDB code)
+    "NAG": "Y",  # GlcNAc (N-acetylglucosamine) — GLYCAM letter Y
+    "NDG": "Y",  # GlcNAc (alternate PDB code, alpha form)
     "MAN": "M",  # Mannose
     "BMA": "M",  # Beta-mannose (often labeled BMA in PDB)
     "GLC": "G",  # Glucose
@@ -61,6 +61,14 @@ SUGAR_LETTER: dict[str, str] = {
 # (used as default when geometry-based detection is ambiguous)
 DEFAULT_ALPHA: frozenset[str] = frozenset(["MAN", "FUC", "FUL", "SIA", "NAN"])
 DEFAULT_BETA: frozenset[str] = frozenset(["NAG", "NDG", "GAL", "GLA", "GLC", "BGC", "BMA"])
+
+# Per-residue atom name remapping needed to convert PDB atom names to GLYCAM names.
+# NAG/NDG use C7/C8/O7 for the acetamide group in PDB but GLYCAM templates expect
+# C2N/CME/O2N.  All other residues use the same atom names in both conventions.
+_ATOM_NAME_REMAP: dict[str, dict[str, str]] = {
+    "NAG": {"C7": "C2N", "O7": "O2N", "C8": "CME"},
+    "NDG": {"C7": "C2N", "O7": "O2N", "C8": "CME"},
+}
 
 
 # ---------------------------------------------------------------------------
@@ -390,6 +398,18 @@ def rename_glycam_residues(pdb_text: str) -> tuple[str, list[str]]:
         for atom in res.atoms:
             line_rename[atom.line_index] = new_name
 
+    # Build atom-name remapping for residues whose PDB atom names differ from GLYCAM
+    # (e.g. NAG C7→C2N, C8→CME, O7→O2N).  Keyed by line_index → new atom name.
+    atom_rename: dict[int, str] = {}
+    for key, res in residues.items():
+        remap = _ATOM_NAME_REMAP.get(res.resname)
+        if remap is None:
+            continue
+        for atom in res.atoms:
+            new_atom_name = remap.get(atom.name)
+            if new_atom_name is not None:
+                atom_rename[atom.line_index] = new_atom_name
+
     new_lines = []
     for i, line in enumerate(lines):
         if i in line_rename:
@@ -397,6 +417,11 @@ def rename_glycam_residues(pdb_text: str) -> tuple[str, list[str]]:
             # PDB columns 18-20 (0-indexed 17-19) hold the residue name, right-justified
             padded = new_name.ljust(3)[:3]
             line = line[:17] + padded + line[20:]
+        if i in atom_rename:
+            new_atom = atom_rename[i]
+            # PDB columns 13-16 (0-indexed 12-15) hold the atom name, left-justified
+            padded_atom = f" {new_atom:<3}" if len(new_atom) < 4 else new_atom[:4]
+            line = line[:12] + padded_atom + line[16:]
         new_lines.append(line)
 
     return "".join(new_lines), log_lines
@@ -427,8 +452,8 @@ def _handle_glycan_link(
     sug_key = sug_res.key
 
     if prot_res.resname == "ASN" and prot_atom_name == "ND2":
-        # N-linked glycan: ASN → NLN, sugar → 0NB (beta) or 0NA (alpha)
-        glycam_sugar = f"0N{anomer}"
+        # N-linked glycan: ASN → NLN, sugar → 0YB (beta) or 0YA (alpha) for GlcNAc
+        glycam_sugar = f"0{sugar_letter}{anomer}"
         protein_renames[prot_key] = "NLN"
         sugar_renames[sug_key] = glycam_sugar
         log_lines.append(
@@ -437,7 +462,7 @@ def _handle_glycan_link(
         )
         log_lines.append(
             f"  {sug_res.resname} {sug_res.chain_id}{sug_res.resseq:4d} → {glycam_sugar} "
-            f"(N-linked reducing end, {'alpha' if is_alpha else 'beta'})"
+            f"(N-linked reducing end, {'alpha' if is_alpha else 'beta'}, GLYCAM {glycam_sugar})"
         )
 
     elif prot_res.resname == "THR" and prot_atom_name in ("OG1", "OG"):
