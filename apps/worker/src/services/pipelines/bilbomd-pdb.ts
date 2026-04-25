@@ -22,6 +22,7 @@ import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
 import { prepareOpenMMConfig } from '../functions/openmm-functions.js'
+import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 import {
   recordWorkerUsageEvent,
   buildContext
@@ -139,6 +140,11 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
   await runners.md(MQjob, foundJob)
   await MQjob.log('end md')
   await progress.update(50)
+
+  // Generate MP4 movies from DCD files (OpenMM only, fire-and-forget)
+  if (engine === 'OpenMM') {
+    enqueueMakeMovie(MQjob, foundJob)
+  }
 
   // Extract PDBs from DCDs
   if (engine === 'CHARMM') {
