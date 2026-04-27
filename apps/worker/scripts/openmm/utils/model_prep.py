@@ -445,7 +445,7 @@ def prepare_modeller(
         # names can trigger problematic CCD fetch/parse paths in PDBFixer.
         pre_fixer.addMissingHydrogens(pH=7.0)
         fixed_pdb_io = StringIO()
-        PDBFile.writeFile(pre_fixer.topology, pre_fixer.positions, fixed_pdb_io)
+        PDBFile.writeFile(pre_fixer.topology, pre_fixer.positions, fixed_pdb_io, keepIds=True)
         fixed_pdb_text = fixed_pdb_io.getvalue()
 
         print("Glycoprotein mode: applying GLYCAM residue renaming to fixed PDB...")

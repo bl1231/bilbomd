@@ -63,6 +63,6 @@ print("✅ Minimization complete.")
 # Step 4: Save structure
 positions = simulation.context.getState(getPositions=True).getPositions()
 with open(os.path.join(min_dir, output_pdb_file_name), "w", encoding="utf-8") as f:
-    PDBFile.writeFile(modeller.topology, positions, f)
+    PDBFile.writeFile(modeller.topology, positions, f, keepIds=True)
 
 print(f"✅ Saved {output_pdb_file_name}")
