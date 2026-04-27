@@ -396,6 +396,30 @@ def _remove_unknown_residues(
         modeller.delete([atom for res in unknown for atom in res.atoms()])
 
 
+def register_ligand_templates_for_topology(
+    topology,
+    forcefield: ForceField,
+    input_dir: str,
+) -> tuple[set[str], dict[str, str]]:
+    """Register GAFF2 templates for unknown non-metal ligands present in `topology`."""
+    known_templates = set(forcefield._templates.keys())
+    unknown_organic_resnames = list({
+        res.name for res in topology.residues()
+        if res.name not in known_templates
+        and res.name not in _STANDARD_BIOMOL_NAMES
+        and not _is_glycam_name(res.name)
+        and not _has_metal_atoms(res)
+    })
+    if not unknown_organic_resnames:
+        return set(), {}
+
+    print(f"Unknown organic residues detected: {sorted(unknown_organic_resnames)}")
+    sdf_map = _find_organic_ligand_sdfs(input_dir, unknown_organic_resnames)
+    if not sdf_map:
+        return set(), {}
+    return _register_gaff_generator(forcefield, sdf_map), sdf_map
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -491,21 +515,11 @@ def prepare_modeller(
 
     # Identify unknown residues that are organic (no metals) and have an SDF file,
     # then register a GAFF2 template generator for them before deletion runs.
-    known_templates = set(forcefield._templates.keys())
-    unknown_organic_resnames = list({
-        res.name for res in modeller.topology.residues()
-        if res.name not in known_templates
-        and res.name not in _STANDARD_BIOMOL_NAMES
-        and not _is_glycam_name(res.name)
-        and not _has_metal_atoms(res)
-    })
-    if unknown_organic_resnames:
-        print(f"Unknown organic residues detected: {sorted(unknown_organic_resnames)}")
-        sdf_map = _find_organic_ligand_sdfs(config["input"]["dir"], unknown_organic_resnames)
-        gaff_resnames = _register_gaff_generator(forcefield, sdf_map) if sdf_map else set()
-    else:
-        sdf_map = {}
-        gaff_resnames = set()
+    gaff_resnames, sdf_map = register_ligand_templates_for_topology(
+        modeller.topology,
+        forcefield,
+        config["input"]["dir"],
+    )
 
     _remove_unknown_residues(modeller, forcefield, frozenset(gaff_resnames))
 
