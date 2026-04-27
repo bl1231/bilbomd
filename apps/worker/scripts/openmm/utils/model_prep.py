@@ -7,6 +7,9 @@ The public entry point is prepare_modeller().
 from __future__ import annotations
 
 import os
+import urllib.request
+import urllib.error
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 from io import StringIO
 
@@ -139,14 +142,252 @@ _STANDARD_BIOMOL_NAMES = frozenset([
     "HOH", "WAT", "TIP",
 ])
 
+_METAL_ELEMENTS: frozenset[str] = frozenset([
+    "FE", "ZN", "CU", "MN", "CO", "NI", "MG", "CA", "NA", "K",
+    "MO", "W", "V", "CR", "RU", "RH", "PD", "AG", "CD", "PT", "AU", "HG",
+])
 
-def _remove_unknown_residues(modeller: Modeller, forcefield: ForceField) -> None:
+
+def _has_metal_atoms(residue) -> bool:
+    return any(
+        a.element is not None and a.element.symbol.upper() in _METAL_ELEMENTS
+        for a in residue.atoms()
+    )
+
+
+def _find_organic_ligand_sdfs(input_dir: str, unknown_resnames: list[str]) -> dict[str, str]:
+    found = {}
+    for name in unknown_resnames:
+        path = os.path.join(input_dir, f"{name}.sdf")
+        if os.path.exists(path):
+            found[name] = path
+        else:
+            url = f"https://files.rcsb.org/ligands/download/{name}_ideal.sdf"
+            print(f"  No SDF for {name}, attempting download from RCSB...")
+            try:
+                urllib.request.urlretrieve(url, path)
+                print(f"  Downloaded {name}.sdf from RCSB.")
+                found[name] = path
+            except urllib.error.URLError as e:
+                print(f"  Warning: could not download {name}.sdf from RCSB ({e}). "
+                      f"Residue will be removed.")
+    return found
+
+
+def _register_gaff_generator(forcefield: ForceField, sdf_map: dict[str, str]) -> set[str]:
+    """Pre-generate GAFF2 templates for organic ligands and load them into the ForceField.
+
+    Uses Gasteiger charges (milliseconds) instead of AM1-BCC/sqm (10-20 min).
+    Templates are renamed from their canonical SMILES to the PDB residue name so that
+    ForceField.addHydrogens() and createSystem() can find them by name.
+    """
+    from openff.toolkit import Molecule
+    from openmmforcefields.generators import GAFFTemplateGenerator
+    from lxml import etree
+
+    gaff_resnames: set[str] = set()
+    for resname, sdf_path in sdf_map.items():
+        try:
+            mol = Molecule.from_file(sdf_path, allow_undefined_stereo=True)
+            mol.name = resname
+            print(f"  Loaded {resname} from {sdf_path} ({mol.n_atoms} atoms)")
+
+            # Gasteiger charges: ~8ms via RDKit, no QM required
+            mol.assign_partial_charges("gasteiger")
+
+            # generate_residue_template runs antechamber for GAFF atom typing (~2-3s)
+            gaff = GAFFTemplateGenerator(molecules=mol, forcefield="gaff-2.11")
+            ffxml = gaff.generate_residue_template(mol)
+
+            # The Residue name in the ffxml is the canonical SMILES; rename to PDB resname
+            # so ForceField can match the residue by name during addHydrogens/createSystem.
+            tree = etree.fromstring(ffxml.encode())
+            for residue_elem in tree.iter("Residue"):
+                residue_elem.set("name", resname)
+            ffxml_renamed = etree.tostring(tree, encoding="unicode")
+
+            forcefield.loadFile(StringIO(ffxml_renamed))
+            gaff_resnames.add(resname)
+            print(f"  GAFF2 template for {resname} loaded (Gasteiger charges)")
+        except Exception as e:
+            print(f"  Warning: could not parameterize {resname}: {e}")
+
+    if gaff_resnames:
+        print(f"GAFF2 templates ready for: {sorted(gaff_resnames)}")
+
+    return gaff_resnames
+
+
+def _build_residue_heavy_graph(residue) -> tuple[list, dict[int, set[int]], dict[int, int]]:
+    heavy_atoms = [
+        atom for atom in residue.atoms()
+        if atom.element is not None and atom.element.symbol != "H"
+    ]
+    local_index = {atom.index: i for i, atom in enumerate(heavy_atoms)}
+    adjacency: dict[int, set[int]] = {i: set() for i in range(len(heavy_atoms))}
+    existing_h_count: dict[int, int] = {i: 0 for i in range(len(heavy_atoms))}
+
+    for atom1, atom2 in residue.internal_bonds():
+        a1_is_h = atom1.element is not None and atom1.element.symbol == "H"
+        a2_is_h = atom2.element is not None and atom2.element.symbol == "H"
+        if not a1_is_h and not a2_is_h:
+            if atom1.index in local_index and atom2.index in local_index:
+                i = local_index[atom1.index]
+                j = local_index[atom2.index]
+                adjacency[i].add(j)
+                adjacency[j].add(i)
+        elif a1_is_h and not a2_is_h and atom2.index in local_index:
+            existing_h_count[local_index[atom2.index]] += 1
+        elif a2_is_h and not a1_is_h and atom1.index in local_index:
+            existing_h_count[local_index[atom1.index]] += 1
+
+    return heavy_atoms, adjacency, existing_h_count
+
+
+def _build_molecule_heavy_graph(mol) -> tuple[list[int], dict[int, set[int]], dict[int, int]]:
+    heavy_indices = [atom.molecule_atom_index for atom in mol.atoms if atom.atomic_number > 1]
+    local_index = {mol_idx: i for i, mol_idx in enumerate(heavy_indices)}
+    adjacency: dict[int, set[int]] = {i: set() for i in range(len(heavy_indices))}
+    h_count: dict[int, int] = {i: 0 for i in range(len(heavy_indices))}
+
+    for bond in mol.bonds:
+        i = bond.atom1_index
+        j = bond.atom2_index
+        i_is_h = mol.atoms[i].atomic_number == 1
+        j_is_h = mol.atoms[j].atomic_number == 1
+        if not i_is_h and not j_is_h:
+            ii = local_index[i]
+            jj = local_index[j]
+            adjacency[ii].add(jj)
+            adjacency[jj].add(ii)
+        elif i_is_h and not j_is_h:
+            h_count[local_index[j]] += 1
+        elif j_is_h and not i_is_h:
+            h_count[local_index[i]] += 1
+
+    return heavy_indices, adjacency, h_count
+
+
+def _map_heavy_atoms(residue, mol) -> dict[int, int] | None:
+    residue_heavy_atoms, residue_adj, _ = _build_residue_heavy_graph(residue)
+    mol_heavy_indices, mol_adj, _ = _build_molecule_heavy_graph(mol)
+    if len(residue_heavy_atoms) != len(mol_heavy_indices):
+        return None
+
+    residue_elem = [atom.element.atomic_number for atom in residue_heavy_atoms]
+    mol_elem = [mol.atoms[idx].atomic_number for idx in mol_heavy_indices]
+
+    candidates: dict[int, list[int]] = {}
+    for r_i in range(len(residue_heavy_atoms)):
+        r_deg = len(residue_adj[r_i])
+        options = [
+            m_i for m_i in range(len(mol_heavy_indices))
+            if mol_elem[m_i] == residue_elem[r_i] and len(mol_adj[m_i]) == r_deg
+        ]
+        if not options:
+            return None
+        candidates[r_i] = options
+
+    mapped_r_to_m: dict[int, int] = {}
+    used_m: set[int] = set()
+
+    def backtrack() -> bool:
+        if len(mapped_r_to_m) == len(residue_heavy_atoms):
+            return True
+
+        r_i = min(
+            (idx for idx in range(len(residue_heavy_atoms)) if idx not in mapped_r_to_m),
+            key=lambda idx: len([m for m in candidates[idx] if m not in used_m]),
+        )
+
+        for m_i in candidates[r_i]:
+            if m_i in used_m:
+                continue
+            consistent = True
+            for r_j, mapped_m_j in mapped_r_to_m.items():
+                if (r_j in residue_adj[r_i]) != (mapped_m_j in mol_adj[m_i]):
+                    consistent = False
+                    break
+            if not consistent:
+                continue
+            mapped_r_to_m[r_i] = m_i
+            used_m.add(m_i)
+            if backtrack():
+                return True
+            used_m.remove(m_i)
+            del mapped_r_to_m[r_i]
+        return False
+
+    if not backtrack():
+        return None
+    return mapped_r_to_m
+
+
+def _generate_ligand_hydrogen_definitions(modeller: Modeller, sdf_map: dict[str, str], gaff_resnames: set[str]) -> str:
+    from openff.toolkit import Molecule
+
+    root = ET.Element("Residues")
+    loaded_any = False
+
+    residues_by_name: dict[str, list] = defaultdict(list)
+    for residue in modeller.topology.residues():
+        residues_by_name[residue.name].append(residue)
+
+    for resname in sorted(gaff_resnames):
+        sdf_path = sdf_map.get(resname)
+        residue_candidates = residues_by_name.get(resname, [])
+        if not sdf_path or not residue_candidates:
+            continue
+
+        residue = residue_candidates[0]
+        try:
+            mol = Molecule.from_file(sdf_path, allow_undefined_stereo=True)
+            mapping = _map_heavy_atoms(residue, mol)
+            if mapping is None:
+                print(f"  Warning: could not map heavy-atom graph for {resname}; skipping ligand hydrogen definitions.")
+                continue
+
+            residue_heavy_atoms, _, existing_h = _build_residue_heavy_graph(residue)
+            _, _, expected_h = _build_molecule_heavy_graph(mol)
+
+            residue_elem = ET.SubElement(root, "Residue", {"name": resname})
+            used_names = {atom.name for atom in residue.atoms()}
+            for r_i, atom in enumerate(residue_heavy_atoms):
+                expected = expected_h[mapping[r_i]]
+                present = existing_h[r_i]
+                total = max(expected, present)
+                if total <= 0:
+                    continue
+                base = ("H" + atom.name).replace("'", "").replace("*", "")
+                if not base:
+                    base = "H"
+                for n in range(1, total + 1):
+                    h_name = f"{base}{n}" if total > 1 else base
+                    while h_name in used_names:
+                        h_name = f"{h_name}X"
+                    used_names.add(h_name)
+                    ET.SubElement(residue_elem, "H", {"name": h_name, "parent": atom.name})
+            loaded_any = True
+        except Exception as e:
+            print(f"  Warning: failed to prepare ligand hydrogen definitions for {resname}: {e}")
+
+    if not loaded_any:
+        return ""
+    return ET.tostring(root, encoding="unicode")
+
+
+def _remove_unknown_residues(
+    modeller: Modeller,
+    forcefield: ForceField,
+    gaff_resnames: frozenset[str] = frozenset(),
+) -> None:
     known_templates = set(forcefield._templates.keys())
     unknown = [
         res for res in modeller.topology.residues()
         if res.name not in known_templates
         and res.name not in _STANDARD_BIOMOL_NAMES
         and not _is_glycam_name(res.name)
+        and res.name not in gaff_resnames
     ]
     if unknown:
         print(f"Warning: removing {len(unknown)} residue(s) with no force field template:")
@@ -195,6 +436,14 @@ def prepare_modeller(
                 pre_fixer.replaceNonstandardResidues()
         pre_fixer.findMissingAtoms()
         pre_fixer.addMissingAtoms()
+        # Add hydrogens while residues still have standard/CCD-recognized names.
+        # This is especially important for organic cofactors/ligands (e.g., FAD):
+        # GAFF templates are explicit-H, so leaving ligands dehydrogenated here
+        # causes later ForceField matching failures inside Modeller.addHydrogens().
+        #
+        # We intentionally do this *before* GLYCAM renaming, because GLYCAM residue
+        # names can trigger problematic CCD fetch/parse paths in PDBFixer.
+        pre_fixer.addMissingHydrogens(pH=7.0)
         fixed_pdb_io = StringIO()
         PDBFile.writeFile(pre_fixer.topology, pre_fixer.positions, fixed_pdb_io)
         fixed_pdb_text = fixed_pdb_io.getvalue()
@@ -240,7 +489,32 @@ def prepare_modeller(
 
     modeller = Modeller(fixer.topology, fixer.positions)
 
-    _remove_unknown_residues(modeller, forcefield)
+    # Identify unknown residues that are organic (no metals) and have an SDF file,
+    # then register a GAFF2 template generator for them before deletion runs.
+    known_templates = set(forcefield._templates.keys())
+    unknown_organic_resnames = list({
+        res.name for res in modeller.topology.residues()
+        if res.name not in known_templates
+        and res.name not in _STANDARD_BIOMOL_NAMES
+        and not _is_glycam_name(res.name)
+        and not _has_metal_atoms(res)
+    })
+    if unknown_organic_resnames:
+        print(f"Unknown organic residues detected: {sorted(unknown_organic_resnames)}")
+        sdf_map = _find_organic_ligand_sdfs(config["input"]["dir"], unknown_organic_resnames)
+        gaff_resnames = _register_gaff_generator(forcefield, sdf_map) if sdf_map else set()
+    else:
+        sdf_map = {}
+        gaff_resnames = set()
+
+    _remove_unknown_residues(modeller, forcefield, frozenset(gaff_resnames))
+
+    # Add hydrogen definitions for GAFF residues so Modeller.addHydrogens() can
+    # fill in missing ligand H atoms before force-field matching.
+    if gaff_resnames and sdf_map:
+        ligand_h_xml = _generate_ligand_hydrogen_definitions(modeller, sdf_map, gaff_resnames)
+        if ligand_h_xml:
+            Modeller.loadHydrogenDefinitions(StringIO(ligand_h_xml))
 
     # In glycoprotein mode we skip PDBFixer.addMissingHydrogens(), so there is no
     # partial-hydrogenation problem: any H atoms present are from the original PDB or
@@ -248,10 +522,14 @@ def prepare_modeller(
     # (OLS/OLT/NLN templates require H atoms to be present when createSystem is called
     # internally by addHydrogens). In non-glycoprotein mode, strip first to fix the
     # DNA/RNA partial-hydrogenation issue from PDBFixer.addMissingHydrogens().
+    # GAFF2 templates are explicit-H: createSystem() (called internally by
+    # addHydrogens) needs H atoms present to match the template. Keep them.
     h_atoms = [
         atom
         for atom in modeller.topology.atoms()
-        if atom.element is not None and atom.element.symbol == "H"
+        if atom.element is not None
+        and atom.element.symbol == "H"
+        and atom.residue.name not in gaff_resnames
     ]
     modeller.delete(h_atoms)
 
