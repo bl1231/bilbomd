@@ -73,7 +73,11 @@ RUN apt-get update && \
     git build-essential cmake gfortran make wget ca-certificates bzip2 tar swig && \
     rm -rf /var/lib/apt/lists/*
 RUN conda update -y -p /opt/envs/base -c defaults conda && \
-    conda create -y -p /opt/envs/openmm python=${PYTHON_VERSION} openmm=${OPENMM_VERSION} numpy doxygen pip cython pyyaml && \
+    conda create -y -p /opt/envs/openmm \
+    python=${PYTHON_VERSION} \
+    openmm=${OPENMM_VERSION} \
+    numpy doxygen pip cython pyyaml \
+    openmmforcefields openff-toolkit rdkit ambertools lxml && \
     conda clean -afy
 ENV PATH=/opt/envs/openmm/bin:/opt/envs/base/bin:${PATH}
 
