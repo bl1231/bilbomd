@@ -174,6 +174,25 @@ def _find_organic_ligand_sdfs(input_dir: str, unknown_resnames: list[str]) -> di
     return found
 
 
+def _load_sdf_molecule(sdf_path: str) -> "Molecule":
+    """Load first molecule from SDF with correct 3D dimensionality flag.
+
+    RCSB ideal SDF files are sometimes tagged as 2D even though coordinates
+    have non-zero Z values. Loading via RDKit first and calling Set3D(True)
+    suppresses the RDKit warning before the OpenFF layer processes the mol.
+    """
+    from rdkit.Chem import SDMolSupplier
+    from openff.toolkit import Molecule
+
+    supplier = SDMolSupplier(sdf_path, removeHs=False, sanitize=True)
+    rdmol = next(iter(supplier), None)
+    if rdmol is None:
+        raise ValueError(f"No molecule found in {sdf_path}")
+    if rdmol.GetNumConformers() > 0:
+        rdmol.GetConformer().Set3D(True)
+    return Molecule.from_rdkit(rdmol, allow_undefined_stereo=True)
+
+
 def _register_gaff_generator(forcefield: ForceField, sdf_map: dict[str, str]) -> set[str]:
     """Pre-generate GAFF2 templates for organic ligands and load them into the ForceField.
 
@@ -181,14 +200,13 @@ def _register_gaff_generator(forcefield: ForceField, sdf_map: dict[str, str]) ->
     Templates are renamed from their canonical SMILES to the PDB residue name so that
     ForceField.addHydrogens() and createSystem() can find them by name.
     """
-    from openff.toolkit import Molecule
     from openmmforcefields.generators import GAFFTemplateGenerator
     from lxml import etree
 
     gaff_resnames: set[str] = set()
     for resname, sdf_path in sdf_map.items():
         try:
-            mol = Molecule.from_file(sdf_path, allow_undefined_stereo=True)
+            mol = _load_sdf_molecule(sdf_path)
             mol.name = resname
             print(f"  Loaded {resname} from {sdf_path} ({mol.n_atoms} atoms)")
 
@@ -324,8 +342,6 @@ def _map_heavy_atoms(residue, mol) -> dict[int, int] | None:
 
 
 def _generate_ligand_hydrogen_definitions(modeller: Modeller, sdf_map: dict[str, str], gaff_resnames: set[str]) -> str:
-    from openff.toolkit import Molecule
-
     root = ET.Element("Residues")
     loaded_any = False
 
@@ -341,7 +357,7 @@ def _generate_ligand_hydrogen_definitions(modeller: Modeller, sdf_map: dict[str,
 
         residue = residue_candidates[0]
         try:
-            mol = Molecule.from_file(sdf_path, allow_undefined_stereo=True)
+            mol = _load_sdf_molecule(sdf_path)
             mapping = _map_heavy_atoms(residue, mol)
             if mapping is None:
                 print(f"  Warning: could not map heavy-atom graph for {resname}; skipping ligand hydrogen definitions.")
