@@ -12,7 +12,8 @@ import {
   BilboMdSANSJob,
   BilboMdScoperJob,
   MultiJob,
-  JobStatus
+  JobStatus,
+  AccessMode
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { BilboMDDispatchContext } from '../../types/bilbomd.js'
@@ -169,7 +170,7 @@ const createPublicSANSJob = async (req: Request, res: Response) => {
         const quotaQuery = {
           client_ip_hash,
           status: { $in: activeStatuses },
-          access_mode: 'anonymous'
+          access_mode: AccessMode.Anonymous
         }
         const counts = await Promise.all([
           BilboMdPDBJob.countDocuments(quotaQuery),

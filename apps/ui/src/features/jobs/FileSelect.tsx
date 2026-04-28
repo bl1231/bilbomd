@@ -19,6 +19,7 @@ interface FileSelectProps extends FormControlProps {
   error: boolean
   errorMessage?: string
   warningMessage?: string
+  infoMessage?: string
   existingFileName?: string
   setFieldValue: (field: string, value: File, shouldValidate?: boolean) => void
   onFileChange: (file: File) => void
@@ -116,6 +117,14 @@ const FileSelect = (props: FileSelectProps) => {
               sx={{ py: 0 }}
             >
               {props.errorMessage}
+            </Alert>
+          ) : null}
+          {!props.error && props.infoMessage ? (
+            <Alert
+              severity="info"
+              sx={{ mt: 1 }}
+            >
+              {props.infoMessage}
             </Alert>
           ) : null}
           {!props.error && props.warningMessage ? (

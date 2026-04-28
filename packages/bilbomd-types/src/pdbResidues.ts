@@ -32,14 +32,11 @@ export const CARBOHYDRATE_RESIDUES = new Set<string>([
   'AMA', 'BGL',
 ])
 
-// Cofactors that have no Amber/GLYCAM force-field parameters and are stripped
-// automatically before OpenMM MD. Keep in sync with UNSUPPORTED_COFACTORS in
-// apps/worker/scripts/strip_cofactors.py.
-export const STRIPPABLE_COFACTORS = new Set<string>([
+// Organic cofactors parameterized via GAFF2 by openmmforcefields at runtime.
+// model_prep.py downloads their SDF from RCSB and registers GAFF2 templates.
+export const GAFF_COFACTORS = new Set<string>([
   // Flavin cofactors
   'FAD', 'FMN', 'RBF',
-  // Heme / porphyrins
-  'HEM', 'HEC', 'HEA', 'HEB',
   // Nicotinamide cofactors
   'NAD', 'NAP', 'NDP',
   // Pyridoxal phosphate
@@ -56,6 +53,13 @@ export const STRIPPABLE_COFACTORS = new Set<string>([
   'SAH', 'SAM', 'HBI',
 ])
 
+// Metal-containing cofactors excluded from the GAFF2 path (model_prep.py
+// _has_metal_atoms check). These are still removed before OpenMM MD.
+export const METAL_COFACTORS = new Set<string>([
+  // Heme / porphyrins (contain Fe)
+  'HEM', 'HEC', 'HEA', 'HEB',
+])
+
 export const SUPPORTED_PDB_RESIDUES = new Set<string>([
   ...PROTEIN_RESIDUES,
   ...DNA_RESIDUES,
@@ -63,8 +67,9 @@ export const SUPPORTED_PDB_RESIDUES = new Set<string>([
   // Nucleotide aliases recognised by pdb_utils (post-rename CHARMM names)
   'ADE', 'CYT', 'GUA', 'THY',
   ...CARBOHYDRATE_RESIDUES,
-  // Cofactors stripped before OpenMM MD — allowed through validation
-  ...STRIPPABLE_COFACTORS,
+  // Cofactors handled before OpenMM MD — allowed through validation
+  ...GAFF_COFACTORS,
+  ...METAL_COFACTORS,
   // Water — removed by pdb2crd.py, not an error
   'HOH',
   // Common ions — passed through or stripped without error
