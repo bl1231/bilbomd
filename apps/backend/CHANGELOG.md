@@ -1,5 +1,13 @@
 # @bilbomd/backend
 
+## 2.7.3
+
+### Patch Changes
+
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+  - @bilbomd/md-utils@1.1.9
+
 ## 2.7.2
 
 ### Patch Changes
