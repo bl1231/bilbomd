@@ -109,7 +109,7 @@ positions = simulation.context.getState(getPositions=True).getPositions()
 with open(
     os.path.join(heat_dir, output_pdb_file_name), "w", encoding="utf-8"
 ) as out_pdb:
-    PDBFile.writeFile(simulation.topology, positions, out_pdb)
+    PDBFile.writeFile(simulation.topology, positions, out_pdb, keepIds=True)
 
 # Save restart file
 with open(os.path.join(heat_dir, output_restart_file_name), "w", encoding="utf-8") as f:
