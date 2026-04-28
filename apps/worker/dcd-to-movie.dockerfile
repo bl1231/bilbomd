@@ -1,4 +1,4 @@
-FROM ubuntu:24.04 AS build
+FROM ubuntu:26.04 AS build
 
 # Install build dependencies for PyMOL
 RUN apt-get update && \
