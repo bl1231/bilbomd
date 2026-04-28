@@ -410,6 +410,20 @@ def main():
         cmd.hide("everything", "mol")
         cmd.show("cartoon", "mol")
 
+        # Show organic non-protein entities (glycans, ligands) as sticks
+        organic_sel = "(mol) and organic"
+        if cmd.count_atoms(organic_sel) > 0:
+            cmd.show("sticks", organic_sel)
+            cmd.color("byelement", organic_sel)
+            print(f"[style] showing {cmd.count_atoms(organic_sel)} organic atoms as sticks")
+
+        # Show inorganic entities (metal ions) as spheres
+        inorganic_sel = "(mol) and inorganic"
+        if cmd.count_atoms(inorganic_sel) > 0:
+            cmd.show("spheres", inorganic_sel)
+            cmd.color("byelement", inorganic_sel)
+            print(f"[style] showing {cmd.count_atoms(inorganic_sel)} inorganic atoms as spheres")
+
         # apply coloring scheme
         _apply_coloring_scheme("mol", args, constraints_config)
 
