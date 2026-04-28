@@ -1,6 +1,7 @@
 import {
   SUPPORTED_PDB_RESIDUES,
-  STRIPPABLE_COFACTORS,
+  GAFF_COFACTORS,
+  METAL_COFACTORS,
   parseCifAtomSite,
   cifContainsChainId as cifContainsChainIdUtil,
   cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
@@ -561,7 +562,7 @@ const cifIsSingleModel = (file: File): Promise<boolean> => {
   })
 }
 
-const detectStrippableCofactors = (file: File): Promise<string[]> => {
+const _detectResiduesFromSet = (file: File, residueSet: Set<string>): Promise<string[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -574,7 +575,7 @@ const detectStrippableCofactors = (file: File): Promise<string[]> => {
       for (const line of text.split(/\r?\n/)) {
         if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
           const resName = line.substring(17, 20).trim().toUpperCase()
-          if (STRIPPABLE_COFACTORS.has(resName)) found.add(resName)
+          if (residueSet.has(resName)) found.add(resName)
         }
       }
       resolve(Array.from(found).sort())
@@ -583,6 +584,12 @@ const detectStrippableCofactors = (file: File): Promise<string[]> => {
     reader.readAsText(file)
   })
 }
+
+const detectGaffCofactors = (file: File): Promise<string[]> =>
+  _detectResiduesFromSet(file, GAFF_COFACTORS)
+
+const detectMetalCofactors = (file: File): Promise<string[]> =>
+  _detectResiduesFromSet(file, METAL_COFACTORS)
 
 export {
   fromCharmmGui,
@@ -600,6 +607,7 @@ export {
   noLeadingSpaceOnPDBLines,
   isValidConstInpFile,
   hasAllowedResiduesOnly,
-  detectStrippableCofactors
+  detectGaffCofactors,
+  detectMetalCofactors
 }
 export type { SaxsQualityResult }

@@ -8,7 +8,10 @@ import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import NewAutoJobFormInstructions from './AutoJobFormInstructions'
 import { BilboMDAutoJobSchema } from 'schemas/BilboMDAutoJobSchema'
-import { detectStrippableCofactors } from 'schemas/ValidationFunctions'
+import {
+  detectGaffCofactors,
+  detectMetalCofactors
+} from 'schemas/ValidationFunctions'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
@@ -72,6 +75,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [pdbWarning, setPdbWarning] = useState<string>('')
+  const [pdbInfo, setPdbInfo] = useState<string>('')
 
   // RTK Query to fetch the configuration
   const {
@@ -274,16 +278,23 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             setMdEngine(val)
                             if (val === 'charmm') {
                               setPdbWarning('')
+                              setPdbInfo('')
                             } else if (
                               val === 'openmm' &&
                               values.pdb_file instanceof File
                             ) {
-                              void detectStrippableCofactors(
-                                values.pdb_file
-                              ).then((found) => {
+                              void Promise.all([
+                                detectGaffCofactors(values.pdb_file),
+                                detectMetalCofactors(values.pdb_file)
+                              ]).then(([gaffFound, metalFound]) => {
+                                setPdbInfo(
+                                  gaffFound.length > 0
+                                    ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
+                                    : ''
+                                )
                                 setPdbWarning(
-                                  found.length > 0
-                                    ? `The following residues have no Amber force-field parameters and will be removed before MD: ${found.join(', ')}`
+                                  metalFound.length > 0
+                                    ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
                                     : ''
                                 )
                               })
@@ -323,6 +334,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           setFieldTouched={setFieldTouched}
                           error={errors.pdb_file && touched.pdb_file}
                           errorMessage={errors.pdb_file ? errors.pdb_file : ''}
+                          infoMessage={pdbInfo}
                           warningMessage={pdbWarning}
                           fileType="AlphaFold *.pdb or *.cif"
                           fileExt=".pdb,.cif"
@@ -331,13 +343,22 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           }
                           onFileChange={async (file: File) => {
                             if (mdEngine !== 'openmm') {
+                              setPdbInfo('')
                               setPdbWarning('')
                               return
                             }
-                            const found = await detectStrippableCofactors(file)
+                            const [gaffFound, metalFound] = await Promise.all([
+                              detectGaffCofactors(file),
+                              detectMetalCofactors(file)
+                            ])
+                            setPdbInfo(
+                              gaffFound.length > 0
+                                ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
+                                : ''
+                            )
                             setPdbWarning(
-                              found.length > 0
-                                ? `The following residues have no Amber force-field parameters and will be removed before MD: ${found.join(', ')}`
+                              metalFound.length > 0
+                                ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
                                 : ''
                             )
                           }}
