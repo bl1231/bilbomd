@@ -5,12 +5,8 @@ This module provides functionality for energy minimization of a molecular system
 import os
 import sys
 import yaml
-from collections import defaultdict
-from io import StringIO
-from pdbfixer import PDBFixer
 from openmm.app import (
     ForceField,
-    Modeller,
     Simulation,
     PDBFile,
     CutoffNonPeriodic,
@@ -18,49 +14,8 @@ from openmm.app import (
 )
 from openmm import LangevinIntegrator
 from openmm.unit import kelvin, picoseconds, nanometer
+from utils.model_prep import prepare_modeller
 
-def _normalize_charmm_nucleic_names(pdb_text: str) -> str:
-    """Rename CHARMM-style DNA residue names to standard PDB convention.
-
-    pdb2crd.py emits ADE/GUA/CYT for DNA, but OpenMM's pdbNames.xml maps
-    ADE->RNA A, GUA->RNA G, CYT->RNA C, causing PDBFixer to add spurious
-    O2' atoms and subsequent createSystem failures. We detect DNA by the
-    absence of the O2' ribose atom and rename to DA/DG/DC before PDBFixer.
-    THY is already handled correctly by pdbNames.xml (THY->DT).
-    """
-    CHARMM_DNA_MAP = {"ADE": "DA ", "GUA": "DG ", "CYT": "DC "}
-
-    lines = pdb_text.splitlines(keepends=True)
-
-    residue_lines: dict = defaultdict(list)
-    for i, line in enumerate(lines):
-        if not line.startswith(("ATOM", "HETATM")):
-            continue
-        resname = line[17:20].strip()
-        if resname in CHARMM_DNA_MAP:
-            key = (line[21], line[22:26], resname)
-            residue_lines[key].append(i)
-
-    rename: dict = {}
-    for (chain_id, resseq, resname), indices in residue_lines.items():
-        atom_names = {lines[i][12:16].strip() for i in indices}
-        if "O2'" not in atom_names and "O2*" not in atom_names:
-            new_name = CHARMM_DNA_MAP[resname]
-            for i in indices:
-                rename[i] = new_name
-
-    if not rename:
-        return pdb_text
-
-    result = []
-    for i, line in enumerate(lines):
-        if i in rename:
-            line = line[:17] + rename[i] + line[20:]
-        result.append(line)
-    return "".join(result)
-
-
-# Load the YAML configuration file
 if len(sys.argv) != 2:
     print("Usage: python minimize.py <config.yaml>")
     sys.exit(1)
@@ -69,7 +24,7 @@ config_path = sys.argv[1]
 with open(config_path, "r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
-# Build output directories:
+# Build output directories
 output_dir = config["output"]["output_dir"]
 min_dir = os.path.join(output_dir, config["output"]["min_dir"])
 heat_dir = os.path.join(output_dir, config["output"]["heat_dir"])
@@ -82,39 +37,11 @@ for d in [output_dir, min_dir, heat_dir, md_dir]:
     if not os.path.exists(d):
         os.makedirs(d)
 
-# Step 1: Load and fix the PDB
-with open(initial_pdb_file, "r", encoding="utf-8") as f:
-    raw_pdb = f.read()
-normalized_pdb = _normalize_charmm_nucleic_names(raw_pdb)
-fixer = PDBFixer(pdbfile=StringIO(normalized_pdb))
-fixer.findMissingResidues()
-fixer.findMissingAtoms()
-fixer.addMissingAtoms()
-fixer.addMissingHydrogens(pH=7.0)
-fixer.findNonstandardResidues()
-if fixer.nonstandardResidues:
-    print("Nonstandard residues found:")
-    for residue in fixer.nonstandardResidues:
-        print(f" - {residue}")
-else:
-    print("No nonstandard residues found.")
-
-# Step 2: Build the system using configured force fields
+# Step 1: Load and prepare the structure
 forcefield = ForceField(*config["input"]["forcefield"])
-modeller = Modeller(fixer.topology, fixer.positions)
+modeller = prepare_modeller(initial_pdb_file, config, forcefield)
 
-# PDBFixer.addMissingHydrogens can leave DNA/RNA residues partially hydrogenated
-# (some H present but not all), causing addHydrogens to fail template matching.
-# Strip all H atoms first so addHydrogens can place them from forcefield templates.
-h_atoms = [
-    atom
-    for atom in modeller.topology.atoms()
-    if atom.element is not None and atom.element.symbol == "H"
-]
-modeller.delete(h_atoms)
-modeller.addHydrogens(forcefield, pH=7.0)
-
-# ⚙️ Build system
+# Step 2: Build the system
 system = forcefield.createSystem(
     modeller.topology,
     nonbondedMethod=CutoffNonPeriodic,
@@ -124,19 +51,18 @@ system = forcefield.createSystem(
     solventDielectric=78.5,
 )
 
-# Simulation setup
+# Step 3: Energy minimization
 integrator = LangevinIntegrator(300 * kelvin, 1 / picoseconds, 0.002 * picoseconds)
 simulation = Simulation(modeller.topology, system, integrator)
 simulation.context.setPositions(modeller.positions)
 
-# Energy minimization
 print("Minimizing energy...")
 simulation.minimizeEnergy()
 print("✅ Minimization complete.")
 
-# Save structure
+# Step 4: Save structure
 positions = simulation.context.getState(getPositions=True).getPositions()
 with open(os.path.join(min_dir, output_pdb_file_name), "w", encoding="utf-8") as f:
-    PDBFile.writeFile(modeller.topology, positions, f)
+    PDBFile.writeFile(modeller.topology, positions, f, keepIds=True)
 
 print(f"✅ Saved {output_pdb_file_name}")

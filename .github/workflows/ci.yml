@@ -49,6 +49,7 @@ jobs:
               - 'apps/backend/**'
               - 'tools/python/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/bilbomd-types/**'
               - 'packages/md-utils/**'
               - 'packages/eslint-config/**'
               - 'pnpm-workspace.yaml'

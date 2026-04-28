@@ -12,7 +12,8 @@ import {
   containsChainId,
   cifContainsChainId,
   cifHasAllowedResiduesOnly,
-  noLeadingSpaceOnPDBLines
+  noLeadingSpaceOnPDBLines,
+  detectStrippableCofactors
 } from '../ValidationFunctions'
 
 const makeFile = (name: string, content: string, type = 'text/plain') => {
@@ -67,6 +68,18 @@ describe('ValidationFunctions', () => {
     const content = `HETATM    1 MG   MG  A   1\nHETATM    2 ZN   ZN  A   2\nEND\n`
     const result = await hasAllowedResiduesOnly(makeFile('model.pdb', content))
     expect(result.valid).toBe(true)
+  })
+
+  it('hasAllowedResiduesOnly returns valid for strippable cofactors (PCA, FAD, HEM)', async () => {
+    const content = [
+      'HETATM    1  C   PCA A   1',
+      'HETATM    2  N   FAD A   2',
+      'HETATM    3  FE  HEM A   3',
+      'END'
+    ].join('\n')
+    const result = await hasAllowedResiduesOnly(makeFile('cofactors.pdb', content))
+    expect(result.valid).toBe(true)
+    expect(result.unsupportedResidues).toHaveLength(0)
   })
 
   it('hasAllowedResiduesOnly returns invalid for truly unknown residues', async () => {
@@ -166,6 +179,52 @@ describe('ValidationFunctions', () => {
   it('isCRD fails when EXT is missing after header', async () => {
     const badContent = ['* a', '* b', '* c', '* d'].join('\n')
     expect(await isCRD(makeFile('no-ext.crd', badContent))).toBe(false)
+  })
+})
+
+describe('detectStrippableCofactors', () => {
+  it('returns empty array when no strippable cofactors are present', async () => {
+    const content = `ATOM      1  N   MET A   1\nATOM      2  CA  GLY A   2\nEND\n`
+    const result = await detectStrippableCofactors(makeFile('model.pdb', content))
+    expect(result).toHaveLength(0)
+  })
+
+  it('detects PCA in HETATM lines', async () => {
+    const content = [
+      'ATOM      1  N   GLN A   1',
+      'HETATM    2  C   PCA A   2',
+      'END'
+    ].join('\n')
+    const result = await detectStrippableCofactors(makeFile('pca.pdb', content))
+    expect(result).toContain('PCA')
+    expect(result).toHaveLength(1)
+  })
+
+  it('detects FAD and HEM together and returns sorted list', async () => {
+    const content = [
+      'HETATM    1  FE  HEM A   1',
+      'HETATM    2  N   FAD A   2',
+      'END'
+    ].join('\n')
+    const result = await detectStrippableCofactors(makeFile('multi.pdb', content))
+    expect(result).toEqual(['FAD', 'HEM'])
+  })
+
+  it('deduplicates repeated cofactor entries', async () => {
+    const content = [
+      'HETATM    1  C1  PCA A   1',
+      'HETATM    2  C2  PCA A   1',
+      'HETATM    3  C3  PCA A   1',
+      'END'
+    ].join('\n')
+    const result = await detectStrippableCofactors(makeFile('dup.pdb', content))
+    expect(result).toEqual(['PCA'])
+  })
+
+  it('does not flag truly unsupported residues (UNK)', async () => {
+    const content = `ATOM      1  CA  UNK A   1\nEND\n`
+    const result = await detectStrippableCofactors(makeFile('unk.pdb', content))
+    expect(result).toHaveLength(0)
   })
 })
 

@@ -100,6 +100,8 @@ interface InputConfig {
   pdb_file: string
   /** OpenMM ForceField XMLs in load order */
   forcefield: string[]
+  /** True when carbohydrate residues were detected in the input PDB */
+  has_carbohydrates?: boolean
 }
 
 interface OutputConfig {

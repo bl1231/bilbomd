@@ -16,6 +16,7 @@ from openmm.app import (
 from openmm.openmm import XmlSerializer
 from openmm.unit import kelvin, nanometer, picoseconds
 from utils.fixed_bodies import apply_fixed_body_constraints
+from utils.model_prep import register_ligand_templates_for_topology
 from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
 
 if len(sys.argv) != 2:
@@ -53,6 +54,7 @@ pdb = PDBFile(file=input_pdb_file)
 # Initialize forcefield and modeller
 forcefield = ForceField(*config["input"]["forcefield"])
 modeller = Modeller(pdb.topology, pdb.positions)
+register_ligand_templates_for_topology(modeller.topology, forcefield, config["input"]["dir"])
 
 fixed_bodies_config = config["constraints"]["fixed_bodies"]
 rigid_bodies_configs = config["constraints"]["rigid_bodies"]

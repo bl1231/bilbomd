@@ -180,7 +180,7 @@ const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
     pdb,
     dcd,
     outDir,
-    constYaml,
+    constYaml,   // may be undefined for jobs without a constraint YAML
     width,
     height,
     stride,
@@ -221,11 +221,12 @@ const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
     '--orient',
     'principal',
     '--clip',
-    '--color-scheme',
-    'constraints',
-    '--config',
-    constYaml
   ]
+  if (constYaml) {
+    pymolArgs.push('--color-scheme', 'constraints', '--config', constYaml)
+  } else {
+    pymolArgs.push('--color-scheme', 'default')
+  }
   if (rayEnabled) {
     pymolArgs.push('--ray')
   }
