@@ -175,7 +175,7 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     with open(
         os.path.join(rg_md_dir, output_pdb_file_name), "w", encoding="utf-8"
     ) as out_pdb:
-        PDBFile.writeFile(simulation.topology, final_state.getPositions(), out_pdb)
+        PDBFile.writeFile(simulation.topology, final_state.getPositions(), out_pdb, keepIds=True)
 
     print(f"[GPU {gpu_id}] ✅ Completed MD with Rg {rg}. Results in {rg_md_dir}")
 
