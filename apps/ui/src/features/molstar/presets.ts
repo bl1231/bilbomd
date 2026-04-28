@@ -111,7 +111,8 @@ export const StructurePreset = StructureRepresentationPresetProvider({
     const components = {
       ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
       polymer: await presetStaticComponent(plugin, structureCell, 'polymer'),
-      ions: await presetStaticComponent(plugin, structureCell, 'ion')
+      ions: await presetStaticComponent(plugin, structureCell, 'ion'),
+      branched: await presetStaticComponent(plugin, structureCell, 'branched')
     }
 
     const { update, builder, typeParams } =
@@ -150,6 +151,17 @@ export const StructurePreset = StructureRepresentationPresetProvider({
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
         { tag: 'ions' }
+      ),
+      branched: builder.buildRepresentation(
+        update,
+        components.branched,
+        {
+          type: 'ball-and-stick',
+          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          color: 'element-symbol',
+          colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
+        },
+        { tag: 'branched' }
       )
     }
 
@@ -172,7 +184,8 @@ export const IllustrativePreset = StructureRepresentationPresetProvider({
     const components = {
       ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
       polymer: await presetStaticComponent(plugin, structureCell, 'polymer'),
-      ions: await presetStaticComponent(plugin, structureCell, 'ion')
+      ions: await presetStaticComponent(plugin, structureCell, 'ion'),
+      branched: await presetStaticComponent(plugin, structureCell, 'branched')
     }
 
     const { update, builder, typeParams } =
@@ -211,6 +224,17 @@ export const IllustrativePreset = StructureRepresentationPresetProvider({
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
         { tag: 'ions' }
+      ),
+      branched: builder.buildRepresentation(
+        update,
+        components.branched,
+        {
+          type: 'spacefill',
+          typeParams: { ...typeParams, ignoreLight: true },
+          color: 'element-symbol',
+          colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
+        },
+        { tag: 'branched' }
       )
     }
 
@@ -234,7 +258,8 @@ export const SurfacePreset = StructureRepresentationPresetProvider({
     const components = {
       ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
       polymer: await presetStaticComponent(plugin, structureCell, 'polymer'),
-      ions: await presetStaticComponent(plugin, structureCell, 'ion')
+      ions: await presetStaticComponent(plugin, structureCell, 'ion'),
+      branched: await presetStaticComponent(plugin, structureCell, 'branched')
     }
 
     const { update, builder, typeParams } =
@@ -277,6 +302,17 @@ export const SurfacePreset = StructureRepresentationPresetProvider({
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
         { tag: 'ions' }
+      ),
+      branched: builder.buildRepresentation(
+        update,
+        components.branched,
+        {
+          type: 'ball-and-stick',
+          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          color: 'element-symbol',
+          colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
+        },
+        { tag: 'branched' }
       )
     }
 
