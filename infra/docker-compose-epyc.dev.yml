@@ -36,7 +36,8 @@ services:
     pull_policy: always
     restart: always
     healthcheck:
-      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u
+        $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
       interval: 10s
       timeout: 10s
       retries: 7
@@ -59,7 +60,7 @@ services:
     pull_policy: always
     restart: always
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -98,7 +99,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:3500/healthcheck"]
+      test: [ "CMD", "curl", "--fail", "http://localhost:3500/healthcheck" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -117,7 +118,7 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
     restart: no
     user: "${UID:-1001}:${GID:-1001}"
     env_file:
@@ -132,7 +133,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:3000/config"]
+      test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -140,7 +141,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.13.1
+    image: ghcr.io/bl1231/bilbomd-ui:pr-676-a263b932
     pull_policy: always
     env_file:
       - .env.dev
@@ -153,7 +154,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost/"]
+      test: [ "CMD", "curl", "--fail", "http://localhost/" ]
       interval: 30s
       timeout: 10s
       retries: 3

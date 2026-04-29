@@ -15,8 +15,13 @@ case "$1" in
     ;;
   dev)
     ENV=".env.dev"
-    COMPOSE_FILE="docker-compose.dev.yml"
+    COMPOSE_FILE="docker-compose-epyc.dev.yml"
     PROJECT_NAME="bilbomd-dev"
+    ;;
+  prod)
+    ENV=".env.prod"
+    COMPOSE_FILE="docker-compose-epyc.prod.yml"
+    PROJECT_NAME="bilbomd-prod"
     ;;
   *)
     echo "❌ Usage: $0 [local|dev]"
