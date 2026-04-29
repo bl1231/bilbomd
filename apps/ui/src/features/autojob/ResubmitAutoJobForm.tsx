@@ -34,7 +34,6 @@ import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
 import type { BilboMDAutoDTO } from '@bilbomd/bilbomd-types'
-import MdEngineField from 'components/MdEngineField'
 
 const ResubmitAutoJobForm = () => {
   useTitle('BilboMD: Resubmit Auto Job')
@@ -51,7 +50,7 @@ const ResubmitAutoJobForm = () => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
-  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
+  const [mdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [pdbWarning, setPdbWarning] = useState<string>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
 
@@ -78,7 +77,7 @@ const ResubmitAutoJobForm = () => {
 
   // Are we running on NERSC?
   const useNersc = config?.useNersc?.toLowerCase() === 'true'
-  const charmmEnabled = config?.enableCharmmEngine?.toLowerCase() !== 'false'
+
 
   // Grouped early return for loading and error states
   {
@@ -128,10 +127,7 @@ const ResubmitAutoJobForm = () => {
     pdb_file: jobMongo.pdb_file ?? '',
     pae_file: jobMongo.pae_file ?? '',
     dat_file: jobMongo.data_file ?? '',
-    md_engine: !charmmEnabled
-      ? 'openmm'
-      : ((jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
-        'charmm')
+    md_engine: 'openmm'
   }
 
   const onSubmit = async (values: BilboMDAutoJobFormValues) => {
@@ -258,42 +254,6 @@ const ResubmitAutoJobForm = () => {
                       />
                     </Grid>
 
-                    {/* MD Engine selection */}
-                    <Grid sx={{ width: '520px', mb: 1 }}>
-                      <MdEngineField
-                        value={values.md_engine as 'charmm' | 'openmm'}
-                        onChange={(val) => {
-                          void setFieldValue('md_engine', val)
-                          setMdEngine(val)
-                          if (val === 'charmm') {
-                            setPdbWarning('')
-                            setPdbInfo('')
-                          } else if (
-                            val === 'openmm' &&
-                            values.pdb_file instanceof File
-                          ) {
-                            void Promise.all([
-                              detectGaffCofactors(values.pdb_file),
-                              detectMetalCofactors(values.pdb_file)
-                            ]).then(([gaffFound, metalFound]) => {
-                              setPdbInfo(
-                                gaffFound.length > 0
-                                  ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
-                                  : ''
-                              )
-                              setPdbWarning(
-                                metalFound.length > 0
-                                  ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
-                                  : ''
-                              )
-                            })
-                          }
-                        }}
-                        disabled={isSubmitting}
-                        disableCharmm={!charmmEnabled}
-                      />
-                    </Grid>
-
                     <Grid>
                       <Field
                         name="pdb_file"
@@ -315,11 +275,6 @@ const ResubmitAutoJobForm = () => {
                         fileType="AlphaFold2 *.pdb"
                         fileExt=".pdb"
                         onFileChange={async (file: File) => {
-                          if (mdEngine !== 'openmm') {
-                            setPdbInfo('')
-                            setPdbWarning('')
-                            return
-                          }
                           const [gaffFound, metalFound] = await Promise.all([
                             detectGaffCofactors(file),
                             detectMetalCofactors(file)

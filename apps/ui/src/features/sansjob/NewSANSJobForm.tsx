@@ -33,7 +33,6 @@ import ChainDeuterationSlider from './ChainDeuterationSlider'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
-import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -115,7 +114,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     return <Alert severity="error">Configuration not available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
-  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
+
 
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
@@ -130,7 +129,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     rg_max: 0,
     inp_file: '',
     d2o_fraction: 100,
-    md_engine: charmmEnabled ? 'charmm' : 'openmm'
+    md_engine: 'openmm'
   }
 
   const onSubmit = async (values: NewSANSJobFormValues) => {
@@ -278,16 +277,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           errors.title && touched.title ? errors.title : ''
                         }
                         value={values.title || ''}
-                      />
-                    </Grid>
-
-                    {/* MD Engine selection */}
-                    {/* Disabled until we write teh necessary worker code*/}
-                    <Grid sx={{ width: '520px' }}>
-                      <MdEngineField
-                        value={values.md_engine as 'charmm' | 'openmm'}
-                        onChange={(val) => void setFieldValue('md_engine', val)}
-                        disabled={true}
                       />
                     </Grid>
 

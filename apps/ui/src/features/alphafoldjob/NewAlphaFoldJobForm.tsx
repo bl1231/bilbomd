@@ -39,7 +39,6 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
-import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -485,7 +484,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
-  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
+  const [mdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -504,7 +503,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
   const useAlphaFold = config.enableBilboMdAlphaFold?.toLowerCase() === 'true'
   const useNersc = config.useNersc?.toLowerCase() === 'true'
-  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
+
 
   const initialValues: NewAlphaFoldJobFormValues = {
     title: '',
@@ -519,7 +518,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         seq_length: 0
       }
     ],
-    md_engine: charmmEnabled ? 'charmm' : 'openmm'
+    md_engine: 'openmm'
   }
 
   const onSubmit = async (values: NewAlphaFoldJobFormValues) => {
@@ -730,18 +729,6 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Box>
                     </Box>
 
-                    {/* MD Engine selection */}
-                    <Grid sx={{ width: '520px' }}>
-                      <MdEngineField
-                        value={values.md_engine as 'charmm' | 'openmm'}
-                        onChange={(val) => {
-                          void setFieldValue('md_engine', val)
-                          setMdEngine(val)
-                        }}
-                        disabled={isSubmitting}
-                        disableCharmm={!charmmEnabled}
-                      />
-                    </Grid>
                     {useExampleData && (
                       <Alert
                         severity="warning"
