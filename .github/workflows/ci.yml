@@ -1141,7 +1141,7 @@ jobs:
         run: pnpm -C apps/backend run test
 
       - name: Run ui tests with coverage
-        run: pnpm -C apps/ui run test
+        run: pnpm -C apps/ui run test:coverage
 
       - name: Run worker tests with coverage
         run: pnpm -C apps/worker run test

@@ -29,7 +29,8 @@
     "build:ci": "pnpm run clean && pnpm run lint && pnpm run vite-build",
     "preview": "vite preview",
     "optimize": "vite optimize",
-    "test": "vitest --run --coverage",
+    "test": "vitest --run",
+    "test:coverage": "vitest --run --coverage",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "related": "vitest related"
