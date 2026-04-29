@@ -1,20 +1,17 @@
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import {
   Box,
   Button,
-  Checkbox,
   TextField,
   MenuItem,
   Typography,
   Alert,
   Paper,
-  FormGroup,
-  FormControlLabel,
-  Divider,
   LinearProgress
 } from '@mui/material'
+import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
-import { Form, Formik, Field, FormikHelpers, FormikErrors } from 'formik'
+import { Form, Formik, Field } from 'formik'
 import {
   useAddNewJobMutation,
   useCalculateAutoRgMutation
@@ -90,11 +87,11 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
   const [selectedMode, setSelectedMode] = useState('pdb')
-  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [pdbWarning, setPdbWarning] = useState<string>('')
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
   const [saxsData, setSaxsData] = useState<
     { q: number; intensity: number; error: number }[]
@@ -129,11 +126,11 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     pdb_file: '',
     inp_file: '',
     dat_file: '',
-    num_conf: '',
+    num_conf: '3',
     rg: '',
     rg_min: '',
     rg_max: '',
-    md_engine: charmmEnabled ? 'charmm' : 'openmm'
+    md_engine: 'openmm'
   }
 
   const onSubmit = async (values: BilboMDClassicJobFormValues) => {
@@ -150,10 +147,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('rg_max', values.rg_max)
     form.append('dat_file', values.dat_file)
     form.append('inp_file', values.inp_file)
-    form.append(
-      'md_engine',
-      values.bilbomd_mode === 'crd_psf' ? 'charmm' : values.md_engine
-    )
+    form.append('md_engine', values.md_engine)
     if (useExampleData) {
       form.append('useExampleData', 'true')
     }
@@ -170,48 +164,6 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
       )
     }
   }
-
-  const handleCheckboxChange =
-    (
-      resetForm: FormikHelpers<BilboMDClassicJobFormValues>['resetForm'],
-      validateForm: (
-        values?: Partial<BilboMDClassicJobFormValues>
-      ) => Promise<FormikErrors<BilboMDClassicJobFormValues>>,
-      setUseExampleData: (value: boolean) => void
-    ) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newBilboMDMode =
-        event.target.name === 'pdb_inputs' ? 'pdb' : 'crd_psf'
-
-      setSelectedMode(newBilboMDMode)
-      setUseExampleData(false) // Switch to custom data mode when changing modes
-
-      if (newBilboMDMode === 'pdb') {
-        console.log('reset to PDB mode')
-        resetForm({
-          values: {
-            ...initialValues,
-            bilbomd_mode: 'pdb'
-          },
-          errors: {},
-          touched: {}
-        })
-      } else {
-        console.log('reset to CRD/PSF mode')
-        resetForm({
-          values: {
-            ...initialValues,
-            bilbomd_mode: 'crd_psf'
-          },
-          errors: {},
-          touched: {}
-        })
-      }
-      // Delay validation to ensure form state has been updated
-      setTimeout(() => {
-        void validateForm()
-      }, 0)
-    }
 
   const isFormValid = (values: BilboMDClassicJobFormValues) => {
     return (
@@ -284,7 +236,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                 handleBlur,
                 setFieldValue,
                 setFieldTouched,
-                resetForm,
+                setValues,
                 validateForm
               }) => (
                 <Form>
@@ -299,61 +251,32 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         onStatusCheck={handleStatusCheck}
                       />
                     )}
-                    <Divider
-                      textAlign="left"
-                      sx={{ my: 1 }}
-                    >
-                      Model Inputs
-                    </Divider>
-                    <Grid
-                      container
-                      direction="row"
+                    <Box
                       sx={{
                         display: 'flex',
-                        minWidth: '520px'
+                        alignItems: 'center',
+                        my: 1
                       }}
                     >
-                      <Grid>
-                        <FormGroup sx={{ ml: 1 }}>
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={values.bilbomd_mode === 'pdb'}
-                                onChange={handleCheckboxChange(
-                                  resetForm,
-                                  validateForm,
-                                  setUseExampleData
-                                )}
-                                name="pdb_inputs"
-                              />
-                            }
-                            label="PDB or CIF file"
-                          />
-                          <FormControlLabel
-                            disabled={!charmmEnabled}
-                            control={
-                              <Checkbox
-                                checked={values.bilbomd_mode === 'crd_psf'}
-                                onChange={handleCheckboxChange(
-                                  resetForm,
-                                  validateForm,
-                                  setUseExampleData
-                                )}
-                                name="crd_psf_inputs"
-                                disabled={!charmmEnabled}
-                              />
-                            }
-                            label="CRD/PSF files"
-                          />
-                        </FormGroup>
-                      </Grid>
-                      <Grid sx={{ width: '260px' }}>
-                        <Alert severity="info">
-                          If you used CHARMM-GUI to parameterize your inputs
-                          then please select the CRD/PSF option
-                        </Alert>
-                      </Grid>
-                      <Grid sx={{ ml: 4 }}>
+                      <Box sx={{ minWidth: '520px' }}>
+                        <Field
+                          label="Title"
+                          name="title"
+                          id="title"
+                          type="text"
+                          disabled={isSubmitting}
+                          as={TextField}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={errors.title && touched.title}
+                          helperText={
+                            errors.title && touched.title ? errors.title : ''
+                          }
+                          value={values.title || ''}
+                          sx={{ width: '100%' }}
+                        />
+                      </Box>
+                      <Box sx={{ ml: 8, minWidth: 'fit-content' }}>
                         <Button
                           variant={useExampleData ? 'outlined' : 'contained'}
                           onClick={() => {
@@ -361,7 +284,6 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             setSaxsData([])
                             setGuinierRegion(null)
                             if (!useExampleData) {
-                              // Switching to example data: reset file fields
                               if (values.bilbomd_mode === 'pdb') {
                                 void setFieldValue('pdb_file', '')
                                 void setFieldValue('inp_file', '')
@@ -372,7 +294,6 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 void setFieldValue('inp_file', '')
                                 void setFieldValue('dat_file', '')
                               }
-                              // Add defaults for other fields
                               if (values.bilbomd_mode === 'pdb') {
                                 void setFieldValue(
                                   'title',
@@ -381,7 +302,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 void setFieldValue('rg', '33')
                                 void setFieldValue('rg_min', '30')
                                 void setFieldValue('rg_max', '49')
-                                void setFieldValue('num_conf', 2)
+                                void setFieldValue('num_conf', '2')
                               } else {
                                 void setFieldValue(
                                   'title',
@@ -390,10 +311,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 void setFieldValue('rg', '27')
                                 void setFieldValue('rg_min', '26')
                                 void setFieldValue('rg_max', '41')
-                                void setFieldValue('num_conf', 2)
+                                void setFieldValue('num_conf', '2')
                               }
                             } else {
-                              // Switching to custom data: clear example defaults
                               void setFieldValue('psf_file', '')
                               void setFieldValue('crd_file', '')
                               void setFieldValue('pdb_file', '')
@@ -402,9 +322,11 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               void setFieldValue('title', '')
                               void setFieldValue('rg_min', '')
                               void setFieldValue('rg_max', '')
-                              void setFieldValue('num_conf', '')
+                              void setFieldValue(
+                                'num_conf',
+                                values.md_engine === 'openmm' ? '3' : ''
+                              )
                             }
-                            // Delay validation to ensure form state has been updated
                             setTimeout(() => {
                               void validateForm()
                             }, 0)
@@ -414,8 +336,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             ? 'Use Custom Data'
                             : 'Load Example Data'}
                         </Button>
-                      </Grid>
-                      <Grid sx={{ ml: 0 }}>
+                      </Box>
+                      <Box sx={{ ml: 2, minWidth: 'fit-content' }}>
                         <Button
                           variant="contained"
                           href={
@@ -423,12 +345,11 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               ? '/api/v1/public/examples/classic/pdb'
                               : '/api/v1/public/examples/classic/crd'
                           }
-                          sx={{ ml: 1 }}
                         >
                           Download Example Data
                         </Button>
-                      </Grid>
-                    </Grid>
+                      </Box>
+                    </Box>
 
                     {useExampleData && (
                       <Alert
@@ -449,75 +370,36 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Alert>
                     )}
 
-                    <Divider
-                      textAlign="left"
-                      sx={{ my: 1 }}
-                    >
-                      Job Form
-                    </Divider>
-                    <Grid sx={{ my: 2, width: '520px' }}>
-                      <Field
-                        fullWidth
-                        label="Title"
-                        name="title"
-                        id="title"
-                        type="text"
-                        disabled={isSubmitting}
-                        as={TextField}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={errors.title && touched.title}
-                        helperText={
-                          errors.title && touched.title ? errors.title : ''
-                        }
-                        value={values.title || ''}
-                      />
-                    </Grid>
-
                     {/* MD Engine selection */}
                     <Grid sx={{ width: '520px' }}>
                       <MdEngineField
-                        value={
-                          (values.bilbomd_mode === 'crd_psf'
-                            ? 'charmm'
-                            : values.md_engine) as 'charmm' | 'openmm'
-                        }
+                        value={values.md_engine as 'charmm' | 'openmm'}
                         onChange={(val) => {
-                          if (values.bilbomd_mode !== 'crd_psf') {
-                            void setFieldValue('md_engine', val)
-                            setMdEngine(val)
-                            // For OpenMM, lock num_conf to the default (600)
-                            if (val === 'openmm') {
-                              void setFieldValue('num_conf', 3)
-                            }
-                            if (val === 'charmm') {
-                              setPdbWarning('')
-                              setPdbInfo('')
-                            } else if (
-                              val === 'openmm' &&
-                              values.pdb_file instanceof File
-                            ) {
-                              void Promise.all([
-                                detectGaffCofactors(values.pdb_file),
-                                detectMetalCofactors(values.pdb_file)
-                              ]).then(([gaffFound, metalFound]) => {
-                                setPdbInfo(
-                                  gaffFound.length > 0
-                                    ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
-                                    : ''
-                                )
-                                setPdbWarning(
-                                  metalFound.length > 0
-                                    ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
-                                    : ''
-                                )
-                              })
-                            }
+                          const newMode = val === 'charmm' ? 'crd_psf' : 'pdb'
+                          void setFieldValue('md_engine', val)
+                          void setFieldValue('bilbomd_mode', newMode)
+                          setMdEngine(val)
+                          setSelectedMode(newMode)
+                          setUseExampleData(false)
+                          void setFieldValue('pdb_file', '')
+                          void setFieldValue('crd_file', '')
+                          void setFieldValue('psf_file', '')
+                          void setFieldValue('inp_file', '')
+                          void setFieldValue('dat_file', '')
+                          void setFieldValue('title', '')
+                          void setFieldValue('rg_min', '')
+                          void setFieldValue('rg_max', '')
+                          void setFieldValue('num_conf', '')
+                          setPdbWarning('')
+                          setPdbInfo('')
+                          setSaxsData([])
+                          setGuinierRegion(null)
+                          if (val === 'openmm') {
+                            void setFieldValue('num_conf', '3')
                           }
+                          setTimeout(() => void validateForm(), 0)
                         }}
-                        disabled={
-                          isSubmitting || values.bilbomd_mode === 'crd_psf'
-                        }
+                        disabled={isSubmitting}
                         disableCharmm={!charmmEnabled}
                       />
                     </Grid>
@@ -630,13 +512,47 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   ])
                                 setPdbInfo(
                                   gaffFound.length > 0
-                                    ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
+                                    ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
                                     : ''
                                 )
                                 setPdbWarning(
-                                  metalFound.length > 0
-                                    ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
-                                    : ''
+                                  metalFound.length > 0 ? (
+                                    <>
+                                      The following metal-containing
+                                      residues have no force-field
+                                      parameters and will be removed
+                                      before MD:{' '}
+                                      {metalFound.join(', ')}. If
+                                      these residues are important for
+                                      your system, consider using{' '}
+                                      <Button
+                                        href="https://charmm-gui.org/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        size="small"
+                                        variant="outlined"
+                                        color="info"
+                                        endIcon={<LaunchIcon />}
+                                        sx={{
+                                          textTransform: 'none',
+                                          py: 0,
+                                          px: 0.75,
+                                          minHeight: 0,
+                                          fontSize: 'inherit',
+                                          lineHeight: 'inherit',
+                                          verticalAlign: 'baseline'
+                                        }}
+                                      >
+                                        CHARMM-GUI
+                                      </Button>{' '}
+                                      to properly parameterize your
+                                      structure, then return here with
+                                      CRD and PSF files using the
+                                      CHARMM engine option.
+                                    </>
+                                  ) : (
+                                    ''
+                                  )
                                 )
                               }}
                             />
@@ -693,20 +609,6 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               : `*.crd`}
                           </b>{' '}
                           file.
-                          {values.bilbomd_mode === 'pdb' ? (
-                            <>
-                              {' '}
-                              For example, Protein Chain ID <b>A</b> will be
-                              converted to segid <b>PROA</b> and DNA Chain ID{' '}
-                              <b>G</b> will be converted to segid <b>DNAG</b>.
-                            </>
-                          ) : (
-                            <>
-                              {' '}
-                              Keeping in mind that CHARMM-GUI creates segid
-                              names in a unique way.
-                            </>
-                          )}
                         </Typography>
                       </Alert>
                     </Grid>
@@ -778,13 +680,27 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               try {
                                 const { rg, rg_min, rg_max, qmin, qmax } =
                                   await calculateAutoRg(formData).unwrap()
-                                void setFieldValue('rg', rg, false)
-                                void setFieldValue('rg_min', rg_min, false)
-                                void setFieldValue('rg_max', rg_max, false)
+                                void setValues(
+                                  {
+                                    ...values,
+                                    dat_file: selectedFile,
+                                    rg: String(rg),
+                                    rg_min: String(rg_min),
+                                    rg_max: String(rg_max)
+                                  },
+                                  true
+                                )
                                 void setFieldTouched('rg', true, false)
-                                void setFieldTouched('rg_min', true, false)
-                                void setFieldTouched('rg_max', true, false)
-                                setTimeout(() => void validateForm(), 0)
+                                void setFieldTouched(
+                                  'rg_min',
+                                  true,
+                                  false
+                                )
+                                void setFieldTouched(
+                                  'rg_max',
+                                  true,
+                                  false
+                                )
                                 if (
                                   typeof qmin === 'number' &&
                                   typeof qmax === 'number'
@@ -900,26 +816,26 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }
                       >
                         <MenuItem
-                          key={1}
-                          value={1}
+                          key="1"
+                          value="1"
                         >
                           200
                         </MenuItem>
                         <MenuItem
-                          key={2}
-                          value={2}
+                          key="2"
+                          value="2"
                         >
                           400
                         </MenuItem>
                         <MenuItem
-                          key={3}
-                          value={3}
+                          key="3"
+                          value="3"
                         >
                           600
                         </MenuItem>
                         <MenuItem
-                          key={4}
-                          value={4}
+                          key="4"
+                          value="4"
                         >
                           800
                         </MenuItem>

@@ -196,28 +196,28 @@ const Help = ({ title = 'BilboMD: Help' }) => {
               <Box sx={{ mt: 2 }}>
                 {tabValue === 0 && (
                   <img
-                    src="/images/bilbomd-classic-pdb-schematic.png"
+                    src={`/images/bilbomd-classic-pdb-schematic-openmm${theme.palette.mode === 'dark' ? '-dark' : ''}.png`}
                     alt="BilboMD Classic PDB Schematic"
                     style={{ width: '100%' }}
                   />
                 )}
                 {tabValue === 1 && (
                   <img
-                    src="/images/bilbomd-classic-crd-schematic.png"
+                    src={`/images/bilbomd-classic-crd-schematic${theme.palette.mode === 'dark' ? '-dark' : ''}.png`}
                     alt="BilboMD Classic CRD Schematic"
                     style={{ width: '100%' }}
                   />
                 )}
                 {tabValue === 2 && (
                   <img
-                    src="/images/bilbomd-auto-schematic.png"
+                    src={`/images/bilbomd-auto-schematic-openmm${theme.palette.mode === 'dark' ? '-dark' : ''}.png`}
                     alt="BilboMD Auto Schematic"
                     style={{ width: '100%' }}
                   />
                 )}
                 {tabValue === 3 && (
                   <img
-                    src="/images/bilbomd-af-schematic.png"
+                    src={`/images/bilbomd-af-schematic-openmm${theme.palette.mode === 'dark' ? '-dark' : ''}.png`}
                     alt="BilboMD AF Schematic"
                     style={{ width: '100%' }}
                   />

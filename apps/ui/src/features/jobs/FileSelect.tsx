@@ -1,4 +1,4 @@
-import { ChangeEvent } from 'react'
+import { ChangeEvent, ReactNode } from 'react'
 import {
   Button,
   FormControl,
@@ -18,7 +18,7 @@ interface FileSelectProps extends FormControlProps {
   title: string
   error: boolean
   errorMessage?: string
-  warningMessage?: string
+  warningMessage?: ReactNode
   infoMessage?: string
   existingFileName?: string
   setFieldValue: (field: string, value: File, shouldValidate?: boolean) => void

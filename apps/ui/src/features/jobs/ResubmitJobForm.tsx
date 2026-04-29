@@ -1,29 +1,20 @@
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import {
   Box,
   Button,
-  Checkbox,
   TextField,
   MenuItem,
   Typography,
   Alert,
   AlertTitle,
   Paper,
-  FormGroup,
-  FormControlLabel,
   Divider,
   LinearProgress
 } from '@mui/material'
+import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Link as RouterLink, useParams, useNavigate } from 'react-router'
-import {
-  Form,
-  Formik,
-  Field,
-  FormikHelpers,
-  FormikErrors,
-  FormikTouched
-} from 'formik'
+import { Form, Formik, Field } from 'formik'
 import {
   useAddNewJobMutation,
   useCalculateAutoRgMutation,
@@ -66,8 +57,8 @@ const ResubmitJobForm = () => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
-  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
-  const [pdbWarning, setPdbWarning] = useState<string>('')
+  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('openmm')
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
 
   // RTK Query to fetch the configuration
@@ -161,10 +152,7 @@ const ResubmitJobForm = () => {
         rg: jobMongo.rg?.toString() ?? '',
         rg_min: jobMongo.rg_min?.toString() ?? '',
         rg_max: jobMongo.rg_max?.toString() ?? '',
-        md_engine: !charmmEnabled
-          ? 'openmm'
-          : ((jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
-            'charmm')
+        md_engine: 'charmm'
       }
       break
     case 'pdb':
@@ -180,10 +168,7 @@ const ResubmitJobForm = () => {
         rg: jobMongo.rg?.toString() ?? '',
         rg_min: jobMongo.rg_min?.toString() ?? '',
         rg_max: jobMongo.rg_max?.toString() ?? '',
-        md_engine: !charmmEnabled
-          ? 'openmm'
-          : ((jobMongo.md_engine?.toLowerCase?.() as 'charmm' | 'openmm') ??
-            'charmm')
+        md_engine: 'openmm'
       }
       break
     default:
@@ -216,7 +201,7 @@ const ResubmitJobForm = () => {
       form.append('reuse_pdb_file', 'true')
     }
 
-    form.append('num_conf', values.num_conf.toString())
+    form.append('num_conf', values.num_conf)
     form.append('rg', values.rg)
     form.append('rg_min', values.rg_min)
     form.append('rg_max', values.rg_max)
@@ -241,48 +226,6 @@ const ResubmitJobForm = () => {
       console.error('rejected', error)
     }
   }
-
-  const setMode = (
-    mode: 'pdb' | 'crd_psf',
-    resetForm: FormikHelpers<typeof initialValues>['resetForm'],
-    values: typeof initialValues,
-    touched: FormikTouched<typeof initialValues>,
-    validateForm: (
-      values?: Partial<typeof initialValues>
-    ) => Promise<FormikErrors<typeof initialValues>>
-  ) => {
-    if (mode === 'pdb') {
-      resetForm({
-        values: { ...values, crd_file: '', psf_file: '', bilbomd_mode: 'pdb' },
-        errors: {},
-        touched: { ...touched }
-      })
-    } else {
-      resetForm({
-        values: { ...values, pdb_file: '', bilbomd_mode: 'crd_psf' },
-        errors: {},
-        touched: { ...touched }
-      })
-    }
-
-    setTimeout(() => validateForm(), 0)
-  }
-
-  const handleCheckboxChange =
-    (
-      resetForm: FormikHelpers<typeof initialValues>['resetForm'],
-      values: typeof initialValues,
-      validateForm: (
-        values?: Partial<typeof initialValues>
-      ) => Promise<FormikErrors<typeof initialValues>>,
-      touched: FormikTouched<typeof initialValues>
-    ) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newBilboMDMode =
-        event.target.name === 'pdb_inputs' ? 'pdb' : 'crd_psf'
-
-      setMode(newBilboMDMode, resetForm, values, touched, validateForm)
-    }
 
   const isFormValid = (
     values: BilboMDClassicJobFormValues,
@@ -361,7 +304,6 @@ const ResubmitJobForm = () => {
                   status,
                   setFieldValue,
                   setFieldTouched,
-                  resetForm,
                   validateForm
                 }) => (
                   <Form>
@@ -382,56 +324,6 @@ const ResubmitJobForm = () => {
                       >
                         Model Inputs
                       </Divider>
-                      <Grid
-                        container
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          width: '520px'
-                        }}
-                      >
-                        <Grid size={{ xs: 6 }}>
-                          <FormGroup sx={{ ml: 1 }}>
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={values.bilbomd_mode === 'pdb'}
-                                  onChange={handleCheckboxChange(
-                                    resetForm,
-                                    values,
-                                    validateForm,
-                                    touched
-                                  )}
-                                  name="pdb_inputs"
-                                />
-                              }
-                              label="PDB file"
-                            />
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={values.bilbomd_mode === 'crd_psf'}
-                                  onChange={handleCheckboxChange(
-                                    resetForm,
-                                    values,
-                                    validateForm,
-                                    touched
-                                  )}
-                                  name="crd_psf_inputs"
-                                />
-                              }
-                              label="CRD/PSF files"
-                            />
-                          </FormGroup>
-                        </Grid>
-                        <Grid size={{ xs: 6 }}>
-                          <Alert severity="info">
-                            If you used CHARMM-GUI to parameterize your inputs
-                            then please select the CRD/PSF option
-                          </Alert>
-                        </Grid>
-                      </Grid>
                       <Divider
                         textAlign="left"
                         sx={{ my: 1 }}
@@ -461,31 +353,16 @@ const ResubmitJobForm = () => {
                         <MdEngineField
                           value={values.md_engine as 'charmm' | 'openmm'}
                           onChange={(val) => {
+                            const newMode = val === 'charmm' ? 'crd_psf' : 'pdb'
                             void setFieldValue('md_engine', val)
+                            void setFieldValue('bilbomd_mode', newMode)
                             setMdEngine(val)
-                            if (val === 'charmm') {
-                              setPdbWarning('')
-                              setPdbInfo('')
-                            } else if (
-                              val === 'openmm' &&
-                              values.pdb_file instanceof File
-                            ) {
-                              void Promise.all([
-                                detectGaffCofactors(values.pdb_file),
-                                detectMetalCofactors(values.pdb_file)
-                              ]).then(([gaffFound, metalFound]) => {
-                                setPdbInfo(
-                                  gaffFound.length > 0
-                                    ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
-                                    : ''
-                                )
-                                setPdbWarning(
-                                  metalFound.length > 0
-                                    ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
-                                    : ''
-                                )
-                              })
-                            }
+                            void setFieldValue('pdb_file', '')
+                            void setFieldValue('crd_file', '')
+                            void setFieldValue('psf_file', '')
+                            setPdbWarning('')
+                            setPdbInfo('')
+                            setTimeout(() => void validateForm(), 0)
                           }}
                           disabled={isSubmitting}
                           disableCharmm={!charmmEnabled}
@@ -605,13 +482,48 @@ const ResubmitJobForm = () => {
                                     ])
                                   setPdbInfo(
                                     gaffFound.length > 0
-                                      ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
+                                      ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
                                       : ''
                                   )
                                   setPdbWarning(
-                                    metalFound.length > 0
-                                      ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
-                                      : ''
+                                    metalFound.length > 0 ? (
+                                      <>
+                                        The following metal-containing
+                                        residues have no force-field
+                                        parameters and will be removed
+                                        before MD:{' '}
+                                        {metalFound.join(', ')}. If
+                                        these residues are important
+                                        for your system, consider
+                                        using{' '}
+                                        <Button
+                                          href="https://charmm-gui.org/"
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          size="small"
+                                          variant="outlined"
+                                          color="info"
+                                          endIcon={<LaunchIcon />}
+                                          sx={{
+                                            textTransform: 'none',
+                                            py: 0,
+                                            px: 0.75,
+                                            minHeight: 0,
+                                            fontSize: 'inherit',
+                                            lineHeight: 'inherit',
+                                            verticalAlign: 'baseline'
+                                          }}
+                                        >
+                                          CHARMM-GUI
+                                        </Button>{' '}
+                                        to properly parameterize your
+                                        structure, then return here
+                                        with CRD and PSF files using
+                                        the CHARMM engine option.
+                                      </>
+                                    ) : (
+                                      ''
+                                    )
                                   )
                                 }}
                               />
@@ -812,26 +724,26 @@ const ResubmitJobForm = () => {
                           }
                         >
                           <MenuItem
-                            key={1}
-                            value={1}
+                            key="1"
+                            value="1"
                           >
                             200
                           </MenuItem>
                           <MenuItem
-                            key={2}
-                            value={2}
+                            key="2"
+                            value="2"
                           >
                             400
                           </MenuItem>
                           <MenuItem
-                            key={3}
-                            value={3}
+                            key="3"
+                            value="3"
                           >
                             600
                           </MenuItem>
                           <MenuItem
-                            key={4}
-                            value={4}
+                            key="4"
+                            value="4"
                           >
                             800
                           </MenuItem>
