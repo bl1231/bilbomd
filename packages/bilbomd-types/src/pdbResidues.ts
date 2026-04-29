@@ -53,11 +53,27 @@ export const GAFF_COFACTORS = new Set<string>([
   'SAH', 'SAM', 'HBI',
 ])
 
+// Metal-containing cofactors parameterized via committed CHARMM36-derived
+// ffxml files (see apps/worker/scripts/openmm/forcefields/). Loaded into the
+// OpenMM ForceField alongside AMBER19 when present in the input PDB.
+export const SUPPORTED_METAL_COFACTORS = new Set<string>([
+  // b-type heme (Fe-protoporphyrin IX) — most common heme in SAXS submissions
+  'HEM',
+])
+
 // Metal-containing cofactors excluded from the GAFF2 path (model_prep.py
-// _has_metal_atoms check). These are still removed before OpenMM MD.
+// _has_metal_atoms check) and not yet covered by a curated ffxml. Still
+// removed before OpenMM MD.
+export const UNSUPPORTED_METAL_COFACTORS = new Set<string>([
+  // Other heme variants (c-type covalently attached, a-type, b-type alt)
+  'HEC', 'HEA', 'HEB',
+])
+
+// Combined view for callers that previously consumed METAL_COFACTORS as a
+// single set (e.g. PDB validation). Replaces the old METAL_COFACTORS export.
 export const METAL_COFACTORS = new Set<string>([
-  // Heme / porphyrins (contain Fe)
-  'HEM', 'HEC', 'HEA', 'HEB',
+  ...SUPPORTED_METAL_COFACTORS,
+  ...UNSUPPORTED_METAL_COFACTORS,
 ])
 
 export const SUPPORTED_PDB_RESIDUES = new Set<string>([

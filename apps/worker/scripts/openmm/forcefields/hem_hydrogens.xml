@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Residues>
+  <Residue name="HEM">
+    <H name="HA" parent="CHA" />
+    <H name="HAA1" parent="CAA" />
+    <H name="HAA2" parent="CAA" />
+    <H name="HAB" parent="CAB" />
+    <H name="HAC" parent="CAC" />
+    <H name="HAD1" parent="CAD" />
+    <H name="HAD2" parent="CAD" />
+    <H name="HB" parent="CHB" />
+    <H name="HBA1" parent="CBA" />
+    <H name="HBA2" parent="CBA" />
+    <H name="HBB1" parent="CBB" />
+    <H name="HBB2" parent="CBB" />
+    <H name="HBC1" parent="CBC" />
+    <H name="HBC2" parent="CBC" />
+    <H name="HBD1" parent="CBD" />
+    <H name="HBD2" parent="CBD" />
+    <H name="HC" parent="CHC" />
+    <H name="HD" parent="CHD" />
+    <H name="HMA1" parent="CMA" />
+    <H name="HMA2" parent="CMA" />
+    <H name="HMA3" parent="CMA" />
+    <H name="HMB1" parent="CMB" />
+    <H name="HMB2" parent="CMB" />
+    <H name="HMB3" parent="CMB" />
+    <H name="HMC1" parent="CMC" />
+    <H name="HMC2" parent="CMC" />
+    <H name="HMC3" parent="CMC" />
+    <H name="HMD1" parent="CMD" />
+    <H name="HMD2" parent="CMD" />
+    <H name="HMD3" parent="CMD" />
+  </Residue>
+</Residues>
