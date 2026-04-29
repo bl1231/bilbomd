@@ -134,7 +134,7 @@ importers:
         version: 0.6.2
       mongoose:
         specifier: ^9.4.1
-        version: 9.6.0
+        version: 9.6.1
       mongoose-to-swagger:
         specifier: ^1.5.1
         version: 1.5.1
@@ -252,7 +252,7 @@ importers:
         version: 0.6.2
       mongoose:
         specifier: ^9.4.1
-        version: 9.6.0
+        version: 9.6.1
       nodemailer:
         specifier: ^8.0.5
         version: 8.0.7
@@ -482,7 +482,7 @@ importers:
         version: 0.6.2
       mongoose:
         specifier: ^9.4.1
-        version: 9.6.0
+        version: 9.6.1
       nodemailer:
         specifier: ^8.0.5
         version: 8.0.7
@@ -582,7 +582,7 @@ importers:
     dependencies:
       mongoose:
         specifier: ^9.4.1
-        version: 9.6.0
+        version: 9.6.1
 
 packages:
 
@@ -4452,8 +4452,8 @@ packages:
   mongoose-to-swagger@1.5.1:
     resolution: {integrity: sha512-gwEr0NhA+DyGswtgypIoV/iR0RGX4jY/SE9zmYYk6qpG2C83urcQfYJWzm7PsDPo3snMm8XjBYiAtLyYAqirXA==}
 
-  mongoose@9.6.0:
-    resolution: {integrity: sha512-Xs7aN4fk4uHhDYltjQFqPQ+Z45eJscuIaw3EtP+NAmXLEm7z3xeJSgerLwyszALJNY9TvE0PMxCjQH9kCVTe5g==}
+  mongoose@9.6.1:
+    resolution: {integrity: sha512-3T8/b0plM3ZJPW3WjlzVMIGJEYYTjgDPQ05Qzru3xu3/wOPSFKWYxdwUF2dl8h3NG5dVkzIuOkZdLacnlLf/sA==}
     engines: {node: '>=20.19.0'}
 
   morgan@1.10.1:
@@ -10509,7 +10509,7 @@ snapshots:
 
   mongoose-to-swagger@1.5.1: {}
 
-  mongoose@9.6.0:
+  mongoose@9.6.1:
     dependencies:
       kareem: 3.3.0
       mongodb: 7.2.0
