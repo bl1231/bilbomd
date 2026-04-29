@@ -80,7 +80,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.7.2
+    image: ghcr.io/bl1231/bilbomd-backend:2.7.3
     pull_policy: always
     deploy:
       resources:
