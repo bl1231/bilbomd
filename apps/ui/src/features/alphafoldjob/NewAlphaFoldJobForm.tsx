@@ -246,7 +246,7 @@ const EntitiesFieldArray = ({
         return (
           <Grid
             container
-            direction="column"
+            sx={{ flexDirection: 'column' }}
           >
             <Box>
               {values.entities.map((entity, index) => {
@@ -264,9 +264,7 @@ const EntitiesFieldArray = ({
                 return (
                   <Box
                     key={index}
-                    mb={2}
-                    display="flex"
-                    alignItems="start"
+                    sx={{ mb: 2, display: 'flex', alignItems: 'start' }}
                   >
                     {/* Molecule Type */}
                     <TextField
@@ -326,10 +324,7 @@ const EntitiesFieldArray = ({
                     />
 
                     {/* AminoAcidField */}
-                    <Box
-                      flex={1}
-                      marginRight={2}
-                    >
+                    <Box sx={{ flex: 1, marginRight: 2 }}>
                       <AminoAcidField
                         label={`Amino Acid Sequence (${
                           entity.sequence?.length || 0
@@ -629,7 +624,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                 <Form>
                   <Grid
                     container
-                    direction="column"
+                    sx={{ flexDirection: 'column' }}
                   >
                     {useNersc && (
                       <NerscStatusChecker

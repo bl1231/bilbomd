@@ -1,5 +1,46 @@
 # @bilbomd/backend
 
+## 2.7.3
+
+### Patch Changes
+
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+  - @bilbomd/md-utils@1.1.9
+
+## 2.7.2
+
+### Patch Changes
+
+- 682fd84: Fix DNA/RNA residue handling in both CHARMM and OpenMM pipelines.
+
+  OpenMM: `minimize.py` now calls `Modeller.addHydrogens(forcefield)` after PDBFixer so that DNA/RNA residues get all required hydrogen atoms (PDBFixer alone misses some, causing a "No template found" crash at system creation).
+
+  CHARMM: `constraintUtils.ts` segment-ID mapping now correctly handles DNA/RNA chains. `parseInpConstraints` strips the mol-type prefix (PRO/DNA/RNA/CAR/CAL) to extract the real chain ID from pdb2crd segids (e.g. `DNAD` → `D`). `generateInpFromConstraints`/`convertYamlToInp` accept an optional `chainSegidMap` built by the new `buildChainSegidMap` utility, so YAML→INP conversion emits the correct segid for each chain instead of always defaulting to `PRO{chain}`.
+
+- Updated dependencies [682fd84]
+  - @bilbomd/md-utils@1.1.8
+
+## 2.7.1
+
+### Patch Changes
+
+- 0fda064: CORS allowed origins are now derived at runtime from `BILBOMD_URL` and `BILBOMD_UI_PORT`, fixing CORS errors for external users installing BilboMD on their own hardware. An optional `CORS_ALLOWED_ORIGINS` env var (comma-separated) is also supported for additional origins.
+
+## 2.7.0
+
+### Minor Changes
+
+- e99111b: Add admin-only BullMQ dashboard access. Admins can now open the bull-board queue dashboard via a new sidebar link. Protected by nginx auth_request using the session cookie, so no unauthenticated access is possible.
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+- Updated dependencies [57f8495]
+  - @bilbomd/bilbomd-types@1.5.2
+  - @bilbomd/md-utils@1.1.7
+  - @bilbomd/mongodb-schema@2.5.4
+
 ## 2.6.4
 
 ### Patch Changes

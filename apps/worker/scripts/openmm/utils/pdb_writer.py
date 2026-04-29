@@ -33,5 +33,5 @@ class PDBFrameWriter:
         fname = f"{self._base}_{int(step):09d}.pdb"
         out_path = os.path.join(self._dir, fname)
         with open(out_path, "w", encoding="utf-8") as fh:
-            PDBFile.writeFile(simulation.topology, state.getPositions(), fh)
+            PDBFile.writeFile(simulation.topology, state.getPositions(), fh, keepIds=True)
         self._count += 1

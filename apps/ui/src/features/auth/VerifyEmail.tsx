@@ -54,10 +54,7 @@ const VerifyEmail = () => {
     <Grid
       container
       columns={12}
-      direction='row'
-      sx={{ height: '100vh' }}
-      alignItems='center'
-      justifyContent='center'
+      sx={{ height: '100vh', alignItems: 'center', justifyContent: 'center' }}
     >
       <Grid
         size={{ xs: 4 }}

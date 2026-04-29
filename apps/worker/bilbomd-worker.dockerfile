@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.7
+ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:pr-656-f7d08144
 ########################################
 # Stage 1: deps (prefetch pnpm store)
 ########################################
@@ -9,6 +9,7 @@ RUN corepack enable
 
 # Copy only files needed to resolve workspace dependencies (better cache)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/bilbomd-types/package.json packages/bilbomd-types/package.json
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
 COPY packages/md-utils/package.json packages/md-utils/package.json
 COPY packages/eslint-config/ packages/eslint-config/
@@ -34,6 +35,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 
 # Build shared packages first, then the worker
+RUN pnpm -C packages/bilbomd-types run build
 RUN pnpm -C packages/mongodb-schema run build
 RUN pnpm -C packages/md-utils run build
 RUN pnpm -C apps/worker run build

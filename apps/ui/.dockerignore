@@ -14,7 +14,10 @@ out/
 .hg/
 .cvsignore
 
-# Configuration files
+# Environment files
+.env
+.env.*
+.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -40,3 +43,14 @@ yarn.lock
 
 # Optional eslint cache
 .eslintcache
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa*
+id_ed25519*
+id_dsa*

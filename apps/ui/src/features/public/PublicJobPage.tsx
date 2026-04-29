@@ -162,7 +162,7 @@ const PublicJobPage = () => {
       <Grid
         container
         spacing={2}
-        mb={2}
+        sx={{ mb: 2 }}
       >
         {/* TOP LEVEL STATUS */}
         <Grid size={{ xs: 12 }}>

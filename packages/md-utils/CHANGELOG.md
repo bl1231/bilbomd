@@ -1,5 +1,30 @@
 # @bilbomd/md-utils
 
+## 1.1.9
+
+### Patch Changes
+
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+
+## 1.1.8
+
+### Patch Changes
+
+- 682fd84: Fix DNA/RNA residue handling in both CHARMM and OpenMM pipelines.
+
+  OpenMM: `minimize.py` now calls `Modeller.addHydrogens(forcefield)` after PDBFixer so that DNA/RNA residues get all required hydrogen atoms (PDBFixer alone misses some, causing a "No template found" crash at system creation).
+
+  CHARMM: `constraintUtils.ts` segment-ID mapping now correctly handles DNA/RNA chains. `parseInpConstraints` strips the mol-type prefix (PRO/DNA/RNA/CAR/CAL) to extract the real chain ID from pdb2crd segids (e.g. `DNAD` → `D`). `generateInpFromConstraints`/`convertYamlToInp` accept an optional `chainSegidMap` built by the new `buildChainSegidMap` utility, so YAML→INP conversion emits the correct segid for each chain instead of always defaulting to `PRO{chain}`.
+
+## 1.1.7
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+- Updated dependencies [57f8495]
+  - @bilbomd/mongodb-schema@2.5.4
+
 ## 1.1.6
 
 ### Patch Changes

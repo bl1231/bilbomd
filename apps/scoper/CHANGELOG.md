@@ -1,5 +1,13 @@
 # @bilbomd/scoper
 
+## 1.7.7
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+- Updated dependencies [57f8495]
+  - @bilbomd/mongodb-schema@2.5.4
+
 ## 1.7.6
 
 ### Patch Changes

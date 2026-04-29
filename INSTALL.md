@@ -281,6 +281,15 @@ docker compose --env-file .env.local -f docker-compose.local.yml -p bilbomd-loca
 
 ## Troubleshooting
 
+**CORS error in the backend logs (`Error: Not allowed by CORS`)**
+The backend derives the allowed UI origin automatically from `BILBOMD_URL` and
+`BILBOMD_UI_PORT`. Make sure these values in `.env.local` match the URL your
+browser uses to reach BilboMD. For example, if you access the UI at
+`http://192.168.1.50:3001`, set `BILBOMD_URL=http://192.168.1.50` and
+`BILBOMD_UI_PORT=3001`, then restart the backend container. To allow additional
+origins (e.g. a reverse proxy), set
+`CORS_ALLOWED_ORIGINS=http://host1:port,http://host2:port` in `.env.local`.
+
 **`BILBOMD_DEV_BIND_ADDR` or similar variable errors on startup**
 The compose file uses `${VAR:?err}` syntax which aborts if a variable is unset.
 Double-check that your `.env.local` has all required variables set.

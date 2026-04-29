@@ -1,26 +1,49 @@
 # Ignore everything by default
 **
 
-# Re-include only what the backend build needs
+# Root manifests needed by all services
 !pnpm-workspace.yaml
 !pnpm-lock.yaml
 !package.json
 !LICENSE.txt
 
-# Unignore dirs so we can include subpaths
+# Re-include entire dirs — !apps and !packages bring in ALL contents.
+# Docker rule: a ! pattern matching a directory re-includes all its files.
+# The explicit per-path lines below are kept for documentation clarity only.
 !apps
 !packages
 
-# Include backend app code
+# All service source trees (redundant with !apps above, but explicit)
 !apps/backend/**
-# Include the schema package used by backend
-!packages/mongodb-schema/**
+!apps/ui/**
+!apps/worker/**
+!apps/scoper/**
 
-# If you have shared config packages that backend needs, include them too:
+# All shared packages (redundant with !packages above, but explicit)
+!packages/mongodb-schema/**
+!packages/md-utils/**
+!packages/bilbomd-types/**
 !packages/tsconfig/**
 !packages/eslint-config/**
+
+# Shared runtime assets
 !tools/python/**
 !example-data/**
+
+# Deny sensitive files that survive the broad !apps / !packages re-includes.
+# Last-match-wins: these take precedence over the directory re-includes above.
+**/.env
+**/.env.*
+**/.env.local
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.crt
+**/*.cer
+**/id_rsa*
+**/id_ed25519*
+**/id_dsa*
 
 # Keep these ignored even if matched above
 .git/

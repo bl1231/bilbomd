@@ -1,5 +1,81 @@
 # @bilbomd/worker
 
+## 2.8.0
+
+### Minor Changes
+
+- 5739029: Switch OpenMM base force field from CHARMM36+HCT to Amber19SB+GBn2. Add carbohydrate detection for glycoprotein PDB inputs; when detected, the job fails early with an actionable error directing users to the CHARMM engine until full GLYCAM preprocessing support is implemented (see #655).
+- 5739029: Add GLYCAM glycoprotein support for PDB + OpenMM pipeline (issue #655 Phase 2).
+
+  Glycosylated PDB inputs submitted with the OpenMM engine are now processed correctly instead of failing with an error. Key changes:
+  - New `strip_cofactors.py` strips FAD, HEM, PCA, and other cofactors that have no bundled Amber parameters before MD; writes `stripped_cofactors.json` so the pipeline can surface a user warning.
+  - New `utils/glycam_rename.py` (importable) and `glycam_rename.py` (CLI) convert standard PDB residue names to GLYCAM format before PDBFixer runs: ASN→NLN (N-linked), THR→OLT and SER→OLS (O-linked); sugar residues renamed to GLYCAM codes (0NB for terminal GlcNAc, 0MA/0MB for terminal mannose, etc.). Anomer determined from 3D geometry.
+  - `minimize.py` calls GLYCAM rename when `has_carbohydrates: true` in config, and skips `PDBFixer.addMissingAtoms()` for glycoprotein inputs (PDBFixer has no carbohydrate templates).
+  - `openmm-functions.ts` no longer throws for glycoproteins; sets `has_carbohydrates` in the config YAML and adds `amber14/GLYCAM_06j-1.xml` to the force field list when carbs are detected.
+  - `bilbomd-pdb.ts` runs the cofactor-strip step in the OpenMM branch before config preparation.
+
+- beb5e69: Show non-protein entities (glycans, ligands, metal ions) in trajectory movies. Previously, PyMOL's cartoon representation left these atoms invisible; organic entities now render as sticks and inorganic atoms as spheres, both colored by element.
+
+### Patch Changes
+
+- ab80931: Fix non-protein atoms (glycans, FAD, cofactors) being reassigned to Chain B in OpenMM output PDB files. Added `keepIds=True` to all `PDBFile.writeFile` calls in heat.py, md.py, and pdb_writer.py so chain IDs from the input structure are preserved throughout the pipeline.
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+  - @bilbomd/md-utils@1.1.9
+
+## 2.7.5
+
+### Patch Changes
+
+- 2c512bc: Normalize CHARMM-style DNA residue names (ADE/GUA/CYT) to standard PDB names (DA/DG/DC) before PDBFixer runs. OpenMM's pdbNames.xml maps ADE/GUA/CYT to RNA residues, causing PDBFixer to add spurious O2' atoms to DNA chains. DNA is detected by absence of the O2' ribose atom.
+
+## 2.7.4
+
+### Patch Changes
+
+- 9289689: Fix OpenMM minimize crash for DNA/RNA complexes by stripping all H atoms before calling addHydrogens. PDBFixer can partially hydrogenate DNA/RNA residues, leaving them in a state that fails forcefield template matching. Stripping all H first lets addHydrogens place them correctly from forcefield templates.
+
+## 2.7.3
+
+### Patch Changes
+
+- 682fd84: Fix DNA/RNA residue handling in both CHARMM and OpenMM pipelines.
+
+  OpenMM: `minimize.py` now calls `Modeller.addHydrogens(forcefield)` after PDBFixer so that DNA/RNA residues get all required hydrogen atoms (PDBFixer alone misses some, causing a "No template found" crash at system creation).
+
+  CHARMM: `constraintUtils.ts` segment-ID mapping now correctly handles DNA/RNA chains. `parseInpConstraints` strips the mol-type prefix (PRO/DNA/RNA/CAR/CAL) to extract the real chain ID from pdb2crd segids (e.g. `DNAD` → `D`). `generateInpFromConstraints`/`convertYamlToInp` accept an optional `chainSegidMap` built by the new `buildChainSegidMap` utility, so YAML→INP conversion emits the correct segid for each chain instead of always defaulting to `PRO{chain}`.
+
+- Updated dependencies [682fd84]
+  - @bilbomd/md-utils@1.1.8
+
+## 2.7.2
+
+### Patch Changes
+
+- 298405b: Fix dcd2pdb CHARMM scripts failing with fatal NBFIX error when reading CGenFF parameter files. Set bomlev -2 in dcd2pdb and dcd2pdb-sans templates to match the other MD step templates.
+
+## 2.7.1
+
+### Patch Changes
+
+- a0acc15: build docker image from ghcr.io/bl1231/bilbomd-worker-base:0.0.8-dev5
+
+## 2.7.0
+
+### Minor Changes
+
+- 33ec715: Replace legacy toppar directory with CHARMM-bundled toppar from the c49b2 build stage. Switch protein force field from CHARMM36 to CHARMM36m (par_all36m_prot.prm). Replace CGenFF auto-generated FAD parameters with peer-reviewed cofactors stream (Aleksandrov, J. Comput. Chem. 2019). No custom topology files remain in the repository.
+
+## 2.6.5
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+- Updated dependencies [57f8495]
+  - @bilbomd/bilbomd-types@1.5.2
+  - @bilbomd/md-utils@1.1.7
+  - @bilbomd/mongodb-schema@2.5.4
+
 ## 2.6.4
 
 ### Patch Changes

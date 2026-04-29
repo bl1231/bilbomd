@@ -23,6 +23,10 @@ import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import { expdataSchema } from 'schemas/ExpdataSchema'
 import { BilboMDClassicJobSchema } from 'schemas/BilboMDClassicJobSchema'
+import {
+  detectGaffCofactors,
+  detectMetalCofactors
+} from 'schemas/ValidationFunctions'
 import SAXSGuinierPlot from './SAXSGuinierPlot'
 import HeaderBox from 'components/HeaderBox'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
@@ -90,6 +94,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [pdbWarning, setPdbWarning] = useState<string>('')
+  const [pdbInfo, setPdbInfo] = useState<string>('')
   const [saxsData, setSaxsData] = useState<
     { q: number; intensity: number; error: number }[]
   >([])
@@ -285,8 +291,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                   <Grid
                     container
                     columns={12}
-                    direction="column"
-                    sx={{ display: 'flex' }}
+                    sx={{ display: 'flex', flexDirection: 'column' }}
                   >
                     {useNersc && (
                       <NerscStatusChecker
@@ -485,6 +490,29 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             if (val === 'openmm') {
                               void setFieldValue('num_conf', 3)
                             }
+                            if (val === 'charmm') {
+                              setPdbWarning('')
+                              setPdbInfo('')
+                            } else if (
+                              val === 'openmm' &&
+                              values.pdb_file instanceof File
+                            ) {
+                              void Promise.all([
+                                detectGaffCofactors(values.pdb_file),
+                                detectMetalCofactors(values.pdb_file)
+                              ]).then(([gaffFound, metalFound]) => {
+                                setPdbInfo(
+                                  gaffFound.length > 0
+                                    ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
+                                    : ''
+                                )
+                                setPdbWarning(
+                                  metalFound.length > 0
+                                    ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
+                                    : ''
+                                )
+                              })
+                            }
                           }
                         }}
                         disabled={
@@ -582,11 +610,35 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               errorMessage={
                                 errors.pdb_file ? errors.pdb_file : ''
                               }
+                              infoMessage={pdbInfo}
+                              warningMessage={pdbWarning}
                               fileType=" *.pdb or *.cif"
                               fileExt=".pdb,.cif"
                               existingFileName={
                                 useExampleData ? 'example.pdb' : undefined
                               }
+                              onFileChange={async (file: File) => {
+                                if (mdEngine !== 'openmm') {
+                                  setPdbInfo('')
+                                  setPdbWarning('')
+                                  return
+                                }
+                                const [gaffFound, metalFound] =
+                                  await Promise.all([
+                                    detectGaffCofactors(file),
+                                    detectMetalCofactors(file)
+                                  ])
+                                setPdbInfo(
+                                  gaffFound.length > 0
+                                    ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
+                                    : ''
+                                )
+                                setPdbWarning(
+                                  metalFound.length > 0
+                                    ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
+                                    : ''
+                                )
+                              }}
                             />
                           </Grid>
                         </Grid>
@@ -726,9 +778,13 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               try {
                                 const { rg, rg_min, rg_max, qmin, qmax } =
                                   await calculateAutoRg(formData).unwrap()
-                                void setFieldValue('rg', rg)
-                                void setFieldValue('rg_min', rg_min)
-                                void setFieldValue('rg_max', rg_max)
+                                void setFieldValue('rg', rg, false)
+                                void setFieldValue('rg_min', rg_min, false)
+                                void setFieldValue('rg_max', rg_max, false)
+                                void setFieldTouched('rg', true, false)
+                                void setFieldTouched('rg_min', true, false)
+                                void setFieldTouched('rg_max', true, false)
+                                setTimeout(() => void validateForm(), 0)
                                 if (
                                   typeof qmin === 'number' &&
                                   typeof qmax === 'number'

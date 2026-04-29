@@ -85,7 +85,7 @@ const enqueueMakeMovie = async (
     label: string
     pdb: string
     dcd: string
-    constYaml: string
+    constYaml?: string
     outDir: string
   }> = []
 
@@ -93,6 +93,20 @@ const enqueueMakeMovie = async (
     await MQjob.log(`[movie] skip enqueue: md directory not found at ${mdDir}`)
     return
   }
+
+  // Resolve constraint YAML once for the whole job: try openmm_const.yml (Auto pipeline)
+  // then fall back to openmm_config.yaml (Classic pipeline, which embeds constraints).
+  const constYamlPath = path.join(workDir, 'openmm_const.yml')
+  const fallbackYamlPath = path.join(workDir, 'openmm_config.yaml')
+  const resolvedConstYaml = (await fs.pathExists(constYamlPath))
+    ? constYamlPath
+    : (await fs.pathExists(fallbackYamlPath))
+      ? fallbackYamlPath
+      : undefined
+
+  await MQjob.log(
+    `[movie] constraint config: ${resolvedConstYaml ?? 'none (default coloring)'}`
+  )
 
   const entries = await fs.readdir(mdDir, { withFileTypes: true })
   for (const ent of entries) {
@@ -104,15 +118,13 @@ const enqueueMakeMovie = async (
     const runDir = path.join(mdDir, label)
     const pdbPath = path.join(runDir, 'md.pdb')
     const dcdPath = path.join(runDir, 'md.dcd')
-    const constYamlPath = path.join(workDir, 'openmm_const.yml')
 
     const hasPdb = await fs.pathExists(pdbPath)
     const hasDcd = await fs.pathExists(dcdPath)
-    const hasConstYaml = await fs.pathExists(constYamlPath)
 
-    if (!hasPdb || !hasDcd || !hasConstYaml) {
+    if (!hasPdb || !hasDcd) {
       await MQjob.log(
-        `[movie] skipping ${label}: missing ${!hasPdb ? 'md.pdb' : ''}${!hasPdb && !hasDcd ? ' and ' : ''}${!hasDcd ? 'md.dcd' : ''}${!hasConstYaml ? 'openmm_const.yml' : ''}`
+        `[movie] skipping ${label}: missing ${!hasPdb ? 'md.pdb' : ''}${!hasPdb && !hasDcd ? ' and ' : ''}${!hasDcd ? 'md.dcd' : ''}`
       )
       logger.warn(`[movie-enqueuer] skipping ${label}: missing files`)
       continue
@@ -125,7 +137,7 @@ const enqueueMakeMovie = async (
       pdb: pdbPath,
       dcd: dcdPath,
       outDir,
-      constYaml: constYamlPath
+      constYaml: resolvedConstYaml
     })
   }
 

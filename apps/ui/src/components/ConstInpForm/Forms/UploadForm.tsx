@@ -1,4 +1,5 @@
 import { ChangeEvent, useEffect, useCallback } from 'react'
+import { CARBOHYDRATE_RESIDUES } from '@bilbomd/bilbomd-types'
 import { Field, useFormikContext } from 'formik'
 import {
   Typography,
@@ -67,34 +68,7 @@ const dnaResidues = new Set([
   'THY'
 ]) // Deoxyribonucleotides
 // const rnaResidues = new Set(['A', 'C', 'G', 'U', 'URA']) // Ribonucleotides
-const carbResidues = new Set([
-  'AFL',
-  'ALL',
-  'BMA',
-  'BGC',
-  'BOG',
-  'FCA',
-  'FCB',
-  'FMF',
-  'FUC',
-  'FUL',
-  'G4S',
-  'GAL',
-  'GLA',
-  'GLB',
-  'GLC',
-  'GLS',
-  'GSA',
-  'LAK',
-  'LAT',
-  'MAF',
-  'MAL',
-  'NAG',
-  'NAN',
-  'NGA',
-  'SIA',
-  'SLB'
-])
+const carbResidues = CARBOHYDRATE_RESIDUES
 
 interface UploadFormProps {
   setStepIsValid(...args: unknown[]): unknown
@@ -409,7 +383,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
             <Typography>File Upload</Typography>
           </HeaderBox>
           <Paper sx={{ p: 1 }}>
-            <Grid container direction='column'>
+            <Grid container sx={{ flexDirection: 'column' }}>
               <Grid size={{ xs: 6 }}>
                 <Field
                   name='pdb_file'

@@ -500,8 +500,7 @@ const Alphafold2PAEJiffy = () => {
                       <Grid
                         container
                         columns={12}
-                        direction="column"
-                        sx={{ display: 'flex' }}
+                        sx={{ display: 'flex', flexDirection: 'column' }}
                       >
                         {isError && (
                           <Alert

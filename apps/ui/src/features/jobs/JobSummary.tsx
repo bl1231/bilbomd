@@ -21,13 +21,7 @@ const JobSummary = ({ job }: JobSummaryProps) => {
         sx={{ marginBottom: '16px' }}
       >
         <CardContent>
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="flex-start"
-            gap={1}
-            mb={1}
-          >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1, mb: 1 }}>
             <Typography
               variant="h5"
               component="h3"

@@ -17,6 +17,19 @@ bilbomd-test-data
 uploads
 imp-2.18.0.tar.gz
 .env
+.env.*
+.env.local
 test
 !test_scripts/data/**
 test.rest
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa*
+id_ed25519*
+id_dsa*

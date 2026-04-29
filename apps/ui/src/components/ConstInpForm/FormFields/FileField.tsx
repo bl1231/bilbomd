@@ -47,7 +47,7 @@ const FileField = ({
   return (
     <FormControl error={isError}>
       {/* <FormLabel>test</FormLabel> */}
-      <Grid container spacing={2} alignItems='center'>
+      <Grid container spacing={2} sx={{ alignItems: 'center' }}>
         <Grid>
           <Input
             style={{ display: 'none' }}

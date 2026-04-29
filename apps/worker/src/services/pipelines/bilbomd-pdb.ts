@@ -22,6 +22,7 @@ import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
 import { prepareOpenMMConfig } from '../functions/openmm-functions.js'
+import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 import {
   recordWorkerUsageEvent,
   buildContext
@@ -103,6 +104,12 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
     await runStripIons({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
     await MQjob.log('end strip-ions')
 
+    // Strip unsupported cofactors (FAD, HEM, PCA, etc.) — no bundled Amber parameters.
+    // They are removed for MD only; the original uploaded PDB is used for FoXS.
+    // await MQjob.log('start strip-cofactors')
+    // await runStripCofactors({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
+    // await MQjob.log('end strip-cofactors')
+
     // Prepare OpenMM config YAML instead of pdb2crd
     await MQjob.log('start openmm-config')
     await prepareOpenMMConfig(foundJob)
@@ -133,6 +140,11 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
   await runners.md(MQjob, foundJob)
   await MQjob.log('end md')
   await progress.update(50)
+
+  // Generate MP4 movies from DCD files (OpenMM only, fire-and-forget)
+  if (engine === 'OpenMM') {
+    enqueueMakeMovie(MQjob, foundJob)
+  }
 
   // Extract PDBs from DCDs
   if (engine === 'CHARMM') {
