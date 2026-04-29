@@ -1,5 +1,14 @@
 # @bilbomd/ui
 
+## 2.13.1
+
+### Patch Changes
+
+- d0504b0: Fix UI cofactor alerts to reflect GAFF2 support for organic small molecules. Split STRIPPABLE_COFACTORS into GAFF_COFACTORS (organic, now parameterized via GAFF2) and METAL_COFACTORS (heme/porphyrins, still removed). FAD and similar molecules now show a blue info alert instead of a yellow warning.
+- cde25c7: Fix Molstar viewer not showing glycans, cofactors, and ions on initial load. Apply StructurePreset to all ensemble structures and add branched entity support to display presets.
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+
 ## 2.13.0
 
 ### Minor Changes
