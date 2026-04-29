@@ -9,9 +9,11 @@ describe('Acknowledgments', () => {
     expect(screen.getByText(/Referencing BilboMD:/i)).toBeInTheDocument()
   })
 
-  it('includes manuscript citation with PubMed link', () => {
+  it('includes manuscript citation with DOI link', () => {
     renderWithProviders(<Acknowledgments />)
-    expect(screen.getByRole('link', { name: /19592714/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /10\.1093\/nar\/gkag377/i })
+    ).toBeInTheDocument()
   })
 
   it('lists external tools and citations', () => {

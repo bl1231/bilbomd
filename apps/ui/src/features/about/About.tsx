@@ -188,21 +188,21 @@ const About = ({ title = 'BilboMD: About' }) => {
           .Details of the implementation and integration of these tools into{' '}
           <b>BilboMD</b> are described in the following manuscript:
           <Typography variant='body2' sx={{ mx: 5, my: 2 }}>
-            Pelikan M, Hura GL, Hammel M.{' '}
+            Classen S, Del Mundo J, Kulkarni D, Prabhakar S, Hicks A, Hammel
+            M.{' '}
             <b>
-              Structure and flexibility within proteins as identified through
-              small angle X-ray scattering.
+              BilboMD: a web-accessible SAXS and AlphaFold-guided modeling
+              pipeline.
             </b>{' '}
-            Gen Physiol Biophys. 2009 Jun;28(2):174-89. doi:
-            10.4149/gpb_2009_02_174. PMID:{' '}
+            Nucleic Acids Research. 2026; gkag377. doi:{' '}
             <Link
-              href='https://pubmed.ncbi.nlm.nih.gov/19592714/'
+              href='https://doi.org/10.1093/nar/gkag377'
               target='_blank'
               rel='noopener noreferrer'
             >
-              19592714
+              10.1093/nar/gkag377
             </Link>
-            ; PMCID: PMC3773563.
+            .
           </Typography>
         </Introduction>
 
