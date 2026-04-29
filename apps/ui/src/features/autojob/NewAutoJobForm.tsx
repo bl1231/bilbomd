@@ -1,5 +1,13 @@
-import { useState } from 'react'
-import { Box, Button, TextField, Typography, Alert, Paper } from '@mui/material'
+import { ReactNode, useState } from 'react'
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Alert,
+  Paper
+} from '@mui/material'
+import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
@@ -73,7 +81,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [mdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [pdbWarning, setPdbWarning] = useState<string>('')
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
 
   // RTK Query to fetch the configuration
@@ -91,7 +99,6 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
   // Are we running on NERSC?
   const useNersc = config.useNersc?.toLowerCase() === 'true'
-
 
   const initialValues: BilboMDAutoJobFormValues = {
     bilbomd_mode: 'auto',
@@ -311,13 +318,47 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             ])
                             setPdbInfo(
                               gaffFound.length > 0
-                                ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
+                                ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
                                 : ''
                             )
                             setPdbWarning(
-                              metalFound.length > 0
-                                ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
-                                : ''
+                              metalFound.length > 0 ? (
+                                <>
+                                  The following metal-containing
+                                  residues have no force-field
+                                  parameters and will be removed
+                                  before MD:{' '}
+                                  {metalFound.join(', ')}. If these
+                                  residues are important for your
+                                  system, consider using{' '}
+                                  <Button
+                                    href="https://charmm-gui.org/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    variant="outlined"
+                                    color="info"
+                                    endIcon={<LaunchIcon />}
+                                    sx={{
+                                      textTransform: 'none',
+                                      py: 0,
+                                      px: 0.75,
+                                      minHeight: 0,
+                                      fontSize: 'inherit',
+                                      lineHeight: 'inherit',
+                                      verticalAlign: 'baseline'
+                                    }}
+                                  >
+                                    CHARMM-GUI
+                                  </Button>{' '}
+                                  to properly parameterize your
+                                  structure, then submit a Classic job
+                                  with CRD and PSF files using the
+                                  CHARMM engine option.
+                                </>
+                              ) : (
+                                ''
+                              )
                             )
                           }}
                         />

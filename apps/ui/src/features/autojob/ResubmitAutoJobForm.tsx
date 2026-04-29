@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import {
   Box,
   Button,
@@ -8,6 +8,7 @@ import {
   AlertTitle,
   Paper
 } from '@mui/material'
+import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Link as RouterLink, useParams, useNavigate } from 'react-router'
 import { Form, Formik, Field } from 'formik'
@@ -51,7 +52,7 @@ const ResubmitAutoJobForm = () => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
   const [mdEngine] = useState<'charmm' | 'openmm'>('openmm')
-  const [pdbWarning, setPdbWarning] = useState<string>('')
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
 
   // RTK Query to fetch the configuration
@@ -77,7 +78,6 @@ const ResubmitAutoJobForm = () => {
 
   // Are we running on NERSC?
   const useNersc = config?.useNersc?.toLowerCase() === 'true'
-
 
   // Grouped early return for loading and error states
   {
@@ -281,13 +281,46 @@ const ResubmitAutoJobForm = () => {
                           ])
                           setPdbInfo(
                             gaffFound.length > 0
-                              ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
+                              ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
                               : ''
                           )
                           setPdbWarning(
-                            metalFound.length > 0
-                              ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
-                              : ''
+                            metalFound.length > 0 ? (
+                              <>
+                                The following metal-containing
+                                residues have no force-field
+                                parameters and will be removed before
+                                MD: {metalFound.join(', ')}. If these
+                                residues are important for your
+                                system, consider using{' '}
+                                <Button
+                                  href="https://charmm-gui.org/"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  size="small"
+                                  variant="outlined"
+                                  color="info"
+                                  endIcon={<LaunchIcon />}
+                                  sx={{
+                                    textTransform: 'none',
+                                    py: 0,
+                                    px: 0.75,
+                                    minHeight: 0,
+                                    fontSize: 'inherit',
+                                    lineHeight: 'inherit',
+                                    verticalAlign: 'baseline'
+                                  }}
+                                >
+                                  CHARMM-GUI
+                                </Button>{' '}
+                                to properly parameterize your
+                                structure, then submit a Classic job
+                                with CRD and PSF files using the
+                                CHARMM engine option.
+                              </>
+                            ) : (
+                              ''
+                            )
                           )
                         }}
                       />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import {
   Box,
   Button,
@@ -11,6 +11,7 @@ import {
   Divider,
   LinearProgress
 } from '@mui/material'
+import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Link as RouterLink, useParams, useNavigate } from 'react-router'
 import { Form, Formik, Field } from 'formik'
@@ -57,7 +58,7 @@ const ResubmitJobForm = () => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
   const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('openmm')
-  const [pdbWarning, setPdbWarning] = useState<string>('')
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
 
   // RTK Query to fetch the configuration
@@ -200,7 +201,7 @@ const ResubmitJobForm = () => {
       form.append('reuse_pdb_file', 'true')
     }
 
-    form.append('num_conf', values.num_conf.toString())
+    form.append('num_conf', values.num_conf)
     form.append('rg', values.rg)
     form.append('rg_min', values.rg_min)
     form.append('rg_max', values.rg_max)
@@ -352,8 +353,7 @@ const ResubmitJobForm = () => {
                         <MdEngineField
                           value={values.md_engine as 'charmm' | 'openmm'}
                           onChange={(val) => {
-                            const newMode =
-                              val === 'charmm' ? 'crd_psf' : 'pdb'
+                            const newMode = val === 'charmm' ? 'crd_psf' : 'pdb'
                             void setFieldValue('md_engine', val)
                             void setFieldValue('bilbomd_mode', newMode)
                             setMdEngine(val)
@@ -482,13 +482,48 @@ const ResubmitJobForm = () => {
                                     ])
                                   setPdbInfo(
                                     gaffFound.length > 0
-                                      ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM MD: ${gaffFound.join(', ')}`
+                                      ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
                                       : ''
                                   )
                                   setPdbWarning(
-                                    metalFound.length > 0
-                                      ? `The following metal-containing residues have no force-field parameters and will be removed before MD: ${metalFound.join(', ')}`
-                                      : ''
+                                    metalFound.length > 0 ? (
+                                      <>
+                                        The following metal-containing
+                                        residues have no force-field
+                                        parameters and will be removed
+                                        before MD:{' '}
+                                        {metalFound.join(', ')}. If
+                                        these residues are important
+                                        for your system, consider
+                                        using{' '}
+                                        <Button
+                                          href="https://charmm-gui.org/"
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          size="small"
+                                          variant="outlined"
+                                          color="info"
+                                          endIcon={<LaunchIcon />}
+                                          sx={{
+                                            textTransform: 'none',
+                                            py: 0,
+                                            px: 0.75,
+                                            minHeight: 0,
+                                            fontSize: 'inherit',
+                                            lineHeight: 'inherit',
+                                            verticalAlign: 'baseline'
+                                          }}
+                                        >
+                                          CHARMM-GUI
+                                        </Button>{' '}
+                                        to properly parameterize your
+                                        structure, then return here
+                                        with CRD and PSF files using
+                                        the CHARMM engine option.
+                                      </>
+                                    ) : (
+                                      ''
+                                    )
                                   )
                                 }}
                               />
@@ -689,26 +724,26 @@ const ResubmitJobForm = () => {
                           }
                         >
                           <MenuItem
-                            key={1}
-                            value={1}
+                            key="1"
+                            value="1"
                           >
                             200
                           </MenuItem>
                           <MenuItem
-                            key={2}
-                            value={2}
+                            key="2"
+                            value="2"
                           >
                             400
                           </MenuItem>
                           <MenuItem
-                            key={3}
-                            value={3}
+                            key="3"
+                            value="3"
                           >
                             600
                           </MenuItem>
                           <MenuItem
-                            key={4}
-                            value={4}
+                            key="4"
+                            value="4"
                           >
                             800
                           </MenuItem>
