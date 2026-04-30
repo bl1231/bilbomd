@@ -125,6 +125,8 @@ services:
               count: 1
               capabilities: [gpu]
     restart: no
+    group_add:
+      - '${DOCKER_GID:-999}'
     env_file:
       - .env.prod
     networks:
