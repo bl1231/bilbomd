@@ -138,7 +138,7 @@ services:
       start_period: 10s
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.13.1
+    image: ghcr.io/bl1231/bilbomd-ui:2.14.0
     pull_policy: always
     env_file:
       - .env.local
