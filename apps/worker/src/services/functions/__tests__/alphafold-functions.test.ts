@@ -98,6 +98,8 @@ describe('buildDockerArgs', () => {
       '/host/cache:/cache',
       '-e',
       'COLABFOLD_DATA_DIR=/cache',
+      '--workdir',
+      '/bilbomd/work',
       'ghcr.io/test/colabfold:latest',
       'colabfold_batch',
       '--num-models=3',

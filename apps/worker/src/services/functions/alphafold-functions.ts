@@ -53,6 +53,8 @@ const buildDockerArgs = (params: {
     `${params.hostCacheDir}:/cache`,
     '-e',
     'COLABFOLD_DATA_DIR=/cache',
+    '--workdir',
+    '/bilbomd/work',
     params.image,
     'colabfold_batch',
     '--num-models=3',
