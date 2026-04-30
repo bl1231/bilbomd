@@ -74,7 +74,6 @@ const makeProc = (exitCode: number) => {
   proc.stdout = new EventEmitter()
   // @ts-expect-error minimal stub
   proc.stderr = new EventEmitter()
-  // @ts-expect-error minimal stub
   proc.kill = vi.fn()
   setTimeout(() => proc.emit('close', exitCode), 0)
   return proc

@@ -16,6 +16,18 @@ const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
   return process.env[name] || defaultValue
 }
 
+const parsePositiveIntEnv = (name: string, defaultValue: number): number => {
+  const raw = process.env[name]
+  if (raw === undefined || raw === '') return defaultValue
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(
+      `Environment variable ${name}="${raw}" is not a positive number`
+    )
+  }
+  return Math.floor(parsed)
+}
+
 const validateRequiredEnvVars = (): void => {
   const required = [
     'BILBOMD_URL',
@@ -83,9 +95,9 @@ export const config = {
     'COLABFOLD_IMAGE',
     'ghcr.io/bl1231/bilbomd-colabfold:0.0.10'
   ),
-  colabfoldTimeoutMs: parseInt(
-    getEnvVarWithDefault('COLABFOLD_TIMEOUT_MS', String(60 * 60 * 1000)),
-    10
+  colabfoldTimeoutMs: parsePositiveIntEnv(
+    'COLABFOLD_TIMEOUT_MS',
+    60 * 60 * 1000
   ),
   dockerBin: getEnvVarWithDefault('DOCKER_BIN', '/usr/bin/docker'),
   logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info'),
