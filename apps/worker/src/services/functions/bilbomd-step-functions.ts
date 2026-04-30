@@ -405,7 +405,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
 }
 
 const storeConstraintsInMongoDB = async (
-  DBjob: IBilboMDAutoJob,
+  DBjob: IBilboMDAutoJob | IBilboMDAlphaFoldJob,
   filePath: string,
   fileName: string
 ): Promise<void> => {
@@ -522,7 +522,7 @@ const runPdb2Crd = async (
 
 const runPaeToConstInp = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDAutoJob
+  DBjob: IBilboMDAutoJob | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   logger.debug(`Starting runPaeToConstInp for job ${DBjob.uuid}`)
 

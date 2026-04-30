@@ -4,6 +4,7 @@ import { Job as BullMQJob } from 'bullmq'
 import {
   IBilboMDPDBJob,
   IBilboMDAutoJob,
+  IBilboMDAlphaFoldJob,
   IBilboMDSteps,
   IStepStatus
 } from '@bilbomd/mongodb-schema'
@@ -15,6 +16,8 @@ import fs from 'fs-extra'
 import YAML from 'yaml'
 import { runPythonStep } from '../../helpers/runPythonStep.js'
 import { convertInpToYaml } from '@bilbomd/md-utils'
+
+type OmmCapableJob = IBilboMDPDBJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
 
 const detectCarbohydratesInPdb = async (pdbPath: string): Promise<boolean> => {
   try {
@@ -57,17 +60,28 @@ const writeOpenMMConfigYaml = async (
 }
 
 const buildOpenMMConfigForJob = async (
-  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
+  DBjob: OmmCapableJob,
   workDir: string
 ): Promise<OpenMMConfig> => {
   const omm_params = DBjob.openmm_parameters || {}
 
-  const pdbPath = path.join(workDir, DBjob.pdb_file)
+  // pdb_file is optional on IBilboMDAlphaFoldJob until runAlphaFold has
+  // promoted af-rank1.pdb. For AF jobs prepareOpenMMConfig is only invoked
+  // after that step, so this should always be present at runtime.
+  const pdbFile = DBjob.pdb_file
+  if (!pdbFile) {
+    throw new Error(
+      `prepareOpenMMConfig called for job ${DBjob.uuid} (${DBjob.__t}) ` +
+        `without a pdb_file set on the job document.`
+    )
+  }
+
+  const pdbPath = path.join(workDir, pdbFile)
   const hasCarbohydrates = await detectCarbohydratesInPdb(pdbPath)
 
   if (hasCarbohydrates) {
     logger.info(
-      `Glycoprotein detected in ${DBjob.pdb_file} — activating GLYCAM force field ` +
+      `Glycoprotein detected in ${pdbFile} — activating GLYCAM force field ` +
         `(amber14/GLYCAM_06j-1.xml). Unsupported cofactors (FAD, HEM, PCA, etc.) ` +
         `will be stripped before MD.`
     )
@@ -80,7 +94,7 @@ const buildOpenMMConfigForJob = async (
   return {
     input: {
       dir: workDir,
-      pdb_file: DBjob.pdb_file,
+      pdb_file: pdbFile,
       forcefield,
       has_carbohydrates: hasCarbohydrates
     },
@@ -131,9 +145,7 @@ const buildOpenMMConfigForJob = async (
   }
 }
 
-const prepareOpenMMConfig = async (
-  DBjob: IBilboMDPDBJob | IBilboMDAutoJob
-): Promise<void> => {
+const prepareOpenMMConfig = async (DBjob: OmmCapableJob): Promise<void> => {
   const workDir = path.join(config.uploadDir, DBjob.uuid)
   const cfg = await buildOpenMMConfigForJob(DBjob, workDir)
 
@@ -172,7 +184,9 @@ const prepareOpenMMConfig = async (
           logger.info('Loaded constraints from CHARMM const.inp for OpenMM')
         }
       } catch (error) {
-        logger.warn(`Failed to convert const.inp to OpenMM constraints: ${error}`)
+        logger.warn(
+          `Failed to convert const.inp to OpenMM constraints: ${error}`
+        )
       }
     }
   }
@@ -240,7 +254,7 @@ interface OpenMMConfig {
 
 const runOmmStep = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
+  DBjob: OmmCapableJob,
   stepKey: OmmStepKey,
   scriptRelPath: string,
   opts?: {
@@ -306,7 +320,7 @@ const runOmmStep = async (
 
 const runOmmMinimize = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
+  DBjob: OmmCapableJob,
   opts?: {
     cwd?: string
     platform?: 'CUDA' | 'OpenCL' | 'CPU'
@@ -326,7 +340,7 @@ const runOmmMinimize = async (
 
 const runOmmHeat = (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
+  DBjob: OmmCapableJob,
   opts?: {
     cwd?: string
     platform?: 'CUDA' | 'OpenCL' | 'CPU'
@@ -338,7 +352,7 @@ const runOmmHeat = (
 
 const runOmmMD = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDPDBJob | IBilboMDAutoJob,
+  DBjob: OmmCapableJob,
   opts?: {
     cwd?: string
     platform?: 'CUDA' | 'OpenCL' | 'CPU'

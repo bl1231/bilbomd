@@ -1,6 +1,7 @@
 import { Job } from 'bullmq'
 import { logger } from '../helpers/loggers.js'
 import { config } from '../config/config.js'
+import { processBilboMDAlphaFoldJob } from '../services/pipelines/bilbomd-alphafold.js'
 import { processBilboMDAutoJob } from '../services/pipelines/bilbomd-auto.js'
 import { processBilboMDCRDJob } from '../services/pipelines/bilbomd-crd.js'
 import { processBilboMDJobNersc } from '../services/pipelines/bilbomd-nersc.js'
@@ -18,7 +19,7 @@ const getPipelineExecutor = (
     pdb: runOnNERSC ? processBilboMDJobNersc : processBilboMDPDBJob,
     crd_psf: runOnNERSC ? processBilboMDJobNersc : processBilboMDCRDJob,
     auto: runOnNERSC ? processBilboMDJobNersc : processBilboMDAutoJob,
-    alphafold: processBilboMDJobNersc, // Always NERSC
+    alphafold: runOnNERSC ? processBilboMDJobNersc : processBilboMDAlphaFoldJob,
     sans: runOnNERSC ? processBilboMDJobNersc : processBilboMDSANSJob
   }
   return pipelines[type] ?? null
@@ -27,13 +28,6 @@ const getPipelineExecutor = (
 export const bilboMdHandler = async (job: Job<WorkerJob>) => {
   logger.info(`bilboMdHandler: ${JSON.stringify(job.data)}`)
   try {
-    // Validate AlphaFold jobs can only run on NERSC
-    if (job.data.type === 'alphafold' && !config.runOnNERSC) {
-      throw new Error(
-        `AlphaFold jobs can only be run on NERSC. Job: ${job.name}`
-      )
-    }
-
     const executor = getPipelineExecutor(job.data.type, config.runOnNERSC)
     if (!executor) {
       throw new Error(`Unknown job type: ${job.data.type}`)
