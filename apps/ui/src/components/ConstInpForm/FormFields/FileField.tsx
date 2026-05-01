@@ -55,7 +55,7 @@ const FileField = ({
             name={name}
             type='file'
             onChange={handleFileChange}
-            inputProps={{ accept: fileExt }}
+            slotProps={{ input: { accept: fileExt } }}
           />
           <label htmlFor={id}>
             <Button

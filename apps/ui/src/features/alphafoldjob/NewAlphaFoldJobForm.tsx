@@ -310,9 +310,9 @@ const EntitiesFieldArray = ({
                       label="Copies"
                       type="number"
                       disabled={useExampleData}
-                      InputProps={{
-                        inputProps: { min: 1, step: 1 },
-                        sx: { height: '100%' } // Ensure full height usage
+                      slotProps={{
+                        input: { sx: { height: '100%' } },
+                        htmlInput: { min: 1, step: 1 }
                       }}
                       fullWidth
                       variant="outlined"
