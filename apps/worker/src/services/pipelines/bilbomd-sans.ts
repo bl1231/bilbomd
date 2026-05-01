@@ -1,5 +1,8 @@
 import { Job as BullMQJob } from 'bullmq'
 import { BilboMdSANSJob } from '@bilbomd/mongodb-schema'
+import path from 'node:path'
+import fs from 'fs-extra'
+import { config } from '../../config/config.js'
 import {
   runPdb2Crd,
   runMinimize,
@@ -111,6 +114,13 @@ const processBilboMDSANSJob = async (MQjob: BullMQJob) => {
     await MQjob.log('start minimize')
     await runOmmMinimize(MQjob, foundJob)
     await MQjob.log('end minimize')
+    // Place minimized PDB at the job root so prepareBilboMDSANSResults can copy it.
+    const workDir = path.join(config.uploadDir, foundJob.uuid)
+    await fs.copy(
+      path.join(workDir, 'openmm', 'minimize', 'minimized.pdb'),
+      path.join(workDir, 'minimization_output.pdb'),
+      { overwrite: true }
+    )
     await progress.update(20)
 
     // OpenMM heating
