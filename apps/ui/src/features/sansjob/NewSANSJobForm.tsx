@@ -393,7 +393,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             ? errors.rg_min
                             : 'Min value of Rg ...(between 10 and 100)'
                         }
-                        inputProps={{ min: 10, max: 100 }}
+                        slotProps={{ htmlInput: { min: 10, max: 100 } }}
                       />
                     </Grid>
 
@@ -415,7 +415,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        inputProps={{ min: 0, max: 100 }}
+                        slotProps={{ htmlInput: { min: 0, max: 100 } }}
                       />
                     </Grid>
 

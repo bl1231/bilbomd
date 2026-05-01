@@ -133,10 +133,12 @@ const Domain: FC<DomainProps> = ({
               type='text'
               as={TextField}
               helperText='Starting residue'
-              InputLabelProps={{
-                style: { backgroundColor: 'transparent', color: 'black' }
+              slotProps={{
+                inputLabel: {
+                  style: { backgroundColor: 'transparent', color: 'black' }
+                },
+                input: { style: { color: 'black' } }
               }}
-              InputProps={{ style: { color: 'black' } }}
               onChange={handleChange}
               onBlur={handleBlur}
               error={Boolean(
@@ -155,10 +157,12 @@ const Domain: FC<DomainProps> = ({
               type='text'
               as={TextField}
               helperText='Ending residue'
-              InputLabelProps={{
-                style: { backgroundColor: 'transparent', color: 'black' }
+              slotProps={{
+                inputLabel: {
+                  style: { backgroundColor: 'transparent', color: 'black' }
+                },
+                input: { style: { color: 'black' } }
               }}
-              InputProps={{ style: { color: 'black' } }}
               onChange={handleChange}
               onBlur={handleBlur}
               error={Boolean(

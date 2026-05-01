@@ -87,7 +87,7 @@ const FileSelect = (props: FileSelectProps) => {
             type="file"
             onChange={handleFileChange}
             onBlur={handleBlur}
-            inputProps={{ accept: props.fileExt }}
+            slotProps={{ input: { accept: props.fileExt } }}
             disabled={props.disabled}
           />
           <label htmlFor={props.id}>
