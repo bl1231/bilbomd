@@ -5,6 +5,7 @@ import {
   IBilboMDPDBJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDSANSJob,
   IBilboMDSteps,
   IStepStatus
 } from '@bilbomd/mongodb-schema'
@@ -17,7 +18,11 @@ import YAML from 'yaml'
 import { runPythonStep } from '../../helpers/runPythonStep.js'
 import { convertInpToYaml } from '@bilbomd/md-utils'
 
-type OmmCapableJob = IBilboMDPDBJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+type OmmCapableJob =
+  | IBilboMDPDBJob
+  | IBilboMDAutoJob
+  | IBilboMDAlphaFoldJob
+  | IBilboMDSANSJob
 
 const detectCarbohydratesInPdb = async (pdbPath: string): Promise<boolean> => {
   try {
