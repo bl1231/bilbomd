@@ -438,7 +438,8 @@ const SingleJobPage = () => {
             job.mongo.jobType === 'crd' ||
             job.mongo.jobType === 'auto' ||
             job.mongo.jobType === 'alphafold' ||
-            job.mongo.jobType === 'scoper') && (
+            job.mongo.jobType === 'scoper' ||
+            job.mongo.jobType === 'sans') && (
             <Grid size={{ xs: 12 }}>
               <HeaderBox sx={{ py: '6px' }}>
                 <Typography>
