@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router'
 import useTitle from 'hooks/useTitle'
 import {
@@ -111,26 +111,10 @@ const SingleJobPage = () => {
     data: moviesData,
     error: moviesError,
     isLoading: moviesLoading
-  } = useGetMDMoviesQuery(id ?? skipToken)
-
-  const allMoviesReady =
-    moviesData &&
-    moviesData.movies.length > 0 &&
-    moviesData.movies.every((m) => m.status === 'ready')
-
-  // Optionally, use a refetch or polling effect:
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined
-    if (!allMoviesReady && id) {
-      interval = setInterval(() => {
-        // You may need to use refetch from RTK Query if available
-        // refetchMovies()
-      }, 15000)
-    }
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [allMoviesReady, id])
+  } = useGetMDMoviesQuery(id ?? skipToken, {
+    pollingInterval: 15000,
+    skipPollingIfUnfocused: true
+  })
 
   // Debug logging
   // console.log('moviesData:', moviesData)
