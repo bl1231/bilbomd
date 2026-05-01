@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.14.1
+
+### Patch Changes
+
+- ff2b1f4: Fix MD movies not appearing without manual page refresh for SANS and OpenMM jobs by using RTK Query's built-in pollingInterval instead of a broken manual setInterval.
+
 ## 2.14.0
 
 ### Minor Changes
