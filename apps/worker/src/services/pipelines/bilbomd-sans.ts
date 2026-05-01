@@ -15,6 +15,7 @@ import {
   runOmmMD,
   prepareOpenMMConfig
 } from '../functions/openmm-functions.js'
+import { runCifToPdb } from '../functions/pdb-to-crd.js'
 import {
   extractPDBFilesFromDCD,
   mirrorOmmMdToPepsiSANS,
@@ -67,6 +68,16 @@ const processBilboMDSANSJob = async (MQjob: BullMQJob) => {
   // Initialize
   await initializeJob(MQjob, foundJob)
   await progress.update(10)
+
+  // Convert CIF → PDB before any engine-specific processing
+  if (foundJob.pdb_file?.toLowerCase().endsWith('.cif')) {
+    await MQjob.log('start cif-to-pdb')
+    foundJob.pdb_file = await runCifToPdb({
+      uuid: foundJob.uuid,
+      pdb_file: foundJob.pdb_file
+    })
+    await MQjob.log(`end cif-to-pdb: ${foundJob.pdb_file}`)
+  }
 
   if (engine === 'CHARMM') {
     // PDB to CRD/PSF for 'pdb' mode
