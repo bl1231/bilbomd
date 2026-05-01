@@ -158,11 +158,18 @@ const handleBilboMDAlphaFoldJob = async (
 
     let stepsInit: IBilboMDSteps
 
+    // AutoRg already ran successfully above (invalid values cause an early
+    // return), so mark it Success immediately rather than leaving it Waiting.
+    const autorgStep = {
+      status: StepStatus.Success,
+      message: `Rg: ${rg}, Rg_min: ${rg_min}, Rg_max: ${rg_max}`
+    }
+
     if (md_engine === 'OpenMM') {
       stepsInit = {
         alphafold: { status: StepStatus.Waiting, message: '' },
         pae: { status: StepStatus.Waiting, message: '' },
-        autorg: { status: StepStatus.Waiting, message: '' },
+        autorg: autorgStep,
         minimize: { status: StepStatus.Waiting, message: '' },
         initfoxs: { status: StepStatus.Waiting, message: '' },
         heat: { status: StepStatus.Waiting, message: '' },
@@ -179,7 +186,7 @@ const handleBilboMDAlphaFoldJob = async (
         alphafold: { status: StepStatus.Waiting, message: '' },
         pdb2crd: { status: StepStatus.Waiting, message: '' },
         pae: { status: StepStatus.Waiting, message: '' },
-        autorg: { status: StepStatus.Waiting, message: '' },
+        autorg: autorgStep,
         minimize: { status: StepStatus.Waiting, message: '' },
         initfoxs: { status: StepStatus.Waiting, message: '' },
         heat: { status: StepStatus.Waiting, message: '' },

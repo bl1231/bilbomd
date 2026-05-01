@@ -143,7 +143,7 @@ FROM nvidia/cuda:12.9.1-runtime-ubuntu22.04 AS bilbomd-worker-base
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    ca-certificates curl software-properties-common \
+    ca-certificates curl software-properties-common gnupg \
     libgfortran5 libstdc++6 libxml2 libtiff5 liblzma5 libicu70 libharfbuzz0b \
     parallel binutils \
     libglew-dev \
@@ -157,6 +157,22 @@ RUN apt-get update && \
     libxmu-dev \
     libxi-dev \
     ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Docker CLI — required by the local AlphaFold pipeline so the worker can
+# spawn sibling bilbomd-colabfold containers via the host docker daemon
+# (mounted at /var/run/docker.sock). We only need the client; the daemon
+# runs on the host.
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+        gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    chmod a+r /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+        > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        docker-ce-cli && \
     rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository -y ppa:salilab/ppa && \
