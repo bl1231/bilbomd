@@ -867,8 +867,63 @@ Thank you for using BilboMD SANS
   }
 }
 
+const mirrorOmmMdToPepsiSANS = async (
+  DBjob: IBilboMDSANSJob
+): Promise<void> => {
+  const workDir = path.join(config.uploadDir, DBjob.uuid)
+  const ommMdDir = path.join(workDir, 'openmm', 'md')
+  const pepsiSANSDir = path.join(workDir, 'pepsisans')
+
+  await fs.ensureDir(pepsiSANSDir)
+
+  if (!(await fs.pathExists(ommMdDir))) {
+    throw new Error(`OpenMM MD output directory not found: ${ommMdDir}`)
+  }
+
+  const entries = await fs.readdir(ommMdDir)
+  const rgDirs = []
+  for (const name of entries) {
+    const fullPath = path.join(ommMdDir, name)
+    if (/^rg_\d+$/.test(name) && (await fs.stat(fullPath)).isDirectory()) {
+      rgDirs.push(name)
+    }
+  }
+
+  if (rgDirs.length === 0) {
+    throw new Error(`No rg_* directories found in ${ommMdDir}`)
+  }
+
+  for (const rgDir of rgDirs) {
+    const srcDir = path.join(ommMdDir, rgDir)
+    const match = rgDir.match(/^rg_(\d+)$/)
+    if (!match) continue
+    const normalizedName = `rg${match[1]}`
+    const destDir = path.join(pepsiSANSDir, normalizedName)
+    await fs.ensureDir(destDir)
+
+    const files = await fs.readdir(srcDir)
+    for (const file of files) {
+      if (!file.toLowerCase().endsWith('.pdb')) continue
+      if (file.toLowerCase() === 'md.pdb') continue
+
+      const src = path.join(srcDir, file)
+      const dst = path.join(destDir, file)
+      if (!(await fs.pathExists(dst))) {
+        try {
+          const rel = path.relative(path.dirname(dst), src)
+          await fs.ensureSymlink(rel, dst)
+        } catch {
+          await fs.copy(src, dst)
+        }
+      }
+    }
+    logger.info(`Mirrored ${rgDir} -> pepsisans/${normalizedName}`)
+  }
+}
+
 export {
   extractPDBFilesFromDCD,
+  mirrorOmmMdToPepsiSANS,
   remediatePDBFiles,
   runPepsiSANSOnPDBFiles,
   runGASANS,

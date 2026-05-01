@@ -34,7 +34,7 @@ export default function PlddtSlider({
       <Grid
         container
         spacing={2}
-        alignItems="center"
+        sx={{ alignItems: 'center' }}
       >
         <Grid>
           <Chip
@@ -49,7 +49,7 @@ export default function PlddtSlider({
         </Grid>
         <Grid sx={{ flex: 1 }}>
           <Slider
-            value={value}
+            value={Number(value)}
             valueLabelFormat={valuetext}
             getAriaValueText={valuetext}
             step={1}

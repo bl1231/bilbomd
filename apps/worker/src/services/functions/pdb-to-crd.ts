@@ -284,4 +284,60 @@ const runCifToPdb = (data: CifToPdbData): Promise<string> => {
   })
 }
 
-export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runStripIons, runCifToPdb }
+interface StripCofactorsData {
+  uuid: string
+  pdb_file: string
+}
+
+/**
+ * Strip molecular cofactors (FAD, HEM, PCA, etc.) that have no parameters in the
+ * bundled Amber/GLYCAM force fields. Writes stripped_cofactors.json to the job dir.
+ */
+const runStripCofactors = (data: StripCofactorsData): Promise<void> => {
+  const workingDir = path.join(uploadFolder, data.uuid)
+  const pdbPath = path.join(workingDir, data.pdb_file)
+  const logFile = path.join(workingDir, 'strip_cofactors.log')
+  const errorFile = path.join(workingDir, 'strip_cofactors_error.log')
+  const logStream = fs.createWriteStream(logFile)
+  const errorStream = fs.createWriteStream(errorFile)
+  const script = '/app/scripts/strip_cofactors.py'
+
+  logger.info(`runStripCofactors: stripping cofactors from ${data.pdb_file}`)
+
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn('/opt/envs/base/bin/python', [script, pdbPath], {
+      cwd: workingDir
+    })
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      logStream.write(chunk.toString())
+    })
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      const msg = chunk.toString().trim()
+      logger.error(`runStripCofactors stderr: ${msg}`)
+      errorStream.write(msg + '\n')
+    })
+
+    proc.on('error', (error) => {
+      logger.error(`runStripCofactors spawn error: ${error}`)
+      reject(error)
+    })
+
+    proc.on('close', (code) => {
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).then(() => {
+        if (code === 0) {
+          logger.info(`runStripCofactors succeeded for ${data.pdb_file}`)
+          resolve()
+        } else {
+          reject(new Error(`strip_cofactors.py exited with code ${code}`))
+        }
+      }).catch(reject)
+    })
+  })
+}
+
+export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runStripIons, runStripCofactors, runCifToPdb }

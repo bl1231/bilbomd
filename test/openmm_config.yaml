@@ -1,0 +1,64 @@
+constraints:
+  fixed_bodies:
+    - name: FixedBody1
+      segments:
+        - chain_id: A
+          residues:
+            start: 1
+            stop: 202
+        - chain_id: A
+          residues:
+            start: 204
+            stop: 206
+        - chain_id: A
+          residues:
+            start: 226
+            stop: 870
+  rigid_bodies: []
+input:
+  dir: .
+  forcefield:
+    - amber19-all.xml
+    - amber14/GLYCAM_06j-1.xml
+    - implicit/gbn2.xml
+  has_carbohydrates: true
+  pdb_file: 4QI6.pdb
+output:
+  heat_dir: heat
+  md_dir: md
+  min_dir: minimize
+  output_dir: ./openmm
+steps:
+  heating:
+    output_pdb: heated.pdb
+    output_restart: heated.xml
+    parameters:
+      final_temp: 600
+      nsteps: 10000
+      start_temp: 300
+      timestep: 0.001
+  md:
+    output_dcd: md.dcd
+    output_pdb: md.pdb
+    output_restart: md.xml
+    parameters:
+      friction: 0.1
+      nsteps: 300000
+      temperature: 600
+      timestep: 0.001
+    pdb_report_interval: 500
+    rgyr:
+      filename: rgyr.csv
+      k_rg: 10
+      report_interval: 500
+      rgs:
+        - 33
+        - 37
+        - 42
+        - 46
+        - 51
+        - 55
+  minimization:
+    output_pdb: minimized.pdb
+    parameters:
+      max_iterations: 1000

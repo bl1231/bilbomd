@@ -1,5 +1,49 @@
 # @bilbomd/ui
 
+## 2.14.1
+
+### Patch Changes
+
+- ff2b1f4: Fix MD movies not appearing without manual page refresh for SANS and OpenMM jobs by using RTK Query's built-in pollingInterval instead of a broken manual setInterval.
+
+## 2.14.0
+
+### Minor Changes
+
+- c764232: Enforce engine-driven input mode across all job forms. Classic form: MD engine selection now drives input format (CHARMM requires CRD/PSF from CHARMM-GUI, OpenMM accepts PDB/CIF). Auto, AlphaFold, and SANS forms: CHARMM engine option hidden, defaulting to OpenMM. Prevents PDB-to-CRD/PSF conversion failures with non-standard residues. Metal cofactor warning now suggests CHARMM-GUI with inline link button. Fix Classic form regressions: Conformations per Rg defaults to 600 for OpenMM, auto-Rg validation no longer requires manual field interaction. Fix Help page pipeline schematic images for dark mode support.
+
+### Patch Changes
+
+- 26b85b8: Update BilboMD citation to the published NAR 2026 paper. Replaces the Pelikan et al. 2009 Gen Physiol Biophys reference with Classen et al. 2026 Nucleic Acids Research (doi: 10.1093/nar/gkag377) across the Home, About, Help, and Acknowledgments pages.
+
+## 2.13.1
+
+### Patch Changes
+
+- d0504b0: Fix UI cofactor alerts to reflect GAFF2 support for organic small molecules. Split STRIPPABLE_COFACTORS into GAFF_COFACTORS (organic, now parameterized via GAFF2) and METAL_COFACTORS (heme/porphyrins, still removed). FAD and similar molecules now show a blue info alert instead of a yellow warning.
+- cde25c7: Fix Molstar viewer not showing glycans, cofactors, and ions on initial load. Apply StructurePreset to all ensemble structures and add branched entity support to display presets.
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+
+## 2.13.0
+
+### Minor Changes
+
+- d2e967c: Upgrade MUI core packages to v9 and MUI X Data Grid to v9. Migrate system props (`alignItems`, `justifyContent`, `direction`, `display`, `mt`, `mb`, `mx`, `fontWeight`, `textAlign`, etc.) to `sx` prop across 41 components. Update deprecated icon imports (`Outline` → `Outlined`). Migrate `MenuProps.PaperProps` to `slotProps.paper`. Remove legacy `@emotion/core` dependency.
+
+## 2.12.0
+
+### Minor Changes
+
+- e99111b: Add admin-only BullMQ dashboard access. Admins can now open the bull-board queue dashboard via a new sidebar link. Protected by nginx auth_request using the session cookie, so no unauthenticated access is possible.
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+- Updated dependencies [57f8495]
+  - @bilbomd/bilbomd-types@1.5.2
+  - @bilbomd/mongodb-schema@2.5.4
+
 ## 2.11.3
 
 ### Patch Changes

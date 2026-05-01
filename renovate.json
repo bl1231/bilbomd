@@ -3,6 +3,9 @@
   "extends": ["config:recommended"],
   "timezone": "America/Los_Angeles",
   "schedule": ["before 6am on Monday"],
+  "ignorePaths": [
+    "apps/scoper/bilbomd-scoper-base.dockerfile"
+  ],
   "packageRules": [
     {
       "description": "Group all minor and patch npm updates into one PR",

@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import NewAutoJobForm from '../NewAutoJobForm'
 
@@ -24,20 +23,9 @@ vi.mock('../../../slices/configsApiSlice', () => ({
 }))
 
 describe('NewAutoJobForm md_engine', () => {
-  it('renders CHARMM and OpenMM options and defaults to CHARMM', async () => {
+  it('does not render engine selection radio buttons', () => {
     render(<NewAutoJobForm />)
-    const charmm = screen.getByLabelText(/CHARMM/i)
-    const openmm = screen.getByLabelText(/OpenMM/i)
-    expect(charmm).toBeInTheDocument()
-    expect(openmm).toBeInTheDocument()
-    expect((charmm as HTMLInputElement).checked).toBe(true)
-  })
-
-  it('allows selecting OpenMM', async () => {
-    const user = userEvent.setup()
-    render(<NewAutoJobForm />)
-    const openmm = screen.getByLabelText(/OpenMM/i)
-    await user.click(openmm)
-    expect((openmm as HTMLInputElement).checked).toBe(true)
+    expect(screen.queryByLabelText(/CHARMM/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/OpenMM/i)).not.toBeInTheDocument()
   })
 })

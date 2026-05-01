@@ -199,7 +199,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                             </Fragment>
                           )
                         )}
-                      <Grid container justifyContent='flex-end'>
+                      <Grid container sx={{ justifyContent: 'flex-end' }}>
                         <Grid
                           size={{ xs: 12 }}
                           sx={{

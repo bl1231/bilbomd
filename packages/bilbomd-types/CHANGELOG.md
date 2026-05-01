@@ -1,5 +1,17 @@
 # @bilbomd/bilbomd-types
 
+## 1.5.3
+
+### Patch Changes
+
+- d0504b0: Fix UI cofactor alerts to reflect GAFF2 support for organic small molecules. Split STRIPPABLE_COFACTORS into GAFF_COFACTORS (organic, now parameterized via GAFF2) and METAL_COFACTORS (heme/porphyrins, still removed). FAD and similar molecules now show a blue info alert instead of a yellow warning.
+
+## 1.5.2
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+
 ## 1.5.1
 
 ### Patch Changes

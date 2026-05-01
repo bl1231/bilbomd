@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/md-utils",
-  "version": "1.1.6",
+  "version": "1.1.9",
   "description": "Molecular dynamics constraint utilities for BilboMD",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,6 +25,7 @@
     "openmm"
   ],
   "dependencies": {
+    "@bilbomd/bilbomd-types": "workspace:*",
     "@bilbomd/mongodb-schema": "workspace:*",
     "fs-extra": "^11.3.4",
     "yaml": "^2.8.3"
@@ -35,7 +36,7 @@
     "@vitest/coverage-v8": "^4.1.3",
     "eslint": "^10.2.0",
     "typescript": "^6.0.2",
-    "uuid": "^13.0.0",
+    "uuid": "^14.0.0",
     "vitest": "^4.1.3"
   }
 }

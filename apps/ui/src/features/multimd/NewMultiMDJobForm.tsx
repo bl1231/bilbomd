@@ -143,10 +143,7 @@ const NewMultiMDJobForm: React.FC = () => {
 
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
-            <Box
-              display="flex"
-              alignItems="center"
-            >
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography>BilboMD Multi Job Form</Typography>
               <Typography
                 component="span"
@@ -186,7 +183,7 @@ const NewMultiMDJobForm: React.FC = () => {
                   <Form>
                     <Grid
                       container
-                      direction="column"
+                      sx={{ flexDirection: 'column' }}
                     >
                       <Grid sx={{ my: 2, width: '520px' }}>
                         <Field

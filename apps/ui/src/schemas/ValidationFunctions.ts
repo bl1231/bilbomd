@@ -1,5 +1,7 @@
 import {
   SUPPORTED_PDB_RESIDUES,
+  GAFF_COFACTORS,
+  METAL_COFACTORS,
   parseCifAtomSite,
   cifContainsChainId as cifContainsChainIdUtil,
   cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
@@ -560,6 +562,35 @@ const cifIsSingleModel = (file: File): Promise<boolean> => {
   })
 }
 
+const _detectResiduesFromSet = (file: File, residueSet: Set<string>): Promise<string[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const found = new Set<string>()
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+          const resName = line.substring(17, 20).trim().toUpperCase()
+          if (residueSet.has(resName)) found.add(resName)
+        }
+      }
+      resolve(Array.from(found).sort())
+    }
+    reader.onerror = () => reject(new Error('Error reading file'))
+    reader.readAsText(file)
+  })
+}
+
+const detectGaffCofactors = (file: File): Promise<string[]> =>
+  _detectResiduesFromSet(file, GAFF_COFACTORS)
+
+const detectMetalCofactors = (file: File): Promise<string[]> =>
+  _detectResiduesFromSet(file, METAL_COFACTORS)
+
 export {
   fromCharmmGui,
   isCRD,
@@ -575,6 +606,8 @@ export {
   cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines,
   isValidConstInpFile,
-  hasAllowedResiduesOnly
+  hasAllowedResiduesOnly,
+  detectGaffCofactors,
+  detectMetalCofactors
 }
 export type { SaxsQualityResult }

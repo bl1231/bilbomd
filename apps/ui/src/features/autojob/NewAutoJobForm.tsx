@@ -1,5 +1,13 @@
-import { useState } from 'react'
-import { Box, Button, TextField, Typography, Alert, Paper } from '@mui/material'
+import { ReactNode, useState } from 'react'
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Alert,
+  Paper
+} from '@mui/material'
+import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
@@ -8,6 +16,10 @@ import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import NewAutoJobFormInstructions from './AutoJobFormInstructions'
 import { BilboMDAutoJobSchema } from 'schemas/BilboMDAutoJobSchema'
+import {
+  detectGaffCofactors,
+  detectMetalCofactors
+} from 'schemas/ValidationFunctions'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
@@ -17,7 +29,6 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
-import MdEngineField from 'components/MdEngineField'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 
@@ -67,9 +78,11 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
-  const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('charmm')
+  const [mdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
+  const [pdbInfo, setPdbInfo] = useState<string>('')
 
   // RTK Query to fetch the configuration
   const {
@@ -86,7 +99,6 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
   // Are we running on NERSC?
   const useNersc = config.useNersc?.toLowerCase() === 'true'
-  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
 
   const initialValues: BilboMDAutoJobFormValues = {
     bilbomd_mode: 'auto',
@@ -94,7 +106,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     pdb_file: '',
     pae_file: '',
     dat_file: '',
-    md_engine: charmmEnabled ? 'charmm' : 'openmm'
+    md_engine: 'openmm'
   }
 
   const onSubmit = async (values: BilboMDAutoJobFormValues) => {
@@ -190,7 +202,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                   <Form>
                     <Grid
                       container
-                      direction="column"
+                      sx={{ flexDirection: 'column' }}
                     >
                       {useNersc && (
                         <NerscStatusChecker
@@ -263,19 +275,6 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Box>
                       </Box>
 
-                      {/* MD Engine selection */}
-                      <Grid sx={{ width: '520px' }}>
-                        <MdEngineField
-                          value={values.md_engine as 'charmm' | 'openmm'}
-                          onChange={(val) => {
-                            void setFieldValue('md_engine', val)
-                            setMdEngine(val)
-                          }}
-                          disabled={isSubmitting}
-                          disableCharmm={!charmmEnabled}
-                        />
-                      </Grid>
-
                       {useExampleData && (
                         <Alert
                           severity="warning"
@@ -305,11 +304,63 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           setFieldTouched={setFieldTouched}
                           error={errors.pdb_file && touched.pdb_file}
                           errorMessage={errors.pdb_file ? errors.pdb_file : ''}
+                          infoMessage={pdbInfo}
+                          warningMessage={pdbWarning}
                           fileType="AlphaFold *.pdb or *.cif"
                           fileExt=".pdb,.cif"
                           existingFileName={
                             useExampleData ? 'example-auto.pdb' : undefined
                           }
+                          onFileChange={async (file: File) => {
+                            const [gaffFound, metalFound] = await Promise.all([
+                              detectGaffCofactors(file),
+                              detectMetalCofactors(file)
+                            ])
+                            setPdbInfo(
+                              gaffFound.length > 0
+                                ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
+                                : ''
+                            )
+                            setPdbWarning(
+                              metalFound.length > 0 ? (
+                                <>
+                                  The following metal-containing
+                                  residues have no force-field
+                                  parameters and will be removed
+                                  before MD:{' '}
+                                  {metalFound.join(', ')}. If these
+                                  residues are important for your
+                                  system, consider using{' '}
+                                  <Button
+                                    href="https://charmm-gui.org/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    variant="outlined"
+                                    color="info"
+                                    endIcon={<LaunchIcon />}
+                                    sx={{
+                                      textTransform: 'none',
+                                      py: 0,
+                                      px: 0.75,
+                                      minHeight: 0,
+                                      fontSize: 'inherit',
+                                      lineHeight: 'inherit',
+                                      verticalAlign: 'baseline'
+                                    }}
+                                  >
+                                    CHARMM-GUI
+                                  </Button>{' '}
+                                  to properly parameterize your
+                                  structure, then submit a Classic job
+                                  with CRD and PSF files using the
+                                  CHARMM engine option.
+                                </>
+                              ) : (
+                                ''
+                              )
+                            )
+                          }}
                         />
                       </Grid>
 
