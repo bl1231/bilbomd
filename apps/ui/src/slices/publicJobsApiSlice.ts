@@ -1,5 +1,9 @@
 import { apiSlice } from 'app/api/apiSlice'
-import type { PublicJobStatus, AnonJobResponse } from '@bilbomd/bilbomd-types'
+import type {
+  PublicJobStatus,
+  AnonJobResponse,
+  JobAssetsDTO
+} from '@bilbomd/bilbomd-types'
 import type { IFeedbackData } from '@bilbomd/mongodb-schema/frontend'
 import type { FoxsData } from 'types/foxs'
 
@@ -51,6 +55,9 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
         url: `/public/jobs/${publicId}/results/${filename}`,
         responseHandler: (response) => response.text()
       })
+    }),
+    getPublicMDMovies: builder.query<JobAssetsDTO, string>({
+      query: (publicId) => `/public/jobs/${publicId}/movies`
     })
   })
 })
@@ -63,5 +70,6 @@ export const {
   useGetPublicFeedbackDataQuery,
   useGetPublicResultFileQuery,
   useGetPublicResultFileJsonQuery,
-  useGetPublicResultFileTextQuery
+  useGetPublicResultFileTextQuery,
+  useGetPublicMDMoviesQuery
 } = publicJobsApiSlice
