@@ -3,7 +3,8 @@ import {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
-  IStepStatus
+  IStepStatus,
+  Job
 } from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
 import { spawn, ChildProcess } from 'node:child_process'
@@ -165,9 +166,8 @@ const spawnFoXSOptimized = async (
                 `FoXS progress: ${completed}/${allTasks.length} files completed (${progress}%)`
               )
               if (DBjob) {
-                void updateStepStatus(DBjob, 'foxs', {
-                  status: 'Running',
-                  message: statusMsg
+                void Job.findByIdAndUpdate(DBjob._id, {
+                  'steps.foxs': { status: 'Running', message: statusMsg }
                 })
               }
             }

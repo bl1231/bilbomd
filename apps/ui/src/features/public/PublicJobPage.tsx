@@ -235,10 +235,13 @@ const PublicJobPage = () => {
                     icon={
                       <DirectionsRunRoundedIcon style={{ color: 'black' }} />
                     }
-                    size="small"
+                    variant="outlined"
                     label={getStepDetails(runningStepName).friendlyName}
-                    style={{ backgroundColor: '#fff566', color: 'black' }}
-                    sx={{ mr: 2 }}
+                    sx={{
+                      backgroundColor: '#fff566',
+                      color: 'black',
+                      mr: 2
+                    }}
                   />
                 </Tooltip>
               )}
