@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useParams, useLocation, useNavigate, Link } from 'react-router'
 import useTitle from 'hooks/useTitle'
 import {
@@ -72,6 +72,7 @@ const SingleJobPage = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
   const [tabValue, setTabValue] = useState(0)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [jobPollingInterval, setJobPollingInterval] = useState(10000)
   const [deleteJob] = useDeleteJobMutation()
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -94,12 +95,24 @@ const SingleJobPage = () => {
     isLoading,
     isError
   } = useGetJobByIdQuery(id ?? skipToken, {
-    pollingInterval: 30000,
+    pollingInterval: jobPollingInterval,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
 
   const job = jobData as BilboMDJobDTO
+
+  useEffect(() => {
+    const status = job?.mongo?.status
+    if (!status) return
+    if (status === 'Running') {
+      setJobPollingInterval(10000)
+    } else if (['Completed', 'Error', 'Failed'].includes(status)) {
+      setJobPollingInterval(0)
+    } else {
+      setJobPollingInterval(30000)
+    }
+  }, [job?.mongo?.status])
 
   const {
     data: config,
