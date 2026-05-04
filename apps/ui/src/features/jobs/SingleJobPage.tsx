@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from 'react'
-import { useParams, useLocation, useNavigate } from 'react-router'
+import { useParams, useLocation, useNavigate, Link } from 'react-router'
 import useTitle from 'hooks/useTitle'
 import {
   Button,
@@ -551,15 +551,34 @@ const SingleJobPage = () => {
             </HeaderBox>
 
             <Item>
-              <Alert
-                severity="error"
-                variant="outlined"
-              >
-                Hmmmm... Well something didn&apos;t work. Please try submitting
-                again and if things still don&apos;t work contact Scott or
-                Michal.
-              </Alert>
-              {/* <JobError job={job} /> */}
+              {token ? (
+                <Alert
+                  severity="error"
+                  variant="outlined"
+                >
+                  <AlertTitle>Job Failed</AlertTitle>
+                  We&apos;ve logged the details of this job failure. Please
+                  contact Scott or Michal and reference your job ID for faster
+                  support:{' '}
+                  <Box
+                    component="code"
+                    sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}
+                  >
+                    {job.mongo.uuid}
+                  </Box>
+                </Alert>
+              ) : (
+                <Alert
+                  severity="error"
+                  variant="outlined"
+                >
+                  <AlertTitle>Job Failed</AlertTitle>
+                  Something didn&apos;t work.{' '}
+                  <Link to="/register">Creating a free BilboMD account</Link>{' '}
+                  allows us to investigate job failures and provide personalized
+                  support. You can also try resubmitting.
+                </Alert>
+              )}
             </Item>
           </Grid>
         )}

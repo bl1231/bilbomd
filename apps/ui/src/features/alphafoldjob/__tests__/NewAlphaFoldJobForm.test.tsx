@@ -1,7 +1,7 @@
 import React from 'react'
-import { describe, it, beforeEach, vi, Mock } from 'vitest'
+import { describe, it, beforeEach, vi, Mock, expect } from 'vitest'
 import '@testing-library/jest-dom'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import NewAlphaFoldJob from '../NewAlphaFoldJobForm'
 import { useAddNewAlphaFoldJobMutation } from 'slices/jobsApiSlice'
 import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
@@ -26,7 +26,14 @@ vi.mock('react-router', () => ({
 }))
 
 vi.mock('@mui/material/styles', () => ({
-  useTheme: vi.fn(() => ({ palette: { mode: 'light' } }))
+  useTheme: vi.fn(() => ({
+    palette: {
+      mode: 'light',
+      success: { main: '#2e7d32' },
+      warning: { main: '#ed6c02' },
+      error: { main: '#d32f2f' }
+    }
+  }))
 }))
 
 vi.mock('features/jobs/FileSelect', () => ({
@@ -161,5 +168,31 @@ describe('NewAlphaFoldJob Component', () => {
   it('should handle config loaded', () => {
     render(<NewAlphaFoldJob />)
     // Component should render form when config is loaded
+  })
+
+  it('shows GPU warning on non-NERSC deployments with AF enabled', () => {
+    ;(useGetConfigsQuery as Mock).mockReturnValue({
+      data: { enableBilboMdAlphaFold: 'true', useNersc: 'false' },
+      error: null,
+      isLoading: false
+    })
+
+    render(<NewAlphaFoldJob />)
+    expect(
+      screen.getByText(/limited GPU compute available/i)
+    ).toBeInTheDocument()
+  })
+
+  it('does not show GPU warning on NERSC deployments', () => {
+    ;(useGetConfigsQuery as Mock).mockReturnValue({
+      data: { enableBilboMdAlphaFold: 'true', useNersc: 'true' },
+      error: null,
+      isLoading: false
+    })
+
+    render(<NewAlphaFoldJob />)
+    expect(
+      screen.queryByText(/limited GPU compute available/i)
+    ).not.toBeInTheDocument()
   })
 })

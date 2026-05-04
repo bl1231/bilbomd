@@ -600,7 +600,25 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
               />
             ) : null
           ) : (
-            <Formik<NewAlphaFoldJobFormValues>
+            <>
+              {!useNersc && (
+                <Alert
+                  severity="warning"
+                  sx={{ mb: 2 }}
+                >
+                  This deployment has limited GPU compute available. If you plan
+                  to submit many AlphaFold jobs, please use{' '}
+                  <Link
+                    href="https://bilbomd-nersc.bl1231.als.lbl.gov/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    bilbomd-nersc.bl1231.als.lbl.gov
+                  </Link>
+                  .
+                </Alert>
+              )}
+              <Formik<NewAlphaFoldJobFormValues>
               initialValues={initialValues}
               validationSchema={
                 useExampleData ? undefined : BilboMDAlphaFoldJobSchema
@@ -828,7 +846,8 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                   {import.meta.env.MODE === 'development' ? <Debug /> : ''}
                 </Form>
               )}
-            </Formik>
+              </Formik>
+            </>
           )}
         </Paper>
       </Grid>
