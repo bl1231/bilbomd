@@ -250,7 +250,7 @@ const PublicJobPage = () => {
             </Box>
             {latestStepMessage && (
               <Typography
-                variant="body2"
+                variant="subtitle1"
                 sx={{ color: 'text.secondary', pl: 1 }}
               >
                 {latestStepMessage}
