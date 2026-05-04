@@ -247,12 +247,19 @@ const PublicJobPage = () => {
               )}
               {/* Live job timer */}
               {calculateDuration() && (
-                <Typography
-                  variant="body1"
-                  sx={{ mr: 2, minWidth: '90px' }}
-                >
-                  ⏱ {calculateDuration()}
-                </Typography>
+                <Chip
+                  label={`⏱ ${calculateDuration()}`}
+                  variant="outlined"
+                  sx={{
+                    mr: 2,
+                    backgroundColor:
+                      job.status === 'Running' || job.status === 'Completed'
+                        ? '#e8f5e9'
+                        : job.status === 'Error' || job.status === 'Failed'
+                          ? '#ffebee'
+                          : undefined
+                  }}
+                />
               )}
               <LinearProgress
                 variant="determinate"
