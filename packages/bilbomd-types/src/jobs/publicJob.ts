@@ -1,5 +1,6 @@
 import { JobResultsDTO } from './results.js'
 import { JobType, JobStatusEnum } from './jobs.js'
+import { JobStepsDTO } from './jobSteps.js'
 
 export type PublicJobStatus = {
   publicId: string
@@ -12,6 +13,7 @@ export type PublicJobStatus = {
   submittedAt: Date
   startedAt?: Date
   completedAt?: Date
+  steps?: JobStepsDTO
   results?: JobResultsDTO
 }
 

@@ -100,7 +100,8 @@ interface FoxsTask {
 const spawnFoXSOptimized = async (
   foxsRunDirs: string[],
   MQjob?: BullMQJob,
-  maxConcurrency = getEffectiveCpuCount()
+  maxConcurrency = getEffectiveCpuCount(),
+  DBjob?: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   try {
     // Collect all PDB files from all directories
@@ -152,8 +153,9 @@ const spawnFoXSOptimized = async (
             // Progress logging - report every 50 completed files
             if (MQjob && completed % 50 === 0) {
               const progress = Math.round((completed / allTasks.length) * 100)
+              const statusMsg = `FoXS: ${completed}/${allTasks.length} (${progress}%)`
               MQjob.updateProgress({
-                status: `FoXS processing: ${completed}/${allTasks.length} (${progress}%)`,
+                status: statusMsg,
                 timestamp: Date.now()
               })
               MQjob.log(
@@ -162,6 +164,12 @@ const spawnFoXSOptimized = async (
               logger.info(
                 `FoXS progress: ${completed}/${allTasks.length} files completed (${progress}%)`
               )
+              if (DBjob) {
+                void updateStepStatus(DBjob, 'foxs', {
+                  status: 'Running',
+                  message: statusMsg
+                })
+              }
             }
 
             resolve()
@@ -397,7 +405,7 @@ const runFoXS = async (
     }
 
     // Run optimized FoXS processing - ALL FILES IN PARALLEL
-    await spawnFoXSOptimized(foxsRunDirs, MQjob, actualConcurrency)
+    await spawnFoXSOptimized(foxsRunDirs, MQjob, actualConcurrency, DBjob)
 
     // Update status to Success once all jobs are complete
     status = {

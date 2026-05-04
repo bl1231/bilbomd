@@ -139,6 +139,13 @@ const PublicJobPage = () => {
   const job: PublicJobStatus = data
   const progress = job.progress ?? 0
 
+  const latestStepMessage = job.steps
+    ? Object.values(job.steps).reduce((msg: string, step) => {
+        if (!step || typeof step !== 'object') return msg
+        return (step as { message?: string }).message || msg
+      }, '')
+    : ''
+
   const calculateDuration = (): string | undefined => {
     if (!job.startedAt) return undefined
     const startTime = new Date(job.startedAt)
@@ -198,46 +205,56 @@ const PublicJobPage = () => {
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Progress</Typography>
           </HeaderBox>
-          <Item sx={{ display: 'flex', alignItems: 'center' }}>
-            <Chip
-              label={job.status}
-              variant="outlined"
-              sx={{
-                backgroundColor: statusColors.background,
-                color: statusColors.text,
-                mr: 2
-              }}
-            />
-            {/* Live job timer */}
-            {calculateDuration() && (
-              <Typography
-                variant="body1"
-                sx={{ mr: 2, minWidth: '90px' }}
-              >
-                ⏱ {calculateDuration()}
-              </Typography>
-            )}
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              sx={{ flexGrow: 1, mr: 2 }}
-            />
-            <Typography
-              variant="h3"
-              sx={{ mx: 1 }}
-            >
-              {progress.toFixed(0)}%
-            </Typography>
-            {job.status === 'Completed' && (
-              <Button
-                variant="contained"
-                onClick={() => {
-                  void handleDownload(job.publicId)
+          <Item sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Chip
+                label={job.status}
+                variant="outlined"
+                sx={{
+                  backgroundColor: statusColors.background,
+                  color: statusColors.text,
+                  mr: 2
                 }}
-                sx={{ mr: 2 }}
+              />
+              {/* Live job timer */}
+              {calculateDuration() && (
+                <Typography
+                  variant="body1"
+                  sx={{ mr: 2, minWidth: '90px' }}
+                >
+                  ⏱ {calculateDuration()}
+                </Typography>
+              )}
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{ flexGrow: 1, mr: 2 }}
+              />
+              <Typography
+                variant="h3"
+                sx={{ mx: 1 }}
               >
-                Download Results
-              </Button>
+                {progress.toFixed(0)}%
+              </Typography>
+              {job.status === 'Completed' && (
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    void handleDownload(job.publicId)
+                  }}
+                  sx={{ mr: 2 }}
+                >
+                  Download Results
+                </Button>
+              )}
+            </Box>
+            {latestStepMessage && (
+              <Typography
+                variant="body2"
+                sx={{ color: 'text.secondary', pl: 1 }}
+              >
+                {latestStepMessage}
+              </Typography>
             )}
           </Item>
         </Grid>
