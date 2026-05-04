@@ -24,6 +24,7 @@ import {
   prepareBilboMDSANSResults
 } from '../functions/bilbomd-sans-functions.js'
 // import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc'
+import { runPrepPdb } from '../functions/pdb-to-crd.js'
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 import {
@@ -105,6 +106,11 @@ const processBilboMDSANSJob = async (MQjob: BullMQJob) => {
     await MQjob.log('end remediate')
     await progress.update(70)
   } else {
+    // Remove waters and ions — incompatible with the implicit-solvent force field
+    await MQjob.log('start prep-pdb')
+    await runPrepPdb({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
+    await MQjob.log('end prep-pdb')
+
     // Prepare OpenMM config YAML
     await MQjob.log('start openmm-config')
     await prepareOpenMMConfig(foundJob)
