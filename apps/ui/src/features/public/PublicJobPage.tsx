@@ -142,19 +142,16 @@ const PublicJobPage = () => {
   const job: PublicJobStatus = data
   const progress = job.progress ?? 0
 
-  const latestStepMessage = job.steps
-    ? Object.values(job.steps).reduce((msg: string, step) => {
-        if (!step || typeof step !== 'object') return msg
-        return (step as { message?: string }).message || msg
-      }, '')
-    : ''
-
   const runningStepName = job.steps
     ? (Object.entries(job.steps).find(
         ([, step]) =>
           step && typeof step === 'object' && step.status === 'Running'
       )?.[0] ?? null)
     : null
+
+  const latestStepMessage = runningStepName && job.steps
+    ? (job.steps[runningStepName as keyof typeof job.steps]?.message ?? '')
+    : ''
 
   const calculateDuration = (): string | undefined => {
     if (!job.startedAt) return undefined
