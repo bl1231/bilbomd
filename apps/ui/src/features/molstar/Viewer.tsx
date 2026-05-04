@@ -191,7 +191,7 @@ const MolstarViewer = ({
     }
 
     // Adding LoadParams based on job type and results structure
-    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
+    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold', 'sans']
 
     if (ensembleJobTypes.includes(jobType)) {
       // Use the appropriate results structure based on job type
@@ -210,9 +210,6 @@ const MolstarViewer = ({
         const pdbFilename = `scoper_combined_${results.scoper.foxs_top_file}`
         addFilesToLoadParams(pdbFilename, 1)
       }
-    } else if (jobType === 'sans') {
-      // SANS jobs might have different file structures - handle if needed
-      console.log('SANS job detected - no ensemble loading implemented yet')
     }
 
     // Convert the Map values to an array of arrays

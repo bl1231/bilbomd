@@ -12,14 +12,21 @@ import HeaderBox from 'components/HeaderBox'
 import FoXSAnalysis from 'features/jobs/FoXSAnalysis'
 import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
 import BilboMdFeedback from 'features/analysis/BilboMdFeedback'
+import MovieGallery from 'features/analysis/MovieGallery'
+import { useGetPublicMDMoviesQuery } from 'slices/publicJobsApiSlice'
 
 interface JobAnalysisSectionProps {
   job: PublicJobStatus
 }
 
 const JobAnalysisSection = ({ job }: JobAnalysisSectionProps) => {
-  // console.log('JobAnalysisSection job:', job)
   const [tabValue, setTabValue] = useState(0)
+
+  const {
+    data: moviesData,
+    error: moviesError,
+    isLoading: moviesLoading
+  } = useGetPublicMDMoviesQuery(job.publicId)
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -68,11 +75,15 @@ const JobAnalysisSection = ({ job }: JobAnalysisSectionProps) => {
       {tabValue === 1 && (
         <Box sx={{ p: 0 }}>
           <Grid size={{ xs: 12 }}>
-            <Suspense fallback={<CircularProgress />}>
-              <Alert severity="info">
-                No MD Movies available for this job.
-              </Alert>
-            </Suspense>
+            {moviesLoading ? (
+              <CircularProgress />
+            ) : moviesError ? (
+              <Alert severity="error">Error loading movies.</Alert>
+            ) : moviesData ? (
+              <MovieGallery data={moviesData} />
+            ) : (
+              <Alert severity="warning">No movie data available.</Alert>
+            )}
           </Grid>
         </Box>
       )}
