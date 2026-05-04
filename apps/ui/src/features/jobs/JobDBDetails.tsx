@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   Typography,
   Accordion,
   AccordionSummary,
   AccordionDetails,
   Stack,
-  Box,
-  Chip
+  Box
 } from '@mui/material'
 import { useSnackbar } from 'notistack'
 import Grid from '@mui/material/Grid'
@@ -38,39 +37,8 @@ type MongoDBProperty = {
 
 const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
   const [open, setOpen] = useState(false)
-  const [currentTime, setCurrentTime] = useState<Date>(new Date())
   const { enqueueSnackbar } = useSnackbar()
 
-  const isJobRunning =
-    job.mongo.status === 'Running' &&
-    !!job.mongo.time_started &&
-    !job.mongo.time_completed
-
-  useEffect(() => {
-    if (!isJobRunning) return
-    const interval = setInterval(() => setCurrentTime(new Date()), 1000)
-    return () => clearInterval(interval)
-  }, [isJobRunning])
-
-  const calculateDuration = (): string | undefined => {
-    if (!job.mongo.time_started) return undefined
-    const startTime = new Date(job.mongo.time_started)
-    const endTime = job.mongo.time_completed
-      ? new Date(job.mongo.time_completed)
-      : isJobRunning
-        ? currentTime
-        : new Date()
-    const durationMs = endTime.getTime() - startTime.getTime()
-    const durationSeconds = Math.floor(durationMs / 1000)
-    const hours = Math.floor(durationSeconds / 3600)
-    const minutes = Math.floor((durationSeconds % 3600) / 60)
-    const seconds = durationSeconds % 60
-    if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`
-    if (minutes > 0) return `${minutes}m ${seconds}s`
-    return `${seconds}s`
-  }
-
-  const timerDuration = calculateDuration()
   const [triggerGetFile, { data: fileContents, isLoading, error }] =
     useLazyGetFileByIdAndNameQuery()
 
@@ -198,24 +166,6 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
         </AccordionSummary>
 
         <AccordionDetails>
-          {timerDuration && (
-            <Box sx={{ mb: 1 }}>
-              <Chip
-                label={`⏱ ${timerDuration}`}
-                variant="outlined"
-                sx={{
-                  backgroundColor:
-                    job.mongo.status === 'Running' ||
-                    job.mongo.status === 'Completed'
-                      ? '#e8f5e9'
-                      : job.mongo.status === 'Error' ||
-                          job.mongo.status === 'Failed'
-                        ? '#ffebee'
-                        : undefined
-                }}
-              />
-            </Box>
-          )}
           <Grid
             container
             spacing={2}
