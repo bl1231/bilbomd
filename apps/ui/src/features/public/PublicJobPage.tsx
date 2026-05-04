@@ -18,6 +18,9 @@ import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
 import HeaderBox from 'components/HeaderBox'
 import Item from 'themes/components/Item'
 import { getStatusColors } from 'features/shared/StatusColors'
+import { getStepDetails } from 'features/shared/stepDetails'
+import DirectionsRunRoundedIcon from '@mui/icons-material/DirectionsRunRounded'
+import Tooltip from '@mui/material/Tooltip'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import PublicJobAnalysisSection from 'features/public/PublicJobAnalysisSection'
 const MolstarViewer = lazy(() => import('features/molstar/Viewer'))
@@ -146,6 +149,13 @@ const PublicJobPage = () => {
       }, '')
     : ''
 
+  const runningStepName = job.steps
+    ? (Object.entries(job.steps).find(
+        ([, step]) =>
+          step && typeof step === 'object' && step.status === 'Running'
+      )?.[0] ?? null)
+    : null
+
   const calculateDuration = (): string | undefined => {
     if (!job.startedAt) return undefined
     const startTime = new Date(job.startedAt)
@@ -216,6 +226,22 @@ const PublicJobPage = () => {
                   mr: 2
                 }}
               />
+              {runningStepName && (
+                <Tooltip
+                  title={getStepDetails(runningStepName).tooltipMessage}
+                  arrow
+                >
+                  <Chip
+                    icon={
+                      <DirectionsRunRoundedIcon style={{ color: 'black' }} />
+                    }
+                    size="small"
+                    label={getStepDetails(runningStepName).friendlyName}
+                    style={{ backgroundColor: '#fff566', color: 'black' }}
+                    sx={{ mr: 2 }}
+                  />
+                </Tooltip>
+              )}
               {/* Live job timer */}
               {calculateDuration() && (
                 <Typography
