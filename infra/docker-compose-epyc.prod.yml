@@ -141,6 +141,10 @@ services:
     environment:
       - HOST_UPLOAD_DIR=/bilbomd/prod/uploads
       - HOST_COLABFOLD_CACHE=/bilbomd/colabfold-cache
+      - ENABLE_BILBOMD_OPENFOLD=${ENABLE_BILBOMD_OPENFOLD:-false}
+      - OF3_IMAGE=${OF3_IMAGE:-openfoldconsortium/openfold3:stable}
+      - OF3_TIMEOUT_MS=${OF3_TIMEOUT_MS:-3600000}
+      - HOST_OF3_CACHE=${HOST_OF3_CACHE:-/bilbomd/of3-data}
     depends_on:
       - mongodb
       - redis

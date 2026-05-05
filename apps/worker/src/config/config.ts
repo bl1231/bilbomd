@@ -99,6 +99,14 @@ export const config = {
     'COLABFOLD_TIMEOUT_MS',
     60 * 60 * 1000
   ),
+  // Host-side path holding the OF3 model weights cache. Mounted into
+  // spawned bilbomd-openfold3 containers at /of3_data.
+  hostOf3Cache: getEnvVarWithDefault('HOST_OF3_CACHE', '/bilbomd/of3-cache'),
+  of3Image: getEnvVarWithDefault(
+    'OF3_IMAGE',
+    'openfoldconsortium/openfold3:stable'
+  ),
+  of3TimeoutMs: parsePositiveIntEnv('OF3_TIMEOUT_MS', 60 * 60 * 1000),
   dockerBin: getEnvVarWithDefault('DOCKER_BIN', '/usr/bin/docker'),
   logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info'),
   scripts: {
@@ -110,6 +118,7 @@ export const config = {
   bilbomd: {
     SANSEnabled: toBoolean(process.env.ENABLE_BILBOMD_SANS),
     AlphaFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_ALPHAFOLD),
+    OpenFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_OPENFOLD),
     MultiEnabled: toBoolean(process.env.ENABLE_BILBOMD_MULTI),
     ScoperEnabled: toBoolean(process.env.ENABLE_BILBOMD_SCOPER)
   }

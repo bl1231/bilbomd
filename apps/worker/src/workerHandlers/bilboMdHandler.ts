@@ -2,6 +2,7 @@ import { Job } from 'bullmq'
 import { logger } from '../helpers/loggers.js'
 import { config } from '../config/config.js'
 import { processBilboMDAlphaFoldJob } from '../services/pipelines/bilbomd-alphafold.js'
+import { processBilboMDOpenFoldJob } from '../services/pipelines/bilbomd-openfold.js'
 import { processBilboMDAutoJob } from '../services/pipelines/bilbomd-auto.js'
 import { processBilboMDCRDJob } from '../services/pipelines/bilbomd-crd.js'
 import { processBilboMDJobNersc } from '../services/pipelines/bilbomd-nersc.js'
@@ -20,6 +21,7 @@ const getPipelineExecutor = (
     crd_psf: runOnNERSC ? processBilboMDJobNersc : processBilboMDCRDJob,
     auto: runOnNERSC ? processBilboMDJobNersc : processBilboMDAutoJob,
     alphafold: runOnNERSC ? processBilboMDJobNersc : processBilboMDAlphaFoldJob,
+    openfold: processBilboMDOpenFoldJob,
     sans: runOnNERSC ? processBilboMDJobNersc : processBilboMDSANSJob
   }
   return pipelines[type] ?? null

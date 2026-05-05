@@ -22,6 +22,7 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
 
   const stepOrder = [
     'alphafold',
+    'openfold',
     'reduce',
     'rnaview',
     'kgs',

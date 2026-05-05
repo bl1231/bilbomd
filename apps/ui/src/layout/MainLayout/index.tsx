@@ -91,6 +91,13 @@ export default function ClippedDrawer() {
       roles: ['user', 'manager']
     },
     {
+      text: 'BilboMD OF3',
+      icon: <AddCircleOutlineOutlined />,
+      path: '/dashboard/jobs/openfold',
+      onclick: () => navigate('dashboard/jobs/openfold'),
+      roles: ['user', 'manager']
+    },
+    {
       text: 'BilboMD Multi',
       icon: <AddCircleOutlineOutlined />,
       path: '/dashboard/jobs/multimd',

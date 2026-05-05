@@ -5,6 +5,7 @@ import {
   IBilboMDPDBJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IBilboMDSANSJob,
   IBilboMDSteps,
   IStepStatus
@@ -22,6 +23,7 @@ type OmmCapableJob =
   | IBilboMDPDBJob
   | IBilboMDAutoJob
   | IBilboMDAlphaFoldJob
+  | IBilboMDOpenFoldJob
   | IBilboMDSANSJob
 
 const detectCarbohydratesInPdb = async (pdbPath: string): Promise<boolean> => {

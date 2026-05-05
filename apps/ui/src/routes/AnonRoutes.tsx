@@ -14,6 +14,9 @@ const NewAutoJob = Loadable(
 const NewAlphaFoldJob = Loadable(
   lazy(() => import('features/alphafoldjob/NewAlphaFoldJobForm'))
 )
+const NewOpenFoldJob = Loadable(
+  lazy(() => import('features/openfoldjob/NewOpenFoldJobForm'))
+)
 const NewSANSJob = Loadable(
   lazy(() => import('features/sansjob/NewSANSJobForm'))
 )
@@ -60,6 +63,10 @@ const AnonRoutes = {
     {
       path: 'jobs/alphafold/new',
       element: <NewAlphaFoldJob mode="anonymous" />
+    },
+    {
+      path: 'jobs/openfold/new',
+      element: <NewOpenFoldJob mode="anonymous" />
     },
     {
       path: 'jobs/sans/new',

@@ -32,6 +32,10 @@ vi.mock('../../services/pipelines/bilbomd-alphafold.js', () => ({
   processBilboMDAlphaFoldJob: vi.fn()
 }))
 
+vi.mock('../../services/pipelines/bilbomd-openfold.js', () => ({
+  processBilboMDOpenFoldJob: vi.fn()
+}))
+
 describe('bilboMdHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -180,5 +184,26 @@ describe('bilboMdHandler', () => {
 
     await expect(bilboMdHandler(mockJob)).resolves.toBeUndefined()
     expect(processBilboMDSANSJob).toHaveBeenCalledWith(mockJob)
+  })
+
+  it('routes openfold jobs to the local pipeline', async () => {
+    const { processBilboMDOpenFoldJob } =
+      await import('../../services/pipelines/bilbomd-openfold.js')
+    const { bilboMdHandler } = await import('../bilboMdHandler.js')
+
+    vi.mocked(processBilboMDOpenFoldJob).mockResolvedValueOnce(undefined)
+
+    const mockJob = {
+      id: 'test-job-id',
+      name: 'test-job',
+      data: {
+        type: 'openfold',
+        jobid: 'mongo-job-id'
+      },
+      log: vi.fn()
+    } as unknown as Job
+
+    await expect(bilboMdHandler(mockJob)).resolves.toBeUndefined()
+    expect(processBilboMDOpenFoldJob).toHaveBeenCalledWith(mockJob)
   })
 })

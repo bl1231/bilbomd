@@ -34,6 +34,7 @@ export const toPipeline = (mode: string): PipelineType => {
     'crd',
     'auto',
     'alphafold',
+    'openfold',
     'sans',
     'scoper',
     'multi'

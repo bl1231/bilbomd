@@ -1,6 +1,7 @@
 import { OpenMMParametersDTO } from './openmm.js'
 import { CHARMMParametersDTO } from './charmm.js'
 import { AlphafoldEntityDTO } from './alphafold.js'
+import { OpenFoldEntityDTO } from './openfold.js'
 import { UserSummaryDTO } from '../users/user.js'
 import { MDConstraintsDTO } from './mdConstraints.js'
 import { JobStepsDTO } from './jobSteps.js'
@@ -14,6 +15,7 @@ export type JobType =
   | 'crd'
   | 'auto'
   | 'alphafold'
+  | 'openfold'
   | 'sans'
   | 'scoper'
   | 'multi'
@@ -108,6 +110,20 @@ export interface BilboMDAlphaFoldDTO extends BaseJobDTO {
   rg_max?: number
 }
 
+export interface BilboMDOpenFoldDTO extends BaseJobDTO {
+  openfold_entities: OpenFoldEntityDTO[]
+  query_json_file: string
+  pdb_file?: string
+  psf_file?: string
+  crd_file?: string
+  pae_file?: string
+  const_inp_file?: string
+  conformational_sampling: number
+  rg?: number
+  rg_min?: number
+  rg_max?: number
+}
+
 export interface BilboMDSANSDTO extends BaseJobDTO {
   pdb_file: string
   psf_file?: string
@@ -138,6 +154,7 @@ export type BilboMDMongoJobDTO =
   | BilboMDCRDDTO
   | BilboMDAutoDTO
   | BilboMDAlphaFoldDTO
+  | BilboMDOpenFoldDTO
   | BilboMDSANSDTO
   | BilboMDScoperDTO
   | BilboMDMultiDTO
