@@ -31,6 +31,7 @@ const buildDockerArgs = (params: {
     '--rm',
     '--gpus',
     params.gpus,
+    '--shm-size=16g',
     '-v',
     `${params.hostJobDir}:/bilbomd/work`,
     '-v',
