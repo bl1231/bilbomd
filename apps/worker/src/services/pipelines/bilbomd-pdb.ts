@@ -12,7 +12,7 @@ import {
   runOmmHeat,
   runOmmMD
 } from '../functions/openmm-functions.js'
-import { runCifToPdb, runStripIons } from '../functions/pdb-to-crd.js'
+import { runCifToPdb, runPrepPdb } from '../functions/pdb-to-crd.js'
 import {
   extractPDBFilesFromDCD,
   remediatePDBFiles
@@ -99,10 +99,10 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
     await runPdb2Crd(MQjob, foundJob)
     await MQjob.log('end pdb2crd')
   } else {
-    // Strip ions before OpenMM — ForceField has no parameters for metal ions
-    await MQjob.log('start strip-ions')
-    await runStripIons({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
-    await MQjob.log('end strip-ions')
+    // Remove waters and ions — incompatible with the implicit-solvent force field
+    await MQjob.log('start prep-pdb')
+    await runPrepPdb({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
+    await MQjob.log('end prep-pdb')
 
     // Strip unsupported cofactors (FAD, HEM, PCA, etc.) — no bundled Amber parameters.
     // They are removed for MD only; the original uploaded PDB is used for FoXS.

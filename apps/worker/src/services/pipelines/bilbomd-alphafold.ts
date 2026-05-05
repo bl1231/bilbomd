@@ -11,7 +11,7 @@ import {
   runOmmHeat,
   runOmmMD
 } from '../functions/openmm-functions.js'
-import { runStripIons } from '../functions/pdb-to-crd.js'
+import { runPrepPdb } from '../functions/pdb-to-crd.js'
 import { runFoXS } from '../functions/foxs-functions.js'
 import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc.js'
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
@@ -69,13 +69,13 @@ const processBilboMDAlphaFoldJob = async (MQjob: BullMQJob) => {
   await MQjob.log('end alphafold')
   await progress.update(25)
 
-  // Strip metal ions before OpenMM ForceField sees the structure.
-  await MQjob.log('start strip-ions')
-  await runStripIons({
+  // Remove waters and ions — incompatible with the implicit-solvent force field
+  await MQjob.log('start prep-pdb')
+  await runPrepPdb({
     uuid: foundJob.uuid,
     pdb_file: foundJob.pdb_file as string
   })
-  await MQjob.log('end strip-ions')
+  await MQjob.log('end prep-pdb')
 
   // First openmm_config.yaml — bare config, no constraints yet.
   await MQjob.log('start openmm-config')
