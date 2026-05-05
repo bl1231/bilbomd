@@ -601,8 +601,12 @@ class PAEProcessor:
             )
         elif "pae" in self.pae_data:
             pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        elif "pde" in self.pae_data:
+            pae_full = np.array(self.pae_data["pde"], dtype=np.float32)
         else:
-            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+            raise ValueError(
+                "PAE data must contain 'predicted_aligned_error', 'pae', or 'pde'"
+            )
 
         if pae_full.ndim != 2 or pae_full.shape[0] != pae_full.shape[1]:
             raise ValueError(
@@ -709,6 +713,8 @@ class PAEProcessor:
             matrix = data["pae"]
         elif "predicted_aligned_error" in data:
             matrix = data["predicted_aligned_error"]
+        elif "pde" in data:
+            matrix = data["pde"]
         else:
             raise ValueError("Invalid PAE JSON format.")
 
@@ -942,8 +948,12 @@ class PAEProcessor:
             )
         elif "pae" in self.pae_data:
             pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        elif "pde" in self.pae_data:
+            pae_full = np.array(self.pae_data["pde"], dtype=np.float32)
         else:
-            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+            raise ValueError(
+                "PAE data must contain 'predicted_aligned_error', 'pae', or 'pde'"
+            )
         mapper = self.input_handler.get_tuple_to_global_mapper(self.first_residue)
         for rb_idx, rb in enumerate(self.rigid_bodies, start=1):
             domain_meds = []
@@ -982,8 +992,12 @@ class PAEProcessor:
             )
         elif "pae" in self.pae_data:
             pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        elif "pde" in self.pae_data:
+            pae_full = np.array(self.pae_data["pde"], dtype=np.float32)
         else:
-            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+            raise ValueError(
+                "PAE data must contain 'predicted_aligned_error', 'pae', or 'pde'"
+            )
 
         # 2) Determine L
         L = pae_full.shape[0]
