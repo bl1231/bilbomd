@@ -1,5 +1,95 @@
 # @bilbomd/backend
 
+## 2.7.6
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+- Updated dependencies [964095e]
+  - @bilbomd/bilbomd-types@1.5.4
+  - @bilbomd/md-utils@1.1.10
+
+## 2.7.5
+
+### Patch Changes
+
+- 8dac70d: Fix admin/manager access to MD Movies from other users' jobs. Admins and Managers can now stream movie files and fetch movie metadata for any job, consistent with their ability to view all jobs. Regular users are still restricted to their own jobs.
+
+## 2.7.4
+
+### Patch Changes
+
+- ccdad28: Enable BilboMD AlphaFold pipeline on local GPU hosts (initial target: epyc, 2× NVIDIA A100) and implement the OpenMM engine path for the SANS pipeline.
+
+  ### AlphaFold pipeline (local GPU)
+
+  Adds `processBilboMDAlphaFoldJob` — a new worker pipeline that runs ColabFold in a
+  sibling Docker container via the host Docker socket, then continues through the existing
+  OpenMM minimize / heat / md / FoXS / MultiFoXS path. `bilboMdHandler` now routes
+  `alphafold` jobs to this local pipeline when `USE_NERSC=false`; CHARMM AlphaFold
+  remains NERSC-only.
+
+  New env vars (see `infra/.env.example`):
+  - `HOST_UPLOAD_DIR` — host-side path that backs DATA_VOL inside the worker
+  - `HOST_COLABFOLD_CACHE` — host-side path for the ~50GB ColabFold weights cache
+  - `COLABFOLD_IMAGE` — overridable image tag (default `bl1231/bilbomd-colabfold:latest`)
+  - `COLABFOLD_TIMEOUT_MS` — per-AF-run timeout in ms (default 1h)
+  - `DOCKER_GID` — host docker group GID; added to the worker container via `group_add`
+    so the non-root `bilbo` user can access `/var/run/docker.sock`
+
+  ### Bug fixes
+  - **Docker socket permissions**: worker's non-root user (`bilbo`) now gets the host
+    docker group added via `group_add` in both epyc Compose files, fixing
+    "permission denied on /var/run/docker.sock" when spawning sibling containers.
+  - **ColabFold working directory**: added `--workdir /bilbomd/work` to the `docker run`
+    args so `colabfold_batch` resolves the relative `af-entities.fasta` path correctly
+    against the mounted volume.
+  - **AutoRg step display**: AlphaFold jobs now initialize the `autorg` step as `Success`
+    (with computed Rg values) at submission time rather than `Waiting`, since AutoRg runs
+    as a submission precondition and is never re-run by the worker pipeline.
+
+  ### OpenMM SANS pipeline
+
+  Previously all OpenMM function calls in `bilbomd-sans.ts` were commented out, causing
+  OpenMM SANS jobs to skip MD entirely and fail at Pepsi-SANS with no PDB files. Now wires
+  up `prepareOpenMMConfig`, `runOmmMinimize`, `runOmmHeat`, `runOmmMD`, and a new
+  `mirrorOmmMdToPepsiSANS` step that symlinks PDB frames from `openmm/md/rg_{N}/` into
+  `pepsisans/rg{N}/` for Pepsi-SANS to consume. `remediatePDBFiles` is correctly skipped
+  for OpenMM since its PDBs already use standard chain IDs.
+
+  ### Operator setup on epyc
+  1. Find the host docker GID: `getent group docker | cut -d: -f3`
+  2. Add `DOCKER_GID=<value>` to `.env.prod`.
+  3. Pre-create `/bilbomd/colabfold-cache` on the host.
+  4. Pull and prime the ColabFold weights:
+     ```
+     docker pull $COLABFOLD_IMAGE
+     docker run --rm -v /bilbomd/colabfold-cache:/cache $COLABFOLD_IMAGE \
+       colabfold_batch --download-only
+     ```
+  5. Set `ENABLE_BILBOMD_ALPHAFOLD=true` and `USE_NERSC=false` in `.env.prod`.
+
+## 2.7.3
+
+### Patch Changes
+
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+  - @bilbomd/md-utils@1.1.9
+
+## 2.7.2
+
+### Patch Changes
+
+- 682fd84: Fix DNA/RNA residue handling in both CHARMM and OpenMM pipelines.
+
+  OpenMM: `minimize.py` now calls `Modeller.addHydrogens(forcefield)` after PDBFixer so that DNA/RNA residues get all required hydrogen atoms (PDBFixer alone misses some, causing a "No template found" crash at system creation).
+
+  CHARMM: `constraintUtils.ts` segment-ID mapping now correctly handles DNA/RNA chains. `parseInpConstraints` strips the mol-type prefix (PRO/DNA/RNA/CAR/CAL) to extract the real chain ID from pdb2crd segids (e.g. `DNAD` → `D`). `generateInpFromConstraints`/`convertYamlToInp` accept an optional `chainSegidMap` built by the new `buildChainSegidMap` utility, so YAML→INP conversion emits the correct segid for each chain instead of always defaulting to `PRO{chain}`.
+
+- Updated dependencies [682fd84]
+  - @bilbomd/md-utils@1.1.8
+
 ## 2.7.1
 
 ### Patch Changes

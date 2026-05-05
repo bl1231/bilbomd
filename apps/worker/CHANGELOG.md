@@ -1,5 +1,152 @@
 # @bilbomd/worker
 
+## 2.9.3
+
+### Patch Changes
+
+- a5fd493: Add PDB preparation step (strip waters and ions) to SANS OpenMM pipeline. Rename strip_ions.py → prep_pdb.py and runStripIons → runPrepPdb for accuracy — the script has always removed both HOH waters and metal/polyatomic ions.
+
+  Add GAFF2/metal cofactor alerts to the SANS new job form, matching the behaviour already present on the Classic PDB and Auto forms.
+
+## 2.9.2
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+- Updated dependencies [964095e]
+  - @bilbomd/bilbomd-types@1.5.4
+  - @bilbomd/md-utils@1.1.10
+
+## 2.9.1
+
+### Patch Changes
+
+- 04bd25d: Add Molstar viewer support for SANS jobs.
+
+  Worker: fix SANS ensemble PDB files to use proper MODEL N / ENDMDL formatting so Molstar can load each conformation as a separate assembly. Populate results.sans.ensembles in MongoDB after each SANS job completes.
+
+  UI: enable the Molstar viewer for completed SANS jobs in SingleJobPage. Viewer.tsx now routes SANS jobs through the same ensemble loading path as classic/auto/alphafold jobs.
+
+## 2.9.0
+
+### Minor Changes
+
+- ccdad28: Enable BilboMD AlphaFold pipeline on local GPU hosts (initial target: epyc, 2× NVIDIA A100) and implement the OpenMM engine path for the SANS pipeline.
+
+  ### AlphaFold pipeline (local GPU)
+
+  Adds `processBilboMDAlphaFoldJob` — a new worker pipeline that runs ColabFold in a
+  sibling Docker container via the host Docker socket, then continues through the existing
+  OpenMM minimize / heat / md / FoXS / MultiFoXS path. `bilboMdHandler` now routes
+  `alphafold` jobs to this local pipeline when `USE_NERSC=false`; CHARMM AlphaFold
+  remains NERSC-only.
+
+  New env vars (see `infra/.env.example`):
+  - `HOST_UPLOAD_DIR` — host-side path that backs DATA_VOL inside the worker
+  - `HOST_COLABFOLD_CACHE` — host-side path for the ~50GB ColabFold weights cache
+  - `COLABFOLD_IMAGE` — overridable image tag (default `bl1231/bilbomd-colabfold:latest`)
+  - `COLABFOLD_TIMEOUT_MS` — per-AF-run timeout in ms (default 1h)
+  - `DOCKER_GID` — host docker group GID; added to the worker container via `group_add`
+    so the non-root `bilbo` user can access `/var/run/docker.sock`
+
+  ### Bug fixes
+  - **Docker socket permissions**: worker's non-root user (`bilbo`) now gets the host
+    docker group added via `group_add` in both epyc Compose files, fixing
+    "permission denied on /var/run/docker.sock" when spawning sibling containers.
+  - **ColabFold working directory**: added `--workdir /bilbomd/work` to the `docker run`
+    args so `colabfold_batch` resolves the relative `af-entities.fasta` path correctly
+    against the mounted volume.
+  - **AutoRg step display**: AlphaFold jobs now initialize the `autorg` step as `Success`
+    (with computed Rg values) at submission time rather than `Waiting`, since AutoRg runs
+    as a submission precondition and is never re-run by the worker pipeline.
+
+  ### OpenMM SANS pipeline
+
+  Previously all OpenMM function calls in `bilbomd-sans.ts` were commented out, causing
+  OpenMM SANS jobs to skip MD entirely and fail at Pepsi-SANS with no PDB files. Now wires
+  up `prepareOpenMMConfig`, `runOmmMinimize`, `runOmmHeat`, `runOmmMD`, and a new
+  `mirrorOmmMdToPepsiSANS` step that symlinks PDB frames from `openmm/md/rg_{N}/` into
+  `pepsisans/rg{N}/` for Pepsi-SANS to consume. `remediatePDBFiles` is correctly skipped
+  for OpenMM since its PDBs already use standard chain IDs.
+
+  ### Operator setup on epyc
+  1. Find the host docker GID: `getent group docker | cut -d: -f3`
+  2. Add `DOCKER_GID=<value>` to `.env.prod`.
+  3. Pre-create `/bilbomd/colabfold-cache` on the host.
+  4. Pull and prime the ColabFold weights:
+     ```
+     docker pull $COLABFOLD_IMAGE
+     docker run --rm -v /bilbomd/colabfold-cache:/cache $COLABFOLD_IMAGE \
+       colabfold_batch --download-only
+     ```
+  5. Set `ENABLE_BILBOMD_ALPHAFOLD=true` and `USE_NERSC=false` in `.env.prod`.
+
+## 2.8.0
+
+### Minor Changes
+
+- 5739029: Switch OpenMM base force field from CHARMM36+HCT to Amber19SB+GBn2. Add carbohydrate detection for glycoprotein PDB inputs; when detected, the job fails early with an actionable error directing users to the CHARMM engine until full GLYCAM preprocessing support is implemented (see #655).
+- 5739029: Add GLYCAM glycoprotein support for PDB + OpenMM pipeline (issue #655 Phase 2).
+
+  Glycosylated PDB inputs submitted with the OpenMM engine are now processed correctly instead of failing with an error. Key changes:
+  - New `strip_cofactors.py` strips FAD, HEM, PCA, and other cofactors that have no bundled Amber parameters before MD; writes `stripped_cofactors.json` so the pipeline can surface a user warning.
+  - New `utils/glycam_rename.py` (importable) and `glycam_rename.py` (CLI) convert standard PDB residue names to GLYCAM format before PDBFixer runs: ASN→NLN (N-linked), THR→OLT and SER→OLS (O-linked); sugar residues renamed to GLYCAM codes (0NB for terminal GlcNAc, 0MA/0MB for terminal mannose, etc.). Anomer determined from 3D geometry.
+  - `minimize.py` calls GLYCAM rename when `has_carbohydrates: true` in config, and skips `PDBFixer.addMissingAtoms()` for glycoprotein inputs (PDBFixer has no carbohydrate templates).
+  - `openmm-functions.ts` no longer throws for glycoproteins; sets `has_carbohydrates` in the config YAML and adds `amber14/GLYCAM_06j-1.xml` to the force field list when carbs are detected.
+  - `bilbomd-pdb.ts` runs the cofactor-strip step in the OpenMM branch before config preparation.
+
+- beb5e69: Show non-protein entities (glycans, ligands, metal ions) in trajectory movies. Previously, PyMOL's cartoon representation left these atoms invisible; organic entities now render as sticks and inorganic atoms as spheres, both colored by element.
+
+### Patch Changes
+
+- ab80931: Fix non-protein atoms (glycans, FAD, cofactors) being reassigned to Chain B in OpenMM output PDB files. Added `keepIds=True` to all `PDBFile.writeFile` calls in heat.py, md.py, and pdb_writer.py so chain IDs from the input structure are preserved throughout the pipeline.
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+  - @bilbomd/md-utils@1.1.9
+
+## 2.7.5
+
+### Patch Changes
+
+- 2c512bc: Normalize CHARMM-style DNA residue names (ADE/GUA/CYT) to standard PDB names (DA/DG/DC) before PDBFixer runs. OpenMM's pdbNames.xml maps ADE/GUA/CYT to RNA residues, causing PDBFixer to add spurious O2' atoms to DNA chains. DNA is detected by absence of the O2' ribose atom.
+
+## 2.7.4
+
+### Patch Changes
+
+- 9289689: Fix OpenMM minimize crash for DNA/RNA complexes by stripping all H atoms before calling addHydrogens. PDBFixer can partially hydrogenate DNA/RNA residues, leaving them in a state that fails forcefield template matching. Stripping all H first lets addHydrogens place them correctly from forcefield templates.
+
+## 2.7.3
+
+### Patch Changes
+
+- 682fd84: Fix DNA/RNA residue handling in both CHARMM and OpenMM pipelines.
+
+  OpenMM: `minimize.py` now calls `Modeller.addHydrogens(forcefield)` after PDBFixer so that DNA/RNA residues get all required hydrogen atoms (PDBFixer alone misses some, causing a "No template found" crash at system creation).
+
+  CHARMM: `constraintUtils.ts` segment-ID mapping now correctly handles DNA/RNA chains. `parseInpConstraints` strips the mol-type prefix (PRO/DNA/RNA/CAR/CAL) to extract the real chain ID from pdb2crd segids (e.g. `DNAD` → `D`). `generateInpFromConstraints`/`convertYamlToInp` accept an optional `chainSegidMap` built by the new `buildChainSegidMap` utility, so YAML→INP conversion emits the correct segid for each chain instead of always defaulting to `PRO{chain}`.
+
+- Updated dependencies [682fd84]
+  - @bilbomd/md-utils@1.1.8
+
+## 2.7.2
+
+### Patch Changes
+
+- 298405b: Fix dcd2pdb CHARMM scripts failing with fatal NBFIX error when reading CGenFF parameter files. Set bomlev -2 in dcd2pdb and dcd2pdb-sans templates to match the other MD step templates.
+
+## 2.7.1
+
+### Patch Changes
+
+- a0acc15: build docker image from ghcr.io/bl1231/bilbomd-worker-base:0.0.8-dev5
+
+## 2.7.0
+
+### Minor Changes
+
+- 33ec715: Replace legacy toppar directory with CHARMM-bundled toppar from the c49b2 build stage. Switch protein force field from CHARMM36 to CHARMM36m (par_all36m_prot.prm). Replace CGenFF auto-generated FAD parameters with peer-reviewed cofactors stream (Aleksandrov, J. Comput. Chem. 2019). No custom topology files remain in the repository.
+
 ## 2.6.5
 
 ### Patch Changes

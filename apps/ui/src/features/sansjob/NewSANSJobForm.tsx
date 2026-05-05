@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   Box,
   Button,
@@ -9,6 +10,7 @@ import {
   Slider,
   Chip
 } from '@mui/material'
+import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
@@ -30,10 +32,13 @@ import NewSANSJobFormInstructions from './NewSANSJobFormInstructions'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import ChainDeuterationSlider from './ChainDeuterationSlider'
+import {
+  detectGaffCofactors,
+  detectMetalCofactors
+} from 'schemas/ValidationFunctions'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
-import MdEngineField from 'components/MdEngineField'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -100,6 +105,8 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const [chainIds, setChainIds] = useState<string[]>([])
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
+  const [pdbInfo, setPdbInfo] = useState<string>('')
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
 
   const {
     data: config,
@@ -115,7 +122,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     return <Alert severity="error">Configuration not available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
-  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
+
 
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
@@ -130,7 +137,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     rg_max: 0,
     inp_file: '',
     d2o_fraction: 100,
-    md_engine: charmmEnabled ? 'charmm' : 'openmm'
+    md_engine: 'openmm'
   }
 
   const onSubmit = async (values: NewSANSJobFormValues) => {
@@ -281,16 +288,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       />
                     </Grid>
 
-                    {/* MD Engine selection */}
-                    {/* Disabled until we write teh necessary worker code*/}
-                    <Grid sx={{ width: '520px' }}>
-                      <MdEngineField
-                        value={values.md_engine as 'charmm' | 'openmm'}
-                        onChange={(val) => void setFieldValue('md_engine', val)}
-                        disabled={true}
-                      />
-                    </Grid>
-
                     {/* PDB file */}
                     <Grid>
                       <Field
@@ -303,6 +300,8 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         setFieldTouched={setFieldTouched}
                         error={errors.pdb_file && touched.pdb_file}
                         errorMessage={errors.pdb_file ? errors.pdb_file : ''}
+                        infoMessage={pdbInfo}
+                        warningMessage={pdbWarning}
                         fileType="Starting PDB file *.pdb"
                         fileExt=".pdb"
                         onFileChange={async (selectedFile: File) => {
@@ -316,8 +315,55 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               setChainIds(parsedChainIds)
                             }
                             reader.readAsText(selectedFile)
+
+                            const [gaffFound, metalFound] = await Promise.all([
+                              detectGaffCofactors(selectedFile),
+                              detectMetalCofactors(selectedFile)
+                            ])
+                            setPdbInfo(
+                              gaffFound.length > 0
+                                ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
+                                : ''
+                            )
+                            setPdbWarning(
+                              metalFound.length > 0 ? (
+                                <>
+                                  The following metal-containing residues
+                                  have no force-field parameters and will
+                                  be removed before MD:{' '}
+                                  {metalFound.join(', ')}. If these
+                                  residues are important for your system,
+                                  consider using{' '}
+                                  <Button
+                                    href="https://charmm-gui.org/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    variant="outlined"
+                                    color="info"
+                                    endIcon={<LaunchIcon />}
+                                    sx={{
+                                      textTransform: 'none',
+                                      py: 0,
+                                      px: 0.75,
+                                      minHeight: 0,
+                                      fontSize: 'inherit',
+                                      lineHeight: 'inherit',
+                                      verticalAlign: 'baseline'
+                                    }}
+                                  >
+                                    CHARMM-GUI
+                                  </Button>{' '}
+                                  to properly parameterize your structure.
+                                </>
+                              ) : (
+                                ''
+                              )
+                            )
                           } else {
                             setChainIds([])
+                            setPdbInfo('')
+                            setPdbWarning('')
                           }
                         }}
                       />
@@ -404,7 +450,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             ? errors.rg_min
                             : 'Min value of Rg ...(between 10 and 100)'
                         }
-                        inputProps={{ min: 10, max: 100 }}
+                        slotProps={{ htmlInput: { min: 10, max: 100 } }}
                       />
                     </Grid>
 
@@ -426,7 +472,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        inputProps={{ min: 0, max: 100 }}
+                        slotProps={{ htmlInput: { min: 0, max: 100 } }}
                       />
                     </Grid>
 

@@ -12,7 +12,9 @@ import {
   containsChainId,
   cifContainsChainId,
   cifHasAllowedResiduesOnly,
-  noLeadingSpaceOnPDBLines
+  noLeadingSpaceOnPDBLines,
+  detectGaffCofactors,
+  detectMetalCofactors
 } from '../ValidationFunctions'
 
 const makeFile = (name: string, content: string, type = 'text/plain') => {
@@ -67,6 +69,18 @@ describe('ValidationFunctions', () => {
     const content = `HETATM    1 MG   MG  A   1\nHETATM    2 ZN   ZN  A   2\nEND\n`
     const result = await hasAllowedResiduesOnly(makeFile('model.pdb', content))
     expect(result.valid).toBe(true)
+  })
+
+  it('hasAllowedResiduesOnly returns valid for GAFF and metal cofactors (PCA, FAD, HEM)', async () => {
+    const content = [
+      'HETATM    1  C   PCA A   1',
+      'HETATM    2  N   FAD A   2',
+      'HETATM    3  FE  HEM A   3',
+      'END'
+    ].join('\n')
+    const result = await hasAllowedResiduesOnly(makeFile('cofactors.pdb', content))
+    expect(result.valid).toBe(true)
+    expect(result.unsupportedResidues).toHaveLength(0)
   })
 
   it('hasAllowedResiduesOnly returns invalid for truly unknown residues', async () => {
@@ -166,6 +180,95 @@ describe('ValidationFunctions', () => {
   it('isCRD fails when EXT is missing after header', async () => {
     const badContent = ['* a', '* b', '* c', '* d'].join('\n')
     expect(await isCRD(makeFile('no-ext.crd', badContent))).toBe(false)
+  })
+})
+
+describe('detectGaffCofactors', () => {
+  it('returns empty array when no GAFF cofactors are present', async () => {
+    const content = `ATOM      1  N   MET A   1\nATOM      2  CA  GLY A   2\nEND\n`
+    const result = await detectGaffCofactors(makeFile('model.pdb', content))
+    expect(result).toHaveLength(0)
+  })
+
+  it('detects PCA in HETATM lines', async () => {
+    const content = [
+      'ATOM      1  N   GLN A   1',
+      'HETATM    2  C   PCA A   2',
+      'END'
+    ].join('\n')
+    const result = await detectGaffCofactors(makeFile('pca.pdb', content))
+    expect(result).toContain('PCA')
+    expect(result).toHaveLength(1)
+  })
+
+  it('detects FAD and returns sorted list', async () => {
+    const content = [
+      'HETATM    1  N1  FAD A   1',
+      'HETATM    2  C   NAD A   2',
+      'END'
+    ].join('\n')
+    const result = await detectGaffCofactors(makeFile('gaff.pdb', content))
+    expect(result).toEqual(['FAD', 'NAD'])
+  })
+
+  it('deduplicates repeated cofactor entries', async () => {
+    const content = [
+      'HETATM    1  C1  PCA A   1',
+      'HETATM    2  C2  PCA A   1',
+      'HETATM    3  C3  PCA A   1',
+      'END'
+    ].join('\n')
+    const result = await detectGaffCofactors(makeFile('dup.pdb', content))
+    expect(result).toEqual(['PCA'])
+  })
+
+  it('does not flag HEM (metal cofactor) or unknown residues', async () => {
+    const content = [
+      'HETATM    1  FE  HEM A   1',
+      'ATOM      2  CA  UNK A   2',
+      'END'
+    ].join('\n')
+    const result = await detectGaffCofactors(makeFile('hem-unk.pdb', content))
+    expect(result).toHaveLength(0)
+  })
+})
+
+describe('detectMetalCofactors', () => {
+  it('returns empty array when no metal cofactors are present', async () => {
+    const content = `ATOM      1  N   MET A   1\nHETATM    2  N   FAD A   2\nEND\n`
+    const result = await detectMetalCofactors(makeFile('model.pdb', content))
+    expect(result).toHaveLength(0)
+  })
+
+  it('detects HEM in HETATM lines', async () => {
+    const content = [
+      'ATOM      1  N   GLN A   1',
+      'HETATM    2  FE  HEM A   2',
+      'END'
+    ].join('\n')
+    const result = await detectMetalCofactors(makeFile('hem.pdb', content))
+    expect(result).toContain('HEM')
+    expect(result).toHaveLength(1)
+  })
+
+  it('detects all heme variants and returns sorted list', async () => {
+    const content = [
+      'HETATM    1  FE  HEB A   1',
+      'HETATM    2  FE  HEM A   2',
+      'END'
+    ].join('\n')
+    const result = await detectMetalCofactors(makeFile('hemes.pdb', content))
+    expect(result).toEqual(['HEB', 'HEM'])
+  })
+
+  it('does not flag FAD (GAFF cofactor) or unknown residues', async () => {
+    const content = [
+      'HETATM    1  N   FAD A   1',
+      'ATOM      2  CA  UNK A   2',
+      'END'
+    ].join('\n')
+    const result = await detectMetalCofactors(makeFile('fad-unk.pdb', content))
+    expect(result).toHaveLength(0)
   })
 })
 

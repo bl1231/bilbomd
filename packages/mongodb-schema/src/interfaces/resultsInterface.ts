@@ -42,7 +42,10 @@ interface IAlphaFoldResults {
   ensembles?: IEnsemble[]
 }
 
-interface ISANSResults {}
+interface ISANSResults {
+  total_num_ensembles?: number
+  ensembles?: IEnsemble[]
+}
 
 interface IScoperResults {
   kgs_conformations?: number

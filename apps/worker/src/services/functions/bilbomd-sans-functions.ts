@@ -5,7 +5,7 @@ import csv from 'csv-parser'
 import { logger } from '../../helpers/loggers.js'
 import { glob } from 'glob'
 import { promisify } from 'util'
-import { IStepStatus } from '@bilbomd/mongodb-schema'
+import { IStepStatus, IEnsemble } from '@bilbomd/mongodb-schema'
 import { IJob, IBilboMDSANSJob } from '@bilbomd/mongodb-schema'
 import { updateStepStatus } from './mongo-utils.js'
 import { generateDCD2PDBInpFile } from './bilbomd-step-functions.js'
@@ -743,28 +743,50 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
           `REMARK`
         ].join('\n')
 
-        // Read and concatenate the content of all PDB files in memory
-        const concatenatedContent = await Promise.all(
-          pdbFilesToConcatenate.map((filePath) =>
-            fs.promises.readFile(filePath, 'utf-8')
+        // Build a proper multi-model PDB with MODEL N / ENDMDL records so
+        // Molstar can load each conformation as a separate assembly.
+        const modelLines: string[] = []
+        for (let i = 0; i < pdbFilesToConcatenate.length; i++) {
+          let content = await fs.promises.readFile(
+            pdbFilesToConcatenate[i],
+            'utf-8'
           )
-        ).then((contents) => contents.join('\n')) // Join all files' contents
+          content = content
+            .split('\n')
+            .filter((line) => !line.startsWith('REMARK'))
+            .join('\n')
+            .replace(/\bEND\n?$/, 'ENDMDL')
+          modelLines.push(`MODEL       ${i + 1}`)
+          modelLines.push(content)
+        }
 
-        // Filter out lines starting with "REMARK"
-        const filteredContent = concatenatedContent
-          .split('\n')
-          .filter((line) => !line.startsWith('REMARK'))
-          .join('\n')
-
-        // Combine the custom header and the filtered content
-        const finalContent = [header, filteredContent].join('\n')
+        const finalContent = [header, ...modelLines].join('\n')
 
         // Write the final content to the output file
         await fs.promises.writeFile(concatenatedPdbFile, finalContent, 'utf-8')
 
         logger.info(
-          `Created filtered PDB file with custom header: ${concatenatedPdbFile}`
+          `Created multi-model PDB file: ${concatenatedPdbFile}`
         )
+      }
+    }
+
+    // Store ensemble metadata in MongoDB so the Molstar viewer can load them.
+    // Only the size field is required — the viewer uses it to build filenames
+    // and to know how many MODEL records to load.
+    const sansEnsembles: IEnsemble[] = gasansSummaryFiles
+      .map((f) => ({
+        size: parseInt(f.match(/\d+/)?.[0] ?? '0', 10),
+        models: []
+      }))
+      .filter((e) => e.size > 0)
+      .sort((a, b) => a.size - b.size)
+
+    if (sansEnsembles.length > 0) {
+      DBjob.results = DBjob.results || {}
+      DBjob.results.sans = {
+        total_num_ensembles: sansEnsembles.length,
+        ensembles: sansEnsembles
       }
     }
 
@@ -867,8 +889,63 @@ Thank you for using BilboMD SANS
   }
 }
 
+const mirrorOmmMdToPepsiSANS = async (
+  DBjob: IBilboMDSANSJob
+): Promise<void> => {
+  const workDir = path.join(config.uploadDir, DBjob.uuid)
+  const ommMdDir = path.join(workDir, 'openmm', 'md')
+  const pepsiSANSDir = path.join(workDir, 'pepsisans')
+
+  await fs.ensureDir(pepsiSANSDir)
+
+  if (!(await fs.pathExists(ommMdDir))) {
+    throw new Error(`OpenMM MD output directory not found: ${ommMdDir}`)
+  }
+
+  const entries = await fs.readdir(ommMdDir)
+  const rgDirs = []
+  for (const name of entries) {
+    const fullPath = path.join(ommMdDir, name)
+    if (/^rg_\d+$/.test(name) && (await fs.stat(fullPath)).isDirectory()) {
+      rgDirs.push(name)
+    }
+  }
+
+  if (rgDirs.length === 0) {
+    throw new Error(`No rg_* directories found in ${ommMdDir}`)
+  }
+
+  for (const rgDir of rgDirs) {
+    const srcDir = path.join(ommMdDir, rgDir)
+    const match = rgDir.match(/^rg_(\d+)$/)
+    if (!match) continue
+    const normalizedName = `rg${match[1]}`
+    const destDir = path.join(pepsiSANSDir, normalizedName)
+    await fs.ensureDir(destDir)
+
+    const files = await fs.readdir(srcDir)
+    for (const file of files) {
+      if (!file.toLowerCase().endsWith('.pdb')) continue
+      if (file.toLowerCase() === 'md.pdb') continue
+
+      const src = path.join(srcDir, file)
+      const dst = path.join(destDir, file)
+      if (!(await fs.pathExists(dst))) {
+        try {
+          const rel = path.relative(path.dirname(dst), src)
+          await fs.ensureSymlink(rel, dst)
+        } catch {
+          await fs.copy(src, dst)
+        }
+      }
+    }
+    logger.info(`Mirrored ${rgDir} -> pepsisans/${normalizedName}`)
+  }
+}
+
 export {
   extractPDBFilesFromDCD,
+  mirrorOmmMdToPepsiSANS,
   remediatePDBFiles,
   runPepsiSANSOnPDBFiles,
   runGASANS,

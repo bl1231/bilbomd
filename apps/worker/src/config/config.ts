@@ -16,6 +16,18 @@ const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
   return process.env[name] || defaultValue
 }
 
+const parsePositiveIntEnv = (name: string, defaultValue: number): number => {
+  const raw = process.env[name]
+  if (raw === undefined || raw === '') return defaultValue
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(
+      `Environment variable ${name}="${raw}" is not a positive number`
+    )
+  }
+  return Math.floor(parsed)
+}
+
 const validateRequiredEnvVars = (): void => {
   const required = [
     'BILBOMD_URL',
@@ -66,6 +78,28 @@ export const config = {
     'BASE_PYTHON_BIN',
     '/opt/envs/base/bin/python'
   ),
+  // Host-side path that maps to the in-container DATA_VOL. Used when the
+  // worker spawns sibling containers via the host docker daemon and needs
+  // to bind-mount job directories from the host's filesystem.
+  hostUploadDir: getEnvVarWithDefault(
+    'HOST_UPLOAD_DIR',
+    process.env.DATA_VOL ?? ''
+  ),
+  // Host-side path that holds the ColabFold weights cache (~50GB). Mounted
+  // into spawned bilbomd-colabfold containers at /cache.
+  hostColabfoldCache: getEnvVarWithDefault(
+    'HOST_COLABFOLD_CACHE',
+    '/bilbomd/colabfold-cache'
+  ),
+  colabfoldImage: getEnvVarWithDefault(
+    'COLABFOLD_IMAGE',
+    'ghcr.io/bl1231/bilbomd-colabfold:0.0.10'
+  ),
+  colabfoldTimeoutMs: parsePositiveIntEnv(
+    'COLABFOLD_TIMEOUT_MS',
+    60 * 60 * 1000
+  ),
+  dockerBin: getEnvVarWithDefault('DOCKER_BIN', '/usr/bin/docker'),
   logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info'),
   scripts: {
     prepareCHARMMSlurmScript: getEnvVar('PREPARE_CHARMM_SLURM_SCRIPT'),

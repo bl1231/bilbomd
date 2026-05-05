@@ -1,5 +1,17 @@
 # @bilbomd/bilbomd-types
 
+## 1.5.4
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+
+## 1.5.3
+
+### Patch Changes
+
+- d0504b0: Fix UI cofactor alerts to reflect GAFF2 support for organic small molecules. Split STRIPPABLE_COFACTORS into GAFF_COFACTORS (organic, now parameterized via GAFF2) and METAL_COFACTORS (heme/porphyrins, still removed). FAD and similar molecules now show a blue info alert instead of a yellow warning.
+
 ## 1.5.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/worker",
-  "version": "2.6.5",
+  "version": "2.9.3",
   "description": "Worker app to process BilboMD jobs from BullMQ queue",
   "main": "dist/worker.js",
   "files": [
@@ -23,7 +23,8 @@
     "start": "node dist/worker.js",
     "test": "vitest --run --coverage",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:python": "python -m pytest scripts/ -v"
   },
   "keywords": [],
   "author": "Scott Classen",

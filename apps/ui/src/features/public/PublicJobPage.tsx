@@ -18,6 +18,9 @@ import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
 import HeaderBox from 'components/HeaderBox'
 import Item from 'themes/components/Item'
 import { getStatusColors } from 'features/shared/StatusColors'
+import { getStepDetails } from 'features/shared/stepDetails'
+import DirectionsRunRoundedIcon from '@mui/icons-material/DirectionsRunRounded'
+import Tooltip from '@mui/material/Tooltip'
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import PublicJobAnalysisSection from 'features/public/PublicJobAnalysisSection'
 const MolstarViewer = lazy(() => import('features/molstar/Viewer'))
@@ -139,6 +142,17 @@ const PublicJobPage = () => {
   const job: PublicJobStatus = data
   const progress = job.progress ?? 0
 
+  const runningStepName = job.steps
+    ? (Object.entries(job.steps).find(
+        ([, step]) =>
+          step && typeof step === 'object' && step.status === 'Running'
+      )?.[0] ?? null)
+    : null
+
+  const latestStepMessage = runningStepName && job.steps
+    ? (job.steps[runningStepName as keyof typeof job.steps]?.message ?? '')
+    : ''
+
   const calculateDuration = (): string | undefined => {
     if (!job.startedAt) return undefined
     const startTime = new Date(job.startedAt)
@@ -198,46 +212,82 @@ const PublicJobPage = () => {
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Progress</Typography>
           </HeaderBox>
-          <Item sx={{ display: 'flex', alignItems: 'center' }}>
-            <Chip
-              label={job.status}
-              variant="outlined"
-              sx={{
-                backgroundColor: statusColors.background,
-                color: statusColors.text,
-                mr: 2
-              }}
-            />
-            {/* Live job timer */}
-            {calculateDuration() && (
-              <Typography
-                variant="body1"
-                sx={{ mr: 2, minWidth: '90px' }}
-              >
-                ⏱ {calculateDuration()}
-              </Typography>
-            )}
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              sx={{ flexGrow: 1, mr: 2 }}
-            />
-            <Typography
-              variant="h3"
-              sx={{ mx: 1 }}
-            >
-              {progress.toFixed(0)}%
-            </Typography>
-            {job.status === 'Completed' && (
-              <Button
-                variant="contained"
-                onClick={() => {
-                  void handleDownload(job.publicId)
+          <Item sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Chip
+                label={job.status}
+                variant="outlined"
+                sx={{
+                  backgroundColor: statusColors.background,
+                  color: statusColors.text,
+                  mr: 2
                 }}
-                sx={{ mr: 2 }}
+              />
+              {runningStepName && (
+                <Tooltip
+                  title={getStepDetails(runningStepName).tooltipMessage}
+                  arrow
+                >
+                  <Chip
+                    icon={
+                      <DirectionsRunRoundedIcon style={{ color: 'black' }} />
+                    }
+                    variant="outlined"
+                    label={getStepDetails(runningStepName).friendlyName}
+                    sx={{
+                      backgroundColor: '#fff566',
+                      color: 'black',
+                      mr: 2
+                    }}
+                  />
+                </Tooltip>
+              )}
+              {/* Live job timer */}
+              {calculateDuration() && (
+                <Chip
+                  label={`⏱ ${calculateDuration()}`}
+                  variant="outlined"
+                  sx={{
+                    mr: 2,
+                    backgroundColor:
+                      job.status === 'Running' || job.status === 'Completed'
+                        ? '#e8f5e9'
+                        : job.status === 'Error' || job.status === 'Failed'
+                          ? '#ffebee'
+                          : undefined
+                  }}
+                />
+              )}
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{ flexGrow: 1, mr: 2 }}
+              />
+              <Typography
+                variant="h3"
+                sx={{ mx: 1 }}
               >
-                Download Results
-              </Button>
+                {progress.toFixed(0)}%
+              </Typography>
+              {job.status === 'Completed' && (
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    void handleDownload(job.publicId)
+                  }}
+                  sx={{ mr: 2 }}
+                >
+                  Download Results
+                </Button>
+              )}
+            </Box>
+            {latestStepMessage && (
+              <Typography
+                variant="subtitle1"
+                sx={{ color: 'text.secondary', pl: 1 }}
+              >
+                {latestStepMessage}
+              </Typography>
             )}
           </Item>
         </Grid>

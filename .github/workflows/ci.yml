@@ -8,6 +8,8 @@ on:
       - "docs/**/*.md"
       - "infra/**"
       - "test_scripts/**"
+      - "apps/worker/base-image-version"
+      - "apps/worker/bilbomd-worker-base.dockerfile"
   pull_request:
     branches: [main]
     paths-ignore:
@@ -15,6 +17,8 @@ on:
       - "docs/**/*.md"
       - "infra/**"
       - "test_scripts/**"
+      - "apps/worker/base-image-version"
+      - "apps/worker/bilbomd-worker-base.dockerfile"
   workflow_dispatch: {}
 
 permissions:
@@ -45,10 +49,12 @@ jobs:
               - 'apps/backend/**'
               - 'tools/python/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/bilbomd-types/**'
               - 'packages/md-utils/**'
               - 'packages/eslint-config/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - 'apps/backend/bilbomd-backend.dockerfile'
             ui:
               - 'apps/ui/**'
@@ -56,6 +62,7 @@ jobs:
               - 'packages/eslint-config/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - 'apps/ui/bilbomd-ui.dockerfile'
             worker:
               - 'apps/worker/**'
@@ -65,6 +72,7 @@ jobs:
               - 'packages/eslint-config/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - 'apps/worker/bilbomd-worker.dockerfile'
             scoper:
               - 'apps/scoper/**'
@@ -72,18 +80,22 @@ jobs:
               - 'packages/eslint-config/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - 'apps/scoper/bilbomd-scoper.dockerfile'
             schema:
               - 'packages/mongodb-schema/**'
               - 'packages/eslint-config/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
             md-utils:
               - 'packages/md-utils/**'
+              - 'packages/bilbomd-types/**'
               - 'packages/mongodb-schema/**'
               - 'packages/eslint-config/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
 
   lint:
     name: Lint
@@ -638,7 +650,9 @@ jobs:
           fi
 
       - name: Build dependencies
-        run: pnpm -C packages/mongodb-schema run build
+        run: |
+          pnpm -C packages/bilbomd-types run build
+          pnpm -C packages/mongodb-schema run build
 
       - name: Build md-utils
         run: pnpm -C packages/md-utils run build
@@ -1133,7 +1147,7 @@ jobs:
         run: pnpm -C apps/backend run test
 
       - name: Run ui tests with coverage
-        run: pnpm -C apps/ui run test
+        run: pnpm -C apps/ui run test:coverage
 
       - name: Run worker tests with coverage
         run: pnpm -C apps/worker run test

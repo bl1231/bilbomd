@@ -81,7 +81,7 @@ services:
       - app-network
 
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.7.1
+    image: ghcr.io/bl1231/bilbomd-backend:2.7.6
     pull_policy: always
     env_file:
       - path: .env.local
@@ -105,7 +105,7 @@ services:
       start_period: 10s
 
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.6.5
+    image: ghcr.io/bl1231/bilbomd-worker:2.9.2
     pull_policy: always
     deploy:
       replicas: 1
@@ -138,7 +138,7 @@ services:
       start_period: 10s
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.13.0
+    image: ghcr.io/bl1231/bilbomd-ui:2.14.5
     pull_policy: always
     env_file:
       - .env.local

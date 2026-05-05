@@ -1,5 +1,63 @@
 # @bilbomd/ui
 
+## 2.14.5
+
+### Patch Changes
+
+- a5fd493: Add PDB preparation step (strip waters and ions) to SANS OpenMM pipeline. Rename strip_ions.py → prep_pdb.py and runStripIons → runPrepPdb for accuracy — the script has always removed both HOH waters and metal/polyatomic ions.
+
+  Add GAFF2/metal cofactor alerts to the SANS new job form, matching the behaviour already present on the Classic PDB and Auto forms.
+
+## 2.14.4
+
+### Patch Changes
+
+- f2032ce: Fix stuck step message on job pages and add adaptive polling. Step messages now reflect the currently Running step instead of relying on iteration order, which caused stale messages from earlier completed steps to persist. SingleJobPage now polls at 10s while a job is Running, stops polling on terminal states, and falls back to 30s for other states.
+
+## 2.14.3
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+- Updated dependencies [964095e]
+  - @bilbomd/bilbomd-types@1.5.4
+
+## 2.14.2
+
+### Patch Changes
+
+- b5d24dd: Improve error message on failed job page: logged-in users see their job UUID for support reference; anonymous users see a prompt to create an account for personalized support.
+- 04bd25d: Add Molstar viewer support for SANS jobs.
+
+  Worker: fix SANS ensemble PDB files to use proper MODEL N / ENDMDL formatting so Molstar can load each conformation as a separate assembly. Populate results.sans.ensembles in MongoDB after each SANS job completes.
+
+  UI: enable the Molstar viewer for completed SANS jobs in SingleJobPage. Viewer.tsx now routes SANS jobs through the same ensemble loading path as classic/auto/alphafold jobs.
+
+## 2.14.1
+
+### Patch Changes
+
+- ff2b1f4: Fix MD movies not appearing without manual page refresh for SANS and OpenMM jobs by using RTK Query's built-in pollingInterval instead of a broken manual setInterval.
+
+## 2.14.0
+
+### Minor Changes
+
+- c764232: Enforce engine-driven input mode across all job forms. Classic form: MD engine selection now drives input format (CHARMM requires CRD/PSF from CHARMM-GUI, OpenMM accepts PDB/CIF). Auto, AlphaFold, and SANS forms: CHARMM engine option hidden, defaulting to OpenMM. Prevents PDB-to-CRD/PSF conversion failures with non-standard residues. Metal cofactor warning now suggests CHARMM-GUI with inline link button. Fix Classic form regressions: Conformations per Rg defaults to 600 for OpenMM, auto-Rg validation no longer requires manual field interaction. Fix Help page pipeline schematic images for dark mode support.
+
+### Patch Changes
+
+- 26b85b8: Update BilboMD citation to the published NAR 2026 paper. Replaces the Pelikan et al. 2009 Gen Physiol Biophys reference with Classen et al. 2026 Nucleic Acids Research (doi: 10.1093/nar/gkag377) across the Home, About, Help, and Acknowledgments pages.
+
+## 2.13.1
+
+### Patch Changes
+
+- d0504b0: Fix UI cofactor alerts to reflect GAFF2 support for organic small molecules. Split STRIPPABLE_COFACTORS into GAFF_COFACTORS (organic, now parameterized via GAFF2) and METAL_COFACTORS (heme/porphyrins, still removed). FAD and similar molecules now show a blue info alert instead of a yellow warning.
+- cde25c7: Fix Molstar viewer not showing glycans, cofactors, and ions on initial load. Apply StructurePreset to all ensemble structures and add branched entity support to display presets.
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+
 ## 2.13.0
 
 ### Minor Changes

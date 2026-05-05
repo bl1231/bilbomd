@@ -6,6 +6,7 @@ import { logger } from '../../middleware/loggers.js'
 
 interface AuthenticatedRequest extends Request {
   user?: string
+  roles?: string[]
 }
 
 const getContentType = (filename: string): string => {
@@ -46,13 +47,18 @@ const streamVideo = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(404).json({ message: 'Job not found' })
     }
 
-    // Check if user owns the job by comparing usernames
-    const jobOwnerUsername = (job.user as { username: string })?.username
-    if (jobOwnerUsername !== username) {
-      logger.warn(
-        `Access denied: ${username} attempted to access job owned by ${jobOwnerUsername}`
-      )
-      return res.status(403).json({ message: 'Access denied' })
+    // Admins and Managers can access any job's movies
+    const roles = req.roles ?? []
+    const isAdmin = roles.includes('Admin')
+    const isManager = roles.includes('Manager')
+    if (!isAdmin && !isManager) {
+      const jobOwnerUsername = (job.user as { username: string })?.username
+      if (jobOwnerUsername !== username) {
+        logger.warn(
+          `Access denied: ${username} attempted to access job owned by ${jobOwnerUsername}`
+        )
+        return res.status(403).json({ message: 'Access denied' })
+      }
     }
 
     const assets = job.assets as IAssets | undefined

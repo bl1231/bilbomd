@@ -191,7 +191,7 @@ const MolstarViewer = ({
     }
 
     // Adding LoadParams based on job type and results structure
-    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold']
+    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold', 'sans']
 
     if (ensembleJobTypes.includes(jobType)) {
       // Use the appropriate results structure based on job type
@@ -210,9 +210,6 @@ const MolstarViewer = ({
         const pdbFilename = `scoper_combined_${results.scoper.foxs_top_file}`
         addFilesToLoadParams(pdbFilename, 1)
       }
-    } else if (jobType === 'sans') {
-      // SANS jobs might have different file structures - handle if needed
-      console.log('SANS job detected - no ensemble loading implemented yet')
     }
 
     // Convert the Map values to an array of arrays
@@ -371,29 +368,16 @@ const MolstarViewer = ({
             refs.push(struct.ref)
             ensembleStructureRefs.current.set(ensembleSize, refs)
           }
-          if (jobType === 'scoper') {
-            // For Scoper, apply StructurePreset so Mg ions (and polymer) are shown
-            const plugin = window.molstar
-            const allStructs =
-              plugin.managers.structure.hierarchy.current.structures
-            const structureRef = allStructs.find(
-              (s) => s.cell.transform.ref === struct.ref
-            )
-            if (structureRef) {
-              await plugin.managers.structure.component.applyPreset(
-                [structureRef],
-                StructurePreset
-              )
-            }
-          } else {
-            await window.molstar.builders.structure.representation.addRepresentation(
-              struct,
-              {
-                type: 'cartoon',
-                color: 'structure-index',
-                size: 'uniform',
-                sizeParams: { value: 1.0 }
-              }
+          const plugin = window.molstar
+          const allStructs =
+            plugin.managers.structure.hierarchy.current.structures
+          const structureRef = allStructs.find(
+            (s) => s.cell.transform.ref === struct.ref
+          )
+          if (structureRef) {
+            await plugin.managers.structure.component.applyPreset(
+              [structureRef],
+              StructurePreset
             )
           }
         }

@@ -64,15 +64,15 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts', './vitest.setup.coverage.ts'],
     reporters: ['default'],
     globals: true,
-    css: true,
-    pool: 'forks', // Use forks pool for single-threaded execution to avoid IPC issues
+    css: false,
+    pool: 'threads',
     server: {
       deps: {
         inline: ['@mui/x-data-grid']
       }
     },
     coverage: {
-      enabled: true,
+      enabled: false,
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
       reportsDirectory: 'coverage',

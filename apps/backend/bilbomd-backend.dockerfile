@@ -36,6 +36,7 @@ RUN corepack enable \
 
 # Only copy what's needed to resolve workspaces (good cache behavior)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/bilbomd-types/package.json packages/bilbomd-types/package.json
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
 COPY packages/md-utils/package.json packages/md-utils/package.json
 COPY packages/eslint-config/ packages/eslint-config/
@@ -67,9 +68,9 @@ COPY . .
 
 # Install deterministically from lockfile and build
 RUN pnpm install --frozen-lockfile
+RUN pnpm -C packages/bilbomd-types run build
 RUN pnpm -C packages/mongodb-schema run build
 RUN pnpm -C packages/md-utils run build
-RUN pnpm -C packages/bilbomd-types run build
 RUN pnpm -C apps/backend run build
 
 # Produce a minimal deployable bundle for just the backend

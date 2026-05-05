@@ -1,4 +1,4 @@
-import { ChangeEvent } from 'react'
+import { ChangeEvent, ReactNode } from 'react'
 import {
   Button,
   FormControl,
@@ -18,6 +18,8 @@ interface FileSelectProps extends FormControlProps {
   title: string
   error: boolean
   errorMessage?: string
+  warningMessage?: ReactNode
+  infoMessage?: string
   existingFileName?: string
   setFieldValue: (field: string, value: File, shouldValidate?: boolean) => void
   onFileChange: (file: File) => void
@@ -85,7 +87,7 @@ const FileSelect = (props: FileSelectProps) => {
             type="file"
             onChange={handleFileChange}
             onBlur={handleBlur}
-            inputProps={{ accept: props.fileExt }}
+            slotProps={{ input: { accept: props.fileExt } }}
             disabled={props.disabled}
           />
           <label htmlFor={props.id}>
@@ -115,6 +117,22 @@ const FileSelect = (props: FileSelectProps) => {
               sx={{ py: 0 }}
             >
               {props.errorMessage}
+            </Alert>
+          ) : null}
+          {!props.error && props.infoMessage ? (
+            <Alert
+              severity="info"
+              sx={{ mt: 1 }}
+            >
+              {props.infoMessage}
+            </Alert>
+          ) : null}
+          {!props.error && props.warningMessage ? (
+            <Alert
+              severity="warning"
+              sx={{ mt: 1 }}
+            >
+              {props.warningMessage}
             </Alert>
           ) : null}
         </Grid>

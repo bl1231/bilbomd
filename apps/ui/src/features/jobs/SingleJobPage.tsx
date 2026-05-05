@@ -1,5 +1,5 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
-import { useParams, useLocation, useNavigate } from 'react-router'
+import { useState, useEffect, lazy, Suspense } from 'react'
+import { useParams, useLocation, useNavigate, Link } from 'react-router'
 import useTitle from 'hooks/useTitle'
 import {
   Button,
@@ -72,6 +72,7 @@ const SingleJobPage = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
   const [tabValue, setTabValue] = useState(0)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [jobPollingInterval, setJobPollingInterval] = useState(10000)
   const [deleteJob] = useDeleteJobMutation()
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -94,12 +95,24 @@ const SingleJobPage = () => {
     isLoading,
     isError
   } = useGetJobByIdQuery(id ?? skipToken, {
-    pollingInterval: 30000,
+    pollingInterval: jobPollingInterval,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
 
   const job = jobData as BilboMDJobDTO
+
+  useEffect(() => {
+    const status = job?.mongo?.status
+    if (!status) return
+    if (status === 'Running') {
+      setJobPollingInterval(10000)
+    } else if (['Completed', 'Error', 'Failed'].includes(status)) {
+      setJobPollingInterval(0)
+    } else {
+      setJobPollingInterval(30000)
+    }
+  }, [job?.mongo?.status])
 
   const {
     data: config,
@@ -111,26 +124,10 @@ const SingleJobPage = () => {
     data: moviesData,
     error: moviesError,
     isLoading: moviesLoading
-  } = useGetMDMoviesQuery(id ?? skipToken)
-
-  const allMoviesReady =
-    moviesData &&
-    moviesData.movies.length > 0 &&
-    moviesData.movies.every((m) => m.status === 'ready')
-
-  // Optionally, use a refetch or polling effect:
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined
-    if (!allMoviesReady && id) {
-      interval = setInterval(() => {
-        // You may need to use refetch from RTK Query if available
-        // refetchMovies()
-      }, 15000)
-    }
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [allMoviesReady, id])
+  } = useGetMDMoviesQuery(id ?? skipToken, {
+    pollingInterval: 15000,
+    skipPollingIfUnfocused: true
+  })
 
   // Debug logging
   // console.log('moviesData:', moviesData)
@@ -454,7 +451,8 @@ const SingleJobPage = () => {
             job.mongo.jobType === 'crd' ||
             job.mongo.jobType === 'auto' ||
             job.mongo.jobType === 'alphafold' ||
-            job.mongo.jobType === 'scoper') && (
+            job.mongo.jobType === 'scoper' ||
+            job.mongo.jobType === 'sans') && (
             <Grid size={{ xs: 12 }}>
               <HeaderBox sx={{ py: '6px' }}>
                 <Typography>
@@ -566,15 +564,34 @@ const SingleJobPage = () => {
             </HeaderBox>
 
             <Item>
-              <Alert
-                severity="error"
-                variant="outlined"
-              >
-                Hmmmm... Well something didn&apos;t work. Please try submitting
-                again and if things still don&apos;t work contact Scott or
-                Michal.
-              </Alert>
-              {/* <JobError job={job} /> */}
+              {token ? (
+                <Alert
+                  severity="error"
+                  variant="outlined"
+                >
+                  <AlertTitle>Job Failed</AlertTitle>
+                  We&apos;ve logged the details of this job failure. Please
+                  contact Scott or Michal and reference your job ID for faster
+                  support:{' '}
+                  <Box
+                    component="code"
+                    sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}
+                  >
+                    {job.mongo.uuid}
+                  </Box>
+                </Alert>
+              ) : (
+                <Alert
+                  severity="error"
+                  variant="outlined"
+                >
+                  <AlertTitle>Job Failed</AlertTitle>
+                  Something didn&apos;t work.{' '}
+                  <Link to="/register">Creating a free BilboMD account</Link>{' '}
+                  allows us to investigate job failures and provide personalized
+                  support. You can also try resubmitting.
+                </Alert>
+              )}
             </Item>
           </Grid>
         )}

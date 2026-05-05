@@ -4,7 +4,7 @@ import os
 import sys
 
 import yaml
-from openmm import CustomCVForce, Platform, RGForce, VerletIntegrator, XmlSerializer
+from openmm import Platform, VerletIntegrator, XmlSerializer
 from openmm.app import (
     CutoffNonPeriodic,
     DCDReporter,
@@ -16,8 +16,9 @@ from openmm.app import (
 )
 from openmm.unit import angstroms
 from utils.fixed_bodies import apply_fixed_body_constraints
+from utils.model_prep import register_ligand_templates_for_topology
 from utils.pdb_writer import PDBFrameWriter
-from utils.rgyr import RadiusOfGyrationReporter
+from utils.rgyr import RadiusOfGyrationCVForce, RadiusOfGyrationReporter
 from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
 
 
@@ -53,6 +54,7 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
 
     forcefield = ForceField(*config["input"]["forcefield"])
     modeller = Modeller(pdb.topology, pdb.positions)
+    register_ligand_templates_for_topology(modeller.topology, forcefield, config["input"]["dir"])
 
     fixed_bodies_config = config["constraints"]["fixed_bodies"]
     rigid_bodies_configs = config["constraints"]["rigid_bodies"]
@@ -83,7 +85,8 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     print(f"[GPU {gpu_id}] Applying rigid body constraints...")
     create_rigid_bodies(system, modeller.positions, list(rigid_bodies.values()))
 
-    # ⛓️ RG restraint
+    # ⛓️ RG restraint — applied to CA atoms only so it is consistent with the
+    # RadiusOfGyrationReporter and unaffected by free glycan chains in glycoproteins.
     k_rg_yaml = float(config["steps"]["md"]["rgyr"]["k_rg"])  # kcal/mol/Å^2 from YAML
     timestep = float(config["steps"]["md"]["parameters"]["timestep"])
     nsteps = int(config["steps"]["md"]["parameters"]["nsteps"])
@@ -92,14 +95,11 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     rgyr_report = config["steps"]["md"]["rgyr"]["filename"]
     print(f"\n[GPU {gpu_id}] 🔁 Running MD with Rg target: {rg} Å")
 
-    rg_force = RGForce()
+    atom_indices = [a.index for a in modeller.topology.atoms() if a.name == "CA"]
     # Convert kcal/mol/Å^2 → kJ/mol/nm^2
     k_rg = k_rg_yaml * 418.4
     rg0 = rg * 0.1  # Å → nm
-    cv = CustomCVForce("0.5 * k * (rg - rg0)^2")
-    cv.addCollectiveVariable("rg", rg_force)
-    cv.addGlobalParameter("k", k_rg)
-    cv.addGlobalParameter("rg0", rg0)
+    cv = RadiusOfGyrationCVForce(atom_indices, k_rg, rg0)
     system.addForce(cv)
 
     integrator = VerletIntegrator(timestep)
@@ -152,7 +152,6 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     simulation.reporters.append(DCDReporter(dcd_file_path, report_interval))
 
     # Radius of Gyration Reporter
-    atom_indices = [a.index for a in modeller.topology.atoms() if a.name == "CA"]
     simulation.reporters.append(
         RadiusOfGyrationReporter(
             atom_indices, system, rgyr_file_path, reportInterval=report_interval
@@ -176,7 +175,7 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     with open(
         os.path.join(rg_md_dir, output_pdb_file_name), "w", encoding="utf-8"
     ) as out_pdb:
-        PDBFile.writeFile(simulation.topology, final_state.getPositions(), out_pdb)
+        PDBFile.writeFile(simulation.topology, final_state.getPositions(), out_pdb, keepIds=True)
 
     print(f"[GPU {gpu_id}] ✅ Completed MD with Rg {rg}. Results in {rg_md_dir}")
 
