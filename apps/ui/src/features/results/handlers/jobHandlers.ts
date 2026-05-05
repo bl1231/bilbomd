@@ -217,7 +217,14 @@ export const createMultiJobHandler = (): JobHandler => ({
   getJobTypeDisplayName: () => 'BilboMD MultiMD',
 
   getJobSpecificProperties: (): MongoDBProperty[] => {
-    // Multi jobs might have specific properties in the future
+    return []
+  }
+})
+
+export const createOpenFoldJobHandler = (): JobHandler => ({
+  getJobTypeDisplayName: () => 'BilboMD OpenFold3',
+
+  getJobSpecificProperties: (): MongoDBProperty[] => {
     return []
   }
 })
