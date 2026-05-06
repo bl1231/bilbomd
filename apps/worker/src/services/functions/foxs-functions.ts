@@ -168,8 +168,10 @@ const spawnFoXSOptimized = async (
               )
               if (DBjob) {
                 void Job.findByIdAndUpdate(DBjob._id, {
-                  'steps.foxs': { status: 'Running', message: statusMsg }
-                })
+                  $set: { 'steps.foxs': { status: 'Running', message: statusMsg } }
+                }).catch((err) =>
+                  logger.error(`FoXS step status update failed: ${err}`)
+                )
               }
             }
 
