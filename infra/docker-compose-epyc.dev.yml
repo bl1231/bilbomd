@@ -32,7 +32,7 @@ networks:
 services:
   # ------------------------------------------------------------------------------------
   mongodb:
-    image: mongo:8.2.7
+    image: mongo:8.3.1
     pull_policy: always
     restart: always
     healthcheck:
