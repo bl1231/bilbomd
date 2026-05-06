@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "vitest --run",
+    "test": "vitest --run --coverage",
     "test:watch": "vitest",
     "test:coverage": "vitest --run --coverage",
     "lint": "eslint"
