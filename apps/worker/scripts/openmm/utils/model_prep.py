@@ -131,6 +131,42 @@ def _normalize_charmm_nucleic_names(pdb_text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# DNA/RNA 5'-terminal phosphate cleanup
+# ---------------------------------------------------------------------------
+
+_NUCLEIC_NAMES: frozenset[str] = frozenset({
+    "DA", "DC", "DG", "DT",
+    "A", "C", "G", "U", "RA", "RG", "RC", "RU",
+})
+_5PRIME_PHOSPHATE_ATOMS: frozenset[str] = frozenset({"P", "OP1", "OP2", "OP3"})
+
+
+def _remove_5prime_terminal_phosphates(modeller: Modeller) -> None:
+    """Remove spurious phosphate groups PDBFixer adds to 5' DNA/RNA termini.
+
+    PDBFixer.addMissingAtoms() treats P/OP1/OP2 as "missing" on the first
+    residue of a nucleic acid chain, creating a dangling phosphate that has
+    no O3' from a preceding residue. OpenMM's template matcher cannot match
+    the resulting external-bond pattern (e.g. matches DT3 internally but sees
+    wrong external bonding), raising a ValueError inside addHydrogens().
+    """
+    atoms_to_delete = []
+    for chain in modeller.topology.chains():
+        residues = list(chain.residues())
+        if not residues:
+            continue
+        first_res = residues[0]
+        if first_res.name in _NUCLEIC_NAMES:
+            for atom in first_res.atoms():
+                if atom.name in _5PRIME_PHOSPHATE_ATOMS:
+                    atoms_to_delete.append(atom)
+    if atoms_to_delete:
+        names = [a.name for a in atoms_to_delete]
+        print(f"  Removing {len(atoms_to_delete)} spurious 5'-terminal phosphate atom(s): {names}")
+        modeller.delete(atoms_to_delete)
+
+
+# ---------------------------------------------------------------------------
 # Unknown residue removal
 # ---------------------------------------------------------------------------
 
@@ -528,6 +564,10 @@ def prepare_modeller(
         fixer.addMissingHydrogens(pH=7.0)
 
     modeller = Modeller(fixer.topology, fixer.positions)
+
+    # PDBFixer.addMissingAtoms() incorrectly adds P/OP1/OP2 to the 5' terminus
+    # of DNA/RNA chains. Strip them before addHydrogens() to avoid template mismatch.
+    _remove_5prime_terminal_phosphates(modeller)
 
     # Identify unknown residues that are organic (no metals) and have an SDF file,
     # then register a GAFF2 template generator for them before deletion runs.
