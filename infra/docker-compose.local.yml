@@ -61,7 +61,7 @@ services:
       - app-network
 
   redis:
-    image: redis:8.6.2
+    image: redis:8.6.3
     pull_policy: missing
     restart: always
     healthcheck:
