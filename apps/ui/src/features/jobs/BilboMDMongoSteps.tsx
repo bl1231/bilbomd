@@ -21,6 +21,7 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
   stepsToHide = ['_id']
 
   const stepOrder = [
+    'autorg',
     'alphafold',
     'openfold',
     'reduce',
@@ -29,7 +30,6 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
     'ionnet',
     'pdb2crd',
     'pae',
-    'autorg',
     'minimize',
     'initfoxs',
     'heat',
