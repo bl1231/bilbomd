@@ -28,15 +28,15 @@
     "@bilbomd/bilbomd-types": "workspace:*",
     "@bilbomd/mongodb-schema": "workspace:*",
     "fs-extra": "^11.3.4",
-    "yaml": "^2.8.3"
+    "yaml": "^2.8.4"
   },
   "devDependencies": {
     "@bilbomd/eslint-config": "workspace:*",
     "@types/fs-extra": "^11.0.4",
-    "@vitest/coverage-v8": "^4.1.3",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.2",
+    "@vitest/coverage-v8": "^4.1.5",
+    "eslint": "^10.3.0",
+    "typescript": "^6.0.3",
     "uuid": "^14.0.0",
-    "vitest": "^4.1.3"
+    "vitest": "^4.1.5"
   }
 }
