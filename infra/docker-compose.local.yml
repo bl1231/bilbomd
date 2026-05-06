@@ -38,7 +38,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:8.2.7
+    image: mongo:8.3.1
     pull_policy: missing
     restart: always
     healthcheck:
@@ -61,7 +61,7 @@ services:
       - app-network
 
   redis:
-    image: redis:8.6.2
+    image: redis:8.6.3
     pull_policy: missing
     restart: always
     healthcheck:
@@ -105,7 +105,7 @@ services:
       start_period: 10s
 
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.9.2
+    image: ghcr.io/bl1231/bilbomd-worker:2.9.3
     pull_policy: always
     deploy:
       replicas: 1
