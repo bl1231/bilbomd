@@ -15,7 +15,7 @@ interface BilboMDJwtPayload {
 
 const otp = async (req: Request, res: Response) => {
   try {
-    const { otp: code } = req.body
+    const code = String(req.body.otp ?? '')
 
     if (!code) {
       res.status(400).json({ message: 'OTP required.' })

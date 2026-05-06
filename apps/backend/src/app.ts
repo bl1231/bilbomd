@@ -50,6 +50,9 @@ logger.info(`Starting in ${environment} mode`)
 // Trust exactly 2 proxies: Cloudflare and Docker host
 app.set('trust proxy', 2)
 
+// Prevent MongoDB operator injection in all Mongoose queries
+mongoose.set('sanitizeFilter', true)
+
 // Connect to MongoDB
 connectDB()
 
