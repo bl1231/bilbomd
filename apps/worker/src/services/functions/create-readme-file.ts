@@ -3,7 +3,8 @@ import {
   IBilboMDPDBJob,
   IBilboMDCRDJob,
   IBilboMDAutoJob,
-  IBilboMDAlphaFoldJob
+  IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob
 } from '@bilbomd/mongodb-schema'
 import path from 'path'
 import fs from 'fs-extra'
@@ -13,7 +14,8 @@ const createReadmeFile = async (
     | IBilboMDCRDJob
     | IBilboMDPDBJob
     | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob,
+    | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob,
   numEnsembles: number,
   resultsDir: string
 ): Promise<void> => {
@@ -77,6 +79,23 @@ const createReadmeFile = async (
 - Generated minimized PDB file: minimized_output.pdb
 - Generated minimized PDB DAT file: minimization_output_${
         alphafoldJob.data_file.split('.')[0]
+      }.dat
+`
+      break
+    }
+    case 'BilboMdOpenFold': {
+      const openfoldJob = DBjob as IBilboMDOpenFoldJob
+      originalFiles = `
+- Original experimental SAXS data file: ${openfoldJob.data_file}
+- OpenFold3 query JSON: of3-query.json
+- OpenFold3 PDB file: of3-rank1.pdb
+- OpenFold3 PDE file: of3-pae.json
+- Generated CRD file: bilbomd_pdb2crd.crd
+- Generated PSF file: bilbomd_pdb2crd.psf
+- Generated const.inp file: const.inp
+- Generated minimized PDB file: minimized_output.pdb
+- Generated minimized PDB DAT file: minimization_output_${
+        openfoldJob.data_file.split('.')[0]
       }.dat
 `
       break

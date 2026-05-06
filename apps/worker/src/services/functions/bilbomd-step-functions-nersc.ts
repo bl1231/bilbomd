@@ -7,6 +7,7 @@ import {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IBilboMDSteps,
   StepStatusEnum
 } from '@bilbomd/mongodb-schema'
@@ -47,6 +48,10 @@ function isBilboMDAutoJob(job: IJob): job is IBilboMDAutoJob {
 
 function isBilboMDAlphaFoldJob(job: IJob): job is IBilboMDAlphaFoldJob {
   return (job as IBilboMDAlphaFoldJob).alphafold_entities !== undefined
+}
+
+function isBilboMDOpenFoldJob(job: IJob): job is IBilboMDOpenFoldJob {
+  return (job as IBilboMDOpenFoldJob).openfold_entities !== undefined
 }
 
 const updateNerscSpecificSteps = async (DBJob: IJob): Promise<void> => {
@@ -245,7 +250,8 @@ const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
       isBilboMDCRDJob(DBjob) ||
       isBilboMDPDBJob(DBjob) ||
       isBilboMDAutoJob(DBjob) ||
-      isBilboMDAlphaFoldJob(DBjob)
+      isBilboMDAlphaFoldJob(DBjob) ||
+      isBilboMDOpenFoldJob(DBjob)
     ) {
       await prepareResults(DBjob)
       await updateJobStatus(
@@ -362,5 +368,6 @@ export {
   isBilboMDCRDJob,
   isBilboMDPDBJob,
   isBilboMDAutoJob,
-  isBilboMDAlphaFoldJob
+  isBilboMDAlphaFoldJob,
+  isBilboMDOpenFoldJob
 }

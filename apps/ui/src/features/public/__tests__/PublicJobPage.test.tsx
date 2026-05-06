@@ -63,6 +63,7 @@ describe('PublicJobPage', () => {
       classic: null,
       auto: { total_num_ensembles: 10 },
       alphafold: null,
+      openfold: null,
       sans: null,
       scoper: null
     }
@@ -77,6 +78,7 @@ describe('PublicJobPage', () => {
       classic: null,
       auto: null,
       alphafold: null,
+      openfold: null,
       sans: null,
       scoper: null
     }

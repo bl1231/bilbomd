@@ -5,7 +5,8 @@ import {
   IBilboMDPDBJob,
   IBilboMDCRDJob,
   IBilboMDAutoJob,
-  IBilboMDAlphaFoldJob
+  IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob
 } from '@bilbomd/mongodb-schema'
 import path from 'path'
 import fs from 'fs-extra'
@@ -25,6 +26,7 @@ const prepareResults = async (
     | IBilboMDPDBJob
     | IBilboMDAutoJob
     | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob
 ): Promise<void> => {
   try {
     const jobDir = path.join(config.uploadDir, DBjob.uuid)
@@ -171,6 +173,18 @@ const prepareResults = async (
         'bilbomd_pdb2crd.crd'
       ]
       alphafoldExtraFiles.forEach((file) => {
+        filesToCopy.push({ file, label: file })
+      })
+    }
+
+    if (DBjob.__t === 'BilboMdOpenFold') {
+      const openfoldExtraFiles = [
+        'of3-pae.json',
+        'of3-rank1.pdb',
+        'bilbomd_pdb2crd.psf',
+        'bilbomd_pdb2crd.crd'
+      ]
+      openfoldExtraFiles.forEach((file) => {
         filesToCopy.push({ file, label: file })
       })
     }

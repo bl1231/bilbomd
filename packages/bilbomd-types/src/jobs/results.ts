@@ -42,6 +42,11 @@ export interface AlphafoldJobResults {
   ensembles?: IEnsemble[] // Array of ensembles for each N
 }
 
+export interface OpenFoldJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
 export interface SANSJobResults {
   total_num_ensembles?: number // Total number of ensembles (N)
   ensembles?: IEnsemble[] // Array of ensembles for each N
@@ -65,6 +70,7 @@ export type JobResultsDTO = {
   classic: ClassicJobResults | null
   auto: AutoJobResults | null
   alphafold: AlphafoldJobResults | null
+  openfold: OpenFoldJobResults | null
   sans: SANSJobResults | null
   scoper: ScoperJobResults | null
 }
