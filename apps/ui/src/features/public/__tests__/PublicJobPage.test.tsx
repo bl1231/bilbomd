@@ -167,10 +167,9 @@ describe('PublicJobPage', () => {
         expect(screen.getByText('BilboMD Job Status')).toBeInTheDocument()
       })
 
+      expect(screen.getByText('Job Type: BilboMD Auto')).toBeInTheDocument()
       expect(
-        screen.getByText(
-          `Job type: ${mockJobData.jobType} | MD Engine: ${mockJobData.md_engine}`
-        )
+        screen.getByText(`MD Engine: ${mockJobData.md_engine}`)
       ).toBeInTheDocument()
       expect(screen.getByText(`Public Job ID:`)).toBeInTheDocument()
       expect(screen.getByText('Progress')).toBeInTheDocument()
@@ -259,11 +258,8 @@ describe('PublicJobPage', () => {
       renderWithProviders(<PublicJobPage />)
 
       await waitFor(() => {
-        expect(
-          screen.getByText(
-            `Job type: ${jobWithoutEngine.jobType} | MD Engine: n/a`
-          )
-        ).toBeInTheDocument()
+        expect(screen.getByText('Job Type: BilboMD Auto')).toBeInTheDocument()
+        expect(screen.getByText('MD Engine: n/a')).toBeInTheDocument()
       })
     })
 
@@ -312,9 +308,14 @@ describe('PublicJobPage', () => {
     })
 
     describe('different job types', () => {
-      const jobTypes = ['auto', 'classic', 'alphafold', 'scoper']
+      const jobTypeDisplayNames: Record<string, string> = {
+        auto: 'BilboMD Auto',
+        classic: 'classic',
+        alphafold: 'BilboMD AlphaFold',
+        scoper: 'BilboMD Scoper'
+      }
 
-      jobTypes.forEach((jobType) => {
+      Object.entries(jobTypeDisplayNames).forEach(([jobType, displayName]) => {
         it(`should display ${jobType} job type correctly`, async () => {
           const jobWithType = { ...mockJobData, jobType }
 
@@ -327,9 +328,10 @@ describe('PublicJobPage', () => {
 
           await waitFor(() => {
             expect(
-              screen.getByText(
-                `Job type: ${jobType} | MD Engine: ${mockJobData.md_engine}`
-              )
+              screen.getByText(`Job Type: ${displayName}`)
+            ).toBeInTheDocument()
+            expect(
+              screen.getByText(`MD Engine: ${mockJobData.md_engine}`)
             ).toBeInTheDocument()
           })
         })
