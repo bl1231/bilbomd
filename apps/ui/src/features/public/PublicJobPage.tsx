@@ -29,6 +29,15 @@ import PublicDownloadResultsSection from 'features/public/PublicDownloadResultsS
 import CopyableChip from 'components/CopyableChip'
 import { BilboMDScoperTable } from 'features/scoperjob/BilboMDScoperTable'
 import { axiosInstance } from 'app/api/axios'
+import { createJobHandler } from 'features/results/handlers/jobHandlerFactory'
+
+const getJobTypeDisplayName = (jobType: string): string => {
+  try {
+    return createJobHandler(jobType).getJobTypeDisplayName()
+  } catch {
+    return jobType
+  }
+}
 
 const handleDownload = async (publicId: string) => {
   try {
@@ -184,12 +193,23 @@ const PublicJobPage = () => {
             <Typography>BilboMD Job Status</Typography>
           </HeaderBox>
           <Item>
-            <Typography variant="subtitle1">
-              Job type: {job.jobType} | MD Engine: {job.md_engine ?? 'n/a'}
-            </Typography>
-            <Typography variant="subtitle1">
-              Submitted: {job.submittedAt ? formatDate(job.submittedAt) : 'N/A'}
-            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+              <Chip
+                label={`Job Type: ${getJobTypeDisplayName(job.jobType)}`}
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={`MD Engine: ${job.md_engine ?? 'n/a'}`}
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={`Submitted: ${job.submittedAt ? formatDate(job.submittedAt) : 'N/A'}`}
+                size="small"
+                variant="outlined"
+              />
+            </Box>
             <Box sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
               <span style={{ width: '140px' }}>Public Job ID:</span>
               <CopyableChip
