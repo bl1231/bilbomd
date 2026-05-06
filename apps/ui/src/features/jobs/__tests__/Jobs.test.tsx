@@ -113,6 +113,36 @@ describe('Jobs table', () => {
       refetch: vi.fn()
     })
   })
+  it('renders the Pipeline column header', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([createMockJobDTO()])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    const pipelineHeader = await screen.findByRole('columnheader', {
+      name: /pipeline/i
+    })
+    expect(pipelineHeader).toBeInTheDocument()
+  })
+
+  it('shows "Classic" in Pipeline column for pdb jobs', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([
+          createMockJobDTO({ mongo: createMockPdbMongo({ jobType: 'pdb' }) })
+        ])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    const pipelineCell = await screen.findByText('Classic')
+    expect(pipelineCell).toBeInTheDocument()
+  })
+
   it('renders the Engine column header', async () => {
     server.use(
       http.get('http://localhost:3003/api/v1/jobs', () => {
