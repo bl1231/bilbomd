@@ -65,7 +65,8 @@ export default defineConfig({
     reporters: ['default'],
     globals: true,
     css: false,
-    pool: 'threads',
+    pool: 'forks',
+    forks: { maxForks: 4 },
     server: {
       deps: {
         inline: ['@mui/x-data-grid']
