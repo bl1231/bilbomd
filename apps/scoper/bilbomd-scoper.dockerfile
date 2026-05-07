@@ -65,6 +65,8 @@ RUN groupadd -g $GROUP_ID scoper && \
     mkdir -p /home/scoper/app && \
     chown -R scoper:scoper /home/scoper
 
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
+
 # Switch to scoper user
 USER scoper:scoper
 

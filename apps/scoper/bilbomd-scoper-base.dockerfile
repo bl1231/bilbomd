@@ -107,6 +107,8 @@ RUN pip install wandb && conda clean --all --yes
 # Environment config
 ENV RNAVIEW=/usr/local/RNAView
 
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
+
 # Default working directory for app (populated by dependent image)
 WORKDIR /home/scoper/app
 

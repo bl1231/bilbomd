@@ -118,6 +118,8 @@ ENV BILBOMD_BACKEND_GIT_HASH=${BILBOMD_BACKEND_GIT_HASH}
 ENV BILBOMD_BACKEND_VERSION=${BILBOMD_BACKEND_VERSION}
 ENV NODE_DEBUG=openid-client
 
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
+
 USER bilbo:bilbomd
 EXPOSE 3500
 CMD [ "node", "dist/server.js" ]
