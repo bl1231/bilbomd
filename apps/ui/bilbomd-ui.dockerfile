@@ -51,6 +51,8 @@ COPY --from=build /repo/apps/ui/build /usr/share/nginx/html
 COPY apps/ui/nginx/nginx.default.conf /etc/nginx/conf.d/default.conf
 COPY apps/ui/nginx/nginx.conf /etc/nginx/nginx.conf
 
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
+
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
