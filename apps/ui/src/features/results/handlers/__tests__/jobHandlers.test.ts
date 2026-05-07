@@ -219,14 +219,19 @@ describe('jobHandlers', () => {
       expect(handler.getJobTypeDisplayName()).toBe('BilboMD AlphaFold')
     })
 
-    it('should return empty properties array', () => {
+    it('should return alphafold-specific properties', () => {
       const job = createMockJob({
         jobType: 'alphafold',
         alphafold_entities: [],
         fasta_file: 'test.fasta'
       })
       const properties = handler.getJobSpecificProperties(job)
-      expect(properties).toHaveLength(0)
+      const propertyLabels = properties.map((p) => p.label)
+
+      expect(propertyLabels).toContain('FASTA file')
+      expect(propertyLabels).toContain('Number of MD Runs')
+      expect(propertyLabels).toContain('Rg values')
+      expect(propertyLabels).toContain('Number of conformations')
     })
   })
 
@@ -251,10 +256,19 @@ describe('jobHandlers', () => {
       expect(handler.getJobTypeDisplayName()).toBe('BilboMD OpenFold3')
     })
 
-    it('should return empty properties array', () => {
-      const job = createMockJob({ jobType: 'openfold' })
+    it('should return of3-specific properties', () => {
+      const job = createMockJob({
+        jobType: 'openfold',
+        openfold_entities: [],
+        query_json_file: 'of3-query.json'
+      })
       const properties = handler.getJobSpecificProperties(job)
-      expect(properties).toHaveLength(0)
+      const propertyLabels = properties.map((p) => p.label)
+
+      expect(propertyLabels).toContain('Query JSON file')
+      expect(propertyLabels).toContain('Number of MD Runs')
+      expect(propertyLabels).toContain('Rg values')
+      expect(propertyLabels).toContain('Number of conformations')
     })
   })
 })
