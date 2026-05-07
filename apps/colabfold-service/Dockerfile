@@ -1,4 +1,4 @@
-FROM ghcr.io/bl1231/bilbomd-colabfold:0.0.10
+FROM ghcr.io/bl1231/bilbomd-colabfold:0.1.0
 
 WORKDIR /app
 
