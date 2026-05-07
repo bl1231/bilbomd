@@ -258,7 +258,7 @@ describe('jobHandlers', () => {
 
     it('should return of3-specific properties', () => {
       const job = createMockJob({
-        jobType: 'of3',
+        jobType: 'openfold',
         openfold_entities: [],
         query_json_file: 'of3-query.json'
       })

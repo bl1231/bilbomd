@@ -38,7 +38,7 @@ export const useJobProperties = (
       crd: 'BilboMD Classic w/CRD/PSF',
       scoper: 'BilboMD Scoper',
       multi: 'BilboMD MultiMD',
-      of3: 'BilboMD OF3'
+      openfold: 'BilboMD OF3'
     }
 
     const getJobTypeDisplayName = (type?: string) =>
