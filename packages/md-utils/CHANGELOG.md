@@ -1,5 +1,13 @@
 # @bilbomd/md-utils
 
+## 1.1.11
+
+### Patch Changes
+
+- e4aa0b3: Add keyword allowlist to validateInpConstraints to block CHARMM directives like 'system', 'open', 'read', etc. that could execute OS commands or perform file I/O. Mirrors the existing backend isValidConstInpFile allowlist, closing the gap on the worker-side validator. Addresses F-4 pen test finding.
+- Updated dependencies [24b6dc2]
+  - @bilbomd/mongodb-schema@2.5.5
+
 ## 1.1.10
 
 ### Patch Changes

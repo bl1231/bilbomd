@@ -1,5 +1,16 @@
 # @bilbomd/ui
 
+## 2.14.6
+
+### Patch Changes
+
+- 6ca5249: Harden Docker Compose deployments: remove Docker socket mount from worker, add no-new-privileges to all services, set read_only root filesystem on worker containers with /tmp tmpfs, and drop all Linux capabilities from worker. Addresses F-7 pen test finding (Docker socket privilege escalation).
+- b41b107: Add custom seccomp profile blocking AF_ALG sockets (CVE-2026-31431) and other dangerous syscalls not needed by BilboMD containers. Profile applied to all services in all Docker Compose environments. Addresses F-6 pen test finding.
+- be7f034: Strip all SUID/SGID bits from container filesystems before dropping to non-root user. Added to backend, ui, worker-base, worker, scoper-base, and scoper Dockerfiles. Addresses F-6 pen test finding (SUID binary privilege escalation).
+- e1cead2: Add CHARMM keyword allowlist to frontend const.inp validation. Dangerous directives like `system`, `open`, and `read` are now rejected client-side before upload, giving immediate feedback and layering the defence already present on the backend.
+- Updated dependencies [24b6dc2]
+  - @bilbomd/mongodb-schema@2.5.5
+
 ## 2.14.5
 
 ### Patch Changes
