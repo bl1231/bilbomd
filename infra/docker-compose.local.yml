@@ -109,8 +109,11 @@ services:
   worker:
     image: ghcr.io/bl1231/bilbomd-worker:2.9.3
     pull_policy: always
+    read_only: true
     security_opt:
       - no-new-privileges:true
+    tmpfs:
+      - /tmp
     deploy:
       replicas: 1
       resources:

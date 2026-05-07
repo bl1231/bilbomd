@@ -127,8 +127,11 @@ services:
               count: 1
               capabilities: [gpu]
     restart: no
+    read_only: true
     security_opt:
       - no-new-privileges:true
+    tmpfs:
+      - /tmp
     env_file:
       - .env.prod
     networks:
