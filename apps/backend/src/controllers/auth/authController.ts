@@ -13,6 +13,8 @@ interface BilboMDJwtPayload {
   email: string
 }
 
+const MAX_OTP_ATTEMPTS = 5
+
 const otp = async (req: Request, res: Response) => {
   try {
     const code = String(req.body.otp ?? '')
@@ -24,36 +26,54 @@ const otp = async (req: Request, res: Response) => {
 
     const user: IUser | null = await User.findOne({ 'otp.code': code })
 
-    if (user) {
-      if (!user.active) {
-        logger.warn('User is not active')
-        res.status(401).json({ message: 'Unauthorized - User is not active' })
-        return
-      }
-      logger.debug(`User found: ${user.username}`)
-      logger.info(`OTP login for user: ${user.username} email: ${user.email}`)
-
-      // Check if OTP has expired
-      const currentTimestamp = Date.now()
-      if (
-        user.otp?.expiresAt &&
-        user.otp.expiresAt.getTime() < currentTimestamp
-      ) {
-        logger.warn('OTP has expired')
-        res.status(401).json({ error: 'OTP has expired' })
-        return
-      }
-
-      const accessToken = await issueTokensAndSetCookie(user, res)
-
-      user.otp = null
-      await user.save()
-
-      res.json({ accessToken })
-    } else {
+    if (!user) {
       logger.warn('Invalid OTP')
       res.status(401).json({ message: 'Invalid OTP' })
+      return
     }
+
+    if (!user.active) {
+      logger.warn('User is not active')
+      res.status(401).json({ message: 'Unauthorized - User is not active' })
+      return
+    }
+
+    logger.debug(`User found: ${user.username}`)
+
+    const currentAttempts = user.otp?.attempts ?? 0
+
+    if (currentAttempts >= MAX_OTP_ATTEMPTS) {
+      logger.warn(`OTP attempt limit reached for user: ${user.username}`)
+      user.otp = null
+      await user.save()
+      res
+        .status(429)
+        .json({ message: 'Too many OTP attempts. Please request a new magic link.' })
+      return
+    }
+
+    if (user.otp?.expiresAt && user.otp.expiresAt.getTime() < Date.now()) {
+      logger.warn('OTP has expired')
+      const newAttempts = currentAttempts + 1
+      if (newAttempts >= MAX_OTP_ATTEMPTS) {
+        user.otp = null
+        await user.save()
+        res
+          .status(429)
+          .json({ message: 'Too many OTP attempts. Please request a new magic link.' })
+      } else {
+        user.otp.attempts = newAttempts
+        await user.save()
+        res.status(401).json({ error: 'OTP has expired' })
+      }
+      return
+    }
+
+    logger.info(`OTP login for user: ${user.username} email: ${user.email}`)
+    const accessToken = await issueTokensAndSetCookie(user, res)
+    user.otp = null
+    await user.save()
+    res.json({ accessToken })
   } catch (error) {
     logger.error(`Error occurred while querying user: ${error}`)
     res.status(500).json({ message: 'Internal server error' })

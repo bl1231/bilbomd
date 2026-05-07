@@ -4,6 +4,7 @@ import { IJob } from './jobInterface'
 interface IOtp {
   code: string
   expiresAt: Date
+  attempts?: number
 }
 
 interface IConfirmationCode {

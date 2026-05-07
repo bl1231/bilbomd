@@ -79,6 +79,10 @@ const userSchema = new Schema(
       },
       expiresAt: {
         type: Date
+      },
+      attempts: {
+        type: Number,
+        default: 0
       }
     },
     UUID: {

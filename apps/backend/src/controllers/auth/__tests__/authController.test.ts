@@ -32,6 +32,67 @@ const makeRes = (): Response => {
 
 beforeEach(() => vi.clearAllMocks())
 
+describe('otp handler — per-account attempt limiting', () => {
+  const makeExpiredOtpUser = (attempts: number) => ({
+    active: true,
+    username: 'scott',
+    email: 'scott@example.com',
+    otp: { code: 'abc', expiresAt: new Date(Date.now() - 1000), attempts },
+    save: vi.fn()
+  })
+
+  it('returns 401 and increments attempts on first expired OTP submission', async () => {
+    const mockUser = makeExpiredOtpUser(0)
+    vi.mocked(User.findOne).mockResolvedValue(mockUser as never)
+
+    await otp(makeReq({ otp: 'abc' }), makeRes())
+
+    expect(mockUser.save).toHaveBeenCalled()
+    expect(mockUser.otp.attempts).toBe(1)
+  })
+
+  it('returns 429 and nulls OTP when attempt limit is reached on expiry', async () => {
+    const mockUser = makeExpiredOtpUser(4)
+    vi.mocked(User.findOne).mockResolvedValue(mockUser as never)
+
+    const res = makeRes()
+    await otp(makeReq({ otp: 'abc' }), res)
+
+    expect(mockUser.otp).toBeNull()
+    expect(mockUser.save).toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(429)
+  })
+
+  it('returns 429 and nulls OTP when stored attempts already at limit', async () => {
+    const mockUser = makeExpiredOtpUser(5)
+    vi.mocked(User.findOne).mockResolvedValue(mockUser as never)
+
+    const res = makeRes()
+    await otp(makeReq({ otp: 'abc' }), res)
+
+    expect(mockUser.otp).toBeNull()
+    expect(res.status).toHaveBeenCalledWith(429)
+  })
+
+  it('clears OTP (resetting attempts) on successful login', async () => {
+    const mockUser = {
+      active: true,
+      username: 'scott',
+      email: 'scott@example.com',
+      otp: { code: 'abc', expiresAt: new Date(Date.now() + 60000), attempts: 2 },
+      save: vi.fn()
+    }
+    vi.mocked(User.findOne).mockResolvedValue(mockUser as never)
+    vi.mocked(issueTokensAndSetCookie).mockResolvedValue('access-token')
+
+    const res = makeRes()
+    await otp(makeReq({ otp: 'abc' }), res)
+
+    expect(mockUser.otp).toBeNull()
+    expect(res.json).toHaveBeenCalledWith({ accessToken: 'access-token' })
+  })
+})
+
 describe('otp handler — NoSQL injection prevention', () => {
   it('casts an object payload to string, querying with a literal string', async () => {
     const req = makeReq({ otp: { $gt: '' } })
