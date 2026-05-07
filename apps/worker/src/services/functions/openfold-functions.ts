@@ -1,5 +1,4 @@
 import { Job as BullMQJob } from 'bullmq'
-import { spawn } from 'node:child_process'
 import path from 'node:path'
 import fs from 'fs-extra'
 import { IBilboMDOpenFoldJob, IStepStatus } from '@bilbomd/mongodb-schema'
@@ -20,92 +19,27 @@ const writeRunnerYml = async (workDir: string): Promise<void> => {
   await fs.writeFile(path.join(workDir, OF3_RUNNER_YML), content)
 }
 
-const buildDockerArgs = (params: {
-  hostJobDir: string
-  hostOf3Cache: string
-  gpus: string
-  image: string
-}): string[] => {
-  return [
-    'run',
-    '--rm',
-    '--gpus',
-    params.gpus,
-    '--shm-size=16g',
-    '-v',
-    `${params.hostJobDir}:/bilbomd/work`,
-    '-v',
-    `${params.hostOf3Cache}:/of3_data`,
-    '--workdir',
-    '/bilbomd/work',
-    params.image,
-    'run_openfold',
-    'predict',
-    `--query-json=${OF3_QUERY_FILE}`,
-    `--output-dir=${OF3_OUTPUT_DIR}`,
-    `--runner-yaml=${OF3_RUNNER_YML}`,
-    '--inference-ckpt-path=/of3_data/of3-p2-155k.pt'
-  ]
-}
-
-const spawnOpenFold = async (
+const callOf3Service = async (
   MQjob: BullMQJob,
-  workDir: string,
-  args: string[]
+  uuid: string
 ): Promise<void> => {
-  const stdoutLog = path.join(workDir, 'openfold.log')
-  const stderrLog = path.join(workDir, 'openfold_error.log')
-  const stdoutStream = fs.createWriteStream(stdoutLog)
-  const stderrStream = fs.createWriteStream(stderrLog)
+  const url = `${config.of3ServiceUrl}/infer`
+  logger.info(`Calling OF3 service: POST ${url} uuid=${uuid}`)
+  await MQjob.log(`openfold http: POST ${url}`)
 
-  logger.info(`Spawning OpenFold3: ${config.dockerBin} ${args.join(' ')}`)
-  await MQjob.log(`openfold spawn: ${config.dockerBin} ${args.join(' ')}`)
-
-  return new Promise<void>((resolve, reject) => {
-    const proc = spawn(config.dockerBin, args, { cwd: workDir })
-
-    const timer = setTimeout(() => {
-      logger.error(
-        `OpenFold3 timed out after ${config.of3TimeoutMs}ms; killing pid ${proc.pid}`
-      )
-      proc.kill('SIGKILL')
-    }, config.of3TimeoutMs)
-
-    proc.stdout.on('data', (chunk: Buffer) => {
-      stdoutStream.write(chunk)
-    })
-    proc.stderr.on('data', (chunk: Buffer) => {
-      const msg = chunk.toString()
-      stderrStream.write(msg)
-      logger.warn(`[openfold3 stderr] ${msg.trimEnd()}`)
-    })
-
-    proc.on('error', (err) => {
-      clearTimeout(timer)
-      Promise.all([
-        new Promise((r) => stdoutStream.end(r)),
-        new Promise((r) => stderrStream.end(r))
-      ]).finally(() => reject(err))
-    })
-
-    proc.on('close', (code, signal) => {
-      clearTimeout(timer)
-      Promise.all([
-        new Promise((r) => stdoutStream.end(r)),
-        new Promise((r) => stderrStream.end(r))
-      ]).then(() => {
-        if (code === 0) {
-          resolve()
-        } else {
-          reject(
-            new Error(
-              `run_openfold exited with code ${code}${signal ? ` (signal ${signal})` : ''}`
-            )
-          )
-        }
-      })
-    })
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ uuid }),
+    signal: AbortSignal.timeout(config.of3TimeoutMs)
   })
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(
+      `OF3 service returned HTTP ${res.status}: ${body}`
+    )
+  }
 }
 
 // Walk openfold/<query>/seed_*/ directories and collect all (pdb, aggregated-json) pairs.
@@ -231,20 +165,7 @@ const runOpenFold = async (
     }
 
     await writeRunnerYml(workDir)
-
-    const cudaDevices = process.env.CUDA_VISIBLE_DEVICES?.trim()
-    const gpus = cudaDevices ? `device=${cudaDevices}` : 'all'
-
-    const hostJobDir = path.join(config.hostUploadDir, DBjob.uuid)
-
-    const args = buildDockerArgs({
-      hostJobDir,
-      hostOf3Cache: config.hostOf3Cache,
-      gpus,
-      image: config.of3Image
-    })
-
-    await spawnOpenFold(MQjob, workDir, args)
+    await callOf3Service(MQjob, DBjob.uuid)
     await promoteRank1Outputs(workDir)
 
     DBjob.pdb_file = OF3_RANK1_PDB
@@ -266,7 +187,6 @@ const runOpenFold = async (
 export {
   runOpenFold,
   // Exported for unit tests:
-  buildDockerArgs,
   promoteRank1Outputs,
   collectSamples,
   OF3_QUERY_NAME

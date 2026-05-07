@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { EventEmitter } from 'node:events'
-import { spawn } from 'node:child_process'
 import {
-  buildDockerArgs,
   RANK1_PAE_PATTERN,
   RANK1_PDB_PATTERN
 } from '../alphafold-functions.js'
@@ -16,19 +13,11 @@ vi.mock('../../../helpers/loggers.js', () => ({
   }
 }))
 
-vi.mock('node:child_process', () => ({
-  spawn: vi.fn()
-}))
-
 vi.mock('fs-extra', () => {
   const files = new Map<string, Buffer | string>()
   const dirEntries = new Map<string, string[]>()
   return {
     default: {
-      createWriteStream: vi.fn(() => ({
-        write: vi.fn(),
-        end: vi.fn((cb?: () => void) => cb?.())
-      })),
       pathExists: vi.fn(async (p: string) => files.has(p) || dirEntries.has(p)),
       readdir: vi.fn(async (dir: string) => dirEntries.get(dir) ?? []),
       copy: vi.fn(async (src: string, dst: string) => {
@@ -60,57 +49,13 @@ vi.mock('../job-utils.js', () => ({
 vi.mock('../../../config/config.js', () => ({
   config: {
     uploadDir: '/in/uploads',
-    hostUploadDir: '/host/uploads',
-    hostColabfoldCache: '/host/cache',
-    colabfoldImage: 'ghcr.io/test/colabfold:latest',
-    colabfoldTimeoutMs: 60_000,
-    dockerBin: '/usr/bin/docker'
+    colabfoldServiceUrl: 'http://colabfold-service:8000',
+    colabfoldTimeoutMs: 60_000
   }
 }))
 
-const makeProc = (exitCode: number) => {
-  const proc = new EventEmitter() as unknown as ReturnType<typeof spawn>
-  // @ts-expect-error minimal stub
-  proc.stdout = new EventEmitter()
-  // @ts-expect-error minimal stub
-  proc.stderr = new EventEmitter()
-  proc.kill = vi.fn()
-  setTimeout(() => proc.emit('close', exitCode), 0)
-  return proc
-}
-
-describe('buildDockerArgs', () => {
-  it('produces the expected docker run argv', () => {
-    const args = buildDockerArgs({
-      hostJobDir: '/host/uploads/abc',
-      hostCacheDir: '/host/cache',
-      gpus: 'device=1',
-      image: 'ghcr.io/test/colabfold:latest'
-    })
-    expect(args).toEqual([
-      'run',
-      '--rm',
-      '--gpus',
-      'device=1',
-      '-v',
-      '/host/uploads/abc:/bilbomd/work',
-      '-v',
-      '/host/cache:/cache',
-      '-e',
-      'COLABFOLD_DATA_DIR=/cache',
-      '--workdir',
-      '/bilbomd/work',
-      'ghcr.io/test/colabfold:latest',
-      'colabfold_batch',
-      '--num-models=3',
-      '--amber',
-      '--use-gpu-relax',
-      '--num-recycle=4',
-      'af-entities.fasta',
-      'alphafold'
-    ])
-  })
-})
+const mockFetch = vi.fn()
+vi.stubGlobal('fetch', mockFetch)
 
 describe('rank_001 patterns', () => {
   it('matches relaxed rank_001 PDB names', () => {
@@ -134,7 +79,7 @@ describe('rank_001 patterns', () => {
     ).toBe(true)
     expect(
       RANK1_PAE_PATTERN.test(
-        'job_scores_rank_002_alphafold2_ptm_model_3_seed_000.json'
+        'job_scores_rank_002_alphafold2_ptm_model_2_seed_000.json'
       )
     ).toBe(false)
   })
@@ -143,6 +88,7 @@ describe('rank_001 patterns', () => {
 describe('runAlphaFold integration shape', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetch.mockResolvedValue({ ok: true, text: async () => '' })
   })
 
   it('throws when the FASTA file is missing', async () => {
@@ -152,9 +98,6 @@ describe('runAlphaFold integration shape', () => {
     }
     fs.__setFiles({})
     fs.__setDirs({})
-    vi.mocked(spawn).mockReturnValue(
-      makeProc(0) as unknown as ReturnType<typeof spawn>
-    )
 
     const { runAlphaFold } = await import('../alphafold-functions.js')
     const fakeJob = {
@@ -171,7 +114,7 @@ describe('runAlphaFold integration shape', () => {
     )
   })
 
-  it('promotes rank_001 outputs and persists pdb_file/pae_file on success', async () => {
+  it('calls ColabFold service and promotes rank_001 outputs on success', async () => {
     const fs = (await import('fs-extra')).default as unknown as {
       __setFiles: (m: Record<string, string>) => void
       __setDirs: (m: Record<string, string[]>) => void
@@ -186,9 +129,6 @@ describe('runAlphaFold integration shape', () => {
         'job_relaxed_rank_002_alphafold2_ptm_model_2_seed_000.pdb'
       ]
     })
-    vi.mocked(spawn).mockReturnValue(
-      makeProc(0) as unknown as ReturnType<typeof spawn>
-    )
 
     const { runAlphaFold } = await import('../alphafold-functions.js')
     const save = vi.fn(async () => undefined)
@@ -207,17 +147,39 @@ describe('runAlphaFold integration shape', () => {
       pae_file: 'af-pae.json'
     })
     expect(save).toHaveBeenCalled()
-    expect(spawn).toHaveBeenCalledWith(
-      '/usr/bin/docker',
-      expect.arrayContaining([
-        'run',
-        '--rm',
-        '--gpus',
-        expect.stringMatching(/^device=|^all$/),
-        '-v',
-        '/host/uploads/abc:/bilbomd/work'
-      ]),
-      expect.objectContaining({ cwd: '/in/uploads/abc' })
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://colabfold-service:8000/infer',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ uuid: 'abc' })
+      })
+    )
+  })
+
+  it('throws when the ColabFold service returns an error', async () => {
+    const fs = (await import('fs-extra')).default as unknown as {
+      __setFiles: (m: Record<string, string>) => void
+      __setDirs: (m: Record<string, string[]>) => void
+    }
+    fs.__setFiles({ '/in/uploads/abc/af-entities.fasta': '>a\nACDE' })
+    fs.__setDirs({})
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => 'GPU OOM'
+    })
+
+    const { runAlphaFold } = await import('../alphafold-functions.js')
+    const fakeJob = {
+      uuid: 'abc',
+      pdb_file: undefined,
+      pae_file: undefined,
+      save: vi.fn()
+    } as never
+    const fakeMQ = { log: vi.fn() } as never
+
+    await expect(runAlphaFold(fakeMQ, fakeJob)).rejects.toThrow(
+      /ColabFold service returned HTTP 500/
     )
   })
 })
