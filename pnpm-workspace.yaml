@@ -2,3 +2,11 @@ packages:
   - "apps/*"
   - "packages/*"
 injectWorkspacePackages: true
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@scarf/scarf'
+  - esbuild
+  - msgpackr-extract
+  - msw
+  - unrs-resolver
