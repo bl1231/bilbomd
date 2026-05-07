@@ -79,6 +79,8 @@ services:
   backend:
     image: ghcr.io/bl1231/bilbomd-backend:2.7.6
     pull_policy: always
+    security_opt:
+      - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       resources:
         limits:
@@ -109,6 +111,8 @@ services:
   worker:
     image: ghcr.io/bl1231/bilbomd-worker:2.9.3
     pull_policy: always
+    security_opt:
+      - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       replicas: 1
       resources:
@@ -151,6 +155,8 @@ services:
   ui:
     image: ghcr.io/bl1231/bilbomd-ui:pr-676-a263b932
     pull_policy: always
+    security_opt:
+      - seccomp:./seccomp/bilbomd-seccomp.json
     env_file:
       - .env.dev
     ports:
