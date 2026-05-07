@@ -27,12 +27,21 @@ const callOf3Service = async (
   logger.info(`Calling OF3 service: POST ${url} uuid=${uuid}`)
   await MQjob.log(`openfold http: POST ${url}`)
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ uuid }),
-    signal: AbortSignal.timeout(config.of3TimeoutMs)
-  })
+  const heartbeat = setInterval(() => {
+    MQjob.updateProgress({ status: 'running', timestamp: Date.now() })
+  }, 20_000)
+
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ uuid }),
+      signal: AbortSignal.timeout(config.of3TimeoutMs)
+    })
+  } finally {
+    clearInterval(heartbeat)
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => '')

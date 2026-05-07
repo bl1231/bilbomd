@@ -9,12 +9,22 @@ Requests are serialised by an asyncio lock — OpenFold3 saturates the GPU.
 """
 
 import asyncio
+import logging
 import os
 import subprocess
+import sys
+import threading
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger("of3-service")
 
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/bilbomd/uploads"))
 OF3_DATA_DIR = Path(os.environ.get("OF3_DATA_DIR", "/of3_data"))
@@ -63,9 +73,21 @@ async def infer(req: InferRequest) -> dict:
     return {"status": "ok", "uuid": uuid}
 
 
+def _tee_stream(src, log_file, log_fn):
+    """Read lines from src, write to log_file and call log_fn for each line."""
+    with log_file.open("wb") as f:
+        for raw in src:
+            f.write(raw)
+            f.flush()
+            log_fn(raw.decode(errors="replace").rstrip())
+
+
 def _run_inference(work_dir: Path) -> None:
     stdout_log = work_dir / "openfold.log"
     stderr_log = work_dir / "openfold_error.log"
+
+    uuid = work_dir.name
+    logger.info("Starting run_openfold for %s", uuid)
 
     cmd = [
         "run_openfold",
@@ -76,11 +98,32 @@ def _run_inference(work_dir: Path) -> None:
         f"--inference-ckpt-path={CKPT_PATH}",
     ]
 
-    with stdout_log.open("wb") as out, stderr_log.open("wb") as err:
-        subprocess.run(
-            cmd,
-            cwd=work_dir,
-            stdout=out,
-            stderr=err,
-            check=True,
-        )
+    proc = subprocess.Popen(
+        cmd,
+        cwd=work_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    t_out = threading.Thread(
+        target=_tee_stream,
+        args=(proc.stdout, stdout_log, lambda line: logger.info("[%s stdout] %s", uuid, line)),
+        daemon=True,
+    )
+    t_err = threading.Thread(
+        target=_tee_stream,
+        args=(proc.stderr, stderr_log, lambda line: logger.warning("[%s stderr] %s", uuid, line)),
+        daemon=True,
+    )
+    t_out.start()
+    t_err.start()
+
+    proc.wait()
+    t_out.join()
+    t_err.join()
+
+    if proc.returncode != 0:
+        logger.error("run_openfold exited with code %d for %s", proc.returncode, uuid)
+        raise subprocess.CalledProcessError(proc.returncode, cmd)
+
+    logger.info("run_openfold completed successfully for %s", uuid)

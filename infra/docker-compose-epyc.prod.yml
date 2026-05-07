@@ -81,7 +81,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.7.7
+    image: ghcr.io/bl1231/bilbomd-backend:2.7.8
     pull_policy: always
     security_opt:
       - no-new-privileges:true
@@ -114,7 +114,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:pr-652-9a1785cc
+    image: ghcr.io/bl1231/bilbomd-worker:2.9.4
     pull_policy: always
     security_opt:
       - no-new-privileges:true
@@ -161,70 +161,70 @@ services:
       start_period: 10s
 
   # ------------------------------------------------------------------------------------
-  of3-service:
-    image: ghcr.io/bl1231/bilbomd-of3-service:latest
-    pull_policy: always
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
-    restart: no
-    env_file:
-      - .env.prod
-    environment:
-      - UPLOAD_DIR=/bilbomd/uploads
-      - OF3_DATA_DIR=/bilbomd/of3-data
-    volumes:
-      - /bilbomd/prod/uploads:/bilbomd/uploads
-      - /bilbomd/of3-data:/bilbomd/of3-data:ro
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:8000/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # of3-service:
+  #   image: ghcr.io/bl1231/bilbomd-of3-service:latest
+  #   pull_policy: always
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [ gpu ]
+  #   restart: no
+  #   env_file:
+  #     - .env.prod
+  #   environment:
+  #     - UPLOAD_DIR=/bilbomd/uploads
+  #     - OF3_DATA_DIR=/bilbomd/of3-data
+  #   volumes:
+  #     - /bilbomd/prod/uploads:/bilbomd/uploads
+  #     - /bilbomd/of3-data:/bilbomd/of3-data:ro
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: [ "CMD", "curl", "--fail", "http://localhost:8000/health" ]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
   # ------------------------------------------------------------------------------------
-  colabfold-service:
-    image: ghcr.io/bl1231/bilbomd-colabfold-service:latest
-    pull_policy: always
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
-    restart: no
-    env_file:
-      - .env.prod
-    environment:
-      - UPLOAD_DIR=/bilbomd/uploads
-      - COLABFOLD_DATA_DIR=/cache
-    volumes:
-      - /bilbomd/prod/uploads:/bilbomd/uploads
-      - /bilbomd/colabfold-cache:/cache:ro
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:8000/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # colabfold-service:
+  #   image: ghcr.io/bl1231/bilbomd-colabfold-service:latest
+  #   pull_policy: always
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [ gpu ]
+  #   restart: no
+  #   env_file:
+  #     - .env.prod
+  #   environment:
+  #     - UPLOAD_DIR=/bilbomd/uploads
+  #     - COLABFOLD_DATA_DIR=/cache
+  #   volumes:
+  #     - /bilbomd/prod/uploads:/bilbomd/uploads
+  #     - /bilbomd/colabfold-cache:/cache:ro
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: [ "CMD", "curl", "--fail", "http://localhost:8000/health" ]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.14.5
+    image: ghcr.io/bl1231/bilbomd-ui:2.14.6
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
