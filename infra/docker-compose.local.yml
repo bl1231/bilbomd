@@ -85,6 +85,7 @@ services:
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
+      - no-new-privileges:true
     env_file:
       - path: .env.local
     ports:
@@ -111,6 +112,12 @@ services:
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
+      - no-new-privileges:true
+    read_only: true      
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
     deploy:
       replicas: 1
       resources:
@@ -146,6 +153,7 @@ services:
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
+      - no-new-privileges:true
     env_file:
       - .env.local
     ports:

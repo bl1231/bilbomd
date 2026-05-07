@@ -15,6 +15,7 @@ services:
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
+      - no-new-privileges:true
     deploy:
       replicas: 1
       resources:
