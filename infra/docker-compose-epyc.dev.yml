@@ -48,7 +48,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - '${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017'
+      - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
     volumes:
       - mongodb:/data/db
     networks:
@@ -60,7 +60,7 @@ services:
     pull_policy: always
     restart: always
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -68,7 +68,7 @@ services:
     env_file:
       - path: .env.dev
     ports:
-      - '${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379'
+      - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
     command: redis-server --save 20 1 --loglevel warning
     volumes:
       - redis-cache:/data
@@ -80,19 +80,18 @@ services:
     image: ghcr.io/bl1231/bilbomd-backend:2.7.6
     pull_policy: always
     security_opt:
+      - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       resources:
         limits:
-          cpus: '12'
+          cpus: "12"
     restart: no
-    user: '${UID:-1001}:${GID:-1001}'
-    security_opt:
-      - no-new-privileges:true
+    user: "${UID:-1001}:${GID:-1001}"
     env_file:
       - path: .env.dev
     ports:
-      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500'
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       - /bilbomd/dev/uploads:/bilbomd/uploads
       - /bilbomd/dev/logs:/bilbomd/logs
@@ -103,7 +102,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ['CMD', 'curl', '--fail', 'http://localhost:3500/healthcheck']
+      test: [ "CMD", "curl", "--fail", "http://localhost:3500/healthcheck" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -114,22 +113,21 @@ services:
     image: ghcr.io/bl1231/bilbomd-worker:2.9.3
     pull_policy: always
     security_opt:
+      - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       replicas: 1
       resources:
         limits:
-          cpus: '24'
+          cpus: "24"
         reservations:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
     restart: no
     read_only: true
-    user: '${UID:-1001}:${GID:-1001}'
-    security_opt:
-      - no-new-privileges:true
+    user: "${UID:-1001}:${GID:-1001}"
     cap_drop:
       - ALL
     tmpfs:
@@ -149,7 +147,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ['CMD', 'curl', '--fail', 'http://localhost:3000/config']
+      test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -165,7 +163,7 @@ services:
     env_file:
       - .env.dev
     ports:
-      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80'
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
     networks:
       - app-network-dev
     depends_on:
@@ -173,7 +171,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ['CMD', 'curl', '--fail', 'http://localhost/']
+      test: [ "CMD", "curl", "--fail", "http://localhost/" ]
       interval: 30s
       timeout: 10s
       retries: 3
