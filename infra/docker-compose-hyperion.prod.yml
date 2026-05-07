@@ -13,6 +13,9 @@ services:
   scoper:
     image: ghcr.io/bl1231/bilbomd-scoper:1.7.7
     pull_policy: always
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       replicas: 1
       resources:

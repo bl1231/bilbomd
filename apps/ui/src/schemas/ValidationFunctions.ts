@@ -490,6 +490,26 @@ const isValidConstInpFile = (
         return
       }
 
+      // Allowlist check: reject any line that doesn't start with a permitted
+      // keyword. Blocks CHARMM directives like 'system', 'open', 'read', etc.
+      // that could execute OS commands or perform file I/O when STREAMed.
+      const ALLOWED_PREFIXES = [
+        'define',
+        'cons fix',
+        'cons harm',
+        'shape',
+        'return',
+        '!',
+        '*'
+      ]
+      for (const line of lines) {
+        const lower = line.trim().toLowerCase()
+        if (!ALLOWED_PREFIXES.some((pfx) => lower.startsWith(pfx))) {
+          resolve(`Disallowed keyword in constraint file: "${line.trim()}"`)
+          return
+        }
+      }
+
       resolve(true) // All checks passed
     }
 

@@ -2,6 +2,7 @@
 **
 
 # Root manifests needed by all services
+!.npmrc
 !pnpm-workspace.yaml
 !pnpm-lock.yaml
 !package.json

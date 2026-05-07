@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/md-utils",
-  "version": "1.1.10",
+  "version": "1.1.11",
   "description": "Molecular dynamics constraint utilities for BilboMD",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,7 +27,7 @@
   "dependencies": {
     "@bilbomd/bilbomd-types": "workspace:*",
     "@bilbomd/mongodb-schema": "workspace:*",
-    "fs-extra": "^11.3.4",
+    "fs-extra": "^11.3.5",
     "yaml": "^2.8.4"
   },
   "devDependencies": {

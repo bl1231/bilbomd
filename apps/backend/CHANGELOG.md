@@ -1,5 +1,26 @@
 # @bilbomd/backend
 
+## 2.7.8
+
+### Patch Changes
+
+- 6ca5249: Harden Docker Compose deployments: remove Docker socket mount from worker, add no-new-privileges to all services, set read_only root filesystem on worker containers with /tmp tmpfs, and drop all Linux capabilities from worker. Addresses F-7 pen test finding (Docker socket privilege escalation).
+- 24b6dc2: Add per-account OTP attempt counter to prevent brute-force of magic link tokens. After 5 failed attempts (expired OTP submissions), the OTP is nulled and the user must request a new magic link. Addresses F-1 pen test finding (per-account rate limiting).
+- b41b107: Add custom seccomp profile blocking AF_ALG sockets (CVE-2026-31431) and other dangerous syscalls not needed by BilboMD containers. Profile applied to all services in all Docker Compose environments. Addresses F-6 pen test finding.
+- be7f034: Strip all SUID/SGID bits from container filesystems before dropping to non-root user. Added to backend, ui, worker-base, worker, scoper-base, and scoper Dockerfiles. Addresses F-6 pen test finding (SUID binary privilege escalation).
+- Updated dependencies [e4aa0b3]
+- Updated dependencies [24b6dc2]
+  - @bilbomd/md-utils@1.1.11
+  - @bilbomd/mongodb-schema@2.5.5
+
+## 2.7.7
+
+### Patch Changes
+
+- 0b03fac: Fix critical security vulnerabilities: NoSQL injection in OTP auth flow and CHARMM system directive RCE.
+
+  Cast `email` and `otp` inputs to string before Mongoose queries to prevent MongoDB operator injection. Enable `mongoose.set('sanitizeFilter', true)` globally as defence-in-depth. Add keyword allowlist to `isValidConstInpFile` to reject CHARMM directives (`system`, `open`, etc.) that could execute arbitrary OS commands when the constraint file is STREAMed by the worker.
+
 ## 2.7.6
 
 ### Patch Changes

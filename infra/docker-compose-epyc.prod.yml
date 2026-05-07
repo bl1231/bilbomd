@@ -32,8 +32,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'
-          memory: '4g'
+          cpus: "4"
+          memory: "4g"
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u
         $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
@@ -47,7 +47,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - '${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017'
+      - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
     volumes:
       - mongodb:/data/db
       - /backups/databases/bilbomd:/backups
@@ -61,10 +61,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: '1g'
+          cpus: "2"
+          memory: "1g"
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -72,7 +72,7 @@ services:
     env_file:
       - .env.prod
     ports:
-      - '${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379'
+      - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
     command: redis-server --save 20 1 --loglevel warning
     volumes:
       - redis-cache:/data
@@ -81,18 +81,21 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.7.6
+    image: ghcr.io/bl1231/bilbomd-backend:2.7.7
     pull_policy: always
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       resources:
         limits:
-          cpus: '6'
-          memory: '4g'
+          cpus: "6"
+          memory: "4g"
     restart: always
     env_file:
       - .env.prod
     ports:
-      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500'
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
     volumes:
       - /bilbomd/prod/uploads:/bilbomd/uploads
       - /bilbomd/prod/logs:/bilbomd/logs
@@ -103,7 +106,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ['CMD', 'curl', '--fail', 'http://localhost:3500/healthcheck']
+      test: [ "CMD", "curl", "--fail", "http://localhost:3500/healthcheck" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -113,20 +116,26 @@ services:
   worker:
     image: ghcr.io/bl1231/bilbomd-worker:pr-652-9a1785cc
     pull_policy: always
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       replicas: 2
       resources:
         limits:
-          cpus: '16'
-          memory: '32g'
+          cpus: "16"
+          memory: "32g"
         reservations:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
     restart: no
-    group_add:
-      - '${DOCKER_GID:-999}'
+    read_only: true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
     env_file:
       - .env.prod
     networks:
@@ -135,9 +144,6 @@ services:
       - /bilbomd/prod/uploads:/bilbomd/uploads
       - /bilbomd/prod/logs:/bilbomd/logs
       - scratch:/bilbomd/scratch
-      # Required for the local AlphaFold pipeline: worker spawns sibling
-      # bilbomd-colabfold containers via the host docker daemon.
-      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - HOST_UPLOAD_DIR=/bilbomd/prod/uploads
       - HOST_COLABFOLD_CACHE=/bilbomd/colabfold-cache
@@ -149,7 +155,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ['CMD', 'curl', '--fail', 'http://localhost:3000/config']
+      test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -159,10 +165,13 @@ services:
   ui:
     image: ghcr.io/bl1231/bilbomd-ui:2.14.5
     pull_policy: always
+    security_opt:
+      - seccomp:./seccomp/bilbomd-seccomp.json
+      - no-new-privileges:true
     env_file:
       - .env.prod
     ports:
-      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80'
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
     networks:
       - app-network
     depends_on:
@@ -170,7 +179,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ['CMD', 'curl', '--fail', 'http://localhost/version-info']
+      test: [ "CMD", "curl", "--fail", "http://localhost/version-info" ]
       interval: 30s
       timeout: 10s
       retries: 3

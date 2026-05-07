@@ -8,7 +8,7 @@ import { sendMagickLinkEmail } from '../config/nodemailerConfig.js'
 const bilboMdUrl = getEnvVar('BILBOMD_URL')
 
 const generateMagickLink = async (req: Request, res: Response) => {
-  const { email } = req.body
+  const email = String(req.body.email ?? '')
 
   if (!email) {
     res.status(400).json({ message: 'email is required' })
