@@ -85,6 +85,8 @@ services:
           cpus: '12'
     restart: no
     user: '${UID:-1001}:${GID:-1001}'
+    security_opt:
+      - no-new-privileges:true
     env_file:
       - path: .env.dev
     ports:
@@ -121,8 +123,8 @@ services:
               capabilities: [gpu]
     restart: no
     user: '${UID:-1001}:${GID:-1001}'
-    group_add:
-      - '${DOCKER_GID:-999}'
+    security_opt:
+      - no-new-privileges:true
     env_file:
       - path: .env.dev
     networks:
@@ -131,9 +133,6 @@ services:
       - /bilbomd/dev/uploads:/bilbomd/uploads
       - /bilbomd/dev/logs:/bilbomd/logs
       - scratch:/bilbomd/scratch
-      # Required for the local AlphaFold pipeline: worker spawns sibling
-      # bilbomd-colabfold containers via the host docker daemon.
-      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - HOST_UPLOAD_DIR=/bilbomd/dev/uploads
       - HOST_COLABFOLD_CACHE=/bilbomd/colabfold-cache
@@ -151,6 +150,8 @@ services:
   ui:
     image: ghcr.io/bl1231/bilbomd-ui:pr-676-a263b932
     pull_policy: always
+    security_opt:
+      - no-new-privileges:true
     env_file:
       - .env.dev
     ports:
