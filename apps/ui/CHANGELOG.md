@@ -1,5 +1,26 @@
 # @bilbomd/ui
 
+## 2.15.0
+
+### Minor Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+### Patch Changes
+
+- b9c8a64: Update all npm/pnpm dependencies to latest versions within semver ranges.
+
+  Notable updates: mongoose 9.4→9.6, molstar 5.8→5.9, react-router 7.14→7.15, vite 8.0.7→8.0.11, bullmq 5.73→5.76, msw 2.13→2.14, MUI 9.0.0→9.0.1, react/react-dom 19.2.5→19.2.6.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/bilbomd-types@1.6.0
+  - @bilbomd/mongodb-schema@2.6.0
+
 ## 2.14.6
 
 ### Patch Changes

@@ -1,5 +1,20 @@
 # @bilbomd/md-utils
 
+## 1.1.12
+
+### Patch Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/bilbomd-types@1.6.0
+  - @bilbomd/mongodb-schema@2.6.0
+
 ## 1.1.11
 
 ### Patch Changes
