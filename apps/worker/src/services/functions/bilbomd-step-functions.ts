@@ -16,6 +16,7 @@ import {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IBilboMDSANSJob,
   IMDConstraints,
   Job
@@ -405,7 +406,7 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
 }
 
 const storeConstraintsInMongoDB = async (
-  DBjob: IBilboMDAutoJob | IBilboMDAlphaFoldJob,
+  DBjob: IBilboMDAutoJob | IBilboMDAlphaFoldJob | IBilboMDOpenFoldJob,
   filePath: string,
   fileName: string
 ): Promise<void> => {
@@ -522,7 +523,7 @@ const runPdb2Crd = async (
 
 const runPaeToConstInp = async (
   MQjob: BullMQJob,
-  DBjob: IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob: IBilboMDAutoJob | IBilboMDAlphaFoldJob | IBilboMDOpenFoldJob
 ): Promise<void> => {
   logger.debug(`Starting runPaeToConstInp for job ${DBjob.uuid}`)
 
@@ -758,6 +759,7 @@ const runMinimize = async (
     | IBilboMDPDBJob
     | IBilboMDAutoJob
     | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob
     | IBilboMDSANSJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
@@ -800,6 +802,7 @@ const runHeat = async (
     | IBilboMDPDBJob
     | IBilboMDAutoJob
     | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob
     | IBilboMDSANSJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
@@ -843,6 +846,7 @@ const runMolecularDynamics = async (
     | IBilboMDPDBJob
     | IBilboMDAutoJob
     | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob
     | IBilboMDSANSJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)

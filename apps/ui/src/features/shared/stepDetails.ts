@@ -57,11 +57,17 @@ const getStepDetails = (stepName: string): StepDetails => {
         tooltipMessage:
           'In this step we use ColabFold to run AlphaFold on your molecule.'
       }
+    case 'openfold':
+      return {
+        friendlyName: 'OpenFold3',
+        tooltipMessage:
+          'In this step we use OpenFold3 to predict the structure of your molecule.'
+      }
     case 'pae':
       return {
-        friendlyName: 'Define MD Domains from AlphaFold PAE matrix',
+        friendlyName: 'Define MD Domains from PAE/PDE Matrix',
         tooltipMessage:
-          'In this step the PAE matrix from Alphafold is used to define rigid bodies and rigid domains of your molecule.'
+          'In this step the PAE/PDE matrix from the structure prediction is used to define rigid bodies and rigid domains of your molecule.'
       }
     case 'autorg':
       return {

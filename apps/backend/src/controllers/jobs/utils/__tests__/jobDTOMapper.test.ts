@@ -87,6 +87,7 @@ describe('mapDiscriminatorToJobType', () => {
     ['BilboMdAlphaFold', 'alphafold'],
     ['BilboMdSANS', 'sans'],
     ['BilboMdScoper', 'scoper'],
+    ['BilboMdOpenFold', 'openfold'],
     ['MultiJob', 'multi']
   ])('maps %s → %s', (discriminator, expected) => {
     expect(mapDiscriminatorToJobType(discriminator)).toBe(expected)

@@ -147,6 +147,8 @@ const MolstarViewer = ({
           return 'auto'
         case 'alphafold':
           return 'alphafold'
+        case 'openfold':
+          return 'openfold'
         case 'sans':
           return 'sans'
         case 'scoper':
@@ -191,7 +193,7 @@ const MolstarViewer = ({
     }
 
     // Adding LoadParams based on job type and results structure
-    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold', 'sans']
+    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold', 'openfold', 'sans']
 
     if (ensembleJobTypes.includes(jobType)) {
       // Use the appropriate results structure based on job type

@@ -202,8 +202,20 @@ const jobTypeToRoute: Record<string, string> = {
   auto: 'auto',
   scoper: 'scoper',
   alphafold: 'alphafold',
+  openfold: 'openfold',
   sans: 'sans',
   multi: 'multi'
+}
+
+const jobTypeToPipelineName: Record<string, string> = {
+  pdb: 'Classic',
+  crd: 'Classic',
+  auto: 'Auto',
+  alphafold: 'AlphaFold2',
+  openfold: 'OpenFold3',
+  sans: 'SANS',
+  scoper: 'Scoper',
+  multi: 'Multi'
 }
 
 const Jobs = () => {
@@ -499,6 +511,13 @@ const Jobs = () => {
 
     const columns: GridColDef[] = [
       { field: 'title', headerName: 'Title', flex: 0.4, minWidth: 180 },
+      {
+        field: 'jobType',
+        headerName: 'Pipeline',
+        width: 110,
+        valueGetter: (_value, row) =>
+          jobTypeToPipelineName[row.jobType] ?? row.jobType
+      },
       {
         field: 'time_submitted',
         headerName: 'Submitted',

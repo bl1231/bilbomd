@@ -15,6 +15,7 @@ const modeToDataset: Record<string, string> = {
   auto: 'auto',
   sans: 'sans',
   alphafold: 'af',
+  openfold: 'of3',
   scoper: 'scoper'
 }
 
@@ -41,6 +42,10 @@ const exampleConfigs: Record<
   af: {
     folder: 'af',
     files: ['example-saxs.dat', 'example-af.fasta']
+  },
+  of3: {
+    folder: 'of3',
+    files: ['example-saxs.dat']
   },
   auto: {
     folder: 'auto',

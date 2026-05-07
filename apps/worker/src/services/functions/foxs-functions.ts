@@ -3,6 +3,7 @@ import {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IStepStatus,
   Job
 } from '@bilbomd/mongodb-schema'
@@ -102,7 +103,7 @@ const spawnFoXSOptimized = async (
   foxsRunDirs: string[],
   MQjob?: BullMQJob,
   maxConcurrency = getEffectiveCpuCount(),
-  DBjob?: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
+  DBjob?: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob | IBilboMDOpenFoldJob
 ): Promise<void> => {
   try {
     // Collect all PDB files from all directories
@@ -167,8 +168,10 @@ const spawnFoXSOptimized = async (
               )
               if (DBjob) {
                 void Job.findByIdAndUpdate(DBjob._id, {
-                  'steps.foxs': { status: 'Running', message: statusMsg }
-                })
+                  $set: { 'steps.foxs': { status: 'Running', message: statusMsg } }
+                }).catch((err) =>
+                  logger.error(`FoXS step status update failed: ${err}`)
+                )
               }
             }
 
@@ -238,6 +241,7 @@ const prepareFoXSInputs = async (
     | IBilboMDCRDJob
     | IBilboMDAutoJob
     | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob
 ): Promise<string[]> => {
   const jobDir = path.join(config.uploadDir, DBjob.uuid)
   const foxsDir = path.join(jobDir, 'foxs')
@@ -362,7 +366,8 @@ const runFoXS = async (
     | IBilboMDPDBJob
     | IBilboMDCRDJob
     | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob,
+    | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob,
   maxConcurrency?: number
 ): Promise<void> => {
   let status: IStepStatus = {

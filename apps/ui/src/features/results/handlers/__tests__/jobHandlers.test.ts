@@ -5,7 +5,8 @@ import {
   createCrdJobHandler,
   createScoperJobHandler,
   createAlphaFoldJobHandler,
-  createMultiJobHandler
+  createMultiJobHandler,
+  createOpenFoldJobHandler
 } from '../jobHandlers'
 import type {
   BilboMDJobDTO,
@@ -238,6 +239,20 @@ describe('jobHandlers', () => {
 
     it('should return empty properties array', () => {
       const job = createMockJob({ jobType: 'multi' })
+      const properties = handler.getJobSpecificProperties(job)
+      expect(properties).toHaveLength(0)
+    })
+  })
+
+  describe('createOpenFoldJobHandler', () => {
+    const handler = createOpenFoldJobHandler()
+
+    it('should return correct display name', () => {
+      expect(handler.getJobTypeDisplayName()).toBe('BilboMD OpenFold3')
+    })
+
+    it('should return empty properties array', () => {
+      const job = createMockJob({ jobType: 'openfold' })
       const properties = handler.getJobSpecificProperties(job)
       expect(properties).toHaveLength(0)
     })

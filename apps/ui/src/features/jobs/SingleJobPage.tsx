@@ -56,6 +56,7 @@ const jobTypeToRoute: Record<string, string> = {
   auto: 'auto',
   scoper: 'scoper',
   alphafold: 'alphafold',
+  openfold: 'openfold',
   sans: 'sans',
   multi: 'multi'
 }
@@ -386,7 +387,8 @@ const SingleJobPage = () => {
                     (job.mongo.jobType === 'pdb' ||
                       job.mongo.jobType === 'crd' ||
                       job.mongo.jobType === 'auto' ||
-                      job.mongo.jobType === 'alphafold') &&
+                      job.mongo.jobType === 'alphafold' ||
+                      job.mongo.jobType === 'openfold') &&
                     id && (
                       <Grid size={{ xs: 12 }}>
                         <Suspense fallback={<CircularProgress />}>
@@ -420,7 +422,8 @@ const SingleJobPage = () => {
                     (job.mongo.jobType === 'pdb' ||
                       job.mongo.jobType === 'crd' ||
                       job.mongo.jobType === 'auto' ||
-                      job.mongo.jobType === 'alphafold') &&
+                      job.mongo.jobType === 'alphafold' ||
+                      job.mongo.jobType === 'openfold') &&
                     job.mongo.feedback && (
                       <Grid size={{ xs: 12 }}>
                         <BilboMdFeedback feedback={job.mongo.feedback} />
@@ -451,6 +454,7 @@ const SingleJobPage = () => {
             job.mongo.jobType === 'crd' ||
             job.mongo.jobType === 'auto' ||
             job.mongo.jobType === 'alphafold' ||
+            job.mongo.jobType === 'openfold' ||
             job.mongo.jobType === 'scoper' ||
             job.mongo.jobType === 'sans') && (
             <Grid size={{ xs: 12 }}>
