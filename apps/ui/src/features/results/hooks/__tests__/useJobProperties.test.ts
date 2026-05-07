@@ -104,7 +104,7 @@ describe('useJobProperties', () => {
       }
     ]
 
-    testCases.forEach(({ start, end, expected }) => {
+    testCases.forEach(({ start, end, expected: _expected }) => {
       const job = createMockJob({
         time_started: new Date(start),
         time_completed: new Date(end)
