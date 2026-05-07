@@ -24,7 +24,7 @@ export const createJobHandler = (jobType: string): JobHandler => {
       return createScoperJobHandler()
     case 'alphafold':
       return createAlphaFoldJobHandler()
-    case 'openfold':
+    case 'of3':
       return createOpenFoldJobHandler()
     case 'multi':
       return createMultiJobHandler()
