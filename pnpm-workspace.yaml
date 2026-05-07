@@ -3,10 +3,10 @@ packages:
   - "packages/*"
 injectWorkspacePackages: true
 
-onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - '@scarf/scarf'
-  - esbuild
-  - msgpackr-extract
-  - msw
-  - unrs-resolver
+allowBuilds:
+  '@parcel/watcher': true
+  '@scarf/scarf': true
+  esbuild: true
+  msgpackr-extract: true
+  msw: true
+  unrs-resolver: true
