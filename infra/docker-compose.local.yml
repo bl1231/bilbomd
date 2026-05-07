@@ -84,6 +84,7 @@ services:
     image: ghcr.io/bl1231/bilbomd-backend:2.7.6
     pull_policy: always
     security_opt:
+      - seccomp:./seccomp/bilbomd-seccomp.json
       - no-new-privileges:true
     env_file:
       - path: .env.local
@@ -109,9 +110,10 @@ services:
   worker:
     image: ghcr.io/bl1231/bilbomd-worker:2.9.3
     pull_policy: always
-    read_only: true
     security_opt:
+      - seccomp:./seccomp/bilbomd-seccomp.json
       - no-new-privileges:true
+    read_only: true      
     cap_drop:
       - ALL
     tmpfs:
@@ -150,6 +152,7 @@ services:
     image: ghcr.io/bl1231/bilbomd-ui:2.14.5
     pull_policy: always
     security_opt:
+      - seccomp:./seccomp/bilbomd-seccomp.json
       - no-new-privileges:true
     env_file:
       - .env.local
