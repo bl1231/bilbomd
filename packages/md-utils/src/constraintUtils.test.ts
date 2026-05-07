@@ -171,6 +171,56 @@ describe('Constraint Utils', () => {
       )
     })
 
+    test('should reject INP files containing "system" directive', async () => {
+      expect.assertions(1)
+
+      const inpPath = path.join(tempDir, 'system.inp')
+      await fs.writeFile(
+        inpPath,
+        `define fixed1 sele ( resid 1:639 .and. segid PROA ) end
+cons fix sele fixed1 end
+system rm -rf /tmp/bilbomd
+return`
+      )
+
+      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+        'Disallowed keyword'
+      )
+    })
+
+    test('should reject INP files containing "open" directive', async () => {
+      expect.assertions(1)
+
+      const inpPath = path.join(tempDir, 'open.inp')
+      await fs.writeFile(
+        inpPath,
+        `define fixed1 sele ( resid 1:639 .and. segid PROA ) end
+cons fix sele fixed1 end
+open unit 1 read card name /etc/passwd
+return`
+      )
+
+      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+        'Disallowed keyword'
+      )
+    })
+
+    test('should allow comment lines starting with ! or *', async () => {
+      expect.assertions(1)
+
+      const inpPath = path.join(tempDir, 'comments.inp')
+      await fs.writeFile(
+        inpPath,
+        `! This is a comment
+* Another comment style
+define fixed1 sele ( resid 1:639 .and. segid PROA ) end
+cons fix sele fixed1 end
+return`
+      )
+
+      await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
+    })
+
     test('should validate valid YAML files', async () => {
       expect.assertions(1)
 
