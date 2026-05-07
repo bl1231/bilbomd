@@ -1,11 +1,9 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 console.log('*** USING apps/backend/vitest.integration.config.ts ***')
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
   test: {
     globals: true,
     environment: 'node',
