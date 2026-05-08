@@ -41,6 +41,26 @@ const detectCarbohydratesInPdb = async (pdbPath: string): Promise<boolean> => {
   }
 }
 
+const PHOSPHO_RESIDUE_NAMES = new Set(['SEP', 'TPO', 'PTR'])
+
+const detectPhosphoResiduesInPdb = async (
+  pdbPath: string
+): Promise<Set<string>> => {
+  const detected = new Set<string>()
+  try {
+    const text = await fs.readFile(pdbPath, 'utf8')
+    for (const line of text.split(/\r?\n/)) {
+      if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+        const resName = line.slice(17, 20).trim().toUpperCase()
+        if (PHOSPHO_RESIDUE_NAMES.has(resName)) detected.add(resName)
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return detected
+}
+
 const writeOpenMMConfigYaml = async (
   dir: string,
   cfg: OpenMMConfig | Record<string, unknown>,
@@ -85,6 +105,8 @@ const buildOpenMMConfigForJob = async (
 
   const pdbPath = path.join(workDir, pdbFile)
   const hasCarbohydrates = await detectCarbohydratesInPdb(pdbPath)
+  const phosphoResidues = await detectPhosphoResiduesInPdb(pdbPath)
+  const hasPhosphoResidues = phosphoResidues.size > 0
 
   if (hasCarbohydrates) {
     logger.info(
@@ -93,17 +115,27 @@ const buildOpenMMConfigForJob = async (
         `will be stripped before MD.`
     )
   }
+  if (hasPhosphoResidues) {
+    logger.info(
+      `Phosphorylated residues detected in ${pdbFile} ` +
+        `(${[...phosphoResidues].join(', ')}) — switching to CHARMM36 force field ` +
+        `(charmm36_2024.xml + implicit/gbn2.xml).`
+    )
+  }
 
   const forcefield = hasCarbohydrates
     ? ['amber19-all.xml', 'amber14/GLYCAM_06j-1.xml', 'implicit/gbn2.xml']
-    : ['amber19-all.xml', 'implicit/gbn2.xml']
+    : hasPhosphoResidues
+      ? ['charmm36_2024.xml', 'implicit/gbn2.xml']
+      : ['amber19-all.xml', 'implicit/gbn2.xml']
 
   return {
     input: {
       dir: workDir,
       pdb_file: pdbFile,
       forcefield,
-      has_carbohydrates: hasCarbohydrates
+      has_carbohydrates: hasCarbohydrates,
+      has_phospho_residues: hasPhosphoResidues
     },
     output: {
       output_dir: path.join(workDir, 'openmm'),
@@ -215,6 +247,7 @@ interface OpenMMConfig {
     pdb_file: string
     forcefield: string[]
     has_carbohydrates?: boolean
+    has_phospho_residues?: boolean
   }
   output: {
     output_dir: string
@@ -293,12 +326,16 @@ const runOmmStep = async (
       ...(opts?.pluginDir ? { OPENMM_PLUGIN_DIR: opts.pluginDir } : {})
     }
 
+    let ommErrorDetail: string | null = null
     const result = await runPythonStep(scriptPath, configYamlPath, {
       cwd: opts?.cwd,
       pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
       env,
       timeoutMs: opts?.timeoutMs ?? 60 * 60 * 1000,
       onStdoutLine: (line) => {
+        if (line.startsWith('BILBOMD_OPENMM_ERROR:')) {
+          ommErrorDetail = line.slice('BILBOMD_OPENMM_ERROR:'.length).trim()
+        }
         logger.info(`[${stepKey}][stdout] ${line}`)
       },
       onStderrLine: (line) => {
@@ -307,10 +344,22 @@ const runOmmStep = async (
     })
 
     if (result.code !== 0) {
+      let detail = ''
+      if (ommErrorDetail) {
+        try {
+          const info = JSON.parse(ommErrorDetail) as {
+            residue_name: string
+            residue_index: number
+          }
+          detail = ` Unrecognized residue: ${info.residue_name} (index ${info.residue_index})`
+        } catch {
+          // ignore malformed JSON
+        }
+      }
       throw new Error(
         `${stepName} failed (exit ${result.code}${
           result.signal ? `, signal ${result.signal}` : ''
-        })`
+        })${detail}`
       )
     }
 

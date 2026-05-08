@@ -6,7 +6,9 @@ The public entry point is prepare_modeller().
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import urllib.request
 import urllib.error
 import xml.etree.ElementTree as ET
@@ -24,6 +26,10 @@ from utils.glycam_rename import rename_glycam_residues
 # ---------------------------------------------------------------------------
 
 _GLYCAM_PROTEIN_NAMES: frozenset[str] = frozenset({"NLN", "OLS", "OLT"})
+
+# Phosphorylated amino acid residues that have native templates in charmm36_2024.xml.
+# These must NOT be treated as standalone GAFF2 ligands — they are backbone residues.
+_PHOSPHO_RESIDUES: frozenset[str] = frozenset({"SEP", "TPO", "PTR"})
 
 # Heavy-atom intra-residue bonds for each GLYCAM protein residue.
 # These are missing because ATOM-record residues unknown to OpenMM's PDB reader
@@ -473,6 +479,18 @@ def register_ligand_templates_for_topology(
 
 
 # ---------------------------------------------------------------------------
+# Error surfacing
+# ---------------------------------------------------------------------------
+
+def _extract_template_error_info(error_msg: str) -> dict | None:
+    """Parse 'No template found for residue N (NAME).' from an OpenMM ValueError."""
+    m = re.search(r"No template found for residue (\d+) \((\w+)\)", error_msg)
+    if m:
+        return {"residue_index": int(m.group(1)), "residue_name": m.group(2)}
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
@@ -483,10 +501,13 @@ def prepare_modeller(
 ) -> Modeller:
     """Load, fix, and hydrogenate a PDB into an OpenMM Modeller.
 
-    Handles both standard proteins and glycoproteins (has_carbohydrates flag
-    in config["input"]). Returns a Modeller ready for forcefield.createSystem().
+    Handles standard proteins, glycoproteins (has_carbohydrates), and proteins
+    with phosphorylated residues (has_phospho_residues). Returns a Modeller
+    ready for forcefield.createSystem().
     """
     has_carbohydrates = config["input"].get("has_carbohydrates", False)
+    has_phospho_residues = config["input"].get("has_phospho_residues", False)
+    phospho_resnames: frozenset[str] = _PHOSPHO_RESIDUES if has_phospho_residues else frozenset()
 
     with open(initial_pdb_file, "r", encoding="utf-8") as f:
         raw_pdb = f.read()
@@ -594,12 +615,16 @@ def prepare_modeller(
     # DNA/RNA partial-hydrogenation issue from PDBFixer.addMissingHydrogens().
     # GAFF2 templates are explicit-H: createSystem() (called internally by
     # addHydrogens) needs H atoms present to match the template. Keep them.
+    # Phospho-residues (SEP/TPO/PTR) use CHARMM36 backbone templates. hydrogens.xml
+    # has no entries for them, so addHydrogens() cannot add their H atoms. Preserve
+    # the H atoms PDBFixer added via CCD data so the template match succeeds.
     h_atoms = [
         atom
         for atom in modeller.topology.atoms()
         if atom.element is not None
         and atom.element.symbol == "H"
         and atom.residue.name not in gaff_resnames
+        and atom.residue.name not in phospho_resnames
     ]
     modeller.delete(h_atoms)
 
@@ -608,6 +633,16 @@ def prepare_modeller(
     # subsequent createSystem() call fails because the GLYCAM templates require H atoms.
     if has_carbohydrates:
         Modeller.loadHydrogenDefinitions("glycam-hydrogens.xml")
-    modeller.addHydrogens(forcefield, pH=7.0)
+
+    try:
+        modeller.addHydrogens(forcefield, pH=7.0)
+    except ValueError as e:
+        info = _extract_template_error_info(str(e))
+        if info:
+            print(
+                f"BILBOMD_OPENMM_ERROR: {json.dumps({**info, 'message': str(e)})}",
+                flush=True,
+            )
+        raise
 
     return modeller
