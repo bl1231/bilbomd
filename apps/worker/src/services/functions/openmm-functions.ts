@@ -247,6 +247,9 @@ const prepareOpenMMConfig = async (DBjob: OmmCapableJob): Promise<void> => {
 
   const yamlPath = await writeOpenMMConfigYaml(workDir, cfg)
   logger.info(`OpenMM config YAML written: ${yamlPath}`)
+
+  DBjob.openmm_forcefield = cfg.input.forcefield
+  await DBjob.save()
 }
 
 type OmmStepKey = 'minimize' | 'heat' | 'md'

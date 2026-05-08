@@ -123,6 +123,7 @@ const jobSchema = new Schema(
     data_file: { type: String, required: true },
     md_constraints: { type: mdConstraintsSchema, required: false },
     openmm_parameters: { type: openmmParametersSchema, required: false },
+    openmm_forcefield: { type: [String], required: false },
     charmm_parameters: { type: charmmParametersSchema, required: false },
     status: {
       type: String,
