@@ -248,6 +248,27 @@ const prepareResults = async (
       logger.error(`Error running Rgyr vs. Dmax script: ${error}`)
     }
 
+    // Copy consolidated Rgyr/Dmax JSON — only present if the analysis script succeeded
+    const rgyrDmaxJson = path.join(multiFoxsDir, 'consolidated_rgyr_dmax_data.json')
+    if (await fs.pathExists(rgyrDmaxJson)) {
+      await copyFiles({
+        source: rgyrDmaxJson,
+        destination: resultsDir,
+        filename: 'consolidated_rgyr_dmax_data.json',
+        isCritical: false
+      })
+    } else {
+      logger.warn('consolidated_rgyr_dmax_data.json not found — Rgyr/Dmax analysis may have failed')
+    }
+
+    // Copy MultiFoXS log for debugging
+    await copyFiles({
+      source: multiFoxsLogFile,
+      destination: resultsDir,
+      filename: 'multi_foxs.log',
+      isCritical: false
+    })
+
     // Create Job-specific README file.
     try {
       await createReadmeFile(DBjob, numEnsembles, resultsDir)
@@ -280,7 +301,17 @@ const copyFiles = async ({
   isCritical
 }: FileCopyParams): Promise<void> => {
   try {
-    await execPromise(`cp ${source} ${destination}`)
+    if (source.includes('*')) {
+      // Glob pattern — shell expansion required; paths are internally constructed
+      await execPromise(`cp ${source} ${destination}`)
+    } else {
+      // Single file — use fs.copy to avoid shell interpretation of path characters
+      if (!(await fs.pathExists(source))) {
+        logger.warn(`File not found, skipping: ${filename}`)
+        return
+      }
+      await fs.copy(source, path.join(destination, path.basename(source)))
+    }
   } catch (error) {
     logger.error(`Error copying ${filename}: ${error}`)
     if (isCritical) {

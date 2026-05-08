@@ -625,13 +625,74 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
     // Create new empty results directory
     await makeDir(resultsDir)
 
-    // Copy the minimized PDB
-    await copyFiles({
-      source: `${jobDir}/minimization_output.pdb`,
-      destination: resultsDir,
-      filename: 'minimization_output.pdb',
-      isCritical: false
-    })
+    // Copy the minimized PDB — try OpenMM path, then new CHARMM layout, then legacy root
+    const baseDataName = DBjob.data_file.split('.')[0]
+    const openmmPdb = path.join(jobDir, 'openmm', 'minimize', 'minimized.pdb')
+    const charmmNewPdb = path.join(
+      jobDir,
+      'charmm',
+      'minimize',
+      'minimization_output.pdb'
+    )
+    const charmmOldPdb = path.join(jobDir, 'minimization_output.pdb')
+
+    const pdbSource = (await fs.pathExists(openmmPdb))
+      ? openmmPdb
+      : (await fs.pathExists(charmmNewPdb))
+        ? charmmNewPdb
+        : (await fs.pathExists(charmmOldPdb))
+          ? charmmOldPdb
+          : null
+
+    if (pdbSource) {
+      await copyFiles({
+        source: pdbSource,
+        destination: resultsDir,
+        filename: path.basename(pdbSource),
+        isCritical: false
+      })
+    } else {
+      logger.warn('No minimized PDB found (checked OpenMM and CHARMM locations).')
+    }
+
+    // Copy the DAT file for the minimized PDB
+    const openmmDat = path.join(
+      jobDir,
+      'openmm',
+      'minimize',
+      `minimized_${baseDataName}.dat`
+    )
+    const charmmNewDat = path.join(
+      jobDir,
+      'charmm',
+      'minimize',
+      `minimization_output_${baseDataName}.dat`
+    )
+    const charmmOldDat = path.join(
+      jobDir,
+      `minimization_output_${baseDataName}.dat`
+    )
+
+    const datSource = (await fs.pathExists(openmmDat))
+      ? openmmDat
+      : (await fs.pathExists(charmmNewDat))
+        ? charmmNewDat
+        : (await fs.pathExists(charmmOldDat))
+          ? charmmOldDat
+          : null
+
+    if (datSource) {
+      await copyFiles({
+        source: datSource,
+        destination: resultsDir,
+        filename: path.basename(datSource),
+        isCritical: false
+      })
+    } else {
+      logger.warn(
+        'No minimized DAT file found (checked OpenMM and CHARMM locations).'
+      )
+    }
 
     // Gather original uploaded files
     const filesToCopy = [

@@ -242,6 +242,27 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
       isCritical: false
     })
 
+    // Copy the primary SAXS data file from the designated sub-job
+    try {
+      const saxsDataFileName = await getMainSAXSDataFileName(DBjob)
+      await copyFiles({
+        source: path.join(config.uploadDir, DBjob.data_file_from, saxsDataFileName),
+        destination: resultsDir,
+        filename: saxsDataFileName,
+        isCritical: false
+      })
+    } catch (error) {
+      logger.warn(`Could not copy SAXS data file to results: ${getErrorMessage(error)}`)
+    }
+
+    // Copy MultiFoXS log for debugging
+    await copyFiles({
+      source: multifoxsLogFile,
+      destination: resultsDir,
+      filename: 'multi_foxs.log',
+      isCritical: false
+    })
+
     // Write the DBjob to a JSON file
     const simplifiedJob = {
       title: DBjob.title,
