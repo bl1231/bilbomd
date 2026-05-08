@@ -33,17 +33,23 @@ _GLYCAM_PROTEIN_NAMES: frozenset[str] = frozenset({"NLN", "OLS", "OLT"})
 # CYM=deprotonated cysteine, CYSP=phosphocysteine
 _CHARMM36_BACKBONE_RESIDUES: frozenset[str] = frozenset({"SEP", "TPO", "PTR", "CYM", "CYSP"})
 
-# CHARMM36 models phosphate monoesters with a protonated O3P (H3T).
-# PDBFixer at pH 7.0 omits H3T (pKa ~1), and hydrogens.xml has no SEP/TPO/PTR
-# entries, so addHydrogens() would leave OP3 with one bond (to P) instead of
-# two (P + H3T) — causing graph-based template matching to fail.
-# The parent atom is named "OP3" in the topology (PDB canonical per pdbNames.xml),
-# even though the CHARMM36 template calls it "O3P". addHydrogens() does a
-# direct name lookup for the parent atom, so we must use "OP3" here.
-_CHARMM36_PHOSPHO_H_DEFS: dict[str, tuple[str, str]] = {
-    "SEP": ("H3T", "OP3"),
-    "TPO": ("H3T", "OP3"),
-    "PTR": ("H3T", "OP3"),
+# CHARMM36 templates (charmm36_2024.xml) use CHARMM atom naming for phospho-residues:
+# phosphate oxygens are O1P/O2P/O3P (not PDB standard OP1/OP2/OP3), and the
+# backbone amide proton is HN (not PDB standard H). pdbNames.xml only maps OP1→O1P
+# under the Nucleic context — protein-context residues like TPO/SEP/PTR get no alias.
+# _rename_charmm36_atoms() normalises these before addHydrogens() is called.
+#
+# PDBFixer adds H atoms to TPO/SEP/PTR based on CCD data with wrong names:
+# H/H2 (backbone NH), HOP2/HOP3 (protonated phosphate oxygens). These must be
+# stripped and re-added with correct CHARMM36 names via _CHARMM36_FULL_H_DEFS.
+_CHARMM36_PHOSPHATE_RENAMES: dict[str, str] = {"OP1": "O1P", "OP2": "O2P", "OP3": "O3P"}
+
+# Full hydrogen definitions for CHARMM36 phospho-residues, derived directly from
+# charmm36_2024.xml template bonds. Parents use CHARMM36 atom names (O3P not OP3).
+_CHARMM36_FULL_H_DEFS: dict[str, list[tuple[str, str]]] = {
+    "TPO": [("HN", "N"), ("HA", "CA"), ("HB", "CB"), ("HG21", "CG2"), ("HG22", "CG2"), ("HG23", "CG2"), ("H3T", "O3P")],
+    "SEP": [("HN", "N"), ("HA", "CA"), ("HB1", "CB"), ("HB2", "CB"), ("H3T", "O3P")],
+    "PTR": [("HN", "N"), ("HA", "CA"), ("HB1", "CB"), ("HB2", "CB"), ("HD1", "CD1"), ("HD2", "CD2"), ("HE1", "CE1"), ("HE2", "CE2"), ("H3T", "O3P")],
 }
 
 # Heavy-atom intra-residue bonds for each GLYCAM protein residue.
@@ -399,12 +405,13 @@ def _map_heavy_atoms(residue, mol) -> dict[int, int] | None:
 
 
 def _build_charmm36_hydrogen_definitions(charmm36_resnames: frozenset[str]) -> str:
-    """Generate a hydrogens.xml snippet for CHARMM36 phospho-residue H3T atoms."""
+    """Generate a hydrogens.xml snippet for all H atoms in CHARMM36 phospho-residues."""
     root = ET.Element("Residues")
-    for resname, (h_name, parent_name) in _CHARMM36_PHOSPHO_H_DEFS.items():
+    for resname, defs in _CHARMM36_FULL_H_DEFS.items():
         if resname in charmm36_resnames:
             res_elem = ET.SubElement(root, "Residue", {"name": resname})
-            ET.SubElement(res_elem, "H", {"name": h_name, "parent": parent_name})
+            for h_name, parent_name in defs:
+                ET.SubElement(res_elem, "H", {"name": h_name, "parent": parent_name})
     return ET.tostring(root, encoding="unicode") if len(root) > 0 else ""
 
 
@@ -558,6 +565,66 @@ def _repair_backbone_bonds(topology, charmm36_resnames: frozenset[str]) -> int:
 
 
 # ---------------------------------------------------------------------------
+# CHARMM36 atom name normalisation and intra-residue bond repair
+# ---------------------------------------------------------------------------
+
+def _rename_charmm36_atoms(topology, charmm36_resnames: frozenset[str]) -> int:
+    """Rename OP1/OP2/OP3 → O1P/O2P/O3P for CHARMM36 backbone residues.
+
+    Must run before _add_charmm36_intra_bonds so bond lookup uses CHARMM36 names.
+    """
+    count = 0
+    for res in topology.residues():
+        if res.name not in charmm36_resnames:
+            continue
+        for atom in res.atoms():
+            if atom.name in _CHARMM36_PHOSPHATE_RENAMES:
+                atom.name = _CHARMM36_PHOSPHATE_RENAMES[atom.name]
+                count += 1
+    return count
+
+
+def _add_charmm36_intra_bonds(
+    topology,
+    charmm36_resnames: frozenset[str],
+    forcefield: ForceField,
+) -> int:
+    """Add missing intra-residue heavy-atom bonds for CHARMM36 backbone residues.
+
+    PDBFixer does not add bonds within non-standard residues (TPO, SEP, PTR) because
+    it has no templates for them at parse time. Reads expected bonds directly from the
+    CHARMM36 ForceField templates and skips any bond where an atom is not yet present
+    (H atoms are not in the topology yet and are added later by addHydrogens).
+    """
+    existing_bonds: set[tuple[int, int]] = set()
+    for bond in topology.bonds():
+        existing_bonds.add((bond[0].index, bond[1].index))
+        existing_bonds.add((bond[1].index, bond[0].index))
+
+    added = 0
+    for res in topology.residues():
+        if res.name not in charmm36_resnames:
+            continue
+        tmpl = forcefield._templates.get(res.name)
+        if tmpl is None:
+            continue
+        atom_by_name = {a.name: a for a in res.atoms()}
+        for bond in tmpl.bonds:
+            a1_name = tmpl.atoms[bond[0]].name
+            a2_name = tmpl.atoms[bond[1]].name
+            if a1_name not in atom_by_name or a2_name not in atom_by_name:
+                continue  # H atom not yet in topology
+            a1 = atom_by_name[a1_name]
+            a2 = atom_by_name[a2_name]
+            if (a1.index, a2.index) not in existing_bonds:
+                topology.addBond(a1, a2)
+                existing_bonds.add((a1.index, a2.index))
+                existing_bonds.add((a2.index, a1.index))
+                added += 1
+    return added
+
+
+# ---------------------------------------------------------------------------
 # Error surfacing
 # ---------------------------------------------------------------------------
 
@@ -672,6 +739,17 @@ def prepare_modeller(
         n_repaired = _repair_backbone_bonds(modeller.topology, charmm36_resnames)
         if n_repaired:
             print(f"Repaired {n_repaired} missing backbone bond(s) for CHARMM36 residues.")
+        # Normalise phosphate oxygen names (OP1/OP2/OP3 → O1P/O2P/O3P) to match
+        # the CHARMM36 template. pdbNames.xml only has this alias for Nucleic residues.
+        n_renamed = _rename_charmm36_atoms(modeller.topology, charmm36_resnames)
+        if n_renamed:
+            print(f"Renamed {n_renamed} phosphate oxygen atom(s) to CHARMM36 convention.")
+        # Add intra-residue heavy-atom bonds from the CHARMM36 templates. PDBFixer
+        # leaves non-standard residues unconnected internally; without these bonds
+        # the graph-based template matcher in createSystem cannot match TPO/SEP/PTR.
+        n_bonds = _add_charmm36_intra_bonds(modeller.topology, charmm36_resnames, forcefield)
+        if n_bonds:
+            print(f"Added {n_bonds} intra-residue bond(s) for CHARMM36 residues.")
 
     # PDBFixer.addMissingAtoms() incorrectly adds P/OP1/OP2 to the 5' terminus
     # of DNA/RNA chains. Strip them before addHydrogens() to avoid template mismatch.
@@ -702,16 +780,16 @@ def prepare_modeller(
     # DNA/RNA partial-hydrogenation issue from PDBFixer.addMissingHydrogens().
     # GAFF2 templates are explicit-H: createSystem() (called internally by
     # addHydrogens) needs H atoms present to match the template. Keep them.
-    # CHARMM36 backbone residues (SEP/TPO/PTR/CYM/CYSP) have no entries in
-    # hydrogens.xml, so addHydrogens() cannot re-add their H atoms. Preserve
-    # the H atoms PDBFixer added via CCD data so the template match succeeds.
+    # CHARMM36 backbone residues (SEP/TPO/PTR/CYM/CYSP): PDBFixer adds CCD-based H
+    # atoms with wrong names (H/H2 for backbone NH, HOP2/HOP3 for phosphate OH).
+    # Strip them here; _build_charmm36_hydrogen_definitions() defines the correct
+    # CHARMM36-named replacements (HN, H3T, HA, HB, …) added by addHydrogens below.
     h_atoms = [
         atom
         for atom in modeller.topology.atoms()
         if atom.element is not None
         and atom.element.symbol == "H"
         and atom.residue.name not in gaff_resnames
-        and atom.residue.name not in charmm36_resnames
     ]
     modeller.delete(h_atoms)
 
@@ -721,9 +799,9 @@ def prepare_modeller(
     if has_carbohydrates:
         Modeller.loadHydrogenDefinitions("glycam-hydrogens.xml")
 
-    # CHARMM36 phospho-residue templates require H3T on O3P. PDBFixer at pH 7.0 omits
-    # it (deprotonated phosphate), and hydrogens.xml has no SEP/TPO/PTR entries.
-    # Load custom definitions so addHydrogens() adds H3T before createSystem() runs.
+    # hydrogens.xml has no entries for SEP/TPO/PTR. Load full custom definitions
+    # (all backbone and sidechain H atoms, including H3T) so addHydrogens() can
+    # re-add the correct CHARMM36-named H atoms that were stripped above.
     if charmm36_resnames:
         charmm36_h_xml = _build_charmm36_hydrogen_definitions(charmm36_resnames)
         if charmm36_h_xml:
