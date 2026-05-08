@@ -1,6 +1,7 @@
 import { promisify } from 'util'
-import { exec } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import readline from 'node:readline'
+import { glob } from 'glob'
 import {
   IBilboMDPDBJob,
   IBilboMDCRDJob,
@@ -18,7 +19,7 @@ import { spawnFeedbackScript } from './feedback.js'
 import { spawnRgyrDmaxScript } from './analysis.js'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 
-const execPromise = promisify(exec)
+const execFilePromise = promisify(execFile)
 
 const prepareResults = async (
   DBjob:
@@ -69,7 +70,8 @@ const prepareResults = async (
         await copyFiles({
           source: pdbSource,
           destination: resultsDir,
-          filename: path.basename(pdbSource),
+          filename: 'minimization_output.pdb',
+          destFilename: 'minimization_output.pdb',
           isCritical: false
         })
       } else {
@@ -78,7 +80,7 @@ const prepareResults = async (
         )
       }
 
-      // --- Copy the DAT file for the minimized PDB (supports both layouts)
+      // Copy the DAT file for the minimized PDB (supports both layouts)
       const openmmDat = path.join(
         jobDir,
         'openmm',
@@ -105,10 +107,12 @@ const prepareResults = async (
             : null
 
       if (datSource) {
+        const canonicalDatName = `minimization_output_${baseDataName}.dat`
         await copyFiles({
           source: datSource,
           destination: resultsDir,
-          filename: path.basename(datSource),
+          filename: canonicalDatName,
+          destFilename: canonicalDatName,
           isCritical: false
         })
       } else {
@@ -225,20 +229,19 @@ const prepareResults = async (
       })
     }
 
-    // Write the DBjob to a JSON file
-    // We might consider doing this later? since it does not contain feedback data yet?
-    try {
-      const dbJobJsonPath = path.join(resultsDir, 'bilbomd_job.json')
-      await fs.writeFile(dbJobJsonPath, JSON.stringify(DBjob, null, 2), 'utf8')
-    } catch (error) {
-      logger.error(`Error writing DBjob JSON file: ${error}`)
-    }
-
-    // scripts/pipeline_decision_tree.py
+    // Run feedback script before writing bilbomd_job.json so the snapshot
+    // reflects any feedback fields saved back to MongoDB during the script
     try {
       await spawnFeedbackScript(DBjob)
     } catch (error) {
       logger.error(`Error running feedback script: ${error}`)
+    }
+
+    // Write DBjob snapshot after feedback so it includes feedback fields
+    try {
+      await writeJsonFile(path.join(resultsDir, 'bilbomd_job.json'), DBjob)
+    } catch (error) {
+      logger.error(`Error writing DBjob JSON file: ${error}`)
     }
 
     // create the rgyr vs. dmax multifoxs ensembles plots
@@ -278,16 +281,14 @@ const prepareResults = async (
 
     // Create the results tar.gz file
     try {
-      const uuidPrefix = DBjob.uuid.split('-')[0]
-      const archiveName = `results-${uuidPrefix}.tar.gz`
-      await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+      await createResultsArchive(jobDir, DBjob.uuid)
       DBjob.results_ready = true
       await DBjob.save()
     } catch (error) {
       DBjob.results_ready = false
       await DBjob.save()
       logger.error(`Error creating tar file: ${error}`)
-      throw error // Critical error, rethrow or handle specifically if necessary
+      throw error
     }
   } catch (error) {
     await handleError(error, DBjob, 'results')
@@ -298,19 +299,24 @@ const copyFiles = async ({
   source,
   destination,
   filename,
-  isCritical
+  isCritical,
+  destFilename
 }: FileCopyParams): Promise<void> => {
   try {
     if (source.includes('*')) {
-      // Glob pattern — shell expansion required; paths are internally constructed
-      await execPromise(`cp ${source} ${destination}`)
+      // Glob pattern — expand with glob library; no shell involved
+      const matches = await glob(source)
+      await Promise.all(
+        matches.map((f) => fs.copy(f, path.join(destination, path.basename(f))))
+      )
     } else {
       // Single file — use fs.copy to avoid shell interpretation of path characters
       if (!(await fs.pathExists(source))) {
         logger.warn(`File not found, skipping: ${filename}`)
         return
       }
-      await fs.copy(source, path.join(destination, path.basename(source)))
+      const destName = destFilename ?? path.basename(source)
+      await fs.copy(source, path.join(destination, destName))
     }
   } catch (error) {
     logger.error(`Error copying ${filename}: ${error}`)
@@ -318,6 +324,27 @@ const copyFiles = async ({
       throw new Error(`Critical error copying ${filename}: ${error}`)
     }
   }
+}
+
+const writeJsonFile = async (
+  filePath: string,
+  data: unknown
+): Promise<void> => {
+  try {
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    logger.info(`JSON file written to: ${filePath}`)
+  } catch (error) {
+    logger.error(`Error writing JSON file to ${filePath}: ${error}`)
+    throw error
+  }
+}
+
+const createResultsArchive = async (
+  jobDir: string,
+  uuid: string
+): Promise<void> => {
+  const archiveName = `results-${uuid.split('-')[0]}.tar.gz`
+  await execFilePromise('tar', ['czvf', archiveName, 'results'], { cwd: jobDir })
 }
 
 const getNumEnsembles = async (logFile: string): Promise<number> => {
@@ -336,4 +363,10 @@ const getNumEnsembles = async (logFile: string): Promise<number> => {
   return Number(ensembleCount.pop())
 }
 
-export { prepareResults, getNumEnsembles }
+export {
+  prepareResults,
+  getNumEnsembles,
+  copyFiles,
+  writeJsonFile,
+  createResultsArchive
+}

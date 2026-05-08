@@ -4,18 +4,17 @@ import fs from 'fs-extra'
 import csv from 'csv-parser'
 import { logger } from '../../helpers/loggers.js'
 import { glob } from 'glob'
-import { promisify } from 'util'
 import { IStepStatus, IEnsemble } from '@bilbomd/mongodb-schema'
 import { IJob, IBilboMDSANSJob } from '@bilbomd/mongodb-schema'
 import { updateStepStatus } from './mongo-utils.js'
 import { generateDCD2PDBInpFile } from './bilbomd-step-functions.js'
-import { spawn, exec } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { makeDir, makeFile } from './job-utils.js'
 import { config } from '../../config/config.js'
 import { Job as BullMQJob } from 'bullmq'
 import { spawnCharmm } from './job-utils.js'
-
-const execPromise = promisify(exec)
+import { copyFiles, createResultsArchive } from './prepare-results.js'
+import { createReadmeFile } from './create-readme-file.js'
 
 interface CharmmDCD2PDBParams {
   out_dir: string
@@ -56,21 +55,6 @@ function isBilboMDSANSJob(job: IJob): job is IBilboMDSANSJob {
   return (job as IBilboMDSANSJob).d2o_fraction !== undefined
 }
 
-const copyFiles = async ({
-  source,
-  destination,
-  filename,
-  isCritical
-}: FileCopyParams): Promise<void> => {
-  try {
-    await execPromise(`cp ${source} ${destination}`)
-  } catch (error) {
-    logger.error(`Error copying ${filename}: ${error}`)
-    if (isCritical) {
-      throw new Error(`Critical error copying ${filename}: ${error}`)
-    }
-  }
-}
 
 const writeSegidToChainid = async (inputFile: string): Promise<void> => {
   try {
@@ -648,7 +632,8 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
       await copyFiles({
         source: pdbSource,
         destination: resultsDir,
-        filename: path.basename(pdbSource),
+        filename: 'minimization_output.pdb',
+        destFilename: 'minimization_output.pdb',
         isCritical: false
       })
     } else {
@@ -682,10 +667,12 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
           : null
 
     if (datSource) {
+      const canonicalDatName = `minimization_output_${baseDataName}.dat`
       await copyFiles({
         source: datSource,
         destination: resultsDir,
-        filename: path.basename(datSource),
+        filename: canonicalDatName,
+        destFilename: canonicalDatName,
         isCritical: false
       })
     } else {
@@ -855,9 +842,7 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
     await createReadmeFile(DBjob, gasansSummaryFiles.length, resultsDir)
 
     // Create the results tar.gz file
-    const uuidPrefix = DBjob.uuid.split('-')[0]
-    const archiveName = `results-${uuidPrefix}.tar.gz`
-    await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+    await createResultsArchive(jobDir, DBjob.uuid)
     DBjob.results_ready = true
     await DBjob.save()
   } catch (error) {
@@ -878,76 +863,6 @@ const parseCsvFile = (filePath: string): Promise<Record<string, string>[]> => {
       .on('end', () => resolve(results))
       .on('error', (error) => reject(error))
   })
-}
-
-const createReadmeFile = async (
-  DBjob: IBilboMDSANSJob,
-  numEnsembles: number,
-  resultsDir: string
-): Promise<void> => {
-  const readmeContent = `
-# BilboMD SANS Job Results
-
-This directory contains the results for your ${DBjob.title} BilboMD SANS job.
-
-- Job Title:  ${DBjob.title}
-- Job ID:  ${DBjob._id}
-- UUID:  ${DBjob.uuid}
-- Submitted:  ${DBjob.time_submitted}
-- Completed:  ${new Date().toString()}
-
-## Contents
-
-- Original PDB file: ${DBjob.pdb_file}
-- Converted CRD file: ${DBjob.crd_file}
-- Converted PSF file: ${DBjob.psf_file}
-- Original experimental SANS data file: ${DBjob.data_file}
-- Original const.inp file: ${DBjob.const_inp_file}
-- Generated minimized PDB file: minimized_output.pdb
-- Generated minimized PDB DAT file: minimized_output.pdb.dat
-
-The "best" N-state Ensemble PDB files will be present in multiple copies. There is one file for each ensemble size.
-
-- Number of ensembles for this BilboMD SANS run: ${numEnsembles}
-
-- Ensemble PDB file(s):  ensemble_size_N_model.pdb
-- Ensemble CSV file(s):  gasans_summary_EnsSizeN.csv
-- Ensemble DAT/CSV file(s):  best_model_EnsembleSizeN.csv
-
-### The ensemble_size_N_model.pdb files
-
-These will be multi-model PDB files created by catenating the best ensemble of PDB files for each ensemble size.
-
-ensemble_size_2_model.pdb  - will contain the coordinates for the best 2-state model
-ensemble_size_3_model.pdb  - will contain the coordinates for the best 3-state model
-ensemble_size_4_model.pdb  - will contain the coordinates for the best 4-state model
-etc.
-
-### The gasans_summary_EnsSizeN.csv files
-
-TODO - Explain the contents of these CSV files
-
-### The best_model_EnsembleSizeN.csv files
-
-These are the theoretical SANS curves from Pepsi-SANS calculated for each of the ensemble_size_N_model.pdb models.
-
-If you use BilboMD in your research, please cite:
-
-Pelikan M, Hura GL, Hammel M. Structure and flexibility within proteins as identified through small angle X-ray scattering. Gen Physiol Biophys. 2009 Jun;28(2):174-89. doi: 10.4149/gpb_2009_02_174. PMID: ,19592714; PMCID: PMC3773563.
-
-TODO - add citation for Pepsi-SANS
-TODO - add citation for GA-SANS
-
-Thank you for using BilboMD SANS
-`
-  const readmePath = path.join(resultsDir, 'README.md')
-  try {
-    await fs.writeFile(readmePath, readmeContent)
-    logger.info('README file created successfully.')
-  } catch (error) {
-    logger.error('Failed to create README file:', error)
-    throw new Error('Failed to create README file')
-  }
 }
 
 const mirrorOmmMdToPepsiSANS = async (

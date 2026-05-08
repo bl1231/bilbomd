@@ -67,5 +67,6 @@ interface FileCopyParams {
   destination: string
   filename: string
   isCritical: boolean
+  destFilename?: string
 }
 
