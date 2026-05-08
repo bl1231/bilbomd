@@ -41,9 +41,12 @@ const detectCarbohydratesInPdb = async (pdbPath: string): Promise<boolean> => {
   }
 }
 
-const PHOSPHO_RESIDUE_NAMES = new Set(['SEP', 'TPO', 'PTR'])
+// Backbone-integrated residues in CHARMM36 but absent from AMBER19.
+// SEP=phosphoserine, TPO=phosphothreonine, PTR=phosphotyrosine,
+// CYM=deprotonated cysteine, CYSP=phosphocysteine
+const CHARMM36_BACKBONE_RESIDUES = new Set(['SEP', 'TPO', 'PTR', 'CYM', 'CYSP'])
 
-const detectPhosphoResiduesInPdb = async (
+const detectCharmm36ResiduesInPdb = async (
   pdbPath: string
 ): Promise<Set<string>> => {
   const detected = new Set<string>()
@@ -52,7 +55,7 @@ const detectPhosphoResiduesInPdb = async (
     for (const line of text.split(/\r?\n/)) {
       if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
         const resName = line.slice(17, 20).trim().toUpperCase()
-        if (PHOSPHO_RESIDUE_NAMES.has(resName)) detected.add(resName)
+        if (CHARMM36_BACKBONE_RESIDUES.has(resName)) detected.add(resName)
       }
     }
   } catch {
@@ -105,8 +108,8 @@ const buildOpenMMConfigForJob = async (
 
   const pdbPath = path.join(workDir, pdbFile)
   const hasCarbohydrates = await detectCarbohydratesInPdb(pdbPath)
-  const phosphoResidues = await detectPhosphoResiduesInPdb(pdbPath)
-  const hasPhosphoResidues = phosphoResidues.size > 0
+  const charmm36Residues = await detectCharmm36ResiduesInPdb(pdbPath)
+  const hasCharmm36Residues = charmm36Residues.size > 0
 
   if (hasCarbohydrates) {
     logger.info(
@@ -115,24 +118,24 @@ const buildOpenMMConfigForJob = async (
         `will be stripped before MD.`
     )
   }
-  if (hasPhosphoResidues && !hasCarbohydrates) {
+  if (hasCharmm36Residues && !hasCarbohydrates) {
     logger.info(
-      `Phosphorylated residues detected in ${pdbFile} ` +
-        `(${[...phosphoResidues].join(', ')}) — switching to CHARMM36 force field ` +
+      `Non-standard backbone residues detected in ${pdbFile} ` +
+        `(${[...charmm36Residues].join(', ')}) — switching to CHARMM36 force field ` +
         `(charmm36_2024.xml + implicit/gbn2.xml).`
     )
-  } else if (hasPhosphoResidues && hasCarbohydrates) {
+  } else if (hasCharmm36Residues && hasCarbohydrates) {
     logger.warn(
-      `Phosphorylated residues detected in ${pdbFile} ` +
-        `(${[...phosphoResidues].join(', ')}) alongside glycans — GLYCAM force field ` +
-        `takes priority; CHARMM36 will NOT be used. Phospho-residue support in ` +
+      `Non-standard backbone residues detected in ${pdbFile} ` +
+        `(${[...charmm36Residues].join(', ')}) alongside glycans — GLYCAM force field ` +
+        `takes priority; CHARMM36 will NOT be used. CHARMM36 residue support in ` +
         `glycoprotein mode is not yet implemented.`
     )
   }
 
   const forcefield = hasCarbohydrates
     ? ['amber19-all.xml', 'amber14/GLYCAM_06j-1.xml', 'implicit/gbn2.xml']
-    : hasPhosphoResidues
+    : hasCharmm36Residues
       ? ['charmm36_2024.xml', 'implicit/gbn2.xml']
       : ['amber19-all.xml', 'implicit/gbn2.xml']
 
@@ -142,7 +145,7 @@ const buildOpenMMConfigForJob = async (
       pdb_file: pdbFile,
       forcefield,
       has_carbohydrates: hasCarbohydrates,
-      has_phospho_residues: hasPhosphoResidues
+      has_charmm36_residues: hasCharmm36Residues
     },
     output: {
       output_dir: path.join(workDir, 'openmm'),
@@ -254,7 +257,7 @@ interface OpenMMConfig {
     pdb_file: string
     forcefield: string[]
     has_carbohydrates?: boolean
-    has_phospho_residues?: boolean
+    has_charmm36_residues?: boolean
   }
   output: {
     output_dir: string

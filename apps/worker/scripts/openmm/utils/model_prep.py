@@ -27,9 +27,11 @@ from utils.glycam_rename import rename_glycam_residues
 
 _GLYCAM_PROTEIN_NAMES: frozenset[str] = frozenset({"NLN", "OLS", "OLT"})
 
-# Phosphorylated amino acid residues that have native templates in charmm36_2024.xml.
+# Backbone-integrated residues in CHARMM36 (charmm36_2024.xml) but absent from AMBER19.
 # These must NOT be treated as standalone GAFF2 ligands — they are backbone residues.
-_PHOSPHO_RESIDUES: frozenset[str] = frozenset({"SEP", "TPO", "PTR"})
+# SEP=phosphoserine, TPO=phosphothreonine, PTR=phosphotyrosine,
+# CYM=deprotonated cysteine, CYSP=phosphocysteine
+_CHARMM36_BACKBONE_RESIDUES: frozenset[str] = frozenset({"SEP", "TPO", "PTR", "CYM", "CYSP"})
 
 # Heavy-atom intra-residue bonds for each GLYCAM protein residue.
 # These are missing because ATOM-record residues unknown to OpenMM's PDB reader
@@ -479,17 +481,17 @@ def register_ligand_templates_for_topology(
 
 
 # ---------------------------------------------------------------------------
-# Phospho-residue backbone bond repair
+# CHARMM36 backbone bond repair
 # ---------------------------------------------------------------------------
 
-def _repair_phospho_backbone_bonds(topology, phospho_resnames: frozenset[str]) -> int:
-    """Add missing C(prev)→N(phospho) and C(phospho)→N(next) peptide bonds.
+def _repair_backbone_bonds(topology, charmm36_resnames: frozenset[str]) -> int:
+    """Add missing C(prev)→N and C→N(next) peptide bonds flanking CHARMM36 residues.
 
-    OpenMM's PDB reader has no templates for SEP/TPO/PTR at parse time (the
-    CHARMM36 templates are loaded later into the ForceField object). Without a
-    template, the inter-residue backbone bonds are never established. This
-    function repairs them after the Modeller is created, mirroring the approach
-    used by _repair_glycam_protein_topology for GLYCAM residues.
+    OpenMM's PDB reader has no templates for non-standard residues (SEP, TPO,
+    PTR, CYM, CYSP) at parse time — the CHARMM36 templates are only loaded later
+    into the ForceField object. Without a template the inter-residue backbone
+    bonds are never established. This function repairs them after the Modeller is
+    created, mirroring _repair_glycam_protein_topology for GLYCAM residues.
     Returns the total number of bonds added.
     """
     res_list = list(topology.residues())
@@ -510,19 +512,19 @@ def _repair_phospho_backbone_bonds(topology, phospho_resnames: frozenset[str]) -
             added += 1
 
     for i, res in enumerate(res_list):
-        if res.name not in phospho_resnames:
+        if res.name not in charmm36_resnames:
             continue
 
         atom = {a.name: a for a in res.atoms()}
 
-        # C(prev) → N(phospho)
+        # C(prev) → N(charmm36 residue)
         if i > 0:
             prev_res = res_list[i - 1]
             prev_C = next((a for a in prev_res.atoms() if a.name == "C"), None)
             _add_bond(prev_C, atom.get("N"),
                       f"{prev_res.name}[{prev_res.id}].C -- {res.name}[{res.id}].N")
 
-        # C(phospho) → N(next)
+        # C(charmm36 residue) → N(next)
         if i < len(res_list) - 1:
             next_res = res_list[i + 1]
             next_N = next((a for a in next_res.atoms() if a.name == "N"), None)
@@ -556,12 +558,12 @@ def prepare_modeller(
     """Load, fix, and hydrogenate a PDB into an OpenMM Modeller.
 
     Handles standard proteins, glycoproteins (has_carbohydrates), and proteins
-    with phosphorylated residues (has_phospho_residues). Returns a Modeller
+    with CHARMM36 backbone residues (has_charmm36_residues). Returns a Modeller
     ready for forcefield.createSystem().
     """
     has_carbohydrates = config["input"].get("has_carbohydrates", False)
-    has_phospho_residues = config["input"].get("has_phospho_residues", False)
-    phospho_resnames: frozenset[str] = _PHOSPHO_RESIDUES if has_phospho_residues else frozenset()
+    has_charmm36_residues = config["input"].get("has_charmm36_residues", False)
+    charmm36_resnames: frozenset[str] = _CHARMM36_BACKBONE_RESIDUES if has_charmm36_residues else frozenset()
 
     with open(initial_pdb_file, "r", encoding="utf-8") as f:
         raw_pdb = f.read()
@@ -640,13 +642,13 @@ def prepare_modeller(
 
     modeller = Modeller(fixer.topology, fixer.positions)
 
-    # Repair missing C(prev)→N and C→N(next) peptide bonds flanking phospho-residues.
-    # The PDB reader has no templates for SEP/TPO/PTR at parse time, so inter-residue
-    # backbone bonds are not established — same issue as GLYCAM protein residues.
-    if phospho_resnames:
-        n_repaired = _repair_phospho_backbone_bonds(modeller.topology, phospho_resnames)
+    # Repair missing C(prev)→N and C→N(next) peptide bonds flanking CHARMM36 residues.
+    # The PDB reader has no templates for these non-standard residues at parse time,
+    # so inter-residue backbone bonds are not established — same issue as GLYCAM.
+    if charmm36_resnames:
+        n_repaired = _repair_backbone_bonds(modeller.topology, charmm36_resnames)
         if n_repaired:
-            print(f"Repaired {n_repaired} missing backbone bond(s) for phospho-residues.")
+            print(f"Repaired {n_repaired} missing backbone bond(s) for CHARMM36 residues.")
 
     # PDBFixer.addMissingAtoms() incorrectly adds P/OP1/OP2 to the 5' terminus
     # of DNA/RNA chains. Strip them before addHydrogens() to avoid template mismatch.
@@ -677,8 +679,8 @@ def prepare_modeller(
     # DNA/RNA partial-hydrogenation issue from PDBFixer.addMissingHydrogens().
     # GAFF2 templates are explicit-H: createSystem() (called internally by
     # addHydrogens) needs H atoms present to match the template. Keep them.
-    # Phospho-residues (SEP/TPO/PTR) use CHARMM36 backbone templates. hydrogens.xml
-    # has no entries for them, so addHydrogens() cannot add their H atoms. Preserve
+    # CHARMM36 backbone residues (SEP/TPO/PTR/CYM/CYSP) have no entries in
+    # hydrogens.xml, so addHydrogens() cannot re-add their H atoms. Preserve
     # the H atoms PDBFixer added via CCD data so the template match succeeds.
     h_atoms = [
         atom
@@ -686,7 +688,7 @@ def prepare_modeller(
         if atom.element is not None
         and atom.element.symbol == "H"
         and atom.residue.name not in gaff_resnames
-        and atom.residue.name not in phospho_resnames
+        and atom.residue.name not in charmm36_resnames
     ]
     modeller.delete(h_atoms)
 
