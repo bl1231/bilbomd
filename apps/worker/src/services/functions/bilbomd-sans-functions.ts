@@ -632,7 +632,8 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
       await copyFiles({
         source: pdbSource,
         destination: resultsDir,
-        filename: path.basename(pdbSource),
+        filename: 'minimization_output.pdb',
+        destFilename: 'minimization_output.pdb',
         isCritical: false
       })
     } else {
@@ -666,10 +667,12 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
           : null
 
     if (datSource) {
+      const canonicalDatName = `minimization_output_${baseDataName}.dat`
       await copyFiles({
         source: datSource,
         destination: resultsDir,
-        filename: path.basename(datSource),
+        filename: canonicalDatName,
+        destFilename: canonicalDatName,
         isCritical: false
       })
     } else {

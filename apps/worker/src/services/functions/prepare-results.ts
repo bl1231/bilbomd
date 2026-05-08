@@ -1,5 +1,5 @@
 import { promisify } from 'util'
-import { exec } from 'node:child_process'
+import { exec, execFile } from 'node:child_process'
 import readline from 'node:readline'
 import {
   IBilboMDPDBJob,
@@ -19,6 +19,7 @@ import { spawnRgyrDmaxScript } from './analysis.js'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 
 const execPromise = promisify(exec)
+const execFilePromise = promisify(execFile)
 
 const prepareResults = async (
   DBjob:
@@ -69,7 +70,8 @@ const prepareResults = async (
         await copyFiles({
           source: pdbSource,
           destination: resultsDir,
-          filename: path.basename(pdbSource),
+          filename: 'minimization_output.pdb',
+          destFilename: 'minimization_output.pdb',
           isCritical: false
         })
       } else {
@@ -105,10 +107,12 @@ const prepareResults = async (
             : null
 
       if (datSource) {
+        const canonicalDatName = `minimization_output_${baseDataName}.dat`
         await copyFiles({
           source: datSource,
           destination: resultsDir,
-          filename: path.basename(datSource),
+          filename: canonicalDatName,
+          destFilename: canonicalDatName,
           isCritical: false
         })
       } else {
@@ -295,7 +299,8 @@ const copyFiles = async ({
   source,
   destination,
   filename,
-  isCritical
+  isCritical,
+  destFilename
 }: FileCopyParams): Promise<void> => {
   try {
     if (source.includes('*')) {
@@ -307,7 +312,8 @@ const copyFiles = async ({
         logger.warn(`File not found, skipping: ${filename}`)
         return
       }
-      await fs.copy(source, path.join(destination, path.basename(source)))
+      const destName = destFilename ?? path.basename(source)
+      await fs.copy(source, path.join(destination, destName))
     }
   } catch (error) {
     logger.error(`Error copying ${filename}: ${error}`)
@@ -335,7 +341,7 @@ const createResultsArchive = async (
   uuid: string
 ): Promise<void> => {
   const archiveName = `results-${uuid.split('-')[0]}.tar.gz`
-  await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+  await execFilePromise('tar', ['czvf', archiveName, 'results'], { cwd: jobDir })
 }
 
 const getNumEnsembles = async (logFile: string): Promise<number> => {

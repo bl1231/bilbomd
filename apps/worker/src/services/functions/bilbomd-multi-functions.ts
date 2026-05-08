@@ -245,17 +245,22 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
       isCritical: false
     })
 
-    // Copy the primary SAXS data file from the designated sub-job
+    // Resolve SAXS filename once — reused for both the file copy and README generation
+    let saxsDataFileName: string | undefined
     try {
-      const saxsDataFileName = await getMainSAXSDataFileName(DBjob)
+      saxsDataFileName = await getMainSAXSDataFileName(DBjob)
+    } catch (error) {
+      logger.warn(`Could not resolve SAXS data file name: ${getErrorMessage(error)}`)
+    }
+
+    // Copy the primary SAXS data file from the designated sub-job
+    if (saxsDataFileName) {
       await copyFiles({
         source: path.join(config.uploadDir, DBjob.data_file_from, saxsDataFileName),
         destination: resultsDir,
         filename: saxsDataFileName,
         isCritical: false
       })
-    } catch (error) {
-      logger.warn(`Could not copy SAXS data file to results: ${getErrorMessage(error)}`)
     }
 
     // Copy MultiFoXS log for debugging
@@ -310,13 +315,7 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
       })
     }
 
-    // Create README file — resolve SAXS filename for the Multi-specific content
-    let saxsDataFileName: string | undefined
-    try {
-      saxsDataFileName = await getMainSAXSDataFileName(DBjob)
-    } catch (error) {
-      logger.warn(`Could not resolve SAXS data file name for README: ${getErrorMessage(error)}`)
-    }
+    // Create README file — reuse saxsDataFileName resolved above
     await createReadmeFile(DBjob, numEnsembles, resultsDir, saxsDataFileName)
 
     // Create tar.gz archive

@@ -182,18 +182,24 @@ etc.
 
 ### The gasans_summary_EnsSizeN.csv files
 
-TODO - Explain the contents of these CSV files
+Each row in these files describes one candidate N-state ensemble ranked by fitness. Columns include
+the weight and identity of each conformer in the ensemble, the overall fit score to the experimental
+SANS profile, and per-state scattering contributions calculated by Pepsi-SANS.
 
 ### The best_model_EnsembleSizeN.csv files
 
-These are the theoretical SANS curves from Pepsi-SANS calculated for each of the ensemble_size_N_model.pdb models.
+These files contain the theoretical SANS scattering curve from Pepsi-SANS for the best-scoring
+N-state ensemble model, alongside the experimental data, for direct comparison.
 
 If you use BilboMD in your research, please cite:
 
 ${CITATION}
 
-TODO - add citation for Pepsi-SANS
-TODO - add citation for GA-SANS
+If you use Pepsi-SANS, please cite:
+
+Grudinin S, Garkavenko M, Kazennov A. Pepsi-SANS: an adaptive method for rapid and accurate
+computation of small-angle neutron scattering profiles. Acta Crystallogr D Struct Biol.
+2021 Jun 1;77(Pt 6):757-765. doi: 10.1107/S2059798321002837. PMID: 34076590.
 
 Thank you for using BilboMD SANS
 `
