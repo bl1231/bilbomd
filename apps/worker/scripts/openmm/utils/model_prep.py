@@ -35,13 +35,15 @@ _CHARMM36_BACKBONE_RESIDUES: frozenset[str] = frozenset({"SEP", "TPO", "PTR", "C
 
 # CHARMM36 models phosphate monoesters with a protonated O3P (H3T).
 # PDBFixer at pH 7.0 omits H3T (pKa ~1), and hydrogens.xml has no SEP/TPO/PTR
-# entries, so addHydrogens() would leave O3P with one bond instead of two —
-# causing graph-based template matching to fail. We supply these definitions
-# so addHydrogens() inserts H3T before createSystem() runs.
+# entries, so addHydrogens() would leave OP3 with one bond (to P) instead of
+# two (P + H3T) — causing graph-based template matching to fail.
+# The parent atom is named "OP3" in the topology (PDB canonical per pdbNames.xml),
+# even though the CHARMM36 template calls it "O3P". addHydrogens() does a
+# direct name lookup for the parent atom, so we must use "OP3" here.
 _CHARMM36_PHOSPHO_H_DEFS: dict[str, tuple[str, str]] = {
-    "SEP": ("H3T", "O3P"),
-    "TPO": ("H3T", "O3P"),
-    "PTR": ("H3T", "O3P"),
+    "SEP": ("H3T", "OP3"),
+    "TPO": ("H3T", "OP3"),
+    "PTR": ("H3T", "OP3"),
 }
 
 # Heavy-atom intra-residue bonds for each GLYCAM protein residue.
