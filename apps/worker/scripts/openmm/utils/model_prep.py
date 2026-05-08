@@ -479,6 +479,60 @@ def register_ligand_templates_for_topology(
 
 
 # ---------------------------------------------------------------------------
+# Phospho-residue backbone bond repair
+# ---------------------------------------------------------------------------
+
+def _repair_phospho_backbone_bonds(topology, phospho_resnames: frozenset[str]) -> int:
+    """Add missing C(prev)→N(phospho) and C(phospho)→N(next) peptide bonds.
+
+    OpenMM's PDB reader has no templates for SEP/TPO/PTR at parse time (the
+    CHARMM36 templates are loaded later into the ForceField object). Without a
+    template, the inter-residue backbone bonds are never established. This
+    function repairs them after the Modeller is created, mirroring the approach
+    used by _repair_glycam_protein_topology for GLYCAM residues.
+    Returns the total number of bonds added.
+    """
+    res_list = list(topology.residues())
+    existing_bonds: set[tuple[int, int]] = set()
+    for bond in topology.bonds():
+        existing_bonds.add((bond[0].index, bond[1].index))
+        existing_bonds.add((bond[1].index, bond[0].index))
+
+    added = 0
+
+    def _add_bond(a1, a2, label):
+        nonlocal added
+        if a1 and a2 and (a1.index, a2.index) not in existing_bonds:
+            topology.addBond(a1, a2)
+            existing_bonds.add((a1.index, a2.index))
+            existing_bonds.add((a2.index, a1.index))
+            print(f"  Repaired bond: {label}")
+            added += 1
+
+    for i, res in enumerate(res_list):
+        if res.name not in phospho_resnames:
+            continue
+
+        atom = {a.name: a for a in res.atoms()}
+
+        # C(prev) → N(phospho)
+        if i > 0:
+            prev_res = res_list[i - 1]
+            prev_C = next((a for a in prev_res.atoms() if a.name == "C"), None)
+            _add_bond(prev_C, atom.get("N"),
+                      f"{prev_res.name}[{prev_res.id}].C -- {res.name}[{res.id}].N")
+
+        # C(phospho) → N(next)
+        if i < len(res_list) - 1:
+            next_res = res_list[i + 1]
+            next_N = next((a for a in next_res.atoms() if a.name == "N"), None)
+            _add_bond(atom.get("C"), next_N,
+                      f"{res.name}[{res.id}].C -- {next_res.name}[{next_res.id}].N")
+
+    return added
+
+
+# ---------------------------------------------------------------------------
 # Error surfacing
 # ---------------------------------------------------------------------------
 
@@ -585,6 +639,14 @@ def prepare_modeller(
         fixer.addMissingHydrogens(pH=7.0)
 
     modeller = Modeller(fixer.topology, fixer.positions)
+
+    # Repair missing C(prev)→N and C→N(next) peptide bonds flanking phospho-residues.
+    # The PDB reader has no templates for SEP/TPO/PTR at parse time, so inter-residue
+    # backbone bonds are not established — same issue as GLYCAM protein residues.
+    if phospho_resnames:
+        n_repaired = _repair_phospho_backbone_bonds(modeller.topology, phospho_resnames)
+        if n_repaired:
+            print(f"Repaired {n_repaired} missing backbone bond(s) for phospho-residues.")
 
     # PDBFixer.addMissingAtoms() incorrectly adds P/OP1/OP2 to the 5' terminus
     # of DNA/RNA chains. Strip them before addHydrogens() to avoid template mismatch.
