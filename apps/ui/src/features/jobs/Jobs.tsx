@@ -243,11 +243,15 @@ const Jobs = () => {
   const [deleteTargetTitle, setDeleteTargetTitle] = useState<string | null>(
     null
   )
+  const [deleteTargetStatus, setDeleteTargetStatus] = useState<string | null>(
+    null
+  )
   const [deleteJob, { isLoading: isDeleting }] = useDeleteJobMutation()
 
-  const openDeleteDialog = (id: string, title: string) => {
+  const openDeleteDialog = (id: string, title: string, status: string) => {
     setDeleteTargetJobId(id)
     setDeleteTargetTitle(title)
+    setDeleteTargetStatus(status)
     setDeleteDialogOpen(true)
   }
 
@@ -266,6 +270,7 @@ const Jobs = () => {
       setDeleteDialogOpen(false)
       setDeleteTargetJobId(null)
       setDeleteTargetTitle(null)
+      setDeleteTargetStatus(null)
     }
   }
 
@@ -674,6 +679,7 @@ const Jobs = () => {
               jobTitle={params.row.title}
               jobStatus={params.row.status}
               resultsReady={params.row.results_ready}
+              isAdmin={isAdmin}
               anchorEl={anchorEl}
               open={isOpen}
               onClose={handleMenuClose}
@@ -783,6 +789,19 @@ const Jobs = () => {
                         Are you sure you want to delete the job{' '}
                         <strong>{deleteTargetTitle}</strong>?
                       </Typography>
+                      {['Running', 'Submitted'].includes(
+                        deleteTargetStatus ?? ''
+                      ) && (
+                        <Alert
+                          severity="warning"
+                          sx={{ mt: 2 }}
+                        >
+                          This job is currently <strong>{deleteTargetStatus}</strong>.
+                          Deleting it will remove the database record and files,
+                          but the underlying simulation process may continue
+                          until it finishes naturally.
+                        </Alert>
+                      )}
                     </DialogContent>
                     <DialogActions>
                       <Button

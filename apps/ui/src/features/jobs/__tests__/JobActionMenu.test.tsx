@@ -46,7 +46,7 @@ describe('JobActionsMenu', () => {
   it('calls onDelete and onClose when Delete is clicked', () => {
     render(<JobActionsMenu {...baseProps} />)
     fireEvent.click(screen.getByText('Delete'))
-    expect(baseProps.onDelete).toHaveBeenCalledWith('abc123', 'Test Job')
+    expect(baseProps.onDelete).toHaveBeenCalledWith('abc123', 'Test Job', 'Completed')
     expect(baseProps.onClose).toHaveBeenCalled()
   })
 })

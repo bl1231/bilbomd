@@ -12,11 +12,12 @@ interface JobActionsMenuProps {
   jobTitle: string
   jobStatus: string
   resultsReady?: boolean
+  isAdmin?: boolean
   anchorEl: HTMLElement | null
   open: boolean
   onClose: () => void
   onResubmit: (id: string, type: string) => void
-  onDelete: (id: string, title: string) => void
+  onDelete: (id: string, title: string, status: string) => void
   onDownload: (id: string) => void
 }
 
@@ -26,6 +27,7 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
   jobTitle,
   jobStatus,
   resultsReady,
+  isAdmin = false,
   anchorEl,
   open,
   onClose,
@@ -39,7 +41,7 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
   }
 
   const handleDeleteClick = () => {
-    onDelete(jobId, jobTitle)
+    onDelete(jobId, jobTitle, jobStatus)
     onClose()
   }
 
@@ -72,7 +74,7 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
       <MenuItem
         onClick={handleDeleteClick}
         disableRipple
-        disabled={['Running', 'Submitted'].includes(jobStatus)}
+        disabled={['Running', 'Submitted'].includes(jobStatus) && !isAdmin}
         sx={{ color: 'error.main' }}
       >
         <DeleteIcon color='error' />
