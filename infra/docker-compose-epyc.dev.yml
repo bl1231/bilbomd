@@ -146,9 +146,15 @@ services:
       - OF3_SERVICE_URL=http://of3-service:8000
       - COLABFOLD_TIMEOUT_MS=${COLABFOLD_TIMEOUT_MS:-3600000}
       - COLABFOLD_SERVICE_URL=http://colabfold-service:8000
+      - MPLCONFIGDIR=/tmp/matplotlib
+      - XDG_CACHE_HOME=/tmp/cache
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      colabfold-service:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
       interval: 30s
@@ -191,8 +197,9 @@ services:
 
   # ------------------------------------------------------------------------------------
   colabfold-service:
-    image: ghcr.io/bl1231/bilbomd-colabfold-service:latest
+    image: ghcr.io/bl1231/bilbomd-colabfold-service:0.1.0
     pull_policy: always
+    shm_size: "16gb"
     security_opt:
       - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json
