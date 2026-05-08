@@ -1,5 +1,13 @@
 # @bilbomd/backend
 
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+  - @bilbomd/md-utils@1.1.13
+
 ## 2.8.0
 
 ### Minor Changes

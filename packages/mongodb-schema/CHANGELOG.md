@@ -1,5 +1,12 @@
 # @bilbomd/mongodb-schema
 
+## 2.6.1
+
+### Patch Changes
+
+- d82f306: Add openmm_forcefield field to job documents to record the OpenMM force field
+  files selected at runtime (e.g. AMBER19, CHARMM36, GLYCAM).
+
 ## 2.6.0
 
 ### Minor Changes

@@ -1,5 +1,31 @@
 # @bilbomd/worker
 
+## 2.11.0
+
+### Minor Changes
+
+- d82f306: Add CHARMM36 force field fallback for non-standard backbone residues (SEP, TPO, PTR, CYM, CYSP).
+
+  Previously, backbone-integrated non-standard residues were incorrectly treated as standalone GAFF2 ligands, causing a crash when OpenMM tried to match the backbone of the adjacent standard residue. CHARMM36 (`charmm36_2024.xml`) ships with full backbone-aware templates for phosphoserine (SEP), phosphothreonine (TPO), phosphotyrosine (PTR), deprotonated cysteine (CYM), and phosphocysteine (CYSP).
+
+  The worker now detects these residues in the input PDB and automatically selects `charmm36_2024.xml + implicit/gbn2.xml` instead of the default AMBER19 force field. Backbone bonds missing after PDBFixer parsing are repaired before the system is built. If OpenMM still cannot resolve a residue, the unrecognized residue name and index are captured and surfaced in the job error message.
+
+### Patch Changes
+
+- d82f306: Fix OpenMM template matching failure for CHARMM36 phospho-residues (TPO, SEP, PTR).
+
+  Three root causes were identified and fixed in `model_prep.py`:
+  1. **Wrong H atom names from PDBFixer**: PDBFixer adds CCD-based H atoms to TPO/SEP/PTR with names incompatible with the CHARMM36 template (e.g. `H`/`H2` instead of `HN`, `HOP2`/`HOP3` instead of `H3T`). These are now stripped and re-added with correct CHARMM36 names via full hydrogen definitions.
+  2. **Missing intra-residue bonds**: PDBFixer leaves TPO/SEP/PTR residues with no internal bond connectivity, causing OpenMM's graph-based template matcher to fail. New function `_add_charmm36_intra_bonds()` reads bonds directly from the CHARMM36 ForceField templates and adds them before `addHydrogens()` is called.
+  3. **Phosphate oxygen name mismatch**: Some PDB files use PDB standard `OP1`/`OP2`/`OP3` while the CHARMM36 template requires `O1P`/`O2P`/`O3P`. New function `_rename_charmm36_atoms()` normalises these names. The `pdbNames.xml` alias only applies to Nucleic residues, not protein-context phospho-residues.
+
+- d82f306: Add openmm_forcefield field to job documents to record the OpenMM force field
+  files selected at runtime (e.g. AMBER19, CHARMM36, GLYCAM).
+- 8f4e257: Log the underlying cause of fetch errors in handleError so failures like TimeoutError or ECONNREFUSED are visible in logs instead of just "fetch failed".
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+  - @bilbomd/md-utils@1.1.13
+
 ## 2.10.0
 
 ### Minor Changes
