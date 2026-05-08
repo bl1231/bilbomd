@@ -78,7 +78,7 @@ const prepareResults = async (
         )
       }
 
-      // --- Copy the DAT file for the minimized PDB (supports both layouts)
+      // Copy the DAT file for the minimized PDB (supports both layouts)
       const openmmDat = path.join(
         jobDir,
         'openmm',
@@ -225,20 +225,19 @@ const prepareResults = async (
       })
     }
 
-    // Write the DBjob to a JSON file
-    // We might consider doing this later? since it does not contain feedback data yet?
-    try {
-      const dbJobJsonPath = path.join(resultsDir, 'bilbomd_job.json')
-      await fs.writeFile(dbJobJsonPath, JSON.stringify(DBjob, null, 2), 'utf8')
-    } catch (error) {
-      logger.error(`Error writing DBjob JSON file: ${error}`)
-    }
-
-    // scripts/pipeline_decision_tree.py
+    // Run feedback script before writing bilbomd_job.json so the snapshot
+    // reflects any feedback fields saved back to MongoDB during the script
     try {
       await spawnFeedbackScript(DBjob)
     } catch (error) {
       logger.error(`Error running feedback script: ${error}`)
+    }
+
+    // Write DBjob snapshot after feedback so it includes feedback fields
+    try {
+      await writeJsonFile(path.join(resultsDir, 'bilbomd_job.json'), DBjob)
+    } catch (error) {
+      logger.error(`Error writing DBjob JSON file: ${error}`)
     }
 
     // create the rgyr vs. dmax multifoxs ensembles plots
@@ -278,16 +277,14 @@ const prepareResults = async (
 
     // Create the results tar.gz file
     try {
-      const uuidPrefix = DBjob.uuid.split('-')[0]
-      const archiveName = `results-${uuidPrefix}.tar.gz`
-      await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+      await createResultsArchive(jobDir, DBjob.uuid)
       DBjob.results_ready = true
       await DBjob.save()
     } catch (error) {
       DBjob.results_ready = false
       await DBjob.save()
       logger.error(`Error creating tar file: ${error}`)
-      throw error // Critical error, rethrow or handle specifically if necessary
+      throw error
     }
   } catch (error) {
     await handleError(error, DBjob, 'results')
@@ -320,6 +317,27 @@ const copyFiles = async ({
   }
 }
 
+const writeJsonFile = async (
+  filePath: string,
+  data: unknown
+): Promise<void> => {
+  try {
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    logger.info(`JSON file written to: ${filePath}`)
+  } catch (error) {
+    logger.error(`Error writing JSON file to ${filePath}: ${error}`)
+    throw error
+  }
+}
+
+const createResultsArchive = async (
+  jobDir: string,
+  uuid: string
+): Promise<void> => {
+  const archiveName = `results-${uuid.split('-')[0]}.tar.gz`
+  await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+}
+
 const getNumEnsembles = async (logFile: string): Promise<number> => {
   const rl = readline.createInterface({
     input: fs.createReadStream(logFile),
@@ -336,4 +354,10 @@ const getNumEnsembles = async (logFile: string): Promise<number> => {
   return Number(ensembleCount.pop())
 }
 
-export { prepareResults, getNumEnsembles }
+export {
+  prepareResults,
+  getNumEnsembles,
+  copyFiles,
+  writeJsonFile,
+  createResultsArchive
+}
