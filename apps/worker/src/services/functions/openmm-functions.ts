@@ -115,11 +115,18 @@ const buildOpenMMConfigForJob = async (
         `will be stripped before MD.`
     )
   }
-  if (hasPhosphoResidues) {
+  if (hasPhosphoResidues && !hasCarbohydrates) {
     logger.info(
       `Phosphorylated residues detected in ${pdbFile} ` +
         `(${[...phosphoResidues].join(', ')}) — switching to CHARMM36 force field ` +
         `(charmm36_2024.xml + implicit/gbn2.xml).`
+    )
+  } else if (hasPhosphoResidues && hasCarbohydrates) {
+    logger.warn(
+      `Phosphorylated residues detected in ${pdbFile} ` +
+        `(${[...phosphoResidues].join(', ')}) alongside glycans — GLYCAM force field ` +
+        `takes priority; CHARMM36 will NOT be used. Phospho-residue support in ` +
+        `glycoprotein mode is not yet implemented.`
     )
   }
 
@@ -351,7 +358,7 @@ const runOmmStep = async (
             residue_name: string
             residue_index: number
           }
-          detail = ` Unrecognized residue: ${info.residue_name} (index ${info.residue_index})`
+          detail = ` Template match failed for residue: ${info.residue_name} (index ${info.residue_index})`
         } catch {
           // ignore malformed JSON
         }
