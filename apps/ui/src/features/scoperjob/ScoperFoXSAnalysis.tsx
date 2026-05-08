@@ -35,13 +35,18 @@ const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
     }))
 
 const calculateResiduals = (dataPoints: FoxsDataPoint[]) => {
-  return dataPoints.map((item) => {
-    const q = parseFloat(item.q.toFixed(4))
-    const num = item.exp_intensity - item.model_intensity
-    const denom = item.error
-    const res = denom !== 0 ? parseFloat((num / denom).toFixed(4)) : 0
-    return { q, res }
-  })
+  return dataPoints
+    .map((item) => {
+      const q = parseFloat(item.q.toFixed(4))
+      const num = item.exp_intensity - item.model_intensity
+      const denom = item.error
+      const res =
+        Number.isFinite(denom) && denom !== 0
+          ? parseFloat((num / denom).toFixed(4))
+          : 0
+      return { q, res }
+    })
+    .filter((point) => Number.isFinite(point.res))
 }
 
 const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
@@ -88,7 +93,7 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
 
   // Handle loading and error states
   if (isLoading) return <div>Loading...</div>
-  if (isError || !data)
+  if (isError || !data || foxsData.length < 2)
     return (
       <Alert
         severity="info"
