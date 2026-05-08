@@ -33,6 +33,17 @@ _GLYCAM_PROTEIN_NAMES: frozenset[str] = frozenset({"NLN", "OLS", "OLT"})
 # CYM=deprotonated cysteine, CYSP=phosphocysteine
 _CHARMM36_BACKBONE_RESIDUES: frozenset[str] = frozenset({"SEP", "TPO", "PTR", "CYM", "CYSP"})
 
+# CHARMM36 models phosphate monoesters with a protonated O3P (H3T).
+# PDBFixer at pH 7.0 omits H3T (pKa ~1), and hydrogens.xml has no SEP/TPO/PTR
+# entries, so addHydrogens() would leave O3P with one bond instead of two —
+# causing graph-based template matching to fail. We supply these definitions
+# so addHydrogens() inserts H3T before createSystem() runs.
+_CHARMM36_PHOSPHO_H_DEFS: dict[str, tuple[str, str]] = {
+    "SEP": ("H3T", "O3P"),
+    "TPO": ("H3T", "O3P"),
+    "PTR": ("H3T", "O3P"),
+}
+
 # Heavy-atom intra-residue bonds for each GLYCAM protein residue.
 # These are missing because ATOM-record residues unknown to OpenMM's PDB reader
 # receive no template-based bonding and no distance-based bonding fallback.
@@ -385,6 +396,16 @@ def _map_heavy_atoms(residue, mol) -> dict[int, int] | None:
     return mapped_r_to_m
 
 
+def _build_charmm36_hydrogen_definitions(charmm36_resnames: frozenset[str]) -> str:
+    """Generate a hydrogens.xml snippet for CHARMM36 phospho-residue H3T atoms."""
+    root = ET.Element("Residues")
+    for resname, (h_name, parent_name) in _CHARMM36_PHOSPHO_H_DEFS.items():
+        if resname in charmm36_resnames:
+            res_elem = ET.SubElement(root, "Residue", {"name": resname})
+            ET.SubElement(res_elem, "H", {"name": h_name, "parent": parent_name})
+    return ET.tostring(root, encoding="unicode") if len(root) > 0 else ""
+
+
 def _generate_ligand_hydrogen_definitions(modeller: Modeller, sdf_map: dict[str, str], gaff_resnames: set[str]) -> str:
     root = ET.Element("Residues")
     loaded_any = False
@@ -697,6 +718,14 @@ def prepare_modeller(
     # subsequent createSystem() call fails because the GLYCAM templates require H atoms.
     if has_carbohydrates:
         Modeller.loadHydrogenDefinitions("glycam-hydrogens.xml")
+
+    # CHARMM36 phospho-residue templates require H3T on O3P. PDBFixer at pH 7.0 omits
+    # it (deprotonated phosphate), and hydrogens.xml has no SEP/TPO/PTR entries.
+    # Load custom definitions so addHydrogens() adds H3T before createSystem() runs.
+    if charmm36_resnames:
+        charmm36_h_xml = _build_charmm36_hydrogen_definitions(charmm36_resnames)
+        if charmm36_h_xml:
+            Modeller.loadHydrogenDefinitions(StringIO(charmm36_h_xml))
 
     try:
         modeller.addHydrogens(forcefield, pH=7.0)
