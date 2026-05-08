@@ -248,6 +248,22 @@ const prepareResults = async (
       logger.error(`Error running Rgyr vs. Dmax script: ${error}`)
     }
 
+    // Copy consolidated Rgyr/Dmax JSON so users can reproduce the scatter plot
+    await copyFiles({
+      source: path.join(multiFoxsDir, 'consolidated_rgyr_dmax_data.json'),
+      destination: resultsDir,
+      filename: 'consolidated_rgyr_dmax_data.json',
+      isCritical: false
+    })
+
+    // Copy MultiFoXS log for debugging
+    await copyFiles({
+      source: multiFoxsLogFile,
+      destination: resultsDir,
+      filename: 'multi_foxs.log',
+      isCritical: false
+    })
+
     // Create Job-specific README file.
     try {
       await createReadmeFile(DBjob, numEnsembles, resultsDir)
