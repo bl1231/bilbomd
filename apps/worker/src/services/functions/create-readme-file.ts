@@ -214,7 +214,7 @@ This directory contains the results for your ${job.title} BilboMD Multi job.
 
 - Job Title:  ${job.title}
 - Experimental SAXS dat file: ${saxsDataFileName ?? 'N/A'}
-- All calculated scattering profiles from previous selected BilboMD runs
+- All calculated scattering profiles from previously selected BilboMD runs
 - Job ID:  ${job._id}
 - UUID:  ${job.uuid}
 - Submitted:  ${job.time_submitted}

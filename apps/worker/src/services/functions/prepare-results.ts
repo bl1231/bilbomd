@@ -1,6 +1,7 @@
 import { promisify } from 'util'
-import { exec, execFile } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import readline from 'node:readline'
+import { glob } from 'glob'
 import {
   IBilboMDPDBJob,
   IBilboMDCRDJob,
@@ -18,7 +19,6 @@ import { spawnFeedbackScript } from './feedback.js'
 import { spawnRgyrDmaxScript } from './analysis.js'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 
-const execPromise = promisify(exec)
 const execFilePromise = promisify(execFile)
 
 const prepareResults = async (
@@ -304,8 +304,11 @@ const copyFiles = async ({
 }: FileCopyParams): Promise<void> => {
   try {
     if (source.includes('*')) {
-      // Glob pattern — shell expansion required; paths are internally constructed
-      await execPromise(`cp ${source} ${destination}`)
+      // Glob pattern — expand with glob library; no shell involved
+      const matches = await glob(source)
+      await Promise.all(
+        matches.map((f) => fs.copy(f, path.join(destination, path.basename(f))))
+      )
     } else {
       // Single file — use fs.copy to avoid shell interpretation of path characters
       if (!(await fs.pathExists(source))) {

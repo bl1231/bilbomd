@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('fs-extra', () => ({
@@ -17,6 +16,8 @@ vi.mock('../../../helpers/loggers.js', () => ({
 
 import fs from 'fs-extra'
 import { createReadmeFile } from '../create-readme-file.js'
+
+type AnyJob = Parameters<typeof createReadmeFile>[0]
 
 const base = {
   _id: 'job-id-123',
@@ -38,8 +39,8 @@ describe('createReadmeFile', () => {
       crd_file: 'protein.crd',
       psf_file: 'protein.psf',
       const_inp_file: 'const.inp'
-    }
-    await createReadmeFile(job as any, 3, '/results')
+    } as unknown as AnyJob
+    await createReadmeFile(job, 3, '/results')
     const written = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1]
     expect(written).toContain('minimization_output.pdb')
     expect(written).toContain('minimization_output_saxs_data.dat')
@@ -55,8 +56,8 @@ describe('createReadmeFile', () => {
       crd_file: 'protein.crd',
       psf_file: 'protein.psf',
       const_inp_file: 'const.inp'
-    }
-    await createReadmeFile(job as any, 2, '/results')
+    } as unknown as AnyJob
+    await createReadmeFile(job, 2, '/results')
     const written = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1]
     expect(written).toContain('minimization_output.pdb')
     expect(written).toContain('protein.pdb')
@@ -71,8 +72,8 @@ describe('createReadmeFile', () => {
       crd_file: 'protein.crd',
       psf_file: 'protein.psf',
       const_inp_file: 'const.inp'
-    }
-    await createReadmeFile(job as any, 4, '/results')
+    } as unknown as AnyJob
+    await createReadmeFile(job, 4, '/results')
     const written = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1]
     expect(written).toContain('pae.json')
     expect(written).toContain('minimization_output.pdb')
@@ -83,8 +84,8 @@ describe('createReadmeFile', () => {
       ...base,
       __t: 'BilboMdAlphaFold',
       fasta_file: 'protein.fasta'
-    }
-    await createReadmeFile(job as any, 1, '/results')
+    } as unknown as AnyJob
+    await createReadmeFile(job, 1, '/results')
     const written = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1]
     expect(written).toContain('af-rank1.pdb')
     expect(written).toContain('af-pae.json')
@@ -92,8 +93,8 @@ describe('createReadmeFile', () => {
   })
 
   it('generates an OpenFold README', async () => {
-    const job = { ...base, __t: 'BilboMdOpenFold' }
-    await createReadmeFile(job as any, 2, '/results')
+    const job = { ...base, __t: 'BilboMdOpenFold' } as unknown as AnyJob
+    await createReadmeFile(job, 2, '/results')
     const written = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1]
     expect(written).toContain('of3-rank1.pdb')
     expect(written).toContain('of3-pae.json')
@@ -107,8 +108,8 @@ describe('createReadmeFile', () => {
       crd_file: 'protein.crd',
       psf_file: 'protein.psf',
       const_inp_file: 'const.inp'
-    }
-    await createReadmeFile(job as any, 3, '/results')
+    } as unknown as AnyJob
+    await createReadmeFile(job, 3, '/results')
     const written = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1]
     expect(written).toContain('BilboMD SANS')
     expect(written).toContain('Pepsi-SANS')
@@ -122,8 +123,8 @@ describe('createReadmeFile', () => {
       __t: 'MultiJob',
       bilbomd_uuids: ['uuid-1', 'uuid-2'],
       data_file_from: 'uuid-1'
-    }
-    await createReadmeFile(job as any, 3, '/results', 'experiment.dat')
+    } as unknown as AnyJob
+    await createReadmeFile(job, 3, '/results', 'experiment.dat')
     const written = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1]
     expect(written).toContain('BilboMD Multi')
     expect(written).toContain('experiment.dat')
@@ -131,8 +132,8 @@ describe('createReadmeFile', () => {
   })
 
   it('logs a warning and writes a fallback for unknown job type', async () => {
-    const job = { ...base, __t: 'UnknownType' }
-    await createReadmeFile(job as any, 0, '/results')
+    const job = { ...base, __t: 'UnknownType' } as unknown as AnyJob
+    await createReadmeFile(job, 0, '/results')
     const written = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1]
     expect(written).toContain('UnknownType')
   })
