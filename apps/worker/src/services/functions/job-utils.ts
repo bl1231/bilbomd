@@ -254,8 +254,12 @@ const handleError = async (
   if (error instanceof Error) {
     errorMsg = error.message
     stackTrace = error.stack
+    const cause =
+      (error as Error & { cause?: unknown }).cause instanceof Error
+        ? (error as Error & { cause?: Error }).cause
+        : undefined
     logger.error(
-      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}`
+      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}${cause ? `, cause=${cause.name}: ${cause.message}` : ''}`
     )
   } else {
     errorMsg = String(error)
