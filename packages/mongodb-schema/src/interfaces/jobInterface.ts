@@ -127,6 +127,7 @@ interface IJob extends Document {
   data_file: string
   md_engine?: MDEngineEnum
   openmm_parameters?: IOpenMMParameters
+  openmm_forcefield?: string[]
   charmm_parameters?: ICHARMMParameters
   md_constraints?: IMDConstraints
   time_submitted: Date

@@ -41,6 +41,29 @@ const detectCarbohydratesInPdb = async (pdbPath: string): Promise<boolean> => {
   }
 }
 
+// Backbone-integrated residues in CHARMM36 but absent from AMBER19.
+// SEP=phosphoserine, TPO=phosphothreonine, PTR=phosphotyrosine,
+// CYM=deprotonated cysteine, CYSP=phosphocysteine
+const CHARMM36_BACKBONE_RESIDUES = new Set(['SEP', 'TPO', 'PTR', 'CYM', 'CYSP'])
+
+const detectCharmm36ResiduesInPdb = async (
+  pdbPath: string
+): Promise<Set<string>> => {
+  const detected = new Set<string>()
+  try {
+    const text = await fs.readFile(pdbPath, 'utf8')
+    for (const line of text.split(/\r?\n/)) {
+      if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+        const resName = line.slice(17, 20).trim().toUpperCase()
+        if (CHARMM36_BACKBONE_RESIDUES.has(resName)) detected.add(resName)
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return detected
+}
+
 const writeOpenMMConfigYaml = async (
   dir: string,
   cfg: OpenMMConfig | Record<string, unknown>,
@@ -85,6 +108,8 @@ const buildOpenMMConfigForJob = async (
 
   const pdbPath = path.join(workDir, pdbFile)
   const hasCarbohydrates = await detectCarbohydratesInPdb(pdbPath)
+  const charmm36Residues = await detectCharmm36ResiduesInPdb(pdbPath)
+  const hasCharmm36Residues = charmm36Residues.size > 0
 
   if (hasCarbohydrates) {
     logger.info(
@@ -93,17 +118,34 @@ const buildOpenMMConfigForJob = async (
         `will be stripped before MD.`
     )
   }
+  if (hasCharmm36Residues && !hasCarbohydrates) {
+    logger.info(
+      `Non-standard backbone residues detected in ${pdbFile} ` +
+        `(${[...charmm36Residues].join(', ')}) — switching to CHARMM36 force field ` +
+        `(charmm36_2024.xml + implicit/gbn2.xml).`
+    )
+  } else if (hasCharmm36Residues && hasCarbohydrates) {
+    logger.warn(
+      `Non-standard backbone residues detected in ${pdbFile} ` +
+        `(${[...charmm36Residues].join(', ')}) alongside glycans — GLYCAM force field ` +
+        `takes priority; CHARMM36 will NOT be used. CHARMM36 residue support in ` +
+        `glycoprotein mode is not yet implemented.`
+    )
+  }
 
   const forcefield = hasCarbohydrates
     ? ['amber19-all.xml', 'amber14/GLYCAM_06j-1.xml', 'implicit/gbn2.xml']
-    : ['amber19-all.xml', 'implicit/gbn2.xml']
+    : hasCharmm36Residues
+      ? ['charmm36_2024.xml', 'implicit/gbn2.xml']
+      : ['amber19-all.xml', 'implicit/gbn2.xml']
 
   return {
     input: {
       dir: workDir,
       pdb_file: pdbFile,
       forcefield,
-      has_carbohydrates: hasCarbohydrates
+      has_carbohydrates: hasCarbohydrates,
+      has_charmm36_residues: hasCharmm36Residues
     },
     output: {
       output_dir: path.join(workDir, 'openmm'),
@@ -205,6 +247,9 @@ const prepareOpenMMConfig = async (DBjob: OmmCapableJob): Promise<void> => {
 
   const yamlPath = await writeOpenMMConfigYaml(workDir, cfg)
   logger.info(`OpenMM config YAML written: ${yamlPath}`)
+
+  DBjob.openmm_forcefield = cfg.input.forcefield
+  await DBjob.save()
 }
 
 type OmmStepKey = 'minimize' | 'heat' | 'md'
@@ -215,6 +260,7 @@ interface OpenMMConfig {
     pdb_file: string
     forcefield: string[]
     has_carbohydrates?: boolean
+    has_charmm36_residues?: boolean
   }
   output: {
     output_dir: string
@@ -293,12 +339,16 @@ const runOmmStep = async (
       ...(opts?.pluginDir ? { OPENMM_PLUGIN_DIR: opts.pluginDir } : {})
     }
 
+    let ommErrorDetail: string | null = null
     const result = await runPythonStep(scriptPath, configYamlPath, {
       cwd: opts?.cwd,
       pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
       env,
       timeoutMs: opts?.timeoutMs ?? 60 * 60 * 1000,
       onStdoutLine: (line) => {
+        if (line.startsWith('BILBOMD_OPENMM_ERROR:')) {
+          ommErrorDetail = line.slice('BILBOMD_OPENMM_ERROR:'.length).trim()
+        }
         logger.info(`[${stepKey}][stdout] ${line}`)
       },
       onStderrLine: (line) => {
@@ -307,10 +357,22 @@ const runOmmStep = async (
     })
 
     if (result.code !== 0) {
+      let detail = ''
+      if (ommErrorDetail) {
+        try {
+          const info = JSON.parse(ommErrorDetail) as {
+            residue_name: string
+            residue_index: number
+          }
+          detail = ` Template match failed for residue: ${info.residue_name} (index ${info.residue_index})`
+        } catch {
+          // ignore malformed JSON
+        }
+      }
       throw new Error(
         `${stepName} failed (exit ${result.code}${
           result.signal ? `, signal ${result.signal}` : ''
-        })`
+        })${detail}`
       )
     }
 
