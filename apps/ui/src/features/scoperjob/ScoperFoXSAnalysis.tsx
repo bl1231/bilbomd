@@ -26,7 +26,12 @@ interface ScoperFoXSAnalysisProps {
 
 const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
   data
-    .filter((item) => item.exp_intensity > 0 && item.model_intensity > 0)
+    .filter(
+      (item) =>
+        item.exp_intensity > 0 &&
+        item.model_intensity > 0 &&
+        item.error < item.exp_intensity
+    )
     .map((item) => ({
       q: parseFloat(item.q.toFixed(4)),
       exp_intensity: parseFloat(item.exp_intensity.toFixed(4)),
