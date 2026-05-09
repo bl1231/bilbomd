@@ -1,5 +1,19 @@
 # @bilbomd/ui
 
+## 2.16.0
+
+### Minor Changes
+
+- 6a693d2: Fix DNA representation consistency in Molstar viewer and add domain-based coloring.
+  - #768: DNA now renders consistently as cartoon (tube/slab) for both CHARMM and OpenMM pipelines. The fix uses a residue-name-based selection that recognises standard PDB names (DA, DT, DG, DC) and CHARMM names (ADE, GUA, CYT, THY) explicitly.
+  - #769: Add "Color by Domain" toggle button above the Molstar viewport. When active, fixed-body regions are colored blue and rigid-body regions orange, matching the PyMol movie scheme; flexible linkers retain the default chain coloring. The button appears whenever MD constraint data is available, independent of ensemble count.
+
+### Patch Changes
+
+- ab9a1dd: Update BilboMD citation to the published NAR 2026 paper. Worker README files now include the new citation and a BibTeX entry. UI pages (Home, About, Help, Acknowledgments) now show a copyable BibTeX block alongside the citation.
+- Updated dependencies [6a693d2]
+  - @bilbomd/bilbomd-types@1.6.1
+
 ## 2.15.2
 
 ### Patch Changes
