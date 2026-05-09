@@ -13,6 +13,7 @@ import Introduction from '../shared/Introduction'
 import FeaturesList from '../shared/FeaturesList'
 import PipelineOptions from '../shared/PipelineOptions'
 import AdditionalInfo from '../shared/AdditionalInfo'
+import BilboMDBibTeX from 'components/Common/BilboMDBibTeX'
 
 const About = ({ title = 'BilboMD: About' }) => {
   useTitle(title)
@@ -204,6 +205,7 @@ const About = ({ title = 'BilboMD: About' }) => {
             </Link>
             .
           </Typography>
+          <BilboMDBibTeX />
         </Introduction>
 
         {/* Config Alert */}

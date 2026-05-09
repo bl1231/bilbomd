@@ -20,7 +20,19 @@ type AnyBilboMDJob =
   | IBilboMDSANSJob
   | IMultiJob
 
-const CITATION = `Pelikan M, Hura GL, Hammel M. Structure and flexibility within proteins as identified through small angle X-ray scattering. Gen Physiol Biophys. 2009 Jun;28(2):174-89. doi: 10.4149/gpb_2009_02_174. PMID: 19592714; PMCID: PMC3773563.`
+const CITATION = `Scott Classen, Joshua Del Mundo, Dhruva Kulkarni, Shreyas Prabhakar, Alan Hicks, Michal Hammel, BilboMD: a web-accessible SAXS and AlphaFold-guided modeling pipeline, Nucleic Acids Research, 2026;, gkag377, https://doi.org/10.1093/nar/gkag377`
+
+const CITATION_BIBTEX = `@article{10.1093/nar/gkag377,
+    author = {Classen, Scott and Del Mundo, Joshua and Kulkarni, Dhruva and Prabhakar, Shreyas and Hicks, Alan and Hammel, Michal},
+    title = {BilboMD: a web-accessible SAXS and AlphaFold-guided modeling pipeline},
+    journal = {Nucleic Acids Research},
+    pages = {gkag377},
+    year = {2026},
+    month = {04},
+    issn = {1362-4962},
+    doi = {10.1093/nar/gkag377},
+    url = {https://doi.org/10.1093/nar/gkag377},
+}`
 
 const MULTIFOXS_ENSEMBLE_EXPLANATION = `
 ## The ensemble_size_N.txt files
@@ -195,6 +207,10 @@ If you use BilboMD in your research, please cite:
 
 ${CITATION}
 
+BibTeX:
+
+${CITATION_BIBTEX}
+
 If you use Pepsi-SANS, please cite:
 
 Grudinin S, Garkavenko M, Kazennov A. Pepsi-SANS: an adaptive method for rapid and accurate
@@ -235,6 +251,10 @@ ${MULTIFOXS_ENSEMBLE_EXPLANATION}
 If you use BilboMD in your research, please cite:
 
 ${CITATION}
+
+BibTeX:
+
+${CITATION_BIBTEX}
 
 Thank you for using BilboMD
 `
@@ -284,6 +304,10 @@ ${MULTIFOXS_ENSEMBLE_EXPLANATION}
 If you use BilboMD in your research, please cite:
 
 ${CITATION}
+
+BibTeX:
+
+${CITATION_BIBTEX}
 
 Thank you for using BilboMD
 `

@@ -15,6 +15,7 @@ import AdditionalInfo from '../shared/AdditionalInfo'
 import { Grid } from '@mui/system'
 import { blue } from '@mui/material/colors'
 import { useTheme } from '@mui/material/styles'
+import BilboMDBibTeX from 'components/Common/BilboMDBibTeX'
 
 const Help = ({ title = 'BilboMD: Help' }) => {
   useTitle(title)
@@ -92,6 +93,7 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             </Link>
             .
           </Typography>
+          <BilboMDBibTeX />
         </Introduction>
 
         <Box sx={{ m: 1, p: 0 }}>
