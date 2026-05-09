@@ -1,5 +1,22 @@
 # @bilbomd/worker
 
+## 2.12.0
+
+### Minor Changes
+
+- e664424: Add Dmax computation to OpenMM reporter and fix null Rgyr/Dmax in consolidated_rgyr_dmax_data.json for OpenMM jobs.
+
+  Renames `RadiusOfGyrationReporter` to `RgyrDmaxReporter` (backward-compatible alias kept) and extends it to also compute and write Dmax alongside Rgyr, using CA atoms only — consistent with the CHARMM dcd2pdb pipeline. The combined CSV is now named `rgyr_dmax.csv` (previously `rgyr.csv` locally, `rgyr_report.csv` on NERSC).
+
+  Updates `rgyr_v_dmax_analysis.py` to read `rgyr_dmax.csv` files from `openmm/md/rg_*/` directories when building `consolidated_rgyr_dmax_data.json`, so OpenMM jobs now have non-null `rgyr` and `dmax` values instead of `null`.
+
+### Patch Changes
+
+- ab9a1dd: Update BilboMD citation to the published NAR 2026 paper. Worker README files now include the new citation and a BibTeX entry. UI pages (Home, About, Help, Acknowledgments) now show a copyable BibTeX block alongside the citation.
+- Updated dependencies [6a693d2]
+  - @bilbomd/bilbomd-types@1.6.1
+  - @bilbomd/md-utils@1.1.14
+
 ## 2.11.1
 
 ### Patch Changes
