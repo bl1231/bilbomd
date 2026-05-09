@@ -21,6 +21,7 @@ import { MolScriptBuilder as MS } from 'molstar/lib/mol-script/language/builder'
 import { StateObjectRef } from 'molstar/lib/mol-state'
 import { Color } from 'molstar/lib/mol-util/color'
 import { Material } from 'molstar/lib/mol-util/material'
+import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 
 function shinyStyle(plugin: PluginContext) {
   return PluginCommands.Canvas3D.SetSettings(plugin, {
@@ -94,6 +95,24 @@ const ligandSurroundings = StructureSelectionQuery(
   ])
 )
 
+// Selects nucleic acid residues by residue name, covering standard PDB names
+// and CHARMM non-standard names so that DNA/RNA is always rendered consistently.
+const nucleicResidueQuery = StructureSelectionQuery(
+  'Nucleic acid residues',
+  MS.struct.modifier.union([
+    MS.struct.generator.atomGroups({
+      'residue-test': MS.core.set.has([
+        MS.set(
+          'DA', 'DT', 'DG', 'DC', 'DU', // standard DNA
+          'A', 'G', 'C', 'T', 'U', // standard RNA
+          'ADE', 'GUA', 'CYT', 'THY', 'URA' // CHARMM residue names
+        ),
+        MS.ammp('label_comp_id')
+      ])
+    })
+  ])
+)
+
 const PresetParams = {
   ...StructureRepresentationPresetProvider.CommonParams
 }
@@ -110,7 +129,12 @@ export const StructurePreset = StructureRepresentationPresetProvider({
 
     const components = {
       ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
-      polymer: await presetStaticComponent(plugin, structureCell, 'polymer'),
+      protein: await presetStaticComponent(plugin, structureCell, 'protein'),
+      nucleic: await plugin.builders.structure.tryCreateComponentFromSelection(
+        structureCell,
+        nucleicResidueQuery,
+        'nucleic'
+      ),
       ions: await presetStaticComponent(plugin, structureCell, 'ion'),
       branched: await presetStaticComponent(plugin, structureCell, 'branched')
     }
@@ -129,9 +153,9 @@ export const StructurePreset = StructureRepresentationPresetProvider({
         },
         { tag: 'ligand' }
       ),
-      polymer: builder.buildRepresentation(
+      protein: builder.buildRepresentation(
         update,
-        components.polymer,
+        components.protein,
         {
           type: 'cartoon',
           typeParams: { ...typeParams, material: CustomMaterial },
@@ -139,7 +163,19 @@ export const StructurePreset = StructureRepresentationPresetProvider({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           colorParams: { palette: (plugin.customState as any).colorPalette }
         },
-        { tag: 'polymer' }
+        { tag: 'protein' }
+      ),
+      nucleic: builder.buildRepresentation(
+        update,
+        components.nucleic,
+        {
+          type: 'cartoon',
+          typeParams: { ...typeParams, material: CustomMaterial },
+          color: 'structure-index',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          colorParams: { palette: (plugin.customState as any).colorPalette }
+        },
+        { tag: 'nucleic' }
       ),
       ions: builder.buildRepresentation(
         update,
@@ -474,3 +510,182 @@ export const InteractionsPreset = StructureRepresentationPresetProvider({
 })
 
 export const ShowButtons = PluginConfig.item('showButtons', true)
+
+// Colors matching MDConstraintsRenderer
+const FIXED_COLOR = Color(0x2f54eb)
+const RIGID_COLOR = Color(0xfa8c16)
+
+const buildSegmentExpression = (chainId: string, start: number, stop: number) =>
+  MS.struct.generator.atomGroups({
+    'chain-test': MS.core.rel.eq([MS.ammp('auth_asym_id'), chainId]),
+    'residue-test': MS.core.logic.and([
+      MS.core.rel.gre([MS.ammp('auth_seq_id'), start]),
+      MS.core.rel.lte([MS.ammp('auth_seq_id'), stop])
+    ])
+  })
+
+export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
+  StructureRepresentationPresetProvider({
+    id: 'preset-domain-color',
+    display: { name: 'Domain Color' },
+    params: () => PresetParams,
+    async apply(ref, params, plugin) {
+      const structureCell = StateObjectRef.resolveAndCheck(plugin.state.data, ref)
+      if (!structureCell) return {}
+
+      const { update, builder, typeParams } =
+        StructureRepresentationPresetProvider.reprBuilder(plugin, params)
+
+      const allDomainExpressions: ReturnType<typeof buildSegmentExpression>[] = []
+
+      // Fixed bodies — blue
+      for (const body of constraints.fixed_bodies ?? []) {
+        for (const seg of body.segments ?? []) {
+          const expr = buildSegmentExpression(
+            seg.chain_id,
+            seg.residues.start,
+            seg.residues.stop
+          )
+          allDomainExpressions.push(expr)
+          const tag = `fixed-${body.name}-${seg.chain_id}-${seg.residues.start}`
+          const q = StructureSelectionQuery(
+            tag,
+            MS.struct.modifier.union([expr])
+          )
+          const comp =
+            await plugin.builders.structure.tryCreateComponentFromSelection(
+              structureCell,
+              q,
+              tag
+            )
+          builder.buildRepresentation(
+            update,
+            comp,
+            {
+              type: 'cartoon',
+              typeParams: { ...typeParams, material: CustomMaterial },
+              color: 'uniform',
+              colorParams: { value: FIXED_COLOR }
+            },
+            { tag }
+          )
+        }
+      }
+
+      // Rigid bodies — orange
+      for (const body of constraints.rigid_bodies ?? []) {
+        for (const seg of body.segments ?? []) {
+          const expr = buildSegmentExpression(
+            seg.chain_id,
+            seg.residues.start,
+            seg.residues.stop
+          )
+          allDomainExpressions.push(expr)
+          const tag = `rigid-${body.name}-${seg.chain_id}-${seg.residues.start}`
+          const q = StructureSelectionQuery(
+            tag,
+            MS.struct.modifier.union([expr])
+          )
+          const comp =
+            await plugin.builders.structure.tryCreateComponentFromSelection(
+              structureCell,
+              q,
+              tag
+            )
+          builder.buildRepresentation(
+            update,
+            comp,
+            {
+              type: 'cartoon',
+              typeParams: { ...typeParams, material: CustomMaterial },
+              color: 'uniform',
+              colorParams: { value: RIGID_COLOR }
+            },
+            { tag }
+          )
+        }
+      }
+
+      // Flexible — everything in polymer not covered by a domain segment
+      const flexExpr =
+        allDomainExpressions.length > 0
+          ? MS.struct.modifier.exceptBy({
+              0: StructureSelectionQueries.polymer.expression,
+              by: MS.struct.modifier.union(allDomainExpressions)
+            })
+          : StructureSelectionQueries.polymer.expression
+
+      const flexQ = StructureSelectionQuery('flexible', flexExpr)
+      const flexComp =
+        await plugin.builders.structure.tryCreateComponentFromSelection(
+          structureCell,
+          flexQ,
+          'flexible'
+        )
+      builder.buildRepresentation(
+        update,
+        flexComp,
+        {
+          type: 'cartoon',
+          typeParams: { ...typeParams, material: CustomMaterial },
+          color: 'structure-index',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          colorParams: { palette: (plugin.customState as any).colorPalette }
+        },
+        { tag: 'flexible' }
+      )
+
+      // Standard non-polymer components
+      const ligandComp = await presetStaticComponent(
+        plugin,
+        structureCell,
+        'ligand'
+      )
+      const ionsComp = await presetStaticComponent(plugin, structureCell, 'ion')
+      const branchedComp = await presetStaticComponent(
+        plugin,
+        structureCell,
+        'branched'
+      )
+
+      builder.buildRepresentation(
+        update,
+        ligandComp,
+        {
+          type: 'ball-and-stick',
+          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          color: 'element-symbol',
+          colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
+        },
+        { tag: 'ligand' }
+      )
+      builder.buildRepresentation(
+        update,
+        ionsComp,
+        {
+          type: 'spacefill',
+          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 1.0 },
+          color: 'element-symbol',
+          colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
+        },
+        { tag: 'ions' }
+      )
+      builder.buildRepresentation(
+        update,
+        branchedComp,
+        {
+          type: 'ball-and-stick',
+          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          color: 'element-symbol',
+          colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
+        },
+        { tag: 'branched' }
+      )
+
+      await update.commit({ revertOnError: true })
+      await shinyStyle(plugin)
+      plugin.managers.interactivity.setProps({ granularity: 'residue' })
+
+      return {}
+    }
+  })

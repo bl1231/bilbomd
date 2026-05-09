@@ -474,6 +474,7 @@ const SingleJobPage = () => {
                   id={id ?? ''}
                   jobType={job.mongo.jobType}
                   results={job.mongo.results}
+                  constraints={job.mongo.md_constraints}
                 />
               </Suspense>
             </Grid>
