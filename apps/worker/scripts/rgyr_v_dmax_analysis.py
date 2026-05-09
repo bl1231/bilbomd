@@ -1,4 +1,5 @@
 import argparse
+import csv
 import json
 import os
 import re
@@ -43,6 +44,41 @@ def parse_ensemble_size_file(ensemble_file):
                 
     return pdb_occurrences, pdb_counts
 
+def collect_openmm_structural_data(base_dir):
+    """
+    Read Rgyr and Dmax from rgyr_dmax.csv files written by RgyrDmaxReporter for
+    OpenMM jobs. Returns a dict keyed by uppercase PDB stem (e.g. 'MD_000000500').
+    Returns an empty dict if no OpenMM MD output is found.
+    """
+    openmm_md_dir = os.path.join(base_dir, "openmm", "md")
+    if not os.path.isdir(openmm_md_dir):
+        return {}
+
+    data = {}
+    for rg_dir in os.listdir(openmm_md_dir):
+        rg_path = os.path.join(openmm_md_dir, rg_dir)
+        if not os.path.isdir(rg_path):
+            continue
+        csv_path = os.path.join(rg_path, "rgyr_dmax.csv")
+        if not os.path.exists(csv_path):
+            continue
+        with open(csv_path, "r", encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    step = int(float(row["Step"]))
+                    rgyr = float(row["Rgyr_A"])
+                    dmax = float(row["Dmax_A"])
+                except (KeyError, ValueError):
+                    continue
+                prefix = f"MD_{step:09d}"
+                data[prefix] = {"rgyr": rgyr, "dmax": dmax, "pdb": prefix}
+
+    if data:
+        print(f"Loaded Rgyr/Dmax for {len(data)} frames from OpenMM CSV files")
+    return data
+
+
 def collect_pdb_data(foxs_dir):
     """Collect Rgyr, Dmax, and initial size data from PDB files."""
     pdb_data = {}
@@ -68,8 +104,11 @@ def build_scatter_data(base_dir):
     print(f"FoXS directory: {foxs_dir}")
     print(f"MultiFoXS directory: {multifoxs_dir}")
 
-    # Collect PDB data from the foxs directory
+    # Collect PDB data: CHARMM jobs populate via REMARK DCD2PDB_RG in each PDB;
+    # OpenMM jobs have no such REMARK, so fall back to rgyr_dmax.csv files.
     pdb_data = collect_pdb_data(foxs_dir)
+    openmm_data = collect_openmm_structural_data(base_dir)
+    pdb_data.update(openmm_data)
 
     # Traverse through the multifoxs directory for ensemble size files
     for root, _, files in os.walk(multifoxs_dir):

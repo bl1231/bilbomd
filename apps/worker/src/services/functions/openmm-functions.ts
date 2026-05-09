@@ -183,7 +183,7 @@ const buildOpenMMConfigForJob = async (
             : (omm_params.md?.rgyr ?? []),
           k_rg: omm_params.md?.k_rg ?? 10,
           report_interval: omm_params.md?.rg_report_interval ?? 500,
-          filename: 'rgyr.csv'
+          filename: 'rgyr_dmax.csv'
         },
         output_pdb: 'md.pdb',
         output_restart: 'md.xml',
