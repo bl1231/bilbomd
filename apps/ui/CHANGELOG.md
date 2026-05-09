@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.15.2
+
+### Patch Changes
+
+- 9c48e1a: Fix NaN SVG errors in scoper job FoXS chart. Guard against NaN/Infinity error values in residuals calculation and handle fewer than 2 FoXS entries gracefully.
+
 ## 2.15.1
 
 ### Patch Changes
