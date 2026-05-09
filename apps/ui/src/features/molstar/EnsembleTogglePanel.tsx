@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
@@ -24,9 +25,10 @@ const EnsembleTogglePanel = ({
   onColorByDomain
 }: EnsembleTogglePanelProps) => {
   const showEnsembleControls = ensembleSizes.length >= 2
+  const showSingleEnsembleChip = ensembleSizes.length === 1
   const showDomainButton = !!hasConstraints && !!onColorByDomain
 
-  if (!showEnsembleControls && !showDomainButton) return null
+  if (!showEnsembleControls && !showSingleEnsembleChip && !showDomainButton) return null
 
   const selectedSizes = ensembleSizes.filter((s) => visibility[s])
   const allVisible = selectedSizes.length === ensembleSizes.length
@@ -54,6 +56,18 @@ const EnsembleTogglePanel = ({
         py: 0.5
       }}
     >
+      {showSingleEnsembleChip && (
+        <>
+          <Typography variant='body2'>Ensembles:</Typography>
+          <Chip
+            label={`Size ${ensembleSizes[0]}`}
+            size='small'
+            variant='outlined'
+            color='primary'
+          />
+        </>
+      )}
+
       {showEnsembleControls && (
         <>
           <Typography variant='body2'>Ensembles:</Typography>

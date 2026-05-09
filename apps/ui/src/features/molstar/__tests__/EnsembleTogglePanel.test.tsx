@@ -20,15 +20,17 @@ describe('EnsembleTogglePanel', () => {
       expect(container.firstChild).toBeNull()
     })
 
-    it('renders nothing when there is only one ensemble and no constraints', () => {
-      const { container } = renderWithProviders(
+    it('renders a size chip when there is only one ensemble and no constraints', () => {
+      renderWithProviders(
         <EnsembleTogglePanel
           {...baseProps}
           ensembleSizes={[1]}
           visibility={{ 1: true }}
         />
       )
-      expect(container.firstChild).toBeNull()
+      expect(screen.getByText('Size 1')).toBeInTheDocument()
+      expect(screen.getByText('Ensembles:')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Hide All|Show All/ })).not.toBeInTheDocument()
     })
 
     it('renders only the domain button when constraints exist but fewer than 2 ensembles', () => {
