@@ -606,7 +606,10 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
         }
       }
 
-      // Flexible — everything in polymer not covered by a domain segment
+      // Flexible — everything in polymer not covered by a domain segment.
+      // Note: CHARMM DNA classified by Molstar as 'branched' rather than
+      // 'polymer' will not appear here; that is a known limitation of the
+      // residue-classification fix in StructurePreset (see nucleicResidueQuery).
       const flexExpr =
         allDomainExpressions.length > 0
           ? MS.struct.modifier.exceptBy({

@@ -454,26 +454,30 @@ const MolstarViewer = ({
 
     if (targets.length === 0) return
 
-    if (nextMode) {
-      const domainPreset = createDomainColorPreset(constraints)
-      await plugin.managers.structure.component.applyPreset(
-        targets,
-        domainPreset
-      )
-    } else {
-      await plugin.managers.structure.component.applyPreset(
-        targets,
-        StructurePreset
-      )
+    try {
+      if (nextMode) {
+        const domainPreset = createDomainColorPreset(constraints)
+        await plugin.managers.structure.component.applyPreset(
+          targets,
+          domainPreset
+        )
+      } else {
+        await plugin.managers.structure.component.applyPreset(
+          targets,
+          StructurePreset
+        )
+      }
+
+      // Re-apply ensemble visibility after rebuilding representations
+      const reapply = (
+        plugin.customState as Record<string, unknown>
+      ).reapplyVisibility
+      if (typeof reapply === 'function') reapply()
+
+      setIsDomainColor(nextMode)
+    } catch (error) {
+      console.error('Failed to apply domain color preset:', error)
     }
-
-    // Re-apply ensemble visibility after rebuilding representations
-    const reapply = (
-      plugin.customState as Record<string, unknown>
-    ).reapplyVisibility
-    if (typeof reapply === 'function') reapply()
-
-    setIsDomainColor(nextMode)
   }
 
   const toggleAllEnsembles = (action: 'show' | 'hide') => {
