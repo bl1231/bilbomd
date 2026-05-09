@@ -1,6 +1,7 @@
 import { JobResultsDTO } from './results.js'
 import { JobType, JobStatusEnum } from './jobs.js'
 import { JobStepsDTO } from './jobSteps.js'
+import { MDConstraintsDTO } from './mdConstraints.js'
 
 export type PublicJobStatus = {
   publicId: string
@@ -10,6 +11,7 @@ export type PublicJobStatus = {
   status: JobStatusEnum
   progress: number
   md_engine?: string
+  md_constraints?: MDConstraintsDTO
   submittedAt: Date
   startedAt?: Date
   completedAt?: Date

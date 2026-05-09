@@ -348,6 +348,7 @@ const PublicJobPage = () => {
                 results={job.results}
                 isPublic={true}
                 publicId={job.publicId}
+                constraints={job.md_constraints}
               />
             </Suspense>
           </Grid>
