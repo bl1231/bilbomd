@@ -18,7 +18,7 @@ from openmm.unit import angstroms
 from utils.fixed_bodies import apply_fixed_body_constraints
 from utils.model_prep import register_ligand_templates_for_topology
 from utils.pdb_writer import PDBFrameWriter
-from utils.rgyr import RadiusOfGyrationCVForce, RadiusOfGyrationReporter
+from utils.rgyr import RadiusOfGyrationCVForce, RgyrDmaxReporter
 from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
 
 
@@ -151,10 +151,10 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     rgyr_file_path = os.path.join(rg_md_dir, rgyr_report)
     simulation.reporters.append(DCDReporter(dcd_file_path, report_interval))
 
-    # Radius of Gyration Reporter
+    # Rgyr + Dmax Reporter
     simulation.reporters.append(
-        RadiusOfGyrationReporter(
-            atom_indices, system, rgyr_file_path, reportInterval=report_interval
+        RgyrDmaxReporter(
+            atom_indices, rgyr_file_path, reportInterval=report_interval
         )
     )
 
