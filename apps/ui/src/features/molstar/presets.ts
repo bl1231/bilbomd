@@ -533,9 +533,15 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
       const structureCell = StateObjectRef.resolveAndCheck(plugin.state.data, ref)
       if (!structureCell) return {}
 
-      const { update, builder, typeParams } =
+      // Get typeParams/builder before component creation; update must be created
+      // AFTER all components are committed — reprBuilder captures the state tree
+      // as an immutable snapshot, so any component created after that point
+      // won't be findable via update.to(comp).
+      const { builder, typeParams } =
         StructureRepresentationPresetProvider.reprBuilder(plugin, params)
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const components: Record<string, any> = {}
       const allDomainExpressions: ReturnType<typeof buildSegmentExpression>[] = []
 
       // Fixed bodies — blue
@@ -552,22 +558,10 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
             tag,
             MS.struct.modifier.union([expr])
           )
-          const comp =
-            await plugin.builders.structure.tryCreateComponentFromSelection(
-              structureCell,
-              q,
-              tag
-            )
-          builder.buildRepresentation(
-            update,
-            comp,
-            {
-              type: 'cartoon',
-              typeParams: { ...typeParams, material: CustomMaterial },
-              color: 'uniform',
-              colorParams: { value: FIXED_COLOR }
-            },
-            { tag }
+          components[tag] = await plugin.builders.structure.tryCreateComponentFromSelection(
+            structureCell,
+            q,
+            tag
           )
         }
       }
@@ -586,22 +580,10 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
             tag,
             MS.struct.modifier.union([expr])
           )
-          const comp =
-            await plugin.builders.structure.tryCreateComponentFromSelection(
-              structureCell,
-              q,
-              tag
-            )
-          builder.buildRepresentation(
-            update,
-            comp,
-            {
-              type: 'cartoon',
-              typeParams: { ...typeParams, material: CustomMaterial },
-              color: 'uniform',
-              colorParams: { value: RIGID_COLOR }
-            },
-            { tag }
+          components[tag] = await plugin.builders.structure.tryCreateComponentFromSelection(
+            structureCell,
+            q,
+            tag
           )
         }
       }
@@ -619,15 +601,63 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
           : StructureSelectionQueries.polymer.expression
 
       const flexQ = StructureSelectionQuery('flexible', flexExpr)
-      const flexComp =
+      components['flexible'] =
         await plugin.builders.structure.tryCreateComponentFromSelection(
           structureCell,
           flexQ,
           'flexible'
         )
-      builder.buildRepresentation(
+
+      // Standard non-polymer components
+      components['ligand'] = await presetStaticComponent(plugin, structureCell, 'ligand')
+      components['ions'] = await presetStaticComponent(plugin, structureCell, 'ion')
+      components['branched'] = await presetStaticComponent(plugin, structureCell, 'branched')
+
+      // All components are now committed to the live state tree.
+      // Create the update builder NOW so its snapshot includes them all.
+      const update = plugin.state.data.build()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const representations: Record<string, any> = {}
+
+      // Fixed body representations — blue
+      for (const body of constraints.fixed_bodies ?? []) {
+        for (const seg of body.segments ?? []) {
+          const tag = `fixed-${body.name}-${seg.chain_id}-${seg.residues.start}`
+          representations[tag] = builder.buildRepresentation(
+            update,
+            components[tag],
+            {
+              type: 'cartoon',
+              typeParams: { ...typeParams, material: CustomMaterial },
+              color: 'uniform',
+              colorParams: { value: FIXED_COLOR }
+            },
+            { tag }
+          )
+        }
+      }
+
+      // Rigid body representations — orange
+      for (const body of constraints.rigid_bodies ?? []) {
+        for (const seg of body.segments ?? []) {
+          const tag = `rigid-${body.name}-${seg.chain_id}-${seg.residues.start}`
+          representations[tag] = builder.buildRepresentation(
+            update,
+            components[tag],
+            {
+              type: 'cartoon',
+              typeParams: { ...typeParams, material: CustomMaterial },
+              color: 'uniform',
+              colorParams: { value: RIGID_COLOR }
+            },
+            { tag }
+          )
+        }
+      }
+
+      representations['flexible'] = builder.buildRepresentation(
         update,
-        flexComp,
+        components['flexible'],
         {
           type: 'cartoon',
           typeParams: { ...typeParams, material: CustomMaterial },
@@ -637,23 +667,9 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
         },
         { tag: 'flexible' }
       )
-
-      // Standard non-polymer components
-      const ligandComp = await presetStaticComponent(
-        plugin,
-        structureCell,
-        'ligand'
-      )
-      const ionsComp = await presetStaticComponent(plugin, structureCell, 'ion')
-      const branchedComp = await presetStaticComponent(
-        plugin,
-        structureCell,
-        'branched'
-      )
-
-      builder.buildRepresentation(
+      representations['ligand'] = builder.buildRepresentation(
         update,
-        ligandComp,
+        components['ligand'],
         {
           type: 'ball-and-stick',
           typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
@@ -662,9 +678,9 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
         },
         { tag: 'ligand' }
       )
-      builder.buildRepresentation(
+      representations['ions'] = builder.buildRepresentation(
         update,
-        ionsComp,
+        components['ions'],
         {
           type: 'spacefill',
           typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 1.0 },
@@ -673,9 +689,9 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
         },
         { tag: 'ions' }
       )
-      builder.buildRepresentation(
+      representations['branched'] = builder.buildRepresentation(
         update,
-        branchedComp,
+        components['branched'],
         {
           type: 'ball-and-stick',
           typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
@@ -689,6 +705,6 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
       await shinyStyle(plugin)
       plugin.managers.interactivity.setProps({ granularity: 'residue' })
 
-      return {}
+      return { components, representations }
     }
   })
