@@ -33,8 +33,13 @@ services:
   # ------------------------------------------------------------------------------------
   mongodb:
     image: mongo:8.3.1
-    pull_policy: always
+    pull_policy: missing
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: "4g"
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u
         $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
@@ -43,7 +48,7 @@ services:
       retries: 7
       start_period: 20s
     env_file:
-      - .env.dev
+      - path: .env.dev
     environment:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
@@ -57,10 +62,15 @@ services:
   # ------------------------------------------------------------------------------------
   redis:
     image: redis:8.6.3
-    pull_policy: always
+    pull_policy: missing
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "1g"
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -77,16 +87,17 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.8.0
-    pull_policy: always
+    image: ghcr.io/bl1231/bilbomd-backend:2.8.2
+    pull_policy: missing
     security_opt:
       - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       resources:
         limits:
-          cpus: "12"
-    restart: no
+          cpus: "6"
+          memory: "4g"
+    restart: always
     user: "${UID:-1001}:${GID:-1001}"
     env_file:
       - path: .env.dev
@@ -102,7 +113,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3500/healthcheck" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:3500/healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -110,8 +121,8 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.10.0
-    pull_policy: always
+    image: ghcr.io/bl1231/bilbomd-worker:2.12.0
+    pull_policy: missing
     security_opt:
       - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json
@@ -119,12 +130,13 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: "24"
+          cpus: "16"
+          memory: "32g"
         reservations:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [ gpu ]
+              capabilities: [gpu]
     restart: no
     read_only: true
     user: "${UID:-1001}:${GID:-1001}"
@@ -156,7 +168,7 @@ services:
       colabfold-service:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/config"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -165,7 +177,7 @@ services:
   # ------------------------------------------------------------------------------------
   of3-service:
     image: ghcr.io/bl1231/bilbomd-of3-service:0.1.0
-    pull_policy: always
+    pull_policy: missing
     shm_size: "16gb"
     security_opt:
       - no-new-privileges:true
@@ -176,7 +188,7 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [ gpu ]
+              capabilities: [gpu]
     restart: no
     env_file:
       - path: .env.dev
@@ -189,7 +201,7 @@ services:
     networks:
       - app-network-dev
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:8000/health" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -198,7 +210,7 @@ services:
   # ------------------------------------------------------------------------------------
   colabfold-service:
     image: ghcr.io/bl1231/bilbomd-colabfold-service:0.1.0
-    pull_policy: always
+    pull_policy: missing
     shm_size: "16gb"
     security_opt:
       - no-new-privileges:true
@@ -209,7 +221,7 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [ gpu ]
+              capabilities: [gpu]
     restart: no
     env_file:
       - path: .env.dev
@@ -222,7 +234,7 @@ services:
     networks:
       - app-network-dev
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:8000/health" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -230,13 +242,13 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:pr-750-fe1f1c56
-    pull_policy: always
+    image: ghcr.io/bl1231/bilbomd-ui:2.16.0
+    pull_policy: missing
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
       - no-new-privileges:true
     env_file:
-      - .env.dev
+      - path: .env.dev
     ports:
       - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
     networks:
@@ -246,7 +258,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost/" ]
+      test: ["CMD", "curl", "--fail", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
