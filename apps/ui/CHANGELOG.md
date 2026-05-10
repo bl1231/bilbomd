@@ -1,5 +1,13 @@
 # @bilbomd/ui
 
+## 2.16.1
+
+### Patch Changes
+
+- 3ae2172: Fix Color by Domain preset in Molstar viewer for Classic CRD jobs.
+
+  Two-phase component creation prevents "Could not find node" errors when coloring ensemble structures. Also stores `md_constraints` in MongoDB for Classic CRD jobs so the domain-coloring preset has the constraint data it needs.
+
 ## 2.16.0
 
 ### Minor Changes
