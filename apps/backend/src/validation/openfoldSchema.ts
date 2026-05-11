@@ -13,7 +13,6 @@ const dnaSeqRegex = /^[ACGT]+$/
 const rnaSeqRegex = /^[ACGU]+$/
 
 const openfoldEntitySchema = yup.object({
-  id: yup.string().required(),
   name: yup.string().required(),
   sequence: yup
     .string()

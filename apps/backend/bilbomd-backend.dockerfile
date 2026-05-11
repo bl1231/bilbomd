@@ -106,6 +106,7 @@ RUN set -eux; \
     tar czf bilbomd_classic_crd_example.tar.gz crd/; \
     tar czf bilbomd_auto_example.tar.gz auto/; \
     tar czf bilbomd_af_example.tar.gz af/; \
+    tar czf bilbomd_of3_example.tar.gz of3/; \
     tar czf bilbomd_sans_example.tar.gz sans/; \
     tar czf scoper_example.tar.gz scoper/
 

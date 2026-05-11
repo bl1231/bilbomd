@@ -639,22 +639,27 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   {
                                     id: '1',
                                     name: 'pro-1',
-                                    sequence: [
-                                      'MGKKRTKGKTVPIDDSSETLEPVCRHIRKGLEQGNLKKALVNVEWNICQDCKTDNKVKDKAEEETEEKPSVWLCLKCGHQ',
-                                      'GCGRNSQEQHALKHYLTPRSEPHCLVLSLDNWSVWCYVCDNEVQYCSSNQLGQVVDYVRKQASITTPKPAEKDNGNIELE',
-                                      'NKKLEKESKNEQEREKKENMAKENPPMNSPCQITVKGLSNLGNTCFFNAVMQNLSQTPVLRELLKEVKMSGTIVKIEPPD',
-                                      'LALTEPLEINLEPPGPLTLAMSQFLNEMQETKKGVVTPKELFSQVCKKAVRFKGYQQQDSQELLRYLLDGMRAEEHQRVS',
-                                      'KGILKAFGNSTEKLDEELKNKVKDYEKKKSMPSFVDRIFGGELTSMIMCDQCRTVSLVHESFLDLSLPVLDDQSGKKSVN',
-                                      'DKNLKKTVEDEDQDSEEEKDNDSYIKERSDIPSGTSKHLQKKAKKQAKKQAKNQRRQQKIQGKVLHLNDICTIDHPEDSE',
-                                      'YEAEMSLQGEVNIKSNHISQEGVMHKEYCVNQKDLNGQAKMIESVTDNQKSTEEVDMKNINMDNDLEVLTSSPTRNLNGA',
-                                      'YLTEGSNGEVDISNGFKNLNLNAALHPDEINIEILNDSHTPGTKVYEVVNEDPETAFCTLANREVFNTDECSIQHCLYQF',
-                                      'TRNEKLRDANKLLCEVCTRRQCNGPKANIKGERKHVYTNAKKQMLISLAPPVLTLHLKRFQQAGFNLRKVNKHIKFPEIL',
-                                      'DLAPFCTLKCKNVAEENTRVLYSLYGVVEHSGTMRSGHYTAYAKARTANSHLSNLVLHGDIPQDFEMESKGQWFHISDTH',
-                                      'VQAVPTTKVLNSQAYLLFYERIL'
-                                    ].join(''),
+                                    sequence:
+                                      'MGSSHHHHHHSSGLVPRGSHMSGKIQHKAVVPAPSRIPLTLSEIEDLRRKGFNQTEIAELYGVTRQAVSWHKKTYGGRLTTRQIVQQNWPWDTRKPHDKSKAFQRLRDHGEYMRVGSFRTMSEDKKKRLLSWWKMLRDNDLVLEFDPSIEPYEGMAGGGFRYVPRDISDDDLLIRVNEHTQLTAEGELLWSWPDDIEELLSEP',
                                     type: 'Protein',
                                     copies: 1,
-                                    seq_length: 823
+                                    seq_length: 203
+                                  },
+                                  {
+                                    id: '2',
+                                    name: 'dna-2',
+                                    sequence: 'TGTTTCGGTGGCTGTCAAGCGGGC',
+                                    type: 'DNA',
+                                    copies: 1,
+                                    seq_length: 24
+                                  },
+                                  {
+                                    id: '3',
+                                    name: 'dna-3',
+                                    sequence: 'GCCCGCTTGACAGCCACCGAAACA',
+                                    type: 'DNA',
+                                    copies: 1,
+                                    seq_length: 24
                                   }
                                 ])
                               } else {

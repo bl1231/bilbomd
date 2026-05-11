@@ -9,7 +9,6 @@ import {
 } from './helpers/fileValidators.js'
 
 const alphafoldEntitySchema = yup.object({
-  id: yup.string().required(),
   name: yup.string().required(),
   sequence: yup
     .string()
