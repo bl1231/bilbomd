@@ -2,7 +2,24 @@ import os
 from openmm.app import PDBFile
 
 
-# --- Custom reporter that writes one PDB per report interval ---
+class PositionCapture:
+    """
+    Captures (step, positions) in memory during MD for post-simulation PDB writing.
+    Use instead of PDBFrameWriter to avoid GPU stalls from inline text-format writes
+    blocking the trajectory at each report interval.
+    """
+
+    def __init__(self, interval: int):
+        self._interval = interval
+        self.frames: list[tuple[int, object]] = []
+
+    def describeNextReport(self, simulation):
+        return (self._interval, True, False, False, False)
+
+    def report(self, simulation, state):
+        self.frames.append((simulation.currentStep, state.getPositions()))
+
+
 class PDBFrameWriter:
     """
     Write a single-model PDB to an individual file every report interval.

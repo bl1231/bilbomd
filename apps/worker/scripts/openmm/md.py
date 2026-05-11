@@ -17,7 +17,7 @@ from openmm.app import (
 from openmm.unit import angstroms
 from utils.fixed_bodies import apply_fixed_body_constraints
 from utils.model_prep import register_ligand_templates_for_topology
-from utils.pdb_writer import PDBFrameWriter
+from utils.pdb_writer import PositionCapture
 from utils.rgyr import RadiusOfGyrationCVForce, RgyrDmaxReporter
 from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
 
@@ -158,13 +158,21 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
         )
     )
 
-    # PDB Frame Writer
+    # Capture positions in memory; write PDB files after simulation completes to
+    # avoid GPU stalls from inline text-format writes blocking the trajectory.
     base_name = os.path.splitext(output_pdb_file_name)[0]
-    simulation.reporters.append(
-        PDBFrameWriter(rg_md_dir, base_name, reportInterval=pdb_report_interval)
-    )
+    capture = PositionCapture(pdb_report_interval)
+    simulation.reporters.append(capture)
 
     simulation.step(nsteps)
+
+    print(f"[GPU {gpu_id}] Writing {len(capture.frames)} PDB frames to {rg_md_dir}...")
+    for step, positions in capture.frames:
+        fname = f"{base_name}_{int(step):09d}.pdb"
+        out_path = os.path.join(rg_md_dir, fname)
+        with open(out_path, "w", encoding="utf-8") as fh:
+            PDBFile.writeFile(simulation.topology, positions, fh, keepIds=True)
+    print(f"[GPU {gpu_id}] PDB frames written.")
 
     with open(
         os.path.join(rg_md_dir, output_restart_file_name), "w", encoding="utf-8"
