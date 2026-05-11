@@ -1,6 +1,7 @@
 import { Job as BullMQJob } from 'bullmq'
 import path from 'node:path'
 import fs from 'fs-extra'
+import axios from 'axios'
 import { IBilboMDAlphaFoldJob, IStepStatus } from '@bilbomd/mongodb-schema'
 import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
@@ -43,18 +44,25 @@ const callColabFoldService = async (
   logger.info(`Calling ColabFold service: POST ${url} uuid=${uuid}`)
   await MQjob.log(`alphafold http: POST ${url}`)
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ uuid }),
-    signal: AbortSignal.timeout(config.colabfoldTimeoutMs)
-  })
+  const heartbeat = setInterval(() => {
+    MQjob.updateProgress({ status: 'running', timestamp: Date.now() })
+  }, 20_000)
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(
-      `ColabFold service returned HTTP ${res.status}: ${body}`
-    )
+  try {
+    await axios.post(url, { uuid }, {
+      headers: { 'content-type': 'application/json' },
+      // Use axios instead of native fetch to avoid undici's default 300s headersTimeout
+      timeout: config.colabfoldTimeoutMs
+    })
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(
+        `ColabFold service returned HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`
+      )
+    }
+    throw error
+  } finally {
+    clearInterval(heartbeat)
   }
 }
 

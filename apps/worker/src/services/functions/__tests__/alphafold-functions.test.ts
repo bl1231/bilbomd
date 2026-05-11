@@ -54,8 +54,15 @@ vi.mock('../../../config/config.js', () => ({
   }
 }))
 
-const mockFetch = vi.fn()
-vi.stubGlobal('fetch', mockFetch)
+const { mockAxiosPost } = vi.hoisted(() => ({ mockAxiosPost: vi.fn() }))
+
+vi.mock('axios', () => ({
+  default: {
+    post: mockAxiosPost,
+    isAxiosError: (e: unknown) =>
+      typeof e === 'object' && e !== null && 'isAxiosError' in e
+  }
+}))
 
 describe('rank_001 patterns', () => {
   it('matches relaxed rank_001 PDB names', () => {
@@ -88,7 +95,7 @@ describe('rank_001 patterns', () => {
 describe('runAlphaFold integration shape', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockFetch.mockResolvedValue({ ok: true, text: async () => '' })
+    mockAxiosPost.mockResolvedValue({ status: 200, data: {} })
   })
 
   it('throws when the FASTA file is missing', async () => {
@@ -107,7 +114,7 @@ describe('runAlphaFold integration shape', () => {
       save: vi.fn(async () => undefined)
     } as never
 
-    const fakeMQ = { log: vi.fn() } as never
+    const fakeMQ = { log: vi.fn(), updateProgress: vi.fn() } as never
 
     await expect(runAlphaFold(fakeMQ, fakeJob)).rejects.toThrow(
       /AlphaFold input FASTA missing/
@@ -138,7 +145,7 @@ describe('runAlphaFold integration shape', () => {
       pae_file: undefined,
       save
     } as never
-    const fakeMQ = { log: vi.fn() } as never
+    const fakeMQ = { log: vi.fn(), updateProgress: vi.fn() } as never
 
     await runAlphaFold(fakeMQ, fakeJob)
 
@@ -147,12 +154,10 @@ describe('runAlphaFold integration shape', () => {
       pae_file: 'af-pae.json'
     })
     expect(save).toHaveBeenCalled()
-    expect(mockFetch).toHaveBeenCalledWith(
+    expect(mockAxiosPost).toHaveBeenCalledWith(
       'http://colabfold-service:8000/infer',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ uuid: 'abc' })
-      })
+      { uuid: 'abc' },
+      expect.objectContaining({ timeout: 60_000 })
     )
   })
 
@@ -163,11 +168,11 @@ describe('runAlphaFold integration shape', () => {
     }
     fs.__setFiles({ '/in/uploads/abc/af-entities.fasta': '>a\nACDE' })
     fs.__setDirs({})
-    mockFetch.mockResolvedValue({
-      ok: false,
-      status: 500,
-      text: async () => 'GPU OOM'
+    const axiosErr = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: { status: 500, data: 'GPU OOM' }
     })
+    mockAxiosPost.mockRejectedValue(axiosErr)
 
     const { runAlphaFold } = await import('../alphafold-functions.js')
     const fakeJob = {
@@ -176,7 +181,7 @@ describe('runAlphaFold integration shape', () => {
       pae_file: undefined,
       save: vi.fn()
     } as never
-    const fakeMQ = { log: vi.fn() } as never
+    const fakeMQ = { log: vi.fn(), updateProgress: vi.fn() } as never
 
     await expect(runAlphaFold(fakeMQ, fakeJob)).rejects.toThrow(
       /ColabFold service returned HTTP 500/
