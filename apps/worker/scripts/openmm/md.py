@@ -18,7 +18,7 @@ from openmm.unit import angstroms
 from utils.fixed_bodies import apply_fixed_body_constraints
 from utils.model_prep import register_ligand_templates_for_topology
 from utils.pdb_writer import PositionCapture
-from utils.rgyr import RadiusOfGyrationCVForce, RgyrDmaxReporter
+from utils.rgyr import RadiusOfGyrationCVForce, RgyrDmaxCapture
 from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
 
 
@@ -151,12 +151,9 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     rgyr_file_path = os.path.join(rg_md_dir, rgyr_report)
     simulation.reporters.append(DCDReporter(dcd_file_path, report_interval))
 
-    # Rgyr + Dmax Reporter
-    simulation.reporters.append(
-        RgyrDmaxReporter(
-            atom_indices, rgyr_file_path, reportInterval=report_interval
-        )
-    )
+    # Capture Rgyr/Dmax in memory; write CSV after simulation (no per-step flushes)
+    rgyr_capture = RgyrDmaxCapture(atom_indices, reportInterval=report_interval)
+    simulation.reporters.append(rgyr_capture)
 
     # Capture positions in memory; write PDB files after simulation completes to
     # avoid GPU stalls from inline text-format writes blocking the trajectory.
@@ -173,6 +170,8 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
         with open(out_path, "w", encoding="utf-8") as fh:
             PDBFile.writeFile(simulation.topology, positions, fh, keepIds=True)
     print(f"[GPU {gpu_id}] PDB frames written.")
+
+    rgyr_capture.write_csv(rgyr_file_path)
 
     with open(
         os.path.join(rg_md_dir, output_restart_file_name), "w", encoding="utf-8"
