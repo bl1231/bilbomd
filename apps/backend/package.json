@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/backend",
-  "version": "2.8.3",
+  "version": "2.8.4",
   "description": "Backend server for BilboMD webapp",
   "main": "dist/server.js",
   "files": [

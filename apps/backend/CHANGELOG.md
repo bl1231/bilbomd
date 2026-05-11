@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.8.4
+
+### Patch Changes
+
+- 6502a18: Fix OF3 and AlphaFold job submission failure caused by entity validation schema incorrectly requiring an `id` field. The `id` field is UI-only and not part of `IOpenFoldEntity` or `IAlphaFoldEntity`, so it was never present in the parsed form data, causing all submissions to fail backend validation with a 400 error.
+
 ## 2.8.3
 
 ### Patch Changes
