@@ -1,6 +1,7 @@
 import { Job as BullMQJob } from 'bullmq'
 import path from 'node:path'
 import fs from 'fs-extra'
+import axios from 'axios'
 import { IBilboMDOpenFoldJob, IStepStatus } from '@bilbomd/mongodb-schema'
 import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
@@ -31,23 +32,21 @@ const callOf3Service = async (
     MQjob.updateProgress({ status: 'running', timestamp: Date.now() })
   }, 20_000)
 
-  let res: Response
   try {
-    res = await fetch(url, {
-      method: 'POST',
+    await axios.post(url, { uuid }, {
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ uuid }),
-      signal: AbortSignal.timeout(config.of3TimeoutMs)
+      // Use axios instead of native fetch to avoid undici's default 300s headersTimeout
+      timeout: config.of3TimeoutMs
     })
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(
+        `OF3 service returned HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`
+      )
+    }
+    throw error
   } finally {
     clearInterval(heartbeat)
-  }
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(
-      `OF3 service returned HTTP ${res.status}: ${body}`
-    )
   }
 }
 
