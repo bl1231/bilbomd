@@ -154,6 +154,7 @@ services:
       - COLABFOLD_SERVICE_URL=http://colabfold-service:8000
       - MPLCONFIGDIR=/tmp/matplotlib
       - XDG_CACHE_HOME=/tmp/cache
+      - OPENMM_MD_CONCURRENCY=${OPENMM_MD_CONCURRENCY:-1}
     depends_on:
       mongodb:
         condition: service_healthy
