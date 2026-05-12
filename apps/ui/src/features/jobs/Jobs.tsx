@@ -179,6 +179,40 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
   return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
 }
 
+const getTotalRuntime = (
+  timeSubmitted: Date | undefined,
+  timeCompleted: Date | undefined,
+  jobStatus?: string
+) => {
+  const start = parseDateSafe(timeSubmitted)
+  if (!start) return ''
+
+  let end: Date | null = null
+
+  const completed = parseDateSafe(timeCompleted)
+  if (completed && completed.getTime() > 0) {
+    end = completed
+  }
+
+  if (!end) {
+    if (jobStatus === 'Running') {
+      end = new Date()
+    } else {
+      return ''
+    }
+  }
+
+  const diffMs = end.getTime() - start.getTime()
+  if (diffMs < 0) return ''
+
+  const totalMinutes = Math.round(diffMs / 60000)
+  const hrs = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
+  return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
+}
+
 const filteredJobCountChip = (count: number) => {
   return (
     <Chip
@@ -502,6 +536,11 @@ const Jobs = () => {
       const nerscStatus = job.mongo.nersc?.state || ''
       const queueHours = getHoursInQueue(job.mongo.nersc, job.mongo.status)
       const runTimeHours = getRunTimeInHours(job.mongo.nersc, job.mongo.status)
+      const totalRuntime = getTotalRuntime(
+        job.mongo.time_submitted,
+        job.mongo.time_completed,
+        job.mongo.status
+      )
 
       return {
         ...job.mongo,
@@ -510,6 +549,7 @@ const Jobs = () => {
         nerscStatus: nerscStatus,
         queueHours: queueHours,
         runTimeHours: runTimeHours,
+        totalRuntime: totalRuntime,
         progress: job.mongo.progress
       }
     })
@@ -538,6 +578,15 @@ const Jobs = () => {
         width: 150,
         valueGetter: (_value, row) => parseDateSafe(row.time_completed),
         valueFormatter: (value: unknown) => formatDateSafe(value)
+      },
+      {
+        field: 'totalRuntime',
+        headerName: 'Runtime',
+        width: 100,
+        cellClassName: (params: GridCellParams) => {
+          const status = params.row.status
+          return clsx({ running: status === 'Running' })
+        }
       },
       ...(useNersc
         ? [

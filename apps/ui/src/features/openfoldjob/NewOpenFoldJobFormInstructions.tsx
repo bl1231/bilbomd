@@ -53,7 +53,7 @@ const NewOpenFoldJobFormInstructions = () => {
             <b>BilboMD OF3</b> takes your sequence information for Proteins,
             DNA, and RNA chains and runs{' '}
             <Link
-              href="https://github.com/OpenFold-consortium/openfold3"
+              href="https://github.com/aqlaboratory/openfold-3"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -87,7 +87,7 @@ const NewOpenFoldJobFormInstructions = () => {
             <Typography>
               <b>BilboMD OF3</b> uses{' '}
               <Link
-                href="https://github.com/OpenFold-consortium/openfold3"
+                href="https://github.com/aqlaboratory/openfold-3"
                 target="_blank"
                 rel="noopener noreferrer"
               >
