@@ -16,6 +16,7 @@ import { Grid } from '@mui/system'
 import { blue } from '@mui/material/colors'
 import { useTheme } from '@mui/material/styles'
 import BilboMDBibTeX from 'components/Common/BilboMDBibTeX'
+import AFOpenMMPipelineSchematic from 'features/alphafoldjob/AFOpenMMPipelineSchematic'
 
 const Help = ({ title = 'BilboMD: Help' }) => {
   useTitle(title)
@@ -217,13 +218,7 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                     style={{ width: '100%' }}
                   />
                 )}
-                {tabValue === 3 && (
-                  <img
-                    src={`/images/bilbomd-af-schematic-openmm${theme.palette.mode === 'dark' ? '-dark' : ''}.png`}
-                    alt="BilboMD AF Schematic"
-                    style={{ width: '100%' }}
-                  />
-                )}
+                {tabValue === 3 && <AFOpenMMPipelineSchematic />}
               </Box>
             </Box>
           </Box>

@@ -36,29 +36,21 @@ import {
   detectGaffCofactors,
   detectMetalCofactors
 } from 'schemas/ValidationFunctions'
-import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import SANSPipelineSchematic from './SANSPipelineSchematic'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
 }
 
-const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
+const PipelineSchematic = () => (
   <Grid size={{ xs: 12 }}>
     <HeaderBox>
       <Typography>BilboMD SANS Schematic</Typography>
     </HeaderBox>
     <Paper sx={{ p: 2 }}>
-      <img
-        src={
-          isDarkMode
-            ? '/images/bilbomd-sans-schematic-dark.png'
-            : '/images/bilbomd-sans-schematic.png'
-        }
-        alt="Overview of BilboMD AF pipeline"
-        style={{ maxWidth: '100%', height: 'auto' }}
-      />
+      <SANSPipelineSchematic />
     </Paper>
   </Grid>
 )
@@ -69,9 +61,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       ? 'BilboMD: New SANS Job (anonymous)'
       : 'BilboMD: New SANS Job'
   )
-
-  const theme = useTheme()
-  const isDarkMode = theme.palette.mode === 'dark'
 
   const [addNewSANSJob, { isSuccess: isAuthSuccess, data: authJobResponse }] =
     useAddNewSANSJobMutation()
@@ -212,7 +201,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     >
       <NewSANSJobFormInstructions />
 
-      <PipelineSchematic isDarkMode={isDarkMode} />
+      <PipelineSchematic />
 
       <Grid size={{ xs: 12 }}>
         <HeaderBox>

@@ -41,6 +41,7 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import OF3OpenMMPipelineSchematic from './OF3OpenMMPipelineSchematic'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -164,21 +165,13 @@ const Instructions = () => (
   </Grid>
 )
 
-const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
+const PipelineSchematic = () => (
   <Grid size={{ xs: 12 }}>
     <HeaderBox>
       <Typography>BilboMD OF3 Schematic</Typography>
     </HeaderBox>
     <Paper sx={{ p: 2 }}>
-      <img
-        src={
-          isDarkMode
-            ? '/images/bilbomd-of3-schematic-openmm-dark.png'
-            : '/images/bilbomd-of3-schematic-openmm.png'
-        }
-        alt="Overview of BilboMD OF3 pipeline"
-        style={{ maxWidth: '100%', height: 'auto' }}
-      />
+      <OF3OpenMMPipelineSchematic />
     </Paper>
   </Grid>
 )
@@ -437,9 +430,6 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       ? 'BilboMD: New OpenFold3 Job (anonymous)'
       : 'BilboMD: New OpenFold3 Job'
   )
-  const theme = useTheme()
-  const isDarkMode = theme.palette.mode === 'dark'
-
   const [
     addNewOpenFoldJob,
     { isSuccess: isAuthSuccess, data: authJobResponse }
@@ -539,7 +529,7 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       spacing={2}
     >
       <Instructions />
-      <PipelineSchematic isDarkMode={isDarkMode} />
+      <PipelineSchematic />
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
           <Typography>BilboMD OF3 Job Form</Typography>
