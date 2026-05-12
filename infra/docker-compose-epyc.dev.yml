@@ -38,7 +38,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "4"
+          cpus: "2"
           memory: "4g"
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u
@@ -67,7 +67,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2"
+          cpus: "1"
           memory: "1g"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -87,7 +87,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.8.3
+    image: ghcr.io/bl1231/bilbomd-backend:2.8.4
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
@@ -95,7 +95,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "6"
+          cpus: "3"
           memory: "4g"
     restart: always
     user: "${UID:-1001}:${GID:-1001}"
@@ -121,7 +121,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.12.0
+    image: ghcr.io/bl1231/bilbomd-worker:pr-788-b9eee543
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
@@ -130,7 +130,7 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: "16"
+          cpus: "18"
           memory: "32g"
         reservations:
           devices:
@@ -152,6 +152,7 @@ services:
       - /bilbomd/dev/uploads:/bilbomd/uploads
       - /bilbomd/dev/logs:/bilbomd/logs
       - scratch:/bilbomd/scratch
+      - /run/nvidia-mps:/run/nvidia-mps
     environment:
       - ENABLE_BILBOMD_OPENFOLD=${ENABLE_BILBOMD_OPENFOLD:-false}
       - OF3_TIMEOUT_MS=${OF3_TIMEOUT_MS:-3600000}
@@ -160,6 +161,9 @@ services:
       - COLABFOLD_SERVICE_URL=http://colabfold-service:8000
       - MPLCONFIGDIR=/tmp/matplotlib
       - XDG_CACHE_HOME=/tmp/cache
+      - OPENMM_MD_CONCURRENCY=${OPENMM_MD_CONCURRENCY:-1}
+      - CUDA_MPS_PIPE_DIRECTORY=/run/nvidia-mps
+      - CUDA_MPS_LOG_DIRECTORY=/run/nvidia-mps-log
     depends_on:
       mongodb:
         condition: service_healthy
@@ -184,6 +188,8 @@ services:
       - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       resources:
+        limits:
+          cpus: "2"
         reservations:
           devices:
             - driver: nvidia
@@ -217,6 +223,8 @@ services:
       - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       resources:
+        limits:
+          cpus: "2"
         reservations:
           devices:
             - driver: nvidia
@@ -242,11 +250,15 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.16.1
+    image: ghcr.io/bl1231/bilbomd-ui:2.16.2
     pull_policy: missing
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
       - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
     env_file:
       - path: .env.dev
     ports:

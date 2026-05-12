@@ -27,6 +27,39 @@ class TestReporter:
         print(f"TestReporter triggered at step {simulation.currentStep}")
 
 
+class RgyrDmaxCapture:
+    """
+    Computes Rgyr/Dmax in memory during MD; writes CSV once after simulation.
+    Eliminates per-step disk flushes and stdout prints that block the trajectory.
+    """
+
+    def __init__(self, atom_indices, reportInterval=500):
+        self.atom_indices = atom_indices
+        self.reportInterval = reportInterval
+        self.rows: list[tuple[int, float, float]] = []
+
+    def describeNextReport(self, simulation):
+        return (self.reportInterval, True, False, False, False)
+
+    def report(self, simulation, state):
+        positions = state.getPositions()
+        coords = np.array(
+            [positions[i].value_in_unit(angstroms) for i in self.atom_indices]
+        )
+        com = coords.mean(axis=0)
+        rg = float(np.sqrt(np.mean(np.sum((coords - com) ** 2, axis=1))))
+        diff = coords[:, None, :] - coords[None, :, :]
+        dmax = float(np.max(np.sqrt(np.sum(diff ** 2, axis=-1))))
+        self.rows.append((simulation.currentStep, rg, dmax))
+
+    def write_csv(self, filepath: str) -> None:
+        with open(filepath, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Step", "Rgyr_A", "Dmax_A"])
+            writer.writerows(self.rows)
+        print(f"Wrote {len(self.rows)} Rgyr/Dmax rows to {filepath}")
+
+
 class RgyrDmaxReporter:
     """
     Reports radius of gyration (Rgyr) and maximum pairwise distance (Dmax) for a

@@ -74,6 +74,7 @@ export const config = {
     'OPENMM_PYTHON_BIN',
     '/opt/envs/openmm/bin/python'
   ),
+  openmmMdConcurrency: parsePositiveIntEnv('OPENMM_MD_CONCURRENCY', 1),
   basePythonBin: getEnvVarWithDefault(
     'BASE_PYTHON_BIN',
     '/opt/envs/base/bin/python'

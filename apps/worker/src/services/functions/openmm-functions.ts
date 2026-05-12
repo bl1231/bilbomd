@@ -451,12 +451,11 @@ const runOmmMD = async (
     rgs = [50]
   }
 
-  // Determine available GPUs and concurrency
+  // Determine available GPUs
   const envCUDA = process.env.CUDA_VISIBLE_DEVICES
   let availableGpus: number[] = []
 
   if (envCUDA) {
-    // Parse CUDA_VISIBLE_DEVICES to get actual GPU IDs
     availableGpus = envCUDA
       .split(',')
       .map((id) => parseInt(id.trim()))
@@ -466,13 +465,14 @@ const runOmmMD = async (
     availableGpus = [0]
   }
 
-  const maxParallel = Math.min(
-    opts?.concurrency ?? availableGpus.length,
-    availableGpus.length
-  )
+  // Allow multiple processes per GPU (CUDA shares the device across contexts).
+  // Cap at rgs.length — no point queuing more workers than tasks.
+  const requestedConcurrency = opts?.concurrency ?? config.openmmMdConcurrency
+  const maxParallel = Math.min(requestedConcurrency, rgs.length)
 
   logger.info(
-    `[runOmmMD] Available GPUs: ${availableGpus.join(', ')}, max parallel: ${maxParallel}`
+    `[runOmmMD] Available GPUs: ${availableGpus.join(', ')}, ` +
+      `requested concurrency: ${requestedConcurrency}, max parallel: ${maxParallel}`
   )
 
   // Prepare job tracking
