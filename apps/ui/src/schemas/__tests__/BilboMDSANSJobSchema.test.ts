@@ -171,6 +171,13 @@ describe('BilboMDSANSJobSchema - inp_file', () => {
     ).resolves.toBe(file)
   })
 
+  it('rejects non-.inp extension', async () => {
+    const file = makeFile('const.txt')
+    await expect(
+      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
+    ).rejects.toThrow('Only accepts a *.inp file.')
+  })
+
   it('rejects file over 2MB', async () => {
     const file = makeFile('const.inp', 2_000_001)
     await expect(
