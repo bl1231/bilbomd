@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------------------------
-# Use this Docker compose file for production deployment to Hyperion.
+# Use this Docker compose file for production deployment to Epyc.
 # You may need to create the following volumes before running this file:
 #
 #  docker volume create bilbomd-mongodb
@@ -94,6 +94,7 @@ services:
           cpus: "4"
           memory: "4g"
     restart: always
+    user: "${UID:-1001}:${GID:-1001}"
     env_file:
       - path: .env.prod
     ports:
@@ -132,8 +133,9 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    restart: no
+    restart: always
     read_only: true
+    user: "${UID:-1001}:${GID:-1001}"
     cap_drop:
       - ALL
     tmpfs:
@@ -147,6 +149,7 @@ services:
       - /bilbomd/prod/logs:/bilbomd/logs
       - scratch:/bilbomd/scratch
       - /run/nvidia-mps:/run/nvidia-mps
+      - ./worker-passwd-epyc:/etc/passwd:ro
     environment:
       - ENABLE_BILBOMD_OPENFOLD=${ENABLE_BILBOMD_OPENFOLD:-false}
       - OF3_TIMEOUT_MS=${OF3_TIMEOUT_MS:-3600000}
