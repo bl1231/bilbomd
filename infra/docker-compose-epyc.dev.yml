@@ -121,7 +121,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:pr-788-b9eee543
+    image: ghcr.io/bl1231/bilbomd-worker:2.13.0
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
@@ -137,7 +137,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    restart: no
+    restart: always
     read_only: true
     user: "${UID:-1001}:${GID:-1001}"
     cap_drop:
@@ -153,6 +153,7 @@ services:
       - /bilbomd/dev/logs:/bilbomd/logs
       - scratch:/bilbomd/scratch
       - /run/nvidia-mps:/run/nvidia-mps
+      - ./worker-passwd-epyc:/etc/passwd:ro
     environment:
       - ENABLE_BILBOMD_OPENFOLD=${ENABLE_BILBOMD_OPENFOLD:-false}
       - OF3_TIMEOUT_MS=${OF3_TIMEOUT_MS:-3600000}
@@ -250,7 +251,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.16.2
+    image: ghcr.io/bl1231/bilbomd-ui:2.17.0
     pull_policy: missing
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
@@ -270,7 +271,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost/"]
+      test: ["CMD", "curl", "--fail", "http://localhost/version-info"]
       interval: 30s
       timeout: 10s
       retries: 3
