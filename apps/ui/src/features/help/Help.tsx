@@ -20,6 +20,7 @@ import AFOpenMMPipelineSchematic from 'features/alphafoldjob/AFOpenMMPipelineSch
 import ClassicPDBOpenMMPipelineSchematic from 'features/jobs/ClassicPDBOpenMMPipelineSchematic'
 import ClassicCRDPipelineSchematic from 'features/jobs/ClassicCRDPipelineSchematic'
 import AutoOpenMMPipelineSchematic from 'features/autojob/AutoOpenMMPipelineSchematic'
+import OF3OpenMMPipelineSchematic from 'features/openfoldjob/OF3OpenMMPipelineSchematic'
 
 const Help = ({ title = 'BilboMD: Help' }) => {
   useTitle(title)
@@ -81,8 +82,7 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             variant="body2"
             sx={{ mx: 5, my: 2 }}
           >
-            Classen S, Del Mundo J, Kulkarni D, Prabhakar S, Hicks A, Hammel
-            M.{' '}
+            Classen S, Del Mundo J, Kulkarni D, Prabhakar S, Hicks A, Hammel M.{' '}
             <b>
               BilboMD: a web-accessible SAXS and AlphaFold-guided modeling
               pipeline.
@@ -168,8 +168,23 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                   }}
                 >
                   <ListItemText
-                    primary="BilboMD AF (Alphafold)"
+                    primary="BilboMD AF (Alphafold2)"
                     secondary='This pipeline runs Alphafold2 on your input sequence. The "best" Alphafold model and PAE matrix are used as starting structures and to define flexible regions for the MD steps.'
+                  />
+                </ListItem>
+                <ListItem
+                  sx={{
+                    backgroundColor:
+                      tabValue === 4
+                        ? theme.palette.mode === 'dark'
+                          ? blue[700]
+                          : blue[100]
+                        : 'transparent'
+                  }}
+                >
+                  <ListItemText
+                    primary="BilboMD OF3 (OpenFold3)"
+                    secondary='This pipeline runs OpenFold3 on your input sequence. The "best" predicted model and PAE matrix are used as starting structures and to define flexible regions for the MD steps.'
                   />
                 </ListItem>
                 <ListItem>
@@ -197,6 +212,7 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                   <Tab label="Classic CRD" />
                   <Tab label="Auto" />
                   <Tab label="AF" />
+                  <Tab label="OF3" />
                 </Tabs>
               </Box>
               <Box sx={{ mt: 2 }}>
@@ -204,6 +220,7 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                 {tabValue === 1 && <ClassicCRDPipelineSchematic />}
                 {tabValue === 2 && <AutoOpenMMPipelineSchematic />}
                 {tabValue === 3 && <AFOpenMMPipelineSchematic />}
+                {tabValue === 4 && <OF3OpenMMPipelineSchematic />}
               </Box>
             </Box>
           </Box>
