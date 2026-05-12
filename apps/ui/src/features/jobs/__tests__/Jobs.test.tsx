@@ -235,7 +235,7 @@ describe('Jobs table', () => {
     const nerscTimes: INerscInfo = {
       time_submitted: new Date('2025-01-01T00:00:00Z'),
       time_started: new Date('2025-01-01T00:05:00Z'),
-      time_completed: new Date('2025-01-01T00:15:00Z'),
+      time_completed: new Date('2025-01-01T00:20:00Z'), // 15min NERSC run time — avoids collision with 10min mongo totalRuntime
       jobid: '12345',
       state: 'RUNNING',
       qos: 'debug'
@@ -264,9 +264,9 @@ describe('Jobs table', () => {
       screen.getByRole('columnheader', { name: /run time/i })
     ).toBeInTheDocument()
 
-    // Cells show computed durations
-    expect(await screen.findByText(/5min/i)).toBeInTheDocument()
-    expect(screen.getByText(/10min/i)).toBeInTheDocument()
+    // Cells show computed durations (exact match avoids substring collisions)
+    expect(await screen.findByText('5min')).toBeInTheDocument()
+    expect(screen.getByText('15min')).toBeInTheDocument()
   })
 
   it('handles NERSC jobs with epoch placeholder for time_completed', async () => {

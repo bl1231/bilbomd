@@ -532,7 +532,15 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       <PipelineSchematic />
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
-          <Typography>BilboMD OF3 Job Form</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography>BilboMD OF3 Job Form</Typography>
+            <Typography
+              component="span"
+              sx={{ color: 'yellow', ml: 1 }}
+            >
+              *Experimental - Please report problems to Scott
+            </Typography>
+          </Box>
         </HeaderBox>
 
         <Paper sx={{ p: 2 }}>

@@ -13,6 +13,7 @@ type ExampleKey =
   | 'bilbomd-classic-crd'
   | 'bilbomd-auto'
   | 'bilbomd-af'
+  | 'bilbomd-of3'
   | 'bilbomd-sans'
   | 'scoper'
 
@@ -49,6 +50,10 @@ const exampleConfigMap: Record<ExampleKey, ExampleConfig> = {
   'bilbomd-af': {
     filePath: path.join(EXAMPLE_DATA_ROOT, 'bilbomd_af_example.tar.gz'),
     downloadName: 'bilbomd_af_example.tar.gz'
+  },
+  'bilbomd-of3': {
+    filePath: path.join(EXAMPLE_DATA_ROOT, 'bilbomd_of3_example.tar.gz'),
+    downloadName: 'bilbomd_of3_example.tar.gz'
   },
   'bilbomd-sans': {
     filePath: path.join(EXAMPLE_DATA_ROOT, 'bilbomd_sans_example.tar.gz'),
@@ -127,6 +132,12 @@ export const getClassicAfExample = (
   res: Response,
   next: NextFunction
 ) => sendExampleBundle('bilbomd-af', req, res, next)
+
+export const getClassicOf3Example = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => sendExampleBundle('bilbomd-of3', req, res, next)
 
 export const getClassicSansExample = (
   req: Request,
