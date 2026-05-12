@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.13.1
+
+### Patch Changes
+
+- c302402: Add CIF file support to the BilboMD SANS job form. Users can now upload _.cif (mmCIF) structure files in addition to _.pdb files, matching the capability of other BilboMD pipeline forms.
+
 ## 2.13.0
 
 ### Minor Changes
