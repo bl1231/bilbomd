@@ -1,5 +1,17 @@
 # @bilbomd/worker
 
+## 2.13.0
+
+### Minor Changes
+
+- 5a042dc: Enable parallel OpenMM MD runs on a single GPU via CUDA process sharing. Set `OPENMM_MD_CONCURRENCY` env var to run multiple Rg-constrained MD simulations concurrently on one A100, significantly reducing total MD wall time.
+
+### Patch Changes
+
+- 9e056e4: Fix OF3 and AlphaFold pipelines timing out after 5 minutes due to undici's default headersTimeout. Switch callOf3Service and callColabFoldService from native fetch to axios, which does not impose a headers-level timeout separate from the overall request timeout. Also adds BullMQ heartbeat to callColabFoldService to match the OF3 implementation.
+- 5a042dc: Move OpenMM MD PDB frame writing to after simulation completes, eliminating GPU stalls per Rg run caused by inline text-format writes blocking the trajectory.
+- 5a042dc: Buffer RgyrDmax rows in memory and write CSV after simulation, eliminating per-step disk flushes. Add CUDA MPS pipe mount to Epyc dev compose for GPU-sharing experiment.
+
 ## 2.12.0
 
 ### Minor Changes
