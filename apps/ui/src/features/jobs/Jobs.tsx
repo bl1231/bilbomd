@@ -179,12 +179,37 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
   return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
 }
 
-const getTotalRuntime = (
+const getQueuedTime = (
   timeSubmitted: Date | undefined,
-  timeCompleted: Date | undefined,
+  timeStarted: Date | undefined,
   jobStatus?: string
 ) => {
   const start = parseDateSafe(timeSubmitted)
+  if (!start) return ''
+
+  const started = parseDateSafe(timeStarted)
+  const end =
+    started ??
+    (jobStatus === 'Submitted' || jobStatus === 'Pending' ? new Date() : null)
+  if (!end) return ''
+
+  const diffMs = end.getTime() - start.getTime()
+  if (diffMs < 0) return ''
+
+  const totalMinutes = Math.round(diffMs / 60000)
+  const hrs = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
+  return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
+}
+
+const getTotalRuntime = (
+  timeStarted: Date | undefined,
+  timeCompleted: Date | undefined,
+  jobStatus?: string
+) => {
+  const start = parseDateSafe(timeStarted)
   if (!start) return ''
 
   let end: Date | null = null
@@ -536,8 +561,13 @@ const Jobs = () => {
       const nerscStatus = job.mongo.nersc?.state || ''
       const queueHours = getHoursInQueue(job.mongo.nersc, job.mongo.status)
       const runTimeHours = getRunTimeInHours(job.mongo.nersc, job.mongo.status)
-      const totalRuntime = getTotalRuntime(
+      const queuedTime = getQueuedTime(
         job.mongo.time_submitted,
+        job.mongo.time_started,
+        job.mongo.status
+      )
+      const totalRuntime = getTotalRuntime(
+        job.mongo.time_started,
         job.mongo.time_completed,
         job.mongo.status
       )
@@ -549,6 +579,7 @@ const Jobs = () => {
         nerscStatus: nerscStatus,
         queueHours: queueHours,
         runTimeHours: runTimeHours,
+        queuedTime: queuedTime,
         totalRuntime: totalRuntime,
         progress: job.mongo.progress
       }
@@ -578,6 +609,11 @@ const Jobs = () => {
         width: 150,
         valueGetter: (_value, row) => parseDateSafe(row.time_completed),
         valueFormatter: (value: unknown) => formatDateSafe(value)
+      },
+      {
+        field: 'queuedTime',
+        headerName: 'Queued',
+        width: 100
       },
       {
         field: 'totalRuntime',
