@@ -2,9 +2,12 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import sys
+from utils.logger import get_logger
+
+logger = get_logger("plot_rgyrs")
 
 if len(sys.argv) != 2:
-    print("Usage: python plot_rgyrs.py <md_directory>")
+    logger.error("Usage: python plot_rgyrs.py <md_directory>")
     sys.exit(1)
 
 base_dir = sys.argv[1]
@@ -18,7 +21,7 @@ for subdir in sorted(os.listdir(base_dir)):
         # Look for a CSV in the subdir
         csv_files = [f for f in os.listdir(full_path) if f.endswith(".csv")]
         if not csv_files:
-            print(f"No CSV found in {full_path}")
+            logger.warning(f"No CSV found in {full_path}")
             continue
         csv_path = os.path.join(full_path, csv_files[0])
         if os.path.exists(csv_path):
@@ -50,4 +53,4 @@ plt.tight_layout()
 # Save to file
 output_file = f"rgyr_plot.png"
 plt.savefig(output_file, dpi=300)
-print(f"Plot saved to {output_file}")
+logger.info(f"Plot saved to {output_file}")

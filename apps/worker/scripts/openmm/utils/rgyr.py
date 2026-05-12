@@ -3,6 +3,9 @@ from openmm import CustomCVForce, CustomCentroidBondForce
 from openmm.unit import nanometer, dalton, angstroms
 import csv
 import numpy as np
+from utils.logger import get_logger
+
+logger = get_logger("rgyr")
 
 
 class MinimalReporter:
@@ -13,7 +16,7 @@ class MinimalReporter:
         return (self.interval, True, False, False, False)
 
     def report(self, simulation, state):
-        print(f"MinimalReporter called at step {simulation.currentStep}")
+        logger.debug(f"MinimalReporter called at step {simulation.currentStep}")
 
 
 class TestReporter:
@@ -24,7 +27,7 @@ class TestReporter:
         return (self.interval, False, False, False, False)
 
     def report(self, simulation, state):
-        print(f"TestReporter triggered at step {simulation.currentStep}")
+        logger.debug(f"TestReporter triggered at step {simulation.currentStep}")
 
 
 class RgyrDmaxCapture:
@@ -57,7 +60,7 @@ class RgyrDmaxCapture:
             writer = csv.writer(f)
             writer.writerow(["Step", "Rgyr_A", "Dmax_A"])
             writer.writerows(self.rows)
-        print(f"Wrote {len(self.rows)} Rgyr/Dmax rows to {filepath}")
+        logger.info(f"Wrote {len(self.rows)} Rgyr/Dmax rows to {filepath}")
 
 
 class RgyrDmaxReporter:
@@ -97,11 +100,11 @@ class RgyrDmaxReporter:
             dmax = np.max(np.sqrt(np.sum(diff ** 2, axis=-1)))
             self.writer.writerow([simulation.currentStep, rg, dmax])
             self.csvfile.flush()
-            print(
+            logger.debug(
                 f"Step {simulation.currentStep}: Rgyr = {rg:.4f} Å, Dmax = {dmax:.4f} Å"
             )
         except Exception as e:
-            print(f"Exception in RgyrDmaxReporter: {e}")
+            logger.debug(f"Exception in RgyrDmaxReporter: {e}")
 
     def __del__(self):
         if hasattr(self, "csvfile") and not self.csvfile.closed:
@@ -129,7 +132,7 @@ class RadiusOfGyrationCVForce(CustomCVForce):
             force_group (int): Force group to assign.
         """
         num_atoms = len(atom_indices)
-        print(f"num_atoms in Rg calc: {num_atoms}")
+        logger.debug(f"num_atoms in Rg calc: {num_atoms}")
 
         # Define expression: mean squared distance between atoms and group centroid
         rg2_force = CustomCentroidBondForce(2, f"(distance(g1, g2)^2)/{num_atoms}")
@@ -150,21 +153,21 @@ class RadiusOfGyrationCVForce(CustomCVForce):
 
         rg2_force.addGroup(atom_indices, weights)  # g2
 
-        print("Added groups to rg2_force")
+        logger.debug("Added groups to rg2_force")
         # Add bonds between atom-groups (g1) and centroid (g2)
         for i in range(num_atoms):
             rg2_force.addBond(
                 [i, num_atoms]
             )  # last group is full group (index = num_atoms)
 
-        print("Added bonds to rg2_force")
+        logger.debug("Added bonds to rg2_force")
         # Create CV force based on sqrt(Rg²)
         super().__init__("0.5 * k_rg * (sqrt(cv) - rg0)^2")
         self.addGlobalParameter("k_rg", k_rg)
         self.addGlobalParameter("rg0", rg0)
         self.addCollectiveVariable("cv", rg2_force)
         self.setForceGroup(force_group)
-        print("Done creating CVForce object for Rg")
+        logger.debug("Done creating CVForce object for Rg")
 
 
 def compute_radius_of_gyration(positions, atom_indices, masses):

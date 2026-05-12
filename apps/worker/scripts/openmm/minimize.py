@@ -2,22 +2,27 @@
 This module provides functionality for energy minimization of a molecular system using OpenMM.
 """
 
+import math
 import os
 import sys
+
 import yaml
-from openmm.app import (
-    ForceField,
-    Simulation,
-    PDBFile,
-    CutoffNonPeriodic,
-    HBonds,
-)
 from openmm import LangevinIntegrator
-from openmm.unit import kelvin, picoseconds, nanometer
+from openmm.app import (
+    CutoffNonPeriodic,
+    ForceField,
+    HBonds,
+    PDBFile,
+    Simulation,
+)
+from openmm.unit import kelvin, kilojoules_per_mole, nanometer, picoseconds
+from utils.logger import get_logger
 from utils.model_prep import prepare_modeller
 
+logger = get_logger("minimize")
+
 if len(sys.argv) != 2:
-    print("Usage: python minimize.py <config.yaml>")
+    logger.error("Usage: python minimize.py <config.yaml>")
     sys.exit(1)
 
 config_path = sys.argv[1]
@@ -56,13 +61,31 @@ integrator = LangevinIntegrator(300 * kelvin, 1 / picoseconds, 0.002 * picosecon
 simulation = Simulation(modeller.topology, system, integrator)
 simulation.context.setPositions(modeller.positions)
 
-print("Minimizing energy...")
+logger.info("Minimizing energy...")
 simulation.minimizeEnergy()
-print("✅ Minimization complete.")
+logger.info("✅ Minimization complete.")
+
+# Energy gate: check that the minimized structure is physically reasonable.
+# A well-minimized protein is typically in the range of -50,000 to +10,000 kJ/mol.
+# Values above 1e6 kJ/mol indicate unresolved atom clashes that will cause NaN in MD.
+state = simulation.context.getState(getEnergy=True)
+pe = state.getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+logger.info(f"Post-minimization potential energy: {pe:.1f} kJ/mol")
+
+if math.isnan(pe) or math.isinf(pe):
+    logger.error("Potential energy is NaN/Inf after minimization — bad input structure.")
+    sys.exit(1)
+
+if pe > 1_000_000:
+    logger.error(
+        f"Potential energy ({pe:.1f} kJ/mol) is too high after minimization — "
+        "severe atom clashes remain. Heating will fail."
+    )
+    sys.exit(1)
 
 # Step 4: Save structure
 positions = simulation.context.getState(getPositions=True).getPositions()
 with open(os.path.join(min_dir, output_pdb_file_name), "w", encoding="utf-8") as f:
     PDBFile.writeFile(modeller.topology, positions, f, keepIds=True)
 
-print(f"✅ Saved {output_pdb_file_name}")
+logger.info(f"✅ Saved {output_pdb_file_name}")

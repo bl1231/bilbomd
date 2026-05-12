@@ -7,6 +7,9 @@ import openmm as omm
 from openmm import unit, Vec3
 from openmm.app import Topology
 from openmm.unit import amu, nanometer
+from utils.logger import get_logger
+
+logger = get_logger("rigid_body")
 
 
 def apply_rigid_body_constraint(
@@ -35,9 +38,9 @@ def apply_rigid_body_constraint(
             for atom in topology.atoms()
             if atom.index in atom_indices
         }
-        print(f"Applying rigid body constraints to atoms: {atom_info}")
+        logger.info(f"Applying rigid body constraints to atoms: {atom_info}")
     else:
-        print(f"Applying rigid body constraints to atoms: {atom_indices}")
+        logger.info(f"Applying rigid body constraints to atoms: {atom_indices}")
 
     # Add constraints for each unique pair of atoms
     added_pairs = set()
@@ -66,7 +69,7 @@ def apply_rigid_body_constraint(
             if not exists:
                 system.addConstraint(a1, a2, d)
                 added_pairs.add(pair)
-    print("Rigid body constraints applied successfully.")
+    logger.info("Rigid body constraints applied successfully.")
     return system
 
 
