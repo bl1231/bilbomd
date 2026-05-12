@@ -17,6 +17,9 @@ import { blue } from '@mui/material/colors'
 import { useTheme } from '@mui/material/styles'
 import BilboMDBibTeX from 'components/Common/BilboMDBibTeX'
 import AFOpenMMPipelineSchematic from 'features/alphafoldjob/AFOpenMMPipelineSchematic'
+import ClassicPDBOpenMMPipelineSchematic from 'features/jobs/ClassicPDBOpenMMPipelineSchematic'
+import ClassicCRDPipelineSchematic from 'features/jobs/ClassicCRDPipelineSchematic'
+import AutoOpenMMPipelineSchematic from 'features/autojob/AutoOpenMMPipelineSchematic'
 
 const Help = ({ title = 'BilboMD: Help' }) => {
   useTitle(title)
@@ -197,27 +200,9 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                 </Tabs>
               </Box>
               <Box sx={{ mt: 2 }}>
-                {tabValue === 0 && (
-                  <img
-                    src={`/images/bilbomd-classic-pdb-schematic-openmm${theme.palette.mode === 'dark' ? '-dark' : ''}.png`}
-                    alt="BilboMD Classic PDB Schematic"
-                    style={{ width: '100%' }}
-                  />
-                )}
-                {tabValue === 1 && (
-                  <img
-                    src={`/images/bilbomd-classic-crd-schematic${theme.palette.mode === 'dark' ? '-dark' : ''}.png`}
-                    alt="BilboMD Classic CRD Schematic"
-                    style={{ width: '100%' }}
-                  />
-                )}
-                {tabValue === 2 && (
-                  <img
-                    src={`/images/bilbomd-auto-schematic-openmm${theme.palette.mode === 'dark' ? '-dark' : ''}.png`}
-                    alt="BilboMD Auto Schematic"
-                    style={{ width: '100%' }}
-                  />
-                )}
+                {tabValue === 0 && <ClassicPDBOpenMMPipelineSchematic />}
+                {tabValue === 1 && <ClassicCRDPipelineSchematic />}
+                {tabValue === 2 && <AutoOpenMMPipelineSchematic />}
                 {tabValue === 3 && <AFOpenMMPipelineSchematic />}
               </Box>
             </Box>

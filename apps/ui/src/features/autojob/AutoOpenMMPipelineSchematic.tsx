@@ -149,7 +149,7 @@ const AutoOpenMMPipelineSchematic = () => {
     <svg
       viewBox={`0 0 ${SVG_W} ${SVG_H}`}
       style={{ width: '100%', display: 'block' }}
-      aria-label="BilboMD Auto OpenMM pipeline schematic"
+      aria-label="BilboMD Auto pipeline schematic"
     >
       {ROW0.map((step, i) => {
         const x = boxX(i)

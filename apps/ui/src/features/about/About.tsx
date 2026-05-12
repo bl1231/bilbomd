@@ -8,19 +8,20 @@ import {
 } from '@mui/material'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import useTitle from 'hooks/useTitle'
-import { useTheme } from '@mui/material/styles'
 import Introduction from '../shared/Introduction'
 import FeaturesList from '../shared/FeaturesList'
 import PipelineOptions from '../shared/PipelineOptions'
 import AdditionalInfo from '../shared/AdditionalInfo'
 import BilboMDBibTeX from 'components/Common/BilboMDBibTeX'
+import ClassicPDBOpenMMPipelineSchematic from 'features/jobs/ClassicPDBOpenMMPipelineSchematic'
+import ClassicCRDPipelineSchematic from 'features/jobs/ClassicCRDPipelineSchematic'
+import AutoOpenMMPipelineSchematic from 'features/autojob/AutoOpenMMPipelineSchematic'
+import AFOpenMMPipelineSchematic from 'features/alphafoldjob/AFOpenMMPipelineSchematic'
 
 const About = ({ title = 'BilboMD: About' }) => {
   useTitle(title)
   const { data: config, isLoading: configIsLoading } =
     useGetConfigsQuery('configData')
-  const theme = useTheme()
-  const isLightMode = theme.palette.mode === 'light'
 
   let content
 
@@ -126,34 +127,22 @@ const About = ({ title = 'BilboMD: About' }) => {
       {
         title: 'BilboMD Classic w/PDB',
         description: 'Bring your own starting PDB model and constraints.',
-        imagePath: {
-          light: '/images/bilbomd-classic-pdb-schematic.png',
-          dark: '/images/bilbomd-classic-pdb-schematic-dark.png'
-        }
+        schematic: <ClassicPDBOpenMMPipelineSchematic />
       },
       {
         title: 'BilboMD Classic w/CRD/PSF',
         description: 'Bring your own parameterized model and constraints.',
-        imagePath: {
-          light: '/images/bilbomd-classic-crd-schematic.png',
-          dark: '/images/bilbomd-classic-crd-schematic-dark.png'
-        }
+        schematic: <ClassicCRDPipelineSchematic />
       },
       {
         title: 'BilboMD Auto',
         description: 'Use AlphaFold models with automatic constraints.',
-        imagePath: {
-          light: '/images/bilbomd-auto-schematic.png',
-          dark: '/images/bilbomd-auto-schematic-dark.png'
-        }
+        schematic: <AutoOpenMMPipelineSchematic />
       },
       {
         title: 'BilboMD AF - NERSC only',
         description: 'Provide an amino acid sequence for full processing.',
-        imagePath: {
-          light: '/images/bilbomd-af-schematic.png',
-          dark: '/images/bilbomd-af-schematic-dark.png'
-        }
+        schematic: <AFOpenMMPipelineSchematic />
       }
     ]
 
@@ -241,7 +230,7 @@ const About = ({ title = 'BilboMD: About' }) => {
         <Typography variant='h2' sx={{ my: 3 }}>
           Pipeline Options
         </Typography>
-        <PipelineOptions pipelines={pipelines} isLightMode={isLightMode} />
+        <PipelineOptions pipelines={pipelines} />
 
         {/* Additional Information */}
         <AdditionalInfo />
