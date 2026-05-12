@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
+import { parseCifAtomSite } from '@bilbomd/bilbomd-types'
 import {
   Box,
   Button,
@@ -22,7 +23,6 @@ import { useAddNewPublicSANSJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import { BilboMDSANSJobSchema } from 'schemas/BilboMDSANSJobSchema'
 import { expdataSchema } from 'schemas/ExpdataSchema'
-import { pdbFileSchema } from 'schemas/PDBFileSchema'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
@@ -162,17 +162,26 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const parsePDBFile = (fileContent: string): string[] => {
     const lines = fileContent.split('\n')
     const chainIdsSet: Set<string> = new Set()
-
     lines.forEach((line) => {
       if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
         const chainId = line.substring(21, 22).trim()
-        if (chainId) {
-          chainIdsSet.add(chainId)
-        }
+        if (chainId) chainIdsSet.add(chainId)
       }
     })
-
     return Array.from(chainIdsSet)
+  }
+
+  const parseCIFFile = (fileContent: string): string[] => {
+    const parsed = parseCifAtomSite(fileContent)
+    if (!parsed) return []
+    const idx = parsed.columnNames.indexOf('auth_asym_id')
+    if (idx === -1) return []
+    const chainIds = new Set<string>()
+    for (const row of parsed.dataRows) {
+      const val = row[idx]
+      if (val && val !== '.' && val !== '?') chainIds.add(val)
+    }
+    return Array.from(chainIds)
   }
 
   const isFormValid = (values: NewSANSJobFormValues) => {
@@ -291,20 +300,24 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         errorMessage={errors.pdb_file ? errors.pdb_file : ''}
                         infoMessage={pdbInfo}
                         warningMessage={pdbWarning}
-                        fileType="Starting PDB file *.pdb"
-                        fileExt=".pdb"
+                        fileType="Starting PDB or CIF file *.pdb, *.cif"
+                        fileExt=".pdb,.cif"
                         onFileChange={async (selectedFile: File) => {
-                          const isPDBValid =
-                            await pdbFileSchema.isValid(selectedFile)
-                          if (isPDBValid) {
-                            const reader = new FileReader()
-                            reader.onload = (e) => {
-                              const fileContent = e.target?.result as string
-                              const parsedChainIds = parsePDBFile(fileContent)
-                              setChainIds(parsedChainIds)
-                            }
-                            reader.readAsText(selectedFile)
+                          const isCif = selectedFile.name
+                            .toLowerCase()
+                            .endsWith('.cif')
+                          const reader = new FileReader()
+                          reader.onload = (e) => {
+                            const content = e.target?.result as string
+                            setChainIds(
+                              isCif
+                                ? parseCIFFile(content)
+                                : parsePDBFile(content)
+                            )
+                          }
+                          reader.readAsText(selectedFile)
 
+                          if (!isCif) {
                             const [gaffFound, metalFound] = await Promise.all([
                               detectGaffCofactors(selectedFile),
                               detectMetalCofactors(selectedFile)
@@ -350,7 +363,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               )
                             )
                           } else {
-                            setChainIds([])
                             setPdbInfo('')
                             setPdbWarning('')
                           }
