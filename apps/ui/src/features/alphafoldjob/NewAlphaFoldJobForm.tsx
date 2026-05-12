@@ -39,6 +39,8 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import AFOpenMMPipelineSchematic from './AFOpenMMPipelineSchematic'
+import AFCharmmPipelineSchematic from './AFCharmmPipelineSchematic'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -166,10 +168,8 @@ const Instructions = () => (
 )
 
 const PipelineSchematic = ({
-  isDarkMode,
   mdEngine
 }: {
-  isDarkMode: boolean
   mdEngine: 'charmm' | 'openmm'
 }) => (
   <Grid size={{ xs: 12 }}>
@@ -177,15 +177,11 @@ const PipelineSchematic = ({
       <Typography>BilboMD AF Schematic</Typography>
     </HeaderBox>
     <Paper sx={{ p: 2 }}>
-      <img
-        src={
-          isDarkMode
-            ? `/images/bilbomd-af-schematic-${mdEngine}-dark.png`
-            : `/images/bilbomd-af-schematic-${mdEngine}.png`
-        }
-        alt="Overview of BilboMD AF pipeline"
-        style={{ maxWidth: '100%', height: 'auto' }}
-      />
+      {mdEngine === 'openmm' ? (
+        <AFOpenMMPipelineSchematic />
+      ) : (
+        <AFCharmmPipelineSchematic />
+      )}
     </Paper>
   </Grid>
 )
@@ -448,10 +444,6 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       ? 'BilboMD: New AlphaFold Job (anonymous)'
       : 'BilboMD: New AlphaFold Job'
   )
-  // theme and dark mode detection
-  const theme = useTheme()
-  const isDarkMode = theme.palette.mode === 'dark'
-
   const [
     addNewAlphaFoldJob,
     { isSuccess: isAuthSuccess, data: authJobResponse }
@@ -564,10 +556,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       spacing={2}
     >
       <Instructions />
-      <PipelineSchematic
-        isDarkMode={isDarkMode}
-        mdEngine={mdEngine}
-      />
+      <PipelineSchematic mdEngine={mdEngine} />
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
           <Typography>BilboMD AF Job Form</Typography>
