@@ -38,6 +38,7 @@ type MongoDBProperty = {
 const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
   const [open, setOpen] = useState(false)
   const { enqueueSnackbar } = useSnackbar()
+
   const [triggerGetFile, { data: fileContents, isLoading, error }] =
     useLazyGetFileByIdAndNameQuery()
 

@@ -8,18 +8,21 @@ import {
 } from '@mui/material'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import useTitle from 'hooks/useTitle'
-import { useTheme } from '@mui/material/styles'
 import Introduction from '../shared/Introduction'
 import FeaturesList from '../shared/FeaturesList'
 import PipelineOptions from '../shared/PipelineOptions'
 import AdditionalInfo from '../shared/AdditionalInfo'
+import BilboMDBibTeX from 'components/Common/BilboMDBibTeX'
+import ClassicPDBOpenMMPipelineSchematic from 'features/jobs/ClassicPDBOpenMMPipelineSchematic'
+import ClassicCRDPipelineSchematic from 'features/jobs/ClassicCRDPipelineSchematic'
+import AutoOpenMMPipelineSchematic from 'features/autojob/AutoOpenMMPipelineSchematic'
+import AFOpenMMPipelineSchematic from 'features/alphafoldjob/AFOpenMMPipelineSchematic'
+import OF3OpenMMPipelineSchematic from 'features/openfoldjob/OF3OpenMMPipelineSchematic'
 
 const About = ({ title = 'BilboMD: About' }) => {
   useTitle(title)
   const { data: config, isLoading: configIsLoading } =
     useGetConfigsQuery('configData')
-  const theme = useTheme()
-  const isLightMode = theme.palette.mode === 'light'
 
   let content
 
@@ -45,9 +48,9 @@ const About = ({ title = 'BilboMD: About' }) => {
             has already been parameterized for CHARMM as a *.crd and *.psf
             files. This is typically done with{' '}
             <Link
-              href='https://www.charmm-gui.org/'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://www.charmm-gui.org/"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               CHARMM-GUI
             </Link>
@@ -125,109 +128,119 @@ const About = ({ title = 'BilboMD: About' }) => {
       {
         title: 'BilboMD Classic w/PDB',
         description: 'Bring your own starting PDB model and constraints.',
-        imagePath: {
-          light: '/images/bilbomd-classic-pdb-schematic.png',
-          dark: '/images/bilbomd-classic-pdb-schematic-dark.png'
-        }
+        schematic: <ClassicPDBOpenMMPipelineSchematic />
       },
       {
         title: 'BilboMD Classic w/CRD/PSF',
         description: 'Bring your own parameterized model and constraints.',
-        imagePath: {
-          light: '/images/bilbomd-classic-crd-schematic.png',
-          dark: '/images/bilbomd-classic-crd-schematic-dark.png'
-        }
+        schematic: <ClassicCRDPipelineSchematic />
       },
       {
         title: 'BilboMD Auto',
         description: 'Use AlphaFold models with automatic constraints.',
-        imagePath: {
-          light: '/images/bilbomd-auto-schematic.png',
-          dark: '/images/bilbomd-auto-schematic-dark.png'
-        }
+        schematic: <AutoOpenMMPipelineSchematic />
       },
       {
-        title: 'BilboMD AF - NERSC only',
+        title: 'BilboMD AF',
         description: 'Provide an amino acid sequence for full processing.',
-        imagePath: {
-          light: '/images/bilbomd-af-schematic.png',
-          dark: '/images/bilbomd-af-schematic-dark.png'
-        }
+        schematic: <AFOpenMMPipelineSchematic />
+      },
+      {
+        title: 'BilboMD OF3',
+        description: 'Provide an amino acid sequence for full processing.',
+        schematic: <OF3OpenMMPipelineSchematic />
       }
     ]
 
     content = (
       <Container>
-        <Introduction title='About BilboMD'>
+        <Introduction title="About BilboMD">
           <b>BilboMD</b> allows you to determine the three-dimensional domain
           structure of proteins based on conformational sampling using a
           Molecular Dynamics (MD) approach. Conformational sampling performed by{' '}
           <Link
-            href='https://academiccharmm.org/documentation'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://academiccharmm.org/documentation"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             CHARMM
           </Link>{' '}
-          is followed by structure validation using{' '}
+          or{' '}
           <Link
-            href='https://modbase.compbio.ucsf.edu/foxs/about'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://openmm.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OpenMM
+          </Link>{' '}
+          and is followed by structure validation using{' '}
+          <Link
+            href="https://modbase.compbio.ucsf.edu/foxs/about"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             FoXS
           </Link>{' '}
-          and ensemble analysis using Minimal Ensemble Search (MES) via{' '}
+          and ensemble analysis via{' '}
           <Link
-            href='https://modbase.compbio.ucsf.edu/multifoxs/'
-            target='_blank'
-            rel='noopener noreferrer'
+            href="https://modbase.compbio.ucsf.edu/multifoxs/"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             MultiFoXS
           </Link>
           .Details of the implementation and integration of these tools into{' '}
           <b>BilboMD</b> are described in the following manuscript:
-          <Typography variant='body2' sx={{ mx: 5, my: 2 }}>
-            Classen S, Del Mundo J, Kulkarni D, Prabhakar S, Hicks A, Hammel
-            M.{' '}
+          <Typography
+            variant="body2"
+            sx={{ mx: 5, my: 2 }}
+          >
+            Classen S, Del Mundo J, Kulkarni D, Prabhakar S, Hicks A, Hammel M.{' '}
             <b>
               BilboMD: a web-accessible SAXS and AlphaFold-guided modeling
               pipeline.
             </b>{' '}
             Nucleic Acids Research. 2026; gkag377. doi:{' '}
             <Link
-              href='https://doi.org/10.1093/nar/gkag377'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://doi.org/10.1093/nar/gkag377"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               10.1093/nar/gkag377
             </Link>
             .
           </Typography>
+          <BilboMDBibTeX />
         </Introduction>
 
         {/* Config Alert */}
         {config?.useNersc?.toLowerCase() === 'false' ? (
-          <Alert severity='info' variant='outlined'>
+          <Alert
+            severity="info"
+            variant="outlined"
+          >
             You are about to run <b>BilboMD</b> on SIBYLS servers. If you would
             prefer to run on NERSC head over to:{' '}
             <Link
-              href='https://bilbomd-nersc.bl1231.als.lbl.gov'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://bilbomd-nersc.bl1231.als.lbl.gov"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <b>bilbomd-nersc.bl1231.als.lbl.gov</b>
             </Link>
             .
           </Alert>
         ) : (
-          <Alert severity='info' variant='outlined'>
+          <Alert
+            severity="info"
+            variant="outlined"
+          >
             You are about to run <b>BilboMD</b> on NERSC. If you would prefer to
             run on the SIBYLS Beamline servers head over to:{' '}
             <Link
-              href='https://bilbomd.bl1231.als.lbl.gov'
-              target='_blank'
-              rel='noopener noreferrer'
+              href="https://bilbomd.bl1231.als.lbl.gov"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <b>bilbomd.bl1231.als.lbl.gov</b>
             </Link>
@@ -236,10 +249,13 @@ const About = ({ title = 'BilboMD: About' }) => {
         )}
 
         {/* Pipeline Options */}
-        <Typography variant='h2' sx={{ my: 3 }}>
+        <Typography
+          variant="h2"
+          sx={{ my: 3 }}
+        >
           Pipeline Options
         </Typography>
-        <PipelineOptions pipelines={pipelines} isLightMode={isLightMode} />
+        <PipelineOptions pipelines={pipelines} />
 
         {/* Additional Information */}
         <AdditionalInfo />

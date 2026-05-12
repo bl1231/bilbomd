@@ -27,60 +27,89 @@ class TestReporter:
         print(f"TestReporter triggered at step {simulation.currentStep}")
 
 
-class RadiusOfGyrationReporter:
+class RgyrDmaxCapture:
+    """
+    Computes Rgyr/Dmax in memory during MD; writes CSV once after simulation.
+    Eliminates per-step disk flushes and stdout prints that block the trajectory.
+    """
+
+    def __init__(self, atom_indices, reportInterval=500):
+        self.atom_indices = atom_indices
+        self.reportInterval = reportInterval
+        self.rows: list[tuple[int, float, float]] = []
+
+    def describeNextReport(self, simulation):
+        return (self.reportInterval, True, False, False, False)
+
+    def report(self, simulation, state):
+        positions = state.getPositions()
+        coords = np.array(
+            [positions[i].value_in_unit(angstroms) for i in self.atom_indices]
+        )
+        com = coords.mean(axis=0)
+        rg = float(np.sqrt(np.mean(np.sum((coords - com) ** 2, axis=1))))
+        diff = coords[:, None, :] - coords[None, :, :]
+        dmax = float(np.max(np.sqrt(np.sum(diff ** 2, axis=-1))))
+        self.rows.append((simulation.currentStep, rg, dmax))
+
+    def write_csv(self, filepath: str) -> None:
+        with open(filepath, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Step", "Rgyr_A", "Dmax_A"])
+            writer.writerows(self.rows)
+        print(f"Wrote {len(self.rows)} Rgyr/Dmax rows to {filepath}")
+
+
+class RgyrDmaxReporter:
+    """
+    Reports radius of gyration (Rgyr) and maximum pairwise distance (Dmax) for a
+    set of atom indices at each report interval, writing both to a CSV file.
+
+    Both quantities are computed over the supplied atom_indices (typically CA atoms)
+    and reported in Ångströms.
+    """
+
     def __init__(
         self,
         atom_indices,
-        system,
         filename,
         reportInterval=500,
     ):
         self.atom_indices = atom_indices
-        self.system = system
         self.reportInterval = reportInterval
         self.filename = filename
-        # Open CSV file and write header
         self.csvfile = open(self.filename, "w", newline="")
         self.writer = csv.writer(self.csvfile)
-        self.writer.writerow(["Step", "Radius_of_Gyration_nm"])
+        self.writer.writerow(["Step", "Rgyr_A", "Dmax_A"])
 
     def describeNextReport(self, simulation):
-        # print(f"describeNextReport called at step {simulation.currentStep}, interval={self.reportInterval}")
-        # return (self.reportInterval, True, True, True, True)
         return (self.reportInterval, True, False, False, False)
 
     def report(self, simulation, state):
         try:
-            # I'm worried that this is ignoring virtual particles
-            # or virtual particles cause the real particles to be ignored?
             positions = state.getPositions()
-            # print(f"report called at step {simulation.currentStep}, positions={len(positions)}")
-            # for i in self.atom_indices:
-            #     mass_i = self.system.getParticleMass(i)
-            #     print(f"Atom {i} mass: {mass_i}")
-            # masses = np.array([self.system.getParticleMass(i).value_in_unit(dalton) for i in self.atom_indices])
-            masses = np.array([12.011] * len(self.atom_indices))
-            # print("Atom masses:")
-            # for i, m in zip(self.atom_indices, masses):
-            #     print(f"  Atom {i}: mass = {m} Da")
             coords = np.array(
                 [positions[i].value_in_unit(angstroms) for i in self.atom_indices]
             )
-            total_mass = np.sum(masses)
-            com = np.average(coords, axis=0, weights=masses)
-            sq_dists = np.sum((coords - com) ** 2, axis=1)
-            rg2 = np.sum(masses * sq_dists) / total_mass
-            rg = np.sqrt(rg2)
-            # Write step and Rg to CSV
-            self.writer.writerow([simulation.currentStep, rg])
-            self.csvfile.flush()  # ensure data is written promptly
-            print(f"Step {simulation.currentStep}: Radius of Gyration = {rg:.4f} nm")
+            com = coords.mean(axis=0)
+            rg = np.sqrt(np.mean(np.sum((coords - com) ** 2, axis=1)))
+            diff = coords[:, None, :] - coords[None, :, :]
+            dmax = np.max(np.sqrt(np.sum(diff ** 2, axis=-1)))
+            self.writer.writerow([simulation.currentStep, rg, dmax])
+            self.csvfile.flush()
+            print(
+                f"Step {simulation.currentStep}: Rgyr = {rg:.4f} Å, Dmax = {dmax:.4f} Å"
+            )
         except Exception as e:
-            print(f"Exception in RadiusOfGyrationReporter: {e}")
+            print(f"Exception in RgyrDmaxReporter: {e}")
 
     def __del__(self):
         if hasattr(self, "csvfile") and not self.csvfile.closed:
             self.csvfile.close()
+
+
+# Backward-compatible alias
+RadiusOfGyrationReporter = RgyrDmaxReporter
 
 
 class RadiusOfGyrationCVForce(CustomCVForce):

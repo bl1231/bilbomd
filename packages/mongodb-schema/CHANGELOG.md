@@ -1,5 +1,29 @@
 # @bilbomd/mongodb-schema
 
+## 2.6.1
+
+### Patch Changes
+
+- d82f306: Add openmm_forcefield field to job documents to record the OpenMM force field
+  files selected at runtime (e.g. AMBER19, CHARMM36, GLYCAM).
+
+## 2.6.0
+
+### Minor Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+## 2.5.5
+
+### Patch Changes
+
+- 24b6dc2: Add per-account OTP attempt counter to prevent brute-force of magic link tokens. After 5 failed attempts (expired OTP submissions), the OTP is nulled and the user must request a new magic link. Addresses F-1 pen test finding (per-account rate limiting).
+
 ## 2.5.4
 
 ### Patch Changes

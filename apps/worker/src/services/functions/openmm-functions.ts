@@ -5,6 +5,7 @@ import {
   IBilboMDPDBJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IBilboMDSANSJob,
   IBilboMDSteps,
   IStepStatus
@@ -22,6 +23,7 @@ type OmmCapableJob =
   | IBilboMDPDBJob
   | IBilboMDAutoJob
   | IBilboMDAlphaFoldJob
+  | IBilboMDOpenFoldJob
   | IBilboMDSANSJob
 
 const detectCarbohydratesInPdb = async (pdbPath: string): Promise<boolean> => {
@@ -37,6 +39,29 @@ const detectCarbohydratesInPdb = async (pdbPath: string): Promise<boolean> => {
   } catch {
     return false
   }
+}
+
+// Backbone-integrated residues in CHARMM36 but absent from AMBER19.
+// SEP=phosphoserine, TPO=phosphothreonine, PTR=phosphotyrosine,
+// CYM=deprotonated cysteine, CYSP=phosphocysteine
+const CHARMM36_BACKBONE_RESIDUES = new Set(['SEP', 'TPO', 'PTR', 'CYM', 'CYSP'])
+
+const detectCharmm36ResiduesInPdb = async (
+  pdbPath: string
+): Promise<Set<string>> => {
+  const detected = new Set<string>()
+  try {
+    const text = await fs.readFile(pdbPath, 'utf8')
+    for (const line of text.split(/\r?\n/)) {
+      if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+        const resName = line.slice(17, 20).trim().toUpperCase()
+        if (CHARMM36_BACKBONE_RESIDUES.has(resName)) detected.add(resName)
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return detected
 }
 
 const writeOpenMMConfigYaml = async (
@@ -83,6 +108,8 @@ const buildOpenMMConfigForJob = async (
 
   const pdbPath = path.join(workDir, pdbFile)
   const hasCarbohydrates = await detectCarbohydratesInPdb(pdbPath)
+  const charmm36Residues = await detectCharmm36ResiduesInPdb(pdbPath)
+  const hasCharmm36Residues = charmm36Residues.size > 0
 
   if (hasCarbohydrates) {
     logger.info(
@@ -91,17 +118,34 @@ const buildOpenMMConfigForJob = async (
         `will be stripped before MD.`
     )
   }
+  if (hasCharmm36Residues && !hasCarbohydrates) {
+    logger.info(
+      `Non-standard backbone residues detected in ${pdbFile} ` +
+        `(${[...charmm36Residues].join(', ')}) — switching to CHARMM36 force field ` +
+        `(charmm36_2024.xml + implicit/gbn2.xml).`
+    )
+  } else if (hasCharmm36Residues && hasCarbohydrates) {
+    logger.warn(
+      `Non-standard backbone residues detected in ${pdbFile} ` +
+        `(${[...charmm36Residues].join(', ')}) alongside glycans — GLYCAM force field ` +
+        `takes priority; CHARMM36 will NOT be used. CHARMM36 residue support in ` +
+        `glycoprotein mode is not yet implemented.`
+    )
+  }
 
   const forcefield = hasCarbohydrates
     ? ['amber19-all.xml', 'amber14/GLYCAM_06j-1.xml', 'implicit/gbn2.xml']
-    : ['amber19-all.xml', 'implicit/gbn2.xml']
+    : hasCharmm36Residues
+      ? ['charmm36_2024.xml', 'implicit/gbn2.xml']
+      : ['amber19-all.xml', 'implicit/gbn2.xml']
 
   return {
     input: {
       dir: workDir,
       pdb_file: pdbFile,
       forcefield,
-      has_carbohydrates: hasCarbohydrates
+      has_carbohydrates: hasCarbohydrates,
+      has_charmm36_residues: hasCharmm36Residues
     },
     output: {
       output_dir: path.join(workDir, 'openmm'),
@@ -139,7 +183,7 @@ const buildOpenMMConfigForJob = async (
             : (omm_params.md?.rgyr ?? []),
           k_rg: omm_params.md?.k_rg ?? 10,
           report_interval: omm_params.md?.rg_report_interval ?? 500,
-          filename: 'rgyr.csv'
+          filename: 'rgyr_dmax.csv'
         },
         output_pdb: 'md.pdb',
         output_restart: 'md.xml',
@@ -203,6 +247,9 @@ const prepareOpenMMConfig = async (DBjob: OmmCapableJob): Promise<void> => {
 
   const yamlPath = await writeOpenMMConfigYaml(workDir, cfg)
   logger.info(`OpenMM config YAML written: ${yamlPath}`)
+
+  DBjob.openmm_forcefield = cfg.input.forcefield
+  await DBjob.save()
 }
 
 type OmmStepKey = 'minimize' | 'heat' | 'md'
@@ -213,6 +260,7 @@ interface OpenMMConfig {
     pdb_file: string
     forcefield: string[]
     has_carbohydrates?: boolean
+    has_charmm36_residues?: boolean
   }
   output: {
     output_dir: string
@@ -291,12 +339,16 @@ const runOmmStep = async (
       ...(opts?.pluginDir ? { OPENMM_PLUGIN_DIR: opts.pluginDir } : {})
     }
 
+    let ommErrorDetail: string | null = null
     const result = await runPythonStep(scriptPath, configYamlPath, {
       cwd: opts?.cwd,
       pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
       env,
       timeoutMs: opts?.timeoutMs ?? 60 * 60 * 1000,
       onStdoutLine: (line) => {
+        if (line.startsWith('BILBOMD_OPENMM_ERROR:')) {
+          ommErrorDetail = line.slice('BILBOMD_OPENMM_ERROR:'.length).trim()
+        }
         logger.info(`[${stepKey}][stdout] ${line}`)
       },
       onStderrLine: (line) => {
@@ -305,10 +357,22 @@ const runOmmStep = async (
     })
 
     if (result.code !== 0) {
+      let detail = ''
+      if (ommErrorDetail) {
+        try {
+          const info = JSON.parse(ommErrorDetail) as {
+            residue_name: string
+            residue_index: number
+          }
+          detail = ` Template match failed for residue: ${info.residue_name} (index ${info.residue_index})`
+        } catch {
+          // ignore malformed JSON
+        }
+      }
       throw new Error(
         `${stepName} failed (exit ${result.code}${
           result.signal ? `, signal ${result.signal}` : ''
-        })`
+        })${detail}`
       )
     }
 
@@ -387,12 +451,11 @@ const runOmmMD = async (
     rgs = [50]
   }
 
-  // Determine available GPUs and concurrency
+  // Determine available GPUs
   const envCUDA = process.env.CUDA_VISIBLE_DEVICES
   let availableGpus: number[] = []
 
   if (envCUDA) {
-    // Parse CUDA_VISIBLE_DEVICES to get actual GPU IDs
     availableGpus = envCUDA
       .split(',')
       .map((id) => parseInt(id.trim()))
@@ -402,13 +465,14 @@ const runOmmMD = async (
     availableGpus = [0]
   }
 
-  const maxParallel = Math.min(
-    opts?.concurrency ?? availableGpus.length,
-    availableGpus.length
-  )
+  // Allow multiple processes per GPU (CUDA shares the device across contexts).
+  // Cap at rgs.length — no point queuing more workers than tasks.
+  const requestedConcurrency = opts?.concurrency ?? config.openmmMdConcurrency
+  const maxParallel = Math.min(requestedConcurrency, rgs.length)
 
   logger.info(
-    `[runOmmMD] Available GPUs: ${availableGpus.join(', ')}, max parallel: ${maxParallel}`
+    `[runOmmMD] Available GPUs: ${availableGpus.join(', ')}, ` +
+      `requested concurrency: ${requestedConcurrency}, max parallel: ${maxParallel}`
   )
 
   // Prepare job tracking

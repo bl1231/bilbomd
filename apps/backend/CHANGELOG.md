@@ -1,5 +1,93 @@
 # @bilbomd/backend
 
+## 2.8.4
+
+### Patch Changes
+
+- 6502a18: Fix OF3 and AlphaFold job submission failure caused by entity validation schema incorrectly requiring an `id` field. The `id` field is UI-only and not part of `IOpenFoldEntity` or `IAlphaFoldEntity`, so it was never present in the parsed form data, causing all submissions to fail backend validation with a 400 error.
+
+## 2.8.3
+
+### Patch Changes
+
+- 3ae2172: Fix Color by Domain preset in Molstar viewer for Classic CRD jobs.
+
+  Two-phase component creation prevents "Could not find node" errors when coloring ensemble structures. Also stores `md_constraints` in MongoDB for Classic CRD jobs so the domain-coloring preset has the constraint data it needs.
+
+## 2.8.2
+
+### Patch Changes
+
+- Updated dependencies [6a693d2]
+  - @bilbomd/bilbomd-types@1.6.1
+  - @bilbomd/md-utils@1.1.14
+
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+  - @bilbomd/md-utils@1.1.13
+
+## 2.8.0
+
+### Minor Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+### Patch Changes
+
+- b9c8a64: Update all npm/pnpm dependencies to latest versions within semver ranges.
+
+  Notable updates: mongoose 9.4→9.6, molstar 5.8→5.9, react-router 7.14→7.15, vite 8.0.7→8.0.11, bullmq 5.73→5.76, msw 2.13→2.14, MUI 9.0.0→9.0.1, react/react-dom 19.2.5→19.2.6.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/bilbomd-types@1.6.0
+  - @bilbomd/mongodb-schema@2.6.0
+  - @bilbomd/md-utils@1.1.12
+
+## 2.7.8
+
+### Patch Changes
+
+- 6ca5249: Harden Docker Compose deployments: remove Docker socket mount from worker, add no-new-privileges to all services, set read_only root filesystem on worker containers with /tmp tmpfs, and drop all Linux capabilities from worker. Addresses F-7 pen test finding (Docker socket privilege escalation).
+- 24b6dc2: Add per-account OTP attempt counter to prevent brute-force of magic link tokens. After 5 failed attempts (expired OTP submissions), the OTP is nulled and the user must request a new magic link. Addresses F-1 pen test finding (per-account rate limiting).
+- b41b107: Add custom seccomp profile blocking AF_ALG sockets (CVE-2026-31431) and other dangerous syscalls not needed by BilboMD containers. Profile applied to all services in all Docker Compose environments. Addresses F-6 pen test finding.
+- be7f034: Strip all SUID/SGID bits from container filesystems before dropping to non-root user. Added to backend, ui, worker-base, worker, scoper-base, and scoper Dockerfiles. Addresses F-6 pen test finding (SUID binary privilege escalation).
+- Updated dependencies [e4aa0b3]
+- Updated dependencies [24b6dc2]
+  - @bilbomd/md-utils@1.1.11
+  - @bilbomd/mongodb-schema@2.5.5
+
+## 2.7.7
+
+### Patch Changes
+
+- 0b03fac: Fix critical security vulnerabilities: NoSQL injection in OTP auth flow and CHARMM system directive RCE.
+
+  Cast `email` and `otp` inputs to string before Mongoose queries to prevent MongoDB operator injection. Enable `mongoose.set('sanitizeFilter', true)` globally as defence-in-depth. Add keyword allowlist to `isValidConstInpFile` to reject CHARMM directives (`system`, `open`, etc.) that could execute arbitrary OS commands when the constraint file is STREAMed by the worker.
+
+## 2.7.6
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+- Updated dependencies [964095e]
+  - @bilbomd/bilbomd-types@1.5.4
+  - @bilbomd/md-utils@1.1.10
+
+## 2.7.5
+
+### Patch Changes
+
+- 8dac70d: Fix admin/manager access to MD Movies from other users' jobs. Admins and Managers can now stream movie files and fetch movie metadata for any job, consistent with their ability to view all jobs. Regular users are still restricted to their own jobs.
+
 ## 2.7.4
 
 ### Patch Changes

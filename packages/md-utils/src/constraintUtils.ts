@@ -223,6 +223,16 @@ export async function validateYamlConstraints(
   }
 }
 
+const ALLOWED_INP_PREFIXES = [
+  'define',
+  'cons fix',
+  'cons harm',
+  'shape desc',
+  'return',
+  '!',
+  '*'
+]
+
 /**
  * Validates INP constraint file format
  */
@@ -237,15 +247,33 @@ export async function validateInpConstraints(
       throw new Error('Empty INP constraint file')
     }
 
-    // Basic validation for CHARMM syntax
-    const lines = inpContent
-      .split('\n')
-      .filter((line: string) => line.trim() && !line.startsWith('!'))
+    const lines = inpContent.split('\n').filter((line: string) => line.trim())
 
-    // Check for required CHARMM commands
-    const hasDefine = lines.some((line: string) => line.includes('define'))
-    const hasConstraint = lines.some(
-      (line: string) => line.includes('cons fix') || line.includes('shape desc')
+    // Allowlist check: reject any line that doesn't start with a permitted keyword.
+    // Mirrors the backend isValidConstInpFile check to block CHARMM directives like
+    // 'system', 'open', 'read', etc. that could execute OS commands or perform file I/O.
+    for (const line of lines) {
+      const lower = line.trim().toLowerCase()
+      if (!ALLOWED_INP_PREFIXES.some((pfx) => lower.startsWith(pfx))) {
+        throw new Error(
+          `Disallowed keyword in constraint file: "${line.trim()}"`
+        )
+      }
+    }
+
+    // Check for required CHARMM commands (skip comment lines)
+    const nonCommentLines = lines.filter((line: string) => {
+      const t = line.trim()
+      return !t.startsWith('!') && !t.startsWith('*')
+    })
+
+    const hasDefine = nonCommentLines.some((line: string) =>
+      line.toLowerCase().includes('define')
+    )
+    const hasConstraint = nonCommentLines.some(
+      (line: string) =>
+        line.toLowerCase().includes('cons fix') ||
+        line.toLowerCase().includes('shape desc')
     )
 
     if (!hasDefine) {

@@ -160,7 +160,7 @@ def prepare_openmm_config(config, params):
                     "rg_sets": [],
                     "k_rg": 1,
                     "report_interval": 500,
-                    "filename": "rgyr_report.csv",
+                    "filename": "rgyr_dmax.csv",
                 },
                 "output_pdb": "md.pdb",
                 "pdb_report_interval": 500,

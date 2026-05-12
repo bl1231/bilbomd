@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { parseCifAtomSite } from '@bilbomd/bilbomd-types'
 import {
   Box,
@@ -10,6 +11,7 @@ import {
   Slider,
   Chip
 } from '@mui/material'
+import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
@@ -30,29 +32,25 @@ import NewSANSJobFormInstructions from './NewSANSJobFormInstructions'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import ChainDeuterationSlider from './ChainDeuterationSlider'
-import { useTheme } from '@mui/material/styles'
+import {
+  detectGaffCofactors,
+  detectMetalCofactors
+} from 'schemas/ValidationFunctions'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import SANSPipelineSchematic from './SANSPipelineSchematic'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
 }
 
-const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
+const PipelineSchematic = () => (
   <Grid size={{ xs: 12 }}>
     <HeaderBox>
       <Typography>BilboMD SANS Schematic</Typography>
     </HeaderBox>
     <Paper sx={{ p: 2 }}>
-      <img
-        src={
-          isDarkMode
-            ? '/images/bilbomd-sans-schematic-dark.png'
-            : '/images/bilbomd-sans-schematic.png'
-        }
-        alt="Overview of BilboMD AF pipeline"
-        style={{ maxWidth: '100%', height: 'auto' }}
-      />
+      <SANSPipelineSchematic />
     </Paper>
   </Grid>
 )
@@ -63,9 +61,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       ? 'BilboMD: New SANS Job (anonymous)'
       : 'BilboMD: New SANS Job'
   )
-
-  const theme = useTheme()
-  const isDarkMode = theme.palette.mode === 'dark'
 
   const [addNewSANSJob, { isSuccess: isAuthSuccess, data: authJobResponse }] =
     useAddNewSANSJobMutation()
@@ -99,6 +94,8 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const [chainIds, setChainIds] = useState<string[]>([])
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
+  const [pdbInfo, setPdbInfo] = useState<string>('')
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
 
   const {
     data: config,
@@ -213,7 +210,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     >
       <NewSANSJobFormInstructions />
 
-      <PipelineSchematic isDarkMode={isDarkMode} />
+      <PipelineSchematic />
 
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
@@ -301,9 +298,11 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         setFieldTouched={setFieldTouched}
                         error={errors.pdb_file && touched.pdb_file}
                         errorMessage={errors.pdb_file ? errors.pdb_file : ''}
+                        infoMessage={pdbInfo}
+                        warningMessage={pdbWarning}
                         fileType="Starting PDB or CIF file *.pdb, *.cif"
                         fileExt=".pdb,.cif"
-                        onFileChange={(selectedFile: File) => {
+                        onFileChange={async (selectedFile: File) => {
                           const isCif = selectedFile.name
                             .toLowerCase()
                             .endsWith('.cif')
@@ -317,6 +316,56 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             )
                           }
                           reader.readAsText(selectedFile)
+
+                          if (!isCif) {
+                            const [gaffFound, metalFound] = await Promise.all([
+                              detectGaffCofactors(selectedFile),
+                              detectMetalCofactors(selectedFile)
+                            ])
+                            setPdbInfo(
+                              gaffFound.length > 0
+                                ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
+                                : ''
+                            )
+                            setPdbWarning(
+                              metalFound.length > 0 ? (
+                                <>
+                                  The following metal-containing residues
+                                  have no force-field parameters and will
+                                  be removed before MD:{' '}
+                                  {metalFound.join(', ')}. If these
+                                  residues are important for your system,
+                                  consider using{' '}
+                                  <Button
+                                    href="https://charmm-gui.org/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    variant="outlined"
+                                    color="info"
+                                    endIcon={<LaunchIcon />}
+                                    sx={{
+                                      textTransform: 'none',
+                                      py: 0,
+                                      px: 0.75,
+                                      minHeight: 0,
+                                      fontSize: 'inherit',
+                                      lineHeight: 'inherit',
+                                      verticalAlign: 'baseline'
+                                    }}
+                                  >
+                                    CHARMM-GUI
+                                  </Button>{' '}
+                                  to properly parameterize your structure.
+                                </>
+                              ) : (
+                                ''
+                              )
+                            )
+                          } else {
+                            setPdbInfo('')
+                            setPdbWarning('')
+                          }
                         }}
                       />
                     </Grid>

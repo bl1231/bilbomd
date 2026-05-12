@@ -1,5 +1,49 @@
 # @bilbomd/md-utils
 
+## 1.1.14
+
+### Patch Changes
+
+- Updated dependencies [6a693d2]
+  - @bilbomd/bilbomd-types@1.6.1
+
+## 1.1.13
+
+### Patch Changes
+
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+
+## 1.1.12
+
+### Patch Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/bilbomd-types@1.6.0
+  - @bilbomd/mongodb-schema@2.6.0
+
+## 1.1.11
+
+### Patch Changes
+
+- e4aa0b3: Add keyword allowlist to validateInpConstraints to block CHARMM directives like 'system', 'open', 'read', etc. that could execute OS commands or perform file I/O. Mirrors the existing backend isValidConstInpFile allowlist, closing the gap on the worker-side validator. Addresses F-4 pen test finding.
+- Updated dependencies [24b6dc2]
+  - @bilbomd/mongodb-schema@2.5.5
+
+## 1.1.10
+
+### Patch Changes
+
+- Updated dependencies [964095e]
+  - @bilbomd/bilbomd-types@1.5.4
+
 ## 1.1.9
 
 ### Patch Changes

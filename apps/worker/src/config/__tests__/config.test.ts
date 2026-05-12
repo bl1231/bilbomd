@@ -41,7 +41,6 @@ describe('config.ts', () => {
     expect(config.scripts).toHaveProperty('prepareCHARMMSlurmScript')
     expect(config.scripts).toHaveProperty('prepareOMMSlurmScript')
     expect(config.scripts).toHaveProperty('copyFromScratchToCFSScript')
-    expect(config.scripts).toHaveProperty('dockerBuildScript')
 
     expect(config.bilbomd).toHaveProperty('SANSEnabled')
     expect(config.bilbomd).toHaveProperty('AlphaFoldEnabled')

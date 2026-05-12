@@ -1119,12 +1119,12 @@ jobs:
           echo "All required jobs succeeded"
 
   coverage-report:
-    name: Update Coverage in README
+    name: Coverage Report
     runs-on: ubuntu-24.04
     needs: [backend-unit-tests, ui-unit-tests, worker-unit-tests, scoper-unit-tests]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'pull_request'
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -1155,13 +1155,5 @@ jobs:
       - name: Run scoper tests with coverage
         run: pnpm -C apps/scoper run test
 
-      - name: Update README with coverage
+      - name: Report coverage
         run: node .github/scripts/update-coverage-readme.js
-
-      - name: Commit coverage update
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git diff --staged --quiet || git commit -m "chore: update test coverage in README [skip ci]"
-          git push

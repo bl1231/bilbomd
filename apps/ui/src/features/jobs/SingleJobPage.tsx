@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useParams, useLocation, useNavigate, Link } from 'react-router'
 import useTitle from 'hooks/useTitle'
 import {
@@ -56,6 +56,7 @@ const jobTypeToRoute: Record<string, string> = {
   auto: 'auto',
   scoper: 'scoper',
   alphafold: 'alphafold',
+  openfold: 'openfold',
   sans: 'sans',
   multi: 'multi'
 }
@@ -72,6 +73,7 @@ const SingleJobPage = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
   const [tabValue, setTabValue] = useState(0)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [jobPollingInterval, setJobPollingInterval] = useState(10000)
   const [deleteJob] = useDeleteJobMutation()
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -94,12 +96,24 @@ const SingleJobPage = () => {
     isLoading,
     isError
   } = useGetJobByIdQuery(id ?? skipToken, {
-    pollingInterval: 30000,
+    pollingInterval: jobPollingInterval,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
 
   const job = jobData as BilboMDJobDTO
+
+  useEffect(() => {
+    const status = job?.mongo?.status
+    if (!status) return
+    if (status === 'Running') {
+      setJobPollingInterval(10000)
+    } else if (['Completed', 'Error', 'Failed'].includes(status)) {
+      setJobPollingInterval(0)
+    } else {
+      setJobPollingInterval(30000)
+    }
+  }, [job?.mongo?.status])
 
   const {
     data: config,
@@ -373,7 +387,8 @@ const SingleJobPage = () => {
                     (job.mongo.jobType === 'pdb' ||
                       job.mongo.jobType === 'crd' ||
                       job.mongo.jobType === 'auto' ||
-                      job.mongo.jobType === 'alphafold') &&
+                      job.mongo.jobType === 'alphafold' ||
+                      job.mongo.jobType === 'openfold') &&
                     id && (
                       <Grid size={{ xs: 12 }}>
                         <Suspense fallback={<CircularProgress />}>
@@ -407,7 +422,8 @@ const SingleJobPage = () => {
                     (job.mongo.jobType === 'pdb' ||
                       job.mongo.jobType === 'crd' ||
                       job.mongo.jobType === 'auto' ||
-                      job.mongo.jobType === 'alphafold') &&
+                      job.mongo.jobType === 'alphafold' ||
+                      job.mongo.jobType === 'openfold') &&
                     job.mongo.feedback && (
                       <Grid size={{ xs: 12 }}>
                         <BilboMdFeedback feedback={job.mongo.feedback} />
@@ -438,7 +454,9 @@ const SingleJobPage = () => {
             job.mongo.jobType === 'crd' ||
             job.mongo.jobType === 'auto' ||
             job.mongo.jobType === 'alphafold' ||
-            job.mongo.jobType === 'scoper') && (
+            job.mongo.jobType === 'openfold' ||
+            job.mongo.jobType === 'scoper' ||
+            job.mongo.jobType === 'sans') && (
             <Grid size={{ xs: 12 }}>
               <HeaderBox sx={{ py: '6px' }}>
                 <Typography>
@@ -456,6 +474,7 @@ const SingleJobPage = () => {
                   id={id ?? ''}
                   jobType={job.mongo.jobType}
                   results={job.mongo.results}
+                  constraints={job.mongo.md_constraints}
                 />
               </Suspense>
             </Grid>

@@ -10,6 +10,7 @@ import { handleBilboMDClassicCRD } from './handleBilboMDClassicCRD.js'
 import { handleBilboMDAutoJob } from './handleBilboMDAutoJob.js'
 import { handleBilboMDScoperJob } from './handleBilboMDScoperJob.js'
 import { handleBilboMDAlphaFoldJob } from './handleBilboMDAlphaFoldJob.js'
+import { handleBilboMDOpenFoldJob } from './handleBilboMDOpenFoldJob.js'
 import applyExampleDataIfRequested from './utils/exampleData.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
 import { recordUsageEvent } from '../../services/usageEvents.js'
@@ -20,6 +21,7 @@ import {
   BilboMdCRDJob,
   BilboMdAutoJob,
   BilboMdAlphaFoldJob,
+  BilboMdOpenFoldJob,
   BilboMdSANSJob,
   BilboMdScoperJob,
   MultiJob,
@@ -234,6 +236,7 @@ const createPublicJob = async (req: Request, res: Response) => {
           BilboMdAutoJob.countDocuments(quotaQuery),
           BilboMdSANSJob.countDocuments(quotaQuery),
           BilboMdAlphaFoldJob.countDocuments(quotaQuery),
+          BilboMdOpenFoldJob.countDocuments(quotaQuery),
           BilboMdScoperJob.countDocuments(quotaQuery),
           MultiJob.countDocuments(quotaQuery)
         ])
@@ -341,6 +344,12 @@ const dispatchBilboMDJob = async (ctx: BilboMDDispatchContext) => {
     })
   } else if (bilbomd_mode === 'alphafold') {
     await handleBilboMDAlphaFoldJob(req, res, user, UUID, {
+      accessMode,
+      publicId,
+      client_ip_hash
+    })
+  } else if (bilbomd_mode === 'openfold') {
+    await handleBilboMDOpenFoldJob(req, res, user, UUID, {
       accessMode,
       publicId,
       client_ip_hash

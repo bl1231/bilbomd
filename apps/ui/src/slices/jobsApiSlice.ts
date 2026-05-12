@@ -167,6 +167,14 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
+    addNewOpenFoldJob: builder.mutation<JobCreationResponse, FormData>({
+      query: (newJob) => ({
+        url: '/jobs/bilbomd-openfold',
+        method: 'POST',
+        body: newJob
+      }),
+      invalidatesTags: [{ type: 'Job', id: 'LIST' }]
+    }),
     addNewSANSJob: builder.mutation<JobCreationResponse, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-sans',
@@ -245,6 +253,7 @@ export const {
   useCalculateAutoRgMutation,
   useAddNewAutoJobMutation,
   useAddNewAlphaFoldJobMutation,
+  useAddNewOpenFoldJobMutation,
   useAddNewSANSJobMutation,
   useAddNewScoperJobMutation,
   useAddNewMultiJobMutation,

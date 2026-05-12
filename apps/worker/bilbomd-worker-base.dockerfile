@@ -197,6 +197,8 @@ RUN find /opt/envs -type d -name "__pycache__" -prune -exec rm -rf {} + || true 
     find /opt/envs -type f -name "*.a" -delete || true && \
     find /opt/envs -type f -name "*.la" -delete || true
 
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
+
 # ---- Smoke test script installation ----
 COPY apps/worker/scripts/smoke_test.sh /usr/local/bin/smoke_test.sh
 RUN chmod +x /usr/local/bin/smoke_test.sh

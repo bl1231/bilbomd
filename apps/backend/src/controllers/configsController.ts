@@ -65,6 +65,7 @@ export const getConfigsStuff = async (
       'ENABLE_BILBOMD_SANS',
       'ENABLE_BILBOMD_MULTI',
       'ENABLE_BILBOMD_ALPHAFOLD',
+      'ENABLE_BILBOMD_OPENFOLD',
       'ENABLE_BILBOMD_SCOPER',
       'ENABLE_HOME_PAGE_ALERT',
       'ENABLE_CHARMM_ENGINE'
@@ -85,6 +86,7 @@ export const getConfigsStuff = async (
       enableBilboMdSANS: process.env.ENABLE_BILBOMD_SANS || 'false',
       enableBilboMdMulti: process.env.ENABLE_BILBOMD_MULTI || 'false',
       enableBilboMdAlphaFold: process.env.ENABLE_BILBOMD_ALPHAFOLD || 'false',
+      enableBilboMdOpenfold: process.env.ENABLE_BILBOMD_OPENFOLD || 'false',
       enableBilboMdScoper: process.env.ENABLE_BILBOMD_SCOPER || 'false',
       enableHomePageAlert: process.env.ENABLE_HOME_PAGE_ALERT || 'false',
       enableCharmmEngine: process.env.ENABLE_CHARMM_ENGINE || 'true',

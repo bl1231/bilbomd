@@ -1,16 +1,17 @@
-"""Strip residues that OpenMM cannot process from a PDB file.
+"""Prepare a PDB file for OpenMM by removing incompatible residues.
 
 Removes:
   - Water molecules (HOH) — crystal waters from CIF conversion typically
     lack hydrogen atoms and cannot be matched to any force-field template.
-  - Metal ions and common polyatomic ions — CHARMM36 has no parameters
-    for these.
+    Also unnecessary when using implicit solvent.
+  - Metal ions and common polyatomic ions — no parameters exist for these
+    in the Amber implicit-solvent force-field combination used by BilboMD.
 
 Modifies the file in place.  Prints a summary so the caller (Node.js
 worker) can surface the information in logs.
 
 Usage:
-    python strip_ions.py <pdb_file>
+    python prep_pdb.py <pdb_file>
 
 The ion list mirrors KNOWN_IONS in tools/python/pdb2crd.py and
 SUPPORTED_PDB_RESIDUES in packages/bilbomd-types/src/pdbResidues.ts.
@@ -59,7 +60,7 @@ def strip_ions(lines):
 
 
 if len(sys.argv) != 2:
-    print("Usage: strip_ions.py <pdb_file>", file=sys.stderr)
+    print("Usage: prep_pdb.py <pdb_file>", file=sys.stderr)
     sys.exit(1)
 
 pdb_path = sys.argv[1]
@@ -74,6 +75,6 @@ with open(pdb_path, "w", encoding="utf-8") as f:
     f.writelines(lines)
 
 print(
-    f"strip_ions: removed {n_water} water record(s) and "
+    f"prep_pdb: removed {n_water} water record(s) and "
     f"{n_ions} ion record(s) from {pdb_path}"
 )

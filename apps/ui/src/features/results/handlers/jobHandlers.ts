@@ -5,7 +5,9 @@ import type {
   BilboMDSANSDTO,
   BilboMDPDBDTO,
   BilboMDCRDDTO,
-  BilboMDScoperDTO
+  BilboMDScoperDTO,
+  BilboMDAlphaFoldDTO,
+  BilboMDOpenFoldDTO
 } from '@bilbomd/bilbomd-types'
 import type { JobHandler, MongoDBProperty } from '../types'
 import { ConstraintFileChip } from '../components/ConstraintFileChip'
@@ -125,7 +127,10 @@ export const createSansJobHandler = (): JobHandler => ({
           ]
         : []),
       { label: 'Rg min', value: specificJob.rg_min, suffix: 'Å' },
-      { label: 'Rg max', value: specificJob.rg_max, suffix: 'Å' }
+      { label: 'Rg max', value: specificJob.rg_max, suffix: 'Å' },
+      { label: 'Number of MD Runs', value: getMdRunCount(job) },
+      { label: 'Rg values', value: getRgValues(job) },
+      { label: 'Number of conformations', value: getConformationCount(job) }
     ]
   }
 })
@@ -207,9 +212,34 @@ export const createScoperJobHandler = (): JobHandler => ({
 export const createAlphaFoldJobHandler = (): JobHandler => ({
   getJobTypeDisplayName: () => 'BilboMD AlphaFold',
 
-  getJobSpecificProperties: (): MongoDBProperty[] => {
-    // AlphaFold jobs might have specific properties in the future
-    return []
+  getJobSpecificProperties: (
+    job: BilboMDJobDTO,
+    onOpenModal?: () => void
+  ): MongoDBProperty[] => {
+    const specificJob = job.mongo as BilboMDAlphaFoldDTO
+
+    return [
+      { label: 'FASTA file', value: specificJob.fasta_file },
+      { label: 'PDB file', value: specificJob.pdb_file },
+      { label: 'PSF file', value: specificJob.psf_file },
+      { label: 'CRD file', value: specificJob.crd_file },
+      { label: 'PAE file', value: specificJob.pae_file },
+      ...(job.mongo.md_engine === 'CHARMM'
+        ? [
+            {
+              label: 'MD constraint file',
+              render: () =>
+                React.createElement(ConstraintFileChip, {
+                  job: specificJob,
+                  onOpenModal
+                })
+            }
+          ]
+        : []),
+      { label: 'Number of MD Runs', value: getMdRunCount(job) },
+      { label: 'Rg values', value: getRgValues(job) },
+      { label: 'Number of conformations', value: getConformationCount(job) }
+    ]
   }
 })
 
@@ -217,7 +247,40 @@ export const createMultiJobHandler = (): JobHandler => ({
   getJobTypeDisplayName: () => 'BilboMD MultiMD',
 
   getJobSpecificProperties: (): MongoDBProperty[] => {
-    // Multi jobs might have specific properties in the future
     return []
+  }
+})
+
+export const createOpenFoldJobHandler = (): JobHandler => ({
+  getJobTypeDisplayName: () => 'BilboMD OpenFold3',
+
+  getJobSpecificProperties: (
+    job: BilboMDJobDTO,
+    onOpenModal?: () => void
+  ): MongoDBProperty[] => {
+    const specificJob = job.mongo as BilboMDOpenFoldDTO
+
+    return [
+      { label: 'Query JSON file', value: specificJob.query_json_file },
+      { label: 'PDB file', value: specificJob.pdb_file },
+      { label: 'PSF file', value: specificJob.psf_file },
+      { label: 'CRD file', value: specificJob.crd_file },
+      { label: 'PAE file', value: specificJob.pae_file },
+      ...(job.mongo.md_engine === 'CHARMM'
+        ? [
+            {
+              label: 'MD constraint file',
+              render: () =>
+                React.createElement(ConstraintFileChip, {
+                  job: specificJob,
+                  onOpenModal
+                })
+            }
+          ]
+        : []),
+      { label: 'Number of MD Runs', value: getMdRunCount(job) },
+      { label: 'Rg values', value: getRgValues(job) },
+      { label: 'Number of conformations', value: getConformationCount(job) }
+    ]
   }
 })

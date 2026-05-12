@@ -71,6 +71,13 @@ export default function ClippedDrawer() {
       roles: ['user', 'manager']
     },
     {
+      text: 'BilboMD OF3',
+      icon: <AddCircleOutlineOutlined />,
+      path: '/jobs/openfold/new',
+      onclick: () => navigate('jobs/openfold/new'),
+      roles: ['user', 'manager']
+    },
+    {
       text: 'BilboMD SANS',
       icon: <AddCircleOutlineOutlined />,
       path: '/jobs/sans/new',

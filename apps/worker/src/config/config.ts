@@ -74,42 +74,34 @@ export const config = {
     'OPENMM_PYTHON_BIN',
     '/opt/envs/openmm/bin/python'
   ),
+  openmmMdConcurrency: parsePositiveIntEnv('OPENMM_MD_CONCURRENCY', 1),
   basePythonBin: getEnvVarWithDefault(
     'BASE_PYTHON_BIN',
     '/opt/envs/base/bin/python'
   ),
-  // Host-side path that maps to the in-container DATA_VOL. Used when the
-  // worker spawns sibling containers via the host docker daemon and needs
-  // to bind-mount job directories from the host's filesystem.
-  hostUploadDir: getEnvVarWithDefault(
-    'HOST_UPLOAD_DIR',
-    process.env.DATA_VOL ?? ''
-  ),
-  // Host-side path that holds the ColabFold weights cache (~50GB). Mounted
-  // into spawned bilbomd-colabfold containers at /cache.
-  hostColabfoldCache: getEnvVarWithDefault(
-    'HOST_COLABFOLD_CACHE',
-    '/bilbomd/colabfold-cache'
-  ),
-  colabfoldImage: getEnvVarWithDefault(
-    'COLABFOLD_IMAGE',
-    'ghcr.io/bl1231/bilbomd-colabfold:0.0.10'
+  colabfoldServiceUrl: getEnvVarWithDefault(
+    'COLABFOLD_SERVICE_URL',
+    'http://colabfold-service:8000'
   ),
   colabfoldTimeoutMs: parsePositiveIntEnv(
     'COLABFOLD_TIMEOUT_MS',
     60 * 60 * 1000
   ),
-  dockerBin: getEnvVarWithDefault('DOCKER_BIN', '/usr/bin/docker'),
+  of3ServiceUrl: getEnvVarWithDefault(
+    'OF3_SERVICE_URL',
+    'http://of3-service:8000'
+  ),
+  of3TimeoutMs: parsePositiveIntEnv('OF3_TIMEOUT_MS', 60 * 60 * 1000),
   logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info'),
   scripts: {
     prepareCHARMMSlurmScript: getEnvVar('PREPARE_CHARMM_SLURM_SCRIPT'),
     prepareOMMSlurmScript: getEnvVar('PREPARE_OMM_SLURM_SCRIPT'),
-    copyFromScratchToCFSScript: getEnvVar('CP2CFS_SCRIPT'),
-    dockerBuildScript: 'docker-build.sh'
+    copyFromScratchToCFSScript: getEnvVar('CP2CFS_SCRIPT')
   },
   bilbomd: {
     SANSEnabled: toBoolean(process.env.ENABLE_BILBOMD_SANS),
     AlphaFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_ALPHAFOLD),
+    OpenFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_OPENFOLD),
     MultiEnabled: toBoolean(process.env.ENABLE_BILBOMD_MULTI),
     ScoperEnabled: toBoolean(process.env.ENABLE_BILBOMD_SCOPER)
   }

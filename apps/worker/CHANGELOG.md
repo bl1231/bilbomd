@@ -1,5 +1,144 @@
 # @bilbomd/worker
 
+## 2.13.0
+
+### Minor Changes
+
+- 5a042dc: Enable parallel OpenMM MD runs on a single GPU via CUDA process sharing. Set `OPENMM_MD_CONCURRENCY` env var to run multiple Rg-constrained MD simulations concurrently on one A100, significantly reducing total MD wall time.
+
+### Patch Changes
+
+- 9e056e4: Fix OF3 and AlphaFold pipelines timing out after 5 minutes due to undici's default headersTimeout. Switch callOf3Service and callColabFoldService from native fetch to axios, which does not impose a headers-level timeout separate from the overall request timeout. Also adds BullMQ heartbeat to callColabFoldService to match the OF3 implementation.
+- 5a042dc: Move OpenMM MD PDB frame writing to after simulation completes, eliminating GPU stalls per Rg run caused by inline text-format writes blocking the trajectory.
+- 5a042dc: Buffer RgyrDmax rows in memory and write CSV after simulation, eliminating per-step disk flushes. Add CUDA MPS pipe mount to Epyc dev compose for GPU-sharing experiment.
+
+## 2.12.0
+
+### Minor Changes
+
+- e664424: Add Dmax computation to OpenMM reporter and fix null Rgyr/Dmax in consolidated_rgyr_dmax_data.json for OpenMM jobs.
+
+  Renames `RadiusOfGyrationReporter` to `RgyrDmaxReporter` (backward-compatible alias kept) and extends it to also compute and write Dmax alongside Rgyr, using CA atoms only — consistent with the CHARMM dcd2pdb pipeline. The combined CSV is now named `rgyr_dmax.csv` (previously `rgyr.csv` locally, `rgyr_report.csv` on NERSC).
+
+  Updates `rgyr_v_dmax_analysis.py` to read `rgyr_dmax.csv` files from `openmm/md/rg_*/` directories when building `consolidated_rgyr_dmax_data.json`, so OpenMM jobs now have non-null `rgyr` and `dmax` values instead of `null`.
+
+### Patch Changes
+
+- ab9a1dd: Update BilboMD citation to the published NAR 2026 paper. Worker README files now include the new citation and a BibTeX entry. UI pages (Home, About, Help, Acknowledgments) now show a copyable BibTeX block alongside the citation.
+- Updated dependencies [6a693d2]
+  - @bilbomd/bilbomd-types@1.6.1
+  - @bilbomd/md-utils@1.1.14
+
+## 2.11.1
+
+### Patch Changes
+
+- 8b284ab: Refactor results-gathering utilities to eliminate duplication across pipelines.
+  - Extract `copyFiles`, `writeJsonFile`, and `createResultsArchive` as shared exports from `prepare-results.ts`; remove local copies from `bilbomd-sans-functions.ts` and `bilbomd-multi-functions.ts`
+  - Unify three separate `createReadmeFile` implementations into the shared `create-readme-file.ts`, now supporting all job types (PDB, CRD, Auto, AlphaFold, OpenFold, SANS, Multi)
+  - Move `bilbomd_job.json` write to after the feedback script runs so the snapshot reflects any feedback fields saved back to MongoDB
+
+- 475dd8d: Improve results.tar.gz contents across standard, SANS, and Multi pipelines.
+  - Copy `consolidated_rgyr_dmax_data.json` and `multi_foxs.log` into results for all standard pipelines (PDB, CRD, Auto, AlphaFold, OpenFold)
+  - Fix SANS minimized PDB lookup to use the same three-path fallback as standard pipelines (OpenMM → new CHARMM layout → legacy root)
+  - Add minimized PDB DAT file to SANS results
+  - Include the primary SAXS data file and `multi_foxs.log` in Multi results
+
+## 2.11.0
+
+### Minor Changes
+
+- d82f306: Add CHARMM36 force field fallback for non-standard backbone residues (SEP, TPO, PTR, CYM, CYSP).
+
+  Previously, backbone-integrated non-standard residues were incorrectly treated as standalone GAFF2 ligands, causing a crash when OpenMM tried to match the backbone of the adjacent standard residue. CHARMM36 (`charmm36_2024.xml`) ships with full backbone-aware templates for phosphoserine (SEP), phosphothreonine (TPO), phosphotyrosine (PTR), deprotonated cysteine (CYM), and phosphocysteine (CYSP).
+
+  The worker now detects these residues in the input PDB and automatically selects `charmm36_2024.xml + implicit/gbn2.xml` instead of the default AMBER19 force field. Backbone bonds missing after PDBFixer parsing are repaired before the system is built. If OpenMM still cannot resolve a residue, the unrecognized residue name and index are captured and surfaced in the job error message.
+
+### Patch Changes
+
+- d82f306: Fix OpenMM template matching failure for CHARMM36 phospho-residues (TPO, SEP, PTR).
+
+  Three root causes were identified and fixed in `model_prep.py`:
+  1. **Wrong H atom names from PDBFixer**: PDBFixer adds CCD-based H atoms to TPO/SEP/PTR with names incompatible with the CHARMM36 template (e.g. `H`/`H2` instead of `HN`, `HOP2`/`HOP3` instead of `H3T`). These are now stripped and re-added with correct CHARMM36 names via full hydrogen definitions.
+  2. **Missing intra-residue bonds**: PDBFixer leaves TPO/SEP/PTR residues with no internal bond connectivity, causing OpenMM's graph-based template matcher to fail. New function `_add_charmm36_intra_bonds()` reads bonds directly from the CHARMM36 ForceField templates and adds them before `addHydrogens()` is called.
+  3. **Phosphate oxygen name mismatch**: Some PDB files use PDB standard `OP1`/`OP2`/`OP3` while the CHARMM36 template requires `O1P`/`O2P`/`O3P`. New function `_rename_charmm36_atoms()` normalises these names. The `pdbNames.xml` alias only applies to Nucleic residues, not protein-context phospho-residues.
+
+- d82f306: Add openmm_forcefield field to job documents to record the OpenMM force field
+  files selected at runtime (e.g. AMBER19, CHARMM36, GLYCAM).
+- 8f4e257: Log the underlying cause of fetch errors in handleError so failures like TimeoutError or ECONNREFUSED are visible in logs instead of just "fetch failed".
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+  - @bilbomd/md-utils@1.1.13
+
+## 2.10.0
+
+### Minor Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+- c2137eb: Replace docker socket spawning with HTTP sidecars for OpenFold3 and ColabFold.
+
+  The worker no longer requires `/var/run/docker.sock` to be mounted. OpenFold3 and
+  ColabFold now run as dedicated long-lived HTTP microservice containers
+  (`bilbomd-of3-service`, `bilbomd-colabfold-service`) that the worker calls over the
+  internal Docker network. This eliminates the root-equivalent host access that the
+  docker socket granted and was the vector exploited in the recent security breach.
+
+### Patch Changes
+
+- b9c8a64: Update all npm/pnpm dependencies to latest versions within semver ranges.
+
+  Notable updates: mongoose 9.4→9.6, molstar 5.8→5.9, react-router 7.14→7.15, vite 8.0.7→8.0.11, bullmq 5.73→5.76, msw 2.13→2.14, MUI 9.0.0→9.0.1, react/react-dom 19.2.5→19.2.6.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/bilbomd-types@1.6.0
+  - @bilbomd/mongodb-schema@2.6.0
+  - @bilbomd/md-utils@1.1.12
+
+## 2.9.4
+
+### Patch Changes
+
+- 6ca5249: Harden Docker Compose deployments: remove Docker socket mount from worker, add no-new-privileges to all services, set read_only root filesystem on worker containers with /tmp tmpfs, and drop all Linux capabilities from worker. Addresses F-7 pen test finding (Docker socket privilege escalation).
+- b41b107: Add custom seccomp profile blocking AF_ALG sockets (CVE-2026-31431) and other dangerous syscalls not needed by BilboMD containers. Profile applied to all services in all Docker Compose environments. Addresses F-6 pen test finding.
+- be7f034: Strip all SUID/SGID bits from container filesystems before dropping to non-root user. Added to backend, ui, worker-base, worker, scoper-base, and scoper Dockerfiles. Addresses F-6 pen test finding (SUID binary privilege escalation).
+- Updated dependencies [e4aa0b3]
+- Updated dependencies [24b6dc2]
+  - @bilbomd/md-utils@1.1.11
+  - @bilbomd/mongodb-schema@2.5.5
+
+## 2.9.3
+
+### Patch Changes
+
+- a5fd493: Add PDB preparation step (strip waters and ions) to SANS OpenMM pipeline. Rename strip_ions.py → prep_pdb.py and runStripIons → runPrepPdb for accuracy — the script has always removed both HOH waters and metal/polyatomic ions.
+
+  Add GAFF2/metal cofactor alerts to the SANS new job form, matching the behaviour already present on the Classic PDB and Auto forms.
+
+## 2.9.2
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+- Updated dependencies [964095e]
+  - @bilbomd/bilbomd-types@1.5.4
+  - @bilbomd/md-utils@1.1.10
+
+## 2.9.1
+
+### Patch Changes
+
+- 04bd25d: Add Molstar viewer support for SANS jobs.
+
+  Worker: fix SANS ensemble PDB files to use proper MODEL N / ENDMDL formatting so Molstar can load each conformation as a separate assembly. Populate results.sans.ensembles in MongoDB after each SANS job completes.
+
+  UI: enable the Molstar viewer for completed SANS jobs in SingleJobPage. Viewer.tsx now routes SANS jobs through the same ensemble loading path as classic/auto/alphafold jobs.
+
 ## 2.9.0
 
 ### Minor Changes

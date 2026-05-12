@@ -1,7 +1,7 @@
 import { Job as BullMQJob } from 'bullmq'
-import { spawn } from 'node:child_process'
 import path from 'node:path'
 import fs from 'fs-extra'
+import axios from 'axios'
 import { IBilboMDAlphaFoldJob, IStepStatus } from '@bilbomd/mongodb-schema'
 import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
@@ -36,94 +36,34 @@ const findSingleMatch = async (
   return path.join(dir, matches[0])
 }
 
-const buildDockerArgs = (params: {
-  hostJobDir: string
-  hostCacheDir: string
-  gpus: string
-  image: string
-}): string[] => {
-  return [
-    'run',
-    '--rm',
-    '--gpus',
-    params.gpus,
-    '-v',
-    `${params.hostJobDir}:/bilbomd/work`,
-    '-v',
-    `${params.hostCacheDir}:/cache`,
-    '-e',
-    'COLABFOLD_DATA_DIR=/cache',
-    '--workdir',
-    '/bilbomd/work',
-    params.image,
-    'colabfold_batch',
-    '--num-models=3',
-    '--amber',
-    '--use-gpu-relax',
-    '--num-recycle=4',
-    FASTA_FILE,
-    AF_OUTPUT_DIR
-  ]
-}
-
-const spawnColabFold = async (
+const callColabFoldService = async (
   MQjob: BullMQJob,
-  workDir: string,
-  args: string[]
+  uuid: string
 ): Promise<void> => {
-  const stdoutLog = path.join(workDir, 'colabfold.log')
-  const stderrLog = path.join(workDir, 'colabfold_error.log')
-  const stdoutStream = fs.createWriteStream(stdoutLog)
-  const stderrStream = fs.createWriteStream(stderrLog)
+  const url = `${config.colabfoldServiceUrl}/infer`
+  logger.info(`Calling ColabFold service: POST ${url} uuid=${uuid}`)
+  await MQjob.log(`alphafold http: POST ${url}`)
 
-  logger.info(`Spawning ColabFold: ${config.dockerBin} ${args.join(' ')}`)
-  await MQjob.log(`alphafold spawn: ${config.dockerBin} ${args.join(' ')}`)
+  const heartbeat = setInterval(() => {
+    MQjob.updateProgress({ status: 'running', timestamp: Date.now() })
+  }, 20_000)
 
-  return new Promise<void>((resolve, reject) => {
-    const proc = spawn(config.dockerBin, args, { cwd: workDir })
-
-    const timer = setTimeout(() => {
-      logger.error(
-        `ColabFold timed out after ${config.colabfoldTimeoutMs}ms; killing pid ${proc.pid}`
+  try {
+    await axios.post(url, { uuid }, {
+      headers: { 'content-type': 'application/json' },
+      // Use axios instead of native fetch to avoid undici's default 300s headersTimeout
+      timeout: config.colabfoldTimeoutMs
+    })
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(
+        `ColabFold service returned HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`
       )
-      proc.kill('SIGKILL')
-    }, config.colabfoldTimeoutMs)
-
-    proc.stdout.on('data', (chunk: Buffer) => {
-      stdoutStream.write(chunk)
-    })
-    proc.stderr.on('data', (chunk: Buffer) => {
-      const msg = chunk.toString()
-      stderrStream.write(msg)
-      logger.warn(`[colabfold stderr] ${msg.trimEnd()}`)
-    })
-
-    proc.on('error', (err) => {
-      clearTimeout(timer)
-      Promise.all([
-        new Promise((r) => stdoutStream.end(r)),
-        new Promise((r) => stderrStream.end(r))
-      ]).finally(() => reject(err))
-    })
-
-    proc.on('close', (code, signal) => {
-      clearTimeout(timer)
-      Promise.all([
-        new Promise((r) => stdoutStream.end(r)),
-        new Promise((r) => stderrStream.end(r))
-      ]).then(() => {
-        if (code === 0) {
-          resolve()
-        } else {
-          reject(
-            new Error(
-              `colabfold_batch exited with code ${code}${signal ? ` (signal ${signal})` : ''}`
-            )
-          )
-        }
-      })
-    })
-  })
+    }
+    throw error
+  } finally {
+    clearInterval(heartbeat)
+  }
 }
 
 const promoteRank1Outputs = async (workDir: string): Promise<void> => {
@@ -185,23 +125,7 @@ const runAlphaFold = async (
       )
     }
 
-    // Determine which GPU the parent worker holds. The NVIDIA Container
-    // Toolkit set CUDA_VISIBLE_DEVICES when the worker started.
-    const cudaDevices = process.env.CUDA_VISIBLE_DEVICES?.trim()
-    const gpus = cudaDevices ? `device=${cudaDevices}` : 'all'
-
-    // Sibling containers spawned via the host docker daemon use host paths,
-    // not in-container paths. Translate <uploadDir>/<uuid> to its host equivalent.
-    const hostJobDir = path.join(config.hostUploadDir, DBjob.uuid)
-
-    const args = buildDockerArgs({
-      hostJobDir,
-      hostCacheDir: config.hostColabfoldCache,
-      gpus,
-      image: config.colabfoldImage
-    })
-
-    await spawnColabFold(MQjob, workDir, args)
+    await callColabFoldService(MQjob, DBjob.uuid)
     await promoteRank1Outputs(workDir)
 
     DBjob.pdb_file = AF_RANK1_PDB
@@ -223,7 +147,6 @@ const runAlphaFold = async (
 export {
   runAlphaFold,
   // Exported for unit tests:
-  buildDockerArgs,
   promoteRank1Outputs,
   RANK1_PDB_PATTERN,
   RANK1_PAE_PATTERN

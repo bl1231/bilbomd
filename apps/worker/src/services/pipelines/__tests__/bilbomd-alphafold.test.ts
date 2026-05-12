@@ -49,8 +49,8 @@ vi.mock('../../functions/openmm-functions.js', () => ({
 }))
 
 vi.mock('../../functions/pdb-to-crd.js', () => ({
-  runStripIons: vi.fn(async () => {
-    callOrder.push('strip-ions')
+  runPrepPdb: vi.fn(async () => {
+    callOrder.push('prep-pdb')
   })
 }))
 
@@ -108,7 +108,7 @@ describe('processBilboMDAlphaFoldJob', () => {
     expect(callOrder).toEqual([
       'initializeJob',
       'alphafold',
-      'strip-ions',
+      'prep-pdb',
       'openmm-config',
       'pae',
       'openmm-config',

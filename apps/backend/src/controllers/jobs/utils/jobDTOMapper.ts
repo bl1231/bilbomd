@@ -5,6 +5,7 @@ import type {
   BilboMDPDBDTO,
   BilboMDCRDDTO,
   BilboMDAlphaFoldDTO,
+  BilboMDOpenFoldDTO,
   BilboMDSANSDTO,
   BilboMDScoperDTO,
   JobType,
@@ -20,6 +21,7 @@ import type {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IBilboMDSANSJob,
   IBilboMDScoperJob
 } from '@bilbomd/mongodb-schema'
@@ -34,6 +36,8 @@ export const mapDiscriminatorToJobType = (__t?: string): JobType => {
       return 'auto'
     case 'BilboMdAlphaFold':
       return 'alphafold'
+    case 'BilboMdOpenFold':
+      return 'openfold'
     case 'BilboMdSANS':
       return 'sans'
     case 'BilboMdScoper':
@@ -157,6 +161,23 @@ export const mapJobMongoToDTO = (job: IJob) => {
         rg_min: afJob.rg_min,
         rg_max: afJob.rg_max
       } as BilboMDAlphaFoldDTO
+    }
+
+    case 'openfold': {
+      const ofJob = job as IBilboMDOpenFoldJob
+      return {
+        ...base,
+        openfold_entities: ofJob.openfold_entities,
+        query_json_file: ofJob.query_json_file,
+        pdb_file: ofJob.pdb_file,
+        psf_file: ofJob.psf_file,
+        crd_file: ofJob.crd_file,
+        pae_file: ofJob.pae_file,
+        conformational_sampling: ofJob.conformational_sampling,
+        rg: ofJob.rg,
+        rg_min: ofJob.rg_min,
+        rg_max: ofJob.rg_max
+      } as BilboMDOpenFoldDTO
     }
 
     case 'sans': {

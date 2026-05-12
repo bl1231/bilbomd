@@ -1,5 +1,119 @@
 # @bilbomd/ui
 
+## 2.17.0
+
+### Minor Changes
+
+- d48216a: Replace all static PNG pipeline schematics with inline SVG React components. The SVGs scale cleanly at any resolution, respond to MUI dark/light theme automatically, and eliminate the need for separate dark-mode PNG files. Pipelines covered: AF + OpenMM, AF + CHARMM, Classic PDB + OpenMM, Classic PDB + CHARMM, Classic CRD/PSF, Auto + OpenMM, Auto + CHARMM, OpenFold3, and SANS.
+
+## 2.16.2
+
+### Patch Changes
+
+- 6502a18: Fix OF3 "Load Example Data" to populate the correct protein-DNA complex example: a 203-aa protein plus two 24-nt DNA strands, matching the actual files in `example-data/of3/`. Previously a different, unrelated 823-aa single-protein sequence was hard-coded.
+
+## 2.16.1
+
+### Patch Changes
+
+- 3ae2172: Fix Color by Domain preset in Molstar viewer for Classic CRD jobs.
+
+  Two-phase component creation prevents "Could not find node" errors when coloring ensemble structures. Also stores `md_constraints` in MongoDB for Classic CRD jobs so the domain-coloring preset has the constraint data it needs.
+
+## 2.16.0
+
+### Minor Changes
+
+- 6a693d2: Fix DNA representation consistency in Molstar viewer and add domain-based coloring.
+  - #768: DNA now renders consistently as cartoon (tube/slab) for both CHARMM and OpenMM pipelines. The fix uses a residue-name-based selection that recognises standard PDB names (DA, DT, DG, DC) and CHARMM names (ADE, GUA, CYT, THY) explicitly.
+  - #769: Add "Color by Domain" toggle button above the Molstar viewport. When active, fixed-body regions are colored blue and rigid-body regions orange, matching the PyMol movie scheme; flexible linkers retain the default chain coloring. The button appears whenever MD constraint data is available, independent of ensemble count.
+
+### Patch Changes
+
+- ab9a1dd: Update BilboMD citation to the published NAR 2026 paper. Worker README files now include the new citation and a BibTeX entry. UI pages (Home, About, Help, Acknowledgments) now show a copyable BibTeX block alongside the citation.
+- Updated dependencies [6a693d2]
+  - @bilbomd/bilbomd-types@1.6.1
+
+## 2.15.2
+
+### Patch Changes
+
+- 9c48e1a: Fix NaN SVG errors in scoper job FoXS chart. Guard against NaN/Infinity error values in residuals calculation and handle fewer than 2 FoXS entries gracefully.
+
+## 2.15.1
+
+### Patch Changes
+
+- 5922e9d: Allow admins to delete jobs stuck in Running or Submitted state. A warning is shown in the confirmation dialog explaining that the underlying simulation process may continue running.
+- 655c59b: Fix OF3 job type display and add Rg/conformations to all MD pipelines. Corrects "Unknown Job Type" for OF3 jobs, fixes a runtime error when rendering OF3 job details, and makes the sans, alphafold, and of3 handlers consistent with pdb/crd/auto by showing Number of MD Runs, Rg values, and Number of conformations.
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+
+## 2.15.0
+
+### Minor Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+### Patch Changes
+
+- b9c8a64: Update all npm/pnpm dependencies to latest versions within semver ranges.
+
+  Notable updates: mongoose 9.4→9.6, molstar 5.8→5.9, react-router 7.14→7.15, vite 8.0.7→8.0.11, bullmq 5.73→5.76, msw 2.13→2.14, MUI 9.0.0→9.0.1, react/react-dom 19.2.5→19.2.6.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/bilbomd-types@1.6.0
+  - @bilbomd/mongodb-schema@2.6.0
+
+## 2.14.6
+
+### Patch Changes
+
+- 6ca5249: Harden Docker Compose deployments: remove Docker socket mount from worker, add no-new-privileges to all services, set read_only root filesystem on worker containers with /tmp tmpfs, and drop all Linux capabilities from worker. Addresses F-7 pen test finding (Docker socket privilege escalation).
+- b41b107: Add custom seccomp profile blocking AF_ALG sockets (CVE-2026-31431) and other dangerous syscalls not needed by BilboMD containers. Profile applied to all services in all Docker Compose environments. Addresses F-6 pen test finding.
+- be7f034: Strip all SUID/SGID bits from container filesystems before dropping to non-root user. Added to backend, ui, worker-base, worker, scoper-base, and scoper Dockerfiles. Addresses F-6 pen test finding (SUID binary privilege escalation).
+- e1cead2: Add CHARMM keyword allowlist to frontend const.inp validation. Dangerous directives like `system`, `open`, and `read` are now rejected client-side before upload, giving immediate feedback and layering the defence already present on the backend.
+- Updated dependencies [24b6dc2]
+  - @bilbomd/mongodb-schema@2.5.5
+
+## 2.14.5
+
+### Patch Changes
+
+- a5fd493: Add PDB preparation step (strip waters and ions) to SANS OpenMM pipeline. Rename strip_ions.py → prep_pdb.py and runStripIons → runPrepPdb for accuracy — the script has always removed both HOH waters and metal/polyatomic ions.
+
+  Add GAFF2/metal cofactor alerts to the SANS new job form, matching the behaviour already present on the Classic PDB and Auto forms.
+
+## 2.14.4
+
+### Patch Changes
+
+- f2032ce: Fix stuck step message on job pages and add adaptive polling. Step messages now reflect the currently Running step instead of relying on iteration order, which caused stale messages from earlier completed steps to persist. SingleJobPage now polls at 10s while a job is Running, stops polling on terminal states, and falls back to 30s for other states.
+
+## 2.14.3
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+- Updated dependencies [964095e]
+  - @bilbomd/bilbomd-types@1.5.4
+
+## 2.14.2
+
+### Patch Changes
+
+- b5d24dd: Improve error message on failed job page: logged-in users see their job UUID for support reference; anonymous users see a prompt to create an account for personalized support.
+- 04bd25d: Add Molstar viewer support for SANS jobs.
+
+  Worker: fix SANS ensemble PDB files to use proper MODEL N / ENDMDL formatting so Molstar can load each conformation as a separate assembly. Populate results.sans.ensembles in MongoDB after each SANS job completes.
+
+  UI: enable the Molstar viewer for completed SANS jobs in SingleJobPage. Viewer.tsx now routes SANS jobs through the same ensemble loading path as classic/auto/alphafold jobs.
+
 ## 2.14.1
 
 ### Patch Changes

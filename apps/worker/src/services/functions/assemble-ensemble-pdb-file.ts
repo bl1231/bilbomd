@@ -123,6 +123,9 @@ const assembleEnsemblePdbFiles = async ({
     case 'alphafold':
       DBjob.results.alphafold = ensembleResults
       break
+    case 'openfold':
+      DBjob.results.openfold = ensembleResults
+      break
     default:
       logger.error(`Unsupported job type '${DBjob.__t}' for ensemble results`)
       throw new Error(
@@ -143,6 +146,8 @@ const getResultsKey = (discriminator: string): string => {
       return 'auto'
     case 'BilboMdAlphaFold':
       return 'alphafold'
+    case 'BilboMdOpenFold':
+      return 'openfold'
     case 'BilboMdSANS':
       return 'sans'
     case 'BilboMdScoper':

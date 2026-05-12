@@ -1,6 +1,7 @@
 import React from 'react'
 import { Typography, Link } from '@mui/material'
 import Grid from '@mui/material/Grid'
+import BilboMDBibTeX from 'components/Common/BilboMDBibTeX'
 
 const Acknowledgments: React.FC = () => {
   return (
@@ -35,6 +36,7 @@ const Acknowledgments: React.FC = () => {
           </Link>
           .
         </Typography>
+        <BilboMDBibTeX />
       </Grid>
       <Grid size={8}>
         <Typography>
