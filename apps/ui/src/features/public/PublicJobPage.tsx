@@ -1,4 +1,4 @@
-import { useParams } from 'react-router'
+import { useParams, Link } from 'react-router'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import {
   Alert,
@@ -317,6 +317,32 @@ const PublicJobPage = () => {
             )}
           </Item>
         </Grid>
+
+        {/* CREATE ACCOUNT ADVISORY */}
+        {(job.status === 'Error' || job.status === 'Failed') && (
+          <Grid size={{ xs: 12 }}>
+            <Alert
+              severity="info"
+              action={
+                <Button
+                  component={Link}
+                  to="/register"
+                  color="inherit"
+                  size="small"
+                  variant="outlined"
+                >
+                  Register for free
+                </Button>
+              }
+            >
+              <AlertTitle>Get personalized support</AlertTitle>
+              Creating a free BilboMD account allows the BilboMD team to see
+              your failed jobs, diagnose whether this is a bug on our end or an
+              issue with your inputs (PDB file or SAXS data), and notify you
+              directly.
+            </Alert>
+          </Grid>
+        )}
 
         {/* ERROR / FAILED */}
         {(job.status === 'Error' || job.status === 'Failed') && (
