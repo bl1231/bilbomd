@@ -610,11 +610,15 @@ const Jobs = () => {
         valueGetter: (_value, row) => parseDateSafe(row.time_completed),
         valueFormatter: (value: unknown) => formatDateSafe(value)
       },
-      {
-        field: 'queuedTime',
-        headerName: 'Queued',
-        width: 100
-      },
+      ...(!useNersc
+        ? [
+            {
+              field: 'queuedTime',
+              headerName: 'Queued',
+              width: 100
+            }
+          ]
+        : []),
       {
         field: 'totalRuntime',
         headerName: 'Runtime',

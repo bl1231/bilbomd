@@ -123,6 +123,9 @@ export default function ClippedDrawer() {
   if (useNersc || !enableBilboMdScoper) {
     jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'Scoper')
   }
+  if (useNersc) {
+    jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'BilboMD OF3')
+  }
   if (!enableBilboMdSANS) {
     jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'BilboMD SANS')
   }
