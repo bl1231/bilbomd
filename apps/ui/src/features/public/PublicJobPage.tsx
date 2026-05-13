@@ -158,9 +158,10 @@ const PublicJobPage = () => {
       )?.[0] ?? null)
     : null
 
-  const latestStepMessage = runningStepName && job.steps
-    ? (job.steps[runningStepName as keyof typeof job.steps]?.message ?? '')
-    : ''
+  const latestStepMessage =
+    runningStepName && job.steps
+      ? (job.steps[runningStepName as keyof typeof job.steps]?.message ?? '')
+      : ''
 
   const erroredStepMessage = job.steps
     ? (Object.values(job.steps).find(
@@ -323,15 +324,17 @@ const PublicJobPage = () => {
           <Grid size={{ xs: 12 }}>
             <Alert
               severity="info"
+              variant="outlined"
+              sx={{ backgroundColor: 'rgba(30, 136, 229, 0.08)' }}
               action={
                 <Button
                   component={Link}
                   to="/register"
-                  color="inherit"
+                  color="primary"
                   size="small"
-                  variant="outlined"
+                  variant="contained"
                 >
-                  Register for free
+                  Register
                 </Button>
               }
             >
