@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.19.1
+
+### Patch Changes
+
+- a5da1c8: Hide BilboMD OF3 nav item and Queued column when deployed to NERSC. Queue Time is shown instead of Queued on NERSC.
+
 ## 2.19.0
 
 ### Minor Changes
