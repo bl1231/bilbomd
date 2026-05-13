@@ -115,7 +115,7 @@ for step in range(nsteps):
         if any(math.isnan(v) for p in pos for v in (p.x, p.y, p.z)):
             logger.error(f"NaN detected in particle positions at step {step} — aborting.")
             sys.exit(1)
-        logger.info(f"Step {step}: Temperature = {temperature:.2f} K, PE = {pe:.1f} kJ/mol")
+        logger.info(f"Step {step}: Temperature = {temperature.value_in_unit(kelvin):.2f} K, PE = {pe:.1f} kJ/mol")
 
 logger.info("✅ Heating complete.")
 
