@@ -16,6 +16,7 @@ from openmm.app import (
     Simulation,
 )
 from openmm.unit import kelvin, kilojoules_per_mole, nanometer, picoseconds
+from utils.clash_check import check_clashes
 from utils.logger import get_logger
 from utils.model_prep import prepare_modeller
 
@@ -46,7 +47,23 @@ for d in [output_dir, min_dir, heat_dir, md_dir]:
 forcefield = ForceField(*config["input"]["forcefield"])
 modeller = prepare_modeller(initial_pdb_file, config, forcefield)
 
-# Step 2: Build the system
+# Step 2: Clash check — fail fast before spending time on minimization
+hard_clashes, soft_clashes, examples = check_clashes(modeller)
+if hard_clashes:
+    logger.error(
+        f"Found {hard_clashes} inter-residue atom pair(s) closer than 0.5 Å — "
+        "input structure has severely overlapping atoms (possibly multiple molecules superimposed)."
+    )
+    for ex in examples:
+        logger.error(f"  {ex}")
+    sys.exit(1)
+if soft_clashes:
+    logger.warning(
+        f"Found {soft_clashes} inter-residue atom pair(s) closer than 1.5 Å. "
+        "Minimization may be slow or fail."
+    )
+
+# Step 3: Build the system
 system = forcefield.createSystem(
     modeller.topology,
     nonbondedMethod=CutoffNonPeriodic,
@@ -56,7 +73,7 @@ system = forcefield.createSystem(
     solventDielectric=78.5,
 )
 
-# Step 3: Energy minimization
+# Step 4: Energy minimization
 integrator = LangevinIntegrator(300 * kelvin, 1 / picoseconds, 0.002 * picoseconds)
 simulation = Simulation(modeller.topology, system, integrator)
 simulation.context.setPositions(modeller.positions)
@@ -83,7 +100,7 @@ if pe > 1_000_000:
     )
     sys.exit(1)
 
-# Step 4: Save structure
+# Step 5: Save structure
 positions = simulation.context.getState(getPositions=True).getPositions()
 with open(os.path.join(min_dir, output_pdb_file_name), "w", encoding="utf-8") as f:
     PDBFile.writeFile(modeller.topology, positions, f, keepIds=True)
