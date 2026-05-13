@@ -1,4 +1,4 @@
-import { useParams } from 'react-router'
+import { useParams, Link } from 'react-router'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import {
   Alert,
@@ -158,9 +158,16 @@ const PublicJobPage = () => {
       )?.[0] ?? null)
     : null
 
-  const latestStepMessage = runningStepName && job.steps
-    ? (job.steps[runningStepName as keyof typeof job.steps]?.message ?? '')
-    : ''
+  const latestStepMessage =
+    runningStepName && job.steps
+      ? (job.steps[runningStepName as keyof typeof job.steps]?.message ?? '')
+      : ''
+
+  const erroredStepMessage = job.steps
+    ? (Object.values(job.steps).find(
+        (step) => step != null && step.status === 'Error'
+      )?.message ?? null)
+    : null
 
   const calculateDuration = (): string | undefined => {
     if (!job.startedAt) return undefined
@@ -311,6 +318,54 @@ const PublicJobPage = () => {
             )}
           </Item>
         </Grid>
+
+        {/* CREATE ACCOUNT ADVISORY */}
+        {(job.status === 'Error' || job.status === 'Failed') && (
+          <Grid size={{ xs: 12 }}>
+            <Alert
+              severity="info"
+              variant="outlined"
+              sx={{ backgroundColor: 'rgba(30, 136, 229, 0.08)' }}
+              action={
+                <Button
+                  component={Link}
+                  to="/register"
+                  color="primary"
+                  size="small"
+                  variant="contained"
+                >
+                  Register
+                </Button>
+              }
+            >
+              <AlertTitle>Get personalized support</AlertTitle>
+              Creating a free BilboMD account allows the BilboMD team to see
+              your failed jobs, diagnose whether this is a bug on our end or an
+              issue with your inputs (PDB file or SAXS data), and notify you
+              directly.
+            </Alert>
+          </Grid>
+        )}
+
+        {/* ERROR / FAILED */}
+        {(job.status === 'Error' || job.status === 'Failed') && (
+          <Grid size={{ xs: 12 }}>
+            <HeaderBox sx={{ py: '6px' }}>
+              <Typography>Job Failed</Typography>
+            </HeaderBox>
+            <Item>
+              <Alert
+                severity="error"
+                variant="outlined"
+              >
+                <AlertTitle>Something went wrong</AlertTitle>
+                {erroredStepMessage
+                  ? erroredStepMessage
+                  : 'An unexpected error occurred. Please try resubmitting or creating a BilboMD account for support.'}
+              </Alert>
+            </Item>
+          </Grid>
+        )}
 
         {/* SCOPER RESULTS SUMMARY */}
         {job.results?.scoper && (

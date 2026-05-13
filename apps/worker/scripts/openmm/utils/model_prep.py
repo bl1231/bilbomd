@@ -19,6 +19,9 @@ from openmm.app import ForceField, Modeller, PDBFile
 from pdbfixer import PDBFixer
 
 from utils.glycam_rename import rename_glycam_residues
+from utils.logger import get_logger
+
+logger = get_logger("model_prep")
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +93,7 @@ def _repair_glycam_protein_topology(topology) -> int:
             topology.addBond(a1, a2)
             existing_bonds.add((a1.index, a2.index))
             existing_bonds.add((a2.index, a1.index))
-            print(f"  Repaired bond: {label}")
+            logger.info(f"  Repaired bond: {label}")
             added += 1
 
     for i, res in enumerate(res_list):
@@ -189,7 +192,7 @@ def _remove_5prime_terminal_phosphates(modeller: Modeller) -> None:
                     atoms_to_delete.append(atom)
     if atoms_to_delete:
         names = [a.name for a in atoms_to_delete]
-        print(f"  Removing {len(atoms_to_delete)} spurious 5'-terminal phosphate atom(s): {names}")
+        logger.info(f"  Removing {len(atoms_to_delete)} spurious 5'-terminal phosphate atom(s): {names}")
         modeller.delete(atoms_to_delete)
 
 
@@ -226,14 +229,14 @@ def _find_organic_ligand_sdfs(input_dir: str, unknown_resnames: list[str]) -> di
             found[name] = path
         else:
             url = f"https://files.rcsb.org/ligands/download/{name}_ideal.sdf"
-            print(f"  No SDF for {name}, attempting download from RCSB...")
+            logger.info(f"  No SDF for {name}, attempting download from RCSB...")
             try:
                 urllib.request.urlretrieve(url, path)
-                print(f"  Downloaded {name}.sdf from RCSB.")
+                logger.info(f"  Downloaded {name}.sdf from RCSB.")
                 found[name] = path
             except urllib.error.URLError as e:
-                print(f"  Warning: could not download {name}.sdf from RCSB ({e}). "
-                      f"Residue will be removed.")
+                logger.warning(f"  Could not download {name}.sdf from RCSB ({e}). "
+                               f"Residue will be removed.")
     return found
 
 
@@ -271,7 +274,7 @@ def _register_gaff_generator(forcefield: ForceField, sdf_map: dict[str, str]) ->
         try:
             mol = _load_sdf_molecule(sdf_path)
             mol.name = resname
-            print(f"  Loaded {resname} from {sdf_path} ({mol.n_atoms} atoms)")
+            logger.info(f"  Loaded {resname} from {sdf_path} ({mol.n_atoms} atoms)")
 
             # Gasteiger charges: ~8ms via RDKit, no QM required
             mol.assign_partial_charges("gasteiger")
@@ -289,12 +292,12 @@ def _register_gaff_generator(forcefield: ForceField, sdf_map: dict[str, str]) ->
 
             forcefield.loadFile(StringIO(ffxml_renamed))
             gaff_resnames.add(resname)
-            print(f"  GAFF2 template for {resname} loaded (Gasteiger charges)")
+            logger.info(f"  GAFF2 template for {resname} loaded (Gasteiger charges)")
         except Exception as e:
-            print(f"  Warning: could not parameterize {resname}: {e}")
+            logger.warning(f"  Could not parameterize {resname}: {e}")
 
     if gaff_resnames:
-        print(f"GAFF2 templates ready for: {sorted(gaff_resnames)}")
+        logger.info(f"GAFF2 templates ready for: {sorted(gaff_resnames)}")
 
     return gaff_resnames
 
@@ -434,7 +437,7 @@ def _generate_ligand_hydrogen_definitions(modeller: Modeller, sdf_map: dict[str,
             mol = _load_sdf_molecule(sdf_path)
             mapping = _map_heavy_atoms(residue, mol)
             if mapping is None:
-                print(f"  Warning: could not map heavy-atom graph for {resname}; skipping ligand hydrogen definitions.")
+                logger.warning(f"  Could not map heavy-atom graph for {resname}; skipping ligand hydrogen definitions.")
                 continue
 
             residue_heavy_atoms, _, existing_h = _build_residue_heavy_graph(residue)
@@ -459,7 +462,7 @@ def _generate_ligand_hydrogen_definitions(modeller: Modeller, sdf_map: dict[str,
                     ET.SubElement(residue_elem, "H", {"name": h_name, "parent": atom.name})
             loaded_any = True
         except Exception as e:
-            print(f"  Warning: failed to prepare ligand hydrogen definitions for {resname}: {e}")
+            logger.warning(f"  Failed to prepare ligand hydrogen definitions for {resname}: {e}")
 
     if not loaded_any:
         return ""
@@ -480,9 +483,9 @@ def _remove_unknown_residues(
         and res.name not in gaff_resnames
     ]
     if unknown:
-        print(f"Warning: removing {len(unknown)} residue(s) with no force field template:")
+        logger.warning(f"Removing {len(unknown)} residue(s) with no force field template:")
         for res in unknown:
-            print(f"  {res.name} (chain {res.chain.id}, resSeq {res.id})")
+            logger.warning(f"  {res.name} (chain {res.chain.id}, resSeq {res.id})")
         modeller.delete([atom for res in unknown for atom in res.atoms()])
 
 
@@ -503,7 +506,7 @@ def register_ligand_templates_for_topology(
     if not unknown_organic_resnames:
         return set(), {}
 
-    print(f"Unknown organic residues detected: {sorted(unknown_organic_resnames)}")
+    logger.info(f"Unknown organic residues detected: {sorted(unknown_organic_resnames)}")
     sdf_map = _find_organic_ligand_sdfs(input_dir, unknown_organic_resnames)
     if not sdf_map:
         return set(), {}
@@ -538,7 +541,7 @@ def _repair_backbone_bonds(topology, charmm36_resnames: frozenset[str]) -> int:
             topology.addBond(a1, a2)
             existing_bonds.add((a1.index, a2.index))
             existing_bonds.add((a2.index, a1.index))
-            print(f"  Repaired bond: {label}")
+            logger.info(f"  Repaired bond: {label}")
             added += 1
 
     for i, res in enumerate(res_list):
@@ -664,17 +667,17 @@ def prepare_modeller(
         # sequence aligner, causing findMissingResidues() to return {} even when
         # chain gaps exist. Running PDBFixer first on standard names ensures gaps
         # (e.g. missing loops) are correctly detected and repaired.
-        print("Glycoprotein mode: running PDBFixer on original PDB to fix chain gaps...")
+        logger.info("Glycoprotein mode: running PDBFixer on original PDB to fix chain gaps...")
         pre_fixer = PDBFixer(pdbfile=StringIO(_normalize_charmm_nucleic_names(raw_pdb)))
         pre_fixer.findMissingResidues()
-        print(f"Missing residues found by PDBFixer: {pre_fixer.missingResidues}")
+        logger.info(f"Missing residues found by PDBFixer: {pre_fixer.missingResidues}")
         pre_fixer.findNonstandardResidues()
         if pre_fixer.nonstandardResidues:
             truly_nonstandard = [(r, s) for r, s in pre_fixer.nonstandardResidues if r.name != s]
             if truly_nonstandard:
-                print("Replacing nonstandard residues with standard equivalents:")
+                logger.info("Replacing nonstandard residues with standard equivalents:")
                 for r, s in truly_nonstandard:
-                    print(f"  {r.name} → {s}")
+                    logger.info(f"  {r.name} → {s}")
                 pre_fixer.nonstandardResidues = truly_nonstandard
                 pre_fixer.replaceNonstandardResidues()
         pre_fixer.findMissingAtoms()
@@ -691,41 +694,41 @@ def prepare_modeller(
         PDBFile.writeFile(pre_fixer.topology, pre_fixer.positions, fixed_pdb_io, keepIds=True)
         fixed_pdb_text = fixed_pdb_io.getvalue()
 
-        print("Glycoprotein mode: applying GLYCAM residue renaming to fixed PDB...")
+        logger.info("Glycoprotein mode: applying GLYCAM residue renaming to fixed PDB...")
         renamed_pdb, glycam_log = rename_glycam_residues(fixed_pdb_text)
         log_path = os.path.join(config["input"]["dir"], "glycam_rename.log")
         with open(log_path, "w", encoding="utf-8") as f:
             f.write("\n".join(glycam_log) + "\n")
-        print(f"GLYCAM rename log written to {log_path}")
+        logger.info(f"GLYCAM rename log written to {log_path}")
         for line in glycam_log:
-            print(line)
+            logger.info(line)
 
         fixer = PDBFixer(pdbfile=StringIO(renamed_pdb))
         fixer.findNonstandardResidues()
         if fixer.nonstandardResidues:
-            print("Nonstandard residues found (GLYCAM names expected here, not replaced):")
+            logger.info("Nonstandard residues found (GLYCAM names expected here, not replaced):")
             for residue in fixer.nonstandardResidues:
-                print(f" - {residue}")
+                logger.info(f" - {residue}")
         # OpenMM's PDB reader doesn't establish C→N backbone bonds when the destination
         # residue is a GLYCAM protein residue (NLN, OLS, OLT) unknown to its templates.
         n_repaired = _repair_glycam_protein_topology(fixer.topology)
         if n_repaired:
-            print(f"Repaired {n_repaired} missing bond(s) for GLYCAM protein residues.")
+            logger.info(f"Repaired {n_repaired} missing bond(s) for GLYCAM protein residues.")
         # Skip addMissingHydrogens: it triggers CCD downloads for GLYCAM residue names
         # whose mmCIF entries contain '?' coordinates that PDBFixer cannot parse.
         # Hydrogens are added below via modeller.addHydrogens() using GLYCAM_06j-1.xml.
-        print("Glycoprotein mode: skipping PDBFixer.addMissingHydrogens() to avoid GLYCAM CCD downloads.")
+        logger.info("Glycoprotein mode: skipping PDBFixer.addMissingHydrogens() to avoid GLYCAM CCD downloads.")
     else:
         normalized_pdb = _normalize_charmm_nucleic_names(raw_pdb)
         fixer = PDBFixer(pdbfile=StringIO(normalized_pdb))
         fixer.findMissingResidues()
         fixer.findNonstandardResidues()
         if fixer.nonstandardResidues:
-            print("Nonstandard residues found:")
+            logger.info("Nonstandard residues found:")
             for residue in fixer.nonstandardResidues:
-                print(f" - {residue}")
+                logger.info(f" - {residue}")
         else:
-            print("No nonstandard residues found.")
+            logger.info("No nonstandard residues found.")
         fixer.findMissingAtoms()
         fixer.addMissingAtoms()
         fixer.addMissingHydrogens(pH=7.0)
@@ -738,18 +741,18 @@ def prepare_modeller(
     if charmm36_resnames:
         n_repaired = _repair_backbone_bonds(modeller.topology, charmm36_resnames)
         if n_repaired:
-            print(f"Repaired {n_repaired} missing backbone bond(s) for CHARMM36 residues.")
+            logger.info(f"Repaired {n_repaired} missing backbone bond(s) for CHARMM36 residues.")
         # Normalise phosphate oxygen names (OP1/OP2/OP3 → O1P/O2P/O3P) to match
         # the CHARMM36 template. pdbNames.xml only has this alias for Nucleic residues.
         n_renamed = _rename_charmm36_atoms(modeller.topology, charmm36_resnames)
         if n_renamed:
-            print(f"Renamed {n_renamed} phosphate oxygen atom(s) to CHARMM36 convention.")
+            logger.info(f"Renamed {n_renamed} phosphate oxygen atom(s) to CHARMM36 convention.")
         # Add intra-residue heavy-atom bonds from the CHARMM36 templates. PDBFixer
         # leaves non-standard residues unconnected internally; without these bonds
         # the graph-based template matcher in createSystem cannot match TPO/SEP/PTR.
         n_bonds = _add_charmm36_intra_bonds(modeller.topology, charmm36_resnames, forcefield)
         if n_bonds:
-            print(f"Added {n_bonds} intra-residue bond(s) for CHARMM36 residues.")
+            logger.info(f"Added {n_bonds} intra-residue bond(s) for CHARMM36 residues.")
 
     # PDBFixer.addMissingAtoms() incorrectly adds P/OP1/OP2 to the 5' terminus
     # of DNA/RNA chains. Strip them before addHydrogens() to avoid template mismatch.
@@ -812,10 +815,7 @@ def prepare_modeller(
     except ValueError as e:
         info = _extract_template_error_info(str(e))
         if info:
-            print(
-                f"BILBOMD_OPENMM_ERROR: {json.dumps({**info, 'message': str(e)})}",
-                flush=True,
-            )
+            logger.info(f"BILBOMD_OPENMM_ERROR: {json.dumps({**info, 'message': str(e)})}")
         raise
 
     return modeller

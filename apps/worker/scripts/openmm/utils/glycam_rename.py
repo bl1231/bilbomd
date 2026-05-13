@@ -30,6 +30,9 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional
+from utils.logger import get_logger
+
+logger = get_logger("glycam_rename")
 
 
 # ---------------------------------------------------------------------------
@@ -544,11 +547,11 @@ def _main() -> None:
         f.write(modified_text)
 
     if log_lines:
-        print("GLYCAM renames applied:")
+        logger.info("GLYCAM renames applied:")
         for line in log_lines:
-            print(line)
+            logger.info(line)
     else:
-        print("No GLYCAM renames needed.")
+        logger.info("No GLYCAM renames needed.")
 
     log_file = args.pdb_file.replace(".pdb", "_glycam_rename.log")
     with open(log_file, "w", encoding="utf-8") as f:
