@@ -162,6 +162,12 @@ const PublicJobPage = () => {
     ? (job.steps[runningStepName as keyof typeof job.steps]?.message ?? '')
     : ''
 
+  const erroredStepMessage = job.steps
+    ? (Object.values(job.steps).find(
+        (step) => step != null && step.status === 'Error'
+      )?.message ?? null)
+    : null
+
   const calculateDuration = (): string | undefined => {
     if (!job.startedAt) return undefined
     const startTime = new Date(job.startedAt)
@@ -311,6 +317,26 @@ const PublicJobPage = () => {
             )}
           </Item>
         </Grid>
+
+        {/* ERROR / FAILED */}
+        {(job.status === 'Error' || job.status === 'Failed') && (
+          <Grid size={{ xs: 12 }}>
+            <HeaderBox sx={{ py: '6px' }}>
+              <Typography>Job Failed</Typography>
+            </HeaderBox>
+            <Item>
+              <Alert
+                severity="error"
+                variant="outlined"
+              >
+                <AlertTitle>Something went wrong</AlertTitle>
+                {erroredStepMessage
+                  ? erroredStepMessage
+                  : 'An unexpected error occurred. Please try resubmitting or creating a BilboMD account for support.'}
+              </Alert>
+            </Item>
+          </Grid>
+        )}
 
         {/* SCOPER RESULTS SUMMARY */}
         {job.results?.scoper && (

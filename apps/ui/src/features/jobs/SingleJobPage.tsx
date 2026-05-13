@@ -103,6 +103,12 @@ const SingleJobPage = () => {
 
   const job = jobData as BilboMDJobDTO
 
+  const erroredStepMessage = job?.mongo?.steps
+    ? (Object.values(job.mongo.steps).find(
+        (step) => step != null && step.status === 'Error'
+      )?.message ?? null)
+    : null
+
   useEffect(() => {
     const status = job?.mongo?.status
     if (!status) return
@@ -559,13 +565,10 @@ const SingleJobPage = () => {
           </Grid>
         )}
 
-        {job.mongo.status === 'Error' && (
+        {(job.mongo.status === 'Error' || job.mongo.status === 'Failed') && (
           <Grid size={{ xs: 12 }}>
             <HeaderBox sx={{ py: '6px' }}>
-              <Typography>
-                {/* Error - {job.bullmq?.bullmq?.failedReason ?? 'Unknown error'} */}
-                Error in SingleJobPage Component
-              </Typography>
+              <Typography>Job Failed</Typography>
             </HeaderBox>
 
             <Item>
@@ -575,9 +578,21 @@ const SingleJobPage = () => {
                   variant="outlined"
                 >
                   <AlertTitle>Job Failed</AlertTitle>
-                  We&apos;ve logged the details of this job failure. Please
-                  contact Scott or Michal and reference your job ID for faster
-                  support:{' '}
+                  {erroredStepMessage && (
+                    <Box
+                      component="pre"
+                      sx={{
+                        mb: 1,
+                        fontSize: '0.82em',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                      }}
+                    >
+                      {erroredStepMessage}
+                    </Box>
+                  )}
+                  Please contact Scott or Michal and reference your job ID for
+                  faster support:{' '}
                   <Box
                     component="code"
                     sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}
@@ -591,7 +606,19 @@ const SingleJobPage = () => {
                   variant="outlined"
                 >
                   <AlertTitle>Job Failed</AlertTitle>
-                  Something didn&apos;t work.{' '}
+                  {erroredStepMessage && (
+                    <Box
+                      component="pre"
+                      sx={{
+                        mb: 1,
+                        fontSize: '0.82em',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                      }}
+                    >
+                      {erroredStepMessage}
+                    </Box>
+                  )}
                   <Link to="/register">Creating a free BilboMD account</Link>{' '}
                   allows us to investigate job failures and provide personalized
                   support. You can also try resubmitting.

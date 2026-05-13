@@ -340,6 +340,7 @@ const runOmmStep = async (
     }
 
     let ommErrorDetail: string | null = null
+    let lastStderrError: string | null = null
     const result = await runPythonStep(scriptPath, configYamlPath, {
       cwd: opts?.cwd,
       pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
@@ -353,6 +354,9 @@ const runOmmStep = async (
       },
       onStderrLine: (line) => {
         logger.error(`[${stepKey}][stderr] ${line}`)
+        if (line.startsWith('ERROR: ')) {
+          lastStderrError = line.slice('ERROR: '.length).trim()
+        }
       }
     })
 
@@ -370,9 +374,10 @@ const runOmmStep = async (
         }
       }
       throw new Error(
-        `${stepName} failed (exit ${result.code}${
-          result.signal ? `, signal ${result.signal}` : ''
-        })${detail}`
+        lastStderrError ??
+          `${stepName} failed (exit ${result.code}${
+            result.signal ? `, signal ${result.signal}` : ''
+          })${detail}`
       )
     }
 
