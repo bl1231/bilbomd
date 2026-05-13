@@ -33,9 +33,9 @@
     "@bilbomd/bilbomd-types": "workspace:*",
     "@bilbomd/md-utils": "workspace:*",
     "@bilbomd/mongodb-schema": "workspace:*",
-    "axios": "^1.16.0",
+    "axios": "^1.16.1",
     "axios-retry": "^4.5.0",
-    "bullmq": "^5.76.6",
+    "bullmq": "^5.76.8",
     "csv-parser": "^3.2.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -46,14 +46,14 @@
     "jsonwebtoken": "^9.0.3",
     "module-alias": "^2.3.4",
     "moment-timezone": "^0.6.2",
-    "mongoose": "^9.6.1",
+    "mongoose": "^9.6.2",
     "nodemailer": "^8.0.7",
     "nodemailer-express-handlebars": "^7.0.0",
     "p-limit": "^7.3.0",
     "qs": "^6.15.1",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "yaml": "^2.8.4"
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

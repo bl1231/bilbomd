@@ -34,7 +34,7 @@
     "@bull-board/api": "^7.0.0",
     "@bull-board/express": "^7.0.0",
     "axios": "^1.16.0",
-    "bullmq": "^5.76.6",
+    "bullmq": "^5.76.8",
     "cookie-parser": "~1.4.7",
     "cors": "^2.8.6",
     "cron": "^4.4.0",
@@ -48,7 +48,7 @@
     "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
     "moment-timezone": "^0.6.2",
-    "mongoose": "^9.6.1",
+    "mongoose": "^9.6.2",
     "mongoose-to-swagger": "^1.5.1",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
@@ -60,7 +60,7 @@
     "uuid": "^14.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "yaml": "^2.8.4",
+    "yaml": "^2.9.0",
     "yup": "^1.7.1"
   },
   "devDependencies": {
