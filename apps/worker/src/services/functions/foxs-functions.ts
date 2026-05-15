@@ -377,7 +377,7 @@ const runFoXS = async (
   let heartbeat: NodeJS.Timeout | null = null
 
   try {
-    // Update the initial status
+    logger.info(`Starting FoXS for job ${DBjob.uuid}`)
     await updateStepStatus(DBjob, 'foxs', status)
 
     // Discover or prepare FoXS input directories (supports OpenMM md/rg_* layout)
@@ -418,9 +418,7 @@ const runFoXS = async (
       message: 'FoXS Calculations have completed successfully.'
     }
     await updateStepStatus(DBjob, 'foxs', status)
-    logger.info(
-      `FoXS processing completed successfully for job: ${DBjob.title}`
-    )
+    logger.info(`Completed FoXS for job ${DBjob.uuid}`)
   } catch (error: unknown) {
     // Handle errors and update status to Error
     status = {

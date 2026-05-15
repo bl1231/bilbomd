@@ -170,20 +170,46 @@ def print_timing(all_entries: list[dict], uuid: str) -> None:
     print(f"{'='*60}\n")
 
     # ── Minimize ──────────────────────────────────────────────
-    # Start: UUID-containing message
-    min_start_ts, _ = find_first(uuid_entries, "Starting OpenMM minimize")
-
-    # Heat start is the upper bound when searching for minimize end
-    heat_start_ts, _ = find_first(uuid_entries, "Starting OpenMM heat")
-    md_start_ts, _   = find_first(uuid_entries, "Starting OpenMM md")
-
-    # End: Python stdout lines have no UUID — search the full log by time window
-    min_end_ts, _ = find_first_after(
-        all_entries, min_start_ts,
-        "[minimize][stdout] ✅ Saved minimized.pdb",
-        "[minimize][stdout] ✅ Minimization complete",
-        before_ts=heat_start_ts,
+    # All boundary messages now carry the UUID.
+    min_start_ts, _ = find_first(
+        uuid_entries,
+        "Starting OpenMM minimize",
+        "Starting CHARMM minimize",
     )
+    heat_start_ts, _ = find_first(
+        uuid_entries,
+        "Starting OpenMM heat",
+        "Starting CHARMM heat",
+    )
+    md_start_ts, _ = find_first(
+        uuid_entries,
+        "Starting OpenMM md",
+        "Starting CHARMM MD",
+    )
+    foxs_start_ts, _ = find_first(uuid_entries, "Starting FoXS")
+    if not foxs_start_ts:  # fallback for logs before the new log messages
+        foxs_start_ts, _ = find_first(uuid_entries, "MD directories with PDB files")
+
+    multifoxs_start_ts, _ = find_first(uuid_entries, "Starting MultiFoXS")
+    if not multifoxs_start_ts:  # fallback for logs before the new log messages
+        multifoxs_start_ts, _ = find_first(
+            [e for e in uuid_entries if "multifoxs" in e.get("message", "").lower()],
+            "Create Dir:",
+        )
+
+    # "Completed" messages now carry UUID — fall back to Python stdout for old logs
+    min_end_ts, _ = find_first(
+        uuid_entries,
+        "Completed OpenMM minimize",
+        "Completed CHARMM minimize",
+    )
+    if not min_end_ts:
+        min_end_ts, _ = find_first_after(
+            all_entries, min_start_ts,
+            "[minimize][stdout] ✅ Saved minimized.pdb",
+            "[minimize][stdout] ✅ Minimization complete",
+            before_ts=heat_start_ts,
+        )
 
     _, min_platform_msg = find_first_after(
         all_entries, min_start_ts,
@@ -217,12 +243,18 @@ def print_timing(all_entries: list[dict], uuid: str) -> None:
         print(f"  Energy  : {min_energy}")
 
     # ── Heat ─────────────────────────────────────────────────
-    heat_end_ts, _ = find_first_after(
-        all_entries, heat_start_ts,
-        "[heat][stdout] ✅ Heating complete",
-        "[heat][stdout] ✅ Saved heated.pdb",
-        before_ts=md_start_ts,
+    heat_end_ts, _ = find_first(
+        uuid_entries,
+        "Completed OpenMM heat",
+        "Completed CHARMM heat",
     )
+    if not heat_end_ts:
+        heat_end_ts, _ = find_first_after(
+            all_entries, heat_start_ts,
+            "[heat][stdout] ✅ Heating complete",
+            "[heat][stdout] ✅ Saved heated.pdb",
+            before_ts=md_start_ts,
+        )
 
     _, heat_platform_msg = find_first_after(
         all_entries, heat_start_ts,
@@ -315,6 +347,84 @@ def print_timing(all_entries: list[dict], uuid: str) -> None:
     print(f"\n  Overall MD start   : {md_start_ts or '(not found)'}")
     print(f"  Overall MD end     : {md_overall_end_ts or '(not found)'}")
     print(f"  Overall MD duration: {delta(md_start_ts, md_overall_end_ts)}")
+
+    # ── FoXS (on MD frames) ───────────────────────────────────
+    foxs_end_ts, _ = find_first(uuid_entries, "Completed FoXS")
+    # Fallback for older logs without the new UUID messages
+    if not foxs_end_ts:
+        foxs_end_ts, _ = find_first_after(
+            all_entries, foxs_start_ts,
+            "FoXS processing completed:",
+            before_ts=multifoxs_start_ts,
+        )
+
+    _, foxs_workers_msg = find_first_after(
+        all_entries, foxs_start_ts,
+        "concurrent FoXS workers",
+        before_ts=foxs_end_ts,
+    )
+    foxs_workers_info = None
+    if foxs_workers_msg:
+        m = re.search(r"Using (\d+) concurrent FoXS workers \(([^)]+)\)", foxs_workers_msg)
+        if m:
+            foxs_workers_info = f"{m.group(1)} workers ({m.group(2)})"
+
+    _, foxs_summary_msg = find_first_after(
+        all_entries, foxs_start_ts,
+        "FoXS processing completed:",
+        before_ts=multifoxs_start_ts,
+    )
+    foxs_file_counts = None
+    if foxs_summary_msg:
+        m = re.search(r"(\d+) successful, (\d+) failed out of (\d+) total", foxs_summary_msg)
+        if m:
+            foxs_file_counts = f"{m.group(1)} ok / {m.group(2)} failed / {m.group(3)} total"
+
+    foxs_progress_entries = find_all_after(
+        all_entries, foxs_start_ts,
+        "FoXS progress:",
+        before_ts=foxs_end_ts,
+    )
+    last_foxs_pct = None
+    if foxs_progress_entries:
+        m = re.search(r"\((\d+)%\)", foxs_progress_entries[-1][1])
+        last_foxs_pct = m.group(1) + "%" if m else None
+
+    print("\n── FoXS (MD frames) ──────────────────────────────────")
+    print(f"  Start   : {foxs_start_ts or '(not found)'}")
+    print(f"  End     : {foxs_end_ts or '(not found)'}")
+    print(f"  Duration: {delta(foxs_start_ts, foxs_end_ts)}")
+    if foxs_workers_info:
+        print(f"  Workers : {foxs_workers_info}")
+    if foxs_file_counts:
+        print(f"  Files   : {foxs_file_counts}")
+    if last_foxs_pct and not foxs_end_ts:
+        print(f"  Progress: {last_foxs_pct} (incomplete)")
+
+    # ── MultiFoXS ─────────────────────────────────────────────
+    multifoxs_end_ts, _ = find_first(uuid_entries, "Completed MultiFoXS")
+    # Fallback for older logs
+    if not multifoxs_end_ts:
+        multifoxs_end_ts, _ = find_first_after(
+            all_entries, multifoxs_start_ts,
+            "spawnMultiFoxs close success exit code: 0",
+        )
+
+    _, multifoxs_ensembles_msg = find_first_after(
+        all_entries, multifoxs_start_ts,
+        "ensemble files",
+    )
+    multifoxs_ensembles = None
+    if multifoxs_ensembles_msg:
+        m = re.search(r"Found (\d+) ensemble files", multifoxs_ensembles_msg)
+        multifoxs_ensembles = f"{m.group(1)} ensemble files" if m else None
+
+    print("\n── MultiFoXS ─────────────────────────────────────────")
+    print(f"  Start   : {multifoxs_start_ts or '(not found)'}")
+    print(f"  End     : {multifoxs_end_ts or '(not found)'}")
+    print(f"  Duration: {delta(multifoxs_start_ts, multifoxs_end_ts)}")
+    if multifoxs_ensembles:
+        print(f"  Output  : {multifoxs_ensembles}")
 
     # ── Total ────────────────────────────────────────────────
     print("\n── Total ─────────────────────────────────────────────")
