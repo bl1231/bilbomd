@@ -477,8 +477,8 @@ const runPdb2Crd = async (
   MQjob: BullMQJob,
   DBjob: IBilboMDPDBJob | IBilboMDSANSJob | IBilboMDAutoJob
 ): Promise<void> => {
-  logger.debug(`Starting runPdb2Crd for job ${DBjob.uuid}`)
   try {
+    logger.info(`Starting pdb2crd for job ${DBjob.uuid}`)
     let status: IStepStatus = {
       status: 'Running',
       message: 'PDB2CRD has started.'
@@ -514,7 +514,7 @@ const runPdb2Crd = async (
       message: 'PDB2CRD has completed.'
     }
     await updateStepStatus(DBjob, 'pdb2crd', status)
-    logger.debug(`runPdb2Crd completed successfully for job ${DBjob.uuid}`)
+    logger.info(`Completed pdb2crd for job ${DBjob.uuid}`)
   } catch (error) {
     logger.error(`runPdb2Crd failed for job ${DBjob.uuid}: ${error}`)
     await handleError(error, DBjob, 'pdb2crd')
@@ -525,9 +525,9 @@ const runPaeToConstInp = async (
   MQjob: BullMQJob,
   DBjob: IBilboMDAutoJob | IBilboMDAlphaFoldJob | IBilboMDOpenFoldJob
 ): Promise<void> => {
-  logger.debug(`Starting runPaeToConstInp for job ${DBjob.uuid}`)
-
   try {
+    logger.info(`Starting pae2const for job ${DBjob.uuid}`)
+
     // Validate required inputs before proceeding
     if (!DBjob.pae_file) {
       throw new Error('PAE file is required but not provided')
@@ -686,6 +686,7 @@ const runAutoRg = async (DBjob: IBilboMDAutoJob): Promise<void> => {
   const logStream = fs.createWriteStream(logFile)
   const errorStream = fs.createWriteStream(errorFile)
 
+  logger.info(`Starting autorg for job ${DBjob.uuid}`)
   let status: IStepStatus = {
     status: 'Running',
     message: 'Calculate Rg has started.'
@@ -733,6 +734,7 @@ const runAutoRg = async (DBjob: IBilboMDAutoJob): Promise<void> => {
             message: 'Calculate Rg completed successfully.'
           }
           await updateStepStatus(DBjob, 'autorg', status)
+          logger.info(`Completed autorg for job ${DBjob.uuid}`)
           resolve()
         } catch (parseError) {
           reject(parseError)
@@ -778,6 +780,7 @@ const runMinimize = async (
     in_crd_file: DBjob.crd_file ?? ''
   }
   try {
+    logger.info(`Starting CHARMM minimize for job ${DBjob.uuid}`)
     let status: IStepStatus = {
       status: 'Running',
       message: 'CHARMM Minimization has started.'
@@ -790,6 +793,7 @@ const runMinimize = async (
       message: 'CHARMM Minimization has completed.'
     }
     await updateStepStatus(DBjob, 'minimize', status)
+    logger.info(`Completed CHARMM minimize for job ${DBjob.uuid}`)
   } catch (error: unknown) {
     await handleError(error, DBjob, 'minimize')
   }
@@ -822,6 +826,7 @@ const runHeat = async (
     constinp: DBjob.const_inp_file ?? ''
   }
   try {
+    logger.info(`Starting CHARMM heat for job ${DBjob.uuid}`)
     let status: IStepStatus = {
       status: 'Running',
       message: 'CHARMM Heating has started.'
@@ -834,6 +839,7 @@ const runHeat = async (
       message: 'CHARMM Heating has completed.'
     }
     await updateStepStatus(DBjob, 'heat', status)
+    logger.info(`Completed CHARMM heat for job ${DBjob.uuid}`)
   } catch (error) {
     await handleError(error, DBjob, 'heat')
   }
@@ -873,6 +879,7 @@ const runMolecularDynamics = async (
   }
 
   try {
+    logger.info(`Starting CHARMM MD for job ${DBjob.uuid}`)
     let status: IStepStatus = {
       status: 'Running',
       message: 'CHARMM Molecular Dynamics has started.'
@@ -900,6 +907,7 @@ const runMolecularDynamics = async (
       message: 'CHARMM Molecular Dynamics has completed.'
     }
     await updateStepStatus(DBjob, 'md', status)
+    logger.info(`Completed CHARMM MD for job ${DBjob.uuid}`)
   } catch (error) {
     await handleError(error, DBjob, 'md')
   }
@@ -912,6 +920,7 @@ const runMultiFoxs = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
     data_file: DBjob.data_file
   }
   try {
+    logger.info(`Starting MultiFoXS for job ${DBjob.uuid}`)
     let status: IStepStatus = {
       status: 'Running',
       message: 'MultiFoXS Calculations have started.'
@@ -926,6 +935,7 @@ const runMultiFoxs = async (MQjob: BullMQJob, DBjob: IJob): Promise<void> => {
       message: 'MultiFoXS Calculations have completed.'
     }
     await updateStepStatus(DBjob, 'multifoxs', status)
+    logger.info(`Completed MultiFoXS for job ${DBjob.uuid}`)
   } catch (error) {
     await handleError(error, DBjob, 'multifoxs')
   }

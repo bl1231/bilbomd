@@ -381,6 +381,7 @@ const runOmmStep = async (
       )
     }
 
+    logger.info(`Completed ${stepName} for job ${DBjob.uuid}`)
     status = {
       status: 'Success',
       message: `${stepName} has completed.`
@@ -617,6 +618,10 @@ const runOmmMD = async (
     )
   }
 
+  const successCount = rgs.length - failures.length
+  logger.info(
+    `Completed ${stepName} for job ${DBjob.uuid}: ${successCount}/${rgs.length} Rg values succeeded`
+  )
   await updateStepStatus(DBjob, stepKey, {
     status: 'Success',
     message: `${stepName} has completed for ${rgs.length} Rg values (${failures.length} failures tolerated)`
