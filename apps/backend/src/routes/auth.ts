@@ -5,6 +5,7 @@ import { handleOrcidCallback } from '../controllers/auth/handleOrcidCallback.js'
 import { loginLimiter } from '../middleware/loginLimiter.js'
 import { handleOrcidFinalize } from '../controllers/auth/handleOrcidFinalize.js'
 import { handleOrcidConfirmation } from '../controllers/auth/handleOrcidConfirmation.js'
+import { config } from '../config/config.js'
 
 const router = express.Router()
 
@@ -12,9 +13,11 @@ router.route('/otp').post(loginLimiter, otp)
 router.route('/refresh').get(refresh)
 router.route('/logout').post(logout)
 
-router.route('/orcid/login').get(handleOrcidLogin)
-router.route('/orcid/callback').get(handleOrcidCallback)
-router.route('/orcid/confirmation').get(handleOrcidConfirmation)
-router.route('/orcid/finalize').post(handleOrcidFinalize)
+if (config.orcidAuthEnabled) {
+  router.route('/orcid/login').get(handleOrcidLogin)
+  router.route('/orcid/callback').get(handleOrcidCallback)
+  router.route('/orcid/confirmation').get(handleOrcidConfirmation)
+  router.route('/orcid/finalize').post(handleOrcidFinalize)
+}
 
 export default router

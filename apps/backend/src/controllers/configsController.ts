@@ -68,7 +68,8 @@ export const getConfigsStuff = async (
       'ENABLE_BILBOMD_OPENFOLD',
       'ENABLE_BILBOMD_SCOPER',
       'ENABLE_HOME_PAGE_ALERT',
-      'ENABLE_CHARMM_ENGINE'
+      'ENABLE_CHARMM_ENGINE',
+      'ORCID_AUTH_ENABLED'
     ]
 
     envVars.forEach((envVar) => {
@@ -90,6 +91,7 @@ export const getConfigsStuff = async (
       enableBilboMdScoper: process.env.ENABLE_BILBOMD_SCOPER || 'false',
       enableHomePageAlert: process.env.ENABLE_HOME_PAGE_ALERT || 'false',
       enableCharmmEngine: process.env.ENABLE_CHARMM_ENGINE || 'true',
+      orcidAuthEnabled: process.env.ORCID_AUTH_ENABLED || 'false',
       backendVersion: process.env.BILBOMD_BACKEND_VERSION || '0.0.0',
       backendGitHash: process.env.BILBOMD_BACKEND_GIT_HASH || 'abc123',
       workerVersion: workerInfo.version || '0.0.0',
