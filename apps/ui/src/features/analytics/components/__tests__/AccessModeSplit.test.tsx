@@ -27,15 +27,15 @@ describe('AccessModeSplit', () => {
     // Aggregated row for pdb: user 3, anon 2, total 5
     const pdbRow = screen.getByText('pdb').closest('tr')!
     const cells = pdbRow.querySelectorAll('td')
-    expect(cells[1].textContent).toBe('3')
-    expect(cells[2].textContent).toBe('2')
-    expect(cells[3].textContent).toBe('5')
+    expect(cells[1]!.textContent).toBe('3')
+    expect(cells[2]!.textContent).toBe('2')
+    expect(cells[3]!.textContent).toBe('5')
     // crd row: user 5, anon 0, total 5
     const crdRow = screen.getByText('crd').closest('tr')!
     const crdCells = crdRow.querySelectorAll('td')
-    expect(crdCells[1].textContent).toBe('5')
-    expect(crdCells[2].textContent).toBe('0')
-    expect(crdCells[3].textContent).toBe('5')
+    expect(crdCells[1]!.textContent).toBe('5')
+    expect(crdCells[2]!.textContent).toBe('0')
+    expect(crdCells[3]!.textContent).toBe('5')
   })
 
   it('shows skeleton when loading', () => {

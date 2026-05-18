@@ -54,13 +54,13 @@ describe('Signup Component', () => {
     // Simulate user input
     const usernameInputs = screen.getAllByLabelText(/Pick a User Name/i)
     await act(async () => {
-      fireEvent.change(usernameInputs[0], {
+      fireEvent.change(usernameInputs[0]!, {
         target: { value: 'testuser' }
       })
     })
     const emailInputs = screen.getAllByLabelText(/Enter an Email address/i)
     await act(async () => {
-      fireEvent.change(emailInputs[0], {
+      fireEvent.change(emailInputs[0]!, {
         target: { value: 'test@example.com' }
       })
     })
@@ -70,7 +70,7 @@ describe('Signup Component', () => {
       name: /Create an Account/i
     })
     act(() => {
-      fireEvent.click(submitButton[0])
+      fireEvent.click(submitButton[0]!)
     })
     // Wait for the success message to appear
     await waitFor(() => {
@@ -93,11 +93,11 @@ describe('Signup Component', () => {
 
   //   // Simulate user input for duplicate username
   //   const usernameInputs = screen.getAllByLabelText(/Pick a User Name/i)
-  //   fireEvent.change(usernameInputs[0], {
+  //   fireEvent.change(usernameInputs[0]!, {
   //     target: { value: 'duplicateuser' }
   //   })
   //   const emailInputs = screen.getAllByLabelText(/Enter an Email address/i)
-  //   fireEvent.change(emailInputs[0], {
+  //   fireEvent.change(emailInputs[0]!, {
   //     target: { value: 'test@example.com' }
   //   })
 
@@ -106,7 +106,7 @@ describe('Signup Component', () => {
   //     name: /Create an Account/i
   //   })
   //   await act(async () => {
-  //     fireEvent.click(submitButton[0])
+  //     fireEvent.click(submitButton[0]!)
   //   })
 
   //   const alert = await screen.findByRole('alert')

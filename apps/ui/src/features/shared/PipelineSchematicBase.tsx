@@ -19,7 +19,7 @@ const BOX_H = 52
 const GAP = 28
 const LEFT_PAD = 26
 const RIGHT_PAD = 20
-const ROW_Y = [10, 90]
+const ROW_Y = [10, 90] as const
 const WRAP_LEFT_X = LEFT_PAD - 20
 const LEAD_IN = 20
 const ROW0_MID_Y = ROW_Y[0] + BOX_H / 2
@@ -68,6 +68,7 @@ const PipelineSchematicBase = ({
 
   const renderBox = (step: PipelineStep, x: number, y: number, key: string) => {
     const c = colors[step.color]
+    if (!c) return null
     const lineH = 14
     const totalTextH = step.lines.length * lineH
     const textStartY = y + BOX_H / 2 - totalTextH / 2 + lineH * 0.75

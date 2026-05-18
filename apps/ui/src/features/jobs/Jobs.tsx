@@ -412,7 +412,7 @@ const Jobs = () => {
         if (contentDisposition) {
           const matches = /filename="?([^"]+)"?/.exec(contentDisposition)
           if (matches && matches.length > 1) {
-            filename = matches[1]
+            filename = matches[1]!
           }
         }
         const url = window.URL.createObjectURL(response.data)

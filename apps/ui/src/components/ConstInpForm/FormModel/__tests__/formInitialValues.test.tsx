@@ -14,7 +14,7 @@ describe('forminitialValues', () => {
   it(`should have a property for ${pdb_file.name}`, () => {
     expect(initialValues).toHaveProperty(pdb_file.name)
 
-    const pdbFileInitialValue = initialValues[pdb_file.name]
+    const pdbFileInitialValue = initialValues[pdb_file.name]!
 
     // validating the structure of pdb_file
     expect(pdbFileInitialValue).toHaveProperty('file', null)
@@ -27,7 +27,7 @@ describe('forminitialValues', () => {
     expect(Array.isArray(chains)).toBe(true)
     expect(chains.length).toBe(1)
 
-    const chain = chains[0]
+    const chain = chains[0]!
     expect(chain).toHaveProperty('id', '')
     expect(chain).toHaveProperty('atoms', '')
     expect(chain).toHaveProperty('first_res', '')
@@ -49,7 +49,7 @@ describe('forminitialValues', () => {
     expect(Array.isArray(rigidBodies)).toBe(true)
     expect(rigidBodies.length).toBe(1)
 
-    const rigidBody = rigidBodies[0]
+    const rigidBody = rigidBodies[0]!
     expect(rigidBody).toHaveProperty('id', '')
 
     // Validate domains within rigid_bodies

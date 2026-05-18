@@ -21,7 +21,7 @@ export default function PlddtSlider({
   value
 }: PlddtSliderProps) {
   const handleChange = (_event: Event, newValue: number | number[]) => {
-    const valueToSet = Array.isArray(newValue) ? newValue[0] : newValue
+    const valueToSet = Array.isArray(newValue) ? newValue[0]! : newValue
 
     setFieldValue('plddt_cutoff', valueToSet)
   }

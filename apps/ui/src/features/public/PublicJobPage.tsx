@@ -57,7 +57,7 @@ const handleDownload = async (publicId: string) => {
       if (contentDisposition) {
         const matches = /filename="?([^"]+)"?/.exec(contentDisposition)
         if (matches && matches.length > 1) {
-          filename = matches[1]
+          filename = matches[1]!
         }
       }
 
@@ -121,7 +121,7 @@ const PublicJobPage = () => {
     const ordinal = (n: number) => {
       const s = ['th', 'st', 'nd', 'rd']
       const v = n % 100
-      return n + (s[(v - 20) % 10] || s[v] || s[0])
+      return n + (s[(v - 20) % 10] || s[v] || s[0]!)
     }
     const year = date.getFullYear()
     const time = date.toLocaleTimeString('en-US', { hour12: false })

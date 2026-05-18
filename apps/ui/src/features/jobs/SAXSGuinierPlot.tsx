@@ -45,7 +45,7 @@ const SAXSGuinierPlot = ({ data, qmin, qmax }: SAXSGuinierPlotProps) => {
   const lowSnrSegments: Segment[] = []
   let segStart: number | null = null
   for (let i = 0; i < validData.length; i++) {
-    const pt = validData[i]
+    const pt = validData[i]!
     const snrLow =
       pt.error !== undefined &&
       isFinite(pt.error) &&
@@ -56,13 +56,13 @@ const SAXSGuinierPlot = ({ data, qmin, qmax }: SAXSGuinierPlotProps) => {
       if (segStart === null) segStart = pt.q
     } else {
       if (segStart !== null) {
-        lowSnrSegments.push({ x1: segStart, x2: validData[i - 1].q })
+        lowSnrSegments.push({ x1: segStart, x2: validData[i - 1]!.q })
         segStart = null
       }
     }
   }
   if (segStart !== null) {
-    lowSnrSegments.push({ x1: segStart, x2: validData[validData.length - 1].q })
+    lowSnrSegments.push({ x1: segStart, x2: validData[validData.length - 1]!.q })
   }
 
   return (

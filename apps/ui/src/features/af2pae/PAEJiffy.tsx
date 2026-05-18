@@ -208,7 +208,7 @@ const Alphafold2PAEJiffy = () => {
     const out: number[][] = Array.from({ length: N }, () => Array(N).fill(0))
     for (let i = 0; i < N; i++) {
       for (let j = 0; j < N; j++) {
-        out[i][j] = floats[i * N + j]
+        out[i]![j] = floats[i * N + j]!
       }
     }
     return out

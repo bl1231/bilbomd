@@ -146,7 +146,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       const key =
         `deuteration_fraction_${chainId}` as keyof NewSANSJobFormValues
       if (key in values) {
-        form.append(key, values[key].toString())
+        form.append(key, values[key]!.toString())
       }
     })
 
@@ -187,8 +187,8 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const isFormValid = (values: NewSANSJobFormValues) => {
     const hasValidDeuteration = chainIds.every(
       (chainId) =>
-        values[`deuteration_fraction_${chainId}`] >= 0 &&
-        values[`deuteration_fraction_${chainId}`] <= 100
+        (values[`deuteration_fraction_${chainId}`] ?? 0) >= 0 &&
+        (values[`deuteration_fraction_${chainId}`] ?? 0) <= 100
     )
 
     return (
