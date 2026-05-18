@@ -38,7 +38,7 @@ networks:
 
 services:
   mongodb:
-    image: mongo:8.3.1
+    image: mongo:8.3.2
     pull_policy: missing
     restart: always
     healthcheck:
