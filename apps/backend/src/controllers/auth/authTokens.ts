@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken'
 import { Response } from 'express'
 import { IUser } from '@bilbomd/mongodb-schema'
 import { getEnvVar } from '../../config/config.js'
+import { userDisplayName } from './displayName.js'
 
 const accessTokenSecret = getEnvVar('ACCESS_TOKEN_SECRET')
 const refreshTokenSecret = getEnvVar('REFRESH_TOKEN_SECRET')
@@ -14,6 +15,7 @@ export async function issueTokensAndSetCookie(
     {
       UserInfo: {
         username: user.username,
+        displayName: userDisplayName(user),
         roles: user.roles,
         email: user.email
       }

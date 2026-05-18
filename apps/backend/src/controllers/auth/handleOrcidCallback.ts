@@ -134,18 +134,16 @@ export async function handleOrcidCallback(req: Request, res: Response) {
     }
   }
 
-  // New user — stash the verified profile for the confirmation step. Only
-  // fields the finalize handler actually needs are persisted to the session.
+  // New user — stash the verified profile for the confirmation step. We
+  // intentionally do NOT persist the ORCID access/refresh tokens here
+  // (H3, PR 3 of issue #817): the finalize handler does not need them
+  // and they would otherwise sit in the session store and on the User
+  // document with no consumer.
   req.session.orcidProfile = {
     email: selectedEmail,
     givenName,
     familyName,
     orcidId,
-    accessToken: tokens.access_token,
-    tokenType: tokens.token_type,
-    refreshToken: tokens.refresh_token,
-    scope: tokens.scope,
-    expiresIn: tokens.expires_in,
     name: displayName
   }
 

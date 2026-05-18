@@ -288,5 +288,22 @@ describe('handleOrcidCallback', () => {
         })
       )
     })
+
+    it('does NOT persist ORCID access/refresh tokens in the session (H3)', async () => {
+      tokensWithEmail([
+        { email: 'scott@example.com', primary: true, verified: true }
+      ])
+      findOneMock.mockResolvedValue(null)
+
+      const req = makeReq()
+      await handleOrcidCallback(req, makeRes())
+
+      const stored = req.session.orcidProfile as Record<string, unknown>
+      expect(stored).not.toHaveProperty('accessToken')
+      expect(stored).not.toHaveProperty('refreshToken')
+      expect(stored).not.toHaveProperty('tokenType')
+      expect(stored).not.toHaveProperty('scope')
+      expect(stored).not.toHaveProperty('expiresIn')
+    })
   })
 })

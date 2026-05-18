@@ -24,11 +24,6 @@ interface OAuthIdentity {
   provider: 'google' | 'orcid' | 'github' | string
   id: string
   name: string
-  accessToken?: string
-  refreshToken?: string
-  tokenType?: string
-  scope?: string
-  expiresIn?: number
   tokenIssuedAt?: Date
 }
 

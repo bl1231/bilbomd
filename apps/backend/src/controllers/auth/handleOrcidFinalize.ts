@@ -13,23 +13,18 @@ export async function handleOrcidFinalize(req: Request, res: Response) {
       return
     }
 
-    const {
-      email,
-      givenName,
-      familyName,
-      orcidId,
-      accessToken,
-      tokenType,
-      refreshToken,
-      scope,
-      expiresIn,
-      name
-    } = profile
+    const { email, givenName, familyName, orcidId, name } = profile
 
     if (!name || typeof name !== 'string') {
-      res.status(400).send('Username is required')
+      res.status(400).send('Display name is required')
       return
     }
+
+    // Opaque internal identifier — deterministic, unique by construction,
+    // URL-safe, and decoupled from any human-readable display name. See
+    // PR 3 of issue #817 (Option A). The human-readable label is derived
+    // from firstName + lastName at JWT-sign time by userDisplayName().
+    const username = `orcid-${orcidId}`
 
     const existing = await User.findOne({ email })
 
@@ -61,28 +56,26 @@ export async function handleOrcidFinalize(req: Request, res: Response) {
     }
 
     const user = new User({
-      username: name,
+      username,
       email,
       firstName: givenName,
       lastName: familyName,
       roles: ['User'],
       status: 'Active',
+      // H3: we no longer persist ORCID access/refresh tokens. We never call
+      // ORCID APIs on the user's behalf after sign-in, so storing the
+      // bearer just enlarges the blast radius if the DB is leaked.
       oauth: [
         {
           provider: 'orcid',
           id: orcidId,
-          name,
-          accessToken,
-          refreshToken,
-          tokenType,
-          scope,
-          expiresIn
+          name
         }
       ]
     })
 
     await user.save()
-    logger.info(`New user created via ORCID: ${email}`)
+    logger.info(`New user created via ORCID: ${email} (${username})`)
 
     delete req.session.orcidProfile
 

@@ -43,11 +43,6 @@ const makeReq = (overrides: Partial<Request['session']> = {}): Request =>
         givenName: 'Scott',
         familyName: 'Classen',
         orcidId: ORCID_ID,
-        accessToken: 'orcid-access',
-        tokenType: 'bearer',
-        refreshToken: 'orcid-refresh',
-        scope: 'openid',
-        expiresIn: 3600,
         name: 'Scott Classen'
       },
       ...overrides
@@ -118,7 +113,7 @@ describe('handleOrcidFinalize', () => {
   })
 
   describe('happy path', () => {
-    it('creates a new Active user and issues tokens when no email collision', async () => {
+    it('creates a new Active user with opaque ORCID-derived username', async () => {
       findOneMock.mockResolvedValue(null)
 
       const res = makeRes()
@@ -126,16 +121,38 @@ describe('handleOrcidFinalize', () => {
 
       expect(UserConstructor).toHaveBeenCalledWith(
         expect.objectContaining({
+          username: `orcid-${ORCID_ID}`,
           email: 'scott@example.com',
-          status: 'Active',
-          oauth: [
-            expect.objectContaining({ provider: 'orcid', id: ORCID_ID })
-          ]
+          firstName: 'Scott',
+          lastName: 'Classen',
+          status: 'Active'
         })
       )
       expect(userSaveMock).toHaveBeenCalled()
       expect(issueTokensAndSetCookie).toHaveBeenCalled()
       expect(res.status).toHaveBeenCalledWith(200)
+    })
+
+    it('does NOT persist ORCID access/refresh tokens on the User document (H3)', async () => {
+      findOneMock.mockResolvedValue(null)
+
+      await handleOrcidFinalize(makeReq(), makeRes())
+
+      const constructorArg = UserConstructor.mock.calls[0]?.[0] as {
+        oauth: Array<Record<string, unknown>>
+      }
+      const oauthEntry = constructorArg.oauth[0]
+
+      expect(oauthEntry).toEqual({
+        provider: 'orcid',
+        id: ORCID_ID,
+        name: 'Scott Classen'
+      })
+      expect(oauthEntry).not.toHaveProperty('accessToken')
+      expect(oauthEntry).not.toHaveProperty('refreshToken')
+      expect(oauthEntry).not.toHaveProperty('tokenType')
+      expect(oauthEntry).not.toHaveProperty('scope')
+      expect(oauthEntry).not.toHaveProperty('expiresIn')
     })
   })
 

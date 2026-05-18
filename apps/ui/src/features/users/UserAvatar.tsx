@@ -1,12 +1,12 @@
 import { Typography, Box, Chip } from '@mui/material'
 import { teal, purple } from '@mui/material/colors'
 interface UserAvatarProps {
-  username: string
+  displayName: string
   email: string
   status: string
 }
 
-const UserAvatar = ({ username, email, status }: UserAvatarProps) => {
+const UserAvatar = ({ displayName, email, status }: UserAvatarProps) => {
   return (
     <Box
       sx={{
@@ -19,7 +19,7 @@ const UserAvatar = ({ username, email, status }: UserAvatarProps) => {
         borderRadius: 1
       }}
     >
-      <Typography variant='subtitle1'>{username}</Typography>
+      <Typography variant='subtitle1'>{displayName}</Typography>
       <Typography variant='caption' color='textSecondary'>
         {email}
       </Typography>

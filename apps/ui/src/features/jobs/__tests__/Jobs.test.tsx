@@ -196,6 +196,7 @@ describe('Jobs table', () => {
   it('shows User → Engine → Status order for admins', async () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'admin',
+      displayName: 'admin',
       roles: ['Admin'],
       status: 'Admin',
       isManager: false,
@@ -346,6 +347,7 @@ describe('Jobs table', () => {
     beforeEach(() => {
       vi.mocked(useAuth).mockReturnValue({
         username: 'admin',
+        displayName: 'admin',
         roles: ['Admin'],
         status: 'Admin',
         isManager: false,

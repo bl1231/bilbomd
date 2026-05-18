@@ -17,14 +17,9 @@ interface OrcidSessionResponse {
   orcidId: string
 }
 
-interface OrcidFinalizeRequest {
-  givenName?: string
-  familyName?: string
-  email?: string
-  orcidId?: string
-  code?: string
-  state?: string
-}
+// The backend ignores the request body and trusts the server-side
+// session profile; callers send an empty object.
+type OrcidFinalizeRequest = Record<string, never>
 
 export const authApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({

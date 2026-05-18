@@ -73,6 +73,7 @@ describe('Header Component', () => {
   beforeEach(() => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testUser',
+      displayName: 'testUser',
       status: 'Active',
       roles: ['User'],
       isManager: false,
