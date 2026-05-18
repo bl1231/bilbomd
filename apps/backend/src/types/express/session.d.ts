@@ -11,10 +11,10 @@ declare module 'express-session' {
       familyName?: string
       orcidId: string
       accessToken: string
-      tokenType: string
-      refreshToken: string
-      scope: string
-      expiresIn: number
+      tokenType?: string
+      refreshToken?: string
+      scope?: string
+      expiresIn?: number
       name?: string
     }
   }
