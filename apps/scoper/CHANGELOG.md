@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.7.11
+
+### Patch Changes
+
+- 29200d1: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+
 ## 1.7.10
 
 ### Patch Changes

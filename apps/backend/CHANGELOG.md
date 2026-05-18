@@ -1,5 +1,13 @@
 # @bilbomd/backend
 
+## 2.8.6
+
+### Patch Changes
+
+- 29200d1: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+- Updated dependencies [29200d1]
+  - @bilbomd/md-utils@1.1.15
+
 ## 2.8.5
 
 ### Patch Changes
