@@ -5,6 +5,20 @@ import { afterEach, beforeAll, afterAll } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import { server } from './server'
 
+// Node.js v26 defines localStorage/sessionStorage as getter-only globals that
+// return undefined without --localstorage-file, shadowing jsdom's implementation.
+// Use defineProperty to force-override with jsdom's working versions.
+Object.defineProperty(globalThis, 'localStorage', {
+  value: window.localStorage,
+  configurable: true,
+  writable: true,
+})
+Object.defineProperty(globalThis, 'sessionStorage', {
+  value: window.sessionStorage,
+  configurable: true,
+  writable: true,
+})
+
 // Polyfill ResizeObserver for Recharts
 globalThis.ResizeObserver = class {
   observe() {}
