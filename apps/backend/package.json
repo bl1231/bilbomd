@@ -35,6 +35,7 @@
     "@bull-board/express": "^7.1.5",
     "axios": "^1.16.1",
     "bullmq": "^5.76.10",
+    "connect-redis": "^9.0.0",
     "cookie-parser": "~1.4.7",
     "cors": "^2.8.6",
     "cron": "^4.4.0",
