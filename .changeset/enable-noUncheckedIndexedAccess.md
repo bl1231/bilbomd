@@ -1,5 +1,5 @@
 ---
-'@bilbomd/ui': minor
+'@bilbomd/ui': patch
 ---
 
 Enable `noUncheckedIndexedAccess` TypeScript compiler option in apps/ui.
