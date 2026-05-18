@@ -54,7 +54,7 @@ const fromCharmmGui = (file: File): Promise<boolean> => {
       const lines = (reader.result as string).split(/[\r\n]+/g)
       for (let line = 0; line < 5; line++) {
         // console.log(charmmGui.test(lines[line]), 'line', line, lines[line])
-        if (charmmGui.test(lines[line])) {
+        if (charmmGui.test(lines[line]!)) {
           // console.log(lines[line])
           resolve(true)
         }
@@ -75,7 +75,7 @@ const isCRD = (file: File): Promise<boolean> => {
 
       // Check for lines starting with *
       for (let i = 0; i < lines.length; i++) {
-        if (lines[i].startsWith('*')) {
+        if (lines[i]!.startsWith('*')) {
           starLinesCount++
           if (starLinesCount > 6) {
             // More than 6 lines starting with *, not matching the pattern
@@ -85,7 +85,7 @@ const isCRD = (file: File): Promise<boolean> => {
           // Check if the line immediately after the last *-line matches the specified pattern
           if (starLinesCount >= 2 && starLinesCount <= 6) {
             const endPattern = /^\s+\d+\s+EXT$/
-            foundEndPattern = endPattern.test(lines[i])
+            foundEndPattern = endPattern.test(lines[i]!)
           }
           break // No more lines starting with * consecutively, exit the loop
         }
@@ -106,7 +106,7 @@ const isPsfData = (file: File): Promise<boolean> => {
       const atomRegex =
         /^\s*\d+\s+[A-Z]{4}\s+\d+\s+[A-Z]{3,}\s+[a-zA-Z0-9_']+\s+[a-zA-Z0-9_']+\s+-?\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+/
 
-      if (!lines[0].includes('PSF')) {
+      if (!lines[0]?.includes('PSF')) {
         // console.log('first line does not contain PSF')
         resolve(false)
         return
@@ -127,14 +127,14 @@ const isPsfData = (file: File): Promise<boolean> => {
         return
       }
 
-      const natomResult = lines[natomLineIndex].match(/(\d+)\s+!NATOM/)
+      const natomResult = lines[natomLineIndex]!.match(/(\d+)\s+!NATOM/)
       if (!natomResult) {
         // console.log('Failed to capture number of atoms')
         resolve(false)
         return
       }
 
-      const natom = parseInt(natomResult[1], 10)
+      const natom = parseInt(natomResult[1]!, 10)
       // console.log('natom expected = ', natom)
       if (isNaN(natom)) {
         resolve(false)
@@ -221,7 +221,7 @@ const isSaxsData = (
 
         const numbers = line.match(sciNotation)
         if (numbers && numbers.length >= 3) {
-          const qValue = parseFloat(numbers[0])
+          const qValue = parseFloat(numbers[0]!)
           if (qValue < 0.005 || qValue > 0.04) {
             resolve({
               valid: false,
@@ -277,8 +277,8 @@ const hasSaxsQualityIssues = (file: File): Promise<SaxsQualityResult> => {
         const numbers = line.match(sciNotation)
         if (!numbers || numbers.length < 3) continue
 
-        const I = parseFloat(numbers[1])
-        const err = parseFloat(numbers[2])
+        const I = parseFloat(numbers[1]!)
+        const err = parseFloat(numbers[2]!)
         if (!Number.isFinite(I) || !Number.isFinite(err) || I <= 0) continue
 
         totalCount++
@@ -318,7 +318,7 @@ const containsChainId = (file: File): Promise<boolean> => {
         const isValid = lines.some((line) => {
           return (
             (line.startsWith('ATOM') || line.startsWith('HETATM')) &&
-            /^[A-Za-z]$/.test(line[21])
+            /^[A-Za-z]$/.test(line[21] ?? '')
           )
         })
         resolve(isValid)
@@ -373,7 +373,7 @@ const isRNA = (file: File): Promise<{ valid: boolean; message?: string }> => {
 
         if (line.startsWith('ATOM')) {
           const parts = line.split(/\s+/)
-          const residueName = parts[3]
+          const residueName = parts[3] ?? ''
 
           if (residueName.length !== 1 || !validNucleotides.has(residueName)) {
             resolve({
@@ -439,7 +439,7 @@ const isValidConstInpFile = (
       const lines = text.split('\n').filter((line) => line.trim() !== '') // Filter out empty lines
 
       // Check if the last non-empty line is exactly 'return'
-      if (lines.length === 0 || lines[lines.length - 1].trim() !== 'return') {
+      if (lines.length === 0 || lines[lines.length - 1]!.trim() !== 'return') {
         resolve('The last line must be "return".')
         return
       }

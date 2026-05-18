@@ -210,7 +210,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
       }
       charmmChains.push(charmmChain)
 
-      demRigidBodies[0].domains.push({
+      demRigidBodies[0]!.domains.push({
         chainid: chainId,
         start: firstRes,
         end: lastRes
@@ -420,7 +420,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                       mr: 1,
                       mb: 1,
                       backgroundColor: customColors[chain] || '#9773b9',
-                      color: theme.palette.getContrastText(customColors[chain])
+                      color: theme.palette.getContrastText(customColors[chain] ?? '#9773b9')
                     }}
                   />
                 ))}

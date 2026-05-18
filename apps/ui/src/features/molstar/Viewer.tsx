@@ -333,7 +333,7 @@ const MolstarViewer = ({
 
       const loadParamsArray = await createLoadParamsArray(id, jobType, results)
       for (const loadParamsGroup of loadParamsArray) {
-        const { url, format, fileName, ensembleSize } = loadParamsGroup[0]
+        const { url, format, fileName, ensembleSize } = loadParamsGroup[0]!
         const pdbData = await fetchPdbData(url)
 
         for (const { assemblyId } of loadParamsGroup) {

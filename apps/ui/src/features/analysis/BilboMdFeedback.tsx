@@ -163,10 +163,10 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
               sx={{
                 fontSize: '1.2em',
                 width: '100px',
-                ...(getChipProps(actualFeedback.chi_squares_of_regions[0]).sx ||
+                ...(getChipProps(actualFeedback.chi_squares_of_regions[0]!).sx ||
                   {})
               }}
-              label={actualFeedback.chi_squares_of_regions[0].toFixed(2)}
+              label={actualFeedback.chi_squares_of_regions[0]!.toFixed(2)}
             />
           </Grid>
 
@@ -182,10 +182,10 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
               sx={{
                 fontSize: '1.2em',
                 width: '100px',
-                ...(getChipProps(actualFeedback.chi_squares_of_regions[1]).sx ||
+                ...(getChipProps(actualFeedback.chi_squares_of_regions[1]!).sx ||
                   {})
               }}
-              label={actualFeedback.chi_squares_of_regions[1].toFixed(2)}
+              label={actualFeedback.chi_squares_of_regions[1]!.toFixed(2)}
             />
           </Grid>
 
@@ -201,10 +201,10 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
               sx={{
                 fontSize: '1.2em',
                 width: '100px',
-                ...(getChipProps(actualFeedback.chi_squares_of_regions[2]).sx ||
+                ...(getChipProps(actualFeedback.chi_squares_of_regions[2]!).sx ||
                   {})
               }}
-              label={actualFeedback.chi_squares_of_regions[2].toFixed(2)}
+              label={actualFeedback.chi_squares_of_regions[2]!.toFixed(2)}
             />
           </Grid>
         </Grid>
@@ -225,7 +225,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
                 fontSize: '1.2em',
                 width: '100px'
               }}
-              label={actualFeedback.residuals_of_regions[0].toFixed(2)}
+              label={actualFeedback.residuals_of_regions[0]!.toFixed(2)}
             />
           </Grid>
 
@@ -240,7 +240,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
                 fontSize: '1.2em',
                 width: '100px'
               }}
-              label={actualFeedback.residuals_of_regions[1].toFixed(2)}
+              label={actualFeedback.residuals_of_regions[1]!.toFixed(2)}
             />
           </Grid>
 
@@ -255,7 +255,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
                 fontSize: '1.2em',
                 width: '100px'
               }}
-              label={actualFeedback.residuals_of_regions[2].toFixed(2)}
+              label={actualFeedback.residuals_of_regions[2]!.toFixed(2)}
             />
           </Grid>
         </Grid>

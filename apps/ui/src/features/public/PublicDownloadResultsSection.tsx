@@ -24,7 +24,7 @@ const PublicDownloadResultsSection = ({ job }: { job: PublicJobStatus }) => {
         if (contentDisposition) {
           const matches = /filename="?([^"]+)"?/.exec(contentDisposition)
           if (matches && matches.length > 1) {
-            filename = matches[1]
+            filename = matches[1]!
           }
         }
 

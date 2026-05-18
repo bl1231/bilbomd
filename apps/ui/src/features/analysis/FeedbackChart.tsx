@@ -23,9 +23,9 @@ interface FeedbackChartProps {
 
 const FeedbackChart: React.FC<FeedbackChartProps> = ({ data }) => {
   const q_midpoints = [
-    ((data.q_ranges[0] + data.q_ranges[1]) / 2).toFixed(3), // Round to 3 decimal places
-    ((data.q_ranges[1] + data.q_ranges[2]) / 2).toFixed(3),
-    ((data.q_ranges[2] + data.q_ranges[3]) / 2).toFixed(3)
+    ((data.q_ranges[0]! + data.q_ranges[1]!) / 2).toFixed(3), // Round to 3 decimal places
+    ((data.q_ranges[1]! + data.q_ranges[2]!) / 2).toFixed(3),
+    ((data.q_ranges[2]! + data.q_ranges[3]!) / 2).toFixed(3)
   ]
 
   // Prepare data for chi-squares and residuals
@@ -56,7 +56,7 @@ const FeedbackChart: React.FC<FeedbackChartProps> = ({ data }) => {
         <XAxis
           dataKey='q'
           type='number'
-          domain={[data.q_ranges[0], data.q_ranges[3]]}
+          domain={[data.q_ranges[0]!, data.q_ranges[3]!]}
           label={{
             value: `q (Å\u207B\u00B9)`,
             position: 'insideBottom',
@@ -97,8 +97,8 @@ const FeedbackChart: React.FC<FeedbackChartProps> = ({ data }) => {
 
         {/* Background color for the low q region (0.01 < q < 0.1) */}
         <ReferenceArea
-          x1={data.q_ranges[0]}
-          x2={data.q_ranges[1]}
+          x1={data.q_ranges[0]!}
+          x2={data.q_ranges[1]!}
           y1={0}
           y2={maxChiSquare}
           fill='rgba(255, 0, 0, 0.1)'
@@ -109,8 +109,8 @@ const FeedbackChart: React.FC<FeedbackChartProps> = ({ data }) => {
 
         {/* Background color for the mid q region (0.1 < q < 0.2) */}
         <ReferenceArea
-          x1={data.q_ranges[1]}
-          x2={data.q_ranges[2]}
+          x1={data.q_ranges[1]!}
+          x2={data.q_ranges[2]!}
           y1={0}
           y2={maxChiSquare}
           fill='rgba(0, 255, 0, 0.1)'
@@ -121,8 +121,8 @@ const FeedbackChart: React.FC<FeedbackChartProps> = ({ data }) => {
 
         {/* Background color for the high q region (0.2 < q < 0.4) */}
         <ReferenceArea
-          x1={data.q_ranges[2]}
-          x2={data.q_ranges[3]}
+          x1={data.q_ranges[2]!}
+          x2={data.q_ranges[3]!}
           y1={0}
           y2={maxChiSquare}
           fill='rgba(0, 0, 255, 0.1)'
@@ -132,8 +132,8 @@ const FeedbackChart: React.FC<FeedbackChartProps> = ({ data }) => {
         </ReferenceArea>
 
         {/* Vertical reference lines for the region boundaries */}
-        <ReferenceLine x={data.q_ranges[1]} stroke='red' yAxisId='left' />
-        <ReferenceLine x={data.q_ranges[2]} stroke='red' yAxisId='left' />
+        <ReferenceLine x={data.q_ranges[1]!} stroke='red' yAxisId='left' />
+        <ReferenceLine x={data.q_ranges[2]!} stroke='red' yAxisId='left' />
 
         {/* Scatter plot for chi-square values (Left Y-Axis) */}
         <Scatter

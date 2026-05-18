@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import validationSchemas from '../validationSchemas'
 
 describe('validationSchemas', () => {
-  const [fileUploadSchema, rigidDomainsSchema] = validationSchemas
+  const fileUploadSchema = validationSchemas[0]!
+  const rigidDomainsSchema = validationSchemas[1]!
 
   describe('File Upload Schema', () => {
     const validFile = new File(['dummy content'], 'example.pdb', {

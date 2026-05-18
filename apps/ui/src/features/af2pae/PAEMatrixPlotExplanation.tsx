@@ -23,7 +23,7 @@ const ColorBox = ({ color }: { color: string }) => (
   />
 )
 
-const paeColors = [
+const paeColors: [string, string, string, string, string] = [
   'rgb(68, 1, 84)', // purple
   'rgb(59, 82, 139)', // blue
   'rgb(33, 144, 141)', // greenish

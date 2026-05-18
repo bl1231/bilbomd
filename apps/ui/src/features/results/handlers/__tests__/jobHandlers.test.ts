@@ -208,7 +208,7 @@ describe('jobHandlers', () => {
 
       const properties = handler.getJobSpecificProperties(scoperJob)
       expect(properties).toHaveLength(1)
-      expect(properties[0].label).toBe('PDB file')
+      expect(properties[0]!.label).toBe('PDB file')
     })
   })
 

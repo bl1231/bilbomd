@@ -261,9 +261,9 @@ const FoXSAnalysis = ({
 
   // Pull out the other info needed for the FoXS plots
   // const origPDBFile = foxsData[0].filename
-  const origChiSq = foxsData[0].chisq
-  const origC1 = foxsData[0].c1
-  const origC2 = foxsData[0].c2
+  const origChiSq = foxsData[0]!.chisq
+  const origC1 = foxsData[0]!.c1
+  const origC2 = foxsData[0]!.c2
 
   return (
     <Item>

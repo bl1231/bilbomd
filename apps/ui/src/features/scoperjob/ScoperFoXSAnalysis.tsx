@@ -70,11 +70,11 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
   // Prepare original data to reduce the number of digits after the decimal point
   // and filter out negative values
   const origData = useMemo(
-    () => (foxsData.length > 0 ? prepData(foxsData[0].data) : []),
+    () => (foxsData.length > 0 ? prepData(foxsData[0]!.data) : []),
     [foxsData]
   )
   const scopData = useMemo(
-    () => (foxsData.length > 1 ? prepData(foxsData[1].data) : []),
+    () => (foxsData.length > 1 ? prepData(foxsData[1]!.data) : []),
     [foxsData]
   )
 
@@ -109,14 +109,14 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
     )
 
   // Pull out the other info needed for the FoXS plots
-  const origPDBFile = foxsData[0].filename
-  const scopPDBFile = foxsData[1].filename
-  const origChiSq = foxsData[0].chisq
-  const scopChiSq = foxsData[1].chisq
-  const origC1 = foxsData[0].c1
-  const scopC1 = foxsData[1].c1
-  const origC2 = foxsData[0].c2
-  const scopC2 = foxsData[1].c2
+  const origPDBFile = foxsData[0]!.filename
+  const scopPDBFile = foxsData[1]!.filename
+  const origChiSq = foxsData[0]!.chisq
+  const scopChiSq = foxsData[1]!.chisq
+  const origC1 = foxsData[0]!.c1
+  const scopC1 = foxsData[1]!.c1
+  const origC2 = foxsData[0]!.c2
+  const scopC2 = foxsData[1]!.c2
 
   return (
     <Item>

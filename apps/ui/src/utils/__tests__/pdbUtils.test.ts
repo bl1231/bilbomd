@@ -19,9 +19,9 @@ const buildAtomLine = (
   arr[3] = 'M'
   arr[21] = (chainId || ' ').charAt(0)
   const resStr = String(residueNumber).padStart(4, ' ')
-  for (let i = 0; i < resStr.length; i++) arr[22 + i] = resStr[i]
+  for (let i = 0; i < resStr.length; i++) arr[22 + i] = resStr[i]!
   const pStr = plddt.toFixed(2).padStart(6, ' ')
-  for (let i = 0; i < pStr.length; i++) arr[60 + i] = pStr[i]
+  for (let i = 0; i < pStr.length; i++) arr[60 + i] = pStr[i]!
   return arr.join('')
 }
 
@@ -64,7 +64,7 @@ describe('parsePLDDTFromPDB', () => {
     ].join('\n')
     const { data } = parsePLDDTFromPDB(content)
     expect(data).toHaveLength(1)
-    expect(data[0].residueNumber).toBe(1)
+    expect(data[0]!.residueNumber).toBe(1)
   })
 
   it('handles a single residue with one atom', () => {
@@ -84,7 +84,7 @@ describe('parsePLDDTFromPDB', () => {
     ].join('\n')
     const { data } = parsePLDDTFromPDB(content)
     expect(data).toHaveLength(1)
-    expect(data[0].plddt).toBe(90.0)
+    expect(data[0]!.plddt).toBe(90.0)
   })
 
   it('assigns sequential globalIndex values', () => {
@@ -171,7 +171,7 @@ describe('parsePLDDTFromCIF', () => {
     ])
     const { data } = parsePLDDTFromCIF(cif)
     expect(data).toHaveLength(1)
-    expect(data[0].plddt).toBe(90.0)
+    expect(data[0]!.plddt).toBe(90.0)
   })
 
   it('assigns sequential globalIndex values', () => {
