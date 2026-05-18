@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.23-labs
+# syntax=docker/dockerfile:1.24-labs
 
 # -----------------------------------------------------------------------------
 # Scoper app image: builds app on top of long-lived base
