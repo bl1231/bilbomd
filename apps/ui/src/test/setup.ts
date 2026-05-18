@@ -5,16 +5,37 @@ import { afterEach, beforeAll, afterAll } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import { server } from './server'
 
-// Node.js v26 defines localStorage/sessionStorage as getter-only globals that
-// return undefined without --localstorage-file, shadowing jsdom's implementation.
-// Use defineProperty to force-override with jsdom's working versions.
+// Node.js v26 defines localStorage/sessionStorage with a getter that returns
+// undefined without --localstorage-file. In the jsdom fork environment
+// window.localStorage resolves through the same getter (window === globalThis),
+// so we must provide an explicit in-memory implementation.
+const makeStorageMock = (): Storage => {
+  const store = new Map<string, string>()
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, String(value))
+    },
+    removeItem: (key: string) => {
+      store.delete(key)
+    },
+    clear: () => {
+      store.clear()
+    },
+    get length() {
+      return store.size
+    },
+    key: (index: number) => [...store.keys()][index] ?? null,
+  } as Storage
+}
+
 Object.defineProperty(globalThis, 'localStorage', {
-  value: window.localStorage,
+  value: makeStorageMock(),
   configurable: true,
   writable: true,
 })
 Object.defineProperty(globalThis, 'sessionStorage', {
-  value: window.sessionStorage,
+  value: makeStorageMock(),
   configurable: true,
   writable: true,
 })
