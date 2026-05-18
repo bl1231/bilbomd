@@ -5,6 +5,7 @@ export interface ConfigResponse {
   enableBilboMdAlphaFold?: string
   enableBilboMdOpenfold?: string
   enableCharmmEngine?: string
+  orcidAuthEnabled?: string
   [key: string]: string | undefined
 }
 

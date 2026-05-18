@@ -15,7 +15,7 @@ import { connectDB } from './config/dbConn.js'
 import { initOrcidClient } from './controllers/auth/orcidClientConfig.js'
 import { CronJob } from 'cron'
 import { deleteOldJobs } from './middleware/jobCleaner.js'
-import { getEnvVar } from './config/config.js'
+import { config, getEnvVar } from './config/config.js'
 import sfapiRoutes from './routes/sfapi.js'
 import registerRoutes from './routes/register.js'
 import verifyRoutes from './routes/verify.js'
@@ -56,8 +56,15 @@ mongoose.set('sanitizeFilter', true)
 // Connect to MongoDB
 connectDB()
 
-// Initialize the ORCID client configuration
-await initOrcidClient()
+// Initialize the ORCID client configuration only when ORCID auth is enabled.
+// See https://github.com/bl1231/bilbomd/issues/817 — ORCID is gated behind a
+// feature flag until the hardening work is complete.
+if (config.orcidAuthEnabled) {
+  await initOrcidClient()
+  logger.info('ORCID auth enabled')
+} else {
+  logger.info('ORCID auth disabled (ORCID_AUTH_ENABLED is not true)')
+}
 
 // custom middleware logger
 app.use(assignRequestId)
