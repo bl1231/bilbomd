@@ -149,7 +149,7 @@ services:
       start_period: 10s
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.16.1
+    image: ghcr.io/bl1231/bilbomd-ui:2.19.2
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
