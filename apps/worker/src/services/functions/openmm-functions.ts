@@ -482,6 +482,7 @@ const runOmmMD = async (
   )
 
   // Prepare job tracking
+  let cpuFallbackDetected = false
   const failureThreshold = opts?.failureThreshold ?? 0 // Default: no failures allowed
   const results: Array<{
     rg: number
@@ -515,8 +516,12 @@ const runOmmMD = async (
       timeoutMs: opts?.timeoutMs ?? 2 * 60 * 60 * 1000, // 2h default per run
       onStdoutLine: (line) =>
         logger.info(`[md rg=${rg} GPU=${assignedGpu}][stdout] ${line}`),
-      onStderrLine: (line) =>
+      onStderrLine: (line) => {
+        if (line.includes('BILBOMD_CPU_FALLBACK:')) {
+          cpuFallbackDetected = true
+        }
         logger.error(`[md rg=${rg} GPU=${assignedGpu}][stderr] ${line}`)
+      }
     })
 
     if (result.code !== 0) {
@@ -624,7 +629,11 @@ const runOmmMD = async (
   )
   await updateStepStatus(DBjob, stepKey, {
     status: 'Success',
-    message: `${stepName} has completed for ${rgs.length} Rg values (${failures.length} failures tolerated)`
+    message:
+      `${stepName} has completed for ${rgs.length} Rg values (${failures.length} failures tolerated)` +
+      (cpuFallbackDetected
+        ? ' — Warning: CUDA unavailable, MD ran on CPU and may have taken significantly longer than expected'
+        : '')
   })
 }
 
