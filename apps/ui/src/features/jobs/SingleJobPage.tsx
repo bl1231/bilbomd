@@ -109,6 +109,9 @@ const SingleJobPage = () => {
       )?.message ?? null)
     : null
 
+  const cpuFallbackWarning =
+    job?.mongo?.steps?.md?.message?.includes('CUDA unavailable') ?? false
+
   useEffect(() => {
     const status = job?.mongo?.status
     if (!status) return
@@ -326,6 +329,21 @@ const SingleJobPage = () => {
             }}
           >
             <BilboMDNerscSteps job={job} />
+          </Grid>
+        )}
+
+        {/* CPU FALLBACK WARNING */}
+        {cpuFallbackWarning && (
+          <Grid size={{ xs: 12 }}>
+            <Alert
+              severity="warning"
+              variant="outlined"
+            >
+              <AlertTitle>MD ran on CPU</AlertTitle>
+              CUDA was unavailable on this server, so your molecular dynamics
+              simulation ran on CPU instead of GPU. Results are correct, but the
+              job may have taken significantly longer than usual.
+            </Alert>
           </Grid>
         )}
 

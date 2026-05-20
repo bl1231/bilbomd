@@ -169,6 +169,9 @@ const PublicJobPage = () => {
       )?.message ?? null)
     : null
 
+  const cpuFallbackWarning =
+    job.steps?.md?.message?.includes('CUDA unavailable') ?? false
+
   const calculateDuration = (): string | undefined => {
     if (!job.startedAt) return undefined
     const startTime = new Date(job.startedAt)
@@ -318,6 +321,21 @@ const PublicJobPage = () => {
             )}
           </Item>
         </Grid>
+
+        {/* CPU FALLBACK WARNING */}
+        {cpuFallbackWarning && (
+          <Grid size={{ xs: 12 }}>
+            <Alert
+              severity="warning"
+              variant="outlined"
+            >
+              <AlertTitle>MD ran on CPU</AlertTitle>
+              CUDA was unavailable on this server, so your molecular dynamics
+              simulation ran on CPU instead of GPU. Results are correct, but the
+              job may have taken significantly longer than usual.
+            </Alert>
+          </Grid>
+        )}
 
         {/* CREATE ACCOUNT ADVISORY */}
         {(job.status === 'Error' || job.status === 'Failed') && (
