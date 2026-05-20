@@ -128,7 +128,7 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
             f"[GPU {gpu_id}] Initialized on platform: {platform} (CudaDeviceIndex={platform_props.get('CudaDeviceIndex', '-')})"
         )
     except Exception as e:
-        logger.warning(f"[GPU {gpu_id}] CUDA not available; falling back. Error: {e}")
+        logger.warning(f"BILBOMD_CPU_FALLBACK: CUDA unavailable on GPU {gpu_id} — MD is running on CPU and may be very slow. Reason: {e}")
         simulation = Simulation(modeller.topology, system, integrator)
         simulation.context.setState(state)
         platform = simulation.context.getPlatform().getName()
