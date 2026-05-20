@@ -1,5 +1,13 @@
 # @bilbomd/md-utils
 
+## 1.1.16
+
+### Patch Changes
+
+- 5c15d8a: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+- Updated dependencies [e2d4125]
+  - @bilbomd/mongodb-schema@2.7.0
+
 ## 1.1.15
 
 ### Patch Changes

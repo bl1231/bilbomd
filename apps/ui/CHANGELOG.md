@@ -1,5 +1,49 @@
 # @bilbomd/ui
 
+## 2.20.0
+
+### Minor Changes
+
+- 97529b6: Add `ORCID_AUTH_ENABLED` feature flag (default `false`) that gates the ORCID OAuth login flow. When disabled, the backend does not register the `/api/v1/auth/orcid/*` routes and skips OIDC discovery on startup, and the UI `/login` page redirects to `/magicklink`. ORCID will stay disabled in production until the hardening work tracked in issue #817 is complete.
+- e2d4125: ORCID data hygiene & UX (PR 3 of issue #817). Separates the internal `username` (an opaque, URL-safe identifier) from the human-readable `displayName`, removes dead OAuth-token storage, and aligns the sign-in UI with ORCID's official branding guidelines.
+
+  **Option A: separate internal ID from display label**
+  - ORCID accounts now get an opaque `username = orcid-${orcidId}` (e.g., `orcid-0000-0002-1234-5678`). Deterministic, unique by construction, URL-safe, and decoupled from any human name.
+  - New backend helper `userDisplayName()` derives a display label from `firstName + lastName`, falling back to `username` for legacy users with no name fields populated.
+  - Access-token JWT payload now includes a `displayName` claim, computed at sign time. The UI `useAuth` hook exposes it; legacy tokens without the claim fall back to `username`.
+  - UI display sites (`Breadcrumbs`, `Settings` → `UserAvatar`) now show `displayName` instead of `username`. URL routes, job-ownership filters, and admin-edit forms still use `username`.
+  - Admin-edit username regex relaxed from `[a-zA-Z0-9_]+` to `[a-zA-Z0-9_-]+` so ORCID-derived usernames pass validation.
+
+  **H3: stop persisting ORCID access/refresh tokens**
+  - Dropped `accessToken`, `refreshToken`, `tokenType`, `scope`, and `expiresIn` from the User schema `oauth[]` subdocument and from the OAuth session profile. We never call ORCID APIs on the user's behalf after sign-in, so persisting the bearer token only enlarged the blast radius if the database were leaked. Existing data on old user docs is harmless and will fall off on next login.
+
+  **H4: confirmation page becomes read-only**
+  - `OrcidConfirmation` is no longer a misleading editable form — Formik + Yup + `TextField` are gone. Replaced with read-only display rows that surface First Name, Last Name, Email, ORCID iD, the derived BilboMD display name, and the opaque BilboMD account ID. Clicking "Confirm and Continue" calls finalize with an empty body (the backend has always trusted the session profile, not the request body).
+
+  **L4: branding text**
+  - `Login.tsx` heading and button updated from "Sign in with ORCID" to "Sign in with ORCID iD" per ORCID's official sign-in guidelines.
+
+  **L5: ORCID brand asset**
+  - The existing `apps/ui/src/assets/orcid.png` is the ORCID wordmark. ORCID's sign-in guidelines call for the circular green iD icon on sign-in buttons; the wordmark is for "about" contexts. Flagged for replacement before the production-credential review demo.
+
+### Patch Changes
+
+- 5c15d8a: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+- 5c15d8a: Enable `noUncheckedIndexedAccess` TypeScript compiler option in apps/ui.
+
+  Array and object index access now returns `T | undefined` instead of `T`, catching potential out-of-bounds access at compile time. Fixed 175 type errors across 35 files by adding non-null assertions on bounds-checked loops, typed constant tuples, and explicit `??` fallbacks where undefined is a real possibility.
+
+- b94577a: Security hardening for the ORCID OAuth login flow (PR 2 of issue #817).
+  - **Account-takeover guard.** The callback and the finalize endpoints now both refuse to issue JWTs when the verified ORCID email matches an existing BilboMD account that is not already linked to this ORCID iD. Users are redirected to `/auth/orcid-error?reason=email_already_registered` and pointed at a BilboMD administrator to link their account. Previously the flow would silently sign the user in as the pre-existing (e.g., legacy magic-link) account.
+  - **Require a primary, verified ORCID email.** The email-selection fallback that accepted any verified email — and then any email at all — has been removed. If an ORCID profile has no `primary && verified` email, the user is redirected to `/auth/orcid-error?reason=no_primary_verified` with instructions to update their ORCID profile. Closes the related "Pending status" dead code in the finalize handler.
+  - **Verify the ID token and check the nonce.** The hand-rolled axios `POST /oauth/token` is replaced with `openid-client.authorizationCodeGrant`, which validates the ID-token signature against the discovered JWKS, the `iss`/`aud` claims, the `nonce` (matched to the cookie set in `handleOrcidLogin`), and the `state`. Identity claims (`sub`, `given_name`, `family_name`, `name`) now come from the verified ID token rather than from a separate unauthenticated API call. The Public-API call is kept only for the email (not returned by the `openid` scope).
+  - **Tighten state/nonce cookies.** `handleOrcidLogin` cookies switched from `SameSite=None` to `SameSite=Lax` (ORCID redirects back to the same origin) and gained a 5-minute `maxAge` so abandoned sign-in flows cannot leave state behind.
+  - **Friendlier error page.** `OrcidError.tsx` now renders human-readable explanations for `no_primary_verified`, `email_already_registered`, `token_exchange`, `missing_id_token`, `userinfo_fetch`, `finalize`, and `session` reasons.
+
+- 6f17ac5: Display a warning alert on the single job page and public job page when MD ran on CPU due to CUDA being unavailable.
+- Updated dependencies [e2d4125]
+  - @bilbomd/mongodb-schema@2.7.0
+
 ## 2.19.2
 
 ### Patch Changes
