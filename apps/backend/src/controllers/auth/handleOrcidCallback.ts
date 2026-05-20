@@ -1,164 +1,154 @@
 import { Request, Response } from 'express'
 import axios from 'axios'
+import { authorizationCodeGrant } from 'openid-client'
 import { User } from '@bilbomd/mongodb-schema'
 import { issueTokensAndSetCookie } from './authTokens.js'
+import { discovered } from './orcidClientConfig.js'
 import { logger } from '../../middleware/loggers.js'
 import { redactTokens } from '../../middleware/redactTokens.js'
 import { getEnvVar } from '../../config/config.js'
 
 type OrcidEmailEntry = { email?: string; verified?: boolean; primary?: boolean }
 
-export async function handleOrcidCallback(req: Request, res: Response) {
-  const code = typeof req.query.code === 'string' ? req.query.code : undefined
-  const state = typeof req.query.state === 'string' ? req.query.state : undefined
-  const storedState = req.cookies.orcid_oauth_state
+const clearOauthCookies = (res: Response) => {
+  res.clearCookie('orcid_oauth_state')
+  res.clearCookie('orcid_oauth_nonce')
+}
 
-  if (!code || !state || state !== storedState) {
-    res.status(400).send('Invalid or missing authorization parameters')
+export async function handleOrcidCallback(req: Request, res: Response) {
+  const storedState = req.cookies.orcid_oauth_state
+  const storedNonce = req.cookies.orcid_oauth_nonce
+
+  if (!storedState || !storedNonce) {
+    logger.warn('ORCID callback hit without state/nonce cookies')
+    res.status(400).send('Missing OAuth session — please restart the sign-in flow')
     return
   }
 
+  // Build the URL openid-client will inspect for code+state. Use the
+  // app's canonical BILBOMD_URL rather than trusting req headers behind
+  // a proxy.
+  const baseUrl = getEnvVar('BILBOMD_URL')
+  const currentUrl = new URL(req.originalUrl, baseUrl)
+
+  let tokens: Awaited<ReturnType<typeof authorizationCodeGrant>>
   try {
-    logger.info(`Handling ORCID callback with code: ${code}, and state: ${state}`)
+    // authorizationCodeGrant performs ID-token validation end-to-end:
+    // signature against the discovered JWKS, iss / aud claims, nonce
+    // matches expectedNonce, exp not in the past, and state matches
+    // expectedState.
+    tokens = await authorizationCodeGrant(discovered, currentUrl, {
+      expectedState: storedState,
+      expectedNonce: storedNonce,
+      idTokenExpected: true
+    })
+  } catch (err) {
+    logger.error('ORCID authorization-code grant / ID-token verification failed', err)
+    clearOauthCookies(res)
+    return res.redirect('/auth/orcid-error?reason=token_exchange')
+  }
 
-    const redirect_uri = getEnvVar('ORCID_REDIRECT_URI')
-    const orcidBaseUrl = getEnvVar('ORCID_BASE_URL')
-    const tokenRes = await axios.post(
-      `${orcidBaseUrl}/oauth/token`,
-      new URLSearchParams({
-        client_id: getEnvVar('ORCID_CLIENT_ID'),
-        client_secret: getEnvVar('ORCID_CLIENT_SECRET'),
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri
-      }),
-      {
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      }
-    )
-    const tokenSet = tokenRes.data
-    if (tokenRes.status !== 200) {
-      logger.error('ORCID token exchange error body:', redactTokens(tokenSet))
-      throw new Error(`ORCID token exchange failed with status ${tokenRes.status}`)
-    }
+  logger.info(
+    `Received ORCID tokenSet: ${JSON.stringify(redactTokens(tokens as unknown as Record<string, unknown>))}`
+  )
 
-    logger.info(`Received tokenSet: ${JSON.stringify(redactTokens(tokenSet))}`)
+  const claims = tokens.claims()
+  if (!claims || !claims.sub) {
+    logger.error('ORCID ID token missing claims or sub')
+    clearOauthCookies(res)
+    return res.redirect('/auth/orcid-error?reason=missing_id_token')
+  }
 
+  const orcidId = claims.sub
+  const givenName =
+    typeof claims.given_name === 'string' ? claims.given_name : undefined
+  const familyName =
+    typeof claims.family_name === 'string' ? claims.family_name : undefined
+  const displayName =
+    typeof claims.name === 'string' ? claims.name : undefined
+
+  // Email is not part of the openid scope on ORCID; fetch from the Public API.
+  let userinfo: { person?: { emails?: { email?: unknown } } }
+  try {
     const orcidPubUrl = getEnvVar('ORCID_PUBLIC_API_URL')
-    const userinfoRes = await axios.get(`${orcidPubUrl}/${tokenSet.orcid}`, {
+    const userinfoRes = await axios.get(`${orcidPubUrl}/${orcidId}`, {
       headers: {
-        Authorization: `Bearer ${tokenSet.access_token}`,
+        Authorization: `Bearer ${tokens.access_token}`,
         Accept: 'application/orcid+json'
       }
     })
+    userinfo = userinfoRes.data
+  } catch (err) {
+    logger.error('ORCID public-API user-info fetch failed', err)
+    clearOauthCookies(res)
+    return res.redirect('/auth/orcid-error?reason=userinfo_fetch')
+  }
+  logger.info(
+    `ORCID user info: ${JSON.stringify(redactTokens(userinfo as Record<string, unknown>))}`
+  )
 
-    const userinfo = userinfoRes.data
-    logger.info(
-      `ORCID user info (via axios): ${JSON.stringify(redactTokens(userinfo))}`
+  // C2: require a primary AND verified email. No fallback to other verified
+  // emails or to unverified ones — an attacker can list arbitrary unverified
+  // emails on their ORCID profile, so we must not trust them as identity.
+  const emailList = Array.isArray(userinfo.person?.emails?.email)
+    ? (userinfo.person.emails.email as OrcidEmailEntry[])
+    : []
+  const selectedEmail = emailList.find(
+    (entry) => entry.primary && entry.verified
+  )?.email
+
+  if (!selectedEmail) {
+    logger.warn(
+      `ORCID profile ${orcidId} has no primary verified email — refusing sign-in`
     )
+    clearOauthCookies(res)
+    return res.redirect('/auth/orcid-error?reason=no_primary_verified')
+  }
 
-    const givenName = userinfo.person?.name?.['given-names']?.value
-    const familyName = userinfo.person?.name?.['family-name']?.value
+  // Look up an existing user by the verified ORCID email.
+  const user = await User.findOne({ email: selectedEmail })
 
-    // Extract primary verified email
-    const emailList = Array.isArray(userinfo.person?.emails?.email)
-      ? userinfo.person.emails.email
-      : []
-
-    let selectedEmail: string | undefined
-    let emailReason: string | undefined
-
-    if (emailList.length > 0) {
-      selectedEmail = (emailList as OrcidEmailEntry[]).find(
-        (entry) => entry.primary && entry.verified
-      )?.email
-
-      if (!selectedEmail) {
-        logger.warn('No primary verified email found. Trying any verified email.')
-        selectedEmail = (emailList as OrcidEmailEntry[]).find(
-          (entry) => entry.verified
-        )?.email
-        emailReason = 'no_primary_verified'
-      }
-
-      if (!selectedEmail) {
-        logger.warn(
-          'No verified email found. Using first available email (not recommended).'
-        )
-        selectedEmail = (emailList as OrcidEmailEntry[])[0]?.email
-        emailReason = 'no_verified'
-      }
-    } else {
-      emailReason = 'no_email_list'
-    }
-
-    if (!selectedEmail) {
-      logger.error('No email address found in ORCID user info')
-      return res.redirect(`/auth/orcid/error?reason=${emailReason || 'unknown'}`)
-    }
-
-    // Search for an existing user by the verified ORCID email:
-
-    const user = await User.findOne({ email: selectedEmail })
-
-    if (
-      user &&
-      user.status === 'Active' &&
-      user.oauth.some(
-        (oauth) => oauth.provider === 'orcid' && oauth.id === tokenSet.orcid
+  // C1: refuse to issue tokens for an account that exists under this email
+  // but has no ORCID link for this ORCID iD. Otherwise anyone who can pass
+  // ORCID's flow for a profile listing the victim's verified email would be
+  // signed in as the victim's existing (e.g., legacy magic-link) account.
+  if (user) {
+    const isOrcidLinked = user.oauth.some(
+      (entry) => entry.provider === 'orcid' && entry.id === orcidId
+    )
+    if (!isOrcidLinked) {
+      logger.warn(
+        `ORCID sign-in refused: email ${selectedEmail} is registered without an ORCID link for ${orcidId}`
       )
-    ) {
+      clearOauthCookies(res)
+      return res.redirect('/auth/orcid-error?reason=email_already_registered')
+    }
+
+    if (user.status === 'Active') {
       logger.info(
         `Existing ORCID-linked user ${user.email} authenticated. Skipping confirmation.`
       )
-
-      res.clearCookie('orcid_oauth_state')
-      res.clearCookie('orcid_oauth_nonce')
-
-      issueTokensAndSetCookie(user, res)
+      clearOauthCookies(res)
+      await issueTokensAndSetCookie(user, res)
       return res.redirect('/welcome')
     }
-
-    // Store info in session for confirmation page
-    req.session.orcidProfile = {
-      email: selectedEmail,
-      emailReason,
-      givenName,
-      familyName,
-      orcidId: tokenSet.orcid,
-      accessToken: tokenSet.access_token,
-      tokenType: tokenSet.token_type,
-      refreshToken: tokenSet.refresh_token,
-      scope: tokenSet.scope,
-      expiresIn: tokenSet.expires_in,
-      name: tokenSet.name
-    }
-
-    res.clearCookie('orcid_oauth_state')
-    res.clearCookie('orcid_oauth_nonce')
-
-    return res.redirect('/auth/orcid-confirmation')
-  } catch (err: unknown) {
-    logger.error('Error during ORCID token exchange:', err)
-    if (typeof err === 'object' && err !== null && 'response' in err) {
-      const response = (err as { response?: { text?: () => Promise<string> } }).response
-
-      if (response && typeof response.text === 'function') {
-        try {
-          const errorText = await response.text()
-          logger.error('ORCID token exchange error body:', errorText)
-        } catch (readErr) {
-          logger.warn('Could not read error response body from ORCID', readErr)
-        }
-      } else {
-        logger.warn('ORCID error response exists but has no .text() method:', response)
-      }
-    }
-
-    logger.error('ORCID callback error:', err)
-    res.status(500).send('Authentication failed')
   }
+
+  // New user — stash the verified profile for the confirmation step. Only
+  // fields the finalize handler actually needs are persisted to the session.
+  req.session.orcidProfile = {
+    email: selectedEmail,
+    givenName,
+    familyName,
+    orcidId,
+    accessToken: tokens.access_token,
+    tokenType: tokens.token_type,
+    refreshToken: tokens.refresh_token,
+    scope: tokens.scope,
+    expiresIn: tokens.expires_in,
+    name: displayName
+  }
+
+  clearOauthCookies(res)
+  return res.redirect('/auth/orcid-confirmation')
 }
