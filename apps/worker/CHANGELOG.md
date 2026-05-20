@@ -1,5 +1,16 @@
 # @bilbomd/worker
 
+## 2.14.2
+
+### Patch Changes
+
+- 5c15d8a: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+- 6f17ac5: Display a warning alert on the single job page and public job page when MD ran on CPU due to CUDA being unavailable.
+- Updated dependencies [5c15d8a]
+- Updated dependencies [e2d4125]
+  - @bilbomd/md-utils@1.1.16
+  - @bilbomd/mongodb-schema@2.7.0
+
 ## 2.14.1
 
 ### Patch Changes
