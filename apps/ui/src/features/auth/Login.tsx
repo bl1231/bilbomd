@@ -37,14 +37,14 @@ const LoginPage = () => {
           variant='h4'
           gutterBottom
         >
-          Sign in with ORCID
+          Sign in with ORCID iD
         </Typography>
         <Typography
           variant='body1'
           sx={{ mb: 4 }}
         >
-          BilboMD uses ORCID to authenticate users. Click below to log in
-          securely using your ORCID iD.
+          BilboMD uses ORCID to authenticate users. Click below to sign in
+          securely with your ORCID iD.
         </Typography>
         <Button
           variant='contained'
@@ -53,7 +53,7 @@ const LoginPage = () => {
           startIcon={<LoginIcon />}
           onClick={handleOrcidLogin}
         >
-          Sign in with ORCID
+          Sign in with ORCID iD
         </Button>
       </Box>
     </Container>

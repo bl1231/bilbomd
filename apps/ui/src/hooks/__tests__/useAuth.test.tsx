@@ -18,6 +18,7 @@ describe('useAuth', () => {
 
     expect(result.current).toEqual({
       username: '',
+      displayName: '',
       roles: [],
       status: 'User',
       email: '',
@@ -30,7 +31,8 @@ describe('useAuth', () => {
   it('should decode token and return user information', () => {
     const mockPayload = {
       UserInfo: {
-        username: 'testuser',
+        username: 'orcid-0000-0002-1234-5678',
+        displayName: 'Scott Classen',
         roles: ['Admin'],
         email: 'testuser@example.com'
       }
@@ -42,7 +44,8 @@ describe('useAuth', () => {
     const { result } = renderHook(() => useAuth())
 
     expect(result.current).toEqual({
-      username: 'testuser',
+      username: 'orcid-0000-0002-1234-5678',
+      displayName: 'Scott Classen',
       roles: ['Admin'],
       email: 'testuser@example.com',
       isManager: false,
@@ -56,6 +59,7 @@ describe('useAuth', () => {
     const mockPayload = {
       UserInfo: {
         username: 'manageradmin',
+        displayName: 'Manager Admin',
         roles: ['Manager', 'Admin'],
         email: 'manageradmin@example.com'
       }
@@ -68,6 +72,7 @@ describe('useAuth', () => {
 
     expect(result.current).toEqual({
       username: 'manageradmin',
+      displayName: 'Manager Admin',
       roles: ['Manager', 'Admin'],
       email: 'manageradmin@example.com',
       isManager: true,
@@ -75,6 +80,24 @@ describe('useAuth', () => {
       status: 'Admin',
       isAuthenticated: true
     })
+  })
+
+  it('falls back to username when token has no displayName claim (legacy token)', () => {
+    const mockPayload = {
+      UserInfo: {
+        username: 'legacy_user',
+        // displayName intentionally omitted — represents an access token
+        // issued before PR 3 of #817
+        roles: ['User'],
+        email: 'legacy@example.com'
+      }
+    }
+    ;(useAppSelector as Mock).mockReturnValue(createTestJWT(mockPayload))
+
+    const { result } = renderHook(() => useAuth())
+
+    expect(result.current.displayName).toBe('legacy_user')
+    expect(result.current.username).toBe('legacy_user')
   })
 })
 
