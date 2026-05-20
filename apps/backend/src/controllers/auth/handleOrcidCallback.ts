@@ -3,6 +3,8 @@ import axios from 'axios'
 import { User } from '@bilbomd/mongodb-schema'
 import { issueTokensAndSetCookie } from './authTokens.js'
 import { logger } from '../../middleware/loggers.js'
+import { redactTokens } from '../../middleware/redactTokens.js'
+import { getEnvVar } from '../../config/config.js'
 
 type OrcidEmailEntry = { email?: string; verified?: boolean; primary?: boolean }
 
@@ -19,13 +21,13 @@ export async function handleOrcidCallback(req: Request, res: Response) {
   try {
     logger.info(`Handling ORCID callback with code: ${code}, and state: ${state}`)
 
-    const redirect_uri = process.env.ORCID_REDIRECT_URI!
-    const orcidBaseUrl = process.env.ORCID_BASE_URL || 'https://sandbox.orcid.org'
+    const redirect_uri = getEnvVar('ORCID_REDIRECT_URI')
+    const orcidBaseUrl = getEnvVar('ORCID_BASE_URL')
     const tokenRes = await axios.post(
       `${orcidBaseUrl}/oauth/token`,
       new URLSearchParams({
-        client_id: process.env.ORCID_CLIENT_ID!,
-        client_secret: process.env.ORCID_CLIENT_SECRET!,
+        client_id: getEnvVar('ORCID_CLIENT_ID'),
+        client_secret: getEnvVar('ORCID_CLIENT_SECRET'),
         grant_type: 'authorization_code',
         code,
         redirect_uri
@@ -39,14 +41,13 @@ export async function handleOrcidCallback(req: Request, res: Response) {
     )
     const tokenSet = tokenRes.data
     if (tokenRes.status !== 200) {
-      logger.error('ORCID token exchange error body:', tokenSet)
+      logger.error('ORCID token exchange error body:', redactTokens(tokenSet))
       throw new Error(`ORCID token exchange failed with status ${tokenRes.status}`)
     }
 
-    logger.info(`Received tokenSet: ${JSON.stringify(tokenSet)}`)
+    logger.info(`Received tokenSet: ${JSON.stringify(redactTokens(tokenSet))}`)
 
-    const orcidPubUrl =
-      process.env.ORCID_PUBLIC_API_URL || 'https://pub.sandbox.orcid.org/v3.0'
+    const orcidPubUrl = getEnvVar('ORCID_PUBLIC_API_URL')
     const userinfoRes = await axios.get(`${orcidPubUrl}/${tokenSet.orcid}`, {
       headers: {
         Authorization: `Bearer ${tokenSet.access_token}`,
@@ -55,7 +56,9 @@ export async function handleOrcidCallback(req: Request, res: Response) {
     })
 
     const userinfo = userinfoRes.data
-    logger.info(`ORCID user info (via axios): ${JSON.stringify(userinfo)}`)
+    logger.info(
+      `ORCID user info (via axios): ${JSON.stringify(redactTokens(userinfo))}`
+    )
 
     const givenName = userinfo.person?.name?.['given-names']?.value
     const familyName = userinfo.person?.name?.['family-name']?.value
