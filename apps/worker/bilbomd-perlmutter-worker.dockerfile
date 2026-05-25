@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # Build stage 1 - Install build tools & dependencies
-FROM nvidia/cuda:12.9.1-devel-ubuntu22.04 AS builder
+FROM nvidia/cuda:12.9.2-devel-ubuntu22.04 AS builder
 RUN apt-get update && \
     apt-get install -y cmake gcc gfortran g++ python3 \
     libpmix-bin libpmix-dev parallel wget bzip2 ncat \
@@ -64,7 +64,7 @@ RUN chown -R $USER_ID:0 /app
 
 # -----------------------------------------------------------------------------
 # Build stage 5 - Final runtime image
-FROM nvidia/cuda:12.9.1-runtime-ubuntu22.04 AS bilbomd-perlmutter-worker
+FROM nvidia/cuda:12.9.2-runtime-ubuntu22.04 AS bilbomd-perlmutter-worker
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common parallel && \

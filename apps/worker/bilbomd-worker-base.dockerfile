@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # Setup the base image for building
-FROM nvidia/cuda:12.9.1-devel-ubuntu22.04 AS install-dependencies
+FROM nvidia/cuda:12.9.2-devel-ubuntu22.04 AS install-dependencies
 
 # Pin versions for better caching
 ARG CHARMM_VER=c49b2
@@ -139,7 +139,7 @@ RUN rm -rf /tmp/pymol-open-source
 
 # -----------------------------------------------------------------------------
 # Slim final runtime image (CUDA runtime only)
-FROM nvidia/cuda:12.9.1-runtime-ubuntu22.04 AS bilbomd-worker-base
+FROM nvidia/cuda:12.9.2-runtime-ubuntu22.04 AS bilbomd-worker-base
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
