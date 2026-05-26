@@ -9,8 +9,10 @@ import {
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import path from 'path'
+import { ValidationError } from 'yup'
 import { getFileStats } from './utils/jobUtils.js'
 import { config } from '../../config/config.js'
+import { scoperJobSchema } from '../../validation/index.js'
 
 const uploadFolder = config.uploadDir
 
@@ -57,6 +59,30 @@ const handleBilboMDScoperJob = async (
     )
 
     logger.info(`fixc1c2: ${fixc1c2}`)
+
+    const jobPayload = {
+      title,
+      bilbomd_mode: bilbomdMode,
+      email: req.body.email,
+      dat_file: datFile,
+      pdb_file: pdbFile
+    }
+
+    try {
+      await scoperJobSchema.validate(jobPayload, { abortEarly: false })
+    } catch (validationErr) {
+      if (validationErr instanceof ValidationError) {
+        logger.warn('Scoper job payload validation failed', validationErr)
+        return res.status(400).json({
+          message: 'Validation failed',
+          errors: validationErr.inner?.map((err) => ({
+            path: err.path,
+            message: err.message
+          }))
+        })
+      }
+      throw validationErr
+    }
 
     const steps: IBilboMDSteps = {
       reduce: { status: StepStatus.Waiting, message: '' },

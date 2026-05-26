@@ -379,10 +379,10 @@ const runFoXS = async (
 
     const filesToCopy = [inputPDB, inputDAT, scoperPDB]
     for (const file of filesToCopy) {
-      await execPromise(`cp ${path.join(outputDir, file)} .`, {
-        cwd: foxsAnalysisDir
-      })
-      // MQjob.log(`gather ${file}`)
+      await fs.copyFile(
+        path.join(outputDir, file),
+        path.join(foxsAnalysisDir, path.basename(file))
+      )
     }
 
     // Conditionally set foxsArgs based on DBjob.fixc1c2

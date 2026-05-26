@@ -3,6 +3,7 @@ import type { Request, Response } from 'express'
 import type { IUser } from '@bilbomd/mongodb-schema'
 import { handleBilboMDScoperJob } from '../handleBilboMDScoperJob.js'
 import { queueScoperJob } from '../../../queues/scoper.js'
+import { ValidationError } from 'yup'
 
 vi.mock('../../middleware/loggers.js', () => ({
   logger: {
@@ -22,6 +23,12 @@ vi.mock('../../config/config.js', () => ({
 
 vi.mock('../utils/jobUtils.js', () => ({
   getFileStats: vi.fn(() => ({ size: 1024 }))
+}))
+
+vi.mock('../../../validation/index.js', () => ({
+  scoperJobSchema: {
+    validate: vi.fn(async () => {})
+  }
 }))
 
 vi.mock('@bilbomd/mongodb-schema', () => {
@@ -199,6 +206,30 @@ describe('handleBilboMDScoperJob', () => {
       const payload = (res.json as ReturnType<typeof vi.fn>).mock
         .calls[0][0] as Record<string, unknown>
       expect(payload.message).toMatch(/failed/i)
+    })
+
+    it('returns 400 when schema validation rejects shell metacharacters in filename', async () => {
+      const { scoperJobSchema } = await import('../../../validation/index.js')
+      const err = new ValidationError(
+        'Filename contains disallowed characters.',
+        undefined,
+        'pdb_file'
+      )
+      vi.mocked(scoperJobSchema.validate).mockRejectedValueOnce(err)
+
+      const { req, res } = makeReqRes(
+        {},
+        { pdb_file: [{ originalname: 'x$(true).pdb' }] }
+      )
+
+      await handleBilboMDScoperJob(req, res, user, UUID, {
+        accessMode: 'user'
+      })
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      const payload = (res.json as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as Record<string, unknown>
+      expect(payload.message).toBe('Validation failed')
     })
   })
 })
