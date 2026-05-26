@@ -9,7 +9,7 @@ import { logger, requestLogger, assignRequestId } from './middleware/loggers.js'
 import cookieParser from 'cookie-parser'
 import session from 'express-session'
 import { RedisStore } from 'connect-redis'
-import { redis } from './queues/redisConn.js'
+import { sessionRedis } from './queues/sessionRedisConn.js'
 import { router as adminRoutes } from './routes/admin.js'
 import { bullmqAuthCheck } from './controllers/admin/bullmqAuthCheck.js'
 import mongoose from 'mongoose'
@@ -89,9 +89,12 @@ app.use(cookieParser())
 // shared across replicas. The ORCID flow uses req.session.orcidProfile as
 // the bridge between /orcid/callback and /orcid/finalize; an in-memory
 // store would strand mid-OAuth users on the confirmation page.
+// connect-redis@9 requires the official redis@5 client API (not ioredis).
+await sessionRedis.connect()
+
 app.use(
   session({
-    store: new RedisStore({ client: redis, prefix: 'bilbomd-sess:' }),
+    store: new RedisStore({ client: sessionRedis, prefix: 'bilbomd-sess:' }),
     name: 'bilbomd-session',
     secret: getEnvVar('SESSION_SECRET'),
     resave: false,

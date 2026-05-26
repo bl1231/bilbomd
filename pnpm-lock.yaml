@@ -153,6 +153,9 @@ importers:
       openid-client:
         specifier: ~6.8.4
         version: 6.8.4
+      redis:
+        specifier: ^5.0.0
+        version: 5.12.1
       swagger-jsdoc:
         specifier: ^6.2.8
         version: 6.2.8(openapi-types@12.1.3)
