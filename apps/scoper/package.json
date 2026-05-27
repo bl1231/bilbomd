@@ -37,14 +37,14 @@
   },
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
-    "bullmq": "^5.76.10",
+    "bullmq": "^5.77.4",
     "dotenv": "^17.4.2",
     "fs-extra": "^11.3.5",
     "handlebars": "^4.7.9",
-    "ioredis": "^5.10.1",
+    "ioredis": "5.10.1",
     "moment-timezone": "^0.6.2",
     "mongoose": "^9.6.2",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^8.0.9",
     "nodemailer-express-handlebars": "^7.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
@@ -53,9 +53,9 @@
     "@types/fs-extra": "^11.0.4",
     "@types/nodemailer": "^8.0.0",
     "@types/nodemailer-express-handlebars": "^4.0.6",
-    "@vitest/coverage-v8": "^4.1.6",
+    "@vitest/coverage-v8": "^4.1.7",
     "nodemon": "^3.1.14",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   },
   "_moduleAliases": {
     "@services": "build/services",
