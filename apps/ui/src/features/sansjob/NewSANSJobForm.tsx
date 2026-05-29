@@ -39,6 +39,7 @@ import {
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 import SANSPipelineSchematic from './SANSPipelineSchematic'
+import { logger } from 'utils/logger'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -155,7 +156,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         ? addNewPublicSANSJob(form).unwrap()
         : addNewSANSJob(form).unwrap())
     } catch (error) {
-      console.error('rejected', error)
+      logger.error('rejected', error)
     }
   }
 

@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { logger } from 'utils/logger'
 import {
   DataGrid,
   GridColDef,
@@ -95,7 +96,7 @@ const getRunTimeInHours = (
 
   // Validate that the time difference makes sense
   if (diffMs < 0) {
-    console.warn('Invalid NERSC runtime: end time before start time', {
+    logger.warn('Invalid NERSC runtime: end time before start time', {
       jobid: nersc.jobid,
       time_started: nersc.time_started,
       time_completed: nersc.time_completed,
@@ -135,7 +136,7 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
     end = new Date()
   } else if (jobStatus === 'Running' || nersc.state === 'RUNNING') {
     // Job is running but no real start time recorded - this shouldn't happen
-    console.warn('Job is running but no valid NERSC start time recorded', {
+    logger.warn('Job is running but no valid NERSC start time recorded', {
       jobid: nersc.jobid,
       status: jobStatus,
       nersc_state: nersc.state,
@@ -155,7 +156,7 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
   // Debug logging for negative times (should be rare now)
   if (diffMs < 0) {
     const now = new Date()
-    console.warn('Invalid NERSC queue time: negative duration detected', {
+    logger.warn('Invalid NERSC queue time: negative duration detected', {
       jobid: nersc.jobid,
       jobStatus,
       nersc_state: nersc.state,
@@ -321,7 +322,7 @@ const Jobs = () => {
       await deleteJob({ id: deleteTargetJobId }).unwrap()
       enqueueSnackbar('Job deletion queued.', { variant: 'success' })
     } catch (err) {
-      console.error('Failed to delete job:', err)
+      logger.error('Failed to delete job:', err)
       enqueueSnackbar('Failed to delete job. Please try again.', {
         variant: 'error'
       })
@@ -424,7 +425,7 @@ const Jobs = () => {
         link.parentNode?.removeChild(link)
       }
     } catch (err) {
-      console.error('Download failed:', err)
+      logger.error('Download failed:', err)
       enqueueSnackbar('Failed to download results. Please try again.', {
         variant: 'error'
       })

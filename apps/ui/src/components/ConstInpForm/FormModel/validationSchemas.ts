@@ -38,7 +38,6 @@ const validationSchemas = [
             const typedFile = file as File
             if (file) {
               const spaceCheck = await noSpaces(typedFile)
-              // console.log(spaceCheck)
               return spaceCheck
             }
             return false
@@ -80,7 +79,6 @@ const validationSchemas = [
                   'Please choose number between chain start and end residue',
                   (value, ctx) => {
                     // Tricky stuff to find where parent values stored.
-                    // console.log(ctx)
                     if (!ctx.from) {
                       // Handle the case where ctx.from is undefined
                       // For example, you can return false or throw an error.
@@ -91,19 +89,6 @@ const validationSchemas = [
                       (x) => x.id === ctx.parent.chainid
                     )
                     if (!chain) return false
-                    // const chainStart = ctx.from[2]!.value.chains.find(
-                    //   (x) => x.id === ctx.parent.chainid
-                    // ).first_res
-
-                    // const chainEnd = ctx.from[2]!.value.chains.find(
-                    //   (x) => x.id === ctx.parent.chainid
-                    // ).last_res
-                    // console.log('chainStart', chainStart)
-                    // console.log('chainEnd', chainEnd)
-                    // console.log(ctx)
-                    // if (value >= chainStart && value <= chainEnd) {
-                    //   return true
-                    // }
                     if (value >= chain.first_res && value <= chain.last_res) {
                       return true
                     }
@@ -147,9 +132,6 @@ const validationSchemas = [
                     }
                     const rigidBodies = ctx.from[2]!.value.rigid_bodies
                     const numRigidBodies = ctx.from[2]!.value.rigid_bodies.length
-                    // console.log('rigidBodies', rigidBodies)
-                    // console.log('numRigidBodies', numRigidBodies)
-                    // console.log(ctx)
                     for (let idx = 0; idx < numRigidBodies; idx++) {
                       // loop through domains in rigid body
                       const domains = rigidBodies[idx]!.domains
@@ -158,7 +140,6 @@ const validationSchemas = [
                         //skip validating against itself
                         // && same rigid body
                         if (ctx.from[1]!.value.id === rigidBodies[idx]!.id) {
-                          // console.log('skip')
                           continue
                         }
                         //https://stackoverflow.com/questions/36035074/how-can-i-find-an-overlap-between-two-given-ranges
@@ -175,7 +156,6 @@ const validationSchemas = [
                         }
                       }
                     }
-                    // console.log('no overlap')
                     return true
                   }
                 ),
@@ -264,7 +244,6 @@ const validationSchemas = [
                         }
                       }
                     }
-                    // console.log('no overlap')
                     return true
                   }
                 )

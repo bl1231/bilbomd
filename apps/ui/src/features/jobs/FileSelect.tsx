@@ -8,6 +8,7 @@ import {
   Alert
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
+import { logger } from 'utils/logger'
 
 interface FileSelectProps extends FormControlProps {
   value: File
@@ -54,7 +55,7 @@ const FileSelect = (props: FileSelectProps) => {
       }
 
       reader.onerror = () => {
-        console.error('Error reading file:', reader.error)
+        logger.error('Error reading file:', reader.error)
       }
 
       reader.readAsDataURL(file)

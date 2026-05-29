@@ -8,6 +8,7 @@ import { apiSlice } from '../app/api/apiSlice'
 import type { BilboMDJobDTO, JobAssetsDTO } from '@bilbomd/bilbomd-types'
 import { FileCheckResult } from '../types/jobCheckResults'
 import { RootState } from '../app/store'
+import { logger } from 'utils/logger'
 
 interface FoxsData {
   [key: string]: unknown
@@ -132,7 +133,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         try {
           await queryFulfilled
         } catch (error) {
-          console.error('Error occurred during job deletion:', error)
+          logger.error('Error occurred during job deletion:', error)
           patchResult.undo()
         }
       },

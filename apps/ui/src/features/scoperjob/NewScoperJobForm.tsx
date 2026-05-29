@@ -27,6 +27,7 @@ import HeaderBox from 'components/HeaderBox'
 import useTitle from 'hooks/useTitle'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import { logger } from 'utils/logger'
 
 type NewScoperJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -105,7 +106,7 @@ const NewScoperJobForm = ({
           : await addNewScoperJob(form).unwrap()
       setStatus(newJob)
     } catch (error) {
-      console.error('rejected', error)
+      logger.error('rejected', error)
       setSubmitError(
         (error as { data?: { message?: string } }).data?.message ||
           'An error occurred during submission.'

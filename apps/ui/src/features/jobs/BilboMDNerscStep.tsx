@@ -20,8 +20,6 @@ const BilboMDNerscStep = ({
 }: BilboMDStepProps) => {
 
   const { friendlyName, tooltipMessage } = getStepDetails(stepName)
-  // console.log(stepName, stepStatus, stepMessage)
-  // console.log(friendlyName, tooltipMessage)
   return (
     <Grid
       key={stepName}

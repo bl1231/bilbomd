@@ -62,8 +62,6 @@ const FoXSEnsembleCharts = ({
   maxYAxis,
   foxsData
 }: Props) => {
-  // console.log('combinedData:', combinedData)
-  // console.log('foxsData:', foxsData)
   // Initialize visibility state for each line
   const [visibility, setVisibility] = useState([
     false,
@@ -73,7 +71,6 @@ const FoXSEnsembleCharts = ({
   const handleCheckboxChange = (index: number) => {
     const newVisibility = visibility.slice()
     newVisibility[index] = !newVisibility[index]
-    // console.log('Updated visibility:', newVisibility)
     setVisibility(newVisibility)
   }
   return (

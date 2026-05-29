@@ -27,7 +27,6 @@ type WelcomeProps = {
 }
 
 const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
-  console.log(`Welcome mode: ${mode}`)
   const { username } = useAuth()
   const isAnonymous = mode === 'anonymous'
   useTitle(

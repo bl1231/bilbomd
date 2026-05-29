@@ -107,7 +107,6 @@ export const bilbomdScoperJobSchema = object().shape({
       async (file) => {
         if (file) {
           const spaceCheck = await noSpaces(file as File)
-          // console.log(spaceCheck)
           return spaceCheck
         }
         return false

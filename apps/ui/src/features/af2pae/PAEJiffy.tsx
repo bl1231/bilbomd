@@ -1,3 +1,4 @@
+import { logger } from 'utils/logger'
 import {
   Typography,
   Paper,
@@ -127,7 +128,7 @@ const Alphafold2PAEJiffy = () => {
       setSubmittedValues(values)
       setFormInitialValues(values)
     } catch (error) {
-      console.error('Error submitting form:', error)
+      logger.error('Error submitting form:', error)
     }
   }
 
@@ -248,7 +249,7 @@ const Alphafold2PAEJiffy = () => {
           : (paeBuf as ArrayBuffer)
       return reshapeFloat32(buf, viz.length, viz.downsample ?? 1)
     } catch (e) {
-      console.error('Failed to parse pae.bin', e)
+      logger.error('Failed to parse pae.bin', e)
       return null
     }
   }, [vizOk, binOk, viz, paeBuf])

@@ -2,7 +2,6 @@ import { Typography, Alert, Button } from '@mui/material'
 
 const SafetyZone = () => {
   const handleContactSupport = () => {
-    console.log('Contacting support for account deletion')
     window.location.href = 'mailto:bilbomd@lbl.gov'
   }
 

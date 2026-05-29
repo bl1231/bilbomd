@@ -22,8 +22,6 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
 
   const actualFeedback = feedback || fetchedFeedback
 
-  // console.log('actualFeedback:', actualFeedback)
-
   if (isLoading) {
     return <CircularProgress />
   }
@@ -39,7 +37,6 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
     actualFeedback.best_model_dat_file || actualFeedback.best_model || ''
 
   const getChipProps = (value: number) => {
-    // console.log('value:', value)
     if (value < 1.2) {
       return { sx: { backgroundColor: 'green' } }
     } else if (value >= 1.2 && value <= 2.0) {

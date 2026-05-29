@@ -47,6 +47,11 @@ export default defineConfig([
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
 
+      // No stray console.* in production code — route diagnostics through
+      // the `utils/logger` abstraction instead (which gates log/debug/info
+      // to dev). logger.ts itself opts out via a file-level eslint-disable.
+      'no-console': 'error',
+
       // TS hygiene
       '@typescript-eslint/no-unused-vars': [
         'warn',
@@ -59,6 +64,17 @@ export default defineConfig([
         'warn',
         { checksVoidReturn: false }
       ]
+    }
+  },
+
+  // Tests legitimately spy on / reassign console — allow it there.
+  {
+    files: [
+      'src/**/__tests__/**/*.{ts,tsx}',
+      'src/**/*.{test,spec}.{ts,tsx}'
+    ],
+    rules: {
+      'no-console': 'off'
     }
   }
 ])

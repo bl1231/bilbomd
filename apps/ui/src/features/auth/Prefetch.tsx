@@ -8,7 +8,6 @@ import { Outlet } from 'react-router'
 
 const Prefetch = () => {
   useEffect(() => {
-    // console.log('subscribing')
     const store = setupStore()
     store.dispatch(
       configApiSlice.util.prefetch('getConfigs', 'configData', { force: true })

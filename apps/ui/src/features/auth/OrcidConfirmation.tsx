@@ -12,6 +12,7 @@ import {
   useFinalizeOrcidMutation
 } from '../../slices/authApiSlice'
 import { userDisplayName } from 'utils/userDisplayName'
+import { logger } from 'utils/logger'
 
 interface ProfileRowProps {
   label: string
@@ -57,7 +58,7 @@ export default function OrcidConfirmation() {
       await finalizeOrcid({}).unwrap()
       window.location.href = '/welcome'
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       window.location.href = '/auth/orcid-error?reason=finalize'
     }
   }

@@ -14,7 +14,6 @@ interface NerscStatusChipProps {
 
 const NerscStatusChip: React.FC<NerscStatusChipProps> = ({ system }) => {
   const color = system.status === 'active' ? 'success' : 'warning'
-  // console.log(system.notes[0])
   let toolTipMessage = 'OK'
   if (system.status) {
     toolTipMessage = system.status

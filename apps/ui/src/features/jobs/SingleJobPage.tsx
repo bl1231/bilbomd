@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useParams, useLocation, useNavigate, Link } from 'react-router'
+import { logger } from 'utils/logger'
 import useTitle from 'hooks/useTitle'
 import {
   Button,
@@ -81,13 +82,12 @@ const SingleJobPage = () => {
   }
 
   const handleDeleteJob = async () => {
-    // console.log('Deleting job with ID:', id)
     if (!id) return
     try {
       await deleteJob({ id })
       void navigate('/dashboard/jobs')
     } catch (err) {
-      console.error('Failed to delete the job:', err)
+      logger.error('Failed to delete the job:', err)
     }
   }
 
@@ -138,11 +138,6 @@ const SingleJobPage = () => {
     pollingInterval: 15000,
     skipPollingIfUnfocused: true
   })
-
-  // Debug logging
-  // console.log('moviesData:', moviesData)
-  // console.log('moviesError:', moviesError)
-  // console.log('moviesLoading:', moviesLoading)
 
   const getProgressValue = () => {
     if (!job) return 0
@@ -218,7 +213,7 @@ const SingleJobPage = () => {
         )
       }
     } catch (error) {
-      console.error('Download results error:', error)
+      logger.error('Download results error:', error)
       setDownloadError(
         'Download failed. The results archive may be unavailable. Please try again or contact support.'
       )
@@ -229,8 +224,6 @@ const SingleJobPage = () => {
     (job?.mongo.status as JobStatusEnum) || 'Pending',
     theme
   )
-
-  // console.log('job', job)
 
   const jobTypeRouteSegment = job
     ? jobTypeToRoute[job.mongo.jobType] || 'classic'

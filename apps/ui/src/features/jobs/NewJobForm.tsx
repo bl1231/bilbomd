@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react'
+import { logger } from 'utils/logger'
 import {
   Box,
   Button,
@@ -161,7 +162,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
         ? addNewPublicJob(form).unwrap()
         : addNewJob(form).unwrap())
     } catch (error) {
-      console.error('rejected', error)
+      logger.error('rejected', error)
       setSubmitError(
         (error as { data?: { message?: string } }).data?.message ||
           'An error occurred during submission.'

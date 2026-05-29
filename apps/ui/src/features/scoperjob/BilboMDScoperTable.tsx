@@ -16,7 +16,6 @@ interface BilboMDScoperTableProps {
 }
 
 const BilboMDScoperTable = ({ results }: BilboMDScoperTableProps) => {
-  console.log('BilboMDScoperTable: results:', results)
   const rows = [
     {
       key: 'KGS Number of Conformations to Generate',

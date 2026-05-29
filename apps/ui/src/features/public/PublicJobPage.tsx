@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router'
 import { useState, useEffect, lazy, Suspense } from 'react'
+import { logger } from 'utils/logger'
 import {
   Alert,
   AlertTitle,
@@ -69,10 +70,10 @@ const handleDownload = async (publicId: string) => {
       link.click()
       link.parentNode?.removeChild(link)
     } else {
-      console.error('No data to download')
+      logger.error('No data to download')
     }
   } catch (error) {
-    console.error('Download results error:', error)
+    logger.error('Download results error:', error)
   }
 }
 
@@ -82,13 +83,11 @@ const PublicJobPage = () => {
   const { publicId } = useParams<{ publicId: string }>()
   const [shouldPoll, setShouldPoll] = useState(true)
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
-  // console.log('PublicJobPage publicId:', publicId)
 
   const { data, isLoading, isError } = useGetPublicJobByIdQuery(publicId!, {
     skip: !publicId,
     pollingInterval: shouldPoll ? 10000 : 0
   })
-  // console.log('PublicJobPage data:', data)
 
   useEffect(() => {
     if (data?.status) {

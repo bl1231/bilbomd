@@ -25,6 +25,7 @@ import { PluginBehaviors } from 'molstar/lib/mol-plugin/behavior'
 import { renderReact18 } from 'molstar/lib/mol-plugin-ui/react18'
 import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context'
 
+import { logger } from 'utils/logger'
 import { ViewportComponent } from './Viewport'
 import EnsembleTogglePanel from './EnsembleTogglePanel'
 import {
@@ -162,7 +163,7 @@ const MolstarViewer = ({
         case 'multi':
           return ''
         default:
-          console.warn(`Unknown job type '${jobType}', defaulting to 'classic'`)
+          logger.warn(`Unknown job type '${jobType}', defaulting to 'classic'`)
           return 'classic'
       }
     }
@@ -220,7 +221,7 @@ const MolstarViewer = ({
       })
       return response.data
     } catch (error) {
-      console.error('Error fetching PDB data:', error)
+      logger.error('Error fetching PDB data:', error)
       return null
     }
   }
@@ -476,7 +477,7 @@ const MolstarViewer = ({
 
       setIsDomainColor(nextMode)
     } catch (error) {
-      console.error('Failed to apply domain color preset:', error)
+      logger.error('Failed to apply domain color preset:', error)
     }
   }
 

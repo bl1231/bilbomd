@@ -31,6 +31,7 @@ import { FrontendBullMQJob } from '../../types/bullmq'
 import { QueueJobActionsMenu } from './QueueJobActionsMenu'
 import BoxDataGridWrapper from '../../themes/components/BoxDataGridWrapper'
 import { formatDateSafe } from 'utils/dates'
+import { logger } from 'utils/logger'
 
 interface BilboMDJobData {
   type: string
@@ -89,7 +90,7 @@ const QueueDetailsPage = () => {
       setDeleteTargetJobId(null)
       setDeleteTargetTitle(null)
     } catch (error) {
-      console.error('Failed to delete job:', error)
+      logger.error('Failed to delete job:', error)
       // optionally show error UI
     }
   }
@@ -135,8 +136,6 @@ const QueueDetailsPage = () => {
   if (!matchedQueue) {
     return <Alert severity='warning'>Queue not found.</Alert>
   }
-
-  console.log('Jobs:', jobs)
 
   const typedJobs: FrontendBullMQJob<BilboMDJobData>[] = (jobs?.jobs ??
     []) as unknown as FrontendBullMQJob<BilboMDJobData>[]

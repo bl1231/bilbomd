@@ -38,7 +38,6 @@ const NerscStatusChecker: React.FC<NerscStatusCheckerProps> = ({
   const systemStatus = nerscStatIsSuccess
     ? nerscStat.find((system) => system.name === systemName)
     : null
-  // console.log('systemStatus:', systemStatus)
   // Determine if the system is unavailable
   const isUnavailable = systemStatus?.status === 'unavailable'
 

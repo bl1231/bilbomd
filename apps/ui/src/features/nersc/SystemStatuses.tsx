@@ -20,7 +20,6 @@ const NerscSystemStatuses = () => {
   if (isLoading) content = <CircularProgress />
 
   if (error) {
-    console.log('err:', error)
     content = (
       <Alert>
         <AlertTitle>Error loading NERSC Status.</AlertTitle>
@@ -37,7 +36,6 @@ const NerscSystemStatuses = () => {
     'container_runtimes'
   ]
   if (isSuccess) {
-    console.log('nerscStatuses:', nerscStatuses)
     content = (
       <Box>
         <Grid sx={{ mx: 1, display: 'flex', alignItems: 'center' }}>

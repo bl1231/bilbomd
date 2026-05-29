@@ -20,7 +20,6 @@ export const af2paeJiffySchema = object().shape({
       async (file) => {
         if (file) {
           const spaceCheck = await noSpaces(file as File)
-          // console.log(spaceCheck)
           return spaceCheck
         }
         return false
@@ -63,10 +62,8 @@ export const af2paeJiffySchema = object().shape({
     })
     .test('file-size-check', 'Max file size is 140MB', (file) => {
       if (file && (file as File).size <= 140000000) {
-        // console.log(file.size)
         return true
       }
-      // console.log(file.size)
       return false
     })
     .test('file-type-check', 'Only accepts a JSON file', (file) => {
@@ -74,7 +71,6 @@ export const af2paeJiffySchema = object().shape({
         file &&
         (file as File).name.split('.').pop()?.toUpperCase() === 'JSON'
       ) {
-        // console.log(file.name.split('.').pop())
         return true
       }
       return false
@@ -85,7 +81,6 @@ export const af2paeJiffySchema = object().shape({
       async (file) => {
         if (file) {
           const spaceCheck = await noSpaces(file as File)
-          // console.log(spaceCheck)
           return spaceCheck
         }
         return false
