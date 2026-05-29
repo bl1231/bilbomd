@@ -18,11 +18,15 @@ const updateStepStatus = async (
     if (!job.steps) {
       job.steps = {} as IBilboMDSteps
     }
-    // Update the specific step directly on the Job document
+    // Keep the in-memory document in sync for any later reads/saves
     job.steps[stepName] = status
 
-    // Save the modified document
-    await job.save()
+    // Persist with an atomic field update instead of job.save() to avoid
+    // ParallelSaveError ("Can't save() the same doc multiple times in parallel")
+    // when concurrent steps — e.g. the parallel per-Rg OpenMM MD runs — report
+    // status on the same document instance. updateOne() targets only this nested
+    // field and is not subject to the in-flight-save guard.
+    await job.updateOne({ $set: { [`steps.${stepName}`]: status } })
     // logger.info(`Successfully updated ${stepName} status for job ${job._id}`)
   } catch (error) {
     logger.error(
