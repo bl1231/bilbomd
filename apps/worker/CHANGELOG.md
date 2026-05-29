@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.14.4
+
+### Patch Changes
+
+- 35f62cc: Fix intermittent `ParallelSaveError` in the MD step by persisting step status via an atomic field update instead of a full-document save. Concurrent OpenMM per-Rg MD runs previously called `job.save()` on the same document instance simultaneously, throwing "Can't save() the same doc multiple times in parallel".
+
 ## 2.14.3
 
 ### Patch Changes
