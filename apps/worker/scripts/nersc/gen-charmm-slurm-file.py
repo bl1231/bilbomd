@@ -33,8 +33,8 @@ def setup_environment(uuid):
     template_dir = f"{cfs_base}/{env_dir}/templates"
 
     # Docker images
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.29"
-    af_worker = "bilbomd/bilbomd-colabfold:0.0.9"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.30"
+    af_worker = "bilbomd/bilbomd-colabfold:0.0.10"
 
     # Number of cores
     if constraint.startswith("gpu"):
@@ -1265,33 +1265,6 @@ MFOXS_EXIT=$?
 check_exit_code $MFOXS_EXIT multifoxs
 echo "MultiFoXS processing complete."
 update_status multifoxs Success
-"""
-    return section
-
-
-def generate_analysis_section(config):
-    section = f"""
-# --------------------------------------------------------------------------------------
-# Additional Analysis
-update_status analysis Running
-echo "Running additional analysis..."
-ANALYSIS_DIR=$WORKDIR/analysis
-mkdir -p $ANALYSIS_DIR
-srun --ntasks=1 \\
-     --cpus-per-task={config["num_cores"]} \\
-     --cpu-bind=cores \\
-     --job-name analysis \\
-     podman-hpc run --rm \\
-        -v $WORKDIR:/bilbomd/work \\
-        $BILBOMD_WORKER /bin/bash -c "
-            set -e
-            cd /bilbomd/work/analysis &&
-            python /app/scripts/openmm/plot_rgyrs.py /bilbomd/work/openmm/md
-        "
-ANALYSIS_EXIT=$?
-check_exit_code $ANALYSIS_EXIT analysis
-echo "Additional analysis complete."
-update_status analysis Success
 """
     return section
 

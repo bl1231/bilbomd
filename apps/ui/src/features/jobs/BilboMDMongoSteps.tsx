@@ -21,14 +21,15 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
   stepsToHide = ['_id']
 
   const stepOrder = [
+    'autorg',
     'alphafold',
+    'openfold',
     'reduce',
     'rnaview',
     'kgs',
     'ionnet',
     'pdb2crd',
     'pae',
-    'autorg',
     'minimize',
     'initfoxs',
     'heat',
@@ -64,13 +65,10 @@ const BilboMDMongoSteps: React.FC<BilboMDMongoStepsProps> = ({ steps }) => {
       />
     ))
 
-  // Find the latest message from the any of the steps
-  const latestStepMessage = Object.entries(steps).reduce(
-    (latestMessage, [, stepValue]) => {
-      return stepValue.message || latestMessage
-    },
+  // Show the message of whichever step is currently Running
+  const latestStepMessage =
+    Object.values(steps).find((step) => step?.status === 'Running')?.message ??
     ''
-  )
 
   return (
     <Accordion

@@ -54,7 +54,7 @@ const PLDDTPlot: React.FC<PLDDTPlotProps> = ({
     payload?: Array<{ payload: PLDDTData }>
   }) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload
+      const data = payload[0]!.payload
       return (
         <div
           style={{

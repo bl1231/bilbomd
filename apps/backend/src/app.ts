@@ -8,13 +8,16 @@ import { externalApiLimiter } from './middleware/externalApiLimiter.js'
 import { logger, requestLogger, assignRequestId } from './middleware/loggers.js'
 import cookieParser from 'cookie-parser'
 import session from 'express-session'
+import { RedisStore } from 'connect-redis'
+import { sessionRedis } from './queues/sessionRedisConn.js'
 import { router as adminRoutes } from './routes/admin.js'
+import { bullmqAuthCheck } from './controllers/admin/bullmqAuthCheck.js'
 import mongoose from 'mongoose'
 import { connectDB } from './config/dbConn.js'
 import { initOrcidClient } from './controllers/auth/orcidClientConfig.js'
 import { CronJob } from 'cron'
 import { deleteOldJobs } from './middleware/jobCleaner.js'
-import { getEnvVar } from './config/config.js'
+import { config, getEnvVar } from './config/config.js'
 import sfapiRoutes from './routes/sfapi.js'
 import registerRoutes from './routes/register.js'
 import verifyRoutes from './routes/verify.js'
@@ -49,11 +52,21 @@ logger.info(`Starting in ${environment} mode`)
 // Trust exactly 2 proxies: Cloudflare and Docker host
 app.set('trust proxy', 2)
 
+// Prevent MongoDB operator injection in all Mongoose queries
+mongoose.set('sanitizeFilter', true)
+
 // Connect to MongoDB
 connectDB()
 
-// Initialize the ORCID client configuration
-await initOrcidClient()
+// Initialize the ORCID client configuration only when ORCID auth is enabled.
+// See https://github.com/bl1231/bilbomd/issues/817 — ORCID is gated behind a
+// feature flag until the hardening work is complete.
+if (config.orcidAuthEnabled) {
+  await initOrcidClient()
+  logger.info('ORCID auth enabled')
+} else {
+  logger.info('ORCID auth disabled (ORCID_AUTH_ENABLED is not true)')
+}
 
 // custom middleware logger
 app.use(assignRequestId)
@@ -72,9 +85,16 @@ app.use(express.json({ limit: '150mb' }))
 // middleware for COOKIES
 app.use(cookieParser())
 
-// Session management
+// Session management — Redis-backed so sessions survive restarts and are
+// shared across replicas. The ORCID flow uses req.session.orcidProfile as
+// the bridge between /orcid/callback and /orcid/finalize; an in-memory
+// store would strand mid-OAuth users on the confirmation page.
+// connect-redis@9 requires the official redis@5 client API (not ioredis).
+await sessionRedis.connect()
+
 app.use(
   session({
+    store: new RedisStore({ client: sessionRedis, prefix: 'bilbomd-sess:' }),
     name: 'bilbomd-session',
     secret: getEnvVar('SESSION_SECRET'),
     resave: false,
@@ -89,6 +109,8 @@ app.use(
 
 // Serve static files
 app.use('/', express.static('public'))
+
+app.get('/api/v1/admin/bullmq-auth', bullmqAuthCheck)
 
 app.use('/admin/bullmq', adminRoutes)
 
@@ -177,7 +199,12 @@ app.all(/.*/, (req, res) => {
 })
 
 mongoose.connection.on('error', (err) => {
-  logger.error(`mongoose error: ${err.no}: ${err.code}\t${err.syscall}\t${err.hostname}`)
+  logger.error('mongoose connection error', {
+    no: err.no,
+    code: err.code,
+    syscall: err.syscall,
+    hostname: err.hostname
+  })
 })
 
 export default app

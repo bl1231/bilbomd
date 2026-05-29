@@ -57,11 +57,11 @@ describe('MagickLink Component', () => {
     })
 
     await act(async () => {
-      fireEvent.change(emailInputs[0], { target: { value: 'user@test.com' } })
+      fireEvent.change(emailInputs[0]!, { target: { value: 'user@test.com' } })
     })
 
     await act(async () => {
-      fireEvent.click(submitButtons[0])
+      fireEvent.click(submitButtons[0]!)
     })
   })
 
@@ -80,11 +80,11 @@ describe('MagickLink Component', () => {
       name: /Send a MagickLink/i
     })
     await act(async () => {
-      fireEvent.change(emailInputs[0], { target: { value: 'nope@test.com' } })
+      fireEvent.change(emailInputs[0]!, { target: { value: 'nope@test.com' } })
     })
 
     await act(async () => {
-      fireEvent.click(submitButtons[0])
+      fireEvent.click(submitButtons[0]!)
     })
   })
 })

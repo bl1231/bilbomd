@@ -46,29 +46,29 @@ describe('LoginRoutes', () => {
   it('should have correct route configurations', () => {
     const routes = LoginRoutes.children
 
-    expect(routes[0].index).toBe(true)
-    expect(routes[0].element).toBeDefined()
+    expect(routes[0]!.index).toBe(true)
+    expect(routes[0]!.element).toBeDefined()
 
-    expect(routes[1].path).toBe('register')
-    expect(routes[1].element).toBeDefined()
+    expect(routes[1]!.path).toBe('register')
+    expect(routes[1]!.element).toBeDefined()
 
-    expect(routes[2].path).toBe('verify/:code')
-    expect(routes[2].element).toBeDefined()
+    expect(routes[2]!.path).toBe('verify/:code')
+    expect(routes[2]!.element).toBeDefined()
 
-    expect(routes[3].path).toBe('magicklink')
-    expect(routes[3].element).toBeDefined()
+    expect(routes[3]!.path).toBe('magicklink')
+    expect(routes[3]!.element).toBeDefined()
 
-    expect(routes[4].path).toBe('auth/orcid-confirmation')
-    expect(routes[4].element).toBeDefined()
+    expect(routes[4]!.path).toBe('auth/orcid-confirmation')
+    expect(routes[4]!.element).toBeDefined()
 
-    expect(routes[5].path).toBe('auth/orcid-error')
-    expect(routes[5].element).toBeDefined()
+    expect(routes[5]!.path).toBe('auth/orcid-error')
+    expect(routes[5]!.element).toBeDefined()
 
-    expect(routes[6].path).toBe('auth/:otp')
-    expect(routes[6].element).toBeDefined()
+    expect(routes[6]!.path).toBe('auth/:otp')
+    expect(routes[6]!.element).toBeDefined()
 
-    expect(routes[7].path).toBe('login')
-    expect(routes[7].element).toBeDefined()
+    expect(routes[7]!.path).toBe('login')
+    expect(routes[7]!.element).toBeDefined()
   })
 
   it('should render MinimalLayout element', () => {

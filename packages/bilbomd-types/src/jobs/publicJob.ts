@@ -1,5 +1,7 @@
-import { JobResultsDTO } from './results'
-import { JobType, JobStatusEnum } from './jobs'
+import { JobResultsDTO } from './results.js'
+import { JobType, JobStatusEnum } from './jobs.js'
+import { JobStepsDTO } from './jobSteps.js'
+import { MDConstraintsDTO } from './mdConstraints.js'
 
 export type PublicJobStatus = {
   publicId: string
@@ -9,9 +11,11 @@ export type PublicJobStatus = {
   status: JobStatusEnum
   progress: number
   md_engine?: string
+  md_constraints?: MDConstraintsDTO
   submittedAt: Date
   startedAt?: Date
   completedAt?: Date
+  steps?: JobStepsDTO
   results?: JobResultsDTO
 }
 
@@ -19,7 +23,7 @@ export type AnonJobResponse = {
   message: string
   jobid: string
   uuid: string
-  md_engine: string
+  md_engine?: string
   publicId?: string
   resultUrl?: string
 }

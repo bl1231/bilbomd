@@ -1,13 +1,15 @@
 import * as yup from 'yup'
 import {
   requiredFile,
-  fileExtTest,
   fileSizeTest,
+  fileExtTest,
   fileNameLengthTest,
   noSpacesTest,
   saxsCheck,
   constInpCheck,
-  chainIdCheck
+  pdbOrCifExtTest,
+  pdbOrCifChainIdCheck,
+  pdbOrCifResidueCheck
 } from './helpers/fileValidators.js'
 
 export const pdbJobSchema = yup.object({
@@ -26,9 +28,10 @@ export const pdbJobSchema = yup.object({
     .concat(fileExtTest('inp'))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),
-  pdb_file: requiredFile('PDB file is required')
-    .concat(chainIdCheck())
-    .concat(fileExtTest('pdb'))
+  pdb_file: requiredFile('A PDB or CIF file is required')
+    .concat(pdbOrCifChainIdCheck())
+    .concat(pdbOrCifResidueCheck())
+    .concat(pdbOrCifExtTest())
     .concat(fileSizeTest(10_000_000))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),

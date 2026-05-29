@@ -25,7 +25,8 @@ import {
   convertYamlToInp,
   validateYamlConstraints,
   validateInpConstraints,
-  extractConstraintsFromYaml
+  extractConstraintsFromYaml,
+  buildChainSegidMap
 } from '@bilbomd/md-utils'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
@@ -207,7 +208,8 @@ const handleBilboMDClassicPDB = async (
         md_engine,
         jobDir,
         inpFile,
-        inpFileName
+        inpFileName,
+        pdbFilePath: path.join(jobDir, pdbFileName)
       })
       // Update inpFileName to reflect the standardized output filename
       inpFileName = standardizedFileName
@@ -399,12 +401,14 @@ async function processConstraintFile({
   md_engine,
   jobDir,
   inpFile,
-  inpFileName
+  inpFileName,
+  pdbFilePath
 }: {
   md_engine: 'CHARMM' | 'OpenMM'
   jobDir: string
   inpFile: Express.Multer.File
   inpFileName: string
+  pdbFilePath: string
 }): Promise<string> {
   const filePath = inpFile.path // Use the actual uploaded file path
 
@@ -447,7 +451,11 @@ async function processConstraintFile({
       // Convert YAML to INP for CHARMM
       logger.info('Converting YAML file to INP for CHARMM')
       await validateYamlConstraints(filePath)
-      const inpContent = await convertYamlToInp(filePath)
+      // Build chain→segid map from the PDB so DNA/RNA chains get the correct
+      // pdb2crd-style segid (e.g. "DNAD") rather than defaulting to "PROD".
+      const chainSegidMap = await buildChainSegidMap(pdbFilePath)
+      logger.info(`Chain→segid map: ${JSON.stringify(chainSegidMap)}`)
+      const inpContent = await convertYamlToInp(filePath, logger, chainSegidMap)
 
       // Write INP content to standardized filename
       await fs.writeFile(finalPath, inpContent)

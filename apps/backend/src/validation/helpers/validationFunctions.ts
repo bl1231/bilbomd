@@ -1,4 +1,10 @@
 import fs from 'fs/promises'
+import {
+  SUPPORTED_PDB_RESIDUES,
+  parseCifAtomSite,
+  cifContainsChainId as cifContainsChainIdUtil,
+  cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil
+} from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
 
 const fromCharmmGui = async (file: Express.Multer.File): Promise<boolean> => {
@@ -225,6 +231,38 @@ const isRNA = async (
   }
 }
 
+
+const checkPdbResidues = async (
+  file: Express.Multer.File
+): Promise<{ valid: boolean; message?: string }> => {
+  try {
+    const text = await fs.readFile(file.path, 'utf8')
+    const lines = text.split('\n')
+    const unsupported = new Set<string>()
+
+    for (const line of lines) {
+      if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+        const residue = line.slice(17, 20).trim()
+        if (residue && !SUPPORTED_PDB_RESIDUES.has(residue)) {
+          unsupported.add(residue)
+        }
+      }
+    }
+
+    if (unsupported.size > 0) {
+      const list = [...unsupported].sort().join(', ')
+      return {
+        valid: false,
+        message: `PDB contains unsupported residues: ${list}. These cannot be processed by BilboMD.`
+      }
+    }
+
+    return { valid: true }
+  } catch {
+    return { valid: false, message: 'Error reading PDB file.' }
+  }
+}
+
 const isValidConstInpFile = async (
   file: Express.Multer.File,
   mode: string
@@ -268,9 +306,59 @@ const isValidConstInpFile = async (
       }
     }
 
+    // Allowlist check: reject any line that doesn't start with a permitted keyword.
+    // This blocks CHARMM directives like 'system', 'open', 'read', etc. that could
+    // execute arbitrary OS commands or perform file I/O when the file is STREAMed.
+    const ALLOWED_PREFIXES = [
+      'define',
+      'cons fix',
+      'cons harm',
+      'shape desc',
+      'return',
+      '!',
+      '*'
+    ]
+    for (const line of lines) {
+      const lower = line.trim().toLowerCase()
+      if (!ALLOWED_PREFIXES.some((pfx) => lower.startsWith(pfx))) {
+        return `Disallowed keyword in constraint file: "${line.trim()}"`
+      }
+    }
+
     return true // All checks passed
   } catch {
     return 'Error reading file'
+  }
+}
+
+const cifContainsChainId = async (file: Express.Multer.File): Promise<boolean> => {
+  try {
+    const text = await fs.readFile(file.path, 'utf8')
+    const parsed = parseCifAtomSite(text)
+    return parsed !== null && cifContainsChainIdUtil(parsed)
+  } catch {
+    return false
+  }
+}
+
+const checkCifResidues = async (
+  file: Express.Multer.File
+): Promise<{ valid: boolean; message?: string }> => {
+  try {
+    const text = await fs.readFile(file.path, 'utf8')
+    const parsed = parseCifAtomSite(text)
+    if (!parsed) {
+      return { valid: false, message: 'No _atom_site block found in CIF file.' }
+    }
+    const result = cifHasAllowedResiduesOnlyUtil(parsed)
+    if (result.valid) return { valid: true }
+    const list = result.unsupportedResidues.join(', ')
+    return {
+      valid: false,
+      message: `CIF contains unsupported residues: ${list}. These cannot be processed by BilboMD.`
+    }
+  } catch {
+    return { valid: false, message: 'Error reading CIF file.' }
   }
 }
 
@@ -282,5 +370,8 @@ export {
   isSaxsData,
   isRNA,
   containsChainId,
+  cifContainsChainId,
+  checkPdbResidues,
+  checkCifResidues,
   isValidConstInpFile
 }

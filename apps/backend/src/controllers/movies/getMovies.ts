@@ -103,16 +103,35 @@ const getMovies = async (
 
     logger.info(`Attempting to find job with ID: ${id}`)
 
-    // Only fetch the movies array to keep payload small
+    // Fetch movies and user so we can enforce ownership
     const job = (await JobModel.findById(id, {
-      'assets.movies': 1
-    }).lean()) as JobWithAssets | null
+      'assets.movies': 1,
+      user: 1
+    })
+      .populate('user', 'username')
+      .lean()) as JobWithAssets | null
 
     logger.info(`Job query result: ${job ? 'found' : 'not found'}`)
 
     if (!job) {
       logger.warn(`Job not found for ID: ${id}`)
       return res.status(404).json({ error: 'Job not found' })
+    }
+
+    // Admins and Managers can access any job's movies
+    const username = req.user as string | undefined
+    const roles = (req.roles as string[] | undefined) ?? []
+    const isAdmin = roles.includes('Admin')
+    const isManager = roles.includes('Manager')
+    if (!isAdmin && !isManager) {
+      const jobUser = job.user as unknown as { username?: string } | undefined
+      const jobOwnerUsername = jobUser?.username
+      if (jobOwnerUsername !== username) {
+        logger.warn(
+          `Access denied: ${username} attempted to read movies for job owned by ${jobOwnerUsername}`
+        )
+        return res.status(403).json({ error: 'Access denied' })
+      }
     }
 
     const movies: MovieAsset[] = job.assets?.movies ?? []

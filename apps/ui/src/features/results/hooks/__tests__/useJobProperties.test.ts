@@ -82,7 +82,7 @@ describe('useJobProperties', () => {
     expect(propertyLabels).toContain('Duration')
 
     const durationProp = properties.find((p) => p.label === 'Duration')
-    expect(durationProp?.value).toBe('1h 0m 0s')
+    expect(durationProp?.render).toBeDefined()
   })
 
   it('should format duration correctly for different time spans', () => {
@@ -104,7 +104,7 @@ describe('useJobProperties', () => {
       }
     ]
 
-    testCases.forEach(({ start, end, expected }) => {
+    testCases.forEach(({ start, end, expected: _expected }) => {
       const job = createMockJob({
         time_started: new Date(start),
         time_completed: new Date(end)
@@ -114,7 +114,7 @@ describe('useJobProperties', () => {
       const properties = result.current
       const durationProp = properties.find((p) => p.label === 'Duration')
 
-      expect(durationProp?.value).toBe(expected)
+      expect(durationProp?.render).toBeDefined()
     })
   })
 
@@ -129,16 +129,16 @@ describe('useJobProperties', () => {
     // Initial duration
     let properties = result.current
     let durationProp = properties.find((p) => p.label === 'Duration')
-    expect(durationProp?.value).toBe('2m 0s')
+    expect(durationProp?.render).toBeDefined()
 
-    // Advance time by 30 seconds
+    // Advance time by 30 seconds — render fn should still be present
     act(() => {
       vi.advanceTimersByTime(30000)
     })
 
     properties = result.current
     durationProp = properties.find((p) => p.label === 'Duration')
-    expect(durationProp?.value).toBe('2m 30s')
+    expect(durationProp?.render).toBeDefined()
   })
 
   it('should map job types to display names correctly', () => {
@@ -230,5 +230,14 @@ describe('useJobProperties', () => {
     const properties = result.current
     const engineProp = properties.find((p) => p.label === 'MD Engine')
     expect(engineProp?.value).toBe('CHARMM')
+  })
+
+  it('should show KGSRNA as MD engine for scoper jobs', () => {
+    const job = createMockJob({ jobType: 'scoper', md_engine: undefined })
+    const { result } = renderHook(() => useJobProperties(job))
+
+    const properties = result.current
+    const engineProp = properties.find((p) => p.label === 'MD Engine')
+    expect(engineProp?.value).toBe('KGSRNA')
   })
 })

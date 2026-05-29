@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'async_hooks'
 import { createLogger, transports, format } from 'winston'
 import DailyRotateFile from 'winston-daily-rotate-file'
 import moment from 'moment-timezone'
@@ -6,16 +7,24 @@ import { v4 as uuidv4 } from 'uuid'
 import { Request, Response, NextFunction } from 'express'
 import { config } from '../config/config.js'
 
-const { combine, timestamp, label, printf, colorize } = format
+const { combine, timestamp, label, printf, colorize, json } = format
 const localTimezone = 'America/Los_Angeles'
 const logsFolder = `/bilbomd/logs`
+
+interface RequestContext {
+  requestId: string
+  userId?: string
+}
+
+export const requestContextStorage = new AsyncLocalStorage<RequestContext>()
 
 const customTimestamp = () =>
   moment().tz(localTimezone).format('YYYY-MM-DD HH:mm:ss')
 
-const logFormat = printf(({ level, message, label, timestamp }) => {
+const consoleLogFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp} - ${level}: [${label}] ${message}`
 })
+
 // Validate log level
 const validLogLevels = [
   'error',
@@ -34,6 +43,23 @@ if (!validLogLevels.includes(config.logLevel)) {
   console.warn(`Invalid LOG_LEVEL "${config.logLevel}", defaulting to "info"`)
 }
 
+// Injects requestId and userId from AsyncLocalStorage into every log entry
+const contextFormat = format((info) => {
+  const ctx = requestContextStorage.getStore()
+  if (ctx) {
+    info.requestId = ctx.requestId
+    if (ctx.userId) info.userId = ctx.userId
+  }
+  return info
+})()
+
+const fileFormat = combine(
+  label({ label: 'bilbomd-backend' }),
+  timestamp({ format: customTimestamp }),
+  contextFormat,
+  json()
+)
+
 const loggerTransports = []
 if (process.env.NODE_ENV !== 'test') {
   loggerTransports.push(
@@ -43,7 +69,8 @@ if (process.env.NODE_ENV !== 'test') {
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
       maxSize: '10m',
-      maxFiles: '180d'
+      maxFiles: '180d',
+      format: fileFormat
     }),
     new DailyRotateFile({
       level: 'error',
@@ -51,22 +78,25 @@ if (process.env.NODE_ENV !== 'test') {
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
       maxSize: '10m',
-      maxFiles: '30d'
+      maxFiles: '30d',
+      format: fileFormat
     })
   )
 }
-// Always include Console transport
+// Always include Console transport — colorized human-readable text
 loggerTransports.push(
-  new transports.Console({ format: combine(colorize(), logFormat) })
+  new transports.Console({
+    format: combine(
+      label({ label: 'bilbomd-backend' }),
+      timestamp({ format: customTimestamp }),
+      colorize(),
+      consoleLogFormat
+    )
+  })
 )
 
 const logger = createLogger({
   level: logLevel,
-  format: combine(
-    label({ label: 'bilbomd-backend' }),
-    timestamp({ format: customTimestamp }),
-    logFormat
-  ),
   transports: loggerTransports
 })
 
@@ -76,14 +106,15 @@ const requestLogger = morgan(
   ':id :method :url :status :response-time ms - :res[content-length]',
   {
     stream: {
-      write: (message) => logger.info(message.trim())
+      write: (message) => logger.http(message.trim())
     }
   }
 )
 
 const assignRequestId = (req: Request, res: Response, next: NextFunction) => {
-  req.id = uuidv4() // Assign a unique ID to each request
-  next()
+  const context: RequestContext = { requestId: uuidv4() }
+  req.id = context.requestId
+  requestContextStorage.run(context, next)
 }
 
 export { logger, requestLogger, logsFolder, assignRequestId }

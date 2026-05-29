@@ -1,11 +1,13 @@
 import { promisify } from 'util'
-import { exec } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import readline from 'node:readline'
+import { glob } from 'glob'
 import {
   IBilboMDPDBJob,
   IBilboMDCRDJob,
   IBilboMDAutoJob,
-  IBilboMDAlphaFoldJob
+  IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob
 } from '@bilbomd/mongodb-schema'
 import path from 'path'
 import fs from 'fs-extra'
@@ -17,7 +19,7 @@ import { spawnFeedbackScript } from './feedback.js'
 import { spawnRgyrDmaxScript } from './analysis.js'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 
-const execPromise = promisify(exec)
+const execFilePromise = promisify(execFile)
 
 const prepareResults = async (
   DBjob:
@@ -25,6 +27,7 @@ const prepareResults = async (
     | IBilboMDPDBJob
     | IBilboMDAutoJob
     | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob
 ): Promise<void> => {
   try {
     const jobDir = path.join(config.uploadDir, DBjob.uuid)
@@ -41,11 +44,10 @@ const prepareResults = async (
 
     {
       const baseDataName = DBjob.data_file.split('.')[0]
-      const openmmLocalPdb = path.join(jobDir, 'minimize', 'minimized.pdb')
-      const openmmNerscPdb = path.join(
+      const openmmPdb = path.join(
         jobDir,
         'openmm',
-        'minimization',
+        'minimize',
         'minimized.pdb'
       )
       const charmmNewPdb = path.join(
@@ -56,21 +58,20 @@ const prepareResults = async (
       )
       const charmmOldPdb = path.join(jobDir, 'minimization_output.pdb')
 
-      const pdbSource = (await fs.pathExists(openmmLocalPdb))
-        ? openmmLocalPdb
-        : (await fs.pathExists(openmmNerscPdb))
-          ? openmmNerscPdb
-          : (await fs.pathExists(charmmNewPdb))
-            ? charmmNewPdb
-            : (await fs.pathExists(charmmOldPdb))
-              ? charmmOldPdb
-              : null
+      const pdbSource = (await fs.pathExists(openmmPdb))
+        ? openmmPdb
+        : (await fs.pathExists(charmmNewPdb))
+          ? charmmNewPdb
+          : (await fs.pathExists(charmmOldPdb))
+            ? charmmOldPdb
+            : null
 
       if (pdbSource) {
         await copyFiles({
           source: pdbSource,
           destination: resultsDir,
-          filename: path.basename(pdbSource),
+          filename: 'minimization_output.pdb',
+          destFilename: 'minimization_output.pdb',
           isCritical: false
         })
       } else {
@@ -79,14 +80,10 @@ const prepareResults = async (
         )
       }
 
-      // --- Copy the DAT file for the minimized PDB (supports both layouts)
-      const openmmLocalDat = path.join(
+      // Copy the DAT file for the minimized PDB (supports both layouts)
+      const openmmDat = path.join(
         jobDir,
-        'minimize',
-        `minimized_${baseDataName}.dat`
-      )
-      const openmmNerscDat = path.join(
-        jobDir,
+        'openmm',
         'minimize',
         `minimized_${baseDataName}.dat`
       )
@@ -101,21 +98,21 @@ const prepareResults = async (
         `minimization_output_${baseDataName}.dat`
       )
 
-      const datSource = (await fs.pathExists(openmmLocalDat))
-        ? openmmLocalDat
-        : (await fs.pathExists(openmmNerscDat))
-          ? openmmNerscDat
-          : (await fs.pathExists(charmmNewDat))
-            ? charmmNewDat
-            : (await fs.pathExists(charmmOldDat))
-              ? charmmOldDat
-              : null
+      const datSource = (await fs.pathExists(openmmDat))
+        ? openmmDat
+        : (await fs.pathExists(charmmNewDat))
+          ? charmmNewDat
+          : (await fs.pathExists(charmmOldDat))
+            ? charmmOldDat
+            : null
 
       if (datSource) {
+        const canonicalDatName = `minimization_output_${baseDataName}.dat`
         await copyFiles({
           source: datSource,
           destination: resultsDir,
-          filename: path.basename(datSource),
+          filename: canonicalDatName,
+          destFilename: canonicalDatName,
           isCritical: false
         })
       } else {
@@ -184,6 +181,18 @@ const prepareResults = async (
       })
     }
 
+    if (DBjob.__t === 'BilboMdOpenFold') {
+      const openfoldExtraFiles = [
+        'of3-pae.json',
+        'of3-rank1.pdb',
+        'bilbomd_pdb2crd.psf',
+        'bilbomd_pdb2crd.crd'
+      ]
+      openfoldExtraFiles.forEach((file) => {
+        filesToCopy.push({ file, label: file })
+      })
+    }
+
     // OpenMM-specific files to copy
     if (DBjob.md_engine === 'OpenMM') {
       const openmmFiles = [
@@ -220,20 +229,19 @@ const prepareResults = async (
       })
     }
 
-    // Write the DBjob to a JSON file
-    // We might consider doing this later? since it does not contain feedback data yet?
-    try {
-      const dbJobJsonPath = path.join(resultsDir, 'bilbomd_job.json')
-      await fs.writeFile(dbJobJsonPath, JSON.stringify(DBjob, null, 2), 'utf8')
-    } catch (error) {
-      logger.error(`Error writing DBjob JSON file: ${error}`)
-    }
-
-    // scripts/pipeline_decision_tree.py
+    // Run feedback script before writing bilbomd_job.json so the snapshot
+    // reflects any feedback fields saved back to MongoDB during the script
     try {
       await spawnFeedbackScript(DBjob)
     } catch (error) {
       logger.error(`Error running feedback script: ${error}`)
+    }
+
+    // Write DBjob snapshot after feedback so it includes feedback fields
+    try {
+      await writeJsonFile(path.join(resultsDir, 'bilbomd_job.json'), DBjob)
+    } catch (error) {
+      logger.error(`Error writing DBjob JSON file: ${error}`)
     }
 
     // create the rgyr vs. dmax multifoxs ensembles plots
@@ -242,6 +250,27 @@ const prepareResults = async (
     } catch (error) {
       logger.error(`Error running Rgyr vs. Dmax script: ${error}`)
     }
+
+    // Copy consolidated Rgyr/Dmax JSON — only present if the analysis script succeeded
+    const rgyrDmaxJson = path.join(multiFoxsDir, 'consolidated_rgyr_dmax_data.json')
+    if (await fs.pathExists(rgyrDmaxJson)) {
+      await copyFiles({
+        source: rgyrDmaxJson,
+        destination: resultsDir,
+        filename: 'consolidated_rgyr_dmax_data.json',
+        isCritical: false
+      })
+    } else {
+      logger.warn('consolidated_rgyr_dmax_data.json not found — Rgyr/Dmax analysis may have failed')
+    }
+
+    // Copy MultiFoXS log for debugging
+    await copyFiles({
+      source: multiFoxsLogFile,
+      destination: resultsDir,
+      filename: 'multi_foxs.log',
+      isCritical: false
+    })
 
     // Create Job-specific README file.
     try {
@@ -252,12 +281,14 @@ const prepareResults = async (
 
     // Create the results tar.gz file
     try {
-      const uuidPrefix = DBjob.uuid.split('-')[0]
-      const archiveName = `results-${uuidPrefix}.tar.gz`
-      await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+      await createResultsArchive(jobDir, DBjob.uuid)
+      DBjob.results_ready = true
+      await DBjob.save()
     } catch (error) {
+      DBjob.results_ready = false
+      await DBjob.save()
       logger.error(`Error creating tar file: ${error}`)
-      throw error // Critical error, rethrow or handle specifically if necessary
+      throw error
     }
   } catch (error) {
     await handleError(error, DBjob, 'results')
@@ -268,16 +299,52 @@ const copyFiles = async ({
   source,
   destination,
   filename,
-  isCritical
+  isCritical,
+  destFilename
 }: FileCopyParams): Promise<void> => {
   try {
-    await execPromise(`cp ${source} ${destination}`)
+    if (source.includes('*')) {
+      // Glob pattern — expand with glob library; no shell involved
+      const matches = await glob(source)
+      await Promise.all(
+        matches.map((f) => fs.copy(f, path.join(destination, path.basename(f))))
+      )
+    } else {
+      // Single file — use fs.copy to avoid shell interpretation of path characters
+      if (!(await fs.pathExists(source))) {
+        logger.warn(`File not found, skipping: ${filename}`)
+        return
+      }
+      const destName = destFilename ?? path.basename(source)
+      await fs.copy(source, path.join(destination, destName))
+    }
   } catch (error) {
     logger.error(`Error copying ${filename}: ${error}`)
     if (isCritical) {
       throw new Error(`Critical error copying ${filename}: ${error}`)
     }
   }
+}
+
+const writeJsonFile = async (
+  filePath: string,
+  data: unknown
+): Promise<void> => {
+  try {
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    logger.info(`JSON file written to: ${filePath}`)
+  } catch (error) {
+    logger.error(`Error writing JSON file to ${filePath}: ${error}`)
+    throw error
+  }
+}
+
+const createResultsArchive = async (
+  jobDir: string,
+  uuid: string
+): Promise<void> => {
+  const archiveName = `results-${uuid.split('-')[0]}.tar.gz`
+  await execFilePromise('tar', ['czvf', archiveName, 'results'], { cwd: jobDir })
 }
 
 const getNumEnsembles = async (logFile: string): Promise<number> => {
@@ -296,4 +363,10 @@ const getNumEnsembles = async (logFile: string): Promise<number> => {
   return Number(ensembleCount.pop())
 }
 
-export { prepareResults, getNumEnsembles }
+export {
+  prepareResults,
+  getNumEnsembles,
+  copyFiles,
+  writeJsonFile,
+  createResultsArchive
+}

@@ -6,7 +6,10 @@ import {
   isCRD,
   isPsfData,
   isValidConstInpFile,
-  containsChainId
+  containsChainId,
+  cifContainsChainId,
+  checkPdbResidues,
+  checkCifResidues
 } from './validationFunctions.js'
 import { logger } from '../../middleware/loggers.js'
 
@@ -46,6 +49,17 @@ export const noSpacesTest = () =>
     function (value) {
       const file = value as Express.Multer.File | undefined
       return !file?.originalname?.includes(' ')
+    }
+  )
+
+export const noShellMetacharsTest = () =>
+  mixed().test(
+    'no-shell-metachar-check',
+    'Filename contains disallowed characters.',
+    function (value) {
+      const file = value as Express.Multer.File | undefined
+      if (!file?.originalname) return true
+      return !/[;&|`$<>(){}!\r\n]/.test(file.originalname)
     }
   )
 
@@ -96,6 +110,15 @@ export const chainIdCheck = () =>
     return containsChainId(pdbFile)
   })
 
+export const pdbResidueCheck = () =>
+  mixed().test('pdb-residue-check', 'PDB contains unsupported residues', async function (value) {
+    const file = value as Express.Multer.File | undefined
+    if (!file?.path) return true
+    const result = await checkPdbResidues(file)
+    if (result.valid) return true
+    return this.createError({ message: result.message })
+  })
+
 export const constInpCheck = () =>
   mixed().test('const-inp-file-check', '', async function (file, ctx) {
     const mode = ctx?.options?.context?.bilbomd_mode
@@ -119,3 +142,42 @@ export const jsonFileCheck = () =>
       return false
     }
   })
+
+export const pdbOrCifExtTest = () =>
+  mixed().test(
+    'file-type-check',
+    'Only accepts a *.pdb or *.cif file.',
+    function (value) {
+      const file = value as Express.Multer.File | undefined
+      const name = file?.originalname?.toLowerCase()
+      return name?.endsWith('.pdb') || name?.endsWith('.cif') || false
+    }
+  )
+
+export const pdbOrCifChainIdCheck = () =>
+  mixed().test(
+    'pdb-or-cif-chainid-check',
+    'Missing Chain ID',
+    async function (value) {
+      const file = value as Express.Multer.File | undefined
+      if (!file?.path) return true
+      const isCif = file.originalname?.toLowerCase().endsWith('.cif')
+      return isCif ? cifContainsChainId(file) : containsChainId(file)
+    }
+  )
+
+export const pdbOrCifResidueCheck = () =>
+  mixed().test(
+    'pdb-or-cif-residue-check',
+    'File contains unsupported residues',
+    async function (value) {
+      const file = value as Express.Multer.File | undefined
+      if (!file?.path) return true
+      const isCif = file.originalname?.toLowerCase().endsWith('.cif')
+      const result = isCif
+        ? await checkCifResidues(file)
+        : await checkPdbResidues(file)
+      if (result.valid) return true
+      return this.createError({ message: result.message })
+    }
+  )

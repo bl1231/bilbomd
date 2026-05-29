@@ -13,6 +13,7 @@ import {
   selectAllJobs
 } from 'slices/jobsApiSlice'
 import { useSelector } from 'react-redux'
+import { selectCurrentToken } from 'slices/authSlice'
 import useTitle from 'hooks/useTitle'
 import { clsx } from 'clsx'
 import { Box } from '@mui/system'
@@ -33,6 +34,7 @@ import {
   SelectChangeEvent
 } from '@mui/material'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import { axiosInstance } from 'app/api/axios'
 import {
   Dialog,
   DialogTitle,
@@ -177,6 +179,65 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
   return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
 }
 
+const getQueuedTime = (
+  timeSubmitted: Date | undefined,
+  timeStarted: Date | undefined,
+  jobStatus?: string
+) => {
+  const start = parseDateSafe(timeSubmitted)
+  if (!start) return ''
+
+  const started = parseDateSafe(timeStarted)
+  const end =
+    started ??
+    (jobStatus === 'Submitted' || jobStatus === 'Pending' ? new Date() : null)
+  if (!end) return ''
+
+  const diffMs = end.getTime() - start.getTime()
+  if (diffMs < 0) return ''
+
+  const totalMinutes = Math.round(diffMs / 60000)
+  const hrs = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
+  return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
+}
+
+const getTotalRuntime = (
+  timeStarted: Date | undefined,
+  timeCompleted: Date | undefined,
+  jobStatus?: string
+) => {
+  const start = parseDateSafe(timeStarted)
+  if (!start) return ''
+
+  let end: Date | null = null
+
+  const completed = parseDateSafe(timeCompleted)
+  if (completed && completed.getTime() > 0) {
+    end = completed
+  }
+
+  if (!end) {
+    if (jobStatus === 'Running') {
+      end = new Date()
+    } else {
+      return ''
+    }
+  }
+
+  const diffMs = end.getTime() - start.getTime()
+  if (diffMs < 0) return ''
+
+  const totalMinutes = Math.round(diffMs / 60000)
+  const hrs = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
+  return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
+}
+
 const filteredJobCountChip = (count: number) => {
   return (
     <Chip
@@ -200,14 +261,27 @@ const jobTypeToRoute: Record<string, string> = {
   auto: 'auto',
   scoper: 'scoper',
   alphafold: 'alphafold',
+  openfold: 'openfold',
   sans: 'sans',
   multi: 'multi'
+}
+
+const jobTypeToPipelineName: Record<string, string> = {
+  pdb: 'Classic',
+  crd: 'Classic',
+  auto: 'Auto',
+  alphafold: 'AlphaFold2',
+  openfold: 'OpenFold3',
+  sans: 'SANS',
+  scoper: 'Scoper',
+  multi: 'Multi'
 }
 
 const Jobs = () => {
   useTitle('BilboMD: Jobs List')
 
   const { username, isManager, isAdmin } = useAuth()
+  const token = useSelector(selectCurrentToken)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -228,11 +302,15 @@ const Jobs = () => {
   const [deleteTargetTitle, setDeleteTargetTitle] = useState<string | null>(
     null
   )
+  const [deleteTargetStatus, setDeleteTargetStatus] = useState<string | null>(
+    null
+  )
   const [deleteJob, { isLoading: isDeleting }] = useDeleteJobMutation()
 
-  const openDeleteDialog = (id: string, title: string) => {
+  const openDeleteDialog = (id: string, title: string, status: string) => {
     setDeleteTargetJobId(id)
     setDeleteTargetTitle(title)
+    setDeleteTargetStatus(status)
     setDeleteDialogOpen(true)
   }
 
@@ -251,6 +329,7 @@ const Jobs = () => {
       setDeleteDialogOpen(false)
       setDeleteTargetJobId(null)
       setDeleteTargetTitle(null)
+      setDeleteTargetStatus(null)
     }
   }
 
@@ -317,6 +396,39 @@ const Jobs = () => {
     const routeSegment = jobTypeToRoute[jobType]
     if (!routeSegment) return
     void navigate(`/dashboard/jobs/${routeSegment}/resubmit/${id}`)
+  }
+
+  const handleDownload = async (id: string) => {
+    try {
+      const response = await axiosInstance.get(`jobs/${id}/results`, {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      if (response && response.data) {
+        const contentDisposition = response.headers['content-disposition']
+        let filename = 'download.tar.gz'
+        if (contentDisposition) {
+          const matches = /filename="?([^"]+)"?/.exec(contentDisposition)
+          if (matches && matches.length > 1) {
+            filename = matches[1]!
+          }
+        }
+        const url = window.URL.createObjectURL(response.data)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+        link.click()
+        link.parentNode?.removeChild(link)
+      }
+    } catch (err) {
+      console.error('Download failed:', err)
+      enqueueSnackbar('Failed to download results. Please try again.', {
+        variant: 'error'
+      })
+    }
   }
 
   let jobTypes: string[]
@@ -449,6 +561,16 @@ const Jobs = () => {
       const nerscStatus = job.mongo.nersc?.state || ''
       const queueHours = getHoursInQueue(job.mongo.nersc, job.mongo.status)
       const runTimeHours = getRunTimeInHours(job.mongo.nersc, job.mongo.status)
+      const queuedTime = getQueuedTime(
+        job.mongo.time_submitted,
+        job.mongo.time_started,
+        job.mongo.status
+      )
+      const totalRuntime = getTotalRuntime(
+        job.mongo.time_started,
+        job.mongo.time_completed,
+        job.mongo.status
+      )
 
       return {
         ...job.mongo,
@@ -457,12 +579,21 @@ const Jobs = () => {
         nerscStatus: nerscStatus,
         queueHours: queueHours,
         runTimeHours: runTimeHours,
+        queuedTime: queuedTime,
+        totalRuntime: totalRuntime,
         progress: job.mongo.progress
       }
     })
 
     const columns: GridColDef[] = [
       { field: 'title', headerName: 'Title', flex: 0.4, minWidth: 180 },
+      {
+        field: 'jobType',
+        headerName: 'Pipeline',
+        width: 110,
+        valueGetter: (_value, row) =>
+          jobTypeToPipelineName[row.jobType] ?? row.jobType
+      },
       {
         field: 'time_submitted',
         headerName: 'Submitted',
@@ -478,6 +609,24 @@ const Jobs = () => {
         width: 150,
         valueGetter: (_value, row) => parseDateSafe(row.time_completed),
         valueFormatter: (value: unknown) => formatDateSafe(value)
+      },
+      ...(!useNersc
+        ? [
+            {
+              field: 'queuedTime',
+              headerName: 'Queued',
+              width: 100
+            }
+          ]
+        : []),
+      {
+        field: 'totalRuntime',
+        headerName: 'Runtime',
+        width: 100,
+        cellClassName: (params: GridCellParams) => {
+          const status = params.row.status
+          return clsx({ running: status === 'Running' })
+        }
       },
       ...(useNersc
         ? [
@@ -513,7 +662,9 @@ const Jobs = () => {
       {
         field: 'md_engine',
         headerName: 'Engine',
-        width: 110
+        width: 110,
+        valueGetter: (_value, row) =>
+          row.jobType === 'scoper' ? 'KGSRNA' : row.md_engine
       },
       {
         field: 'status',
@@ -616,11 +767,14 @@ const Jobs = () => {
               jobType={params.row.jobType}
               jobTitle={params.row.title}
               jobStatus={params.row.status}
+              resultsReady={params.row.results_ready}
+              isAdmin={isAdmin}
               anchorEl={anchorEl}
               open={isOpen}
               onClose={handleMenuClose}
               onResubmit={handleResubmit}
               onDelete={openDeleteDialog}
+              onDownload={(jobId) => void handleDownload(jobId)}
             />
           ]
         }
@@ -724,6 +878,19 @@ const Jobs = () => {
                         Are you sure you want to delete the job{' '}
                         <strong>{deleteTargetTitle}</strong>?
                       </Typography>
+                      {['Running', 'Submitted'].includes(
+                        deleteTargetStatus ?? ''
+                      ) && (
+                        <Alert
+                          severity="warning"
+                          sx={{ mt: 2 }}
+                        >
+                          This job is currently <strong>{deleteTargetStatus}</strong>.
+                          Deleting it will remove the database record and files,
+                          but the underlying simulation process may continue
+                          until it finishes naturally.
+                        </Alert>
+                      )}
                     </DialogContent>
                     <DialogActions>
                       <Button

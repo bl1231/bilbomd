@@ -16,6 +16,18 @@ const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
   return process.env[name] || defaultValue
 }
 
+const parsePositiveIntEnv = (name: string, defaultValue: number): number => {
+  const raw = process.env[name]
+  if (raw === undefined || raw === '') return defaultValue
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(
+      `Environment variable ${name}="${raw}" is not a positive number`
+    )
+  }
+  return Math.floor(parsed)
+}
+
 const validateRequiredEnvVars = (): void => {
   const required = [
     'BILBOMD_URL',
@@ -58,16 +70,38 @@ export const config = {
   charmmBin: getEnvVar('CHARMM'),
   foxBin: getEnvVar('FOXS'),
   multifoxsBin: getEnvVar('MULTIFOXS'),
+  openmmPythonBin: getEnvVarWithDefault(
+    'OPENMM_PYTHON_BIN',
+    '/opt/envs/openmm/bin/python'
+  ),
+  openmmMdConcurrency: parsePositiveIntEnv('OPENMM_MD_CONCURRENCY', 1),
+  basePythonBin: getEnvVarWithDefault(
+    'BASE_PYTHON_BIN',
+    '/opt/envs/base/bin/python'
+  ),
+  colabfoldServiceUrl: getEnvVarWithDefault(
+    'COLABFOLD_SERVICE_URL',
+    'http://colabfold-service:8000'
+  ),
+  colabfoldTimeoutMs: parsePositiveIntEnv(
+    'COLABFOLD_TIMEOUT_MS',
+    60 * 60 * 1000
+  ),
+  of3ServiceUrl: getEnvVarWithDefault(
+    'OF3_SERVICE_URL',
+    'http://of3-service:8000'
+  ),
+  of3TimeoutMs: parsePositiveIntEnv('OF3_TIMEOUT_MS', 60 * 60 * 1000),
   logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info'),
   scripts: {
     prepareCHARMMSlurmScript: getEnvVar('PREPARE_CHARMM_SLURM_SCRIPT'),
     prepareOMMSlurmScript: getEnvVar('PREPARE_OMM_SLURM_SCRIPT'),
-    copyFromScratchToCFSScript: getEnvVar('CP2CFS_SCRIPT'),
-    dockerBuildScript: 'docker-build.sh'
+    copyFromScratchToCFSScript: getEnvVar('CP2CFS_SCRIPT')
   },
   bilbomd: {
     SANSEnabled: toBoolean(process.env.ENABLE_BILBOMD_SANS),
     AlphaFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_ALPHAFOLD),
+    OpenFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_OPENFOLD),
     MultiEnabled: toBoolean(process.env.ENABLE_BILBOMD_MULTI),
     ScoperEnabled: toBoolean(process.env.ENABLE_BILBOMD_SCOPER)
   }

@@ -1,124 +1,16 @@
+import {
+  SUPPORTED_PDB_RESIDUES,
+  GAFF_COFACTORS,
+  METAL_COFACTORS,
+  parseCifAtomSite,
+  cifContainsChainId as cifContainsChainIdUtil,
+  cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
+  cifIsSingleModel as cifIsSingleModelUtil
+} from '@bilbomd/bilbomd-types'
+
 const hasAllowedResiduesOnly = (
   file: File
 ): Promise<{ valid: boolean; unsupportedResidues: string[] }> => {
-  const allowedResidues = new Set([
-    // Protein
-    'ALA',
-    'CYS',
-    'ASP',
-    'GLU',
-    'PHE',
-    'GLY',
-    'HIS',
-    'HSD',
-    'ILE',
-    'LYS',
-    'LEU',
-    'MET',
-    'ASN',
-    'PRO',
-    'GLN',
-    'ARG',
-    'SER',
-    'THR',
-    'VAL',
-    'TRP',
-    'TYR',
-    // Modified Amino Acids
-    'SEP',
-    'TPO',
-    'PTR',
-    // DNA
-    'DA',
-    'DC',
-    'DG',
-    'DT',
-    'DI',
-    'ADE',
-    'CYT',
-    'GUA',
-    'THY',
-    // RNA
-    'A',
-    'C',
-    'G',
-    'U',
-    'I',
-    // Carbohydrates
-    'AFL',
-    'ALL',
-    'ALT',
-    'BMA',
-    'BGC',
-    'FUC',
-    'FUL',
-    'GAL',
-    'GLC',
-    'GUL',
-    'IDO',
-    'NAG',
-    'RHM',
-    'RIB',
-    'SIA',
-    'TAL',
-    'XYL',
-    'MAN',
-    // MISC removed in pdb2crd.py
-    'HOH'
-  ])
-
-  const allowedIons = new Set([
-    // Alkali metals
-    'LI',
-    'NA',
-    'K',
-    'RB',
-    'CS',
-
-    // Alkaline earth metals
-    'MG',
-    'CA',
-    'SR',
-    'BA',
-
-    // Transition metals
-    'SC',
-    'TI',
-    'V',
-    'CR',
-    'MN',
-    'FE',
-    'CO',
-    'NI',
-    'CU',
-    'ZN',
-    'MO',
-    'CD',
-    'HG',
-
-    // Post-transition/metalloids
-    'AL',
-    'GA',
-    'IN',
-    'SN',
-    'PB',
-
-    // Metalloids and others
-    'B',
-    'SE',
-    'AS',
-
-    // Non-metal anions commonly found as ions
-    'CL',
-    'BR',
-    'I',
-    'F',
-    'SO4',
-    'PO4',
-    'NO3',
-    'CN'
-  ])
-
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
 
@@ -135,7 +27,7 @@ const hasAllowedResiduesOnly = (
       for (const line of lines) {
         if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
           const resName = line.substring(17, 20).trim().toUpperCase()
-          if (!allowedResidues.has(resName) && !allowedIons.has(resName)) {
+          if (!SUPPORTED_PDB_RESIDUES.has(resName)) {
             unsupportedResidues.add(resName)
           }
         }
@@ -162,7 +54,7 @@ const fromCharmmGui = (file: File): Promise<boolean> => {
       const lines = (reader.result as string).split(/[\r\n]+/g)
       for (let line = 0; line < 5; line++) {
         // console.log(charmmGui.test(lines[line]), 'line', line, lines[line])
-        if (charmmGui.test(lines[line])) {
+        if (charmmGui.test(lines[line]!)) {
           // console.log(lines[line])
           resolve(true)
         }
@@ -183,7 +75,7 @@ const isCRD = (file: File): Promise<boolean> => {
 
       // Check for lines starting with *
       for (let i = 0; i < lines.length; i++) {
-        if (lines[i].startsWith('*')) {
+        if (lines[i]!.startsWith('*')) {
           starLinesCount++
           if (starLinesCount > 6) {
             // More than 6 lines starting with *, not matching the pattern
@@ -193,7 +85,7 @@ const isCRD = (file: File): Promise<boolean> => {
           // Check if the line immediately after the last *-line matches the specified pattern
           if (starLinesCount >= 2 && starLinesCount <= 6) {
             const endPattern = /^\s+\d+\s+EXT$/
-            foundEndPattern = endPattern.test(lines[i])
+            foundEndPattern = endPattern.test(lines[i]!)
           }
           break // No more lines starting with * consecutively, exit the loop
         }
@@ -214,7 +106,7 @@ const isPsfData = (file: File): Promise<boolean> => {
       const atomRegex =
         /^\s*\d+\s+[A-Z]{4}\s+\d+\s+[A-Z]{3,}\s+[a-zA-Z0-9_']+\s+[a-zA-Z0-9_']+\s+-?\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+/
 
-      if (!lines[0].includes('PSF')) {
+      if (!lines[0]?.includes('PSF')) {
         // console.log('first line does not contain PSF')
         resolve(false)
         return
@@ -235,14 +127,14 @@ const isPsfData = (file: File): Promise<boolean> => {
         return
       }
 
-      const natomResult = lines[natomLineIndex].match(/(\d+)\s+!NATOM/)
+      const natomResult = lines[natomLineIndex]!.match(/(\d+)\s+!NATOM/)
       if (!natomResult) {
         // console.log('Failed to capture number of atoms')
         resolve(false)
         return
       }
 
-      const natom = parseInt(natomResult[1], 10)
+      const natom = parseInt(natomResult[1]!, 10)
       // console.log('natom expected = ', natom)
       if (isNaN(natom)) {
         resolve(false)
@@ -329,7 +221,7 @@ const isSaxsData = (
 
         const numbers = line.match(sciNotation)
         if (numbers && numbers.length >= 3) {
-          const qValue = parseFloat(numbers[0])
+          const qValue = parseFloat(numbers[0]!)
           if (qValue < 0.005 || qValue > 0.04) {
             resolve({
               valid: false,
@@ -359,6 +251,63 @@ const isSaxsData = (
   })
 }
 
+type SaxsQualityResult = {
+  lowSnrCount: number
+  totalCount: number
+  maxErrorRatio: number
+  warning: string | null
+}
+
+// Scan a SAXS .dat file for data points where error/I > 2 (SNR < 0.5).
+// Returns counts and a human-readable warning string when issues are found.
+// This is informational only — the data is not invalid, just noisy.
+const hasSaxsQualityIssues = (file: File): Promise<SaxsQualityResult> => {
+  const sciNotation = /-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?/g
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.readAsText(file)
+    reader.onloadend = () => {
+      const lines = (reader.result as string).split(/[\r\n]+/g)
+      let totalCount = 0
+      let lowSnrCount = 0
+      let maxErrorRatio = 0
+
+      for (const line of lines) {
+        if (line.startsWith('#') || line.trim() === '') continue
+        const numbers = line.match(sciNotation)
+        if (!numbers || numbers.length < 3) continue
+
+        const I = parseFloat(numbers[1]!)
+        const err = parseFloat(numbers[2]!)
+        if (!Number.isFinite(I) || !Number.isFinite(err) || I <= 0) continue
+
+        totalCount++
+        const ratio = err / I
+        if (ratio > maxErrorRatio) maxErrorRatio = ratio
+        if (ratio > 2) lowSnrCount++
+      }
+
+      if (lowSnrCount === 0) {
+        resolve({ lowSnrCount, totalCount, maxErrorRatio, warning: null })
+        return
+      }
+
+      const pct = totalCount > 0 ? Math.round((lowSnrCount / totalCount) * 100) : 0
+      resolve({
+        lowSnrCount,
+        totalCount,
+        maxErrorRatio,
+        warning:
+          `${lowSnrCount} of ${totalCount} data points (${pct}%) have error/I > 2. ` +
+          `These low-SNR points will be hidden in the FoXS plot. ` +
+          `Consider trimming the high-q range of your .dat file.`
+      })
+    }
+    reader.onerror = () =>
+      resolve({ lowSnrCount: 0, totalCount: 0, maxErrorRatio: 0, warning: null })
+  })
+}
+
 const containsChainId = (file: File): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -369,7 +318,7 @@ const containsChainId = (file: File): Promise<boolean> => {
         const isValid = lines.some((line) => {
           return (
             (line.startsWith('ATOM') || line.startsWith('HETATM')) &&
-            /^[A-Za-z]$/.test(line[21])
+            /^[A-Za-z]$/.test(line[21] ?? '')
           )
         })
         resolve(isValid)
@@ -424,7 +373,7 @@ const isRNA = (file: File): Promise<{ valid: boolean; message?: string }> => {
 
         if (line.startsWith('ATOM')) {
           const parts = line.split(/\s+/)
-          const residueName = parts[3]
+          const residueName = parts[3] ?? ''
 
           if (residueName.length !== 1 || !validNucleotides.has(residueName)) {
             resolve({
@@ -445,6 +394,35 @@ const isRNA = (file: File): Promise<{ valid: boolean; message?: string }> => {
   })
 }
 
+const isSingleModel = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+
+      let modelCount = 0
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith('MODEL')) {
+          modelCount++
+          if (modelCount > 1) {
+            resolve(false)
+            return
+          }
+        }
+      }
+
+      resolve(true)
+    }
+
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
 const isValidConstInpFile = (
   file: File,
   mode: string
@@ -461,7 +439,7 @@ const isValidConstInpFile = (
       const lines = text.split('\n').filter((line) => line.trim() !== '') // Filter out empty lines
 
       // Check if the last non-empty line is exactly 'return'
-      if (lines.length === 0 || lines[lines.length - 1].trim() !== 'return') {
+      if (lines.length === 0 || lines[lines.length - 1]!.trim() !== 'return') {
         resolve('The last line must be "return".')
         return
       }
@@ -512,6 +490,26 @@ const isValidConstInpFile = (
         return
       }
 
+      // Allowlist check: reject any line that doesn't start with a permitted
+      // keyword. Blocks CHARMM directives like 'system', 'open', 'read', etc.
+      // that could execute OS commands or perform file I/O when STREAMed.
+      const ALLOWED_PREFIXES = [
+        'define',
+        'cons fix',
+        'cons harm',
+        'shape',
+        'return',
+        '!',
+        '*'
+      ]
+      for (const line of lines) {
+        const lower = line.trim().toLowerCase()
+        if (!ALLOWED_PREFIXES.some((pfx) => lower.startsWith(pfx))) {
+          resolve(`Disallowed keyword in constraint file: "${line.trim()}"`)
+          return
+        }
+      }
+
       resolve(true) // All checks passed
     }
 
@@ -520,15 +518,116 @@ const isValidConstInpFile = (
   })
 }
 
+const cifContainsChainId = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const parsed = parseCifAtomSite(text)
+      resolve(parsed !== null && cifContainsChainIdUtil(parsed))
+    }
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
+const cifHasAllowedResiduesOnly = (
+  file: File
+): Promise<{ valid: boolean; unsupportedResidues: string[] }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const parsed = parseCifAtomSite(text)
+      if (!parsed) {
+        resolve({
+          valid: false,
+          unsupportedResidues: ['(no _atom_site block found in CIF)']
+        })
+        return
+      }
+      resolve(cifHasAllowedResiduesOnlyUtil(parsed))
+    }
+    reader.onerror = () => reject(new Error('Error reading file'))
+    reader.readAsText(file)
+  })
+}
+
+const cifIsSingleModel = (file: File): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const parsed = parseCifAtomSite(text)
+      if (!parsed) {
+        resolve(true) // no _atom_site block — let other checks catch it
+        return
+      }
+      resolve(cifIsSingleModelUtil(parsed))
+    }
+    reader.onerror = (e) => reject(new Error('Error reading file: ' + e))
+    reader.readAsText(file)
+  })
+}
+
+const _detectResiduesFromSet = (file: File, residueSet: Set<string>): Promise<string[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        reject(new Error('File load error: Event target or result is null'))
+        return
+      }
+      const found = new Set<string>()
+      for (const line of text.split(/\r?\n/)) {
+        if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+          const resName = line.substring(17, 20).trim().toUpperCase()
+          if (residueSet.has(resName)) found.add(resName)
+        }
+      }
+      resolve(Array.from(found).sort())
+    }
+    reader.onerror = () => reject(new Error('Error reading file'))
+    reader.readAsText(file)
+  })
+}
+
+const detectGaffCofactors = (file: File): Promise<string[]> =>
+  _detectResiduesFromSet(file, GAFF_COFACTORS)
+
+const detectMetalCofactors = (file: File): Promise<string[]> =>
+  _detectResiduesFromSet(file, METAL_COFACTORS)
+
 export {
   fromCharmmGui,
   isCRD,
   isPsfData,
   noSpaces,
   isSaxsData,
+  hasSaxsQualityIssues,
   isRNA,
+  isSingleModel,
+  cifIsSingleModel,
   containsChainId,
+  cifContainsChainId,
+  cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines,
   isValidConstInpFile,
-  hasAllowedResiduesOnly
+  hasAllowedResiduesOnly,
+  detectGaffCofactors,
+  detectMetalCofactors
 }
+export type { SaxsQualityResult }

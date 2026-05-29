@@ -1,19 +1,21 @@
-import { OpenMMParametersDTO } from './openmm'
-import { CHARMMParametersDTO } from './charmm'
-import { AlphafoldEntityDTO } from './alphafold'
-import { UserSummaryDTO } from '../users/user'
-import { MDConstraintsDTO } from './mdConstraints'
-import { JobStepsDTO } from './jobSteps'
-import { JobFeedbackDTO } from './feedback'
-import { JobAssetsDTO } from './mdMovie'
-import { NerscInfoDTO } from './nersc'
-import { JobResultsDTO } from './results'
+import { OpenMMParametersDTO } from './openmm.js'
+import { CHARMMParametersDTO } from './charmm.js'
+import { AlphafoldEntityDTO } from './alphafold.js'
+import { OpenFoldEntityDTO } from './openfold.js'
+import { UserSummaryDTO } from '../users/user.js'
+import { MDConstraintsDTO } from './mdConstraints.js'
+import { JobStepsDTO } from './jobSteps.js'
+import { JobFeedbackDTO } from './feedback.js'
+import { JobAssetsDTO } from './mdMovie.js'
+import { NerscInfoDTO } from './nersc.js'
+import { JobResultsDTO } from './results.js'
 
 export type JobType =
   | 'pdb'
   | 'crd'
   | 'auto'
   | 'alphafold'
+  | 'openfold'
   | 'sans'
   | 'scoper'
   | 'multi'
@@ -41,7 +43,7 @@ export interface BaseJobDTO {
   public_id?: string
   status: JobStatusEnum
   data_file: string
-  md_engine: MDEngine
+  md_engine?: MDEngine
   openmm_parameters?: OpenMMParametersDTO
   charmm_parameters?: CHARMMParametersDTO
   md_constraints?: MDConstraintsDTO
@@ -56,6 +58,7 @@ export interface BaseJobDTO {
   assets?: JobAssetsDTO
   nersc?: NerscInfoDTO
   cleanup_in_progress: boolean
+  results_ready?: boolean
   results?: JobResultsDTO
 }
 
@@ -107,6 +110,20 @@ export interface BilboMDAlphaFoldDTO extends BaseJobDTO {
   rg_max?: number
 }
 
+export interface BilboMDOpenFoldDTO extends BaseJobDTO {
+  openfold_entities: OpenFoldEntityDTO[]
+  query_json_file: string
+  pdb_file?: string
+  psf_file?: string
+  crd_file?: string
+  pae_file?: string
+  const_inp_file?: string
+  conformational_sampling: number
+  rg?: number
+  rg_min?: number
+  rg_max?: number
+}
+
 export interface BilboMDSANSDTO extends BaseJobDTO {
   pdb_file: string
   psf_file?: string
@@ -137,6 +154,7 @@ export type BilboMDMongoJobDTO =
   | BilboMDCRDDTO
   | BilboMDAutoDTO
   | BilboMDAlphaFoldDTO
+  | BilboMDOpenFoldDTO
   | BilboMDSANSDTO
   | BilboMDScoperDTO
   | BilboMDMultiDTO

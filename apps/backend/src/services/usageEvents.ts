@@ -7,6 +7,7 @@ type PipelineType =
   | 'crd'
   | 'auto'
   | 'alphafold'
+  | 'openfold'
   | 'sans'
   | 'scoper'
   | 'multi'

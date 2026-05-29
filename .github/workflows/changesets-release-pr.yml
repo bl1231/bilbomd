@@ -16,7 +16,7 @@ concurrency:
 jobs:
   release-pr:
     if: ${{ github.actor != 'github-actions[bot]' }}
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Enable Corepack
         run: corepack enable
@@ -47,7 +47,14 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
+      - name: Check for pending changesets
+        id: check_changesets
+        run: |
+          count=$(find .changeset -name '*.md' ! -name 'README.md' | wc -l | tr -d ' ')
+          echo "count=$count" >> $GITHUB_OUTPUT
+
       - name: Create or update Version Packages PR
+        if: steps.check_changesets.outputs.count != '0'
         uses: changesets/action@v1
         with:
           version: pnpm changeset version

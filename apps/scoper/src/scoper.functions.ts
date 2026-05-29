@@ -168,8 +168,6 @@ const spawnScoper = async (
       try {
         const kgs_files = await getKGSrnaProgress(KGSOutputDir)
         const kgs_conformations = parseInt(SCOPER_KGS_CONFORMERS, 10)
-        // Save to ScoperJobResults (pseudo-code, replace with your actual update logic)
-        // await updateScoperJobResults(DBjob.id, { kgs_files, kgs_conformations })
         await updateJobResults(DBjob, {
           'results.scoper.kgs_files': kgs_files
         })
@@ -177,6 +175,10 @@ const spawnScoper = async (
         logger.info(
           `KGS Progress: ${kgs_files}/${kgs_conformations} (${percent}%)`
         )
+        if (kgs_files >= kgs_conformations) {
+          pollingActive = false
+          return
+        }
       } catch (err) {
         logger.error('Error polling KGS progress:', err)
       }
@@ -377,10 +379,10 @@ const runFoXS = async (
 
     const filesToCopy = [inputPDB, inputDAT, scoperPDB]
     for (const file of filesToCopy) {
-      await execPromise(`cp ${path.join(outputDir, file)} .`, {
-        cwd: foxsAnalysisDir
-      })
-      // MQjob.log(`gather ${file}`)
+      await fs.copyFile(
+        path.join(outputDir, file),
+        path.join(foxsAnalysisDir, path.basename(file))
+      )
     }
 
     // Conditionally set foxsArgs based on DBjob.fixc1c2
@@ -574,7 +576,11 @@ const prepareResultsArchiveFile = async (
     const uuidPrefix = DBjob.uuid.split('-')[0]
     const archiveName = `results-${uuidPrefix}.tar.gz`
     await execPromise(`tar czvf ${archiveName} results`, { cwd: outputDir })
+    DBjob.results_ready = true
+    await DBjob.save()
   } catch (err) {
+    DBjob.results_ready = false
+    await DBjob.save()
     MQjob.log(`tar failed: ${err}`)
     logger.error(`Failed to create results *.tar.gz file: ${err}`)
   }

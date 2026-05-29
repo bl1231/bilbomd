@@ -62,7 +62,7 @@ function valuetext(value: number) {
 
 export default function PAESlider({ setFieldValue, value }: PAESliderProps) {
   const handleChange = (_event: Event, newValue: number | number[]) => {
-    const valueToSet = Array.isArray(newValue) ? newValue[0] : newValue
+    const valueToSet = Array.isArray(newValue) ? newValue[0]! : newValue
 
     setFieldValue('pae_power', valueToSet)
   }
@@ -72,7 +72,7 @@ export default function PAESlider({ setFieldValue, value }: PAESliderProps) {
       <Typography sx={{ mb: 1 }}>
         Select Leiden <b>Clustering Weight</b> (default is 2)
       </Typography>
-      <Grid container spacing={2} alignItems='center'>
+      <Grid container spacing={2} sx={{ alignItems: 'center' }}>
         <Grid>
           <Chip
             label={value}

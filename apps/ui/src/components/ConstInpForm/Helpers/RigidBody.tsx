@@ -39,7 +39,7 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
             >
               {(arrayHelpers: FieldArrayRenderProps) => (
                 <>
-                  {values.pdb_file.rigid_bodies[rigidBodyIndex].domains.map(
+                  {values.pdb_file.rigid_bodies[rigidBodyIndex]!.domains.map(
                     (domain: RigidDomain, index: number) => (
                       <Fragment key={index}>
                         <Grid
@@ -76,7 +76,7 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
                   )}
                   <Grid sx={{ flex: '1 1 auto', alignItems: 'center' }}>
                     <Box sx={{ justifyContent: 'flex-end', m: 1 }}>
-                      <Grid container justifyContent='flex-end'>
+                      <Grid container sx={{ justifyContent: 'flex-end' }}>
                         <Grid sx={{ mx: 2 }}>
                           <Typography>
                             If you want to add another <b>Rigid Body</b> please
@@ -88,9 +88,9 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
                             variant='contained'
                             onClick={() => {
                               const new_domain = {
-                                chainid: values.pdb_file.chains[0].id,
-                                start: values.pdb_file.chains[0].first_res,
-                                end: values.pdb_file.chains[0].last_res
+                                chainid: values.pdb_file.chains[0]!.id,
+                                start: values.pdb_file.chains[0]!.first_res,
+                                end: values.pdb_file.chains[0]!.last_res
                               }
                               arrayHelpers.push(new_domain)
                             }}

@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import React from 'react'
+import { Chip } from '@mui/material'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import type { MongoDBProperty } from '../types'
 import { createJobHandler } from '../handlers/jobHandlerFactory'
@@ -36,7 +37,8 @@ export const useJobProperties = (
       sans: 'BilboMD SANS',
       crd: 'BilboMD Classic w/CRD/PSF',
       scoper: 'BilboMD Scoper',
-      multi: 'BilboMD MultiMD'
+      multi: 'BilboMD MultiMD',
+      openfold: 'BilboMD OF3'
     }
 
     const getJobTypeDisplayName = (type?: string) =>
@@ -75,12 +77,40 @@ export const useJobProperties = (
     const baseProperties: MongoDBProperty[] = [
       { label: 'MongoDB ID', value: job.mongo.id },
       { label: 'Pipeline', value: getJobTypeDisplayName(job.mongo.jobType) },
-      { label: 'MD Engine', value: job.mongo.md_engine ?? 'CHARMM' },
+      {
+        label: 'MD Engine',
+        value:
+          job.mongo.jobType === 'scoper'
+            ? 'KGSRNA'
+            : (job.mongo.md_engine ?? 'CHARMM')
+      },
       { label: 'Submitted', value: job.mongo.time_submitted },
       { label: 'Started', value: job.mongo.time_started },
       { label: 'Completed', value: job.mongo.time_completed },
       ...(job.mongo.time_started
-        ? [{ label: 'Duration', value: calculateDuration() }]
+        ? [
+            {
+              label: 'Duration',
+              render: () => {
+                const duration = calculateDuration()
+                if (!duration) return null
+                return React.createElement(Chip, {
+                  label: `⏱ ${duration}`,
+                  variant: 'outlined',
+                  sx: {
+                    backgroundColor:
+                      job.mongo.status === 'Running' ||
+                      job.mongo.status === 'Completed'
+                        ? '#e8f5e9'
+                        : job.mongo.status === 'Error' ||
+                            job.mongo.status === 'Failed'
+                          ? '#ffebee'
+                          : undefined
+                  }
+                })
+              }
+            }
+          ]
         : []),
       { label: 'SAXS Data', value: job.mongo.data_file }
     ]

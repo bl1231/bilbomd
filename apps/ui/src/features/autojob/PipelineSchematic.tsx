@@ -1,12 +1,13 @@
 import { Typography, Paper } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import HeaderBox from 'components/HeaderBox'
+import AutoOpenMMPipelineSchematic from './AutoOpenMMPipelineSchematic'
+import AutoCharmmPipelineSchematic from './AutoCharmmPipelineSchematic'
 
 const PipelineSchematic = ({
-  isDarkMode,
   mdEngine
 }: {
-  isDarkMode: boolean
+  isDarkMode?: boolean
   mdEngine: 'charmm' | 'openmm'
 }) => (
   <Grid size={{ xs: 12 }}>
@@ -14,15 +15,11 @@ const PipelineSchematic = ({
       <Typography>BilboMD Auto Schematic</Typography>
     </HeaderBox>
     <Paper sx={{ p: 2 }}>
-      <img
-        src={
-          isDarkMode
-            ? `/images/bilbomd-auto-schematic-${mdEngine}-dark.png`
-            : `/images/bilbomd-auto-schematic-${mdEngine}.png`
-        }
-        alt="Overview of BilboMD AF pipeline"
-        style={{ maxWidth: '100%', height: 'auto' }}
-      />
+      {mdEngine === 'openmm' ? (
+        <AutoOpenMMPipelineSchematic />
+      ) : (
+        <AutoCharmmPipelineSchematic />
+      )}
     </Paper>
   </Grid>
 )

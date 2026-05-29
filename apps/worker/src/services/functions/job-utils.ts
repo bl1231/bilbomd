@@ -241,51 +241,6 @@ const spawnCharmm = (
   })
 }
 
-const spawnFoXS = async (
-  foxsRunDir: string,
-  MQjob?: BullMQJob
-): Promise<void> => {
-  try {
-    const files = await fs.readdir(foxsRunDir)
-    logger.info(`Spawn FoXS jobs: ${foxsRunDir}`)
-    const foxsOpts = { cwd: foxsRunDir }
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-
-      await new Promise<void>((resolve, reject) => {
-        const foxsArgs = ['-p', file]
-        const foxs: ChildProcess = spawn(config.foxBin, foxsArgs, foxsOpts)
-
-        foxs.on('exit', (code) => {
-          if (code === 0) {
-            // Log every N files
-            if (MQjob && i % 20 === 0) {
-              MQjob.updateProgress({
-                status: `FoXS processing: ${i + 1}/${files.length}`,
-                timestamp: Date.now()
-              })
-              MQjob.log(`FoXS progress: ${i + 1}/${files.length}`)
-              logger.info(`FoXS progress: ${i + 1}/${files.length}`)
-            }
-            resolve()
-          } else {
-            reject(
-              new Error(`FoXS process for ${file} exited with code ${code}`)
-            )
-          }
-        })
-
-        foxs.on('error', (error) => {
-          reject(new Error(`FoXS process error for ${file}: ${error.message}`))
-        })
-      })
-    }
-  } catch (error) {
-    logger.error(`FoXS error in ${foxsRunDir}: ${error}`)
-    throw error
-  }
-}
 
 const handleError = async (
   error: Error | unknown,
@@ -299,8 +254,12 @@ const handleError = async (
   if (error instanceof Error) {
     errorMsg = error.message
     stackTrace = error.stack
+    const cause =
+      (error as Error & { cause?: unknown }).cause instanceof Error
+        ? (error as Error & { cause?: Error }).cause
+        : undefined
     logger.error(
-      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}`
+      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}${cause ? `, cause=${cause.name}: ${cause.message}` : ''}`
     )
   } else {
     errorMsg = String(error)
@@ -369,6 +328,5 @@ export {
   generateDCD2PDBInpFile,
   generateInputFile,
   spawnCharmm,
-  spawnFoXS,
   handleError
 }

@@ -36,9 +36,9 @@ def setup_environment(uuid):
     workdir = f"{pscratch}/bilbomd/{env_dir}/{uuid}"
 
     # Docker images
-    openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.11"
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.29"
-    af_worker = "bilbomd/bilbomd-colabfold:0.0.9"
+    openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.12"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.30"
+    af_worker = "bilbomd/bilbomd-colabfold:0.0.10"
 
     # Number of cores
     if constraint.startswith("gpu"):
@@ -129,8 +129,8 @@ def prepare_openmm_config(config, params):
         },
         "output": {
             "output_dir": "/bilbomd/work/openmm",
-            "min_dir": "minimization",
-            "heat_dir": "heating",
+            "min_dir": "minimize",
+            "heat_dir": "heat",
             "md_dir": "md",
         },
         "constraints": {"fixed_bodies": [], "rigid_bodies": []},
@@ -160,7 +160,7 @@ def prepare_openmm_config(config, params):
                     "rg_sets": [],
                     "k_rg": 1,
                     "report_interval": 500,
-                    "filename": "rgyr_report.csv",
+                    "filename": "rgyr_dmax.csv",
                 },
                 "output_pdb": "md.pdb",
                 "pdb_report_interval": 500,
@@ -585,7 +585,7 @@ def generate_initial_foxs_analysis_section(config, params):
     max_c1 = 1.05
     min_c2 = -0.50
     max_c2 = 2.00
-    minimized_pdb = os.path.join(".", "openmm/minimization/minimized.pdb")
+    minimized_pdb = os.path.join(".", "openmm/minimize/minimized.pdb")
     saxs_data_in_container = os.path.join(".", params.get("data_file"))
 
     # build foxs args as a list, each argument separate
@@ -813,20 +813,6 @@ sacct --format=JobID,JobName,Account,AllocCPUS,State,Elapsed,ExitCode,DerivedExi
     return section
 
 
-def generate_copy_section(config):
-    section = """
-# --------------------------------------------------------------------------------------
-# Copy results back to CFS
-update_status copy2cfs Running
-echo "Copying results back to CFS..."
-cp -nR $WORKDIR/* $UPLOAD_DIR
-CP_EXIT=$?
-check_exit_code $CP_EXIT copy2cfs
-update_status copy2cfs Success
-"""
-    return section
-
-
 # -----------------------------
 # Main Assembly
 # -----------------------------
@@ -854,7 +840,6 @@ def main():
     slurm_sections.append(add_helper_functions())
     if params.get("__t") == "BilboMdAlphaFold":
         slurm_sections.append(generate_alphafold_section(config))
-        # slurm_sections.append(generate_pae2const_prep_section(config))
         slurm_sections.append(select_best_alphafold_model(config))
         slurm_sections.append(generate_pae2const_section(config, params))
     if params.get("__t") == "BilboMdAuto":

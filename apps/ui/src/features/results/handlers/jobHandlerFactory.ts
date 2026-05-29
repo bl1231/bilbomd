@@ -6,7 +6,8 @@ import {
   createCrdJobHandler,
   createScoperJobHandler,
   createAlphaFoldJobHandler,
-  createMultiJobHandler
+  createMultiJobHandler,
+  createOpenFoldJobHandler
 } from './jobHandlers'
 
 export const createJobHandler = (jobType: string): JobHandler => {
@@ -23,6 +24,8 @@ export const createJobHandler = (jobType: string): JobHandler => {
       return createScoperJobHandler()
     case 'alphafold':
       return createAlphaFoldJobHandler()
+    case 'openfold':
+      return createOpenFoldJobHandler()
     case 'multi':
       return createMultiJobHandler()
     default:

@@ -9,8 +9,10 @@ import {
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import path from 'path'
+import { ValidationError } from 'yup'
 import { getFileStats } from './utils/jobUtils.js'
 import { config } from '../../config/config.js'
+import { scoperJobSchema } from '../../validation/index.js'
 
 const uploadFolder = config.uploadDir
 
@@ -27,20 +29,6 @@ const handleBilboMDScoperJob = async (
 ) => {
   try {
     const { bilbomd_mode: bilbomdMode, title, fixc1c2 } = req.body
-
-    // Extract md_engine and reject OpenMM early
-    const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-    const md_engine: 'CHARMM' | 'OpenMM' =
-      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
-    if (md_engine === 'OpenMM') {
-      logger.warn(
-        'handleBilboMDScoperJob: md_engine=OpenMM is not supported for this pipeline'
-      )
-      return res.status(422).json({
-        message:
-          'md_engine=OpenMM is not supported for this version of the BilboMD pipeline. Please use CHARMM.'
-      })
-    }
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
 
     // Handle example data files if no uploaded files
@@ -71,6 +59,30 @@ const handleBilboMDScoperJob = async (
     )
 
     logger.info(`fixc1c2: ${fixc1c2}`)
+
+    const jobPayload = {
+      title,
+      bilbomd_mode: bilbomdMode,
+      email: req.body.email,
+      dat_file: datFile,
+      pdb_file: pdbFile
+    }
+
+    try {
+      await scoperJobSchema.validate(jobPayload, { abortEarly: false })
+    } catch (validationErr) {
+      if (validationErr instanceof ValidationError) {
+        logger.warn('Scoper job payload validation failed', validationErr)
+        return res.status(400).json({
+          message: 'Validation failed',
+          errors: validationErr.inner?.map((err) => ({
+            path: err.path,
+            message: err.message
+          }))
+        })
+      }
+      throw validationErr
+    }
 
     const steps: IBilboMDSteps = {
       reduce: { status: StepStatus.Waiting, message: '' },
@@ -141,7 +153,6 @@ const handleBilboMDScoperJob = async (
         message: `New Scoper Job successfully created`,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
-        md_engine,
         publicId: ctx.publicId,
         resultUrl,
         resultPath
@@ -150,8 +161,7 @@ const handleBilboMDScoperJob = async (
       res.status(200).json({
         message: `New Scoper Job successfully created`,
         jobid: newJob._id.toString(),
-        uuid: newJob.uuid,
-        md_engine
+        uuid: newJob.uuid
       })
     }
   } catch (error) {

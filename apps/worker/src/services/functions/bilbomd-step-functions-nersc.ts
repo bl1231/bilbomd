@@ -7,6 +7,7 @@ import {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IBilboMDSteps,
   StepStatusEnum
 } from '@bilbomd/mongodb-schema'
@@ -15,8 +16,7 @@ import { updateStepStatus } from './mongo-utils.js'
 import {
   executeNerscScript,
   submitJobToNersc,
-  monitorTaskAtNERSC,
-  monitorJobAtNERSC
+  monitorTaskAtNERSC
 } from './nersc-api-functions.js'
 import { prepareResults } from './prepare-results.js'
 import { cleanupJob } from './job-utils.js'
@@ -48,6 +48,10 @@ function isBilboMDAutoJob(job: IJob): job is IBilboMDAutoJob {
 
 function isBilboMDAlphaFoldJob(job: IJob): job is IBilboMDAlphaFoldJob {
   return (job as IBilboMDAlphaFoldJob).alphafold_entities !== undefined
+}
+
+function isBilboMDOpenFoldJob(job: IJob): job is IBilboMDOpenFoldJob {
+  return (job as IBilboMDOpenFoldJob).openfold_entities !== undefined
 }
 
 const updateNerscSpecificSteps = async (DBJob: IJob): Promise<void> => {
@@ -165,6 +169,7 @@ const makeBilboMDSlurm = async (
       `Failed to prepare Slurm batch file: ${errorMessage}`
     )
     logger.error(`Error during preparation of Slurm batch: ${errorMessage}`)
+    throw error
   }
 }
 
@@ -188,6 +193,11 @@ const submitBilboMDSlurm = async (
 
     const submitResultObject = JSON.parse(submitResult.result)
     const nerscJobID = submitResultObject.jobid
+    if (!nerscJobID) {
+      throw new Error(
+        `NERSC submission task completed but returned no job ID. Full result: ${submitResult.result}`
+      )
+    }
     logger.info(`NERSC JOBID: ${nerscJobID}`)
 
     // Populate the `nersc` field in the `DBjob`
@@ -225,48 +235,6 @@ const submitBilboMDSlurm = async (
   }
 }
 
-const monitorBilboMDJob = async (
-  MQjob: BullMQJob,
-  DBjob: IJob,
-  Pjob: string
-): Promise<void> => {
-  try {
-    await MQjob.log('start nersc watch job')
-    await updateJobStatus(
-      DBjob,
-      'nersc_job_status',
-      'Running',
-      'Watching BilboMD Job'
-    )
-
-    const jobResult = await monitorJobAtNERSC(MQjob, DBjob, Pjob)
-    logger.info(`jobResult: ${JSON.stringify(jobResult)}`)
-
-    await updateJobStatus(
-      DBjob,
-      'nersc_job_status',
-      'Success',
-      'BilboMD job on Perlmutter has finished successfully.'
-    )
-    await MQjob.log('end nersc watch job')
-  } catch (error) {
-    let errorMessage = 'Unknown error'
-    let errorStack = ''
-
-    if (error instanceof Error) {
-      errorMessage = error.message
-      errorStack = error.stack || ''
-    }
-
-    await updateJobStatus(
-      DBjob,
-      'nersc_job_status',
-      'Error',
-      `Failed to monitor BilboMD job: ${errorMessage}`
-    )
-    logger.error(`Error during monitoring of BilboMD job: ${errorStack}`)
-  }
-}
 
 const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
   try {
@@ -282,7 +250,8 @@ const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
       isBilboMDCRDJob(DBjob) ||
       isBilboMDPDBJob(DBjob) ||
       isBilboMDAutoJob(DBjob) ||
-      isBilboMDAlphaFoldJob(DBjob)
+      isBilboMDAlphaFoldJob(DBjob) ||
+      isBilboMDOpenFoldJob(DBjob)
     ) {
       await prepareResults(DBjob)
       await updateJobStatus(
@@ -393,12 +362,12 @@ export {
   updateNerscSpecificSteps,
   makeBilboMDSlurm,
   submitBilboMDSlurm,
-  monitorBilboMDJob,
   copyBilboMDResults,
   prepareBilboMDResults,
   sendBilboMDEmail,
   isBilboMDCRDJob,
   isBilboMDPDBJob,
   isBilboMDAutoJob,
-  isBilboMDAlphaFoldJob
+  isBilboMDAlphaFoldJob,
+  isBilboMDOpenFoldJob
 }

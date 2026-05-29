@@ -139,12 +139,28 @@ const spawnPdb2CrdCharmm = (
           )
           resolve(charmmOutput)
         } else {
+          // Log the full output for debugging, but build a concise error
+          // message for the UI by extracting only CHARMM error lines.
           logger.error(
-            `CHARMM execution failed: ${inputFile}, exit code: ${code}, error: ${charmmOutput}`
+            `CHARMM execution failed: ${inputFile}, exit code: ${code}\n${charmmOutput}`
           )
+          const errorLines = charmmOutput
+            .split('\n')
+            .filter(
+              (line) =>
+                line.includes('***** ERROR') ||
+                line.includes('ABNORMAL TERMINATION') ||
+                line.trimStart().startsWith('?')
+            )
+            .map((line) => line.trim())
+            .filter(Boolean)
+          const errorSummary =
+            errorLines.length > 0
+              ? errorLines.join(' | ')
+              : 'see CHARMM log for details'
           reject(
             new Error(
-              `CHARMM execution failed: ${inputFile}, exit code: ${code}, error: ${charmmOutput}`
+              `CHARMM execution failed: ${inputFile}, exit code: ${code}. ${errorSummary}`
             )
           )
         }
@@ -155,4 +171,169 @@ const spawnPdb2CrdCharmm = (
   return Promise.all(promises)
 }
 
-export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm }
+interface PrepPdbData {
+  uuid: string
+  pdb_file: string
+}
+
+const runPrepPdb = (data: PrepPdbData): Promise<void> => {
+  const workingDir = path.join(uploadFolder, data.uuid)
+  const pdbPath = path.join(workingDir, data.pdb_file)
+  const logFile = path.join(workingDir, 'prep_pdb.log')
+  const errorFile = path.join(workingDir, 'prep_pdb_error.log')
+  const logStream = fs.createWriteStream(logFile)
+  const errorStream = fs.createWriteStream(errorFile)
+  const script = '/app/scripts/prep_pdb.py'
+
+  logger.info(`runPrepPdb: preparing ${data.pdb_file} for OpenMM`)
+
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn('/opt/envs/base/bin/python', [script, pdbPath], {
+      cwd: workingDir
+    })
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      logStream.write(chunk.toString())
+    })
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      const msg = chunk.toString().trim()
+      logger.error(`runPrepPdb stderr: ${msg}`)
+      errorStream.write(msg + '\n')
+    })
+
+    proc.on('error', (error) => {
+      logger.error(`runPrepPdb spawn error: ${error}`)
+      reject(error)
+    })
+
+    proc.on('close', (code) => {
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).then(() => {
+        if (code === 0) {
+          logger.info(`runPrepPdb succeeded for ${data.pdb_file}`)
+          resolve()
+        } else {
+          reject(new Error(`prep_pdb.py exited with code ${code}`))
+        }
+      }).catch(reject)
+    })
+  })
+}
+
+interface CifToPdbData {
+  uuid: string
+  pdb_file: string
+}
+
+/**
+ * Convert an mmCIF file to PDB format using biopython.
+ * Returns the basename of the output PDB file (the .cif extension replaced with .pdb).
+ */
+const runCifToPdb = (data: CifToPdbData): Promise<string> => {
+  const workingDir = path.join(uploadFolder, data.uuid)
+  const inputCif = path.join(workingDir, data.pdb_file)
+  const outputPdbName = data.pdb_file.replace(/\.cif$/i, '.pdb')
+  const outputPdb = path.join(workingDir, outputPdbName)
+  const logFile = path.join(workingDir, 'cif_to_pdb.log')
+  const errorFile = path.join(workingDir, 'cif_to_pdb_error.log')
+  const logStream = fs.createWriteStream(logFile)
+  const errorStream = fs.createWriteStream(errorFile)
+  const script = '/app/scripts/cif_to_pdb.py'
+  const args = [script, inputCif, outputPdb]
+
+  logger.info(`runCifToPdb: converting ${data.pdb_file} -> ${outputPdbName}`)
+
+  return new Promise<string>((resolve, reject) => {
+    const proc = spawn('/opt/envs/base/bin/python', args, { cwd: workingDir })
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      logStream.write(chunk.toString())
+    })
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      const msg = chunk.toString().trim()
+      logger.error(`runCifToPdb stderr: ${msg}`)
+      errorStream.write(msg + '\n')
+    })
+
+    proc.on('error', (error) => {
+      logger.error(`runCifToPdb spawn error: ${error}`)
+      reject(error)
+    })
+
+    proc.on('close', (code) => {
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).then(() => {
+        if (code === 0) {
+          logger.info(`runCifToPdb succeeded: ${outputPdbName}`)
+          resolve(outputPdbName)
+        } else {
+          reject(new Error(`cif_to_pdb.py exited with code ${code}`))
+        }
+      }).catch(reject)
+    })
+  })
+}
+
+interface StripCofactorsData {
+  uuid: string
+  pdb_file: string
+}
+
+/**
+ * Strip molecular cofactors (FAD, HEM, PCA, etc.) that have no parameters in the
+ * bundled Amber/GLYCAM force fields. Writes stripped_cofactors.json to the job dir.
+ */
+const runStripCofactors = (data: StripCofactorsData): Promise<void> => {
+  const workingDir = path.join(uploadFolder, data.uuid)
+  const pdbPath = path.join(workingDir, data.pdb_file)
+  const logFile = path.join(workingDir, 'strip_cofactors.log')
+  const errorFile = path.join(workingDir, 'strip_cofactors_error.log')
+  const logStream = fs.createWriteStream(logFile)
+  const errorStream = fs.createWriteStream(errorFile)
+  const script = '/app/scripts/strip_cofactors.py'
+
+  logger.info(`runStripCofactors: stripping cofactors from ${data.pdb_file}`)
+
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn('/opt/envs/base/bin/python', [script, pdbPath], {
+      cwd: workingDir
+    })
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      logStream.write(chunk.toString())
+    })
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      const msg = chunk.toString().trim()
+      logger.error(`runStripCofactors stderr: ${msg}`)
+      errorStream.write(msg + '\n')
+    })
+
+    proc.on('error', (error) => {
+      logger.error(`runStripCofactors spawn error: ${error}`)
+      reject(error)
+    })
+
+    proc.on('close', (code) => {
+      Promise.all([
+        new Promise((r) => logStream.end(r)),
+        new Promise((r) => errorStream.end(r))
+      ]).then(() => {
+        if (code === 0) {
+          logger.info(`runStripCofactors succeeded for ${data.pdb_file}`)
+          resolve()
+        } else {
+          reject(new Error(`strip_cofactors.py exited with code ${code}`))
+        }
+      }).catch(reject)
+    })
+  })
+}
+
+export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runPrepPdb, runStripCofactors, runCifToPdb }

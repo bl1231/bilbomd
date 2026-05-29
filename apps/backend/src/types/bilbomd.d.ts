@@ -71,6 +71,8 @@ export type AutoRgResults = {
   rg: number
   rg_min: number
   rg_max: number
+  qmin: number
+  qmax: number
 }
 
 export type DispatchUser = {

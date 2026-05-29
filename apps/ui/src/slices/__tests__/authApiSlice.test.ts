@@ -154,10 +154,10 @@ describe('authApiSlice', () => {
 
   describe('finalizeOrcid', () => {
     it('should finalize ORCID authentication', async () => {
-      const body = { code: 'auth-code', state: 'state-123' }
-
+      // PR 3 of #817 — backend ignores the request body and trusts the
+      // server-side session profile, so callers send an empty object.
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.finalizeOrcid.initiate(body)
+        authApiSlice.endpoints.finalizeOrcid.initiate({})
       )
 
       expect(result.data).toBeDefined()
@@ -172,10 +172,7 @@ describe('authApiSlice', () => {
       )
 
       const result = await storeRef.store.dispatch(
-        authApiSlice.endpoints.finalizeOrcid.initiate({
-          code: 'invalid',
-          state: 'invalid'
-        })
+        authApiSlice.endpoints.finalizeOrcid.initiate({})
       )
 
       expect(result.error).toBeDefined()

@@ -2,24 +2,31 @@ import { createLogger, transports, format } from 'winston'
 import DailyRotateFile from 'winston-daily-rotate-file'
 import moment from 'moment-timezone'
 
-const { combine, timestamp, label, printf, colorize } = format
+const { combine, timestamp, label, printf, colorize, json } = format
 const localTimezone = 'America/Los_Angeles'
 const logsFolder = `/bilbomd/logs`
 
-const customTimestamp = () => moment().tz(localTimezone).format('YYYY-MM-DD HH:mm:ss')
+const customTimestamp = () =>
+  moment().tz(localTimezone).format('YYYY-MM-DD HH:mm:ss')
 
-const logFormat = printf(({ level, message, label, timestamp }) => {
+const consoleLogFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp} - ${level}: [${label}] ${message}`
 })
 
-// Declare as an array of any transport types available
+const fileFormat = combine(
+  label({ label: 'bilbomd-scoper' }),
+  timestamp({ format: customTimestamp }),
+  json()
+)
+
 const loggerTransports = [
   new DailyRotateFile({
     filename: `${logsFolder}/bilbomd-scoper-%DATE%.log`,
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
     maxSize: '20m',
-    maxFiles: '14d'
+    maxFiles: '14d',
+    format: fileFormat
   }),
   new DailyRotateFile({
     level: 'error',
@@ -27,18 +34,21 @@ const loggerTransports = [
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
     maxSize: '20m',
-    maxFiles: '30d'
+    maxFiles: '30d',
+    format: fileFormat
   }),
-  new transports.Console({ format: combine(colorize(), logFormat) })
+  new transports.Console({
+    format: combine(
+      label({ label: 'bilbomd-scoper' }),
+      timestamp({ format: customTimestamp }),
+      colorize(),
+      consoleLogFormat
+    )
+  })
 ]
 
 const logger = createLogger({
   level: 'info',
-  format: combine(
-    label({ label: 'bilbomd-scoper' }),
-    timestamp({ format: customTimestamp }),
-    logFormat
-  ),
   transports: loggerTransports
 })
 

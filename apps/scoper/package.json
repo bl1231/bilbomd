@@ -1,7 +1,7 @@
 {
   "name": "@bilbomd/scoper",
   "description": "A worker app to process BilboMD SCOPER jobs from BullMQ queue",
-  "version": "1.6.2",
+  "version": "1.7.13",
   "main": "build/scoper.js",
   "files": [
     "build",
@@ -25,32 +25,37 @@
   ],
   "scripts": {
     "clean": "rimraf build/*",
-    "build": "npm-run-all clean copy-assets tsc",
-    "build:ci": "npm-run-all clean copy-assets lint tsc",
+    "build": "pnpm run clean && pnpm run copy-assets && pnpm run tsc",
+    "build:ci": "pnpm run clean && pnpm run copy-assets && pnpm run lint && pnpm run tsc",
     "copy-assets": "copyfiles --all --up 1 --exclude \"./**/*.{ts,tsx}\" \"./src/**/*\" ./build",
     "start": "npm run build && node build/scoper.js",
     "dev": "nodemon --watch src --ext ts,ejs --verbose --exec npm run start",
     "lint": "eslint",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "test": "vitest --run --coverage",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
-    "bullmq": "^5.71.1",
-    "dotenv": "^17.3.1",
-    "fs-extra": "^11.3.4",
+    "bullmq": "^5.77.4",
+    "dotenv": "^17.4.2",
+    "fs-extra": "^11.3.5",
     "handlebars": "^4.7.9",
-    "ioredis": "^5.10.1",
-    "moment-timezone": "^0.6.1",
-    "mongoose": "^9.3.3",
-    "nodemailer": "^8.0.4",
+    "ioredis": "5.10.1",
+    "moment-timezone": "^0.6.2",
+    "mongoose": "^9.6.2",
+    "nodemailer": "^8.0.9",
     "nodemailer-express-handlebars": "^7.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
-    "@types/nodemailer": "^7.0.11",
+    "@types/fs-extra": "^11.0.4",
+    "@types/nodemailer": "^8.0.0",
     "@types/nodemailer-express-handlebars": "^4.0.6",
-    "nodemon": "^3.1.14"
+    "@vitest/coverage-v8": "^4.1.7",
+    "nodemon": "^3.1.14",
+    "vitest": "^4.1.7"
   },
   "_moduleAliases": {
     "@services": "build/services",

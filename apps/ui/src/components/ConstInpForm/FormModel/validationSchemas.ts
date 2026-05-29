@@ -86,16 +86,16 @@ const validationSchemas = [
                       // For example, you can return false or throw an error.
                       return false
                     }
-                    const chains = ctx.from[2].value.chains as Chain[]
+                    const chains = ctx.from[2]!.value.chains as Chain[]
                     const chain = chains.find(
                       (x) => x.id === ctx.parent.chainid
                     )
                     if (!chain) return false
-                    // const chainStart = ctx.from[2].value.chains.find(
+                    // const chainStart = ctx.from[2]!.value.chains.find(
                     //   (x) => x.id === ctx.parent.chainid
                     // ).first_res
 
-                    // const chainEnd = ctx.from[2].value.chains.find(
+                    // const chainEnd = ctx.from[2]!.value.chains.find(
                     //   (x) => x.id === ctx.parent.chainid
                     // ).last_res
                     // console.log('chainStart', chainStart)
@@ -117,8 +117,8 @@ const validationSchemas = [
                     if (!ctx.from) {
                       return false
                     }
-                    const numDomains = ctx.from[1].value.domains.length
-                    const domains = ctx.from[1].value.domains
+                    const numDomains = ctx.from[1]!.value.domains.length
+                    const domains = ctx.from[1]!.value.domains
 
                     for (let idx = 0; idx < numDomains; idx++) {
                       // skip validating against itself
@@ -128,9 +128,9 @@ const validationSchemas = [
                         continue
                       }
                       if (
-                        domains[idx].start <= value &&
-                        value <= domains[idx].end &&
-                        domains[idx].chainid === ctx.parent.chainid
+                        domains[idx]!.start <= value &&
+                        value <= domains[idx]!.end &&
+                        domains[idx]!.chainid === ctx.parent.chainid
                       ) {
                         return false
                       }
@@ -145,31 +145,31 @@ const validationSchemas = [
                     if (!ctx.from) {
                       return false
                     }
-                    const rigidBodies = ctx.from[2].value.rigid_bodies
-                    const numRigidBodies = ctx.from[2].value.rigid_bodies.length
+                    const rigidBodies = ctx.from[2]!.value.rigid_bodies
+                    const numRigidBodies = ctx.from[2]!.value.rigid_bodies.length
                     // console.log('rigidBodies', rigidBodies)
                     // console.log('numRigidBodies', numRigidBodies)
                     // console.log(ctx)
                     for (let idx = 0; idx < numRigidBodies; idx++) {
                       // loop through domains in rigid body
-                      const domains = rigidBodies[idx].domains
-                      const numDomains = rigidBodies[idx].domains.length
+                      const domains = rigidBodies[idx]!.domains
+                      const numDomains = rigidBodies[idx]!.domains.length
                       for (let didx = 0; didx < numDomains; didx++) {
                         //skip validating against itself
                         // && same rigid body
-                        if (ctx.from[1].value.id === rigidBodies[idx].id) {
+                        if (ctx.from[1]!.value.id === rigidBodies[idx]!.id) {
                           // console.log('skip')
                           continue
                         }
                         //https://stackoverflow.com/questions/36035074/how-can-i-find-an-overlap-between-two-given-ranges
                         const eee = Math.max(
-                          domains[didx].start,
+                          domains[didx]!.start,
                           ctx.parent.start
                         )
-                        const fff = Math.min(domains[didx].end, ctx.parent.end)
+                        const fff = Math.min(domains[didx]!.end, ctx.parent.end)
                         if (
                           eee <= fff &&
-                          domains[didx].chainid === ctx.parent.chainid
+                          domains[didx]!.chainid === ctx.parent.chainid
                         ) {
                           return false
                         }
@@ -192,10 +192,10 @@ const validationSchemas = [
                     if (!ctx.from) {
                       return false
                     }
-                    const chainStart = ctx.from[2].value.chains.find(
+                    const chainStart = ctx.from[2]!.value.chains.find(
                       (x: Chain) => x.id === ctx.parent.chainid
                     ).first_res
-                    const chainEnd = ctx.from[2].value.chains.find(
+                    const chainEnd = ctx.from[2]!.value.chains.find(
                       (x: Chain) => x.id === ctx.parent.chainid
                     ).last_res
                     if (value >= chainStart && value <= chainEnd) {
@@ -211,8 +211,8 @@ const validationSchemas = [
                     if (!ctx.from) {
                       return false
                     }
-                    const numDomains = ctx.from[1].value.domains.length
-                    const domains = ctx.from[1].value.domains
+                    const numDomains = ctx.from[1]!.value.domains.length
+                    const domains = ctx.from[1]!.value.domains
                     for (let idx = 0; idx < numDomains; idx++) {
                       // skip validating against itself
                       if (
@@ -221,9 +221,9 @@ const validationSchemas = [
                         continue
                       }
                       if (
-                        domains[idx].start <= value &&
-                        value <= domains[idx].end &&
-                        domains[idx].chainid === ctx.parent.chainid
+                        domains[idx]!.start <= value &&
+                        value <= domains[idx]!.end &&
+                        domains[idx]!.chainid === ctx.parent.chainid
                       ) {
                         return false
                       }
@@ -238,27 +238,27 @@ const validationSchemas = [
                     if (!ctx.from) {
                       return false
                     }
-                    const rigidBodies = ctx.from[2].value.rigid_bodies
-                    const numRigidBodies = ctx.from[2].value.rigid_bodies.length
+                    const rigidBodies = ctx.from[2]!.value.rigid_bodies
+                    const numRigidBodies = ctx.from[2]!.value.rigid_bodies.length
                     for (let idx = 0; idx < numRigidBodies; idx++) {
                       // loop through domains in rigid body
-                      const domains = rigidBodies[idx].domains
-                      const numDomains = rigidBodies[idx].domains.length
+                      const domains = rigidBodies[idx]!.domains
+                      const numDomains = rigidBodies[idx]!.domains.length
                       for (let didx = 0; didx < numDomains; didx++) {
                         //skip validating against itself
                         // && same rigid body
-                        if (ctx.from[1].value.id === rigidBodies[idx].id) {
+                        if (ctx.from[1]!.value.id === rigidBodies[idx]!.id) {
                           continue
                         }
                         //https://stackoverflow.com/questions/36035074/how-can-i-find-an-overlap-between-two-given-ranges
                         const eee = Math.max(
-                          domains[didx].start,
+                          domains[didx]!.start,
                           ctx.parent.start
                         )
-                        const fff = Math.min(domains[didx].end, ctx.parent.end)
+                        const fff = Math.min(domains[didx]!.end, ctx.parent.end)
                         if (
                           eee <= fff &&
-                          domains[didx].chainid === ctx.parent.chainid
+                          domains[didx]!.chainid === ctx.parent.chainid
                         ) {
                           return false
                         }

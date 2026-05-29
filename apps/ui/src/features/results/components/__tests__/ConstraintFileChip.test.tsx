@@ -52,7 +52,7 @@ describe('ConstraintFileChip', () => {
       />
     )
 
-    const chip = screen.getAllByRole('button')[0]
+    const chip = screen.getAllByRole('button')[0]!
     fireEvent.click(chip)
 
     expect(mockOnOpenModal).toHaveBeenCalledTimes(1)
@@ -179,7 +179,7 @@ describe('ConstraintFileChip', () => {
       render(<ConstraintFileChip job={job} />)
     }).not.toThrow()
 
-    const chip = screen.getAllByRole('button')[0]
+    const chip = screen.getAllByRole('button')[0]!
     expect(() => {
       fireEvent.click(chip)
     }).not.toThrow()

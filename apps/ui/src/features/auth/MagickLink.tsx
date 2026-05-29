@@ -128,10 +128,7 @@ const MagickLink = () => {
       <Grid
         container
         columns={12}
-        direction='row'
-        sx={{ height: '100vh' }}
-        alignItems='center'
-        justifyContent='center'
+        sx={{ height: '100vh', alignItems: 'center', justifyContent: 'center' }}
       >
         <>
           <Alert severity='success' variant='outlined'>
@@ -147,7 +144,7 @@ const MagickLink = () => {
     content = (
       <>
         {/* Configurable Alert on Login Page */}
-        <Grid container justifyContent='center'>
+        <Grid container sx={{ justifyContent: 'center' }}>
           {config.enableHomePageAlert === 'true' && (
             <Grid>
               <Alert severity='error' variant='filled' sx={{ my: 2 }}>
@@ -163,10 +160,7 @@ const MagickLink = () => {
         <Grid
           container
           columns={12}
-          direction='row'
-          sx={{ height: '100vh' }}
-          alignItems='center'
-          justifyContent='center'
+          sx={{ height: '100vh', alignItems: 'center', justifyContent: 'center' }}
         >
           <Grid
             sx={{

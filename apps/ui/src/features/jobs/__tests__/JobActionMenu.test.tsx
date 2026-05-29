@@ -7,11 +7,13 @@ const baseProps = {
   jobType: 'BilboMdPDB',
   jobTitle: 'Test Job',
   jobStatus: 'Completed',
+  resultsReady: true,
   anchorEl: document.createElement('div'),
   open: true,
   onClose: vi.fn(),
   onResubmit: vi.fn(),
-  onDelete: vi.fn()
+  onDelete: vi.fn(),
+  onDownload: vi.fn()
 }
 
 describe('JobActionsMenu', () => {
@@ -44,7 +46,7 @@ describe('JobActionsMenu', () => {
   it('calls onDelete and onClose when Delete is clicked', () => {
     render(<JobActionsMenu {...baseProps} />)
     fireEvent.click(screen.getByText('Delete'))
-    expect(baseProps.onDelete).toHaveBeenCalledWith('abc123', 'Test Job')
+    expect(baseProps.onDelete).toHaveBeenCalledWith('abc123', 'Test Job', 'Completed')
     expect(baseProps.onClose).toHaveBeenCalled()
   })
 })

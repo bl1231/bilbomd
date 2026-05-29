@@ -47,6 +47,13 @@ interface IAlphaFoldEntity {
   copies: number
 }
 
+interface IOpenFoldEntity {
+  name: string
+  sequence: string
+  type: 'Protein' | 'DNA' | 'RNA'
+  copies: number
+}
+
 interface IFeedbackData {
   mw_saxs: number
   mw_model: number
@@ -109,6 +116,7 @@ interface IJob extends Document {
     | 'BilboMdAuto'
     | 'BilboMdScoper'
     | 'BilboMdAlphaFold'
+    | 'BilboMdOpenFold'
     | 'BilboMdSANS'
   title: string
   uuid: string
@@ -119,6 +127,7 @@ interface IJob extends Document {
   data_file: string
   md_engine?: MDEngineEnum
   openmm_parameters?: IOpenMMParameters
+  openmm_forcefield?: string[]
   charmm_parameters?: ICHARMMParameters
   md_constraints?: IMDConstraints
   time_submitted: Date
@@ -132,6 +141,7 @@ interface IJob extends Document {
   assets?: IAssets
   nersc?: INerscInfo
   cleanup_in_progress: boolean
+  results_ready?: boolean
   results?: IJobResults
 }
 
@@ -191,6 +201,22 @@ interface IBilboMDAlphaFoldJob extends IJob {
   rg_max?: number
 }
 
+interface IBilboMDOpenFoldJob extends IJob {
+  __t: 'BilboMdOpenFold'
+  openfold_entities: IOpenFoldEntity[]
+  query_json_file: string
+  pdb_file?: string
+  psf_file?: string
+  crd_file?: string
+  pae_file?: string
+  const_inp_file?: string
+  md_engine?: MDEngineEnum
+  conformational_sampling: number
+  rg?: number
+  rg_min?: number
+  rg_max?: number
+}
+
 interface IBilboMDScoperJob extends IJob {
   __t: 'BilboMdScoper'
   pdb_file: string
@@ -207,6 +233,7 @@ export {
   IStepStatus,
   IBilboMDSteps,
   IAlphaFoldEntity,
+  IOpenFoldEntity,
   IFeedbackData,
   INerscInfo,
   IResidueRange,
@@ -219,5 +246,6 @@ export {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IBilboMDScoperJob
 }

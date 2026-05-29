@@ -1,5 +1,80 @@
 # @bilbomd/bilbomd-types
 
+## 1.6.1
+
+### Patch Changes
+
+- 6a693d2: Fix DNA representation consistency in Molstar viewer and add domain-based coloring.
+  - #768: DNA now renders consistently as cartoon (tube/slab) for both CHARMM and OpenMM pipelines. The fix uses a residue-name-based selection that recognises standard PDB names (DA, DT, DG, DC) and CHARMM names (ADE, GUA, CYT, THY) explicitly.
+  - #769: Add "Color by Domain" toggle button above the Molstar viewport. When active, fixed-body regions are colored blue and rigid-body regions orange, matching the PyMol movie scheme; flexible linkers retain the default chain coloring. The button appears whenever MD constraint data is available, independent of ensemble count.
+
+## 1.6.0
+
+### Minor Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+## 1.5.4
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+
+## 1.5.3
+
+### Patch Changes
+
+- d0504b0: Fix UI cofactor alerts to reflect GAFF2 support for organic small molecules. Split STRIPPABLE_COFACTORS into GAFF_COFACTORS (organic, now parameterized via GAFF2) and METAL_COFACTORS (heme/porphyrins, still removed). FAD and similar molecules now show a blue info alert instead of a yellow warning.
+
+## 1.5.2
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+
+## 1.5.1
+
+### Patch Changes
+
+- 82d0bf4: Remove md_engine from base job schema for scoper jobs. Scoper uses KGSRNA for
+  conformational sampling, not CHARMM or OpenMM. Moving md_engine to only the
+  discriminator schemas that use an MD engine (pdb, crd, auto, alphafold, sans).
+  Also adds md_engine explicitly to the SANS discriminator schema where it was
+  previously relying on the base schema default. The md_engine field is now
+  optional in BaseJobDTO and AnonJobResponse.
+
+## 1.5.0
+
+### Minor Changes
+
+- f3ca090: Add support for mmCIF (.cif) file uploads in Classic/pdb and Auto job types.
+
+  Users can now upload AlphaFold 3 (or any standard mmCIF) files directly into BilboMD without manual conversion. The frontend and backend validate chain IDs and residue names from the `_atom_site` loop block using the same `SUPPORTED_PDB_RESIDUES` allowlist used for PDB validation. The worker converts CIF to PDB at pipeline start using biopython before CHARMM or OpenMM processing.
+
+## 1.4.1
+
+### Patch Changes
+
+- fc1be50: Move the supported PDB residue list to a single constant (`SUPPORTED_PDB_RESIDUES`) in `@bilbomd/bilbomd-types`, shared by both the backend validator and the frontend `hasAllowedResiduesOnly` check. Eliminates the risk of the two lists diverging silently. Also adds common ions (MG, CA, ZN, etc.) and HSD to the allowed set, and adds the missing `pdbCheck()` to the Auto job form schema.
+
+## 1.4.0
+
+### Minor Changes
+
+- 474cef7: Add results_ready flag to track results packaging outcome independently of job status.
+
+  Jobs that complete all MD science steps but fail during final tar.gz creation now remain
+  Completed rather than Failed. A new results_ready boolean field (false by default) is set
+  to true only after a successful archive is created, making the packaging outcome observable.
+
+  The UI disables the Download Results button and shows a warning when results_ready is false,
+  and surfaces download errors to the user via an Alert instead of silently logging to console.
+
 ## 1.3.3
 
 ### Patch Changes

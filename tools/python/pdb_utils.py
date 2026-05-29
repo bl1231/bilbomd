@@ -4,6 +4,7 @@ Also contains shared utilities for PDB processing in BilboMD.
 """
 
 from Bio.PDB.PDBParser import PDBParser
+from Bio.PDB import MMCIFParser
 
 ATOMIC_WEIGHTS = {
     "H": 1.008,
@@ -164,4 +165,28 @@ def get_segid_renaming_map(pdb_file: str) -> dict:
         )
         renaming[chain_id] = f"{mol_type}{chain_id}"
 
+    return renaming
+
+
+def get_segid_renaming_map_from_cif(cif_file: str) -> dict:
+    """
+    Build a mapping from chain ID to renamed segid (as per pdb2crd.py logic)
+    for an mmCIF file. Uses biopython to parse chain/residue info.
+    """
+    parser = MMCIFParser(QUIET=True)
+    structure = parser.get_structure("s", cif_file)
+    renaming = {}
+    for model in structure:
+        for chain in model:
+            chain_id = chain.id
+            if chain_id in renaming:
+                continue
+            res_types = set()
+            for residue in chain:
+                mol_type = classify_residue(residue.resname.strip())
+                res_types.add(mol_type)
+            mol_type = (
+                "PRO" if res_types == {"PRO"} else next(iter(res_types), "UNKNOWN")
+            )
+            renaming[chain_id] = f"{mol_type}{chain_id}"
     return renaming

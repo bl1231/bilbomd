@@ -25,6 +25,7 @@ const redis = new Redis(redisOptions)
 const bilbomdQueue = new QueueMQ('bilbomd', { connection: redis })
 const bilbomdScoperQueue = new QueueMQ('bilbomd-scoper', { connection: redis })
 const multimdQueue = new QueueMQ('multimd', { connection: redis })
+const deleteBilbomdQueue = new QueueMQ('delete-bilbomd', { connection: redis })
 
 const serverAdapter = new ExpressAdapter()
 serverAdapter.setBasePath(basePath)
@@ -33,7 +34,8 @@ createBullBoard({
   queues: [
     new BullMQAdapter(bilbomdQueue),
     new BullMQAdapter(bilbomdScoperQueue),
-    new BullMQAdapter(multimdQueue)
+    new BullMQAdapter(multimdQueue),
+    new BullMQAdapter(deleteBilbomdQueue)
   ],
   serverAdapter: serverAdapter
 })

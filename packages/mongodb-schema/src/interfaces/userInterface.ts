@@ -4,6 +4,7 @@ import { IJob } from './jobInterface'
 interface IOtp {
   code: string
   expiresAt: Date
+  attempts?: number
 }
 
 interface IConfirmationCode {
@@ -23,11 +24,6 @@ interface OAuthIdentity {
   provider: 'google' | 'orcid' | 'github' | string
   id: string
   name: string
-  accessToken?: string
-  refreshToken?: string
-  tokenType?: string
-  scope?: string
-  expiresIn?: number
   tokenIssuedAt?: Date
 }
 

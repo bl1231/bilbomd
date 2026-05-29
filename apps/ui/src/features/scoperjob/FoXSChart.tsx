@@ -7,7 +7,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceLine
+  ReferenceLine,
+  ReferenceArea,
+  ErrorBar
 } from 'recharts'
 import { Typography } from '@mui/material'
 
@@ -23,6 +25,11 @@ interface ResidualDataPoint {
   res: number
 }
 
+interface ExcludedRange {
+  x1: number
+  x2: number
+}
+
 interface FoXSChartProps {
   title: string
   data: DataPoint[]
@@ -32,6 +39,8 @@ interface FoXSChartProps {
   c2: string
   minYAxis: number
   maxYAxis: number
+  excludedCount?: number
+  excludedRanges?: ExcludedRange[]
 }
 
 interface CustomChartLabelProps {
@@ -103,6 +112,11 @@ const ChiSquaredChartLabel = ({
   )
 }
 
+const logDomain = (dataMin: number): number => {
+  if (!Number.isFinite(dataMin) || dataMin <= 0) return 0.001
+  return Math.pow(10, Math.floor(Math.log10(dataMin)))
+}
+
 const FoXSChart = ({
   title,
   data,
@@ -111,7 +125,9 @@ const FoXSChart = ({
   c1,
   c2,
   minYAxis,
-  maxYAxis
+  maxYAxis,
+  excludedCount = 0,
+  excludedRanges = []
 }: FoXSChartProps) => {
   const labelXPosition = 75
   const labelYPosition = 20
@@ -124,6 +140,16 @@ const FoXSChart = ({
       >
         {title} - I vs. q
       </Typography>
+      {excludedCount > 0 && (
+        <Typography
+          variant="caption"
+          sx={{ pl: 2, color: 'warning.main' }}
+        >
+          {excludedCount} point{excludedCount !== 1 ? 's' : ''} excluded from
+          plot (shaded region{excludedCount !== 1 ? 's' : ''}): model &le; 0
+          or SNR &lt; 1
+        </Typography>
+      )}
       <ResponsiveContainer
         width="100%"
         height={300}
@@ -139,7 +165,7 @@ const FoXSChart = ({
             yAxisId="left"
             scale="log"
             type="number"
-            domain={['auto', 'auto']}
+            domain={[logDomain, 'auto']}
           />
           <Tooltip />
           <Legend
@@ -148,6 +174,18 @@ const FoXSChart = ({
             height={30}
             layout="horizontal"
           />
+          {excludedRanges.map((range, i) => (
+            <ReferenceArea
+              key={i}
+              yAxisId="left"
+              x1={range.x1}
+              x2={range.x2}
+              fill="#ff9800"
+              fillOpacity={0.2}
+              stroke="#ff9800"
+              strokeOpacity={0.6}
+            />
+          ))}
           <Line
             yAxisId="left"
             type="monotone"
@@ -155,7 +193,15 @@ const FoXSChart = ({
             name="Exp Intensity"
             stroke="#8884d8"
             activeDot={{ r: 8 }}
-          />
+          >
+            <ErrorBar
+              dataKey="error"
+              direction="y"
+              stroke="#8884d8"
+              strokeOpacity={0.4}
+              strokeWidth={1}
+            />
+          </Line>
           <Line
             yAxisId="left"
             type="monotone"
@@ -190,6 +236,17 @@ const FoXSChart = ({
             layout="horizontal"
             align="center"
           />
+          {excludedRanges.map((range, i) => (
+            <ReferenceArea
+              key={i}
+              x1={range.x1}
+              x2={range.x2}
+              fill="#ff9800"
+              fillOpacity={0.2}
+              stroke="#ff9800"
+              strokeOpacity={0.6}
+            />
+          ))}
           <Line
             type="monotone"
             dataKey="res"

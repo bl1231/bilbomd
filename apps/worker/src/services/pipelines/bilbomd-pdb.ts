@@ -12,6 +12,7 @@ import {
   runOmmHeat,
   runOmmMD
 } from '../functions/openmm-functions.js'
+import { runCifToPdb, runPrepPdb } from '../functions/pdb-to-crd.js'
 import {
   extractPDBFilesFromDCD,
   remediatePDBFiles
@@ -21,6 +22,7 @@ import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc
 import { initializeJob, cleanupJob } from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
 import { prepareOpenMMConfig } from '../functions/openmm-functions.js'
+import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 import {
   recordWorkerUsageEvent,
   buildContext
@@ -81,12 +83,33 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
   await initializeJob(MQjob, foundJob)
   await progress.update(10)
 
+  // Convert CIF → PDB before any engine-specific processing
+  if (foundJob.pdb_file?.toLowerCase().endsWith('.cif')) {
+    await MQjob.log('start cif-to-pdb')
+    foundJob.pdb_file = await runCifToPdb({
+      uuid: foundJob.uuid,
+      pdb_file: foundJob.pdb_file
+    })
+    await MQjob.log(`end cif-to-pdb: ${foundJob.pdb_file}`)
+  }
+
   if (engine === 'CHARMM') {
     // PDB to CRD/PSF for 'pdb' mode
     await MQjob.log('start pdb2crd')
     await runPdb2Crd(MQjob, foundJob)
     await MQjob.log('end pdb2crd')
   } else {
+    // Remove waters and ions — incompatible with the implicit-solvent force field
+    await MQjob.log('start prep-pdb')
+    await runPrepPdb({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
+    await MQjob.log('end prep-pdb')
+
+    // Strip unsupported cofactors (FAD, HEM, PCA, etc.) — no bundled Amber parameters.
+    // They are removed for MD only; the original uploaded PDB is used for FoXS.
+    // await MQjob.log('start strip-cofactors')
+    // await runStripCofactors({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
+    // await MQjob.log('end strip-cofactors')
+
     // Prepare OpenMM config YAML instead of pdb2crd
     await MQjob.log('start openmm-config')
     await prepareOpenMMConfig(foundJob)
@@ -117,6 +140,11 @@ const processBilboMDPDBJob = async (MQjob: BullMQJob) => {
   await runners.md(MQjob, foundJob)
   await MQjob.log('end md')
   await progress.update(50)
+
+  // Generate MP4 movies from DCD files (OpenMM only, fire-and-forget)
+  if (engine === 'OpenMM') {
+    enqueueMakeMovie(MQjob, foundJob)
+  }
 
   // Extract PDBs from DCDs
   if (engine === 'CHARMM') {

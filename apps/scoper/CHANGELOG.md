@@ -1,5 +1,130 @@
 # @bilbomd/scoper
 
+## 1.7.13
+
+### Patch Changes
+
+- 55fb36b: Fix OS command injection vulnerability in scoper worker and add filename validation.
+
+  The scoper's `runFoXS` function used `exec()` with a shell-interpolated template literal to copy files, allowing shell metacharacters in user-supplied filenames to execute arbitrary commands. Replaced with `fs.copyFile()` which never invokes a shell.
+
+  Added `noShellMetacharsTest` filename validator to the backend validation helpers and a new `scoperJobSchema` that applies it to PDB and DAT file uploads, rejecting filenames containing `;`, `&`, `|`, backticks, `$`, `<`, `>`, `(`, `)`, `{`, `}`, or `!` before the job is queued.
+
+## 1.7.12
+
+### Patch Changes
+
+- 5c15d8a: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+- Updated dependencies [e2d4125]
+  - @bilbomd/mongodb-schema@2.7.0
+
+## 1.7.11
+
+### Patch Changes
+
+- 29200d1: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+
+## 1.7.10
+
+### Patch Changes
+
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+
+## 1.7.9
+
+### Patch Changes
+
+- b9c8a64: Update all npm/pnpm dependencies to latest versions within semver ranges.
+
+  Notable updates: mongoose 9.4→9.6, molstar 5.8→5.9, react-router 7.14→7.15, vite 8.0.7→8.0.11, bullmq 5.73→5.76, msw 2.13→2.14, MUI 9.0.0→9.0.1, react/react-dom 19.2.5→19.2.6.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/mongodb-schema@2.6.0
+
+## 1.7.8
+
+### Patch Changes
+
+- 6ca5249: Harden Docker Compose deployments: remove Docker socket mount from worker, add no-new-privileges to all services, set read_only root filesystem on worker containers with /tmp tmpfs, and drop all Linux capabilities from worker. Addresses F-7 pen test finding (Docker socket privilege escalation).
+- b41b107: Add custom seccomp profile blocking AF_ALG sockets (CVE-2026-31431) and other dangerous syscalls not needed by BilboMD containers. Profile applied to all services in all Docker Compose environments. Addresses F-6 pen test finding.
+- be7f034: Strip all SUID/SGID bits from container filesystems before dropping to non-root user. Added to backend, ui, worker-base, worker, scoper-base, and scoper Dockerfiles. Addresses F-6 pen test finding (SUID binary privilege escalation).
+- Updated dependencies [24b6dc2]
+  - @bilbomd/mongodb-schema@2.5.5
+
+## 1.7.7
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+- Updated dependencies [57f8495]
+  - @bilbomd/mongodb-schema@2.5.4
+
+## 1.7.6
+
+### Patch Changes
+
+- Updated dependencies [e24f1c6]
+  - @bilbomd/mongodb-schema@2.5.3
+
+## 1.7.5
+
+### Patch Changes
+
+- bf1837b: Replace npm-run-all with pnpm && chaining in all build scripts. Removes an unnecessary dependency that called npm run internally rather than pnpm run.
+
+## 1.7.4
+
+### Patch Changes
+
+- 9c95606: Fix KGS progress polling: suppress noisy ENOENT error on first poll before output directory exists, and stop polling once all conformers are generated.
+
+## 1.7.3
+
+### Patch Changes
+
+- 4923ccb: Add structured logging with JSON file output and request context propagation.
+
+  File transports now emit JSON for machine-parseable log ingestion (Loki, Elasticsearch, etc.). Console output remains colorized human-readable text.
+
+  Backend gains `AsyncLocalStorage`-based request context: every log line within an HTTP request automatically includes `requestId` without threading `req` through callers. Key controller call sites migrated from string interpolation to structured object fields.
+
+- 7d8ebdc: Update all npm dependencies to latest minor/patch versions. Includes axios 1.15, bullmq 5.73.1, @bull-board 6.21, nodemailer 8.0.5, react 19.2.5, vite 8.0.7, vitest 4.1.3, turbo 2.9.5, and MUI 7.3.10.
+- Updated dependencies [82d0bf4]
+  - @bilbomd/mongodb-schema@2.5.2
+
+## 1.7.2
+
+### Patch Changes
+
+- d9a702d: Update all dependencies. Patch/minor bumps across the board: bullmq, dotenv, mongoose, eslint, molstar, react-router, msw, vite, sass-embedded, @types/node, turbo. Bump @types/nodemailer from ^7 to ^8 to match the already-upgraded nodemailer v8 runtime.
+- Updated dependencies [d9a702d]
+  - @bilbomd/mongodb-schema@2.5.1
+
+## 1.7.1
+
+### Patch Changes
+
+- eeb1eed: Fix Dependabot PRs failing CI due to pnpm frozen lockfile mismatch. CI now skips --frozen-lockfile when the PR author is dependabot[bot].
+
+## 1.7.0
+
+### Minor Changes
+
+- 474cef7: Add results_ready flag to track results packaging outcome independently of job status.
+
+  Jobs that complete all MD science steps but fail during final tar.gz creation now remain
+  Completed rather than Failed. A new results_ready boolean field (false by default) is set
+  to true only after a successful archive is created, making the packaging outcome observable.
+
+  The UI disables the Download Results button and shows a warning when results_ready is false,
+  and surfaces download errors to the user via an Alert instead of silently logging to console.
+
+### Patch Changes
+
+- Updated dependencies [474cef7]
+  - @bilbomd/mongodb-schema@2.5.0
+
 ## 1.6.2
 
 ### Patch Changes

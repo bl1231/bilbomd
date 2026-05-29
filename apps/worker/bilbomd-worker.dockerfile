@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.7
+ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.8
 ########################################
 # Stage 1: deps (prefetch pnpm store)
 ########################################
@@ -9,6 +9,7 @@ RUN corepack enable
 
 # Copy only files needed to resolve workspace dependencies (better cache)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/bilbomd-types/package.json packages/bilbomd-types/package.json
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
 COPY packages/md-utils/package.json packages/md-utils/package.json
 COPY packages/eslint-config/ packages/eslint-config/
@@ -34,6 +35,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 
 # Build shared packages first, then the worker
+RUN pnpm -C packages/bilbomd-types run build
 RUN pnpm -C packages/mongodb-schema run build
 RUN pnpm -C packages/md-utils run build
 RUN pnpm -C apps/worker run build
@@ -60,6 +62,8 @@ ARG USER_ID=1000
 ARG GROUP_ID=1000
 RUN groupadd -g ${GROUP_ID} bilbomd \
     && useradd -u ${USER_ID} -g ${GROUP_ID} -m -d /home/bilbo -s /bin/bash bilbo
+
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
 
 # Copy the minimal app bundle from the build stage
 COPY --chown=bilbo:bilbomd --from=build /out/ .

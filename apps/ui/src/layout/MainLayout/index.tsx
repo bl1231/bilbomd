@@ -9,7 +9,7 @@ import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlined'
 import { useTheme, Divider } from '@mui/material'
 import PeopleIcon from '@mui/icons-material/People'
 import {
@@ -20,6 +20,8 @@ import {
 } from '@mui/icons-material'
 import SettingsIcon from '@mui/icons-material/Settings'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
+import SpeedIcon from '@mui/icons-material/Speed'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import useAuth from 'hooks/useAuth'
@@ -89,6 +91,13 @@ export default function ClippedDrawer() {
       roles: ['user', 'manager']
     },
     {
+      text: 'BilboMD OF3',
+      icon: <AddCircleOutlineOutlined />,
+      path: '/dashboard/jobs/openfold',
+      onclick: () => navigate('dashboard/jobs/openfold'),
+      roles: ['user', 'manager']
+    },
+    {
       text: 'BilboMD Multi',
       icon: <AddCircleOutlineOutlined />,
       path: '/dashboard/jobs/multimd',
@@ -113,6 +122,9 @@ export default function ClippedDrawer() {
 
   if (useNersc || !enableBilboMdScoper) {
     jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'Scoper')
+  }
+  if (useNersc) {
+    jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'BilboMD OF3')
   }
   if (!enableBilboMdSANS) {
     jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'BilboMD SANS')
@@ -153,6 +165,14 @@ export default function ClippedDrawer() {
       icon: <AdminPanelSettingsIcon />,
       path: '/admin',
       onclick: () => navigate('admin'),
+      roles: ['admin']
+    },
+    {
+      text: 'BullMQ',
+      icon: <SpeedIcon />,
+      endIcon: <OpenInNewIcon fontSize='inherit' />,
+      path: '/admin/bullmq',
+      onclick: () => window.open('/admin/bullmq', '_blank'),
       roles: ['admin']
     },
     {
@@ -209,6 +229,7 @@ export default function ClippedDrawer() {
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText sx={{ ml: 1 }}>{item.text}</ListItemText>
+                {'endIcon' in item && item.endIcon}
               </ListItemButton>
             </ListItem>
           ))}

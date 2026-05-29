@@ -14,10 +14,17 @@ export const setupStore = (preloadedState?: Partial<RootState>) => {
   return configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(
-        apiSlice.middleware,
-        superfacilityApiSlice.middleware
-      ),
+      getDefaultMiddleware({
+        serializableCheck: {
+          ignoredActions: ['api/executeQuery/fulfilled'],
+          ignoredActionPaths: [
+            'payload',
+            'meta.baseQueryMeta',
+            'meta.arg.originalArgs'
+          ],
+          ignoredPaths: ['api.queries']
+        }
+      }).concat(apiSlice.middleware, superfacilityApiSlice.middleware),
     preloadedState,
     devTools: true
   })

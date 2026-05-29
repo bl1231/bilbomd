@@ -21,7 +21,7 @@ export default function LeidenResolutionSlider({
   value
 }: LeidenResolutionSliderProps) {
   const handleChange = (_event: Event, newValue: number | number[]) => {
-    const valueToSet = Array.isArray(newValue) ? newValue[0] : newValue
+    const valueToSet = Array.isArray(newValue) ? newValue[0]! : newValue
 
     setFieldValue('leiden_resolution', valueToSet)
   }
@@ -34,7 +34,7 @@ export default function LeidenResolutionSlider({
       <Grid
         container
         spacing={2}
-        alignItems="center"
+        sx={{ alignItems: 'center' }}
       >
         <Grid>
           <Chip
@@ -49,7 +49,7 @@ export default function LeidenResolutionSlider({
         </Grid>
         <Grid sx={{ flex: 1 }}>
           <Slider
-            value={value}
+            value={Number(value)}
             valueLabelFormat={valuetext}
             getAriaValueText={valuetext}
             step={0.01}

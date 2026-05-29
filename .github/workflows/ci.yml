@@ -8,6 +8,8 @@ on:
       - "docs/**/*.md"
       - "infra/**"
       - "test_scripts/**"
+      - "apps/worker/base-image-version"
+      - "apps/worker/bilbomd-worker-base.dockerfile"
   pull_request:
     branches: [main]
     paths-ignore:
@@ -15,6 +17,8 @@ on:
       - "docs/**/*.md"
       - "infra/**"
       - "test_scripts/**"
+      - "apps/worker/base-image-version"
+      - "apps/worker/bilbomd-worker-base.dockerfile"
   workflow_dispatch: {}
 
 permissions:
@@ -24,7 +28,7 @@ permissions:
 jobs:
   changes:
     name: Detect changes
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       ui: ${{ steps.filter.outputs.ui }}
@@ -45,19 +49,20 @@ jobs:
               - 'apps/backend/**'
               - 'tools/python/**'
               - 'packages/mongodb-schema/**'
+              - 'packages/bilbomd-types/**'
               - 'packages/md-utils/**'
               - 'packages/eslint-config/**'
-              - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - 'apps/backend/bilbomd-backend.dockerfile'
             ui:
               - 'apps/ui/**'
               - 'packages/mongodb-schema/**'
               - 'packages/eslint-config/**'
-              - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - 'apps/ui/bilbomd-ui.dockerfile'
             worker:
               - 'apps/worker/**'
@@ -65,35 +70,36 @@ jobs:
               - 'packages/mongodb-schema/**'
               - 'packages/md-utils/**'
               - 'packages/eslint-config/**'
-              - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - 'apps/worker/bilbomd-worker.dockerfile'
             scoper:
               - 'apps/scoper/**'
               - 'packages/mongodb-schema/**'
               - 'packages/eslint-config/**'
-              - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - 'apps/scoper/bilbomd-scoper.dockerfile'
             schema:
               - 'packages/mongodb-schema/**'
               - 'packages/eslint-config/**'
-              - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
             md-utils:
               - 'packages/md-utils/**'
+              - 'packages/bilbomd-types/**'
               - 'packages/mongodb-schema/**'
               - 'packages/eslint-config/**'
-              - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
 
   lint:
     name: Lint
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     needs: [changes]
     steps:
       - uses: actions/checkout@v6
@@ -146,7 +152,12 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       # Lint
       - name: Lint all apps and packages
@@ -158,7 +169,7 @@ jobs:
     name: Build & Push backend
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     permissions:
       contents: read
       packages: write
@@ -238,7 +249,7 @@ jobs:
     name: Build & Push ui
     if: needs.changes.outputs.ui == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     permissions:
       contents: read
       packages: write
@@ -317,7 +328,7 @@ jobs:
     name: Build & Push worker
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     permissions:
       contents: read
       packages: write
@@ -396,7 +407,7 @@ jobs:
     name: Build & Push scoper
     if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint, scoper-typecheck]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     permissions:
       contents: read
       packages: write
@@ -475,7 +486,7 @@ jobs:
     name: Build mongodb-schema
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -546,7 +557,12 @@ jobs:
           jq -r '.packageManager' package.json
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build schema
         run: pnpm -C packages/mongodb-schema run build
@@ -555,7 +571,7 @@ jobs:
     name: Build & Test md-utils
     if: needs.changes.outputs.md-utils == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -626,10 +642,17 @@ jobs:
           jq -r '.packageManager' package.json
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build dependencies
-        run: pnpm -C packages/mongodb-schema run build
+        run: |
+          pnpm -C packages/bilbomd-types run build
+          pnpm -C packages/mongodb-schema run build
 
       - name: Build md-utils
         run: pnpm -C packages/md-utils run build
@@ -641,7 +664,7 @@ jobs:
     name: Scoper typecheck
     if: needs.changes.outputs.scoper == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -693,7 +716,12 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared packages
         run: |
@@ -707,7 +735,7 @@ jobs:
     name: Test ui (unit)
     if: needs.changes.outputs.ui == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -759,7 +787,12 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build
@@ -774,7 +807,7 @@ jobs:
     name: Test worker (unit)
     if: needs.changes.outputs.worker == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -810,7 +843,12 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build
@@ -824,11 +862,11 @@ jobs:
       - name: Run worker unit tests
         run: pnpm -C apps/worker run test
 
-  backend-unit-tests:
-    name: Test backend (unit)
-    if: needs.changes.outputs.backend == 'true'
+  scoper-unit-tests:
+    name: Test scoper (unit)
+    if: needs.changes.outputs.scoper == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -864,7 +902,68 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
+
+      - name: Build shared schema
+        run: pnpm -C packages/mongodb-schema run build
+
+      - name: Build shared types
+        run: pnpm -C packages/bilbomd-types run build
+
+      - name: Run scoper unit tests
+        run: pnpm -C apps/scoper run test
+
+  backend-unit-tests:
+    name: Test backend (unit)
+    if: needs.changes.outputs.backend == 'true'
+    needs: [changes, lint]
+    runs-on: [ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Use Node (from .nvmrc if present)
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm version from package.json
+        id: pnpm_version
+        run: |
+          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
+          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@${{ steps.pnpm_version.outputs.pnpm_version }} --activate
+
+      - name: Determine pnpm store path
+        id: pnpm_store
+        run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.store_path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install deps
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build
@@ -882,10 +981,10 @@ jobs:
     name: Test backend (integration)
     if: needs.changes.outputs.backend == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     services:
       mongo:
-        image: mongo:7
+        image: mongo:8
         ports:
           - 27017:27017
         options: >-
@@ -936,7 +1035,12 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+            pnpm install --prefer-offline
+          else
+            pnpm install --frozen-lockfile --prefer-offline
+          fi
 
       - name: Build shared schema
         run: pnpm -C packages/mongodb-schema run build
@@ -968,7 +1072,7 @@ jobs:
 
   gate:
     name: Branch Protection Gate
-    runs-on: [ubuntu-22.04]
+    runs-on: [ubuntu-24.04]
     needs:
       [
         lint,
@@ -981,6 +1085,7 @@ jobs:
         backend-unit-tests,
         ui-unit-tests,
         worker-unit-tests,
+        scoper-unit-tests,
         scoper-typecheck,
         backend-integration-tests,
       ]
@@ -996,13 +1101,14 @@ jobs:
       BACKEND_UNIT: ${{ needs['backend-unit-tests'].result }}
       UI_UNIT: ${{ needs['ui-unit-tests'].result }}
       WORKER_UNIT: ${{ needs['worker-unit-tests'].result }}
+      SCOPER_UNIT: ${{ needs['scoper-unit-tests'].result }}
       SCOPER_TYPE: ${{ needs['scoper-typecheck'].result }}
       BACKEND_INT: ${{ needs['backend-integration-tests'].result }}
     steps:
       - name: Check build results
         run: |
           set -e
-          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT UI_UNIT WORKER_UNIT SCOPER_TYPE BACKEND_INT; do
+          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT UI_UNIT WORKER_UNIT SCOPER_UNIT SCOPER_TYPE BACKEND_INT; do
             result="${!job}"
             echo "$job result: $result"
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
@@ -1013,17 +1119,17 @@ jobs:
           echo "All required jobs succeeded"
 
   coverage-report:
-    name: Update Coverage in README
-    runs-on: ubuntu-22.04
-    needs: [backend-unit-tests, ui-unit-tests, worker-unit-tests]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    name: Coverage Report
+    runs-on: ubuntu-24.04
+    needs: [backend-unit-tests, ui-unit-tests, worker-unit-tests, scoper-unit-tests]
+    if: github.event_name == 'pull_request'
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -1041,18 +1147,13 @@ jobs:
         run: pnpm -C apps/backend run test
 
       - name: Run ui tests with coverage
-        run: pnpm -C apps/ui run test
+        run: pnpm -C apps/ui run test:coverage
 
       - name: Run worker tests with coverage
         run: pnpm -C apps/worker run test
 
-      - name: Update README with coverage
-        run: node .github/scripts/update-coverage-readme.js
+      - name: Run scoper tests with coverage
+        run: pnpm -C apps/scoper run test
 
-      - name: Commit coverage update
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update test coverage in README [skip ci]"
-          git push
+      - name: Report coverage
+        run: node .github/scripts/update-coverage-readme.js

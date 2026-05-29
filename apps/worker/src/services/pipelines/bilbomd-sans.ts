@@ -1,19 +1,24 @@
 import { Job as BullMQJob } from 'bullmq'
 import { BilboMdSANSJob } from '@bilbomd/mongodb-schema'
+import path from 'node:path'
+import fs from 'fs-extra'
+import { config } from '../../config/config.js'
 import {
   runPdb2Crd,
   runMinimize,
   runHeat,
   runMolecularDynamics
 } from '../functions/bilbomd-step-functions.js'
-// import {
-//   runOmmMinimize,
-//   runOmmHeat,
-//   runOmmMD,
-//   prepareOpenMMConfig
-// } from '../functions/openmm-functions.js'
+import {
+  runOmmMinimize,
+  runOmmHeat,
+  runOmmMD,
+  prepareOpenMMConfig
+} from '../functions/openmm-functions.js'
+import { runCifToPdb, runPrepPdb } from '../functions/pdb-to-crd.js'
 import {
   extractPDBFilesFromDCD,
+  mirrorOmmMdToPepsiSANS,
   remediatePDBFiles,
   runPepsiSANSOnPDBFiles,
   runGASANS,
@@ -64,6 +69,16 @@ const processBilboMDSANSJob = async (MQjob: BullMQJob) => {
   await initializeJob(MQjob, foundJob)
   await progress.update(10)
 
+  // Convert CIF → PDB before any engine-specific processing
+  if (foundJob.pdb_file?.toLowerCase().endsWith('.cif')) {
+    await MQjob.log('start cif-to-pdb')
+    foundJob.pdb_file = await runCifToPdb({
+      uuid: foundJob.uuid,
+      pdb_file: foundJob.pdb_file
+    })
+    await MQjob.log(`end cif-to-pdb: ${foundJob.pdb_file}`)
+  }
+
   if (engine === 'CHARMM') {
     // PDB to CRD/PSF for 'pdb' mode
     await MQjob.log('start pdb2crd')
@@ -101,32 +116,47 @@ const processBilboMDSANSJob = async (MQjob: BullMQJob) => {
     await MQjob.log('end remediate')
     await progress.update(70)
   } else {
+    // Remove waters and ions — incompatible with the implicit-solvent force field
+    await MQjob.log('start prep-pdb')
+    await runPrepPdb({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
+    await MQjob.log('end prep-pdb')
+
     // Prepare OpenMM config YAML
     await MQjob.log('start openmm-config')
-    // await prepareOpenMMConfig(foundJob)
+    await prepareOpenMMConfig(foundJob)
     await MQjob.log('end openmm-config')
 
     // OpenMM minimization
     await MQjob.log('start minimize')
-    // await runOmmMinimize(MQjob, foundJob)
+    await runOmmMinimize(MQjob, foundJob)
     await MQjob.log('end minimize')
+    // Place minimized PDB at the job root so prepareBilboMDSANSResults can copy it.
+    const workDir = path.join(config.uploadDir, foundJob.uuid)
+    await fs.copy(
+      path.join(workDir, 'openmm', 'minimize', 'minimized.pdb'),
+      path.join(workDir, 'minimization_output.pdb'),
+      { overwrite: true }
+    )
     await progress.update(20)
 
     // OpenMM heating
     await MQjob.log('start heat')
-    // await runOmmHeat(MQjob, foundJob)
+    await runOmmHeat(MQjob, foundJob)
     await MQjob.log('end heat')
     await progress.update(30)
 
     // OpenMM molecular dynamics
     await MQjob.log('start md')
-    // await runOmmMD(MQjob, foundJob)
+    await runOmmMD(MQjob, foundJob)
     await MQjob.log('end md')
     await progress.update(50)
 
-    // Generate MP4 movies from DCD files
-    // We don't want to await this.
-    // Just fire and forget.
+    // Mirror PDB frames from openmm/md/rg_{N}/ into pepsisans/rg{N}/
+    await MQjob.log('start mirror-md-to-pepsisans')
+    await mirrorOmmMdToPepsiSANS(foundJob)
+    await MQjob.log('end mirror-md-to-pepsisans')
+
+    // Generate MP4 movies from DCD files — fire and forget.
     enqueueMakeMovie(MQjob, foundJob)
 
     await progress.update(70)

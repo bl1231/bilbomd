@@ -12,6 +12,7 @@ const stepStatusSchema = new Schema({
 
 const stepsSchema = new Schema<IBilboMDSteps>({
   alphafold: { type: stepStatusSchema, required: false },
+  openfold: { type: stepStatusSchema, required: false },
   reduce: { type: stepStatusSchema, required: false },
   rnaview: { type: stepStatusSchema, required: false },
   pdb2crd: { type: stepStatusSchema, required: false },

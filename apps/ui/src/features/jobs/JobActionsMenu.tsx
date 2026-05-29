@@ -2,6 +2,7 @@ import React from 'react'
 import MenuItem from '@mui/material/MenuItem'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import DeleteIcon from '@mui/icons-material/Delete'
+import DownloadIcon from '@mui/icons-material/Download'
 import Divider from '@mui/material/Divider'
 import { StyledMenu } from '../../themes/components/StyledDropdownMenu'
 
@@ -10,11 +11,14 @@ interface JobActionsMenuProps {
   jobType: string
   jobTitle: string
   jobStatus: string
+  resultsReady?: boolean
+  isAdmin?: boolean
   anchorEl: HTMLElement | null
   open: boolean
   onClose: () => void
   onResubmit: (id: string, type: string) => void
-  onDelete: (id: string, title: string) => void
+  onDelete: (id: string, title: string, status: string) => void
+  onDownload: (id: string) => void
 }
 
 const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
@@ -22,11 +26,14 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
   jobType,
   jobTitle,
   jobStatus,
+  resultsReady,
+  isAdmin = false,
   anchorEl,
   open,
   onClose,
   onResubmit,
-  onDelete
+  onDelete,
+  onDownload
 }) => {
   const handleResubmitClick = () => {
     onResubmit(jobId, jobType)
@@ -34,7 +41,12 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
   }
 
   const handleDeleteClick = () => {
-    onDelete(jobId, jobTitle)
+    onDelete(jobId, jobTitle, jobStatus)
+    onClose()
+  }
+
+  const handleDownloadClick = () => {
+    onDownload(jobId)
     onClose()
   }
 
@@ -50,11 +62,19 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
         <AutorenewIcon />
         Resubmit
       </MenuItem>
+      <MenuItem
+        onClick={handleDownloadClick}
+        disableRipple
+        disabled={jobStatus !== 'Completed' || resultsReady === false}
+      >
+        <DownloadIcon />
+        Download Results
+      </MenuItem>
       <Divider />
       <MenuItem
         onClick={handleDeleteClick}
         disableRipple
-        disabled={['Running', 'Submitted'].includes(jobStatus)}
+        disabled={['Running', 'Submitted'].includes(jobStatus) && !isAdmin}
         sx={{ color: 'error.main' }}
       >
         <DeleteIcon color='error' />

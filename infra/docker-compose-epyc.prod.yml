@@ -1,0 +1,274 @@
+# --------------------------------------------------------------------------------------
+# Use this Docker compose file for production deployment to Epyc.
+# You may need to create the following volumes before running this file:
+#
+#  docker volume create bilbomd-mongodb
+#  docker volume create bilbomd-redis-cache
+#  docker volume create bilbomd-scratch
+#
+# You will also need to copy .env.example to .env.prod and maybe adjust some
+# of the values in the .env.prod file.
+# --------------------------------------------------------------------------------------
+volumes:
+  mongodb:
+    name: bilbomd-mongodb
+    external: true
+  redis-cache:
+    name: bilbomd-redis-cache
+    external: true
+  scratch:
+    name: bilbomd-scratch
+    external: true
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  # ------------------------------------------------------------------------------------
+  mongodb:
+    image: mongo:8.3.2
+    pull_policy: missing
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: "4g"
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u
+        $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
+      interval: 10s
+      timeout: 10s
+      retries: 7
+      start_period: 20s
+    env_file:
+      - path: .env.prod
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
+      MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
+    ports:
+      - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
+    volumes:
+      - mongodb:/data/db
+      - /backups/databases/bilbomd:/backups
+    networks:
+      - app-network
+
+  # ------------------------------------------------------------------------------------
+  redis:
+    image: redis:8.8.0
+    pull_policy: missing
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "1g"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    env_file:
+      - path: .env.prod
+    ports:
+      - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - redis-cache:/data
+    networks:
+      - app-network
+
+  # ------------------------------------------------------------------------------------
+  backend:
+    image: ghcr.io/bl1231/bilbomd-backend:2.9.2
+    pull_policy: missing
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: "4g"
+    restart: always
+    user: "${UID:-1001}:${GID:-1001}"
+    env_file:
+      - path: .env.prod
+    ports:
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
+    volumes:
+      - /bilbomd/prod/uploads:/bilbomd/uploads
+      - /bilbomd/prod/logs:/bilbomd/logs
+      - scratch:/bilbomd/scratch
+    networks:
+      - app-network
+    depends_on:
+      - mongodb
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3500/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ------------------------------------------------------------------------------------
+  worker:
+    image: ghcr.io/bl1231/bilbomd-worker:2.14.2
+    pull_policy: missing
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "18"
+          memory: "32g"
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: always
+    read_only: true
+    user: "${UID:-1001}:${GID:-1001}"
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    env_file:
+      - path: .env.prod
+    networks:
+      - app-network
+    volumes:
+      - /bilbomd/prod/uploads:/bilbomd/uploads
+      - /bilbomd/prod/logs:/bilbomd/logs
+      - scratch:/bilbomd/scratch
+      - /run/nvidia-mps:/run/nvidia-mps
+      - ./worker-passwd-epyc:/etc/passwd:ro
+    environment:
+      - ENABLE_BILBOMD_OPENFOLD=${ENABLE_BILBOMD_OPENFOLD:-false}
+      - OF3_TIMEOUT_MS=${OF3_TIMEOUT_MS:-3600000}
+      - OF3_SERVICE_URL=http://of3-service:8000
+      - COLABFOLD_TIMEOUT_MS=${COLABFOLD_TIMEOUT_MS:-3600000}
+      - COLABFOLD_SERVICE_URL=http://colabfold-service:8000
+      - MPLCONFIGDIR=/tmp/matplotlib
+      - XDG_CACHE_HOME=/tmp/cache
+      - OPENMM_MD_CONCURRENCY=${OPENMM_MD_CONCURRENCY:-1}
+      - CUDA_MPS_PIPE_DIRECTORY=/run/nvidia-mps
+      - CUDA_MPS_LOG_DIRECTORY=/run/nvidia-mps-log
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      colabfold-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ------------------------------------------------------------------------------------
+  of3-service:
+    image: ghcr.io/bl1231/bilbomd-of3-service:0.1.0
+    pull_policy: missing
+    shm_size: "16gb"
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: no
+    env_file:
+      - path: .env.prod
+    environment:
+      - UPLOAD_DIR=/bilbomd/uploads
+      - OF3_DATA_DIR=/bilbomd/of3-data
+    volumes:
+      - /bilbomd/prod/uploads:/bilbomd/uploads
+      - /af2_data/of3:/bilbomd/of3-data:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ------------------------------------------------------------------------------------
+  colabfold-service:
+    image: ghcr.io/bl1231/bilbomd-colabfold-service:0.1.0
+    pull_policy: missing
+    shm_size: "16gb"
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: no
+    env_file:
+      - path: .env.prod
+    environment:
+      - UPLOAD_DIR=/bilbomd/uploads
+      - COLABFOLD_DATA_DIR=/cache
+    volumes:
+      - /bilbomd/prod/uploads:/bilbomd/uploads
+      - /bilbomd/colabfold-cache:/cache:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ------------------------------------------------------------------------------------
+  ui:
+    image: ghcr.io/bl1231/bilbomd-ui:2.20.0
+    pull_policy: missing
+    security_opt:
+      - seccomp:./seccomp/bilbomd-seccomp.json
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+    env_file:
+      - path: .env.prod
+    ports:
+      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
+    networks:
+      - app-network
+    depends_on:
+      - backend
+      - mongodb
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/version-info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

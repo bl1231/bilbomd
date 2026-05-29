@@ -9,7 +9,7 @@ type JobSuccessAlertProps = {
     message: string
     jobid: string
     uuid: string
-    md_engine: string
+    md_engine?: string
   }
   jobType: string
 }
@@ -20,9 +20,16 @@ const JobSuccessAlert = ({ jobResponse, jobType }: JobSuccessAlertProps) => {
     <Alert severity="success">
       <AlertTitle>Job submitted!</AlertTitle>
       <Typography>
-        Your <b>BilboMD {jobType} job</b> has been submitted and will use
-        <b> {jobResponse?.md_engine} </b>
-        for the Molecular Dynamics step.
+        Your <b>BilboMD {jobType} job</b> has been submitted
+        {jobResponse?.md_engine ? (
+          <>
+            {' '}
+            and will use <b>{jobResponse.md_engine}</b> for the Molecular
+            Dynamics step.
+          </>
+        ) : (
+          '.'
+        )}
       </Typography>
       {jobResponse && jobResponse.jobid && (
         <Typography sx={{ my: 1 }}>

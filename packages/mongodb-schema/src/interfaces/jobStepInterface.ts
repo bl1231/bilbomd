@@ -13,6 +13,7 @@ interface IStepStatus {
 // Interface for steps status
 interface IBilboMDSteps {
   alphafold?: IStepStatus
+  openfold?: IStepStatus
   reduce?: IStepStatus
   rnaview?: IStepStatus
   pdb2crd?: IStepStatus

@@ -1,5 +1,367 @@
 # @bilbomd/ui
 
+## 2.20.0
+
+### Minor Changes
+
+- 97529b6: Add `ORCID_AUTH_ENABLED` feature flag (default `false`) that gates the ORCID OAuth login flow. When disabled, the backend does not register the `/api/v1/auth/orcid/*` routes and skips OIDC discovery on startup, and the UI `/login` page redirects to `/magicklink`. ORCID will stay disabled in production until the hardening work tracked in issue #817 is complete.
+- e2d4125: ORCID data hygiene & UX (PR 3 of issue #817). Separates the internal `username` (an opaque, URL-safe identifier) from the human-readable `displayName`, removes dead OAuth-token storage, and aligns the sign-in UI with ORCID's official branding guidelines.
+
+  **Option A: separate internal ID from display label**
+  - ORCID accounts now get an opaque `username = orcid-${orcidId}` (e.g., `orcid-0000-0002-1234-5678`). Deterministic, unique by construction, URL-safe, and decoupled from any human name.
+  - New backend helper `userDisplayName()` derives a display label from `firstName + lastName`, falling back to `username` for legacy users with no name fields populated.
+  - Access-token JWT payload now includes a `displayName` claim, computed at sign time. The UI `useAuth` hook exposes it; legacy tokens without the claim fall back to `username`.
+  - UI display sites (`Breadcrumbs`, `Settings` → `UserAvatar`) now show `displayName` instead of `username`. URL routes, job-ownership filters, and admin-edit forms still use `username`.
+  - Admin-edit username regex relaxed from `[a-zA-Z0-9_]+` to `[a-zA-Z0-9_-]+` so ORCID-derived usernames pass validation.
+
+  **H3: stop persisting ORCID access/refresh tokens**
+  - Dropped `accessToken`, `refreshToken`, `tokenType`, `scope`, and `expiresIn` from the User schema `oauth[]` subdocument and from the OAuth session profile. We never call ORCID APIs on the user's behalf after sign-in, so persisting the bearer token only enlarged the blast radius if the database were leaked. Existing data on old user docs is harmless and will fall off on next login.
+
+  **H4: confirmation page becomes read-only**
+  - `OrcidConfirmation` is no longer a misleading editable form — Formik + Yup + `TextField` are gone. Replaced with read-only display rows that surface First Name, Last Name, Email, ORCID iD, the derived BilboMD display name, and the opaque BilboMD account ID. Clicking "Confirm and Continue" calls finalize with an empty body (the backend has always trusted the session profile, not the request body).
+
+  **L4: branding text**
+  - `Login.tsx` heading and button updated from "Sign in with ORCID" to "Sign in with ORCID iD" per ORCID's official sign-in guidelines.
+
+  **L5: ORCID brand asset**
+  - The existing `apps/ui/src/assets/orcid.png` is the ORCID wordmark. ORCID's sign-in guidelines call for the circular green iD icon on sign-in buttons; the wordmark is for "about" contexts. Flagged for replacement before the production-credential review demo.
+
+### Patch Changes
+
+- 5c15d8a: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+- 5c15d8a: Enable `noUncheckedIndexedAccess` TypeScript compiler option in apps/ui.
+
+  Array and object index access now returns `T | undefined` instead of `T`, catching potential out-of-bounds access at compile time. Fixed 175 type errors across 35 files by adding non-null assertions on bounds-checked loops, typed constant tuples, and explicit `??` fallbacks where undefined is a real possibility.
+
+- b94577a: Security hardening for the ORCID OAuth login flow (PR 2 of issue #817).
+  - **Account-takeover guard.** The callback and the finalize endpoints now both refuse to issue JWTs when the verified ORCID email matches an existing BilboMD account that is not already linked to this ORCID iD. Users are redirected to `/auth/orcid-error?reason=email_already_registered` and pointed at a BilboMD administrator to link their account. Previously the flow would silently sign the user in as the pre-existing (e.g., legacy magic-link) account.
+  - **Require a primary, verified ORCID email.** The email-selection fallback that accepted any verified email — and then any email at all — has been removed. If an ORCID profile has no `primary && verified` email, the user is redirected to `/auth/orcid-error?reason=no_primary_verified` with instructions to update their ORCID profile. Closes the related "Pending status" dead code in the finalize handler.
+  - **Verify the ID token and check the nonce.** The hand-rolled axios `POST /oauth/token` is replaced with `openid-client.authorizationCodeGrant`, which validates the ID-token signature against the discovered JWKS, the `iss`/`aud` claims, the `nonce` (matched to the cookie set in `handleOrcidLogin`), and the `state`. Identity claims (`sub`, `given_name`, `family_name`, `name`) now come from the verified ID token rather than from a separate unauthenticated API call. The Public-API call is kept only for the email (not returned by the `openid` scope).
+  - **Tighten state/nonce cookies.** `handleOrcidLogin` cookies switched from `SameSite=None` to `SameSite=Lax` (ORCID redirects back to the same origin) and gained a 5-minute `maxAge` so abandoned sign-in flows cannot leave state behind.
+  - **Friendlier error page.** `OrcidError.tsx` now renders human-readable explanations for `no_primary_verified`, `email_already_registered`, `token_exchange`, `missing_id_token`, `userinfo_fetch`, `finalize`, and `session` reasons.
+
+- 6f17ac5: Display a warning alert on the single job page and public job page when MD ran on CPU due to CUDA being unavailable.
+- Updated dependencies [e2d4125]
+  - @bilbomd/mongodb-schema@2.7.0
+
+## 2.19.2
+
+### Patch Changes
+
+- 29200d1: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+
+## 2.19.1
+
+### Patch Changes
+
+- a5da1c8: Hide BilboMD OF3 nav item and Queued column when deployed to NERSC. Queue Time is shown instead of Queued on NERSC.
+
+## 2.19.0
+
+### Minor Changes
+
+- c1e6adb: Split job timing into separate Queued and Runtime columns. Runtime now shows time from when processing started (time_started) to completion, excluding queue wait. The new Queued column shows time from submission until processing began (or until now for pending/submitted jobs).
+
+### Patch Changes
+
+- 844bd2d: Replace print() with Python logging in all OpenMM scripts, add a post-minimization energy gate, and surface OpenMM stderr errors to the UI job status pages.
+
+  All OpenMM Python scripts (minimize.py, heat.py, md.py, plot_rgyrs.py and all utils) now use a shared `utils/logger.py` logger. INFO-level output goes to stdout (visible as `[step][stdout]` in worker logs); WARNING and ERROR go to stderr (`[step][stderr]`), matching the log levels already applied by the Node.js worker.
+
+  A post-minimization energy gate in minimize.py checks potential energy after `minimizeEnergy()` completes and exits with code 1 if the value is NaN/Inf or exceeds 1,000,000 kJ/mol — catching severe atom-clash failures at the correct step rather than as an opaque NaN crash during heating.
+
+  The heating loop in heat.py now reports potential energy alongside temperature at each 1000-step checkpoint and includes NaN position detection with an early abort.
+
+  A pre-minimization clash detection step (clash_check.py) was added to identify severe atom overlaps before minimization begins.
+
+  The UI (SingleJobPage and PublicJobPage) now displays the stderr error message from the failed step in the job failure alert, giving users actionable feedback instead of a generic error message.
+
+## 2.18.0
+
+### Minor Changes
+
+- c302402: Add CIF file support to the BilboMD SANS job form. Users can now upload _.cif (mmCIF) structure files in addition to _.pdb files, matching the capability of other BilboMD pipeline forms.
+
+### Patch Changes
+
+- 73c535c: Fix OF3 pipeline issues and add Jobs runtime column.
+  - Correct the OpenFold3 GitHub link in the OF3 job form instructions to point to the right repository (aqlaboratory/openfold-3)
+  - Add "Experimental - Please report problems to Scott" label to the OF3 job form header
+  - Fix 404 error on the OF3 "Download Example Data" button by wiring up the missing backend route and handler
+  - Add a Runtime column to the Jobs table showing wall-clock duration from submission to completion for all job types (live for running jobs)
+
+## 2.17.0
+
+### Minor Changes
+
+- d48216a: Replace all static PNG pipeline schematics with inline SVG React components. The SVGs scale cleanly at any resolution, respond to MUI dark/light theme automatically, and eliminate the need for separate dark-mode PNG files. Pipelines covered: AF + OpenMM, AF + CHARMM, Classic PDB + OpenMM, Classic PDB + CHARMM, Classic CRD/PSF, Auto + OpenMM, Auto + CHARMM, OpenFold3, and SANS.
+
+## 2.16.2
+
+### Patch Changes
+
+- 6502a18: Fix OF3 "Load Example Data" to populate the correct protein-DNA complex example: a 203-aa protein plus two 24-nt DNA strands, matching the actual files in `example-data/of3/`. Previously a different, unrelated 823-aa single-protein sequence was hard-coded.
+
+## 2.16.1
+
+### Patch Changes
+
+- 3ae2172: Fix Color by Domain preset in Molstar viewer for Classic CRD jobs.
+
+  Two-phase component creation prevents "Could not find node" errors when coloring ensemble structures. Also stores `md_constraints` in MongoDB for Classic CRD jobs so the domain-coloring preset has the constraint data it needs.
+
+## 2.16.0
+
+### Minor Changes
+
+- 6a693d2: Fix DNA representation consistency in Molstar viewer and add domain-based coloring.
+  - #768: DNA now renders consistently as cartoon (tube/slab) for both CHARMM and OpenMM pipelines. The fix uses a residue-name-based selection that recognises standard PDB names (DA, DT, DG, DC) and CHARMM names (ADE, GUA, CYT, THY) explicitly.
+  - #769: Add "Color by Domain" toggle button above the Molstar viewport. When active, fixed-body regions are colored blue and rigid-body regions orange, matching the PyMol movie scheme; flexible linkers retain the default chain coloring. The button appears whenever MD constraint data is available, independent of ensemble count.
+
+### Patch Changes
+
+- ab9a1dd: Update BilboMD citation to the published NAR 2026 paper. Worker README files now include the new citation and a BibTeX entry. UI pages (Home, About, Help, Acknowledgments) now show a copyable BibTeX block alongside the citation.
+- Updated dependencies [6a693d2]
+  - @bilbomd/bilbomd-types@1.6.1
+
+## 2.15.2
+
+### Patch Changes
+
+- 9c48e1a: Fix NaN SVG errors in scoper job FoXS chart. Guard against NaN/Infinity error values in residuals calculation and handle fewer than 2 FoXS entries gracefully.
+
+## 2.15.1
+
+### Patch Changes
+
+- 5922e9d: Allow admins to delete jobs stuck in Running or Submitted state. A warning is shown in the confirmation dialog explaining that the underlying simulation process may continue running.
+- 655c59b: Fix OF3 job type display and add Rg/conformations to all MD pipelines. Corrects "Unknown Job Type" for OF3 jobs, fixes a runtime error when rendering OF3 job details, and makes the sans, alphafold, and of3 handlers consistent with pdb/crd/auto by showing Number of MD Runs, Rg values, and Number of conformations.
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+
+## 2.15.0
+
+### Minor Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+### Patch Changes
+
+- b9c8a64: Update all npm/pnpm dependencies to latest versions within semver ranges.
+
+  Notable updates: mongoose 9.4→9.6, molstar 5.8→5.9, react-router 7.14→7.15, vite 8.0.7→8.0.11, bullmq 5.73→5.76, msw 2.13→2.14, MUI 9.0.0→9.0.1, react/react-dom 19.2.5→19.2.6.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/bilbomd-types@1.6.0
+  - @bilbomd/mongodb-schema@2.6.0
+
+## 2.14.6
+
+### Patch Changes
+
+- 6ca5249: Harden Docker Compose deployments: remove Docker socket mount from worker, add no-new-privileges to all services, set read_only root filesystem on worker containers with /tmp tmpfs, and drop all Linux capabilities from worker. Addresses F-7 pen test finding (Docker socket privilege escalation).
+- b41b107: Add custom seccomp profile blocking AF_ALG sockets (CVE-2026-31431) and other dangerous syscalls not needed by BilboMD containers. Profile applied to all services in all Docker Compose environments. Addresses F-6 pen test finding.
+- be7f034: Strip all SUID/SGID bits from container filesystems before dropping to non-root user. Added to backend, ui, worker-base, worker, scoper-base, and scoper Dockerfiles. Addresses F-6 pen test finding (SUID binary privilege escalation).
+- e1cead2: Add CHARMM keyword allowlist to frontend const.inp validation. Dangerous directives like `system`, `open`, and `read` are now rejected client-side before upload, giving immediate feedback and layering the defence already present on the backend.
+- Updated dependencies [24b6dc2]
+  - @bilbomd/mongodb-schema@2.5.5
+
+## 2.14.5
+
+### Patch Changes
+
+- a5fd493: Add PDB preparation step (strip waters and ions) to SANS OpenMM pipeline. Rename strip_ions.py → prep_pdb.py and runStripIons → runPrepPdb for accuracy — the script has always removed both HOH waters and metal/polyatomic ions.
+
+  Add GAFF2/metal cofactor alerts to the SANS new job form, matching the behaviour already present on the Classic PDB and Auto forms.
+
+## 2.14.4
+
+### Patch Changes
+
+- f2032ce: Fix stuck step message on job pages and add adaptive polling. Step messages now reflect the currently Running step instead of relying on iteration order, which caused stale messages from earlier completed steps to persist. SingleJobPage now polls at 10s while a job is Running, stops polling on terminal states, and falls back to 30s for other states.
+
+## 2.14.3
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+- Updated dependencies [964095e]
+  - @bilbomd/bilbomd-types@1.5.4
+
+## 2.14.2
+
+### Patch Changes
+
+- b5d24dd: Improve error message on failed job page: logged-in users see their job UUID for support reference; anonymous users see a prompt to create an account for personalized support.
+- 04bd25d: Add Molstar viewer support for SANS jobs.
+
+  Worker: fix SANS ensemble PDB files to use proper MODEL N / ENDMDL formatting so Molstar can load each conformation as a separate assembly. Populate results.sans.ensembles in MongoDB after each SANS job completes.
+
+  UI: enable the Molstar viewer for completed SANS jobs in SingleJobPage. Viewer.tsx now routes SANS jobs through the same ensemble loading path as classic/auto/alphafold jobs.
+
+## 2.14.1
+
+### Patch Changes
+
+- ff2b1f4: Fix MD movies not appearing without manual page refresh for SANS and OpenMM jobs by using RTK Query's built-in pollingInterval instead of a broken manual setInterval.
+
+## 2.14.0
+
+### Minor Changes
+
+- c764232: Enforce engine-driven input mode across all job forms. Classic form: MD engine selection now drives input format (CHARMM requires CRD/PSF from CHARMM-GUI, OpenMM accepts PDB/CIF). Auto, AlphaFold, and SANS forms: CHARMM engine option hidden, defaulting to OpenMM. Prevents PDB-to-CRD/PSF conversion failures with non-standard residues. Metal cofactor warning now suggests CHARMM-GUI with inline link button. Fix Classic form regressions: Conformations per Rg defaults to 600 for OpenMM, auto-Rg validation no longer requires manual field interaction. Fix Help page pipeline schematic images for dark mode support.
+
+### Patch Changes
+
+- 26b85b8: Update BilboMD citation to the published NAR 2026 paper. Replaces the Pelikan et al. 2009 Gen Physiol Biophys reference with Classen et al. 2026 Nucleic Acids Research (doi: 10.1093/nar/gkag377) across the Home, About, Help, and Acknowledgments pages.
+
+## 2.13.1
+
+### Patch Changes
+
+- d0504b0: Fix UI cofactor alerts to reflect GAFF2 support for organic small molecules. Split STRIPPABLE_COFACTORS into GAFF_COFACTORS (organic, now parameterized via GAFF2) and METAL_COFACTORS (heme/porphyrins, still removed). FAD and similar molecules now show a blue info alert instead of a yellow warning.
+- cde25c7: Fix Molstar viewer not showing glycans, cofactors, and ions on initial load. Apply StructurePreset to all ensemble structures and add branched entity support to display presets.
+- Updated dependencies [d0504b0]
+  - @bilbomd/bilbomd-types@1.5.3
+
+## 2.13.0
+
+### Minor Changes
+
+- d2e967c: Upgrade MUI core packages to v9 and MUI X Data Grid to v9. Migrate system props (`alignItems`, `justifyContent`, `direction`, `display`, `mt`, `mb`, `mx`, `fontWeight`, `textAlign`, etc.) to `sx` prop across 41 components. Update deprecated icon imports (`Outline` → `Outlined`). Migrate `MenuProps.PaperProps` to `slotProps.paper`. Remove legacy `@emotion/core` dependency.
+
+## 2.12.0
+
+### Minor Changes
+
+- e99111b: Add admin-only BullMQ dashboard access. Admins can now open the bull-board queue dashboard via a new sidebar link. Protected by nginx auth_request using the session cookie, so no unauthenticated access is possible.
+
+### Patch Changes
+
+- 57f8495: Bump non-major npm dependencies (bullmq, vite, vitest, react-router, openid-client, prettier, typescript, and others).
+- Updated dependencies [57f8495]
+  - @bilbomd/bilbomd-types@1.5.2
+  - @bilbomd/mongodb-schema@2.5.4
+
+## 2.11.3
+
+### Patch Changes
+
+- Updated dependencies [e24f1c6]
+  - @bilbomd/mongodb-schema@2.5.3
+
+## 2.11.2
+
+### Patch Changes
+
+- 54ad7a0: Fix NaN crash in Scoper FoXS plots by guarding against zero error values in residual calculation and empty/non-finite domain values in Y-axis — mirrors the same fix applied to FoXSAnalysis in #573.
+
+## 2.11.1
+
+### Patch Changes
+
+- bf1837b: Replace npm-run-all with pnpm && chaining in all build scripts. Removes an unnecessary dependency that called npm run internally rather than pnpm run.
+
+## 2.11.0
+
+### Minor Changes
+
+- afa3f90: Enhance SAXS Data Preview plot with green Guinier region and low-SNR warning bands. The Guinier fit region is now highlighted in green, and any q-ranges where σ(q) > I(q) (SNR < 1) are highlighted in red so users can see at a glance which portions of their experimental data may be unreliable.
+
+## 2.10.1
+
+### Patch Changes
+
+- f01ad72: Fix FoXS plot visual break caused by low-SNR data points (#572).
+  - Filter data points where error ≥ intensity (SNR < 1) before plotting; these
+    points produce negative lower error-bar bounds that break log-scale rendering
+  - Display a count of hidden low-SNR points as a caption below the chart title
+  - Add Recharts ErrorBar to the experimental-intensity line so data uncertainty
+    is visible for the remaining points
+  - Replace `domain={['auto','auto']}` on log-scale Y-axes with an explicit
+    floor-of-log10 domain function to prevent Recharts auto-domain artifacts
+  - Add `hasSaxsQualityIssues()` to ValidationFunctions for future per-form
+    data-quality warnings (infrastructure only; per-form integration is a
+    follow-up task)
+
+## 2.10.0
+
+### Minor Changes
+
+- ba1931f: Add SAXS curve preview with Guinier region highlight to the Classic job submission form.
+
+### Patch Changes
+
+- 3a11ee6: Show KGSRNA in the Engine column for Scoper jobs in the Jobs table.
+
+## 2.9.1
+
+### Patch Changes
+
+- a392327: Fix Molstar viewer not displaying Mg2+ ions for Scoper job results. Apply StructurePreset for Scoper structures so the polymer (cartoon) and ions (spacefill) are both rendered correctly.
+- e182790: Show KGSRNA instead of CHARMM as the MD Engine for Scoper jobs in the job details panel.
+- 7d8ebdc: Update all npm dependencies to latest minor/patch versions. Includes axios 1.15, bullmq 5.73.1, @bull-board 6.21, nodemailer 8.0.5, react 19.2.5, vite 8.0.7, vitest 4.1.3, turbo 2.9.5, and MUI 7.3.10.
+- Updated dependencies [82d0bf4]
+  - @bilbomd/mongodb-schema@2.5.2
+  - @bilbomd/bilbomd-types@1.5.1
+
+## 2.9.0
+
+### Minor Changes
+
+- f3ca090: Add support for mmCIF (.cif) file uploads in Classic/pdb and Auto job types.
+
+  Users can now upload AlphaFold 3 (or any standard mmCIF) files directly into BilboMD without manual conversion. The frontend and backend validate chain IDs and residue names from the `_atom_site` loop block using the same `SUPPORTED_PDB_RESIDUES` allowlist used for PDB validation. The worker converts CIF to PDB at pipeline start using biopython before CHARMM or OpenMM processing.
+
+### Patch Changes
+
+- d936a9e: Reject PDB files containing multiple MODEL/ENDMDL records on form submission. Affects Classic, Auto, and SANS job forms.
+- Updated dependencies [f3ca090]
+  - @bilbomd/bilbomd-types@1.5.0
+
+## 2.8.2
+
+### Patch Changes
+
+- d9a702d: Update all dependencies. Patch/minor bumps across the board: bullmq, dotenv, mongoose, eslint, molstar, react-router, msw, vite, sass-embedded, @types/node, turbo. Bump @types/nodemailer from ^7 to ^8 to match the already-upgraded nodemailer v8 runtime.
+- Updated dependencies [d9a702d]
+  - @bilbomd/mongodb-schema@2.5.1
+
+## 2.8.1
+
+### Patch Changes
+
+- eeb1eed: Fix Dependabot PRs failing CI due to pnpm frozen lockfile mismatch. CI now skips --frozen-lockfile when the PR author is dependabot[bot].
+- fc1be50: Move the supported PDB residue list to a single constant (`SUPPORTED_PDB_RESIDUES`) in `@bilbomd/bilbomd-types`, shared by both the backend validator and the frontend `hasAllowedResiduesOnly` check. Eliminates the risk of the two lists diverging silently. Also adds common ions (MG, CA, ZN, etc.) and HSD to the allowed set, and adds the missing `pdbCheck()` to the Auto job form schema.
+- Updated dependencies [fc1be50]
+  - @bilbomd/bilbomd-types@1.4.1
+
+## 2.8.0
+
+### Minor Changes
+
+- 408a810: Add toggle buttons to show/hide ensemble structures in the Molstar viewer. A dedicated panel above the 3D canvas renders one button per ensemble size (e.g. "Size 1", "Size 2", "Size 3"), allowing users to independently show or hide each ensemble. Closes #251.
+- 474cef7: Add results_ready flag to track results packaging outcome independently of job status.
+
+  Jobs that complete all MD science steps but fail during final tar.gz creation now remain
+  Completed rather than Failed. A new results_ready boolean field (false by default) is set
+  to true only after a successful archive is created, making the packaging outcome observable.
+
+  The UI disables the Download Results button and shows a warning when results_ready is false,
+  and surfaces download errors to the user via an Alert instead of silently logging to console.
+
+### Patch Changes
+
+- ada4522: Remove eslint-plugin-react dependency. With the automatic JSX transform (`react-jsx`) and TypeScript, the plugin's rules are unnecessary — the two rules it provided (`react/react-in-jsx-scope`, `react/prop-types`) were already disabled. Hook linting is retained via eslint-plugin-react-hooks.
+- Updated dependencies [474cef7]
+  - @bilbomd/mongodb-schema@2.5.0
+  - @bilbomd/bilbomd-types@1.4.0
+
 ## 2.7.1
 
 ### Patch Changes

@@ -4,7 +4,7 @@ import os
 import sys
 
 import yaml
-from openmm import CustomCVForce, Platform, RGForce, VerletIntegrator, XmlSerializer
+from openmm import Platform, VerletIntegrator, XmlSerializer
 from openmm.app import (
     CutoffNonPeriodic,
     DCDReporter,
@@ -16,9 +16,13 @@ from openmm.app import (
 )
 from openmm.unit import angstroms
 from utils.fixed_bodies import apply_fixed_body_constraints
-from utils.pdb_writer import PDBFrameWriter
-from utils.rgyr import RadiusOfGyrationReporter
+from utils.logger import get_logger
+from utils.model_prep import register_ligand_templates_for_topology
+from utils.pdb_writer import PositionCapture
+from utils.rgyr import RadiusOfGyrationCVForce, RgyrDmaxCapture
 from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
+
+logger = get_logger("md")
 
 
 def run_md_for_rg(rg, config_path, gpu_id=None):
@@ -53,6 +57,7 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
 
     forcefield = ForceField(*config["input"]["forcefield"])
     modeller = Modeller(pdb.topology, pdb.positions)
+    register_ligand_templates_for_topology(modeller.topology, forcefield, config["input"]["dir"])
 
     fixed_bodies_config = config["constraints"]["fixed_bodies"]
     rigid_bodies_configs = config["constraints"]["rigid_bodies"]
@@ -60,7 +65,7 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     # Get all rigid bodies from the modeller based on our configurations.
     rigid_bodies = get_rigid_bodies(modeller, rigid_bodies_configs)
     for name, atoms in rigid_bodies.items():
-        print(
+        logger.info(
             f"[GPU {gpu_id}] Rigid body '{name}': {len(atoms)} atoms — indices: "
             f"{atoms[:10]}{'...' if len(atoms) > 10 else ''}"
         )
@@ -77,29 +82,27 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     )
 
     # 🔒 Apply fixed body constraints and rigid bodies
-    print(f"[GPU {gpu_id}] Applying fixed body constraints...")
+    logger.info(f"[GPU {gpu_id}] Applying fixed body constraints...")
     apply_fixed_body_constraints(system, modeller, fixed_bodies_config)
 
-    print(f"[GPU {gpu_id}] Applying rigid body constraints...")
+    logger.info(f"[GPU {gpu_id}] Applying rigid body constraints...")
     create_rigid_bodies(system, modeller.positions, list(rigid_bodies.values()))
 
-    # ⛓️ RG restraint
+    # ⛓️ RG restraint — applied to CA atoms only so it is consistent with the
+    # RadiusOfGyrationReporter and unaffected by free glycan chains in glycoproteins.
     k_rg_yaml = float(config["steps"]["md"]["rgyr"]["k_rg"])  # kcal/mol/Å^2 from YAML
     timestep = float(config["steps"]["md"]["parameters"]["timestep"])
     nsteps = int(config["steps"]["md"]["parameters"]["nsteps"])
     pdb_report_interval = int(config["steps"]["md"]["pdb_report_interval"])
     report_interval = int(config["steps"]["md"]["rgyr"]["report_interval"])
     rgyr_report = config["steps"]["md"]["rgyr"]["filename"]
-    print(f"\n[GPU {gpu_id}] 🔁 Running MD with Rg target: {rg} Å")
+    logger.info(f"\n[GPU {gpu_id}] 🔁 Running MD with Rg target: {rg} Å")
 
-    rg_force = RGForce()
+    atom_indices = [a.index for a in modeller.topology.atoms() if a.name == "CA"]
     # Convert kcal/mol/Å^2 → kJ/mol/nm^2
     k_rg = k_rg_yaml * 418.4
     rg0 = rg * 0.1  # Å → nm
-    cv = CustomCVForce("0.5 * k * (rg - rg0)^2")
-    cv.addCollectiveVariable("rg", rg_force)
-    cv.addGlobalParameter("k", k_rg)
-    cv.addGlobalParameter("rg0", rg0)
+    cv = RadiusOfGyrationCVForce(atom_indices, k_rg, rg0)
     system.addForce(cv)
 
     integrator = VerletIntegrator(timestep)
@@ -121,15 +124,15 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
         )
         simulation.context.setState(state)
         platform = simulation.context.getPlatform().getName()
-        print(
+        logger.info(
             f"[GPU {gpu_id}] Initialized on platform: {platform} (CudaDeviceIndex={platform_props.get('CudaDeviceIndex', '-')})"
         )
     except Exception as e:
-        print(f"[GPU {gpu_id}] [WARNING] CUDA not available; falling back. Error: {e}")
+        logger.warning(f"BILBOMD_CPU_FALLBACK: CUDA unavailable on GPU {gpu_id} — MD is running on CPU and may be very slow. Reason: {e}")
         simulation = Simulation(modeller.topology, system, integrator)
         simulation.context.setState(state)
         platform = simulation.context.getPlatform().getName()
-        print(f"[GPU {gpu_id}] Initialized on platform: {platform}")
+        logger.info(f"[GPU {gpu_id}] Initialized on platform: {platform}")
 
     rg_label = str(int(rg)) if float(rg).is_integer() else str(rg)
     rg_md_dir = os.path.join(md_dir, f"rg_{rg_label}")
@@ -151,21 +154,27 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     rgyr_file_path = os.path.join(rg_md_dir, rgyr_report)
     simulation.reporters.append(DCDReporter(dcd_file_path, report_interval))
 
-    # Radius of Gyration Reporter
-    atom_indices = [a.index for a in modeller.topology.atoms() if a.name == "CA"]
-    simulation.reporters.append(
-        RadiusOfGyrationReporter(
-            atom_indices, system, rgyr_file_path, reportInterval=report_interval
-        )
-    )
+    # Capture Rgyr/Dmax in memory; write CSV after simulation (no per-step flushes)
+    rgyr_capture = RgyrDmaxCapture(atom_indices, reportInterval=report_interval)
+    simulation.reporters.append(rgyr_capture)
 
-    # PDB Frame Writer
+    # Capture positions in memory; write PDB files after simulation completes to
+    # avoid GPU stalls from inline text-format writes blocking the trajectory.
     base_name = os.path.splitext(output_pdb_file_name)[0]
-    simulation.reporters.append(
-        PDBFrameWriter(rg_md_dir, base_name, reportInterval=pdb_report_interval)
-    )
+    capture = PositionCapture(pdb_report_interval)
+    simulation.reporters.append(capture)
 
     simulation.step(nsteps)
+
+    logger.info(f"[GPU {gpu_id}] Writing {len(capture.frames)} PDB frames to {rg_md_dir}...")
+    for step, positions in capture.frames:
+        fname = f"{base_name}_{int(step):09d}.pdb"
+        out_path = os.path.join(rg_md_dir, fname)
+        with open(out_path, "w", encoding="utf-8") as fh:
+            PDBFile.writeFile(simulation.topology, positions, fh, keepIds=True)
+    logger.info(f"[GPU {gpu_id}] PDB frames written.")
+
+    rgyr_capture.write_csv(rgyr_file_path)
 
     with open(
         os.path.join(rg_md_dir, output_restart_file_name), "w", encoding="utf-8"
@@ -176,9 +185,9 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     with open(
         os.path.join(rg_md_dir, output_pdb_file_name), "w", encoding="utf-8"
     ) as out_pdb:
-        PDBFile.writeFile(simulation.topology, final_state.getPositions(), out_pdb)
+        PDBFile.writeFile(simulation.topology, final_state.getPositions(), out_pdb, keepIds=True)
 
-    print(f"[GPU {gpu_id}] ✅ Completed MD with Rg {rg}. Results in {rg_md_dir}")
+    logger.info(f"[GPU {gpu_id}] ✅ Completed MD with Rg {rg}. Results in {rg_md_dir}")
 
 
 def _env_int(name: str, default: int) -> int:
@@ -224,12 +233,12 @@ def select_gpu_for_standalone():
             if 0 <= gpu_id < available_gpus:
                 return gpu_id
             else:
-                print(
-                    f"[md.py] Warning: OMM_GPU_ID={gpu_id} out of range (0-{available_gpus - 1}), using 0"
+                logger.warning(
+                    f"OMM_GPU_ID={gpu_id} out of range (0-{available_gpus - 1}), using 0"
                 )
                 return 0
         except (ValueError, TypeError):
-            print(f"[md.py] Warning: Invalid OMM_GPU_ID='{gpu_override}', using 0")
+            logger.warning(f"Invalid OMM_GPU_ID='{gpu_override}', using 0")
             return 0
 
     # Default: use GPU 0, but this could be enhanced with load balancing
@@ -260,28 +269,28 @@ if __name__ == "__main__":
         try:
             rg = float(omm_rg)
             gpu_id = select_gpu_for_standalone()
-            print(f"[md.py] Standalone mode: running single Rg={rg} on GPU {gpu_id}")
+            logger.info(f"Standalone mode: running single Rg={rg} on GPU {gpu_id}")
             run_md_for_rg(rg, args.config_path, gpu_id=gpu_id)
-            print(f"[md.py] Standalone mode: completed Rg={rg}")
+            logger.info(f"Standalone mode: completed Rg={rg}")
             sys.exit(0)
         except (ValueError, TypeError) as e:
-            print(f"[md.py] Invalid OMM_RG value '{omm_rg}': {e}")
+            logger.error(f"Invalid OMM_RG value '{omm_rg}': {e}")
             sys.exit(1)
 
     # Fallback to Slurm mode
     rg_sets = config["steps"]["md"]["rgyr"].get("rg_sets", [])
     if not rg_sets:
-        print("No rg_sets found in config.")
+        logger.error("No rg_sets found in config.")
         sys.exit(1)
     if args.rg_set < 0 or args.rg_set >= len(rg_sets):
-        print(
+        logger.error(
             f"Invalid rg_set index {args.rg_set}. Available sets: 0 to {len(rg_sets) - 1}"
         )
         sys.exit(1)
 
     rgs = list(rg_sets[args.rg_set])
     if not rgs:
-        print(f"rg_set {args.rg_set} is empty.")
+        logger.error(f"rg_set {args.rg_set} is empty.")
         sys.exit(1)
 
     # Slurm task metadata
@@ -298,28 +307,28 @@ if __name__ == "__main__":
     # Shard the Rg list to this task (round-robin)
     my_rgs = rgs[task_id::world_sz]
 
-    print(f"[md.py] SLURM_JOB_ID={jobid} STEP={stepid} TASK={task_id}/{world_sz - 1}")
-    print(
-        f"[md.py] CUDA_VISIBLE_DEVICES='{cvis}' -> using local GPU index {gpu_local_index}"
+    logger.info(f"SLURM_JOB_ID={jobid} STEP={stepid} TASK={task_id}/{world_sz - 1}")
+    logger.info(
+        f"CUDA_VISIBLE_DEVICES='{cvis}' -> using local GPU index {gpu_local_index}"
     )
-    print(f"[md.py] Using rg_set {args.rg_set}: {rgs}")
-    print(f"[md.py] Rg assignments for this task: {my_rgs}")
+    logger.info(f"Using rg_set {args.rg_set}: {rgs}")
+    logger.info(f"Rg assignments for this task: {my_rgs}")
 
     if not my_rgs:
-        print(f"[md.py] Task {task_id}: no work (rgs shorter than ntasks). Exiting.")
+        logger.info(f"Task {task_id}: no work (rgs shorter than ntasks). Exiting.")
         sys.exit(0)
 
     # Run assigned Rg targets sequentially on this task/GPU
     failures = 0
     for rg in my_rgs:
         try:
-            print(f"[md.py] Task {task_id}: running Rg={rg}")
+            logger.info(f"Task {task_id}: running Rg={rg}")
             run_md_for_rg(rg, args.config_path, gpu_id=gpu_local_index)
-            print(f"[md.py] Task {task_id}: done Rg={rg}")
+            logger.info(f"Task {task_id}: done Rg={rg}")
         except Exception as e:
             failures += 1
-            print(f"[md.py] Task {task_id}: FAILED Rg={rg} -> {e}", flush=True)
+            logger.error(f"Task {task_id}: FAILED Rg={rg} -> {e}")
 
     if failures:
-        print(f"[md.py] Task {task_id}: {failures} failures.", flush=True)
+        logger.error(f"Task {task_id}: {failures} failures.")
         sys.exit(1)

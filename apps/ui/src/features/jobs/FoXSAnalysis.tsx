@@ -23,15 +23,60 @@ type ScoperFoXSAnalysisProps = {
 type CombinedFoxsDataDynamic = CombinedFoxsData &
   Record<`model_intensity_${number}` | `residual_${number}`, number>
 
-const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
-  data
-    .filter((item) => item.exp_intensity > 0 && item.model_intensity > 0)
-    .map((item) => ({
-      q: parseFloat(item.q.toFixed(4)),
-      exp_intensity: parseFloat(item.exp_intensity.toFixed(4)),
-      model_intensity: parseFloat(item.model_intensity.toFixed(4)),
-      error: parseFloat(item.error.toFixed(4))
-    }))
+type ExcludedRange = { x1: number; x2: number }
+
+// A point is plottable when:
+//   1. exp_intensity > 0  — real measurement
+//   2. model_intensity > 0 — FoXS theoretical curve stays physical
+//   3. error < exp_intensity — SNR ≥ 1, so the lower error bar stays positive
+//      on a log scale (avoids the visual "break" in issue #572)
+const isPlottable = (item: FoxsDataPoint): boolean =>
+  item.exp_intensity > 0 &&
+  item.model_intensity > 0 &&
+  item.error < item.exp_intensity
+
+const prepData = (
+  data: FoxsDataPoint[]
+): {
+  data: FoxsDataPoint[]
+  excludedCount: number
+  excludedRanges: ExcludedRange[]
+} => {
+  const all = data.map((item) => ({
+    q: parseFloat(item.q.toFixed(4)),
+    exp_intensity: parseFloat(item.exp_intensity.toFixed(4)),
+    model_intensity: parseFloat(item.model_intensity.toFixed(4)),
+    error: parseFloat(item.error.toFixed(4))
+  }))
+
+  const good = all.filter(isPlottable)
+  const excluded = all.filter((item) => !isPlottable(item))
+
+  // Compute typical q-step to use as a merge threshold for grouping nearby
+  // excluded points into contiguous shaded bands for the chart.
+  const qStep = all.length > 1 ? all[1]!.q - all[0]!.q : 0.001
+  const mergeGap = qStep * 10
+
+  const excludedRanges: ExcludedRange[] = []
+  if (excluded.length > 0) {
+    const sortedQ = excluded.map((p) => p.q).sort((a, b) => a - b)
+    let rangeStart = sortedQ[0]!
+    let rangeEnd = sortedQ[0]!
+
+    for (let i = 1; i < sortedQ.length; i++) {
+      if (sortedQ[i]! - rangeEnd <= mergeGap) {
+        rangeEnd = sortedQ[i]!
+      } else {
+        excludedRanges.push({ x1: rangeStart - qStep / 2, x2: rangeEnd + qStep / 2 })
+        rangeStart = sortedQ[i]!
+        rangeEnd = sortedQ[i]!
+      }
+    }
+    excludedRanges.push({ x1: rangeStart - qStep / 2, x2: rangeEnd + qStep / 2 })
+  }
+
+  return { data: good, excludedCount: excluded.length, excludedRanges }
+}
 
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
   if (!Array.isArray(foxsDataArray) || foxsDataArray.length < 2) {
@@ -148,8 +193,15 @@ const FoXSAnalysis = ({
 
   const hasEnsemble = useMemo(() => foxsData.length > 1, [foxsData])
 
-  const origData = useMemo(
-    () => (hasBase ? prepData(foxsData[0]!.data as FoxsDataPoint[]) : []),
+  const {
+    data: origData,
+    excludedCount: origExcludedCount,
+    excludedRanges: origExcludedRanges
+  } = useMemo(
+    () =>
+      hasBase
+        ? prepData(foxsData[0]!.data as FoxsDataPoint[])
+        : { data: [], excludedCount: 0, excludedRanges: [] },
     [hasBase, foxsData]
   )
   const ensembleData = useMemo(
@@ -209,9 +261,9 @@ const FoXSAnalysis = ({
 
   // Pull out the other info needed for the FoXS plots
   // const origPDBFile = foxsData[0].filename
-  const origChiSq = foxsData[0].chisq
-  const origC1 = foxsData[0].c1
-  const origC2 = foxsData[0].c2
+  const origChiSq = foxsData[0]!.chisq
+  const origC1 = foxsData[0]!.c1
+  const origC2 = foxsData[0]!.c2
 
   return (
     <Item>
@@ -229,6 +281,8 @@ const FoXSAnalysis = ({
             c2={origC2}
             minYAxis={minYAxis}
             maxYAxis={maxYAxis}
+            excludedCount={origExcludedCount}
+            excludedRanges={origExcludedRanges}
           />
         </Grid>
         <Grid size={{ xs: 6 }}>

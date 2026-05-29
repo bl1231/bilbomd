@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import igraph
+from Bio.PDB import MMCIFParser
 import numpy as np
 import yaml
 
@@ -22,7 +23,7 @@ from helpers_viz import (
     stride_downsample,
     write_viz_json,
 )
-from pdb_utils import get_segid_renaming_map
+from pdb_utils import get_segid_renaming_map, get_segid_renaming_map_from_cif
 
 
 class InputHandler(ABC):
@@ -217,6 +218,47 @@ class PDBHandler(InputHandler):
                 }
             )
         return chains
+
+
+class CIFHandler(PDBHandler):
+    """
+    Handles mmCIF (.cif) input files using biopython's MMCIFParser.
+    Inherits all residue-indexing logic from PDBHandler; only the file
+    parsing step differs.
+    """
+
+    def _prepare_pdb_mappings(self, cif_file: str) -> int:
+        """Override to parse mmCIF instead of fixed-column PDB format."""
+        from pathlib import Path as _Path
+
+        if not _Path(cif_file).exists():
+            raise FileNotFoundError(f"CIF file not found: {cif_file}")
+
+        parser = MMCIFParser(QUIET=True)
+        structure = parser.get_structure("s", cif_file)
+
+        self.pdb_index_to_res.clear()
+        self.pdb_res_plddt.clear()
+        seen_res = set()
+
+        for model in structure:
+            for chain in model:
+                chain_id = chain.id
+                for residue in chain:
+                    resseq = residue.id[1]
+                    icode = residue.id[2].strip()
+                    key = (chain_id, resseq, icode)
+                    if key not in seen_res:
+                        seen_res.add(key)
+                        self.pdb_index_to_res.append((chain_id, resseq))
+                    for atom in residue:
+                        try:
+                            b = float(atom.bfactor)
+                            self.pdb_res_plddt[(chain_id, resseq)].append(b)
+                        except (ValueError, AttributeError):
+                            pass
+
+        return len(self.pdb_index_to_res)
 
 
 class CRDHandler(InputHandler):
@@ -559,8 +601,12 @@ class PAEProcessor:
             )
         elif "pae" in self.pae_data:
             pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        elif "pde" in self.pae_data:
+            pae_full = np.array(self.pae_data["pde"], dtype=np.float32)
         else:
-            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+            raise ValueError(
+                "PAE data must contain 'predicted_aligned_error', 'pae', or 'pde'"
+            )
 
         if pae_full.ndim != 2 or pae_full.shape[0] != pae_full.shape[1]:
             raise ValueError(
@@ -667,6 +713,8 @@ class PAEProcessor:
             matrix = data["pae"]
         elif "predicted_aligned_error" in data:
             matrix = data["predicted_aligned_error"]
+        elif "pde" in data:
+            matrix = data["pde"]
         else:
             raise ValueError("Invalid PAE JSON format.")
 
@@ -900,8 +948,12 @@ class PAEProcessor:
             )
         elif "pae" in self.pae_data:
             pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        elif "pde" in self.pae_data:
+            pae_full = np.array(self.pae_data["pde"], dtype=np.float32)
         else:
-            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+            raise ValueError(
+                "PAE data must contain 'predicted_aligned_error', 'pae', or 'pde'"
+            )
         mapper = self.input_handler.get_tuple_to_global_mapper(self.first_residue)
         for rb_idx, rb in enumerate(self.rigid_bodies, start=1):
             domain_meds = []
@@ -940,8 +992,12 @@ class PAEProcessor:
             )
         elif "pae" in self.pae_data:
             pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        elif "pde" in self.pae_data:
+            pae_full = np.array(self.pae_data["pde"], dtype=np.float32)
         else:
-            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+            raise ValueError(
+                "PAE data must contain 'predicted_aligned_error', 'pae', or 'pde'"
+            )
 
         # 2) Determine L
         L = pae_full.shape[0]
@@ -1012,7 +1068,11 @@ class PAEProcessor:
 
         payload = {
             "input_file": self.input_file,
-            "mode": "pdb" if isinstance(self.input_handler, PDBHandler) else "crd",
+            "mode": (
+                "cif"
+                if isinstance(self.input_handler, CIFHandler)
+                else ("pdb" if isinstance(self.input_handler, PDBHandler) else "crd")
+            ),
             "first_residue": int(self.first_residue)
             if self.first_residue is not None
             else None,
@@ -1371,6 +1431,8 @@ class PAEProcessor:
         renaming = {}
         if input_file and input_file.endswith(".pdb"):
             renaming = get_segid_renaming_map(input_file)
+        elif input_file and input_file.endswith(".cif"):
+            renaming = get_segid_renaming_map_from_cif(input_file)
 
         dock_count = 0
         rigid_body_count = 0
@@ -1754,6 +1816,9 @@ if __name__ == "__main__":
     grp.add_argument(
         "--pdb_file", type=str, help="Path to a PDB file (preferred for OpenMM)."
     )
+    grp.add_argument(
+        "--cif_file", type=str, help="Path to an mmCIF (.cif) file."
+    )
     parser.add_argument(
         "--plddt_cutoff",
         type=float,
@@ -1912,6 +1977,9 @@ if __name__ == "__main__":
     elif args.crd_file:
         processor.input_handler = CRDHandler()
         processor.input_file = args.crd_file
+    elif args.cif_file:
+        processor.input_handler = CIFHandler()
+        processor.input_file = args.cif_file
 
     # Load PAE data and set up processor state
     processor.load_pae_data(args.pae_file)

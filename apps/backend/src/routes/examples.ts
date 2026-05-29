@@ -4,6 +4,7 @@ import {
   getClassicCrdExample,
   getClassicAutoExample,
   getClassicAfExample,
+  getClassicOf3Example,
   getClassicSansExample,
   getClassicScoperExample
 } from '../controllers/examples/getExampleData.js'
@@ -14,6 +15,7 @@ router.route('/classic/pdb').get(getClassicPdbExample)
 router.route('/classic/crd').get(getClassicCrdExample)
 router.route('/auto').get(getClassicAutoExample)
 router.route('/af').get(getClassicAfExample)
+router.route('/of3').get(getClassicOf3Example)
 router.route('/sans').get(getClassicSansExample)
 router.route('/scoper').get(getClassicScoperExample)
 

@@ -14,11 +14,6 @@ const userSchema = new Schema(
           provider: { type: String, required: true },
           id: { type: String, required: true },
           name: { type: String, required: true },
-          accessToken: { type: String },
-          refreshToken: { type: String },
-          tokenType: { type: String },
-          scope: { type: String },
-          expiresIn: { type: Number },
           tokenIssuedAt: { type: Date, default: Date.now }
         }
       ],
@@ -79,6 +74,10 @@ const userSchema = new Schema(
       },
       expiresAt: {
         type: Date
+      },
+      attempts: {
+        type: Number,
+        default: 0
       }
     },
     UUID: {

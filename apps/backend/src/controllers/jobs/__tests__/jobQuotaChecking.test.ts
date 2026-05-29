@@ -7,7 +7,8 @@ import {
   BilboMdSANSJob,
   BilboMdScoperJob,
   MultiJob,
-  JobStatus
+  JobStatus,
+  AccessMode
 } from '@bilbomd/mongodb-schema'
 
 // Mock the mongoose models
@@ -91,7 +92,7 @@ describe('Job Quota Checking Logic', () => {
       const quotaQuery = {
         client_ip_hash: mockClientIpHash,
         status: { $in: activeStatuses },
-        access_mode: 'anonymous'
+        access_mode: AccessMode.Anonymous
       }
 
       const counts = await Promise.all([
@@ -230,7 +231,7 @@ describe('Job Quota Checking Logic', () => {
       const quotaQuery = {
         client_ip_hash: mockClientIpHash,
         status: { $in: activeStatuses },
-        access_mode: 'anonymous'
+        access_mode: AccessMode.Anonymous
       }
 
       vi.mocked(BilboMdPDBJob.countDocuments).mockResolvedValue(0)

@@ -4,25 +4,17 @@ import fs from 'fs-extra'
 import csv from 'csv-parser'
 import { logger } from '../../helpers/loggers.js'
 import { glob } from 'glob'
-import { promisify } from 'util'
-import { IStepStatus } from '@bilbomd/mongodb-schema'
+import { IStepStatus, IEnsemble } from '@bilbomd/mongodb-schema'
 import { IJob, IBilboMDSANSJob } from '@bilbomd/mongodb-schema'
 import { updateStepStatus } from './mongo-utils.js'
 import { generateDCD2PDBInpFile } from './bilbomd-step-functions.js'
-import { spawn, exec } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { makeDir, makeFile } from './job-utils.js'
 import { config } from '../../config/config.js'
 import { Job as BullMQJob } from 'bullmq'
 import { spawnCharmm } from './job-utils.js'
-
-const execPromise = promisify(exec)
-
-interface FileCopyParams {
-  source: string
-  destination: string
-  filename: string
-  isCritical: boolean
-}
+import { copyFiles, createResultsArchive } from './prepare-results.js'
+import { createReadmeFile } from './create-readme-file.js'
 
 interface CharmmDCD2PDBParams {
   out_dir: string
@@ -63,21 +55,6 @@ function isBilboMDSANSJob(job: IJob): job is IBilboMDSANSJob {
   return (job as IBilboMDSANSJob).d2o_fraction !== undefined
 }
 
-const copyFiles = async ({
-  source,
-  destination,
-  filename,
-  isCritical
-}: FileCopyParams): Promise<void> => {
-  try {
-    await execPromise(`cp ${source} ${destination}`)
-  } catch (error) {
-    logger.error(`Error copying ${filename}: ${error}`)
-    if (isCritical) {
-      throw new Error(`Critical error copying ${filename}: ${error}`)
-    }
-  }
-}
 
 const writeSegidToChainid = async (inputFile: string): Promise<void> => {
   try {
@@ -632,13 +609,77 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
     // Create new empty results directory
     await makeDir(resultsDir)
 
-    // Copy the minimized PDB
-    await copyFiles({
-      source: `${jobDir}/minimization_output.pdb`,
-      destination: resultsDir,
-      filename: 'minimization_output.pdb',
-      isCritical: false
-    })
+    // Copy the minimized PDB — try OpenMM path, then new CHARMM layout, then legacy root
+    const baseDataName = DBjob.data_file.split('.')[0]
+    const openmmPdb = path.join(jobDir, 'openmm', 'minimize', 'minimized.pdb')
+    const charmmNewPdb = path.join(
+      jobDir,
+      'charmm',
+      'minimize',
+      'minimization_output.pdb'
+    )
+    const charmmOldPdb = path.join(jobDir, 'minimization_output.pdb')
+
+    const pdbSource = (await fs.pathExists(openmmPdb))
+      ? openmmPdb
+      : (await fs.pathExists(charmmNewPdb))
+        ? charmmNewPdb
+        : (await fs.pathExists(charmmOldPdb))
+          ? charmmOldPdb
+          : null
+
+    if (pdbSource) {
+      await copyFiles({
+        source: pdbSource,
+        destination: resultsDir,
+        filename: 'minimization_output.pdb',
+        destFilename: 'minimization_output.pdb',
+        isCritical: false
+      })
+    } else {
+      logger.warn('No minimized PDB found (checked OpenMM and CHARMM locations).')
+    }
+
+    // Copy the DAT file for the minimized PDB
+    const openmmDat = path.join(
+      jobDir,
+      'openmm',
+      'minimize',
+      `minimized_${baseDataName}.dat`
+    )
+    const charmmNewDat = path.join(
+      jobDir,
+      'charmm',
+      'minimize',
+      `minimization_output_${baseDataName}.dat`
+    )
+    const charmmOldDat = path.join(
+      jobDir,
+      `minimization_output_${baseDataName}.dat`
+    )
+
+    const datSource = (await fs.pathExists(openmmDat))
+      ? openmmDat
+      : (await fs.pathExists(charmmNewDat))
+        ? charmmNewDat
+        : (await fs.pathExists(charmmOldDat))
+          ? charmmOldDat
+          : null
+
+    if (datSource) {
+      const canonicalDatName = `minimization_output_${baseDataName}.dat`
+      await copyFiles({
+        source: datSource,
+        destination: resultsDir,
+        filename: canonicalDatName,
+        destFilename: canonicalDatName,
+        isCritical: false
+      })
+    } else {
+      logger.warn(
+        'No minimized DAT file found (checked OpenMM and CHARMM locations).'
+      )
+    }
 
     // Gather original uploaded files
     const filesToCopy = [
@@ -750,28 +791,50 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
           `REMARK`
         ].join('\n')
 
-        // Read and concatenate the content of all PDB files in memory
-        const concatenatedContent = await Promise.all(
-          pdbFilesToConcatenate.map((filePath) =>
-            fs.promises.readFile(filePath, 'utf-8')
+        // Build a proper multi-model PDB with MODEL N / ENDMDL records so
+        // Molstar can load each conformation as a separate assembly.
+        const modelLines: string[] = []
+        for (let i = 0; i < pdbFilesToConcatenate.length; i++) {
+          let content = await fs.promises.readFile(
+            pdbFilesToConcatenate[i],
+            'utf-8'
           )
-        ).then((contents) => contents.join('\n')) // Join all files' contents
+          content = content
+            .split('\n')
+            .filter((line) => !line.startsWith('REMARK'))
+            .join('\n')
+            .replace(/\bEND\n?$/, 'ENDMDL')
+          modelLines.push(`MODEL       ${i + 1}`)
+          modelLines.push(content)
+        }
 
-        // Filter out lines starting with "REMARK"
-        const filteredContent = concatenatedContent
-          .split('\n')
-          .filter((line) => !line.startsWith('REMARK'))
-          .join('\n')
-
-        // Combine the custom header and the filtered content
-        const finalContent = [header, filteredContent].join('\n')
+        const finalContent = [header, ...modelLines].join('\n')
 
         // Write the final content to the output file
         await fs.promises.writeFile(concatenatedPdbFile, finalContent, 'utf-8')
 
         logger.info(
-          `Created filtered PDB file with custom header: ${concatenatedPdbFile}`
+          `Created multi-model PDB file: ${concatenatedPdbFile}`
         )
+      }
+    }
+
+    // Store ensemble metadata in MongoDB so the Molstar viewer can load them.
+    // Only the size field is required — the viewer uses it to build filenames
+    // and to know how many MODEL records to load.
+    const sansEnsembles: IEnsemble[] = gasansSummaryFiles
+      .map((f) => ({
+        size: parseInt(f.match(/\d+/)?.[0] ?? '0', 10),
+        models: []
+      }))
+      .filter((e) => e.size > 0)
+      .sort((a, b) => a.size - b.size)
+
+    if (sansEnsembles.length > 0) {
+      DBjob.results = DBjob.results || {}
+      DBjob.results.sans = {
+        total_num_ensembles: sansEnsembles.length,
+        ensembles: sansEnsembles
       }
     }
 
@@ -779,10 +842,12 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
     await createReadmeFile(DBjob, gasansSummaryFiles.length, resultsDir)
 
     // Create the results tar.gz file
-    const uuidPrefix = DBjob.uuid.split('-')[0]
-    const archiveName = `results-${uuidPrefix}.tar.gz`
-    await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+    await createResultsArchive(jobDir, DBjob.uuid)
+    DBjob.results_ready = true
+    await DBjob.save()
   } catch (error) {
+    DBjob.results_ready = false
+    await DBjob.save()
     logger.error(`Error preparing results: ${error}`)
     throw error // Rethrow to handle further up the call stack if needed
   }
@@ -800,78 +865,63 @@ const parseCsvFile = (filePath: string): Promise<Record<string, string>[]> => {
   })
 }
 
-const createReadmeFile = async (
-  DBjob: IBilboMDSANSJob,
-  numEnsembles: number,
-  resultsDir: string
+const mirrorOmmMdToPepsiSANS = async (
+  DBjob: IBilboMDSANSJob
 ): Promise<void> => {
-  const readmeContent = `
-# BilboMD SANS Job Results
+  const workDir = path.join(config.uploadDir, DBjob.uuid)
+  const ommMdDir = path.join(workDir, 'openmm', 'md')
+  const pepsiSANSDir = path.join(workDir, 'pepsisans')
 
-This directory contains the results for your ${DBjob.title} BilboMD SANS job.
+  await fs.ensureDir(pepsiSANSDir)
 
-- Job Title:  ${DBjob.title}
-- Job ID:  ${DBjob._id}
-- UUID:  ${DBjob.uuid}
-- Submitted:  ${DBjob.time_submitted}
-- Completed:  ${new Date().toString()}
+  if (!(await fs.pathExists(ommMdDir))) {
+    throw new Error(`OpenMM MD output directory not found: ${ommMdDir}`)
+  }
 
-## Contents
+  const entries = await fs.readdir(ommMdDir)
+  const rgDirs = []
+  for (const name of entries) {
+    const fullPath = path.join(ommMdDir, name)
+    if (/^rg_\d+$/.test(name) && (await fs.stat(fullPath)).isDirectory()) {
+      rgDirs.push(name)
+    }
+  }
 
-- Original PDB file: ${DBjob.pdb_file}
-- Converted CRD file: ${DBjob.crd_file}
-- Converted PSF file: ${DBjob.psf_file}
-- Original experimental SANS data file: ${DBjob.data_file}
-- Original const.inp file: ${DBjob.const_inp_file}
-- Generated minimized PDB file: minimized_output.pdb
-- Generated minimized PDB DAT file: minimized_output.pdb.dat
+  if (rgDirs.length === 0) {
+    throw new Error(`No rg_* directories found in ${ommMdDir}`)
+  }
 
-The "best" N-state Ensemble PDB files will be present in multiple copies. There is one file for each ensemble size.
+  for (const rgDir of rgDirs) {
+    const srcDir = path.join(ommMdDir, rgDir)
+    const match = rgDir.match(/^rg_(\d+)$/)
+    if (!match) continue
+    const normalizedName = `rg${match[1]}`
+    const destDir = path.join(pepsiSANSDir, normalizedName)
+    await fs.ensureDir(destDir)
 
-- Number of ensembles for this BilboMD SANS run: ${numEnsembles}
+    const files = await fs.readdir(srcDir)
+    for (const file of files) {
+      if (!file.toLowerCase().endsWith('.pdb')) continue
+      if (file.toLowerCase() === 'md.pdb') continue
 
-- Ensemble PDB file(s):  ensemble_size_N_model.pdb
-- Ensemble CSV file(s):  gasans_summary_EnsSizeN.csv
-- Ensemble DAT/CSV file(s):  best_model_EnsembleSizeN.csv
-
-### The ensemble_size_N_model.pdb files
-
-These will be multi-model PDB files created by catenating the best ensemble of PDB files for each ensemble size.
-
-ensemble_size_2_model.pdb  - will contain the coordinates for the best 2-state model
-ensemble_size_3_model.pdb  - will contain the coordinates for the best 3-state model
-ensemble_size_4_model.pdb  - will contain the coordinates for the best 4-state model
-etc.
-
-### The gasans_summary_EnsSizeN.csv files
-
-TODO - Explain the contents of these CSV files
-
-### The best_model_EnsembleSizeN.csv files
-
-These are the theoretical SANS curves from Pepsi-SANS calculated for each of the ensemble_size_N_model.pdb models.
-
-If you use BilboMD in your research, please cite:
-
-Pelikan M, Hura GL, Hammel M. Structure and flexibility within proteins as identified through small angle X-ray scattering. Gen Physiol Biophys. 2009 Jun;28(2):174-89. doi: 10.4149/gpb_2009_02_174. PMID: ,19592714; PMCID: PMC3773563.
-
-TODO - add citation for Pepsi-SANS
-TODO - add citation for GA-SANS
-
-Thank you for using BilboMD SANS
-`
-  const readmePath = path.join(resultsDir, 'README.md')
-  try {
-    await fs.writeFile(readmePath, readmeContent)
-    logger.info('README file created successfully.')
-  } catch (error) {
-    logger.error('Failed to create README file:', error)
-    throw new Error('Failed to create README file')
+      const src = path.join(srcDir, file)
+      const dst = path.join(destDir, file)
+      if (!(await fs.pathExists(dst))) {
+        try {
+          const rel = path.relative(path.dirname(dst), src)
+          await fs.ensureSymlink(rel, dst)
+        } catch {
+          await fs.copy(src, dst)
+        }
+      }
+    }
+    logger.info(`Mirrored ${rgDir} -> pepsisans/${normalizedName}`)
   }
 }
 
 export {
   extractPDBFilesFromDCD,
+  mirrorOmmMdToPepsiSANS,
   remediatePDBFiles,
   runPepsiSANSOnPDBFiles,
   runGASANS,

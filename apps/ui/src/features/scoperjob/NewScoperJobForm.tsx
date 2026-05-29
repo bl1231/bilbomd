@@ -52,8 +52,7 @@ const NewScoperJobForm = ({
     anonJobResponse && mode === 'anonymous'
       ? {
           resultUrl: anonJobResponse.resultUrl,
-          publicId: anonJobResponse.publicId,
-          md_engine: anonJobResponse.md_engine
+          publicId: anonJobResponse.publicId
         }
       : undefined
 
@@ -62,8 +61,7 @@ const NewScoperJobForm = ({
       ? {
           message: authJobResponse.message || 'Job submitted successfully',
           jobid: authJobResponse.jobid,
-          uuid: authJobResponse.uuid,
-          md_engine: authJobResponse.md_engine
+          uuid: authJobResponse.uuid
         }
       : undefined
 
@@ -230,7 +228,7 @@ const NewScoperJobForm = ({
                   <Form>
                     <Grid
                       container
-                      direction="column"
+                      sx={{ flexDirection: 'column' }}
                     >
                       <Box
                         sx={{

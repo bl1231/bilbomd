@@ -60,6 +60,7 @@ export const resultsSchema: Schema = new Schema({
   classic: { type: classicResultsSchema, required: false },
   auto: { type: Schema.Types.Mixed, required: false },
   alphafold: { type: Schema.Types.Mixed, required: false },
+  openfold: { type: Schema.Types.Mixed, required: false },
   sans: { type: Schema.Types.Mixed, required: false },
   scoper: { type: scoperResultsSchema, required: false }
 })

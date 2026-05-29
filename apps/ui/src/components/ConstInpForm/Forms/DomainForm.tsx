@@ -113,7 +113,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                       mr: 1,
                       mb: 1,
                       backgroundColor: customColors[chain] || '#9773b9',
-                      color: theme.palette.getContrastText(customColors[chain])
+                      color: theme.palette.getContrastText(customColors[chain] ?? '#9773b9')
                     }}
                   />
                 ))}
@@ -131,7 +131,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                       mb: 1,
                       backgroundColor: customColors[chain.type] || '#9773b9',
                       color: theme.palette.getContrastText(
-                        customColors[chain.type]
+                        customColors[chain.type] ?? '#9773b9'
                       )
                     }}
                   />
@@ -199,7 +199,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                             </Fragment>
                           )
                         )}
-                      <Grid container justifyContent='flex-end'>
+                      <Grid container sx={{ justifyContent: 'flex-end' }}>
                         <Grid
                           size={{ xs: 12 }}
                           sx={{

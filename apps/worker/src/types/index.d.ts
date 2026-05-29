@@ -67,11 +67,6 @@ interface FileCopyParams {
   destination: string
   filename: string
   isCritical: boolean
+  destFilename?: string
 }
 
-interface FileCopyParamsNew {
-  source: string
-  destination: string
-  filename: string
-  isCritical: boolean
-}

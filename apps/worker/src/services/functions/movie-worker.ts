@@ -1,3 +1,4 @@
+import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
 import { spawn } from 'node:child_process'
 import fs from 'fs-extra'
@@ -179,7 +180,7 @@ const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
     pdb,
     dcd,
     outDir,
-    constYaml,
+    constYaml,   // may be undefined for jobs without a constraint YAML
     width,
     height,
     stride,
@@ -220,11 +221,12 @@ const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
     '--orient',
     'principal',
     '--clip',
-    '--color-scheme',
-    'constraints',
-    '--config',
-    constYaml
   ]
+  if (constYaml) {
+    pymolArgs.push('--color-scheme', 'constraints', '--config', constYaml)
+  } else {
+    pymolArgs.push('--color-scheme', 'default')
+  }
   if (rayEnabled) {
     pymolArgs.push('--ray')
   }
@@ -246,7 +248,7 @@ const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
   logger.debug(`[movie-worker] cwd: ${outDir}`)
 
   return new Promise((resolve, reject) => {
-    const pythonBinary = '/opt/envs/openmm/bin/python'
+    const pythonBinary = config.openmmPythonBin
     const pymolCommand = ['-m', 'pymol'].concat(pymolArgs)
 
     const child = spawn(pythonBinary, pymolCommand, {

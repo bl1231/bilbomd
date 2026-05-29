@@ -3,7 +3,9 @@ import {
   convertInpToYaml,
   convertYamlToInp,
   validateYamlConstraints,
-  validateInpConstraints
+  validateInpConstraints,
+  extractConstraintsFromYaml,
+  buildChainSegidMap
 } from './constraintUtils.js'
 import fs from 'fs-extra'
 import path from 'path'
@@ -171,6 +173,56 @@ describe('Constraint Utils', () => {
       )
     })
 
+    test('should reject INP files containing "system" directive', async () => {
+      expect.assertions(1)
+
+      const inpPath = path.join(tempDir, 'system.inp')
+      await fs.writeFile(
+        inpPath,
+        `define fixed1 sele ( resid 1:639 .and. segid PROA ) end
+cons fix sele fixed1 end
+system rm -rf /tmp/bilbomd
+return`
+      )
+
+      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+        'Disallowed keyword'
+      )
+    })
+
+    test('should reject INP files containing "open" directive', async () => {
+      expect.assertions(1)
+
+      const inpPath = path.join(tempDir, 'open.inp')
+      await fs.writeFile(
+        inpPath,
+        `define fixed1 sele ( resid 1:639 .and. segid PROA ) end
+cons fix sele fixed1 end
+open unit 1 read card name /etc/passwd
+return`
+      )
+
+      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+        'Disallowed keyword'
+      )
+    })
+
+    test('should allow comment lines starting with ! or *', async () => {
+      expect.assertions(1)
+
+      const inpPath = path.join(tempDir, 'comments.inp')
+      await fs.writeFile(
+        inpPath,
+        `! This is a comment
+* Another comment style
+define fixed1 sele ( resid 1:639 .and. segid PROA ) end
+cons fix sele fixed1 end
+return`
+      )
+
+      await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
+    })
+
     test('should validate valid YAML files', async () => {
       expect.assertions(1)
 
@@ -198,6 +250,289 @@ describe('Constraint Utils', () => {
       await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
         'No constraint bodies found'
       )
+    })
+  })
+
+  describe('extractConstraintsFromYaml', () => {
+    test('parses unwrapped format', () => {
+      const result = extractConstraintsFromYaml(testYamlContent)
+      expect(result.fixed_bodies).toHaveLength(1)
+      expect(result.rigid_bodies).toHaveLength(2)
+    })
+
+    test('parses wrapped format with constraints key', () => {
+      const wrapped =
+        'constraints:\n' +
+        testYamlContent
+          .split('\n')
+          .map((l) => '  ' + l)
+          .join('\n')
+      const result = extractConstraintsFromYaml(wrapped)
+      expect(result.fixed_bodies).toHaveLength(1)
+    })
+
+    test('throws on non-object YAML', () => {
+      expect(() => extractConstraintsFromYaml('42')).toThrow(
+        'Invalid YAML format'
+      )
+    })
+  })
+
+  describe('buildChainSegidMap', () => {
+    // PDB columns (0-indexed): 0-5 record type, 17-19 resName, 21 chainId
+    const makePdbLine = (record: string, resName: string, chainId: string) =>
+      record.padEnd(6) + '    1  CA  ' + resName.padEnd(3) + ' ' + chainId
+
+    test('maps protein chain to PRO prefix', async () => {
+      const pdbPath = path.join(tempDir, 'protein.pdb')
+      await fs.writeFile(pdbPath, makePdbLine('ATOM', 'ALA', 'A') + '\n')
+      expect(await buildChainSegidMap(pdbPath)).toEqual({ A: 'PROA' })
+    })
+
+    test('maps DNA chain to DNA prefix', async () => {
+      const pdbPath = path.join(tempDir, 'dna.pdb')
+      await fs.writeFile(pdbPath, makePdbLine('ATOM', 'DA', 'D') + '\n')
+      expect(await buildChainSegidMap(pdbPath)).toEqual({ D: 'DNAD' })
+    })
+
+    test('maps RNA chain to RNA prefix', async () => {
+      const pdbPath = path.join(tempDir, 'rna.pdb')
+      await fs.writeFile(pdbPath, makePdbLine('ATOM', 'A', 'R') + '\n')
+      expect(await buildChainSegidMap(pdbPath)).toEqual({ R: 'RNAR' })
+    })
+
+    test('maps carbohydrate chain to CAR prefix', async () => {
+      const pdbPath = path.join(tempDir, 'carb.pdb')
+      await fs.writeFile(pdbPath, makePdbLine('HETATM', 'NAG', 'G') + '\n')
+      expect(await buildChainSegidMap(pdbPath)).toEqual({ G: 'CARG' })
+    })
+
+    test('ignores unknown residue types', async () => {
+      const pdbPath = path.join(tempDir, 'unknown-res.pdb')
+      await fs.writeFile(pdbPath, makePdbLine('ATOM', 'XYZ', 'X') + '\n')
+      expect(await buildChainSegidMap(pdbPath)).toEqual({})
+    })
+
+    test('ignores non-ATOM/HETATM lines', async () => {
+      const pdbPath = path.join(tempDir, 'remarks.pdb')
+      const content = [
+        'REMARK   1 test',
+        makePdbLine('ATOM', 'ALA', 'A'),
+        'TER',
+        'END'
+      ].join('\n')
+      await fs.writeFile(pdbPath, content)
+      expect(await buildChainSegidMap(pdbPath)).toEqual({ A: 'PROA' })
+    })
+
+    test('classifies chain by its first residue only', async () => {
+      const pdbPath = path.join(tempDir, 'multi-res.pdb')
+      const content = [
+        makePdbLine('ATOM', 'ALA', 'A'),
+        makePdbLine('ATOM', 'DA', 'A')
+      ].join('\n')
+      await fs.writeFile(pdbPath, content)
+      expect(await buildChainSegidMap(pdbPath)).toEqual({ A: 'PROA' })
+    })
+  })
+
+  describe('validateInpConstraints additional paths', () => {
+    test('rejects file missing define statement', async () => {
+      const inpPath = path.join(tempDir, 'no-define.inp')
+      await fs.writeFile(inpPath, 'cons fix sele some_selection end\n')
+      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+        'INP file must contain at least one "define" statement'
+      )
+    })
+
+    test('rejects file missing constraint command', async () => {
+      const inpPath = path.join(tempDir, 'no-constraint.inp')
+      await fs.writeFile(inpPath, 'define fixed1 sele something end\n')
+      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+        'INP file must contain at least one constraint command'
+      )
+    })
+  })
+
+  describe('validateYamlConstraints additional paths', () => {
+    test('validates wrapped YAML with constraints key', async () => {
+      const wrapped =
+        'constraints:\n' +
+        testYamlContent
+          .split('\n')
+          .map((l) => '  ' + l)
+          .join('\n')
+      const yamlPath = path.join(tempDir, 'wrapped-valid.yaml')
+      await fs.writeFile(yamlPath, wrapped)
+      await expect(validateYamlConstraints(yamlPath)).resolves.toBeUndefined()
+    })
+
+    test('rejects fixed_bodies that is not an array', async () => {
+      const yamlPath = path.join(tempDir, 'not-array.yaml')
+      await fs.writeFile(yamlPath, 'fixed_bodies: "not an array"\n')
+      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
+        'fixed_bodies must be an array'
+      )
+    })
+
+    test('rejects body without name', async () => {
+      const yaml = [
+        'fixed_bodies:',
+        '  - segments:',
+        '      - chain_id: A',
+        '        residues:',
+        '          start: 1',
+        '          stop: 100'
+      ].join('\n')
+      const yamlPath = path.join(tempDir, 'no-name.yaml')
+      await fs.writeFile(yamlPath, yaml)
+      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
+        'Each fixed_bodies entry must have a valid name'
+      )
+    })
+
+    test('rejects body with non-array segments', async () => {
+      const yaml = [
+        'fixed_bodies:',
+        '  - name: Body1',
+        '    segments: "not an array"'
+      ].join('\n')
+      const yamlPath = path.join(tempDir, 'bad-segments.yaml')
+      await fs.writeFile(yamlPath, yaml)
+      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
+        'Each fixed_bodies entry must have a segments array'
+      )
+    })
+
+    test('rejects segment without chain_id', async () => {
+      const yaml = [
+        'fixed_bodies:',
+        '  - name: Body1',
+        '    segments:',
+        '      - residues:',
+        '          start: 1',
+        '          stop: 100'
+      ].join('\n')
+      const yamlPath = path.join(tempDir, 'no-chain.yaml')
+      await fs.writeFile(yamlPath, yaml)
+      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
+        'Each segment must have a valid chain_id'
+      )
+    })
+
+    test('rejects segment without residues', async () => {
+      const yaml = [
+        'fixed_bodies:',
+        '  - name: Body1',
+        '    segments:',
+        '      - chain_id: A'
+      ].join('\n')
+      const yamlPath = path.join(tempDir, 'no-residues.yaml')
+      await fs.writeFile(yamlPath, yaml)
+      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
+        'Each segment must have a residues object'
+      )
+    })
+
+    test('rejects segment with non-numeric residue bounds', async () => {
+      const yaml = [
+        'fixed_bodies:',
+        '  - name: Body1',
+        '    segments:',
+        '      - chain_id: A',
+        '        residues:',
+        '          start: "abc"',
+        '          stop: 100'
+      ].join('\n')
+      const yamlPath = path.join(tempDir, 'non-numeric.yaml')
+      await fs.writeFile(yamlPath, yaml)
+      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
+        'Residues must have numeric start and stop values'
+      )
+    })
+
+    test('rejects segment with start greater than stop', async () => {
+      const yaml = [
+        'fixed_bodies:',
+        '  - name: Body1',
+        '    segments:',
+        '      - chain_id: A',
+        '        residues:',
+        '          start: 100',
+        '          stop: 1'
+      ].join('\n')
+      const yamlPath = path.join(tempDir, 'start-gt-stop.yaml')
+      await fs.writeFile(yamlPath, yaml)
+      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
+        'Residue start must be less than or equal to stop'
+      )
+    })
+  })
+
+  describe('convertYamlToInp with chainSegidMap', () => {
+    test('uses provided map for segid resolution', async () => {
+      const yamlPath = path.join(tempDir, 'segid-map.yaml')
+      await fs.writeFile(yamlPath, testYamlContent)
+      const result = await convertYamlToInp(yamlPath, undefined, {
+        A: 'PROA',
+        B: 'DNAD',
+        C: 'RNAC'
+      })
+      expect(result).toContain('segid PROA')
+      expect(result).toContain('segid DNAD')
+      expect(result).toContain('segid RNAC')
+    })
+
+    test('handles wrapped YAML format', async () => {
+      const wrapped =
+        'constraints:\n' +
+        testYamlContent
+          .split('\n')
+          .map((l) => '  ' + l)
+          .join('\n')
+      const yamlPath = path.join(tempDir, 'wrapped-convert.yaml')
+      await fs.writeFile(yamlPath, wrapped)
+      const result = await convertYamlToInp(yamlPath)
+      expect(result).toContain('define')
+      expect(result).toContain('return')
+    })
+  })
+
+  describe('error paths', () => {
+    test('convertInpToYaml throws on missing file', async () => {
+      await expect(convertInpToYaml('/nonexistent/file.inp')).rejects.toThrow(
+        'Failed to convert INP to YAML'
+      )
+    })
+
+    test('convertYamlToInp throws on missing file', async () => {
+      await expect(
+        convertYamlToInp('/nonexistent/file.yaml')
+      ).rejects.toThrow('Failed to convert YAML to INP')
+    })
+
+    test('validateYamlConstraints throws on non-object YAML', async () => {
+      const yamlPath = path.join(tempDir, 'number.yaml')
+      await fs.writeFile(yamlPath, '42\n')
+      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
+        'Invalid YAML constraint format'
+      )
+    })
+  })
+
+  describe('segidToChainId fallback', () => {
+    test('convertInpToYaml returns raw segid when no prefix matches', async () => {
+      const inpPath = path.join(tempDir, 'unknown-segid.inp')
+      await fs.writeFile(
+        inpPath,
+        [
+          'define fixed1 sele ( resid 1:100 .and. segid MYID ) end',
+          'cons fix sele fixed1 end',
+          'return'
+        ].join('\n')
+      )
+      const result = await convertInpToYaml(inpPath)
+      expect(result).toContain('chain_id: MYID')
     })
   })
 

@@ -3,7 +3,8 @@ export {
   convertYamlToInp,
   validateYamlConstraints,
   validateInpConstraints,
-  extractConstraintsFromYaml
+  extractConstraintsFromYaml,
+  buildChainSegidMap
 } from './constraintUtils.js'
 
 export { toPipeline, discriminatorToPipeline } from './pipelineUtils.js'
