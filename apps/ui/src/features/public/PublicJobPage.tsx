@@ -88,7 +88,7 @@ const PublicJobPage = () => {
     skip: !publicId,
     pollingInterval: shouldPoll ? 10000 : 0
   })
-  console.log('PublicJobPage data:', data)
+  // console.log('PublicJobPage data:', data)
 
   useEffect(() => {
     if (data?.status) {
