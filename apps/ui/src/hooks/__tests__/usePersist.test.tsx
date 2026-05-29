@@ -27,6 +27,17 @@ describe('usePersist', () => {
     expect(result.current[0]).toBe(false)
   })
 
+  it('should initialize with false if localStorage contains corrupted data', () => {
+    // Arrange: Set up localStorage with a non-JSON value
+    localStorage.setItem('persist', 'not-valid-json')
+
+    // Act: Render the hook (must not throw)
+    const { result } = renderHook(() => usePersist())
+
+    // Assert: Falls back to false instead of crashing
+    expect(result.current[0]).toBe(false)
+  })
+
   it('should update localStorage when the state changes', () => {
     // Act: Render the hook and update the state
     const { result } = renderHook(() => usePersist())
