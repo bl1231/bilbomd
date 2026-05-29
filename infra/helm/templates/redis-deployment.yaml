@@ -15,10 +15,10 @@ spec:
     matchLabels:
       workload.user.cattle.io/workloadselector: apps.deployment-{{ .Values.namespace }}-{{ .Values.redis.name }}
   strategy:
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 25%
-    type: RollingUpdate
+    # Single replica on a ReadWriteOnce PVC: terminate the old pod before
+    # starting the new one so the new pod can mount its volume without a
+    # Multi-Attach error during version upgrades.
+    type: Recreate
   template:
     metadata:
       labels:
