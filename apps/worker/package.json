@@ -1,6 +1,6 @@
 {
   "name": "@bilbomd/worker",
-  "version": "2.14.2",
+  "version": "2.14.3",
   "description": "Worker app to process BilboMD jobs from BullMQ queue",
   "main": "dist/worker.js",
   "files": [
