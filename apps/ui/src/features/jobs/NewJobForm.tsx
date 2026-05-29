@@ -38,6 +38,7 @@ import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from './JobSuccessAlert'
 import MdEngineField from 'components/MdEngineField'
+import { getRgMaxWarning } from './rgMaxWarning'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -100,6 +101,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     qmin: number
     qmax: number
   } | null>(null)
+  // Rg Max suggested by AutoRg, kept so we can reference it if the user
+  // overrides Rg Max with an unreasonably large value.
+  const [suggestedRgMax, setSuggestedRgMax] = useState<string | null>(null)
 
   // RTK Query to fetch the configuration
   const {
@@ -283,6 +287,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             setUseExampleData(!useExampleData)
                             setSaxsData([])
                             setGuinierRegion(null)
+                            setSuggestedRgMax(null)
                             if (!useExampleData) {
                               if (values.bilbomd_mode === 'pdb') {
                                 void setFieldValue('pdb_file', '')
@@ -394,6 +399,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           setPdbInfo('')
                           setSaxsData([])
                           setGuinierRegion(null)
+                          setSuggestedRgMax(null)
                           if (val === 'openmm') {
                             void setFieldValue('num_conf', '3')
                           }
@@ -639,6 +645,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             setAutoRgError(null)
                             setSaxsData([])
                             setGuinierRegion(null)
+                            setSuggestedRgMax(null)
 
                             // Parse SAXS data in the browser for the preview plot
                             try {
@@ -701,6 +708,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   true,
                                   false
                                 )
+                                setSuggestedRgMax(String(rg_max))
                                 if (
                                   typeof qmin === 'number' &&
                                   typeof qmax === 'number'
@@ -709,6 +717,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 }
                               } catch (error) {
                                 setSaxsData([])
+                                setSuggestedRgMax(null)
                                 setAutoRgError(
                                   `Failed to calculate Rg from *.dat file. Please check the file format and try again. ${error}`
                                 )
@@ -717,6 +726,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               }
                             } else {
                               setSaxsData([])
+                              setSuggestedRgMax(null)
                               setAutoRgError(
                                 `Invalid *.dat file format. Please check the file format and try again.`
                               )
@@ -794,6 +804,26 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         onBlur={handleBlur}
                       />
                     </Grid>
+                    {(() => {
+                      const warning = getRgMaxWarning(values.rg, values.rg_max)
+                      if (!warning) return null
+                      return (
+                        <Grid sx={{ mb: 2, width: '520px' }}>
+                          <Alert severity="warning">
+                            Your <b>Rg Max</b> ({warning.rgMax} Å) is{' '}
+                            {warning.ratio}× your measured Rg ({warning.rg} Å).
+                            Targeting an Rg this much larger than the measured
+                            value can cause numerical instability and may crash
+                            the MD simulation.
+                            {suggestedRgMax
+                              ? ` The auto-calculated suggestion was ${suggestedRgMax} Å.`
+                              : ''}{' '}
+                            Consider reducing <b>Rg Max</b> to around{' '}
+                            {warning.recommended} Å.
+                          </Alert>
+                        </Grid>
+                      )
+                    })()}
                     <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
                       <Field
                         name="num_conf"

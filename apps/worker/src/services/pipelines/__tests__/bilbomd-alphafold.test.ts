@@ -74,7 +74,18 @@ vi.mock('../../functions/bilbomd-step-functions-nersc.js', () => ({
 
 vi.mock('../../functions/job-utils.js', () => ({
   initializeJob: stub('initializeJob'),
-  cleanupJob: stub('cleanupJob')
+  cleanupJob: stub('cleanupJob'),
+  runPipelineStep: vi.fn(
+    async (
+      _mq: unknown,
+      _job: unknown,
+      _label: string,
+      _step: string | undefined,
+      fn: () => Promise<void>
+    ) => {
+      await fn()
+    }
+  )
 }))
 
 vi.mock('../../functions/usage-events.js', () => ({
