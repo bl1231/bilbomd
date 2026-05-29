@@ -22,7 +22,11 @@ import {
 } from '../functions/bilbomd-functions.js'
 import { runFoXS } from '../functions/foxs-functions.js'
 import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc.js'
-import { initializeJob, cleanupJob } from '../functions/job-utils.js'
+import {
+  initializeJob,
+  cleanupJob,
+  runPipelineStep
+} from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
 import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 import {
@@ -69,100 +73,100 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
 
   // Convert CIF → PDB before any engine-specific processing
   if (foundJob.pdb_file?.toLowerCase().endsWith('.cif')) {
-    await MQjob.log('start cif-to-pdb')
-    foundJob.pdb_file = await runCifToPdb({
-      uuid: foundJob.uuid,
-      pdb_file: foundJob.pdb_file
+    await runPipelineStep(MQjob, foundJob, 'cif-to-pdb', undefined, async () => {
+      foundJob.pdb_file = await runCifToPdb({
+        uuid: foundJob.uuid,
+        pdb_file: foundJob.pdb_file
+      })
     })
-    await MQjob.log(`end cif-to-pdb: ${foundJob.pdb_file}`)
   }
 
   // Use PAE to construct const.inp file
-  await MQjob.log('start pae')
-  await runPaeToConstInp(MQjob, foundJob)
-  await MQjob.log('end pae')
+  await runPipelineStep(MQjob, foundJob, 'pae', 'pae', () =>
+    runPaeToConstInp(MQjob, foundJob)
+  )
   await progress.update(15)
 
   // Calculate Rg_min and Rg_max
-  await MQjob.log('start autorg')
-  await runAutoRg(foundJob)
-  await MQjob.log('end autorg')
+  await runPipelineStep(MQjob, foundJob, 'autorg', 'autorg', () =>
+    runAutoRg(foundJob)
+  )
   await progress.update(20)
 
   if (engine === 'CHARMM') {
     // Make sure CRD/PSF files are ready
-    await MQjob.log('start pdb2crd')
-    await runPdb2Crd(MQjob, foundJob)
-    await MQjob.log('end pdb2crd')
+    await runPipelineStep(MQjob, foundJob, 'pdb2crd', 'pdb2crd', () =>
+      runPdb2Crd(MQjob, foundJob)
+    )
 
     // CHARMM minimization
-    await MQjob.log('start minimize')
-    await runMinimize(MQjob, foundJob)
-    await MQjob.log('end minimize')
+    await runPipelineStep(MQjob, foundJob, 'minimize', 'minimize', () =>
+      runMinimize(MQjob, foundJob)
+    )
     await progress.update(25)
 
     // FoXS calculations on minimization_output.pdb
-    await MQjob.log('start initfoxs')
-    await runSingleFoXS(foundJob)
-    await MQjob.log('end initfoxs')
+    await runPipelineStep(MQjob, foundJob, 'initfoxs', 'initfoxs', () =>
+      runSingleFoXS(foundJob)
+    )
     await progress.update(30)
 
     // CHARMM heating
-    await MQjob.log('start heat')
-    await runHeat(MQjob, foundJob)
-    await MQjob.log('end heat')
+    await runPipelineStep(MQjob, foundJob, 'heat', 'heat', () =>
+      runHeat(MQjob, foundJob)
+    )
     await progress.update(40)
 
     // CHARMM molecular dynamics
-    await MQjob.log('start md')
-    await runMolecularDynamics(MQjob, foundJob)
-    await MQjob.log('end md')
+    await runPipelineStep(MQjob, foundJob, 'md', 'md', () =>
+      runMolecularDynamics(MQjob, foundJob)
+    )
     await progress.update(50)
 
     // Extract PDBs from DCDs
-    await MQjob.log('start dcd2pdb')
-    await extractPDBFilesFromDCD(MQjob, foundJob)
-    await MQjob.log('end dcd2pdb')
+    await runPipelineStep(MQjob, foundJob, 'dcd2pdb', 'dcd2pdb', () =>
+      extractPDBFilesFromDCD(MQjob, foundJob)
+    )
     await progress.update(60)
 
     // Remediate PDB files
-    await MQjob.log('start remediate')
-    await remediatePDBFiles(foundJob)
-    await MQjob.log('end remediate')
+    await runPipelineStep(MQjob, foundJob, 'remediate', 'pdb_remediate', () =>
+      remediatePDBFiles(foundJob)
+    )
     await progress.update(70)
   } else {
     // Remove waters and ions — incompatible with the implicit-solvent force field
-    await MQjob.log('start prep-pdb')
-    await runPrepPdb({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
-    await MQjob.log('end prep-pdb')
+    await runPipelineStep(MQjob, foundJob, 'prep-pdb', undefined, () =>
+      runPrepPdb({ uuid: foundJob.uuid, pdb_file: foundJob.pdb_file })
+    )
 
     // Prepare OpenMM config YAML
-    await MQjob.log('start openmm-config')
-    await prepareOpenMMConfig(foundJob)
-    await MQjob.log('end openmm-config')
+    await runPipelineStep(MQjob, foundJob, 'openmm-config', undefined, () =>
+      prepareOpenMMConfig(foundJob)
+    )
 
     // OpenMM minimization
-    await MQjob.log('start minimize')
-    await runOmmMinimize(MQjob, foundJob)
-    await MQjob.log('end minimize')
+    await runPipelineStep(MQjob, foundJob, 'minimize', 'minimize', () =>
+      runOmmMinimize(MQjob, foundJob)
+    )
     await progress.update(25)
 
     // FoXS calculations on minimization_output.pdb
-    await MQjob.log('start initfoxs')
-    await runSingleFoXS(foundJob)
-    await MQjob.log('end initfoxs')
+    await runPipelineStep(MQjob, foundJob, 'initfoxs', 'initfoxs', () =>
+      runSingleFoXS(foundJob)
+    )
     await progress.update(30)
 
     // OpenMM heating
-    await MQjob.log('start heat')
-    await runOmmHeat(MQjob, foundJob)
-    await MQjob.log('end heat')
+    await runPipelineStep(MQjob, foundJob, 'heat', 'heat', () =>
+      runOmmHeat(MQjob, foundJob)
+    )
     await progress.update(40)
 
     // OpenMM molecular dynamics
-    await MQjob.log('start md')
-    await runOmmMD(MQjob, foundJob)
-    await MQjob.log('end md')
+    await runPipelineStep(MQjob, foundJob, 'md', 'md', () =>
+      runOmmMD(MQjob, foundJob)
+    )
     await progress.update(50)
 
     // Generate MP4 movies from DCD files
@@ -172,21 +176,21 @@ const processBilboMDAutoJob = async (MQjob: BullMQJob) => {
   }
 
   // Calculate FoXS profiles
-  await MQjob.log('start foxs')
-  await runFoXS(MQjob, foundJob)
-  await MQjob.log('end foxs')
+  await runPipelineStep(MQjob, foundJob, 'foxs', 'foxs', () =>
+    runFoXS(MQjob, foundJob)
+  )
   await progress.update(80)
 
   // MultiFoXS
-  await MQjob.log('start multifoxs')
-  await runMultiFoxs(MQjob, foundJob)
-  await MQjob.log('end multifoxs')
+  await runPipelineStep(MQjob, foundJob, 'multifoxs', 'multifoxs', () =>
+    runMultiFoxs(MQjob, foundJob)
+  )
   await progress.update(95)
 
   // Prepare results
-  await MQjob.log('start results')
-  await prepareBilboMDResults(foundJob)
-  await MQjob.log('end results')
+  await runPipelineStep(MQjob, foundJob, 'results', 'results', () =>
+    prepareBilboMDResults(foundJob)
+  )
   await progress.update(99)
 
   // Cleanup & send email

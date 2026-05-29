@@ -14,7 +14,11 @@ import {
 import { runPrepPdb } from '../functions/pdb-to-crd.js'
 import { runFoXS } from '../functions/foxs-functions.js'
 import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc.js'
-import { initializeJob, cleanupJob } from '../functions/job-utils.js'
+import {
+  initializeJob,
+  cleanupJob,
+  runPipelineStep
+} from '../functions/job-utils.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
 import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 import {
@@ -64,71 +68,71 @@ const processBilboMDAlphaFoldJob = async (MQjob: BullMQJob) => {
   await progress.update(10)
 
   // ColabFold → af-rank1.pdb + af-pae.json. Sets pdb_file/pae_file on the job.
-  await MQjob.log('start alphafold')
-  await runAlphaFold(MQjob, foundJob)
-  await MQjob.log('end alphafold')
+  await runPipelineStep(MQjob, foundJob, 'alphafold', 'alphafold', () =>
+    runAlphaFold(MQjob, foundJob)
+  )
   await progress.update(25)
 
   // Remove waters and ions — incompatible with the implicit-solvent force field
-  await MQjob.log('start prep-pdb')
-  await runPrepPdb({
-    uuid: foundJob.uuid,
-    pdb_file: foundJob.pdb_file as string
-  })
-  await MQjob.log('end prep-pdb')
+  await runPipelineStep(MQjob, foundJob, 'prep-pdb', undefined, () =>
+    runPrepPdb({
+      uuid: foundJob.uuid,
+      pdb_file: foundJob.pdb_file as string
+    })
+  )
 
   // First openmm_config.yaml — bare config, no constraints yet.
-  await MQjob.log('start openmm-config')
-  await prepareOpenMMConfig(foundJob)
-  await MQjob.log('end openmm-config')
+  await runPipelineStep(MQjob, foundJob, 'openmm-config', undefined, () =>
+    prepareOpenMMConfig(foundJob)
+  )
 
   // PAE → openmm_const.yml.
-  await MQjob.log('start pae')
-  await runPaeToConstInp(MQjob, foundJob)
-  await MQjob.log('end pae')
+  await runPipelineStep(MQjob, foundJob, 'pae', 'pae', () =>
+    runPaeToConstInp(MQjob, foundJob)
+  )
   await progress.update(30)
 
   // Re-run prepareOpenMMConfig so openmm_const.yml is folded into openmm_config.yaml.
-  await MQjob.log('start openmm-config-merge')
-  await prepareOpenMMConfig(foundJob)
-  await MQjob.log('end openmm-config-merge')
+  await runPipelineStep(MQjob, foundJob, 'openmm-config-merge', undefined, () =>
+    prepareOpenMMConfig(foundJob)
+  )
 
-  await MQjob.log('start minimize')
-  await runOmmMinimize(MQjob, foundJob)
-  await MQjob.log('end minimize')
+  await runPipelineStep(MQjob, foundJob, 'minimize', 'minimize', () =>
+    runOmmMinimize(MQjob, foundJob)
+  )
   await progress.update(40)
 
-  await MQjob.log('start initfoxs')
-  await runSingleFoXS(foundJob)
-  await MQjob.log('end initfoxs')
+  await runPipelineStep(MQjob, foundJob, 'initfoxs', 'initfoxs', () =>
+    runSingleFoXS(foundJob)
+  )
   await progress.update(45)
 
-  await MQjob.log('start heat')
-  await runOmmHeat(MQjob, foundJob)
-  await MQjob.log('end heat')
+  await runPipelineStep(MQjob, foundJob, 'heat', 'heat', () =>
+    runOmmHeat(MQjob, foundJob)
+  )
   await progress.update(55)
 
-  await MQjob.log('start md')
-  await runOmmMD(MQjob, foundJob)
-  await MQjob.log('end md')
+  await runPipelineStep(MQjob, foundJob, 'md', 'md', () =>
+    runOmmMD(MQjob, foundJob)
+  )
   await progress.update(70)
 
   // Movie generation (fire-and-forget).
   enqueueMakeMovie(MQjob, foundJob)
 
-  await MQjob.log('start foxs')
-  await runFoXS(MQjob, foundJob)
-  await MQjob.log('end foxs')
+  await runPipelineStep(MQjob, foundJob, 'foxs', 'foxs', () =>
+    runFoXS(MQjob, foundJob)
+  )
   await progress.update(85)
 
-  await MQjob.log('start multifoxs')
-  await runMultiFoxs(MQjob, foundJob)
-  await MQjob.log('end multifoxs')
+  await runPipelineStep(MQjob, foundJob, 'multifoxs', 'multifoxs', () =>
+    runMultiFoxs(MQjob, foundJob)
+  )
   await progress.update(95)
 
-  await MQjob.log('start results')
-  await prepareBilboMDResults(foundJob)
-  await MQjob.log('end results')
+  await runPipelineStep(MQjob, foundJob, 'results', 'results', () =>
+    prepareBilboMDResults(foundJob)
+  )
   await progress.update(99)
 
   await cleanupJob(MQjob, foundJob)
