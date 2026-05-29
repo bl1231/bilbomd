@@ -121,7 +121,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.14.3
+    image: ghcr.io/bl1231/bilbomd-worker:2.14.4
     pull_policy: always
     security_opt:
       - no-new-privileges:true
