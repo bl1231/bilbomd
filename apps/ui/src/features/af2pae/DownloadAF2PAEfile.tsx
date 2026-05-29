@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { logger } from 'utils/logger'
 import { Button } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import { Box } from '@mui/system'
@@ -36,7 +37,7 @@ const Download = ({ uuid }: DownloadProps) => {
         window.URL.revokeObjectURL(url)
       }
     } catch (error) {
-      console.error('Download const.inp error:', error)
+      logger.error('Download const.inp error:', error)
     } finally {
       const elapsed = Date.now() - start
       const delay = Math.max(0, 1000 - elapsed)

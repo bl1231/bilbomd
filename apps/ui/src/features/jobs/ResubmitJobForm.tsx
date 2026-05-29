@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react'
+import { logger } from 'utils/logger'
 import {
   Box,
   Button,
@@ -125,8 +126,6 @@ const ResubmitJobForm = () => {
   const selectedMode: 'pdb' | 'crd_psf' =
     job?.mongo.jobType === 'crd' ? 'crd_psf' : 'pdb'
 
-  // console.log('job', job)
-
   let jobMongo: BilboMDCRDDTO | BilboMDPDBDTO
   if (job.mongo.jobType === 'crd') {
     jobMongo = job.mongo as BilboMDCRDDTO
@@ -223,7 +222,7 @@ const ResubmitJobForm = () => {
       // Navigate to the new job page
       void navigate(`/dashboard/jobs/${newJob.id}`)
     } catch (error) {
-      console.error('rejected', error)
+      logger.error('rejected', error)
     }
   }
 
@@ -643,7 +642,7 @@ const ResubmitJobForm = () => {
                                   void setFieldValue('rg_min', rg_min)
                                   void setFieldValue('rg_max', rg_max)
                                 } catch (error) {
-                                  console.error('Error:', error)
+                                  logger.error('Error:', error)
                                   void setFieldValue('rg_min', '')
                                   void setFieldValue('rg_max', '')
                                 }

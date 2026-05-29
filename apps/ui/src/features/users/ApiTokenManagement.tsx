@@ -23,6 +23,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import { formatDistanceToNowStrict } from 'date-fns'
 import { parseDateSafe, formatDateSafe } from 'utils/dates'
 import { useSnackbar } from 'notistack'
+import { logger } from 'utils/logger'
 
 const APITokenManager = () => {
   const { username } = useAuth()
@@ -127,7 +128,7 @@ const APITokenManager = () => {
       enqueueSnackbar(`${label} Token created.`, { variant: 'default' })
       void refetch()
     } catch (err) {
-      console.error('Failed to create token:', err)
+      logger.error('Failed to create token:', err)
       enqueueSnackbar('Failed to create token.', { variant: 'error' })
     }
   }
@@ -138,7 +139,7 @@ const APITokenManager = () => {
       enqueueSnackbar('Token deleted.', { variant: 'default' })
       void refetch()
     } catch (err) {
-      console.error('Failed to delete token:', err)
+      logger.error('Failed to delete token:', err)
       enqueueSnackbar('Failed to delete token.', { variant: 'error' })
     }
   }

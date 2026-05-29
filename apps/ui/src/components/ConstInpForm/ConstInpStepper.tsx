@@ -152,9 +152,6 @@ const ConstInpStepper = () => {
                 // You can access form values using the `values` parameter
                 // You can reset the form using the `resetForm` function
 
-                // Example:
-                console.log(values) // Access form values
-
                 // Reset the form after submission
                 resetForm()
               }}

@@ -35,6 +35,7 @@ import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
 import type { BilboMDAutoDTO } from '@bilbomd/bilbomd-types'
+import { logger } from 'utils/logger'
 
 const ResubmitAutoJobForm = () => {
   useTitle('BilboMD: Resubmit Auto Job')
@@ -164,7 +165,7 @@ const ResubmitAutoJobForm = () => {
       // Navigate to the new job page
       void navigate(`/dashboard/jobs/${newJob.id}`)
     } catch (error) {
-      console.error('rejected', error)
+      logger.error('rejected', error)
     }
   }
 

@@ -8,15 +8,12 @@ const pdbFileSchema = mixed()
   })
   .test('file-size-check', 'Max file size is 2MB', (file) => {
     if (file && (file as File).size <= 2000000) {
-      // console.log(file.size)
       return true
     }
-    // console.log(file.size)
     return false
   })
   .test('file-type-check', 'Only accepts a *.pdb file.', (file) => {
     if (file && (file as File).name.split('.').pop()?.toUpperCase() === 'PDB') {
-      // console.log(file.name.split('.').pop())
       return true
     }
     return false
@@ -27,7 +24,6 @@ const pdbFileSchema = mixed()
     async (file) => {
       if (file) {
         const spaceCheck = await noSpaces(file as File)
-        // console.log(spaceCheck)
         return spaceCheck
       }
       return false

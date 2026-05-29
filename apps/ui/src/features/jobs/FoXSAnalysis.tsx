@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { logger } from 'utils/logger'
 import FoXSChart from 'features/scoperjob/FoXSChart'
 import { Alert, AlertTitle } from '@mui/material'
 import Grid from '@mui/material/Grid'
@@ -80,7 +81,7 @@ const prepData = (
 
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
   if (!Array.isArray(foxsDataArray) || foxsDataArray.length < 2) {
-    console.warn(
+    logger.warn(
       'FoXSAnalysis: Not enough data to process ensemble comparison.'
     )
     return []
@@ -88,7 +89,7 @@ const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
 
   const base = foxsDataArray[0]
   if (!base || !Array.isArray(base.data) || base.data.length === 0) {
-    console.warn('FoXSAnalysis: Base FoXS dataset is empty or invalid.')
+    logger.warn('FoXSAnalysis: Base FoXS dataset is empty or invalid.')
     return []
   }
 

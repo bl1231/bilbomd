@@ -32,6 +32,7 @@ import { Formik, Form, Field } from 'formik'
 import { Debug } from 'components/Debug'
 import useAuth from 'hooks/useAuth'
 import { formatDateSafe } from 'utils/dates'
+import { logger } from 'utils/logger'
 
 interface SubmitValues {
   title: string
@@ -101,14 +102,14 @@ const NewMultiMDJobForm: React.FC = () => {
     try {
       const newJob = await addNewJob(form).unwrap()
       setStatus(null)
-      console.log('Job created successfully:', newJob)
+      logger.debug('Job created successfully:', newJob)
     } catch (error: unknown) {
       if (isApiError(error)) {
         // If the error is from the API, extract the message
         setStatus(error.data?.message || 'An unexpected error occurred.')
       } else {
         // Generic fallback for unexpected errors
-        console.error('Unexpected error:', error)
+        logger.error('Unexpected error:', error)
         setStatus('An unexpected error occurred.')
       }
     }

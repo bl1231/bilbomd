@@ -53,9 +53,7 @@ const fromCharmmGui = (file: File): Promise<boolean> => {
     reader.onloadend = () => {
       const lines = (reader.result as string).split(/[\r\n]+/g)
       for (let line = 0; line < 5; line++) {
-        // console.log(charmmGui.test(lines[line]), 'line', line, lines[line])
         if (charmmGui.test(lines[line]!)) {
-          // console.log(lines[line])
           resolve(true)
         }
       }
@@ -98,7 +96,6 @@ const isCRD = (file: File): Promise<boolean> => {
 
 const isPsfData = (file: File): Promise<boolean> => {
   return new Promise((resolve) => {
-    // console.log(`validate if ${file.name} isPsfData`)
     const reader = new FileReader()
     reader.readAsText(file)
     reader.onloadend = () => {
@@ -107,13 +104,11 @@ const isPsfData = (file: File): Promise<boolean> => {
         /^\s*\d+\s+[A-Z]{4}\s+\d+\s+[A-Z]{3,}\s+[a-zA-Z0-9_']+\s+[a-zA-Z0-9_']+\s+-?\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+/
 
       if (!lines[0]?.includes('PSF')) {
-        // console.log('first line does not contain PSF')
         resolve(false)
         return
       }
 
       if (!lines.some((line) => line.trim().endsWith('!NTITLE'))) {
-        // console.log('NTITLE missing')
         resolve(false)
         return
       }
@@ -122,20 +117,17 @@ const isPsfData = (file: File): Promise<boolean> => {
         /\d+\s+!NATOM/.test(line)
       )
       if (natomLineIndex === -1) {
-        // console.log('!NATOM line not found')
         resolve(false)
         return
       }
 
       const natomResult = lines[natomLineIndex]!.match(/(\d+)\s+!NATOM/)
       if (!natomResult) {
-        // console.log('Failed to capture number of atoms')
         resolve(false)
         return
       }
 
       const natom = parseInt(natomResult[1]!, 10)
-      // console.log('natom expected = ', natom)
       if (isNaN(natom)) {
         resolve(false)
         return
@@ -146,16 +138,13 @@ const isPsfData = (file: File): Promise<boolean> => {
         natomLineIndex + 1,
         natomLineIndex + 1 + natom
       )
-      // console.log('num atom lines = ', atomLines.length)
       if (atomLines.length !== natom) {
-        // console.log('Incorrect number of atom lines')
         resolve(false)
         return
       }
 
       for (const line of atomLines) {
         if (!atomRegex.test(line)) {
-          // console.log('Failed atom regex:', line)
           resolve(false)
           return
         }
@@ -165,7 +154,6 @@ const isPsfData = (file: File): Promise<boolean> => {
     }
 
     reader.onerror = () => {
-      // console.log('Error reading the file')
       resolve(false)
     }
   })
@@ -175,7 +163,6 @@ const noSpaces = (file: File): Promise<boolean> => {
   const spaces = /\s/
   return new Promise((resolve) => {
     if (spaces.test(file.name)) {
-      // console.log('false', file.name)
       resolve(false)
     }
     resolve(true)
@@ -204,7 +191,6 @@ const noSpaces = (file: File): Promise<boolean> => {
 const isSaxsData = (
   file: File
 ): Promise<{ valid: boolean; message?: string }> => {
-  // console.log(`validate if ${file.name} isSaxsData`)
   const sciNotation = /-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?/g
 
   return new Promise((resolve) => {
@@ -460,13 +446,11 @@ const isValidConstInpFile = (
       }
 
       // Check 'define' lines for 'segid' followed by the correct format
-      // console.log('isValidConstInpFile mode: ', mode)
       if (mode === 'pdb') {
         const segidRegex = /segid\s+((PRO|DNA|RNA|CAR|CAL)[A-Z])\b/
         const validSegid = lines
           .filter((line) => line.startsWith('define'))
           .every((line) => segidRegex.test(line))
-        // console.log(file.name, ' valid segid is ', validSegid)
         if (!validSegid) {
           resolve('segid must be: PRO[A-Z], DNA[A-Z], RNA[A-Z], etc.')
           return
@@ -476,7 +460,6 @@ const isValidConstInpFile = (
         const validSegid = lines
           .filter((line) => line.startsWith('define'))
           .every((line) => segidRegex.test(line))
-        // console.log(file.name, ' valid segid is ', validSegid)
         if (!validSegid) {
           resolve('segid must contain 4 uppercase letters [A-Z]')
           return

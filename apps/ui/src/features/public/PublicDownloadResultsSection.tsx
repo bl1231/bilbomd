@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { logger } from 'utils/logger'
 import { Alert, Button, Grid, Typography } from '@mui/material'
 import HeaderBox from 'components/HeaderBox'
 import Item from 'themes/components/Item'
@@ -41,7 +42,7 @@ const PublicDownloadResultsSection = ({ job }: { job: PublicJobStatus }) => {
         )
       }
     } catch (error) {
-      console.error('Download results error:', error)
+      logger.error('Download results error:', error)
       setDownloadError(
         'Download failed. The results archive may be unavailable. Please try again or contact support.'
       )

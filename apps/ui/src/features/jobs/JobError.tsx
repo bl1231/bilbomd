@@ -1,6 +1,7 @@
 import { axiosInstance, AxiosResponse } from 'app/api/axios'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { useSelector } from 'react-redux'
+import { logger } from 'utils/logger'
 import { selectCurrentToken } from 'slices/authSlice'
 import { useEffect, useState, useCallback } from 'react'
 import { Box } from '@mui/system'
@@ -29,7 +30,7 @@ const JobError = ({ job }: JobProps) => {
         )
         setLogContent(response.data.logContent)
       } catch (error) {
-        console.error('Error fetching log file:', error)
+        logger.error('Error fetching log file:', error)
       }
     },
     [token]

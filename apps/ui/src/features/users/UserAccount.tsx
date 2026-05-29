@@ -105,7 +105,6 @@ const UserAccount: React.FC = () => {
 
   const handleUpdateEmail = async (values: { newEmail: string }) => {
     try {
-      // console.log('Updating email to:', values.newEmail)
       await updateEmail({
         username,
         currentEmail: email,
@@ -129,8 +128,6 @@ const UserAccount: React.FC = () => {
   }
 
   const handleVerifyOtp = async (values: { otp: string }) => {
-    // console.log('Verifying OTP:', values.otp)
-
     try {
       await verifyOtp({
         username,
@@ -185,7 +182,6 @@ const UserAccount: React.FC = () => {
     }
 
     try {
-      // console.log('Deleting account:', username)
       await deleteUserByUserName(username).unwrap()
       showMessageDialog('Account deleted successfully')
       setTimeout(handleAutomaticLogout, 3000)

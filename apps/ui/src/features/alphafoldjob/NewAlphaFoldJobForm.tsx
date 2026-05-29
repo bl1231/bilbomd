@@ -41,6 +41,7 @@ import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 import AFOpenMMPipelineSchematic from './AFOpenMMPipelineSchematic'
 import AFCharmmPipelineSchematic from './AFCharmmPipelineSchematic'
+import { logger } from 'utils/logger'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -536,7 +537,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         ? addNewPublicJob(form).unwrap()
         : addNewAlphaFoldJob(form).unwrap())
     } catch (error) {
-      console.error('rejected', error)
+      logger.error('rejected', error)
       setSubmitError(
         (error as { data?: { message?: string } }).data?.message ||
           'An error occurred during submission.'

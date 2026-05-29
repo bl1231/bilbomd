@@ -19,11 +19,9 @@ const ProjectHours = ({ projectCode }: { projectCode: string }) => {
   let content: ContentType
   if (isLoading) content = <CircularProgress />
   if (error) {
-    console.log('err:', error)
     content = <Alert>Error loading NERSC Status.{error.toString()}</Alert>
   }
   if (!project) return <div>No data available</div>
-  // console.log('project:', project)
   if (isSuccess) {
     // Calculate percentages for CPU and GPU usage
     // const cpuUsagePercent =

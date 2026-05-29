@@ -31,6 +31,7 @@ import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
+import { logger } from 'utils/logger'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -127,7 +128,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
         ? addNewPublicJob(form).unwrap()
         : addNewJob(form).unwrap())
     } catch (error) {
-      console.error('rejected', error)
+      logger.error('rejected', error)
       setSubmitError(
         (error as { data?: { message?: string } }).data?.message ||
           'An error occurred during submission.'

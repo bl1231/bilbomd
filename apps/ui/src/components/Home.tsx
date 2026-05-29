@@ -12,6 +12,7 @@ import { selectCurrentToken } from 'slices/authSlice'
 import { useRefreshMutation } from 'slices/authApiSlice'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import usePersist from 'hooks/usePersist'
+import { logger } from 'utils/logger'
 import useTitle from 'hooks/useTitle'
 import ClassicPDBOpenMMPipelineSchematic from 'features/jobs/ClassicPDBOpenMMPipelineSchematic'
 import ClassicCRDPipelineSchematic from 'features/jobs/ClassicCRDPipelineSchematic'
@@ -40,7 +41,7 @@ const Home = ({ title = 'BilboMD' }) => {
         await refresh(undefined)
         setTrueSuccess(true)
       } catch (error) {
-        console.error('verifyRefreshToken error:', error)
+        logger.error('verifyRefreshToken error:', error)
       }
     }
     if (!token && persist) void verifyRefreshToken()
