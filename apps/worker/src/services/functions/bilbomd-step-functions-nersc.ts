@@ -211,6 +211,12 @@ const submitBilboMDSlurm = async (
       time_completed: undefined
     }
 
+    // Persist the nersc sub-document so the NERSC job monitor (which filters on
+    // `nersc.state != null`) can pick up the job and track its Slurm status.
+    // Use updateOne instead of save() to avoid ParallelSaveError, consistent
+    // with the step-status updates in mongo-utils.ts.
+    await DBjob.updateOne({ $set: { nersc: DBjob.nersc } })
+
     await updateJobStatus(
       DBjob,
       stepName,
