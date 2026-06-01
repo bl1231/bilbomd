@@ -108,7 +108,7 @@ services:
       start_period: 10s
 
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.14.4
+    image: ghcr.io/bl1231/bilbomd-worker:2.14.5
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
