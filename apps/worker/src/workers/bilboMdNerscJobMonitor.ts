@@ -35,6 +35,45 @@ const fetchIncompleteJobs = async (): Promise<IJob[]> => {
   }).exec()
 }
 
+// Recover jobs that were submitted to Slurm before the fix that persists the
+// nersc sub-document was deployed. Such jobs have a successful
+// nersc_submit_slurm_batch step (with the NERSC JobID in the message) but no
+// nersc field in MongoDB, so the normal monitor query never finds them.
+const recoverStuckNerscJobs = async (): Promise<void> => {
+  const stuckJobs = await DBJob.find({
+    status: { $ne: JobStatus.Completed },
+    cleanup_in_progress: false,
+    nersc: { $exists: false },
+    'steps.nersc_submit_slurm_batch.status': 'Success'
+  }).exec()
+
+  if (stuckJobs.length === 0) return
+  logger.info(`Recovering ${stuckJobs.length} stuck NERSC job(s) missing nersc sub-document...`)
+
+  for (const job of stuckJobs) {
+    const message = (job.steps as Record<string, { status: string; message: string } | undefined>)
+      ?.nersc_submit_slurm_batch?.message ?? ''
+    const match = message.match(/NERSC JobID (\S+)/)
+    if (!match) {
+      logger.warn(
+        `Job ${job.uuid}: cannot parse NERSC JobID from step message "${message}" — skipping`
+      )
+      continue
+    }
+    const jobid = match[1]
+    const nersc: INerscInfo = {
+      jobid,
+      state: NerscStatus.PENDING,
+      qos: '',
+      time_submitted: new Date(),
+      time_started: undefined,
+      time_completed: undefined
+    }
+    await job.updateOne({ $set: { nersc } })
+    logger.info(`Job ${job.uuid}: recovered with NERSC JobID ${jobid}`)
+  }
+}
+
 const queryNERSCForJobState = async (job: IJob): Promise<INerscInfo | null> => {
   try {
     const jobid = job.nersc?.jobid
@@ -192,6 +231,11 @@ const syncJobStatusFromNerscState = async (
 
 const monitorAndCleanupJobs = async (): Promise<void> => {
   try {
+    // Recover any jobs stuck without a nersc sub-document (submitted before the
+    // fix was deployed). Idempotent — once recovered they satisfy the normal
+    // fetchIncompleteJobs query and are no longer returned here.
+    await recoverStuckNerscJobs()
+
     logger.info('Starting job monitoring and cleanup...')
 
     // Step 1: Fetch all jobs where nersc.state is not null from MongoDB
