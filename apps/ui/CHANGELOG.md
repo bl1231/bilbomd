@@ -1,5 +1,16 @@
 # @bilbomd/ui
 
+## 2.20.2
+
+### Patch Changes
+
+- 8d28405: Clean up unguarded `console.*` calls in the UI (#851). Removed stray debugging
+  `console.log` statements and dead commented-out console lines, and routed genuine
+  diagnostics through a new `utils/logger` abstraction whose `log`/`debug`/`info`
+  are no-ops in production builds while `warn`/`error` still surface. Added a
+  `no-console` ESLint rule (with a test-file exception) to prevent regressions.
+- f3cfd32: Fix usePersist hook crashing on corrupted localStorage data. The hook now safely falls back to `false` when the stored `persist` value is not valid JSON, instead of throwing a SyntaxError during render.
+
 ## 2.20.1
 
 ### Patch Changes
