@@ -37,14 +37,14 @@
   },
   "dependencies": {
     "@bilbomd/mongodb-schema": "workspace:*",
-    "bullmq": "^5.77.4",
+    "bullmq": "^5.77.6",
     "dotenv": "^17.4.2",
     "fs-extra": "^11.3.5",
     "handlebars": "^4.7.9",
     "ioredis": "5.10.1",
     "moment-timezone": "^0.6.2",
-    "mongoose": "^9.6.2",
-    "nodemailer": "^8.0.9",
+    "mongoose": "^9.6.3",
+    "nodemailer": "^8.0.10",
     "nodemailer-express-handlebars": "^7.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
