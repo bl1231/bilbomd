@@ -81,7 +81,7 @@ services:
       - app-network
 
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.9.2
+    image: ghcr.io/bl1231/bilbomd-backend:2.9.3
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
