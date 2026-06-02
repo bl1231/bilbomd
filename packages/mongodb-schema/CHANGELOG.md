@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 2.7.1
+
+### Patch Changes
+
+- 005482b: Update dependencies to latest within range: bullmq, mongoose, nodemailer, date-fns, react-router, type-fest, eslint, lint-staged, and turbo. ioredis intentionally kept pinned at 5.10.1 to match BullMQ's exact ioredis dependency.
+
 ## 2.7.0
 
 ### Minor Changes
