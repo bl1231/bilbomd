@@ -42,8 +42,11 @@ const handleNewUser = async (req: Request, res: Response) => {
     return
   }
 
+  // Matching an array field against a scalar finds docs whose array contains
+  // that value. Avoid `$in` here: with mongoose `sanitizeFilter` enabled (see
+  // app.ts) operator objects get wrapped in `$eq`, which would cast-fail.
   const duplicatePreviousEmail = await User.findOne({
-    previousEmails: { $in: [email] }
+    previousEmails: email
   })
     .collation({ locale: 'en', strength: 2 }) // provide case-insensitive search
     .lean()

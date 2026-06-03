@@ -8,10 +8,11 @@ import { Job, MultiJob } from '@bilbomd/mongodb-schema'
 import { logger } from '../loggers.js'
 
 vi.mock('mongoose', async () => {
-  const actual = await vi.importActual('mongoose')
+  const actual = await vi.importActual<typeof import('mongoose')>('mongoose')
   return {
     ...actual,
     default: {
+      ...actual.default,
       connection: {
         readyState: 1
       }
@@ -291,11 +292,11 @@ describe('deleteOldJobs', () => {
       await deleteOldJobs()
 
       expect(Job.find).toHaveBeenCalledWith({
-        createdAt: { $lt: expectedThreshold }
+        createdAt: mongoose.trusted({ $lt: expectedThreshold })
       })
 
       expect(MultiJob.find).toHaveBeenCalledWith({
-        createdAt: { $lt: expectedThreshold }
+        createdAt: mongoose.trusted({ $lt: expectedThreshold })
       })
 
       vi.useRealTimers()

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { logger } from '../../middleware/loggers.js'
 import multer from 'multer'
 import fs from 'fs-extra'
@@ -227,7 +228,7 @@ const createPublicJob = async (req: Request, res: Response) => {
         ]
         const quotaQuery = {
           client_ip_hash,
-          status: { $in: activeStatuses },
+          status: mongoose.trusted({ $in: activeStatuses }),
           access_mode: AccessMode.Anonymous
         }
         const counts = await Promise.all([
