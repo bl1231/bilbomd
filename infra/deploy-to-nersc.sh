@@ -60,16 +60,16 @@ validate_env() {
     usage >&2
     exit 1
   fi
-  if ! kubectl config get-contexts -o name 2>/dev/null | grep -qx "bilbomd-$env"; then
-    echo -e "${RED}❌ kube-context 'bilbomd-$env' not found.${NC}" >&2
+  if ! kubectl config get-contexts -o name 2>/dev/null | grep -qx "nersc-spin-$env"; then
+    echo -e "${RED}❌ kube-context 'nersc-spin-$env' not found.${NC}" >&2
     exit 1
   fi
 }
 
 use_context() {
   local env="$1"
-  echo -e "🔧 Switching to context: ${BLUE}bilbomd-$env${NC}"
-  kubectl config use-context "bilbomd-$env" >/dev/null
+  echo -e "🔧 Switching to context: ${BLUE}nersc-spin-$env${NC}"
+  kubectl config use-context "nersc-spin-$env" >/dev/null
   echo "🧭 Current context: $(kubectl config current-context)"
   echo "📛 Current namespace: $NS"
   echo "--------------------------------"
