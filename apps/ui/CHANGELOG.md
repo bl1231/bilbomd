@@ -1,5 +1,12 @@
 # @bilbomd/ui
 
+## 2.20.4
+
+### Patch Changes
+
+- c2ba6c5: Update npm dependencies to latest versions (axios, bullmq, morgan, concurrently, @mui/x-data-grid, react, react-dom, react-router, vite, vitest, typescript-eslint, and related). ioredis intentionally held at 5.10.1 for BullMQ compatibility.
+- 6e4baf7: Auto job forms: warn when an uploaded PDB/CIF structure has an all-zero B-factor (pLDDT) column. The non-blocking warning explains that AlphaFold3-style PAE JSON will let BilboMD recover pLDDT automatically, and otherwise no rigid bodies will be defined. Applies to both the new and resubmit auto-job forms.
+
 ## 2.20.3
 
 ### Patch Changes
