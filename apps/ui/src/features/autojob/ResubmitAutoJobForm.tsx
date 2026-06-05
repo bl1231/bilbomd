@@ -23,7 +23,8 @@ import AutoJobFormInstructions from './AutoJobFormInstructions'
 import { BilboMDAutoJobSchema } from 'schemas/BilboMDAutoJobSchema'
 import {
   detectGaffCofactors,
-  detectMetalCofactors
+  detectMetalCofactors,
+  isPlddtColumnAllZero
 } from 'schemas/ValidationFunctions'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
@@ -276,18 +277,20 @@ const ResubmitAutoJobForm = () => {
                         fileType="AlphaFold2 *.pdb"
                         fileExt=".pdb"
                         onFileChange={async (file: File) => {
-                          const [gaffFound, metalFound] = await Promise.all([
-                            detectGaffCofactors(file),
-                            detectMetalCofactors(file)
-                          ])
+                          const [gaffFound, metalFound, plddtAllZero] =
+                            await Promise.all([
+                              detectGaffCofactors(file),
+                              detectMetalCofactors(file),
+                              isPlddtColumnAllZero(file)
+                            ])
                           setPdbInfo(
                             gaffFound.length > 0
                               ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
                               : ''
                           )
-                          setPdbWarning(
+                          const metalWarning =
                             metalFound.length > 0 ? (
-                              <>
+                              <Box>
                                 The following metal-containing
                                 residues have no force-field
                                 parameters and will be removed before
@@ -318,7 +321,32 @@ const ResubmitAutoJobForm = () => {
                                 structure, then submit a Classic job
                                 with CRD and PSF files using the
                                 CHARMM engine option.
-                              </>
+                              </Box>
+                            ) : null
+                          const plddtWarning = plddtAllZero ? (
+                            <Box>
+                              All B-factor (pLDDT) values in this
+                              structure are zero. If your PAE JSON is
+                              AlphaFold3-style (contains per-atom
+                              pLDDT), BilboMD will recover pLDDT
+                              automatically; otherwise no rigid bodies
+                              will be defined and your model will not be
+                              flexed. Consider re-uploading a structure
+                              that retains pLDDT in the B-factor column.
+                            </Box>
+                          ) : null
+                          setPdbWarning(
+                            metalWarning || plddtWarning ? (
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 1
+                                }}
+                              >
+                                {metalWarning}
+                                {plddtWarning}
+                              </Box>
                             ) : (
                               ''
                             )

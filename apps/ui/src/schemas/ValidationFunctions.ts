@@ -7,6 +7,7 @@ import {
   cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
   cifIsSingleModel as cifIsSingleModelUtil
 } from '@bilbomd/bilbomd-types'
+import { parsePLDDTFromPDB, parsePLDDTFromCIF } from '../utils/pdbUtils'
 
 const hasAllowedResiduesOnly = (
   file: File
@@ -594,6 +595,31 @@ const detectGaffCofactors = (file: File): Promise<string[]> =>
 const detectMetalCofactors = (file: File): Promise<string[]> =>
   _detectResiduesFromSet(file, METAL_COFACTORS)
 
+// Detect a structure whose B-factor/pLDDT column is entirely zero. Some
+// preparation tools (e.g. protonation) strip pLDDT, which silently breaks
+// rigid-body detection for auto jobs. Reuses the shared pLDDT parsers.
+const isPlddtColumnAllZero = (file: File): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        resolve(false)
+        return
+      }
+      const isCif = file.name.toLowerCase().endsWith('.cif')
+      const { data } = isCif
+        ? parsePLDDTFromCIF(text)
+        : parsePLDDTFromPDB(text)
+      // Only warn when we actually parsed residues and every one is zero.
+      resolve(data.length > 0 && data.every((d) => d.plddt === 0))
+    }
+    // On read error, don't block or warn — other validators handle bad files.
+    reader.onerror = () => resolve(false)
+    reader.readAsText(file)
+  })
+}
+
 export {
   fromCharmmGui,
   isCRD,
@@ -611,6 +637,7 @@ export {
   isValidConstInpFile,
   hasAllowedResiduesOnly,
   detectGaffCofactors,
-  detectMetalCofactors
+  detectMetalCofactors,
+  isPlddtColumnAllZero
 }
 export type { SaxsQualityResult }
