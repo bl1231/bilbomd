@@ -5,16 +5,19 @@ import path from 'path'
 import { IMultiJob, IStepStatus, User, IUser } from '@bilbomd/mongodb-schema'
 import { updateStepStatus } from './mongo-utils.js'
 import { makeDir } from './job-utils.js'
-import { spawn, ChildProcess, exec } from 'node:child_process'
-import { promisify } from 'util'
+import { spawn, ChildProcess } from 'node:child_process'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
-import { getNumEnsembles } from './prepare-results.js'
+import {
+  getNumEnsembles,
+  copyFiles,
+  writeJsonFile,
+  createResultsArchive
+} from './prepare-results.js'
+import { createReadmeFile } from './create-readme-file.js'
 
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
-
-const execPromise = promisify(exec)
 
 const prepareMultiMDdatFileList = async (DBJob: IMultiJob): Promise<void> => {
   const startingDir = path.join(config.uploadDir, DBJob.uuid)
@@ -242,6 +245,32 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
       isCritical: false
     })
 
+    // Resolve SAXS filename once — reused for both the file copy and README generation
+    let saxsDataFileName: string | undefined
+    try {
+      saxsDataFileName = await getMainSAXSDataFileName(DBjob)
+    } catch (error) {
+      logger.warn(`Could not resolve SAXS data file name: ${getErrorMessage(error)}`)
+    }
+
+    // Copy the primary SAXS data file from the designated sub-job
+    if (saxsDataFileName) {
+      await copyFiles({
+        source: path.join(config.uploadDir, DBjob.data_file_from, saxsDataFileName),
+        destination: resultsDir,
+        filename: saxsDataFileName,
+        isCritical: false
+      })
+    }
+
+    // Copy MultiFoXS log for debugging
+    await copyFiles({
+      source: multifoxsLogFile,
+      destination: resultsDir,
+      filename: 'multi_foxs.log',
+      isCritical: false
+    })
+
     // Write the DBjob to a JSON file
     const simplifiedJob = {
       title: DBjob.title,
@@ -286,13 +315,12 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
       })
     }
 
-    // Create README file
-    await createReadmeFile(DBjob, numEnsembles, resultsDir)
+    // Create README file — reuse saxsDataFileName resolved above
+    await createReadmeFile(DBjob, numEnsembles, resultsDir, saxsDataFileName)
 
     // Create tar.gz archive
-    const archiveName = `results-${DBjob.uuid.split('-')[0]}.tar.gz`
     try {
-      await execPromise(`tar czvf ${archiveName} results`, { cwd: jobDir })
+      await createResultsArchive(jobDir, DBjob.uuid)
       DBjob.results_ready = true
       await DBjob.save()
     } catch (tarError) {
@@ -303,128 +331,6 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
   } catch (error) {
     logger.error(`Error in prepareResults: ${getErrorMessage(error)}`)
     throw error
-  }
-}
-
-const createReadmeFile = async (
-  DBjob: IMultiJob,
-  numEnsembles: number,
-  resultsDir: string
-): Promise<void> => {
-  let saxsDataFileName: string
-  try {
-    saxsDataFileName = await getMainSAXSDataFileName(DBjob)
-  } catch (error) {
-    logger.error(
-      `Failed to get main SAXS data file name for README: ${getErrorMessage(error)}`
-    )
-    saxsDataFileName = 'N/A' // Placeholder for README
-  }
-
-  const readmeContent = `
-# BilboMD Multi Job Results
-
-This directory contains the results for your ${DBjob.title} BilboMD Multi job.
-
-- Job Title:  ${DBjob.title}
-- Experimental SAXS dat file: ${saxsDataFileName}
-- All calcualted scattering profiles from previous selected BilboMD runs
-- Job ID:  ${DBjob._id}
-- UUID:  ${DBjob.uuid}
-- Submitted:  ${DBjob.time_submitted}
-- Completed:  ${new Date().toString()}
-
-## Contents
-
-The Ensemble files will be present in multiple copies. There is one file for each ensemble size.
-
-- Number of ensembles for this BilboMD run: ${numEnsembles}
-
-- Ensemble PDB file(s):  ensemble_size_N_model.pdb
-- Ensemble TXT file(s):  ensemble_size_N.txt
-- Ensemble DAT file(s):  multi_state_model_N_1_1.dat
-- Summary of DB info:    bilbomd_job.json
-
-## The ensemble_size_N.txt files
-
-Here is an example from a hypothetical ensemble_size_3.txt file:
-
-1 |  2.89 | x1 2.89 (0.99, -0.50)
-   70   | 0.418 (0.414, 0.011) | ../foxs/rg25_run3/dcd2pdb_rg25_run3_271500.pdb.dat (0.138)
-   87   | 0.508 (0.422, 0.101) | ../foxs/rg41_run1/dcd2pdb_rg41_run1_35500.pdb.dat (0.273)
-  184   | 0.074 (0.125, 0.024) | ../foxs/rg45_run1/dcd2pdb_rg45_run1_23000.pdb.dat (0.025)
-
-In this example we show only the "best" 3-state ensemble. Each ensemble_size_N.txt file will
-actually contain many possible N-state ensembles.
-
-The first line is a summary of scores and fit parameters for a particular multi-state model:
-    - The first column is a number/rank of the multi-state model (sorted by score)
-    - The second column is a Chi^2 value for the fit to SAXS profile (2.89)
-    - The third column repeats the Chi^2 value and also displays a pair of c1 (0.99) and c2 (-0.50)
-      values (in brackets) from the MultiFoXS optimized fit to data.
-
-After the model summary line the file contains information about the states (one line per state).
-In this example the best scoring 3-state model consists of conformation numbers 70, 87, and 184
-with weights of 0.418, 0.508, and 0.074 respectively. The numbers in brackets after the
-conformation weight are an average and a standard	deviation of the weight calculated for this
-conformation across all good scoring multi-state models of this size. The number in brackets
-after the filename is the fraction of good scoring multi-state models that contain this conformation.
-
-## The ensemble_size_N_model.pdb files
-
-In the case of N>2 These will be multi-model PDB files. For N=1 it will just be the best single conformer
-to fit your SAXS data.
-
-ensemble_size_1_model.pdb  - will contain the coordinates for the best 1-state model
-ensemble_size_2_model.pdb  - will contain the coordinates for the best 2-state model
-ensemble_size_3_model.pdb  - will contain the coordinates for the best 3-state model
-etc.
-
-## The multi_state_model_N_1_1.dat files
-
-These are the theoretical SAXS curves from MultiFoXS calculated for each of the ensemble_size_N_model.pdb models.
-
-If you use BilboMD in your research, please cite:
-
-Pelikan M, Hura GL, Hammel M. Structure and flexibility within proteins as identified through small angle X-ray scattering. Gen Physiol Biophys. 2009 Jun;28(2):174-89. doi: 10.4149/gpb_2009_02_174. PMID: ,19592714; PMCID: PMC3773563.
-
-Thank you for using BilboMD
-`
-  const readmePath = path.join(resultsDir, 'README.md')
-  try {
-    await fs.writeFile(readmePath, readmeContent)
-    logger.info('README file created successfully.')
-  } catch (error) {
-    logger.error('Failed to create README file:', error)
-    throw new Error('Failed to create README file')
-  }
-}
-
-const writeJsonFile = async (filePath: string, data: unknown) => {
-  try {
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
-    logger.info(`JSON file written to: ${filePath}`)
-  } catch (error) {
-    logger.error(
-      `Error writing JSON file to ${filePath}: ${getErrorMessage(error)}`
-    )
-    throw error
-  }
-}
-
-const copyFiles = async ({
-  source,
-  destination,
-  filename,
-  isCritical
-}: FileCopyParams): Promise<void> => {
-  try {
-    await execPromise(`cp ${source} ${destination}`)
-  } catch (error) {
-    logger.error(`Error copying ${filename}: ${error}`)
-    if (isCritical) {
-      throw new Error(`Critical error copying ${filename}: ${error}`)
-    }
   }
 }
 

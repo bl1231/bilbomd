@@ -8,6 +8,7 @@ import { apiSlice } from '../app/api/apiSlice'
 import type { BilboMDJobDTO, JobAssetsDTO } from '@bilbomd/bilbomd-types'
 import { FileCheckResult } from '../types/jobCheckResults'
 import { RootState } from '../app/store'
+import { logger } from 'utils/logger'
 
 interface FoxsData {
   [key: string]: unknown
@@ -132,7 +133,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         try {
           await queryFulfilled
         } catch (error) {
-          console.error('Error occurred during job deletion:', error)
+          logger.error('Error occurred during job deletion:', error)
           patchResult.undo()
         }
       },
@@ -162,6 +163,14 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
     addNewAlphaFoldJob: builder.mutation<JobCreationResponse, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-alphafold',
+        method: 'POST',
+        body: newJob
+      }),
+      invalidatesTags: [{ type: 'Job', id: 'LIST' }]
+    }),
+    addNewOpenFoldJob: builder.mutation<JobCreationResponse, FormData>({
+      query: (newJob) => ({
+        url: '/jobs/bilbomd-openfold',
         method: 'POST',
         body: newJob
       }),
@@ -245,6 +254,7 @@ export const {
   useCalculateAutoRgMutation,
   useAddNewAutoJobMutation,
   useAddNewAlphaFoldJobMutation,
+  useAddNewOpenFoldJobMutation,
   useAddNewSANSJobMutation,
   useAddNewScoperJobMutation,
   useAddNewMultiJobMutation,

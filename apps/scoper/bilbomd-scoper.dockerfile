@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.23-labs
+# syntax=docker/dockerfile:1.24-labs
 
 # -----------------------------------------------------------------------------
 # Scoper app image: builds app on top of long-lived base
@@ -13,11 +13,10 @@ FROM ${BASE_IMAGE} AS deps
 WORKDIR /repo
 
 RUN npm i -g pnpm@${PNPM_VERSION} && \
-    pnpm config set inject-workspace-packages=true && \
     pnpm --version
 
 # Copy only manifests for better caching
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
 COPY apps/scoper/package.json apps/scoper/package.json
 
@@ -31,13 +30,12 @@ FROM ${BASE_IMAGE} AS build
 WORKDIR /repo
 
 RUN npm i -g pnpm@${PNPM_VERSION} && \
-    pnpm config set inject-workspace-packages=true && \
     pnpm --version
 
 ENV HUSKY=0
 
 # Copy only needed sources (keep context small)
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY apps/scoper apps/scoper
 COPY packages/mongodb-schema packages/mongodb-schema
 
@@ -64,6 +62,8 @@ RUN groupadd -g $GROUP_ID scoper && \
     useradd -ms /bin/bash -u $USER_ID -g $GROUP_ID scoper && \
     mkdir -p /home/scoper/app && \
     chown -R scoper:scoper /home/scoper
+
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
 
 # Switch to scoper user
 USER scoper:scoper

@@ -91,8 +91,8 @@ export function parsePLDDTFromCIF(cifContent: string): {
     if (group !== 'ATOM') continue
 
     const chainId = row[chainIdx] || ''
-    const residueNumber = parseInt(row[resIdx], 10)
-    const plddt = parseFloat(row[bfactorIdx])
+    const residueNumber = parseInt(row[resIdx]!, 10)
+    const plddt = parseFloat(row[bfactorIdx]!)
     if (isNaN(residueNumber) || isNaN(plddt)) continue
 
     if (residueNumber !== currentResidue || chainId !== currentChain) {

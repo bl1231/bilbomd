@@ -30,7 +30,6 @@ const UsersList = () => {
   }
 
   if (isError) {
-    // console.error('Error fetching users:', error)
     content = (
       <Alert severity='error' variant='outlined'>
         An error occurred while fetching users.
@@ -39,7 +38,6 @@ const UsersList = () => {
   }
 
   if (isSuccess && users.length > 0) {
-    // console.log('Users:', users)
     const columns: GridColDef[] = [
       { field: 'username', headerName: 'Username' },
       { field: 'email', headerName: 'Email', width: 180 },
@@ -86,7 +84,6 @@ const UsersList = () => {
   }
 
   if (isSuccess && users.length === 0) {
-    // console.warn('Unexpected data format for users:', users)
     content = (
       <Typography color='error'>
         No users available or data format is invalid.

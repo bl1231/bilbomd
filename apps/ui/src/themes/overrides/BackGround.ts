@@ -2,7 +2,6 @@ import { blueGrey } from '@mui/material/colors'
 import { Theme } from '@mui/material/styles'
 
 export default function BackGround(theme: Theme) {
-  // console.log('theme', theme)
   return {
     MuiCssBaseline: {
       styleOverrides: {

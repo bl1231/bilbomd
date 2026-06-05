@@ -160,8 +160,7 @@ export const jsonFileCheck = () =>
         try {
           JSON.parse(content)
           return true
-        } catch (error) {
-          console.log('Invalid JSON content:', error)
+        } catch {
           return false
         }
       }

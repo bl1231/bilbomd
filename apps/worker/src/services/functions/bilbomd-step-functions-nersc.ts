@@ -7,6 +7,7 @@ import {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IBilboMDSteps,
   StepStatusEnum
 } from '@bilbomd/mongodb-schema'
@@ -47,6 +48,10 @@ function isBilboMDAutoJob(job: IJob): job is IBilboMDAutoJob {
 
 function isBilboMDAlphaFoldJob(job: IJob): job is IBilboMDAlphaFoldJob {
   return (job as IBilboMDAlphaFoldJob).alphafold_entities !== undefined
+}
+
+function isBilboMDOpenFoldJob(job: IJob): job is IBilboMDOpenFoldJob {
+  return (job as IBilboMDOpenFoldJob).openfold_entities !== undefined
 }
 
 const updateNerscSpecificSteps = async (DBJob: IJob): Promise<void> => {
@@ -206,6 +211,12 @@ const submitBilboMDSlurm = async (
       time_completed: undefined
     }
 
+    // Persist the nersc sub-document so the NERSC job monitor (which filters on
+    // `nersc.state != null`) can pick up the job and track its Slurm status.
+    // Use updateOne instead of save() to avoid ParallelSaveError, consistent
+    // with the step-status updates in mongo-utils.ts.
+    await DBjob.updateOne({ $set: { nersc: DBjob.nersc } })
+
     await updateJobStatus(
       DBjob,
       stepName,
@@ -245,7 +256,8 @@ const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
       isBilboMDCRDJob(DBjob) ||
       isBilboMDPDBJob(DBjob) ||
       isBilboMDAutoJob(DBjob) ||
-      isBilboMDAlphaFoldJob(DBjob)
+      isBilboMDAlphaFoldJob(DBjob) ||
+      isBilboMDOpenFoldJob(DBjob)
     ) {
       await prepareResults(DBjob)
       await updateJobStatus(
@@ -362,5 +374,6 @@ export {
   isBilboMDCRDJob,
   isBilboMDPDBJob,
   isBilboMDAutoJob,
-  isBilboMDAlphaFoldJob
+  isBilboMDAlphaFoldJob,
+  isBilboMDOpenFoldJob
 }

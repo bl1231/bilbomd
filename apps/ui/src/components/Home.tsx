@@ -12,19 +12,22 @@ import { selectCurrentToken } from 'slices/authSlice'
 import { useRefreshMutation } from 'slices/authApiSlice'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import usePersist from 'hooks/usePersist'
+import { logger } from 'utils/logger'
 import useTitle from 'hooks/useTitle'
-import { useTheme } from '@mui/material/styles'
+import ClassicPDBOpenMMPipelineSchematic from 'features/jobs/ClassicPDBOpenMMPipelineSchematic'
+import ClassicCRDPipelineSchematic from 'features/jobs/ClassicCRDPipelineSchematic'
+import AutoOpenMMPipelineSchematic from 'features/autojob/AutoOpenMMPipelineSchematic'
+import AFOpenMMPipelineSchematic from 'features/alphafoldjob/AFOpenMMPipelineSchematic'
 import Introduction from '../features/shared/Introduction'
 import FeaturesList from '../features/shared/FeaturesList'
 import PipelineOptions from '../features/shared/PipelineOptions'
 import AdditionalInfo from '../features/shared/AdditionalInfo'
+import BilboMDBibTeX from 'components/Common/BilboMDBibTeX'
 
 const Home = ({ title = 'BilboMD' }) => {
   useTitle(title)
   const { data: config, isLoading: configIsLoading } =
     useGetConfigsQuery('configData')
-  const theme = useTheme()
-  const isLightMode = theme.palette.mode === 'light'
   const navigate = useNavigate()
   const [persist] = usePersist()
   const token = useSelector(selectCurrentToken)
@@ -38,7 +41,7 @@ const Home = ({ title = 'BilboMD' }) => {
         await refresh(undefined)
         setTrueSuccess(true)
       } catch (error) {
-        console.error('verifyRefreshToken error:', error)
+        logger.error('verifyRefreshToken error:', error)
       }
     }
     if (!token && persist) void verifyRefreshToken()
@@ -152,34 +155,22 @@ const Home = ({ title = 'BilboMD' }) => {
       {
         title: 'BilboMD Classic w/PDB',
         description: 'Bring your own starting PDB model and constraints.',
-        imagePath: {
-          light: '/images/bilbomd-classic-pdb-schematic.png',
-          dark: '/images/bilbomd-classic-pdb-schematic-dark.png'
-        }
+        schematic: <ClassicPDBOpenMMPipelineSchematic />
       },
       {
         title: 'BilboMD Classic w/CRD/PSF',
         description: 'Bring your own parameterized model and constraints.',
-        imagePath: {
-          light: '/images/bilbomd-classic-crd-schematic.png',
-          dark: '/images/bilbomd-classic-crd-schematic-dark.png'
-        }
+        schematic: <ClassicCRDPipelineSchematic />
       },
       {
         title: 'BilboMD Auto',
         description: 'Use AlphaFold models with automatic constraints.',
-        imagePath: {
-          light: '/images/bilbomd-auto-schematic.png',
-          dark: '/images/bilbomd-auto-schematic-dark.png'
-        }
+        schematic: <AutoOpenMMPipelineSchematic />
       },
       {
         title: 'BilboMD AF - NERSC only',
         description: 'Provide an amino acid sequence for full processing.',
-        imagePath: {
-          light: '/images/bilbomd-af-schematic.png',
-          dark: '/images/bilbomd-af-schematic-dark.png'
-        }
+        schematic: <AFOpenMMPipelineSchematic />
       }
     ]
 
@@ -218,22 +209,23 @@ const Home = ({ title = 'BilboMD' }) => {
             variant="body2"
             sx={{ mx: 5, my: 2 }}
           >
-            Pelikan M, Hura GL, Hammel M.{' '}
+            Classen S, Del Mundo J, Kulkarni D, Prabhakar S, Hicks A, Hammel
+            M.{' '}
             <b>
-              Structure and flexibility within proteins as identified through
-              small angle X-ray scattering.
+              BilboMD: a web-accessible SAXS and AlphaFold-guided modeling
+              pipeline.
             </b>{' '}
-            Gen Physiol Biophys. 2009 Jun;28(2):174-89. doi:
-            10.4149/gpb_2009_02_174. PMID:{' '}
+            Nucleic Acids Research. 2026; gkag377. doi:{' '}
             <Link
-              href="https://pubmed.ncbi.nlm.nih.gov/19592714/"
+              href="https://doi.org/10.1093/nar/gkag377"
               target="_blank"
               rel="noopener noreferrer"
             >
-              19592714
+              10.1093/nar/gkag377
             </Link>
-            ; PMCID: PMC3773563.
+            .
           </Typography>
+          <BilboMDBibTeX />
         </Introduction>
 
         {/* Config Alert */}
@@ -278,10 +270,7 @@ const Home = ({ title = 'BilboMD' }) => {
         >
           Pipeline Options
         </Typography>
-        <PipelineOptions
-          pipelines={pipelines}
-          isLightMode={isLightMode}
-        />
+        <PipelineOptions pipelines={pipelines} />
 
         {/* Additional Information */}
         <AdditionalInfo />

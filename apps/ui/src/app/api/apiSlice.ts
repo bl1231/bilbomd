@@ -7,6 +7,7 @@ import {
 } from '@reduxjs/toolkit/query/react'
 import { setCredentials } from '../../slices/authSlice'
 import type { RootState } from '../store'
+import { logger } from 'utils/logger'
 
 const baseURL =
   process.env.NODE_ENV === 'test' ? 'http://localhost:3003/api/v1' : '/api/v1'
@@ -54,7 +55,7 @@ const baseQueryWithReauth: BaseQueryFn<
       // Return the result of the original query
       return result
     } else if (refreshResult?.error?.status === 403) {
-      console.error(
+      logger.error(
         'Refresh token expired or invalid:',
         refreshResult.error.data
       )

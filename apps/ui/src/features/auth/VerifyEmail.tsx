@@ -6,13 +6,11 @@ import { useParams, Link } from 'react-router'
 import Button from '@mui/material/Button'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import useTitle from 'hooks/useTitle'
+import { logger } from 'utils/logger'
 
 const VerifyEmail = () => {
   useTitle('BilboMD: Verify Email')
   const { code } = useParams()
-  // const data = JSON.stringify({ code })
-  // console.log(data)
-
   const isMountedRef = useRef(false) // Create a ref to track the initial mount
   const [verificationStatus, setVerificationStatus] = useState<
     'loading' | 'success' | 'failure'
@@ -29,16 +27,13 @@ const VerifyEmail = () => {
             withCredentials: true
           }
         )
-        // console.log('res1:', response.data.message)
         if (response.data.message === 'Verified') {
-          // console.log('seems we should be verified')
           setVerificationStatus('success')
         } else {
-          // console.log('res2:', response.data.message)
           setVerificationStatus('failure')
         }
       } catch (error) {
-        console.error('auth error: ', error)
+        logger.error('auth error: ', error)
         setVerificationStatus('failure')
       }
     }

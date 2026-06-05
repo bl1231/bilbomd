@@ -33,11 +33,9 @@ const FileField = ({
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     event.preventDefault()
-    const reader = new FileReader()
     const file = event.target.files?.[0]
     if (file) {
-      reader.onloadend = () => setFileName(file.name)
-      reader.readAsDataURL(file)
+      setFileName(file.name)
       setFieldValue(name, file)
       if (onChange) {
         onChange(event)
@@ -55,7 +53,7 @@ const FileField = ({
             name={name}
             type='file'
             onChange={handleFileChange}
-            inputProps={{ accept: fileExt }}
+            slotProps={{ input: { accept: fileExt } }}
           />
           <label htmlFor={id}>
             <Button

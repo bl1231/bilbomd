@@ -10,9 +10,7 @@ type ThemeContextType = {
 // Create the context
 export const ThemeContext = createContext<ThemeContextType>({
   mode: 'light',
-  toggleColorMode: () => {
-    console.log('toggleColorMode not initialized')
-  },
+  toggleColorMode: () => {},
   theme: createTheme()
 })
 

@@ -5,6 +5,7 @@ import { selectJobById } from 'slices/jobsApiSlice'
 import { selectUserById } from 'slices/usersApiSlice'
 import { useSelector } from 'react-redux'
 import type { RootState } from 'app/store'
+import { userDisplayName } from 'utils/userDisplayName'
 
 // Map of path segments to labels
 // This is used to convert the path segments to human-readable labels.
@@ -61,7 +62,7 @@ export default function AppBreadcrumbs() {
 
           if (segment === maybeId) {
             if (isJob && job?.mongo?.title) label = job.mongo.title
-            if (isUser && user?.username) label = user.username
+            if (isUser && user) label = userDisplayName(user)
           }
 
           const isLast = index === pathnames.length - 1

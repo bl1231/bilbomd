@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:pr-656-f7d08144
+ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.8
 ########################################
 # Stage 1: deps (prefetch pnpm store)
 ########################################
@@ -62,6 +62,8 @@ ARG USER_ID=1000
 ARG GROUP_ID=1000
 RUN groupadd -g ${GROUP_ID} bilbomd \
     && useradd -u ${USER_ID} -g ${GROUP_ID} -m -d /home/bilbo -s /bin/bash bilbo
+
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
 
 # Copy the minimal app bundle from the build stage
 COPY --chown=bilbo:bilbomd --from=build /out/ .

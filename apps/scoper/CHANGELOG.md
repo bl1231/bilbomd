@@ -1,5 +1,71 @@
 # @bilbomd/scoper
 
+## 1.7.15
+
+### Patch Changes
+
+- c2ba6c5: Update npm dependencies to latest versions (axios, bullmq, morgan, concurrently, @mui/x-data-grid, react, react-dom, react-router, vite, vitest, typescript-eslint, and related). ioredis intentionally held at 5.10.1 for BullMQ compatibility.
+
+## 1.7.14
+
+### Patch Changes
+
+- 005482b: Update dependencies to latest within range: bullmq, mongoose, nodemailer, date-fns, react-router, type-fest, eslint, lint-staged, and turbo. ioredis intentionally kept pinned at 5.10.1 to match BullMQ's exact ioredis dependency.
+- Updated dependencies [005482b]
+  - @bilbomd/mongodb-schema@2.7.1
+
+## 1.7.13
+
+### Patch Changes
+
+- 55fb36b: Fix OS command injection vulnerability in scoper worker and add filename validation.
+
+  The scoper's `runFoXS` function used `exec()` with a shell-interpolated template literal to copy files, allowing shell metacharacters in user-supplied filenames to execute arbitrary commands. Replaced with `fs.copyFile()` which never invokes a shell.
+
+  Added `noShellMetacharsTest` filename validator to the backend validation helpers and a new `scoperJobSchema` that applies it to PDB and DAT file uploads, rejecting filenames containing `;`, `&`, `|`, backticks, `$`, `<`, `>`, `(`, `)`, `{`, `}`, or `!` before the job is queued.
+
+## 1.7.12
+
+### Patch Changes
+
+- 5c15d8a: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+- Updated dependencies [e2d4125]
+  - @bilbomd/mongodb-schema@2.7.0
+
+## 1.7.11
+
+### Patch Changes
+
+- 29200d1: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+
+## 1.7.10
+
+### Patch Changes
+
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+
+## 1.7.9
+
+### Patch Changes
+
+- b9c8a64: Update all npm/pnpm dependencies to latest versions within semver ranges.
+
+  Notable updates: mongoose 9.4→9.6, molstar 5.8→5.9, react-router 7.14→7.15, vite 8.0.7→8.0.11, bullmq 5.73→5.76, msw 2.13→2.14, MUI 9.0.0→9.0.1, react/react-dom 19.2.5→19.2.6.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/mongodb-schema@2.6.0
+
+## 1.7.8
+
+### Patch Changes
+
+- 6ca5249: Harden Docker Compose deployments: remove Docker socket mount from worker, add no-new-privileges to all services, set read_only root filesystem on worker containers with /tmp tmpfs, and drop all Linux capabilities from worker. Addresses F-7 pen test finding (Docker socket privilege escalation).
+- b41b107: Add custom seccomp profile blocking AF_ALG sockets (CVE-2026-31431) and other dangerous syscalls not needed by BilboMD containers. Profile applied to all services in all Docker Compose environments. Addresses F-6 pen test finding.
+- be7f034: Strip all SUID/SGID bits from container filesystems before dropping to non-root user. Added to backend, ui, worker-base, worker, scoper-base, and scoper Dockerfiles. Addresses F-6 pen test finding (SUID binary privilege escalation).
+- Updated dependencies [24b6dc2]
+  - @bilbomd/mongodb-schema@2.5.5
+
 ## 1.7.7
 
 ### Patch Changes

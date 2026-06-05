@@ -42,7 +42,15 @@ interface IAlphaFoldResults {
   ensembles?: IEnsemble[]
 }
 
-interface ISANSResults {}
+interface IOpenFoldResults {
+  total_num_ensembles?: number
+  ensembles?: IEnsemble[]
+}
+
+interface ISANSResults {
+  total_num_ensembles?: number
+  ensembles?: IEnsemble[]
+}
 
 interface IScoperResults {
   kgs_conformations?: number
@@ -61,6 +69,7 @@ interface IJobResults {
   classic?: IClassicResults
   auto?: IAutoResults
   alphafold?: IAlphaFoldResults
+  openfold?: IOpenFoldResults
   sans?: ISANSResults
   scoper?: IScoperResults
 }

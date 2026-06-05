@@ -18,9 +18,11 @@ const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email)
 }
 
-// Helper function to validate username format
+// Helper function to validate username format. Hyphens are allowed so
+// ORCID-derived opaque usernames like `orcid-0000-0002-1234-5678`
+// (issue #817 PR 3) pass admin-edit validation.
 const isValidUsername = (username: string): boolean => {
-  const usernameRegex = /^[a-zA-Z0-9_]+$/
+  const usernameRegex = /^[a-zA-Z0-9_-]+$/
   return usernameRegex.test(username)
 }
 

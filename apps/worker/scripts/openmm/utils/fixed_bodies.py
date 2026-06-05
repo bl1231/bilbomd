@@ -2,6 +2,9 @@
 
 from openmm import unit
 from openmm import CustomExternalForce
+from utils.logger import get_logger
+
+logger = get_logger("fixed_bodies")
 
 
 def apply_fixed_body_constraints_zero_mass(system, modeller, fixed_bodies):
@@ -27,13 +30,12 @@ def apply_fixed_body_constraints_zero_mass(system, modeller, fixed_bodies):
                     if start <= res_id < stop:
                         system.setParticleMass(atom.index, 0.0 * unit.amu)
                         break
-    # Debug: Print atoms with zero mass
     zero_mass_atoms = [
         i
         for i in range(system.getNumParticles())
         if system.getParticleMass(i)._value == 0
     ]
-    print(f"Zero-mass atoms: {zero_mass_atoms}")
+    logger.debug(f"Zero-mass atoms: {zero_mass_atoms}")
 
 
 def apply_fixed_body_constraints(system, modeller, fixed_bodies, kfixed=100000.0):
@@ -68,11 +70,3 @@ def apply_fixed_body_constraints(system, modeller, fixed_bodies, kfixed=100000.0
                         break  # Move to next atom once matched
 
     system.addForce(force)
-
-    # Debug: Print atoms with zero mass
-    zero_mass_atoms = [
-        i
-        for i in range(system.getNumParticles())
-        if system.getParticleMass(i)._value == 0
-    ]
-    print(f"Zero-mass atoms: {zero_mass_atoms}")

@@ -1,5 +1,6 @@
 import { ChangeEvent, useEffect, useCallback } from 'react'
 import { CARBOHYDRATE_RESIDUES } from '@bilbomd/bilbomd-types'
+import { logger } from 'utils/logger'
 import { Field, useFormikContext } from 'formik'
 import {
   Typography,
@@ -210,7 +211,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
       }
       charmmChains.push(charmmChain)
 
-      demRigidBodies[0].domains.push({
+      demRigidBodies[0]!.domains.push({
         chainid: chainId,
         start: firstRes,
         end: lastRes
@@ -243,7 +244,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
           void setFieldValue('pdb_file.file', file)
         }
         reader.onerror = (error) => {
-          console.error('File reading error:', error)
+          logger.error('File reading error:', error)
         }
         reader.readAsText(file)
       }
@@ -420,7 +421,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                       mr: 1,
                       mb: 1,
                       backgroundColor: customColors[chain] || '#9773b9',
-                      color: theme.palette.getContrastText(customColors[chain])
+                      color: theme.palette.getContrastText(customColors[chain] ?? '#9773b9')
                     }}
                   />
                 ))}

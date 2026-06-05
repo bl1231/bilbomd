@@ -9,8 +9,10 @@ import {
   IBilboMDAutoJob,
   IBilboMDScoperJob,
   IBilboMDAlphaFoldJob,
+  IBilboMDOpenFoldJob,
   IBilboMDSANSJob,
   IAlphaFoldEntity,
+  IOpenFoldEntity,
   IFeedbackData,
   INerscInfo,
   IBilboMDSteps,
@@ -30,6 +32,13 @@ const alphaFoldEntitySchema = new Schema<IAlphaFoldEntity>({
   name: { type: String, required: true },
   sequence: { type: String, required: true },
   type: { type: String, required: true },
+  copies: { type: Number, required: true }
+})
+
+const openFoldEntitySchema = new Schema<IOpenFoldEntity>({
+  name: { type: String, required: true },
+  sequence: { type: String, required: true },
+  type: { type: String, enum: ['Protein', 'DNA', 'RNA'], required: true },
   copies: { type: Number, required: true }
 })
 
@@ -114,6 +123,7 @@ const jobSchema = new Schema(
     data_file: { type: String, required: true },
     md_constraints: { type: mdConstraintsSchema, required: false },
     openmm_parameters: { type: openmmParametersSchema, required: false },
+    openmm_forcefield: { type: [String], required: false },
     charmm_parameters: { type: charmmParametersSchema, required: false },
     status: {
       type: String,
@@ -281,6 +291,30 @@ const bilboMdAlphaFoldJobSchema = new Schema<IBilboMDAlphaFoldJob>({
   rg_max: { type: Number, required: false, min: 10, max: 100 }
 })
 
+const bilboMdOpenFoldJobSchema = new Schema<IBilboMDOpenFoldJob>({
+  query_json_file: { type: String, required: true },
+  openfold_entities: [openFoldEntitySchema],
+  pdb_file: { type: String, required: false },
+  psf_file: { type: String, required: false },
+  crd_file: { type: String, required: false },
+  pae_file: { type: String, required: false },
+  const_inp_file: { type: String, required: false },
+  md_engine: {
+    type: String,
+    enum: mdEngineEnum,
+    default: 'OpenMM',
+    required: false
+  },
+  conformational_sampling: {
+    type: Number,
+    enum: [1, 2, 3, 4],
+    default: 1
+  },
+  rg: { type: Number, required: false, min: 10, max: 100 },
+  rg_min: { type: Number, required: false, min: 10, max: 100 },
+  rg_max: { type: Number, required: false, min: 10, max: 100 }
+})
+
 const bilboMdSANSJobSchema = new Schema<IBilboMDSANSJob>({
   pdb_file: { type: String, required: true },
   psf_file: { type: String, required: false },
@@ -324,6 +358,10 @@ const BilboMdAlphaFoldJob = Job.discriminator(
   'BilboMdAlphaFold',
   bilboMdAlphaFoldJobSchema
 )
+const BilboMdOpenFoldJob = Job.discriminator(
+  'BilboMdOpenFold',
+  bilboMdOpenFoldJobSchema
+)
 const BilboMdSANSJob = Job.discriminator('BilboMdSANS', bilboMdSANSJobSchema)
 const BilboMdScoperJob = Job.discriminator(
   'BilboMdScoper',
@@ -338,6 +376,7 @@ export {
   BilboMdAutoJob,
   BilboMdScoperJob,
   BilboMdAlphaFoldJob,
+  BilboMdOpenFoldJob,
   BilboMdSANSJob,
   nerscInfoSchema,
   mdConstraintsSchema,

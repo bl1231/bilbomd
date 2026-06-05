@@ -52,6 +52,17 @@ export const noSpacesTest = () =>
     }
   )
 
+export const noShellMetacharsTest = () =>
+  mixed().test(
+    'no-shell-metachar-check',
+    'Filename contains disallowed characters.',
+    function (value) {
+      const file = value as Express.Multer.File | undefined
+      if (!file?.originalname) return true
+      return !/[;&|`$<>(){}!\r\n]/.test(file.originalname)
+    }
+  )
+
 export const saxsCheck = () =>
   mixed().test(
     'saxs-data-check',

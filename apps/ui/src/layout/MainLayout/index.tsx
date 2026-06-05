@@ -91,6 +91,13 @@ export default function ClippedDrawer() {
       roles: ['user', 'manager']
     },
     {
+      text: 'BilboMD OF3',
+      icon: <AddCircleOutlineOutlined />,
+      path: '/dashboard/jobs/openfold',
+      onclick: () => navigate('dashboard/jobs/openfold'),
+      roles: ['user', 'manager']
+    },
+    {
       text: 'BilboMD Multi',
       icon: <AddCircleOutlineOutlined />,
       path: '/dashboard/jobs/multimd',
@@ -115,6 +122,9 @@ export default function ClippedDrawer() {
 
   if (useNersc || !enableBilboMdScoper) {
     jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'Scoper')
+  }
+  if (useNersc) {
+    jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'BilboMD OF3')
   }
   if (!enableBilboMdSANS) {
     jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'BilboMD SANS')

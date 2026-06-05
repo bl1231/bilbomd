@@ -77,7 +77,7 @@ const SettingsLayout = () => {
           Dashboard
         </Button>
         <UserAvatar
-          username={user.username}
+          displayName={user.displayName}
           email={user.email}
           status={user.status}
         />

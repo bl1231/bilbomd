@@ -53,6 +53,7 @@ router.route('/:id/:filename').get(getFile)
 router.route('/bilbomd-auto').post(createNewJob)
 router.route('/bilbomd-scoper').post(createNewJob)
 router.route('/bilbomd-alphafold').post(createNewJob)
+router.route('/bilbomd-openfold').post(createNewJob)
 router.route('/bilbomd-sans').post(createSANSJob)
 router.route('/bilbomd-multi').post(createNewMultiJob)
 

@@ -9,7 +9,7 @@ set -euo pipefail
 #   IMAGES="bilbomd-backend bilbomd-ui bilbomd-worker bilbomd-scoper"
 
 OWNER="${GH_OWNER:-bl1231}"
-IMAGES="${IMAGES:-bilbomd-backend bilbomd-ui bilbomd-worker bilbomd-scoper}"
+IMAGES="${IMAGES:-bilbomd-backend bilbomd-ui bilbomd-worker-base bilbomd-worker bilbomd-scoper-base bilbomd-scoper bilbomd-of3-service bilbomd-colabfold bilbomd-colabfold-service}"
 
 if [[ -z "$OWNER" ]]; then
   echo "GH_OWNER not set. Export GH_OWNER=your-org-or-username" >&2

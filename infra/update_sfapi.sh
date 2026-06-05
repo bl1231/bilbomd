@@ -14,7 +14,7 @@ else
 fi
 
 # Define contexts
-CONTEXTS=("bilbomd-dev" "bilbomd-prod")
+CONTEXTS=("nersc-spin-dev" "nersc-spin-prod")
 
 for CONTEXT in "${CONTEXTS[@]}"; do
     echo "🔁 Switching to context: $CONTEXT"
@@ -30,10 +30,10 @@ for CONTEXT in "${CONTEXTS[@]}"; do
 
     VALUES_FILE=""
     NAME=""
-    if [[ "$CONTEXT" == "bilbomd-dev" ]]; then
+    if [[ "$CONTEXT" == "nersc-spin-dev" ]]; then
         NAME="bilbomd-nersc-dev"
         VALUES_FILE="values-dev.yaml"
-    elif [[ "$CONTEXT" == "bilbomd-prod" ]]; then
+    elif [[ "$CONTEXT" == "nersc-spin-prod" ]]; then
         NAME="bilbomd-nersc-prod"
         VALUES_FILE="values-prod.yaml"
     else

@@ -51,7 +51,7 @@ describe('PersistLogin', () => {
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
 
-  it('renders CircularProgress while refresh is loading', () => {
+  it('renders CircularProgress while refresh is loading', async () => {
     mockUsePersist.mockReturnValue([true, vi.fn()])
     mockUseRefreshMutation.mockReturnValue([
       vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) }),
@@ -60,11 +60,13 @@ describe('PersistLogin', () => {
 
     renderWithProviders(<PersistLogin />)
 
-    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    })
     expect(screen.queryByTestId('outlet')).not.toBeInTheDocument()
   })
 
-  it('renders error state with MagickLink and Home buttons on refresh failure', () => {
+  it('renders error state with MagickLink and Home buttons on refresh failure', async () => {
     mockUsePersist.mockReturnValue([true, vi.fn()])
     mockUseRefreshMutation.mockReturnValue([
       vi.fn().mockReturnValue({ unwrap: vi.fn().mockRejectedValue(new Error('Unauthorized')) }),
@@ -78,7 +80,9 @@ describe('PersistLogin', () => {
 
     renderWithProviders(<PersistLogin />)
 
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+    })
     expect(screen.getByText(/session has expired/i)).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: /request a new magicklink/i })

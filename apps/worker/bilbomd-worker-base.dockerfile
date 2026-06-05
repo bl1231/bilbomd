@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # Setup the base image for building
-FROM nvidia/cuda:12.9.1-devel-ubuntu22.04 AS install-dependencies
+FROM nvidia/cuda:12.9.2-devel-ubuntu22.04 AS install-dependencies
 
 # Pin versions for better caching
 ARG CHARMM_VER=c49b2
@@ -139,11 +139,11 @@ RUN rm -rf /tmp/pymol-open-source
 
 # -----------------------------------------------------------------------------
 # Slim final runtime image (CUDA runtime only)
-FROM nvidia/cuda:12.9.1-runtime-ubuntu22.04 AS bilbomd-worker-base
+FROM nvidia/cuda:12.9.2-runtime-ubuntu22.04 AS bilbomd-worker-base
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    ca-certificates curl software-properties-common \
+    ca-certificates curl software-properties-common gnupg \
     libgfortran5 libstdc++6 libxml2 libtiff5 liblzma5 libicu70 libharfbuzz0b \
     parallel binutils \
     libglew-dev \
@@ -157,6 +157,22 @@ RUN apt-get update && \
     libxmu-dev \
     libxi-dev \
     ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Docker CLI — required by the local AlphaFold pipeline so the worker can
+# spawn sibling bilbomd-colabfold containers via the host docker daemon
+# (mounted at /var/run/docker.sock). We only need the client; the daemon
+# runs on the host.
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+        gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    chmod a+r /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+        > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        docker-ce-cli && \
     rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository -y ppa:salilab/ppa && \
@@ -180,6 +196,8 @@ RUN find /opt/envs -type d -name "__pycache__" -prune -exec rm -rf {} + || true 
     find /opt/envs -type f -name "*.py[co]" -delete || true && \
     find /opt/envs -type f -name "*.a" -delete || true && \
     find /opt/envs -type f -name "*.la" -delete || true
+
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
 
 # ---- Smoke test script installation ----
 COPY apps/worker/scripts/smoke_test.sh /usr/local/bin/smoke_test.sh

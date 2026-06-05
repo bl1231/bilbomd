@@ -131,6 +131,26 @@ const handleJobEmailNotification = async (
   }
 }
 
+// Run a single pipeline step: log start/end and, on failure, mark the job and
+// the specific step as 'Error' in MongoDB before re-throwing so BullMQ fails the
+// job (instead of leaving it stuck as 'Running').
+const runPipelineStep = async (
+  MQjob: BullMQJob,
+  DBjob: IJob,
+  label: string,
+  step: keyof IBilboMDSteps | undefined,
+  fn: () => Promise<void>
+): Promise<void> => {
+  await MQjob.log(`start ${label}`)
+  try {
+    await fn()
+  } catch (error) {
+    // handleError sets job + step status to 'Error' and re-throws.
+    await handleError(error, DBjob, step)
+  }
+  await MQjob.log(`end ${label}`)
+}
+
 const makeDir = async (directory: string) => {
   await fs.ensureDir(directory)
   logger.info(`Create Dir: ${directory}`)
@@ -254,8 +274,12 @@ const handleError = async (
   if (error instanceof Error) {
     errorMsg = error.message
     stackTrace = error.stack
+    const cause =
+      (error as Error & { cause?: unknown }).cause instanceof Error
+        ? (error as Error & { cause?: Error }).cause
+        : undefined
     logger.error(
-      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}`
+      `handleError - Error object details: name=${error.name}, message=${error.message}, stack=${error.stack}, step=${step || 'unknown'}${cause ? `, cause=${cause.name}: ${cause.message}` : ''}`
     )
   } else {
     errorMsg = String(error)
@@ -319,6 +343,7 @@ const handleError = async (
 export {
   initializeJob,
   cleanupJob,
+  runPipelineStep,
   makeDir,
   makeFile,
   generateDCD2PDBInpFile,

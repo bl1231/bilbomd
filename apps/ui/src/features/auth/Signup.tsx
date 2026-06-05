@@ -18,6 +18,7 @@ import {
 import Grid from '@mui/material/Grid'
 import useTitle from 'hooks/useTitle'
 import { axiosInstance, isAxiosError } from 'app/api/axios'
+import { logger } from 'utils/logger'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { Debug } from 'components/Debug'
 
@@ -51,7 +52,6 @@ const Signup = () => {
         headers: { 'Content-Type': 'application/json' },
         withCredentials: true
       })
-      // console.log('response: ', response)
       if (response.status === 201) {
         // successfully created a new user
         setError('')
@@ -63,7 +63,7 @@ const Signup = () => {
     } catch (error) {
       if (isAxiosError(error)) {
         // Access to config, request, and response
-        console.error('Axios Error: ', error)
+        logger.error('Axios Error: ', error)
         if (!error.response) {
           setError('No Server Response')
         } else if (error.response.status === 409) {
@@ -71,7 +71,7 @@ const Signup = () => {
         }
         setSubmitting(false)
       } else {
-        console.error(error)
+        logger.error(error)
       }
     }
   }

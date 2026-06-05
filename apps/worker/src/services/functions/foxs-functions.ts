@@ -3,7 +3,9 @@ import {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
-  IStepStatus
+  IBilboMDOpenFoldJob,
+  IStepStatus,
+  Job
 } from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
 import { spawn, ChildProcess } from 'node:child_process'
@@ -100,7 +102,8 @@ interface FoxsTask {
 const spawnFoXSOptimized = async (
   foxsRunDirs: string[],
   MQjob?: BullMQJob,
-  maxConcurrency = getEffectiveCpuCount()
+  maxConcurrency = getEffectiveCpuCount(),
+  DBjob?: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob | IBilboMDOpenFoldJob
 ): Promise<void> => {
   try {
     // Collect all PDB files from all directories
@@ -152,8 +155,9 @@ const spawnFoXSOptimized = async (
             // Progress logging - report every 50 completed files
             if (MQjob && completed % 50 === 0) {
               const progress = Math.round((completed / allTasks.length) * 100)
+              const statusMsg = `FoXS: ${completed}/${allTasks.length} (${progress}%)`
               MQjob.updateProgress({
-                status: `FoXS processing: ${completed}/${allTasks.length} (${progress}%)`,
+                status: statusMsg,
                 timestamp: Date.now()
               })
               MQjob.log(
@@ -162,6 +166,13 @@ const spawnFoXSOptimized = async (
               logger.info(
                 `FoXS progress: ${completed}/${allTasks.length} files completed (${progress}%)`
               )
+              if (DBjob) {
+                void Job.findByIdAndUpdate(DBjob._id, {
+                  $set: { 'steps.foxs': { status: 'Running', message: statusMsg } }
+                }).catch((err) =>
+                  logger.error(`FoXS step status update failed: ${err}`)
+                )
+              }
             }
 
             resolve()
@@ -230,6 +241,7 @@ const prepareFoXSInputs = async (
     | IBilboMDCRDJob
     | IBilboMDAutoJob
     | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob
 ): Promise<string[]> => {
   const jobDir = path.join(config.uploadDir, DBjob.uuid)
   const foxsDir = path.join(jobDir, 'foxs')
@@ -354,7 +366,8 @@ const runFoXS = async (
     | IBilboMDPDBJob
     | IBilboMDCRDJob
     | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob,
+    | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob,
   maxConcurrency?: number
 ): Promise<void> => {
   let status: IStepStatus = {
@@ -364,7 +377,7 @@ const runFoXS = async (
   let heartbeat: NodeJS.Timeout | null = null
 
   try {
-    // Update the initial status
+    logger.info(`Starting FoXS for job ${DBjob.uuid}`)
     await updateStepStatus(DBjob, 'foxs', status)
 
     // Discover or prepare FoXS input directories (supports OpenMM md/rg_* layout)
@@ -397,7 +410,7 @@ const runFoXS = async (
     }
 
     // Run optimized FoXS processing - ALL FILES IN PARALLEL
-    await spawnFoXSOptimized(foxsRunDirs, MQjob, actualConcurrency)
+    await spawnFoXSOptimized(foxsRunDirs, MQjob, actualConcurrency, DBjob)
 
     // Update status to Success once all jobs are complete
     status = {
@@ -405,9 +418,7 @@ const runFoXS = async (
       message: 'FoXS Calculations have completed successfully.'
     }
     await updateStepStatus(DBjob, 'foxs', status)
-    logger.info(
-      `FoXS processing completed successfully for job: ${DBjob.title}`
-    )
+    logger.info(`Completed FoXS for job ${DBjob.uuid}`)
   } catch (error: unknown) {
     // Handle errors and update status to Error
     status = {

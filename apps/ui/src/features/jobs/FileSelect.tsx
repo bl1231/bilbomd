@@ -1,4 +1,4 @@
-import { ChangeEvent } from 'react'
+import { ChangeEvent, ReactNode } from 'react'
 import {
   Button,
   FormControl,
@@ -8,6 +8,7 @@ import {
   Alert
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
+import { logger } from 'utils/logger'
 
 interface FileSelectProps extends FormControlProps {
   value: File
@@ -18,7 +19,7 @@ interface FileSelectProps extends FormControlProps {
   title: string
   error: boolean
   errorMessage?: string
-  warningMessage?: string
+  warningMessage?: ReactNode
   infoMessage?: string
   existingFileName?: string
   setFieldValue: (field: string, value: File, shouldValidate?: boolean) => void
@@ -54,7 +55,7 @@ const FileSelect = (props: FileSelectProps) => {
       }
 
       reader.onerror = () => {
-        console.error('Error reading file:', reader.error)
+        logger.error('Error reading file:', reader.error)
       }
 
       reader.readAsDataURL(file)
@@ -87,7 +88,7 @@ const FileSelect = (props: FileSelectProps) => {
             type="file"
             onChange={handleFileChange}
             onBlur={handleBlur}
-            inputProps={{ accept: props.fileExt }}
+            slotProps={{ input: { accept: props.fileExt } }}
             disabled={props.disabled}
           />
           <label htmlFor={props.id}>

@@ -48,7 +48,7 @@ steps:
       timestep: 0.001
     pdb_report_interval: 500
     rgyr:
-      filename: rgyr.csv
+      filename: rgyr_dmax.csv
       k_rg: 10
       report_interval: 500
       rgs:

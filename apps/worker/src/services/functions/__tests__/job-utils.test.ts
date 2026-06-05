@@ -5,7 +5,8 @@ import {
   makeDir,
   makeFile,
   generateInputFile,
-  handleError
+  handleError,
+  runPipelineStep
 } from '../job-utils.js'
 import { User, type IJob, type IUser } from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
@@ -423,6 +424,55 @@ describe('job-utils', () => {
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to update job status')
       )
+    })
+  })
+
+  describe('runPipelineStep', () => {
+    it('logs start/end and runs the step function on success', async () => {
+      const mockMQJob = {
+        log: vi.fn().mockResolvedValue(undefined)
+      } as unknown as BullMQJob
+      const mockDBJob = {
+        _id: new Types.ObjectId(),
+        uuid: 'step-uuid'
+      } as unknown as IJob
+      const fn = vi.fn().mockResolvedValue(undefined)
+
+      await runPipelineStep(mockMQJob, mockDBJob, 'md', 'md', fn)
+
+      expect(fn).toHaveBeenCalledTimes(1)
+      expect(mockMQJob.log).toHaveBeenCalledWith('start md')
+      expect(mockMQJob.log).toHaveBeenCalledWith('end md')
+      expect(updateJobStatus).not.toHaveBeenCalled()
+    })
+
+    it('marks job + step as Error and re-throws when the step fails', async () => {
+      vi.mocked(updateJobStatus).mockResolvedValue(undefined)
+      const mockMQJob = {
+        log: vi.fn().mockResolvedValue(undefined)
+      } as unknown as BullMQJob
+      const mockDBJob = {
+        _id: new Types.ObjectId(),
+        uuid: 'step-uuid',
+        title: 'Step Test Job',
+        __t: 'BilboMDPDBJob',
+        status: 'Running'
+      } as unknown as IJob
+      const fn = vi.fn().mockRejectedValue(new Error('boom'))
+
+      await expect(
+        runPipelineStep(mockMQJob, mockDBJob, 'md', 'md', fn)
+      ).rejects.toThrow("BilboMD failed in step 'md': boom")
+
+      expect(updateJobStatus).toHaveBeenCalledWith(mockDBJob, 'Error')
+      expect(updateStepStatus).toHaveBeenCalledWith(
+        mockDBJob,
+        'md',
+        expect.objectContaining({ status: 'Error' })
+      )
+      // 'end md' must NOT be logged after a failure
+      expect(mockMQJob.log).toHaveBeenCalledWith('start md')
+      expect(mockMQJob.log).not.toHaveBeenCalledWith('end md')
     })
   })
 })

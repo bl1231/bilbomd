@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { logger } from 'utils/logger'
 import {
   DataGrid,
   GridColDef,
@@ -95,7 +96,7 @@ const getRunTimeInHours = (
 
   // Validate that the time difference makes sense
   if (diffMs < 0) {
-    console.warn('Invalid NERSC runtime: end time before start time', {
+    logger.warn('Invalid NERSC runtime: end time before start time', {
       jobid: nersc.jobid,
       time_started: nersc.time_started,
       time_completed: nersc.time_completed,
@@ -135,7 +136,7 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
     end = new Date()
   } else if (jobStatus === 'Running' || nersc.state === 'RUNNING') {
     // Job is running but no real start time recorded - this shouldn't happen
-    console.warn('Job is running but no valid NERSC start time recorded', {
+    logger.warn('Job is running but no valid NERSC start time recorded', {
       jobid: nersc.jobid,
       status: jobStatus,
       nersc_state: nersc.state,
@@ -155,7 +156,7 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
   // Debug logging for negative times (should be rare now)
   if (diffMs < 0) {
     const now = new Date()
-    console.warn('Invalid NERSC queue time: negative duration detected', {
+    logger.warn('Invalid NERSC queue time: negative duration detected', {
       jobid: nersc.jobid,
       jobStatus,
       nersc_state: nersc.state,
@@ -170,6 +171,65 @@ const getHoursInQueue = (nersc: INerscInfo | undefined, jobStatus?: string) => {
     })
     return 'Invalid'
   }
+
+  const totalMinutes = Math.round(diffMs / 60000)
+  const hrs = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
+  return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
+}
+
+const getQueuedTime = (
+  timeSubmitted: Date | undefined,
+  timeStarted: Date | undefined,
+  jobStatus?: string
+) => {
+  const start = parseDateSafe(timeSubmitted)
+  if (!start) return ''
+
+  const started = parseDateSafe(timeStarted)
+  const end =
+    started ??
+    (jobStatus === 'Submitted' || jobStatus === 'Pending' ? new Date() : null)
+  if (!end) return ''
+
+  const diffMs = end.getTime() - start.getTime()
+  if (diffMs < 0) return ''
+
+  const totalMinutes = Math.round(diffMs / 60000)
+  const hrs = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+
+  if (totalMinutes < 1) return '<1min'
+  return hrs > 0 ? `${hrs}hr${mins > 0 ? ` ${mins}min` : ''}` : `${mins}min`
+}
+
+const getTotalRuntime = (
+  timeStarted: Date | undefined,
+  timeCompleted: Date | undefined,
+  jobStatus?: string
+) => {
+  const start = parseDateSafe(timeStarted)
+  if (!start) return ''
+
+  let end: Date | null = null
+
+  const completed = parseDateSafe(timeCompleted)
+  if (completed && completed.getTime() > 0) {
+    end = completed
+  }
+
+  if (!end) {
+    if (jobStatus === 'Running') {
+      end = new Date()
+    } else {
+      return ''
+    }
+  }
+
+  const diffMs = end.getTime() - start.getTime()
+  if (diffMs < 0) return ''
 
   const totalMinutes = Math.round(diffMs / 60000)
   const hrs = Math.floor(totalMinutes / 60)
@@ -202,8 +262,20 @@ const jobTypeToRoute: Record<string, string> = {
   auto: 'auto',
   scoper: 'scoper',
   alphafold: 'alphafold',
+  openfold: 'openfold',
   sans: 'sans',
   multi: 'multi'
+}
+
+const jobTypeToPipelineName: Record<string, string> = {
+  pdb: 'Classic',
+  crd: 'Classic',
+  auto: 'Auto',
+  alphafold: 'AlphaFold2',
+  openfold: 'OpenFold3',
+  sans: 'SANS',
+  scoper: 'Scoper',
+  multi: 'Multi'
 }
 
 const Jobs = () => {
@@ -231,11 +303,15 @@ const Jobs = () => {
   const [deleteTargetTitle, setDeleteTargetTitle] = useState<string | null>(
     null
   )
+  const [deleteTargetStatus, setDeleteTargetStatus] = useState<string | null>(
+    null
+  )
   const [deleteJob, { isLoading: isDeleting }] = useDeleteJobMutation()
 
-  const openDeleteDialog = (id: string, title: string) => {
+  const openDeleteDialog = (id: string, title: string, status: string) => {
     setDeleteTargetJobId(id)
     setDeleteTargetTitle(title)
+    setDeleteTargetStatus(status)
     setDeleteDialogOpen(true)
   }
 
@@ -246,7 +322,7 @@ const Jobs = () => {
       await deleteJob({ id: deleteTargetJobId }).unwrap()
       enqueueSnackbar('Job deletion queued.', { variant: 'success' })
     } catch (err) {
-      console.error('Failed to delete job:', err)
+      logger.error('Failed to delete job:', err)
       enqueueSnackbar('Failed to delete job. Please try again.', {
         variant: 'error'
       })
@@ -254,6 +330,7 @@ const Jobs = () => {
       setDeleteDialogOpen(false)
       setDeleteTargetJobId(null)
       setDeleteTargetTitle(null)
+      setDeleteTargetStatus(null)
     }
   }
 
@@ -336,7 +413,7 @@ const Jobs = () => {
         if (contentDisposition) {
           const matches = /filename="?([^"]+)"?/.exec(contentDisposition)
           if (matches && matches.length > 1) {
-            filename = matches[1]
+            filename = matches[1]!
           }
         }
         const url = window.URL.createObjectURL(response.data)
@@ -348,7 +425,7 @@ const Jobs = () => {
         link.parentNode?.removeChild(link)
       }
     } catch (err) {
-      console.error('Download failed:', err)
+      logger.error('Download failed:', err)
       enqueueSnackbar('Failed to download results. Please try again.', {
         variant: 'error'
       })
@@ -485,6 +562,16 @@ const Jobs = () => {
       const nerscStatus = job.mongo.nersc?.state || ''
       const queueHours = getHoursInQueue(job.mongo.nersc, job.mongo.status)
       const runTimeHours = getRunTimeInHours(job.mongo.nersc, job.mongo.status)
+      const queuedTime = getQueuedTime(
+        job.mongo.time_submitted,
+        job.mongo.time_started,
+        job.mongo.status
+      )
+      const totalRuntime = getTotalRuntime(
+        job.mongo.time_started,
+        job.mongo.time_completed,
+        job.mongo.status
+      )
 
       return {
         ...job.mongo,
@@ -493,12 +580,21 @@ const Jobs = () => {
         nerscStatus: nerscStatus,
         queueHours: queueHours,
         runTimeHours: runTimeHours,
+        queuedTime: queuedTime,
+        totalRuntime: totalRuntime,
         progress: job.mongo.progress
       }
     })
 
     const columns: GridColDef[] = [
       { field: 'title', headerName: 'Title', flex: 0.4, minWidth: 180 },
+      {
+        field: 'jobType',
+        headerName: 'Pipeline',
+        width: 110,
+        valueGetter: (_value, row) =>
+          jobTypeToPipelineName[row.jobType] ?? row.jobType
+      },
       {
         field: 'time_submitted',
         headerName: 'Submitted',
@@ -514,6 +610,24 @@ const Jobs = () => {
         width: 150,
         valueGetter: (_value, row) => parseDateSafe(row.time_completed),
         valueFormatter: (value: unknown) => formatDateSafe(value)
+      },
+      ...(!useNersc
+        ? [
+            {
+              field: 'queuedTime',
+              headerName: 'Queued',
+              width: 100
+            }
+          ]
+        : []),
+      {
+        field: 'totalRuntime',
+        headerName: 'Runtime',
+        width: 100,
+        cellClassName: (params: GridCellParams) => {
+          const status = params.row.status
+          return clsx({ running: status === 'Running' })
+        }
       },
       ...(useNersc
         ? [
@@ -655,6 +769,7 @@ const Jobs = () => {
               jobTitle={params.row.title}
               jobStatus={params.row.status}
               resultsReady={params.row.results_ready}
+              isAdmin={isAdmin}
               anchorEl={anchorEl}
               open={isOpen}
               onClose={handleMenuClose}
@@ -764,6 +879,19 @@ const Jobs = () => {
                         Are you sure you want to delete the job{' '}
                         <strong>{deleteTargetTitle}</strong>?
                       </Typography>
+                      {['Running', 'Submitted'].includes(
+                        deleteTargetStatus ?? ''
+                      ) && (
+                        <Alert
+                          severity="warning"
+                          sx={{ mt: 2 }}
+                        >
+                          This job is currently <strong>{deleteTargetStatus}</strong>.
+                          Deleting it will remove the database record and files,
+                          but the underlying simulation process may continue
+                          until it finishes naturally.
+                        </Alert>
+                      )}
                     </DialogContent>
                     <DialogActions>
                       <Button

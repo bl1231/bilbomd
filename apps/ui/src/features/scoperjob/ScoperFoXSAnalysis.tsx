@@ -26,7 +26,12 @@ interface ScoperFoXSAnalysisProps {
 
 const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
   data
-    .filter((item) => item.exp_intensity > 0 && item.model_intensity > 0)
+    .filter(
+      (item) =>
+        item.exp_intensity > 0 &&
+        item.model_intensity > 0 &&
+        item.error < item.exp_intensity
+    )
     .map((item) => ({
       q: parseFloat(item.q.toFixed(4)),
       exp_intensity: parseFloat(item.exp_intensity.toFixed(4)),
@@ -35,13 +40,18 @@ const prepData = (data: FoxsDataPoint[]): FoxsDataPoint[] =>
     }))
 
 const calculateResiduals = (dataPoints: FoxsDataPoint[]) => {
-  return dataPoints.map((item) => {
-    const q = parseFloat(item.q.toFixed(4))
-    const num = item.exp_intensity - item.model_intensity
-    const denom = item.error
-    const res = denom !== 0 ? parseFloat((num / denom).toFixed(4)) : 0
-    return { q, res }
-  })
+  return dataPoints
+    .map((item) => {
+      const q = parseFloat(item.q.toFixed(4))
+      const num = item.exp_intensity - item.model_intensity
+      const denom = item.error
+      const res =
+        Number.isFinite(denom) && denom !== 0
+          ? parseFloat((num / denom).toFixed(4))
+          : 0
+      return { q, res }
+    })
+    .filter((point) => Number.isFinite(point.res))
 }
 
 const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
@@ -60,11 +70,11 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
   // Prepare original data to reduce the number of digits after the decimal point
   // and filter out negative values
   const origData = useMemo(
-    () => (foxsData.length > 0 ? prepData(foxsData[0].data) : []),
+    () => (foxsData.length > 0 ? prepData(foxsData[0]!.data) : []),
     [foxsData]
   )
   const scopData = useMemo(
-    () => (foxsData.length > 1 ? prepData(foxsData[1].data) : []),
+    () => (foxsData.length > 1 ? prepData(foxsData[1]!.data) : []),
     [foxsData]
   )
 
@@ -88,7 +98,7 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
 
   // Handle loading and error states
   if (isLoading) return <div>Loading...</div>
-  if (isError || !data)
+  if (isError || !data || foxsData.length < 2)
     return (
       <Alert
         severity="info"
@@ -99,14 +109,14 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
     )
 
   // Pull out the other info needed for the FoXS plots
-  const origPDBFile = foxsData[0].filename
-  const scopPDBFile = foxsData[1].filename
-  const origChiSq = foxsData[0].chisq
-  const scopChiSq = foxsData[1].chisq
-  const origC1 = foxsData[0].c1
-  const scopC1 = foxsData[1].c1
-  const origC2 = foxsData[0].c2
-  const scopC2 = foxsData[1].c2
+  const origPDBFile = foxsData[0]!.filename
+  const scopPDBFile = foxsData[1]!.filename
+  const origChiSq = foxsData[0]!.chisq
+  const scopChiSq = foxsData[1]!.chisq
+  const origC1 = foxsData[0]!.c1
+  const scopC1 = foxsData[1]!.c1
+  const origC2 = foxsData[0]!.c2
+  const scopC2 = foxsData[1]!.c2
 
   return (
     <Item>

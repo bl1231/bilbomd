@@ -33,7 +33,7 @@ describe('mongo-utils', () => {
         steps: {
           minimize: { status: 'Pending', message: '' }
         } as IBilboMDSteps,
-        save: vi.fn().mockResolvedValue(undefined)
+        updateOne: vi.fn().mockResolvedValue(undefined)
       } as unknown as IJob
 
       const newStatus = { status: 'Success' as const, message: 'Completed' }
@@ -41,14 +41,17 @@ describe('mongo-utils', () => {
       await updateStepStatus(mockJob, 'minimize', newStatus)
 
       expect(mockJob.steps.minimize).toEqual(newStatus)
-      expect(mockJob.save).toHaveBeenCalledTimes(1)
+      expect(mockJob.updateOne).toHaveBeenCalledTimes(1)
+      expect(mockJob.updateOne).toHaveBeenCalledWith({
+        $set: { 'steps.minimize': newStatus }
+      })
     })
 
     it('should initialize steps object if it does not exist', async () => {
       const mockJob = {
         _id: 'test-job-id',
         steps: undefined,
-        save: vi.fn().mockResolvedValue(undefined)
+        updateOne: vi.fn().mockResolvedValue(undefined)
       } as unknown as IJob
 
       const newStatus = { status: 'Running' as const, message: 'In progress' }
@@ -57,14 +60,16 @@ describe('mongo-utils', () => {
 
       expect(mockJob.steps).toBeDefined()
       expect(mockJob.steps?.heat).toEqual(newStatus)
-      expect(mockJob.save).toHaveBeenCalledTimes(1)
+      expect(mockJob.updateOne).toHaveBeenCalledTimes(1)
     })
 
     it('should handle save errors gracefully', async () => {
       const mockJob = {
         _id: 'test-job-id',
         steps: {} as IBilboMDSteps,
-        save: vi.fn().mockRejectedValue(new Error('Database connection failed'))
+        updateOne: vi
+          .fn()
+          .mockRejectedValue(new Error('Database connection failed'))
       } as unknown as IJob
 
       const newStatus = { status: 'Error' as const, message: 'Failed' }
@@ -80,7 +85,7 @@ describe('mongo-utils', () => {
       const mockMultiJob = {
         _id: 'multi-job-id',
         steps: {} as IBilboMDSteps,
-        save: vi.fn().mockResolvedValue(undefined)
+        updateOne: vi.fn().mockResolvedValue(undefined)
       } as unknown as IMultiJob
 
       const newStatus = { status: 'Success' as const, message: 'Done' }
@@ -88,7 +93,7 @@ describe('mongo-utils', () => {
       await updateStepStatus(mockMultiJob, 'multifoxs', newStatus)
 
       expect(mockMultiJob.steps.multifoxs).toEqual(newStatus)
-      expect(mockMultiJob.save).toHaveBeenCalledTimes(1)
+      expect(mockMultiJob.updateOne).toHaveBeenCalledTimes(1)
     })
   })
 

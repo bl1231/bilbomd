@@ -19,7 +19,6 @@ const NerscStatusList = () => {
     // error: outagesError,
     // isLoading: outagesIsLoading
   } = useGetNerscOutagesQuery()
-  // console.log('outages:', outages)
   const {
     data: config,
     error: configError,

@@ -18,7 +18,7 @@ interface DeleteJobProps {
 const DeleteJob = ({ id, title, hide, onClose }: DeleteJobProps) => {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [deleteJob, { isSuccess, isError, error }] = useDeleteJobMutation()
+  const [deleteJob, { isSuccess }] = useDeleteJobMutation()
   const onClickDelete = async () => {
     setDeleting(true)
     await deleteJob({ id })
@@ -37,13 +37,9 @@ const DeleteJob = ({ id, title, hide, onClose }: DeleteJobProps) => {
 
   useEffect(() => {
     if (isSuccess) {
-      console.log('DeleteJob isSuccess:', isSuccess, 'error:', error)
       if (onClose) onClose()
     }
-    if (isError) {
-      console.log('DeleteJob isError:', isError, 'error:', error)
-    }
-  }, [isSuccess, isError, error, onClose])
+  }, [isSuccess, onClose])
 
   return (
     <>

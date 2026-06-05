@@ -5,6 +5,7 @@ import { getEnvVar } from '../config/config.js'
 interface DecodedJWT {
   UserInfo: {
     username: string
+    displayName?: string
     roles: string[]
     email: string
   }

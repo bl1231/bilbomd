@@ -9,6 +9,7 @@ describe('jobHandlerFactory', () => {
       'crd',
       'scoper',
       'alphafold',
+      'openfold',
       'multi'
     ]
 

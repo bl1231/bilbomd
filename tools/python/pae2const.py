@@ -62,6 +62,25 @@ class PDBHandler(InputHandler):
     def __init__(self):
         self.pdb_index_to_res = []
         self.pdb_res_plddt = defaultdict(list)
+        # Ordered (chain_id, resseq) for each non-hydrogen atom, in file order.
+        # Used to align AlphaFold3 JSON `atom_plddts` (heavy atoms) to residues
+        # when the structure's B-factor column lacks pLDDT (all zeros).
+        self.pdb_heavy_atom_res = []
+
+    @staticmethod
+    def _is_hydrogen_pdb_atom(line: str) -> bool:
+        """
+        Decide whether a PDB ATOM/HETATM line describes a hydrogen.
+        Prefers the element column (cols 77-78); falls back to the atom name
+        (cols 13-16) when the element is blank.
+        """
+        element = line[76:78].strip().upper() if len(line) >= 78 else ""
+        if element:
+            return element == "H"
+        # Fall back to the atom name. Strip leading digits/altloc spacing.
+        name = line[12:16].strip()
+        name = name.lstrip("0123456789")
+        return name[:1].upper() == "H"
 
     def _prepare_pdb_mappings(self, pdb_file: str) -> int:
         """
@@ -69,7 +88,8 @@ class PDBHandler(InputHandler):
         pdb_res_plddt (per-residue list of B-factors which hold pLDDT).
         Returns the number of residues discovered.
 
-        This populates self.pdb_index_to_res and self.pdb_res_plddt.
+        This populates self.pdb_index_to_res, self.pdb_res_plddt and
+        self.pdb_heavy_atom_res.
         """
         pdb_path = Path(pdb_file)
         if not pdb_path.exists():
@@ -77,6 +97,7 @@ class PDBHandler(InputHandler):
 
         self.pdb_index_to_res.clear()
         self.pdb_res_plddt.clear()
+        self.pdb_heavy_atom_res.clear()
         seen_res = set()  # Track first atom per residue to build index ordering
 
         with open(pdb_path, "r", encoding="utf-8") as fh:
@@ -103,6 +124,10 @@ class PDBHandler(InputHandler):
                 except ValueError:
                     pass
 
+                # Track heavy atoms (in file order) to align with AF3 atom_plddts
+                if not self._is_hydrogen_pdb_atom(line):
+                    self.pdb_heavy_atom_res.append((chain_id, resseq))
+
                 # Use (chain, resseq, icode) to identify first occurrence order
                 key = (chain_id, resseq, icode)
                 if key not in seen_res:
@@ -110,6 +135,49 @@ class PDBHandler(InputHandler):
                     self.pdb_index_to_res.append((chain_id, resseq))
 
         return len(self.pdb_index_to_res)
+
+    def bfactors_all_zero(self) -> bool:
+        """
+        True iff per-residue B-factor (pLDDT) data has been populated and every
+        recorded B-factor is exactly zero. Used to decide whether to recover
+        pLDDT from an AlphaFold3-style PAE JSON.
+        """
+        if not self.pdb_res_plddt:
+            return False
+        return all(
+            b == 0.0 for vals in self.pdb_res_plddt.values() for b in vals
+        )
+
+    def apply_plddt_from_atom_array(self, atom_plddts: List[float]) -> bool:
+        """
+        Repopulate per-residue pLDDT (self.pdb_res_plddt) from a per-heavy-atom
+        pLDDT array (e.g. AlphaFold3 JSON `atom_plddts`), aligning by file order.
+
+        Returns True if the array was applied, False if it could not be aligned
+        (length mismatch with the heavy-atom count) — in which case existing
+        per-residue data is left unchanged.
+        """
+        n_heavy = len(self.pdb_heavy_atom_res)
+        if not atom_plddts or n_heavy == 0:
+            print(
+                "[plddt-fallback] No heavy atoms or empty atom_plddts; cannot recover pLDDT."
+            )
+            return False
+        if len(atom_plddts) != n_heavy:
+            print(
+                f"[plddt-fallback] atom_plddts length ({len(atom_plddts)}) does not match "
+                f"heavy-atom count ({n_heavy}); skipping pLDDT recovery."
+            )
+            return False
+
+        new_res_plddt = defaultdict(list)
+        for (chain_id, resseq), plddt in zip(self.pdb_heavy_atom_res, atom_plddts):
+            try:
+                new_res_plddt[(chain_id, resseq)].append(float(plddt))
+            except (ValueError, TypeError):
+                pass
+        self.pdb_res_plddt = new_res_plddt
+        return True
 
     def get_first_and_last_residue_numbers(self, pdb_file: str) -> Tuple[int, int]:
         """
@@ -239,6 +307,7 @@ class CIFHandler(PDBHandler):
 
         self.pdb_index_to_res.clear()
         self.pdb_res_plddt.clear()
+        self.pdb_heavy_atom_res.clear()
         seen_res = set()
 
         for model in structure:
@@ -257,6 +326,15 @@ class CIFHandler(PDBHandler):
                             self.pdb_res_plddt[(chain_id, resseq)].append(b)
                         except (ValueError, AttributeError):
                             pass
+                        # Track heavy atoms (in file order) to align with AF3
+                        # atom_plddts when B-factors lack pLDDT.
+                        element = (getattr(atom, "element", "") or "").strip().upper()
+                        if not element:
+                            element = atom.get_name().strip().lstrip(
+                                "0123456789"
+                            )[:1].upper()
+                        if element != "H":
+                            self.pdb_heavy_atom_res.append((chain_id, resseq))
 
         return len(self.pdb_index_to_res)
 
@@ -601,8 +679,12 @@ class PAEProcessor:
             )
         elif "pae" in self.pae_data:
             pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        elif "pde" in self.pae_data:
+            pae_full = np.array(self.pae_data["pde"], dtype=np.float32)
         else:
-            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+            raise ValueError(
+                "PAE data must contain 'predicted_aligned_error', 'pae', or 'pde'"
+            )
 
         if pae_full.ndim != 2 or pae_full.shape[0] != pae_full.shape[1]:
             raise ValueError(
@@ -679,6 +761,51 @@ class PAEProcessor:
         """
         return self.input_handler.define_segments(file)
 
+    def maybe_recover_plddt_from_json(self) -> bool:
+        """
+        Recover per-residue pLDDT from the loaded PAE JSON when the structure's
+        B-factor column is all zeros.
+
+        Rigid-body detection gates on per-residue pLDDT read from the structure's
+        B-factor column. Some preparation tools (e.g. protonation) zero that
+        column, which would silently yield no rigid bodies. AlphaFold3-style PAE
+        JSON carries per-heavy-atom pLDDT in `atom_plddts`; align it to the
+        structure's heavy atoms (file order) to restore per-residue pLDDT.
+
+        Only applies to PDB/CIF inputs. Returns True if pLDDT was recovered.
+        """
+        if not isinstance(self.input_handler, PDBHandler):
+            return False
+        if not self.input_handler.bfactors_all_zero():
+            return False
+
+        atom_plddts = (
+            self.pae_data.get("atom_plddts")
+            if isinstance(self.pae_data, dict)
+            else None
+        )
+        if not atom_plddts:
+            print(
+                "[plddt-fallback] Structure B-factor (pLDDT) column is all zeros and the "
+                "PAE JSON has no 'atom_plddts'; no rigid bodies can be defined. "
+                "Re-submit with a structure that retains pLDDT in the B-factor column "
+                "(e.g. the original AlphaFold CIF) or an AlphaFold3-style PAE JSON."
+            )
+            return False
+
+        print(
+            "[plddt-fallback] Structure B-factor (pLDDT) column is all zeros; "
+            "recovering per-residue pLDDT from PAE JSON 'atom_plddts'."
+        )
+        recovered = self.input_handler.apply_plddt_from_atom_array(atom_plddts)
+        if recovered:
+            print(
+                f"[plddt-fallback] Recovered pLDDT for "
+                f"{len(self.input_handler.pdb_res_plddt)} residues from "
+                f"{len(atom_plddts)} heavy-atom values."
+            )
+        return recovered
+
     def define_clusters(self):
         row_start = self.first_residue - 1
         row_end = self.last_residue - 1
@@ -709,6 +836,8 @@ class PAEProcessor:
             matrix = data["pae"]
         elif "predicted_aligned_error" in data:
             matrix = data["predicted_aligned_error"]
+        elif "pde" in data:
+            matrix = data["pde"]
         else:
             raise ValueError("Invalid PAE JSON format.")
 
@@ -942,8 +1071,12 @@ class PAEProcessor:
             )
         elif "pae" in self.pae_data:
             pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        elif "pde" in self.pae_data:
+            pae_full = np.array(self.pae_data["pde"], dtype=np.float32)
         else:
-            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+            raise ValueError(
+                "PAE data must contain 'predicted_aligned_error', 'pae', or 'pde'"
+            )
         mapper = self.input_handler.get_tuple_to_global_mapper(self.first_residue)
         for rb_idx, rb in enumerate(self.rigid_bodies, start=1):
             domain_meds = []
@@ -982,8 +1115,12 @@ class PAEProcessor:
             )
         elif "pae" in self.pae_data:
             pae_full = np.array(self.pae_data["pae"], dtype=np.float32)
+        elif "pde" in self.pae_data:
+            pae_full = np.array(self.pae_data["pde"], dtype=np.float32)
         else:
-            raise ValueError("PAE data must contain 'predicted_aligned_error' or 'pae'")
+            raise ValueError(
+                "PAE data must contain 'predicted_aligned_error', 'pae', or 'pde'"
+            )
 
         # 2) Determine L
         L = pae_full.shape[0]
@@ -1983,6 +2120,10 @@ if __name__ == "__main__":
 
     # Validate that input structure and PAE matrix align before proceeding
     processor.validate_alignment()
+
+    # If the structure lost its pLDDT (all-zero B-factors), recover it from the
+    # AlphaFold3-style PAE JSON before rigid bodies are defined.
+    processor.maybe_recover_plddt_from_json()
 
     # Define clusters and rigid bodies using processor methods
     processor.define_clusters()

@@ -1,5 +1,252 @@
 # @bilbomd/backend
 
+## 2.9.5
+
+### Patch Changes
+
+- c2ba6c5: Update npm dependencies to latest versions (axios, bullmq, morgan, concurrently, @mui/x-data-grid, react, react-dom, react-router, vite, vitest, typescript-eslint, and related). ioredis intentionally held at 5.10.1 for BullMQ compatibility.
+- Updated dependencies [c2ba6c5]
+  - @bilbomd/md-utils@1.1.18
+
+## 2.9.4
+
+### Patch Changes
+
+- eae412e: Fix HTTP 500 on user registration (and other broken queries) caused by mongoose `sanitizeFilter`. With `sanitizeFilter` enabled globally, any `{ $op: ... }` filter value is wrapped in `$eq` to block operator injection, which then fails to cast against the field's type. This broke the registration previous-email lookup (`$in`), the `deleteOldJobs` cron (`$lt`), and the anonymous job-quota checks (`$in`). Developer-built operator filters are now either rewritten to scalar matches or wrapped in `mongoose.trusted()`. Added regression tests that exercise real mongoose casting under `sanitizeFilter`.
+
+## 2.9.3
+
+### Patch Changes
+
+- 005482b: Update dependencies to latest within range: bullmq, mongoose, nodemailer, date-fns, react-router, type-fest, eslint, lint-staged, and turbo. ioredis intentionally kept pinned at 5.10.1 to match BullMQ's exact ioredis dependency.
+- Updated dependencies [005482b]
+  - @bilbomd/mongodb-schema@2.7.1
+  - @bilbomd/md-utils@1.1.17
+
+## 2.9.2
+
+### Patch Changes
+
+- 55fb36b: Fix OS command injection vulnerability in scoper worker and add filename validation.
+
+  The scoper's `runFoXS` function used `exec()` with a shell-interpolated template literal to copy files, allowing shell metacharacters in user-supplied filenames to execute arbitrary commands. Replaced with `fs.copyFile()` which never invokes a shell.
+
+  Added `noShellMetacharsTest` filename validator to the backend validation helpers and a new `scoperJobSchema` that applies it to PDB and DAT file uploads, rejecting filenames containing `;`, `&`, `|`, backticks, `$`, `<`, `>`, `(`, `)`, `{`, `}`, or `!` before the job is queued.
+
+## 2.9.1
+
+### Patch Changes
+
+- 844e9f9: Fix Redis syntax error in session store by using the official redis@5 client for connect-redis.
+
+  connect-redis@9 expects the redis@5 client API (set with options object), but an ioredis client was being passed, causing ERR syntax error on every session write.
+
+## 2.9.0
+
+### Minor Changes
+
+- 97529b6: Add `ORCID_AUTH_ENABLED` feature flag (default `false`) that gates the ORCID OAuth login flow. When disabled, the backend does not register the `/api/v1/auth/orcid/*` routes and skips OIDC discovery on startup, and the UI `/login` page redirects to `/magicklink`. ORCID will stay disabled in production until the hardening work tracked in issue #817 is complete.
+- e2d4125: ORCID data hygiene & UX (PR 3 of issue #817). Separates the internal `username` (an opaque, URL-safe identifier) from the human-readable `displayName`, removes dead OAuth-token storage, and aligns the sign-in UI with ORCID's official branding guidelines.
+
+  **Option A: separate internal ID from display label**
+  - ORCID accounts now get an opaque `username = orcid-${orcidId}` (e.g., `orcid-0000-0002-1234-5678`). Deterministic, unique by construction, URL-safe, and decoupled from any human name.
+  - New backend helper `userDisplayName()` derives a display label from `firstName + lastName`, falling back to `username` for legacy users with no name fields populated.
+  - Access-token JWT payload now includes a `displayName` claim, computed at sign time. The UI `useAuth` hook exposes it; legacy tokens without the claim fall back to `username`.
+  - UI display sites (`Breadcrumbs`, `Settings` → `UserAvatar`) now show `displayName` instead of `username`. URL routes, job-ownership filters, and admin-edit forms still use `username`.
+  - Admin-edit username regex relaxed from `[a-zA-Z0-9_]+` to `[a-zA-Z0-9_-]+` so ORCID-derived usernames pass validation.
+
+  **H3: stop persisting ORCID access/refresh tokens**
+  - Dropped `accessToken`, `refreshToken`, `tokenType`, `scope`, and `expiresIn` from the User schema `oauth[]` subdocument and from the OAuth session profile. We never call ORCID APIs on the user's behalf after sign-in, so persisting the bearer token only enlarged the blast radius if the database were leaked. Existing data on old user docs is harmless and will fall off on next login.
+
+  **H4: confirmation page becomes read-only**
+  - `OrcidConfirmation` is no longer a misleading editable form — Formik + Yup + `TextField` are gone. Replaced with read-only display rows that surface First Name, Last Name, Email, ORCID iD, the derived BilboMD display name, and the opaque BilboMD account ID. Clicking "Confirm and Continue" calls finalize with an empty body (the backend has always trusted the session profile, not the request body).
+
+  **L4: branding text**
+  - `Login.tsx` heading and button updated from "Sign in with ORCID" to "Sign in with ORCID iD" per ORCID's official sign-in guidelines.
+
+  **L5: ORCID brand asset**
+  - The existing `apps/ui/src/assets/orcid.png` is the ORCID wordmark. ORCID's sign-in guidelines call for the circular green iD icon on sign-in buttons; the wordmark is for "about" contexts. Flagged for replacement before the production-credential review demo.
+
+- 937f5a9: Production-readiness hardening for the ORCID OAuth login flow (PR 1 of issue #817).
+  - **Require ORCID env vars (no silent sandbox fallbacks).** `ORCID_CLIENT_ID`, `ORCID_CLIENT_SECRET`, `ORCID_REDIRECT_URI`, `ORCID_ISSUER`, `ORCID_BASE_URL`, and `ORCID_PUBLIC_API_URL` are now read with `getEnvVar()` and validated at the top of `initOrcidClient()`. Startup fails fast if any is missing when `ORCID_AUTH_ENABLED=true`. The previous defaults that fell back to `https://sandbox.orcid.org` while `ORCID_ISSUER` defaulted to `https://orcid.org` could silently split a deployment across sandbox and production endpoints. The `.env.example` now lists a PRODUCTION block as the default and a commented SANDBOX block for dev/staging.
+  - **Redis-backed express-session store.** Sessions now persist in Redis via `connect-redis` (reusing the existing BullMQ `ioredis` connection) instead of the default in-memory store, so the `req.session.orcidProfile` bridge between `/orcid/callback` and `/orcid/finalize` survives backend restarts and works across replicas.
+  - **Redact tokens in logs.** Added a `redactTokens()` helper used by the ORCID callback and confirmation handlers so OAuth `access_token` / `refresh_token` / `id_token` values are no longer written to logs.
+
+- b94577a: Security hardening for the ORCID OAuth login flow (PR 2 of issue #817).
+  - **Account-takeover guard.** The callback and the finalize endpoints now both refuse to issue JWTs when the verified ORCID email matches an existing BilboMD account that is not already linked to this ORCID iD. Users are redirected to `/auth/orcid-error?reason=email_already_registered` and pointed at a BilboMD administrator to link their account. Previously the flow would silently sign the user in as the pre-existing (e.g., legacy magic-link) account.
+  - **Require a primary, verified ORCID email.** The email-selection fallback that accepted any verified email — and then any email at all — has been removed. If an ORCID profile has no `primary && verified` email, the user is redirected to `/auth/orcid-error?reason=no_primary_verified` with instructions to update their ORCID profile. Closes the related "Pending status" dead code in the finalize handler.
+  - **Verify the ID token and check the nonce.** The hand-rolled axios `POST /oauth/token` is replaced with `openid-client.authorizationCodeGrant`, which validates the ID-token signature against the discovered JWKS, the `iss`/`aud` claims, the `nonce` (matched to the cookie set in `handleOrcidLogin`), and the `state`. Identity claims (`sub`, `given_name`, `family_name`, `name`) now come from the verified ID token rather than from a separate unauthenticated API call. The Public-API call is kept only for the email (not returned by the `openid` scope).
+  - **Tighten state/nonce cookies.** `handleOrcidLogin` cookies switched from `SameSite=None` to `SameSite=Lax` (ORCID redirects back to the same origin) and gained a 5-minute `maxAge` so abandoned sign-in flows cannot leave state behind.
+  - **Friendlier error page.** `OrcidError.tsx` now renders human-readable explanations for `no_primary_verified`, `email_already_registered`, `token_exchange`, `missing_id_token`, `userinfo_fetch`, `finalize`, and `session` reasons.
+
+### Patch Changes
+
+- 5c15d8a: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+- Updated dependencies [5c15d8a]
+- Updated dependencies [e2d4125]
+  - @bilbomd/md-utils@1.1.16
+  - @bilbomd/mongodb-schema@2.7.0
+
+## 2.8.6
+
+### Patch Changes
+
+- 29200d1: Upgrade Node.js runtime from v24 to v26. Updated all package engines fields and dependency versions accordingly. Fixed UI test setup to provide an explicit in-memory Web Storage mock, working around Node.js v26's experimental localStorage global (which returns undefined without --localstorage-file).
+- Updated dependencies [29200d1]
+  - @bilbomd/md-utils@1.1.15
+
+## 2.8.5
+
+### Patch Changes
+
+- 73c535c: Fix OF3 pipeline issues and add Jobs runtime column.
+  - Correct the OpenFold3 GitHub link in the OF3 job form instructions to point to the right repository (aqlaboratory/openfold-3)
+  - Add "Experimental - Please report problems to Scott" label to the OF3 job form header
+  - Fix 404 error on the OF3 "Download Example Data" button by wiring up the missing backend route and handler
+  - Add a Runtime column to the Jobs table showing wall-clock duration from submission to completion for all job types (live for running jobs)
+
+## 2.8.4
+
+### Patch Changes
+
+- 6502a18: Fix OF3 and AlphaFold job submission failure caused by entity validation schema incorrectly requiring an `id` field. The `id` field is UI-only and not part of `IOpenFoldEntity` or `IAlphaFoldEntity`, so it was never present in the parsed form data, causing all submissions to fail backend validation with a 400 error.
+
+## 2.8.3
+
+### Patch Changes
+
+- 3ae2172: Fix Color by Domain preset in Molstar viewer for Classic CRD jobs.
+
+  Two-phase component creation prevents "Could not find node" errors when coloring ensemble structures. Also stores `md_constraints` in MongoDB for Classic CRD jobs so the domain-coloring preset has the constraint data it needs.
+
+## 2.8.2
+
+### Patch Changes
+
+- Updated dependencies [6a693d2]
+  - @bilbomd/bilbomd-types@1.6.1
+  - @bilbomd/md-utils@1.1.14
+
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies [d82f306]
+  - @bilbomd/mongodb-schema@2.6.1
+  - @bilbomd/md-utils@1.1.13
+
+## 2.8.0
+
+### Minor Changes
+
+- c2137eb: Add BilboMD OF3 pipeline using OpenFold3 for structure prediction.
+
+  OpenFold3 replaces ColabFold as the structure predictor and supports Protein,
+  DNA, and RNA chains simultaneously. The downstream OpenMM MD + FoXS + MultiFoXS
+  pipeline is identical to BilboMD AF. Input is a JSON query file; the best sample
+  is selected by `sample_ranking_score` from OpenFold3 confidence outputs.
+
+### Patch Changes
+
+- b9c8a64: Update all npm/pnpm dependencies to latest versions within semver ranges.
+
+  Notable updates: mongoose 9.4→9.6, molstar 5.8→5.9, react-router 7.14→7.15, vite 8.0.7→8.0.11, bullmq 5.73→5.76, msw 2.13→2.14, MUI 9.0.0→9.0.1, react/react-dom 19.2.5→19.2.6.
+
+- Updated dependencies [c2137eb]
+  - @bilbomd/bilbomd-types@1.6.0
+  - @bilbomd/mongodb-schema@2.6.0
+  - @bilbomd/md-utils@1.1.12
+
+## 2.7.8
+
+### Patch Changes
+
+- 6ca5249: Harden Docker Compose deployments: remove Docker socket mount from worker, add no-new-privileges to all services, set read_only root filesystem on worker containers with /tmp tmpfs, and drop all Linux capabilities from worker. Addresses F-7 pen test finding (Docker socket privilege escalation).
+- 24b6dc2: Add per-account OTP attempt counter to prevent brute-force of magic link tokens. After 5 failed attempts (expired OTP submissions), the OTP is nulled and the user must request a new magic link. Addresses F-1 pen test finding (per-account rate limiting).
+- b41b107: Add custom seccomp profile blocking AF_ALG sockets (CVE-2026-31431) and other dangerous syscalls not needed by BilboMD containers. Profile applied to all services in all Docker Compose environments. Addresses F-6 pen test finding.
+- be7f034: Strip all SUID/SGID bits from container filesystems before dropping to non-root user. Added to backend, ui, worker-base, worker, scoper-base, and scoper Dockerfiles. Addresses F-6 pen test finding (SUID binary privilege escalation).
+- Updated dependencies [e4aa0b3]
+- Updated dependencies [24b6dc2]
+  - @bilbomd/md-utils@1.1.11
+  - @bilbomd/mongodb-schema@2.5.5
+
+## 2.7.7
+
+### Patch Changes
+
+- 0b03fac: Fix critical security vulnerabilities: NoSQL injection in OTP auth flow and CHARMM system directive RCE.
+
+  Cast `email` and `otp` inputs to string before Mongoose queries to prevent MongoDB operator injection. Enable `mongoose.set('sanitizeFilter', true)` globally as defence-in-depth. Add keyword allowlist to `isValidConstInpFile` to reject CHARMM directives (`system`, `open`, etc.) that could execute arbitrary OS commands when the constraint file is STREAMed by the worker.
+
+## 2.7.6
+
+### Patch Changes
+
+- 964095e: Surface step progress messages on the public job page. The FoXS step now writes periodic progress text (e.g. "FoXS: 1800/3600 (50%)") to the MongoDB step message alongside the BullMQ update. The public job API now includes steps data, and the public job progress box displays the latest step message below the progress bar.
+- Updated dependencies [964095e]
+  - @bilbomd/bilbomd-types@1.5.4
+  - @bilbomd/md-utils@1.1.10
+
+## 2.7.5
+
+### Patch Changes
+
+- 8dac70d: Fix admin/manager access to MD Movies from other users' jobs. Admins and Managers can now stream movie files and fetch movie metadata for any job, consistent with their ability to view all jobs. Regular users are still restricted to their own jobs.
+
+## 2.7.4
+
+### Patch Changes
+
+- ccdad28: Enable BilboMD AlphaFold pipeline on local GPU hosts (initial target: epyc, 2× NVIDIA A100) and implement the OpenMM engine path for the SANS pipeline.
+
+  ### AlphaFold pipeline (local GPU)
+
+  Adds `processBilboMDAlphaFoldJob` — a new worker pipeline that runs ColabFold in a
+  sibling Docker container via the host Docker socket, then continues through the existing
+  OpenMM minimize / heat / md / FoXS / MultiFoXS path. `bilboMdHandler` now routes
+  `alphafold` jobs to this local pipeline when `USE_NERSC=false`; CHARMM AlphaFold
+  remains NERSC-only.
+
+  New env vars (see `infra/.env.example`):
+  - `HOST_UPLOAD_DIR` — host-side path that backs DATA_VOL inside the worker
+  - `HOST_COLABFOLD_CACHE` — host-side path for the ~50GB ColabFold weights cache
+  - `COLABFOLD_IMAGE` — overridable image tag (default `bl1231/bilbomd-colabfold:latest`)
+  - `COLABFOLD_TIMEOUT_MS` — per-AF-run timeout in ms (default 1h)
+  - `DOCKER_GID` — host docker group GID; added to the worker container via `group_add`
+    so the non-root `bilbo` user can access `/var/run/docker.sock`
+
+  ### Bug fixes
+  - **Docker socket permissions**: worker's non-root user (`bilbo`) now gets the host
+    docker group added via `group_add` in both epyc Compose files, fixing
+    "permission denied on /var/run/docker.sock" when spawning sibling containers.
+  - **ColabFold working directory**: added `--workdir /bilbomd/work` to the `docker run`
+    args so `colabfold_batch` resolves the relative `af-entities.fasta` path correctly
+    against the mounted volume.
+  - **AutoRg step display**: AlphaFold jobs now initialize the `autorg` step as `Success`
+    (with computed Rg values) at submission time rather than `Waiting`, since AutoRg runs
+    as a submission precondition and is never re-run by the worker pipeline.
+
+  ### OpenMM SANS pipeline
+
+  Previously all OpenMM function calls in `bilbomd-sans.ts` were commented out, causing
+  OpenMM SANS jobs to skip MD entirely and fail at Pepsi-SANS with no PDB files. Now wires
+  up `prepareOpenMMConfig`, `runOmmMinimize`, `runOmmHeat`, `runOmmMD`, and a new
+  `mirrorOmmMdToPepsiSANS` step that symlinks PDB frames from `openmm/md/rg_{N}/` into
+  `pepsisans/rg{N}/` for Pepsi-SANS to consume. `remediatePDBFiles` is correctly skipped
+  for OpenMM since its PDBs already use standard chain IDs.
+
+  ### Operator setup on epyc
+  1. Find the host docker GID: `getent group docker | cut -d: -f3`
+  2. Add `DOCKER_GID=<value>` to `.env.prod`.
+  3. Pre-create `/bilbomd/colabfold-cache` on the host.
+  4. Pull and prime the ColabFold weights:
+     ```
+     docker pull $COLABFOLD_IMAGE
+     docker run --rm -v /bilbomd/colabfold-cache:/cache $COLABFOLD_IMAGE \
+       colabfold_batch --download-only
+     ```
+  5. Set `ENABLE_BILBOMD_ALPHAFOLD=true` and `USE_NERSC=false` in `.env.prod`.
+
 ## 2.7.3
 
 ### Patch Changes

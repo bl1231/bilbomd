@@ -116,13 +116,11 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
 
   useEffect(() => {
     if (updateResult.isSuccess || deleteResult.isSuccess) {
-      console.log('about to navigate back to /users')
       void navigate('../users')
     }
   }, [updateResult.isSuccess, deleteResult.isSuccess, navigate])
 
   const myOnSubmit = async (values: EditUserFormValues) => {
-    // console.log(values)
     await updateUser({
       id: user.id,
       roles: values.roles,

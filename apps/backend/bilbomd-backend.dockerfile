@@ -31,11 +31,10 @@ WORKDIR /repo
 
 # Enable pnpm via Corepack and pin the same version you use locally
 RUN corepack enable \
-    && corepack prepare pnpm@latest --activate \
-    && pnpm config set inject-workspace-packages=true
+    && corepack prepare pnpm@latest --activate
 
 # Only copy what's needed to resolve workspaces (good cache behavior)
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/bilbomd-types/package.json packages/bilbomd-types/package.json
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
 COPY packages/md-utils/package.json packages/md-utils/package.json
@@ -51,8 +50,7 @@ FROM bilbomd-backend-step1 AS build
 WORKDIR /repo
 
 RUN corepack enable \
-    && corepack prepare pnpm@latest --activate \
-    && pnpm config set inject-workspace-packages=true
+    && corepack prepare pnpm@latest --activate
 
 ENV HUSKY=0
 
@@ -108,6 +106,7 @@ RUN set -eux; \
     tar czf bilbomd_classic_crd_example.tar.gz crd/; \
     tar czf bilbomd_auto_example.tar.gz auto/; \
     tar czf bilbomd_af_example.tar.gz af/; \
+    tar czf bilbomd_of3_example.tar.gz of3/; \
     tar czf bilbomd_sans_example.tar.gz sans/; \
     tar czf scoper_example.tar.gz scoper/
 
@@ -117,6 +116,8 @@ ARG BILBOMD_BACKEND_VERSION
 ENV BILBOMD_BACKEND_GIT_HASH=${BILBOMD_BACKEND_GIT_HASH}
 ENV BILBOMD_BACKEND_VERSION=${BILBOMD_BACKEND_VERSION}
 ENV NODE_DEBUG=openid-client
+
+RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
 
 USER bilbo:bilbomd
 EXPOSE 3500

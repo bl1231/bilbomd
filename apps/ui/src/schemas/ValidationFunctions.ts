@@ -7,6 +7,7 @@ import {
   cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
   cifIsSingleModel as cifIsSingleModelUtil
 } from '@bilbomd/bilbomd-types'
+import { parsePLDDTFromPDB, parsePLDDTFromCIF } from '../utils/pdbUtils'
 
 const hasAllowedResiduesOnly = (
   file: File
@@ -53,9 +54,7 @@ const fromCharmmGui = (file: File): Promise<boolean> => {
     reader.onloadend = () => {
       const lines = (reader.result as string).split(/[\r\n]+/g)
       for (let line = 0; line < 5; line++) {
-        // console.log(charmmGui.test(lines[line]), 'line', line, lines[line])
-        if (charmmGui.test(lines[line])) {
-          // console.log(lines[line])
+        if (charmmGui.test(lines[line]!)) {
           resolve(true)
         }
       }
@@ -75,7 +74,7 @@ const isCRD = (file: File): Promise<boolean> => {
 
       // Check for lines starting with *
       for (let i = 0; i < lines.length; i++) {
-        if (lines[i].startsWith('*')) {
+        if (lines[i]!.startsWith('*')) {
           starLinesCount++
           if (starLinesCount > 6) {
             // More than 6 lines starting with *, not matching the pattern
@@ -85,7 +84,7 @@ const isCRD = (file: File): Promise<boolean> => {
           // Check if the line immediately after the last *-line matches the specified pattern
           if (starLinesCount >= 2 && starLinesCount <= 6) {
             const endPattern = /^\s+\d+\s+EXT$/
-            foundEndPattern = endPattern.test(lines[i])
+            foundEndPattern = endPattern.test(lines[i]!)
           }
           break // No more lines starting with * consecutively, exit the loop
         }
@@ -98,7 +97,6 @@ const isCRD = (file: File): Promise<boolean> => {
 
 const isPsfData = (file: File): Promise<boolean> => {
   return new Promise((resolve) => {
-    // console.log(`validate if ${file.name} isPsfData`)
     const reader = new FileReader()
     reader.readAsText(file)
     reader.onloadend = () => {
@@ -106,14 +104,12 @@ const isPsfData = (file: File): Promise<boolean> => {
       const atomRegex =
         /^\s*\d+\s+[A-Z]{4}\s+\d+\s+[A-Z]{3,}\s+[a-zA-Z0-9_']+\s+[a-zA-Z0-9_']+\s+-?\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+/
 
-      if (!lines[0].includes('PSF')) {
-        // console.log('first line does not contain PSF')
+      if (!lines[0]?.includes('PSF')) {
         resolve(false)
         return
       }
 
       if (!lines.some((line) => line.trim().endsWith('!NTITLE'))) {
-        // console.log('NTITLE missing')
         resolve(false)
         return
       }
@@ -122,20 +118,17 @@ const isPsfData = (file: File): Promise<boolean> => {
         /\d+\s+!NATOM/.test(line)
       )
       if (natomLineIndex === -1) {
-        // console.log('!NATOM line not found')
         resolve(false)
         return
       }
 
-      const natomResult = lines[natomLineIndex].match(/(\d+)\s+!NATOM/)
+      const natomResult = lines[natomLineIndex]!.match(/(\d+)\s+!NATOM/)
       if (!natomResult) {
-        // console.log('Failed to capture number of atoms')
         resolve(false)
         return
       }
 
-      const natom = parseInt(natomResult[1], 10)
-      // console.log('natom expected = ', natom)
+      const natom = parseInt(natomResult[1]!, 10)
       if (isNaN(natom)) {
         resolve(false)
         return
@@ -146,16 +139,13 @@ const isPsfData = (file: File): Promise<boolean> => {
         natomLineIndex + 1,
         natomLineIndex + 1 + natom
       )
-      // console.log('num atom lines = ', atomLines.length)
       if (atomLines.length !== natom) {
-        // console.log('Incorrect number of atom lines')
         resolve(false)
         return
       }
 
       for (const line of atomLines) {
         if (!atomRegex.test(line)) {
-          // console.log('Failed atom regex:', line)
           resolve(false)
           return
         }
@@ -165,7 +155,6 @@ const isPsfData = (file: File): Promise<boolean> => {
     }
 
     reader.onerror = () => {
-      // console.log('Error reading the file')
       resolve(false)
     }
   })
@@ -175,7 +164,6 @@ const noSpaces = (file: File): Promise<boolean> => {
   const spaces = /\s/
   return new Promise((resolve) => {
     if (spaces.test(file.name)) {
-      // console.log('false', file.name)
       resolve(false)
     }
     resolve(true)
@@ -204,7 +192,6 @@ const noSpaces = (file: File): Promise<boolean> => {
 const isSaxsData = (
   file: File
 ): Promise<{ valid: boolean; message?: string }> => {
-  // console.log(`validate if ${file.name} isSaxsData`)
   const sciNotation = /-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?/g
 
   return new Promise((resolve) => {
@@ -221,7 +208,7 @@ const isSaxsData = (
 
         const numbers = line.match(sciNotation)
         if (numbers && numbers.length >= 3) {
-          const qValue = parseFloat(numbers[0])
+          const qValue = parseFloat(numbers[0]!)
           if (qValue < 0.005 || qValue > 0.04) {
             resolve({
               valid: false,
@@ -277,8 +264,8 @@ const hasSaxsQualityIssues = (file: File): Promise<SaxsQualityResult> => {
         const numbers = line.match(sciNotation)
         if (!numbers || numbers.length < 3) continue
 
-        const I = parseFloat(numbers[1])
-        const err = parseFloat(numbers[2])
+        const I = parseFloat(numbers[1]!)
+        const err = parseFloat(numbers[2]!)
         if (!Number.isFinite(I) || !Number.isFinite(err) || I <= 0) continue
 
         totalCount++
@@ -318,7 +305,7 @@ const containsChainId = (file: File): Promise<boolean> => {
         const isValid = lines.some((line) => {
           return (
             (line.startsWith('ATOM') || line.startsWith('HETATM')) &&
-            /^[A-Za-z]$/.test(line[21])
+            /^[A-Za-z]$/.test(line[21] ?? '')
           )
         })
         resolve(isValid)
@@ -373,7 +360,7 @@ const isRNA = (file: File): Promise<{ valid: boolean; message?: string }> => {
 
         if (line.startsWith('ATOM')) {
           const parts = line.split(/\s+/)
-          const residueName = parts[3]
+          const residueName = parts[3] ?? ''
 
           if (residueName.length !== 1 || !validNucleotides.has(residueName)) {
             resolve({
@@ -439,7 +426,7 @@ const isValidConstInpFile = (
       const lines = text.split('\n').filter((line) => line.trim() !== '') // Filter out empty lines
 
       // Check if the last non-empty line is exactly 'return'
-      if (lines.length === 0 || lines[lines.length - 1].trim() !== 'return') {
+      if (lines.length === 0 || lines[lines.length - 1]!.trim() !== 'return') {
         resolve('The last line must be "return".')
         return
       }
@@ -460,13 +447,11 @@ const isValidConstInpFile = (
       }
 
       // Check 'define' lines for 'segid' followed by the correct format
-      // console.log('isValidConstInpFile mode: ', mode)
       if (mode === 'pdb') {
         const segidRegex = /segid\s+((PRO|DNA|RNA|CAR|CAL)[A-Z])\b/
         const validSegid = lines
           .filter((line) => line.startsWith('define'))
           .every((line) => segidRegex.test(line))
-        // console.log(file.name, ' valid segid is ', validSegid)
         if (!validSegid) {
           resolve('segid must be: PRO[A-Z], DNA[A-Z], RNA[A-Z], etc.')
           return
@@ -476,7 +461,6 @@ const isValidConstInpFile = (
         const validSegid = lines
           .filter((line) => line.startsWith('define'))
           .every((line) => segidRegex.test(line))
-        // console.log(file.name, ' valid segid is ', validSegid)
         if (!validSegid) {
           resolve('segid must contain 4 uppercase letters [A-Z]')
           return
@@ -488,6 +472,26 @@ const isValidConstInpFile = (
       if (shapeCount > 20) {
         resolve('Too many CHARMM shape commands. Maximum allowed is 20.')
         return
+      }
+
+      // Allowlist check: reject any line that doesn't start with a permitted
+      // keyword. Blocks CHARMM directives like 'system', 'open', 'read', etc.
+      // that could execute OS commands or perform file I/O when STREAMed.
+      const ALLOWED_PREFIXES = [
+        'define',
+        'cons fix',
+        'cons harm',
+        'shape',
+        'return',
+        '!',
+        '*'
+      ]
+      for (const line of lines) {
+        const lower = line.trim().toLowerCase()
+        if (!ALLOWED_PREFIXES.some((pfx) => lower.startsWith(pfx))) {
+          resolve(`Disallowed keyword in constraint file: "${line.trim()}"`)
+          return
+        }
       }
 
       resolve(true) // All checks passed
@@ -591,6 +595,31 @@ const detectGaffCofactors = (file: File): Promise<string[]> =>
 const detectMetalCofactors = (file: File): Promise<string[]> =>
   _detectResiduesFromSet(file, METAL_COFACTORS)
 
+// Detect a structure whose B-factor/pLDDT column is entirely zero. Some
+// preparation tools (e.g. protonation) strip pLDDT, which silently breaks
+// rigid-body detection for auto jobs. Reuses the shared pLDDT parsers.
+const isPlddtColumnAllZero = (file: File): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string | undefined
+      if (!text) {
+        resolve(false)
+        return
+      }
+      const isCif = file.name.toLowerCase().endsWith('.cif')
+      const { data } = isCif
+        ? parsePLDDTFromCIF(text)
+        : parsePLDDTFromPDB(text)
+      // Only warn when we actually parsed residues and every one is zero.
+      resolve(data.length > 0 && data.every((d) => d.plddt === 0))
+    }
+    // On read error, don't block or warn — other validators handle bad files.
+    reader.onerror = () => resolve(false)
+    reader.readAsText(file)
+  })
+}
+
 export {
   fromCharmmGui,
   isCRD,
@@ -608,6 +637,7 @@ export {
   isValidConstInpFile,
   hasAllowedResiduesOnly,
   detectGaffCofactors,
-  detectMetalCofactors
+  detectMetalCofactors,
+  isPlddtColumnAllZero
 }
 export type { SaxsQualityResult }

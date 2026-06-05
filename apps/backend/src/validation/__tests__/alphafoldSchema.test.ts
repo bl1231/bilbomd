@@ -20,7 +20,6 @@ const multerFile = (name = 'file.dat') => ({
 })
 
 const validEntity = {
-  id: 'entity-1',
   name: 'chain A',
   sequence: 'ACDEFGHIKLM',
   type: 'Protein',
@@ -150,10 +149,7 @@ describe('alphafoldJobSchema - entities', () => {
   })
 
   it('rejects more than 20 entities', async () => {
-    const entities = Array.from({ length: 21 }, (_, i) => ({
-      ...validEntity,
-      id: `entity-${i}`
-    }))
+    const entities = Array.from({ length: 21 }, () => ({ ...validEntity }))
     await expect(
       alphafoldJobSchema.validateAt('entities', { entities })
     ).rejects.toThrow('20 entities')
@@ -172,12 +168,9 @@ describe('alphafoldJobSchema - entities', () => {
     ).resolves.toBeDefined()
   })
 
-  it('rejects entity missing required id', async () => {
-    const bad = { ...validEntity, id: undefined }
+  it('accepts entity without id (id is a UI-only field)', async () => {
     await expect(
-      alphafoldJobSchema.validateAt('entities', {
-        entities: [bad]
-      })
-    ).rejects.toBeTruthy()
+      alphafoldJobSchema.validateAt('entities', { entities: [validEntity] })
+    ).resolves.toBeDefined()
   })
 })

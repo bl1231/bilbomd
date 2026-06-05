@@ -171,25 +171,21 @@ const spawnPdb2CrdCharmm = (
   return Promise.all(promises)
 }
 
-interface StripIonsData {
+interface PrepPdbData {
   uuid: string
   pdb_file: string
 }
 
-/**
- * Strip metal ions from a PDB file in place, so that OpenMM's ForceField
- * does not encounter residues it has no parameters for.
- */
-const runStripIons = (data: StripIonsData): Promise<void> => {
+const runPrepPdb = (data: PrepPdbData): Promise<void> => {
   const workingDir = path.join(uploadFolder, data.uuid)
   const pdbPath = path.join(workingDir, data.pdb_file)
-  const logFile = path.join(workingDir, 'strip_ions.log')
-  const errorFile = path.join(workingDir, 'strip_ions_error.log')
+  const logFile = path.join(workingDir, 'prep_pdb.log')
+  const errorFile = path.join(workingDir, 'prep_pdb_error.log')
   const logStream = fs.createWriteStream(logFile)
   const errorStream = fs.createWriteStream(errorFile)
-  const script = '/app/scripts/strip_ions.py'
+  const script = '/app/scripts/prep_pdb.py'
 
-  logger.info(`runStripIons: stripping ions from ${data.pdb_file}`)
+  logger.info(`runPrepPdb: preparing ${data.pdb_file} for OpenMM`)
 
   return new Promise<void>((resolve, reject) => {
     const proc = spawn('/opt/envs/base/bin/python', [script, pdbPath], {
@@ -202,12 +198,12 @@ const runStripIons = (data: StripIonsData): Promise<void> => {
 
     proc.stderr.on('data', (chunk: Buffer) => {
       const msg = chunk.toString().trim()
-      logger.error(`runStripIons stderr: ${msg}`)
+      logger.error(`runPrepPdb stderr: ${msg}`)
       errorStream.write(msg + '\n')
     })
 
     proc.on('error', (error) => {
-      logger.error(`runStripIons spawn error: ${error}`)
+      logger.error(`runPrepPdb spawn error: ${error}`)
       reject(error)
     })
 
@@ -217,10 +213,10 @@ const runStripIons = (data: StripIonsData): Promise<void> => {
         new Promise((r) => errorStream.end(r))
       ]).then(() => {
         if (code === 0) {
-          logger.info(`runStripIons succeeded for ${data.pdb_file}`)
+          logger.info(`runPrepPdb succeeded for ${data.pdb_file}`)
           resolve()
         } else {
-          reject(new Error(`strip_ions.py exited with code ${code}`))
+          reject(new Error(`prep_pdb.py exited with code ${code}`))
         }
       }).catch(reject)
     })
@@ -340,4 +336,4 @@ const runStripCofactors = (data: StripCofactorsData): Promise<void> => {
   })
 }
 
-export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runStripIons, runStripCofactors, runCifToPdb }
+export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runPrepPdb, runStripCofactors, runCifToPdb }

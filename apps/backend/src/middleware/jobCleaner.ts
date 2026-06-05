@@ -18,7 +18,7 @@ export const deleteOldJobs = async () => {
     const thresholdDate = new Date(Date.now() - maxAge * 1000)
 
     const oldJobs = await Job.find({
-      createdAt: { $lt: thresholdDate }
+      createdAt: mongoose.trusted({ $lt: thresholdDate })
     })
       .lean()
       .exec()
@@ -47,13 +47,13 @@ export const deleteOldJobs = async () => {
     }
 
     const deleteResult = await Job.deleteMany({
-      createdAt: { $lt: thresholdDate }
+      createdAt: mongoose.trusted({ $lt: thresholdDate })
     }).exec()
     const deletedJobsCount = deleteResult.deletedCount
     logger.warn(`Deleted ${deletedJobsCount} jobs from MongoDB`)
 
     const oldMultiJobs = await MultiJob.find({
-      createdAt: { $lt: thresholdDate }
+      createdAt: mongoose.trusted({ $lt: thresholdDate })
     })
       .lean()
       .exec()
@@ -84,7 +84,7 @@ export const deleteOldJobs = async () => {
     }
 
     const deleteMultiResult = await MultiJob.deleteMany({
-      createdAt: { $lt: thresholdDate }
+      createdAt: mongoose.trusted({ $lt: thresholdDate })
     }).exec()
     const deletedMultiJobsCount = deleteMultiResult.deletedCount
     logger.warn(`Deleted ${deletedMultiJobsCount} multi-jobs from MongoDB`)

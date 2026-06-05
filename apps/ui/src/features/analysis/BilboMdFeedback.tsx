@@ -22,8 +22,6 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
 
   const actualFeedback = feedback || fetchedFeedback
 
-  // console.log('actualFeedback:', actualFeedback)
-
   if (isLoading) {
     return <CircularProgress />
   }
@@ -39,7 +37,6 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
     actualFeedback.best_model_dat_file || actualFeedback.best_model || ''
 
   const getChipProps = (value: number) => {
-    // console.log('value:', value)
     if (value < 1.2) {
       return { sx: { backgroundColor: 'green' } }
     } else if (value >= 1.2 && value <= 2.0) {
@@ -163,10 +160,10 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
               sx={{
                 fontSize: '1.2em',
                 width: '100px',
-                ...(getChipProps(actualFeedback.chi_squares_of_regions[0]).sx ||
+                ...(getChipProps(actualFeedback.chi_squares_of_regions[0]!).sx ||
                   {})
               }}
-              label={actualFeedback.chi_squares_of_regions[0].toFixed(2)}
+              label={actualFeedback.chi_squares_of_regions[0]!.toFixed(2)}
             />
           </Grid>
 
@@ -182,10 +179,10 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
               sx={{
                 fontSize: '1.2em',
                 width: '100px',
-                ...(getChipProps(actualFeedback.chi_squares_of_regions[1]).sx ||
+                ...(getChipProps(actualFeedback.chi_squares_of_regions[1]!).sx ||
                   {})
               }}
-              label={actualFeedback.chi_squares_of_regions[1].toFixed(2)}
+              label={actualFeedback.chi_squares_of_regions[1]!.toFixed(2)}
             />
           </Grid>
 
@@ -201,10 +198,10 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
               sx={{
                 fontSize: '1.2em',
                 width: '100px',
-                ...(getChipProps(actualFeedback.chi_squares_of_regions[2]).sx ||
+                ...(getChipProps(actualFeedback.chi_squares_of_regions[2]!).sx ||
                   {})
               }}
-              label={actualFeedback.chi_squares_of_regions[2].toFixed(2)}
+              label={actualFeedback.chi_squares_of_regions[2]!.toFixed(2)}
             />
           </Grid>
         </Grid>
@@ -225,7 +222,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
                 fontSize: '1.2em',
                 width: '100px'
               }}
-              label={actualFeedback.residuals_of_regions[0].toFixed(2)}
+              label={actualFeedback.residuals_of_regions[0]!.toFixed(2)}
             />
           </Grid>
 
@@ -240,7 +237,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
                 fontSize: '1.2em',
                 width: '100px'
               }}
-              label={actualFeedback.residuals_of_regions[1].toFixed(2)}
+              label={actualFeedback.residuals_of_regions[1]!.toFixed(2)}
             />
           </Grid>
 
@@ -255,7 +252,7 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
                 fontSize: '1.2em',
                 width: '100px'
               }}
-              label={actualFeedback.residuals_of_regions[2].toFixed(2)}
+              label={actualFeedback.residuals_of_regions[2]!.toFixed(2)}
             />
           </Grid>
         </Grid>

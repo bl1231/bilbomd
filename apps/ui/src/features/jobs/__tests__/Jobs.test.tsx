@@ -113,6 +113,36 @@ describe('Jobs table', () => {
       refetch: vi.fn()
     })
   })
+  it('renders the Pipeline column header', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([createMockJobDTO()])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    const pipelineHeader = await screen.findByRole('columnheader', {
+      name: /pipeline/i
+    })
+    expect(pipelineHeader).toBeInTheDocument()
+  })
+
+  it('shows "Classic" in Pipeline column for pdb jobs', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([
+          createMockJobDTO({ mongo: createMockPdbMongo({ jobType: 'pdb' }) })
+        ])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    const pipelineCell = await screen.findByText('Classic')
+    expect(pipelineCell).toBeInTheDocument()
+  })
+
   it('renders the Engine column header', async () => {
     server.use(
       http.get('http://localhost:3003/api/v1/jobs', () => {
@@ -166,6 +196,7 @@ describe('Jobs table', () => {
   it('shows User → Engine → Status order for admins', async () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'admin',
+      displayName: 'admin',
       roles: ['Admin'],
       status: 'Admin',
       isManager: false,
@@ -205,7 +236,7 @@ describe('Jobs table', () => {
     const nerscTimes: INerscInfo = {
       time_submitted: new Date('2025-01-01T00:00:00Z'),
       time_started: new Date('2025-01-01T00:05:00Z'),
-      time_completed: new Date('2025-01-01T00:15:00Z'),
+      time_completed: new Date('2025-01-01T00:20:00Z'), // 15min NERSC run time — avoids collision with 10min mongo totalRuntime
       jobid: '12345',
       state: 'RUNNING',
       qos: 'debug'
@@ -217,6 +248,10 @@ describe('Jobs table', () => {
           createMockJobDTO({
             mongo: createMockPdbMongo({
               status: 'Running',
+              // Use distinct mongo times so Queued(2min)/Runtime(7min) don't
+              // collide with NERSC Queue Time(5min) or Run Time(15min)
+              time_started: new Date('2025-01-01T00:02:00Z'),
+              time_completed: new Date('2025-01-01T00:09:00Z'),
               nersc: nerscTimes
             })
           })
@@ -234,9 +269,10 @@ describe('Jobs table', () => {
       screen.getByRole('columnheader', { name: /run time/i })
     ).toBeInTheDocument()
 
-    // Cells show computed durations
-    expect(await screen.findByText(/5min/i)).toBeInTheDocument()
-    expect(screen.getByText(/10min/i)).toBeInTheDocument()
+    // NERSC Queue Time (nersc.time_submitted→nersc.time_started = 5min)
+    expect(await screen.findByText('5min')).toBeInTheDocument()
+    // NERSC Run Time (nersc.time_started→nersc.time_completed = 15min)
+    expect(screen.getByText('15min')).toBeInTheDocument()
   })
 
   it('handles NERSC jobs with epoch placeholder for time_completed', async () => {
@@ -262,6 +298,9 @@ describe('Jobs table', () => {
           createMockJobDTO({
             mongo: createMockPdbMongo({
               status: 'Running',
+              // Use distinct mongo times so Queued(2min)/Runtime(8min) don't
+              // collide with NERSC Queue Time(5min)
+              time_started: new Date('2025-01-01T00:02:00Z'),
               nersc: nerscTimesWithEpoch
             })
           })
@@ -279,7 +318,7 @@ describe('Jobs table', () => {
       screen.getByRole('columnheader', { name: /run time/i })
     ).toBeInTheDocument()
 
-    // Queue time should show (5 minutes from submit to start)
+    // NERSC Queue Time should show (5 minutes from nersc.time_submitted to nersc.time_started)
     expect(await screen.findByText('5min')).toBeInTheDocument()
 
     // Run time should NOT show 'Invalid' - it should calculate from start to now
@@ -308,6 +347,7 @@ describe('Jobs table', () => {
     beforeEach(() => {
       vi.mocked(useAuth).mockReturnValue({
         username: 'admin',
+        displayName: 'admin',
         roles: ['Admin'],
         status: 'Admin',
         isManager: false,

@@ -32,6 +32,7 @@ describe('RequireAuth', () => {
   it('renders Outlet when user has a matching role', () => {
     mockUseAuth.mockReturnValue({
       username: 'admin',
+      displayName: 'admin',
       roles: ['Admin'],
       status: 'Admin',
       isManager: false,
@@ -50,6 +51,7 @@ describe('RequireAuth', () => {
   it('renders Navigate when user has no matching role', () => {
     mockUseAuth.mockReturnValue({
       username: 'user',
+      displayName: 'user',
       roles: ['User'],
       status: 'User',
       isManager: false,
@@ -69,6 +71,7 @@ describe('RequireAuth', () => {
   it('passes location state to Navigate redirect', () => {
     mockUseAuth.mockReturnValue({
       username: 'user',
+      displayName: 'user',
       roles: ['User'],
       status: 'User',
       isManager: false,

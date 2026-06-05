@@ -76,6 +76,7 @@ describe('Welcome Component', () => {
   it('displays loading message while fetching config', () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
+      displayName: 'testuser',
       roles: [] as string[],
       status: 'active',
       isManager: false,
@@ -101,6 +102,7 @@ describe('Welcome Component', () => {
   it('displays error message when config fails to load', () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
+      displayName: 'testuser',
       roles: [] as string[],
       status: 'active',
       isManager: false,
@@ -125,6 +127,7 @@ describe('Welcome Component', () => {
   it('displays Beamline 12.3.1 when not using NERSC', () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
+      displayName: 'testuser',
       roles: [] as string[],
       status: 'active',
       isManager: false,
@@ -158,6 +161,7 @@ describe('Welcome Component', () => {
   it('displays NERSC status when using NERSC', async () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
+      displayName: 'testuser',
       roles: [] as string[],
       status: 'active',
       isManager: false,
@@ -198,6 +202,7 @@ describe('Welcome Component', () => {
   it('displays contact information', () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'testuser',
+      displayName: 'testuser',
       roles: [] as string[],
       status: 'active',
       isManager: false,

@@ -1,5 +1,6 @@
 import { apiSlice } from 'app/api/apiSlice'
 import { logOut, setCredentials } from 'slices/authSlice'
+import { logger } from 'utils/logger'
 
 interface LoginCredentials {
   email?: string
@@ -17,14 +18,9 @@ interface OrcidSessionResponse {
   orcidId: string
 }
 
-interface OrcidFinalizeRequest {
-  givenName?: string
-  familyName?: string
-  email?: string
-  orcidId?: string
-  code?: string
-  state?: string
-}
+// The backend ignores the request body and trusts the server-side
+// session profile; callers send an empty object.
+type OrcidFinalizeRequest = Record<string, never>
 
 export const authApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -42,15 +38,14 @@ export const authApiSlice = apiSlice.injectEndpoints({
       }),
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
         try {
-          const { data } = await queryFulfilled
+          await queryFulfilled
           dispatch(logOut())
           // Dave Gray suggests this timeout to give components time to unmount before resetting state
           setTimeout(() => {
             dispatch(apiSlice.util.resetApiState())
           }, 1000)
-          console.log('Logout succeeded with response:', data)
         } catch (error) {
-          console.log(error)
+          logger.error(error)
         }
       }
     }),
@@ -62,11 +57,10 @@ export const authApiSlice = apiSlice.injectEndpoints({
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled
-          //console.log(data)
           const { accessToken } = data
           dispatch(setCredentials({ accessToken }))
         } catch (error) {
-          console.log(error)
+          logger.error(error)
         }
       }
     }),

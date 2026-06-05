@@ -19,29 +19,23 @@ BilboMD is a webapp developed at the [SIBYLS beamline](https://sibyls.als.lbl.go
 
 There are several different SAXS modeling pipelines available.
 
+> 📊 Interactive pipeline diagrams for each workflow are rendered in the live app — see the [Deployment](#deployment) instances below (e.g. [Hyperion](https://bilbomd.bl1231.als.lbl.gov)).
+
 ### BilboMD Classic w/PDB inputs
 
 This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided PDB file and experimental SAXS data.
-
-![Classic PDB](apps/ui/public/images/bilbomd-classic-pdb-schematic-openmm-dark.png)
 
 ### BilboMD Classic w/CRD inputs
 
 This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided CRD and PSF file and experimental SAXS data. The CRD and PSF files can be generated using [CHARMM GUI](https://www.charmm-gui.org/).
 
-![Classic CRD](apps/ui/public/images/bilbomd-classic-crd-schematic-dark.png)
-
 ### BilboMD Auto
 
 This pipeline is designed to take Alphafold models and a Per residue Alignment Error (PAE) matrix in combination with your experimental SAXS data.
 
-![Auto](apps/ui/public/images/bilbomd-auto-schematic-openmm-dark.png)
-
 ### BilboMD AF
 
 This pipeline is designed to run Alphafold2 on your provided protein sequence and then run the Auto pipeline above.
-
-![Auto](apps/ui/public/images/bilbomd-af-schematic-openmm-dark.png)
 
 ## Test Coverage
 
@@ -50,9 +44,9 @@ Current test coverage across BilboMD apps:
 <!-- COVERAGE-TABLE:START -->
 | App | Statements | Branches | Functions | Lines |
 |-----|-----------|----------|-----------|-------|
-| Backend | 89.32% | 81.54% | 87.75% | 89.80% |
-| UI | 69.84% | 61.64% | 69.10% | 71.11% |
-| Worker | 86.74% | 73.45% | 88.05% | 86.77% |
+| Backend | 87.05% | 80.65% | 86.84% | 87.38% |
+| UI | 69.82% | 61.26% | 69.11% | 71.07% |
+| Worker | 77.76% | 64.25% | 67.40% | 77.55% |
 | Scoper | 95.11% | 82.14% | 88.00% | 95.11% |
 <!-- COVERAGE-TABLE:END -->
 

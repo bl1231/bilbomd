@@ -94,7 +94,7 @@ describe('BilboMDNerscSteps', () => {
       renderWithProviders(<BilboMDNerscSteps job={job} />)
 
       expect(screen.queryByText('AutoRg')).not.toBeInTheDocument()
-      expect(screen.queryByText(/PAE matrix/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/PAE\/PDE Matrix/)).not.toBeInTheDocument()
       expect(screen.queryByText('AlphaFold2')).not.toBeInTheDocument()
       expect(screen.queryByText('Convert PDB to CRD')).not.toBeInTheDocument()
     })
@@ -113,7 +113,7 @@ describe('BilboMDNerscSteps', () => {
       expect(screen.queryByText('AutoRg')).not.toBeInTheDocument()
       expect(screen.queryByText('AlphaFold2')).not.toBeInTheDocument()
       // PAE should be visible for auto jobs
-      expect(screen.getByText(/PAE matrix/)).toBeInTheDocument()
+      expect(screen.getByText(/PAE\/PDE Matrix/)).toBeInTheDocument()
     })
 
     it('should hide autorg for alphafold jobs', () => {
@@ -130,7 +130,7 @@ describe('BilboMDNerscSteps', () => {
       expect(screen.queryByText('AutoRg')).not.toBeInTheDocument()
       // AlphaFold and PAE should be visible
       expect(screen.getByText('AlphaFold2')).toBeInTheDocument()
-      expect(screen.getByText(/PAE matrix/)).toBeInTheDocument()
+      expect(screen.getByText(/PAE\/PDE Matrix/)).toBeInTheDocument()
     })
 
     it('should hide autorg, pae, alphafold for pdb jobs', () => {
@@ -145,7 +145,7 @@ describe('BilboMDNerscSteps', () => {
       renderWithProviders(<BilboMDNerscSteps job={job} />)
 
       expect(screen.queryByText('AutoRg')).not.toBeInTheDocument()
-      expect(screen.queryByText(/PAE matrix/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/PAE\/PDE Matrix/)).not.toBeInTheDocument()
       expect(screen.queryByText('AlphaFold2')).not.toBeInTheDocument()
     })
 

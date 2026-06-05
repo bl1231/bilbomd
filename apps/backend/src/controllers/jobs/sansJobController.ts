@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { v4 as uuid } from 'uuid'
 import path from 'path'
 import fs from 'fs-extra'
@@ -169,7 +170,7 @@ const createPublicSANSJob = async (req: Request, res: Response) => {
         ]
         const quotaQuery = {
           client_ip_hash,
-          status: { $in: activeStatuses },
+          status: mongoose.trusted({ $in: activeStatuses }),
           access_mode: AccessMode.Anonymous
         }
         const counts = await Promise.all([

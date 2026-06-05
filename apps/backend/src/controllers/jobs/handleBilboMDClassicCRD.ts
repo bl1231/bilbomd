@@ -21,6 +21,11 @@ import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { config } from '../../config/config.js'
+import {
+  validateInpConstraints,
+  convertInpToYaml,
+  extractConstraintsFromYaml
+} from '@bilbomd/md-utils'
 
 const uploadFolder = config.uploadDir
 
@@ -278,6 +283,27 @@ const handleBilboMDClassicCRD = async (
     logger.info(
       `BilboMD-${bilbomdMode} Job saved to MongoDB: ${newJob._id.toString()}`
     )
+
+    // Store MD constraints in MongoDB (CRD only supports CHARMM/const.inp)
+    if (!isResubmission && inpFile) {
+      try {
+        const constraintFilePath = path.join(jobDir, inpFileName)
+        await validateInpConstraints(constraintFilePath)
+        const yamlContent = await convertInpToYaml(constraintFilePath, logger)
+        const mdConstraints = extractConstraintsFromYaml(yamlContent)
+        newJob.md_constraints = mdConstraints
+        await newJob.save()
+        logger.info(
+          `MD constraints stored in MongoDB for job ${newJob._id.toString()}`
+        )
+      } catch (constraintError) {
+        logger.warn(
+          `Failed to store MD constraints for job ${newJob._id.toString()}:`,
+          constraintError
+        )
+        // Don't fail job creation if constraint storage fails
+      }
+    }
 
     // Write Job params for use by NERSC job script.
     await writeJobParams(newJob._id.toString())

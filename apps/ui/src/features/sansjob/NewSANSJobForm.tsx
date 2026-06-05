@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
+import { parseCifAtomSite } from '@bilbomd/bilbomd-types'
 import {
   Box,
   Button,
@@ -9,6 +11,7 @@ import {
   Slider,
   Chip
 } from '@mui/material'
+import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
@@ -20,7 +23,6 @@ import { useAddNewPublicSANSJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import { BilboMDSANSJobSchema } from 'schemas/BilboMDSANSJobSchema'
 import { expdataSchema } from 'schemas/ExpdataSchema'
-import { pdbFileSchema } from 'schemas/PDBFileSchema'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
@@ -30,30 +32,26 @@ import NewSANSJobFormInstructions from './NewSANSJobFormInstructions'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import ChainDeuterationSlider from './ChainDeuterationSlider'
-import { useTheme } from '@mui/material/styles'
+import {
+  detectGaffCofactors,
+  detectMetalCofactors
+} from 'schemas/ValidationFunctions'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
-import MdEngineField from 'components/MdEngineField'
+import SANSPipelineSchematic from './SANSPipelineSchematic'
+import { logger } from 'utils/logger'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
 }
 
-const PipelineSchematic = ({ isDarkMode }: { isDarkMode: boolean }) => (
+const PipelineSchematic = () => (
   <Grid size={{ xs: 12 }}>
     <HeaderBox>
       <Typography>BilboMD SANS Schematic</Typography>
     </HeaderBox>
     <Paper sx={{ p: 2 }}>
-      <img
-        src={
-          isDarkMode
-            ? '/images/bilbomd-sans-schematic-dark.png'
-            : '/images/bilbomd-sans-schematic.png'
-        }
-        alt="Overview of BilboMD AF pipeline"
-        style={{ maxWidth: '100%', height: 'auto' }}
-      />
+      <SANSPipelineSchematic />
     </Paper>
   </Grid>
 )
@@ -64,9 +62,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       ? 'BilboMD: New SANS Job (anonymous)'
       : 'BilboMD: New SANS Job'
   )
-
-  const theme = useTheme()
-  const isDarkMode = theme.palette.mode === 'dark'
 
   const [addNewSANSJob, { isSuccess: isAuthSuccess, data: authJobResponse }] =
     useAddNewSANSJobMutation()
@@ -100,6 +95,8 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const [chainIds, setChainIds] = useState<string[]>([])
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
+  const [pdbInfo, setPdbInfo] = useState<string>('')
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
 
   const {
     data: config,
@@ -115,7 +112,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     return <Alert severity="error">Configuration not available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
-  const charmmEnabled = config.enableCharmmEngine?.toLowerCase() !== 'false'
+
 
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
@@ -130,7 +127,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     rg_max: 0,
     inp_file: '',
     d2o_fraction: 100,
-    md_engine: charmmEnabled ? 'charmm' : 'openmm'
+    md_engine: 'openmm'
   }
 
   const onSubmit = async (values: NewSANSJobFormValues) => {
@@ -150,7 +147,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       const key =
         `deuteration_fraction_${chainId}` as keyof NewSANSJobFormValues
       if (key in values) {
-        form.append(key, values[key].toString())
+        form.append(key, values[key]!.toString())
       }
     })
 
@@ -159,31 +156,40 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         ? addNewPublicSANSJob(form).unwrap()
         : addNewSANSJob(form).unwrap())
     } catch (error) {
-      console.error('rejected', error)
+      logger.error('rejected', error)
     }
   }
 
   const parsePDBFile = (fileContent: string): string[] => {
     const lines = fileContent.split('\n')
     const chainIdsSet: Set<string> = new Set()
-
     lines.forEach((line) => {
       if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
         const chainId = line.substring(21, 22).trim()
-        if (chainId) {
-          chainIdsSet.add(chainId)
-        }
+        if (chainId) chainIdsSet.add(chainId)
       }
     })
-
     return Array.from(chainIdsSet)
+  }
+
+  const parseCIFFile = (fileContent: string): string[] => {
+    const parsed = parseCifAtomSite(fileContent)
+    if (!parsed) return []
+    const idx = parsed.columnNames.indexOf('auth_asym_id')
+    if (idx === -1) return []
+    const chainIds = new Set<string>()
+    for (const row of parsed.dataRows) {
+      const val = row[idx]
+      if (val && val !== '.' && val !== '?') chainIds.add(val)
+    }
+    return Array.from(chainIds)
   }
 
   const isFormValid = (values: NewSANSJobFormValues) => {
     const hasValidDeuteration = chainIds.every(
       (chainId) =>
-        values[`deuteration_fraction_${chainId}`] >= 0 &&
-        values[`deuteration_fraction_${chainId}`] <= 100
+        (values[`deuteration_fraction_${chainId}`] ?? 0) >= 0 &&
+        (values[`deuteration_fraction_${chainId}`] ?? 0) <= 100
     )
 
     return (
@@ -205,7 +211,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     >
       <NewSANSJobFormInstructions />
 
-      <PipelineSchematic isDarkMode={isDarkMode} />
+      <PipelineSchematic />
 
       <Grid size={{ xs: 12 }}>
         <HeaderBox>
@@ -281,16 +287,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       />
                     </Grid>
 
-                    {/* MD Engine selection */}
-                    {/* Disabled until we write teh necessary worker code*/}
-                    <Grid sx={{ width: '520px' }}>
-                      <MdEngineField
-                        value={values.md_engine as 'charmm' | 'openmm'}
-                        onChange={(val) => void setFieldValue('md_engine', val)}
-                        disabled={true}
-                      />
-                    </Grid>
-
                     {/* PDB file */}
                     <Grid>
                       <Field
@@ -303,21 +299,73 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         setFieldTouched={setFieldTouched}
                         error={errors.pdb_file && touched.pdb_file}
                         errorMessage={errors.pdb_file ? errors.pdb_file : ''}
-                        fileType="Starting PDB file *.pdb"
-                        fileExt=".pdb"
+                        infoMessage={pdbInfo}
+                        warningMessage={pdbWarning}
+                        fileType="Starting PDB or CIF file *.pdb, *.cif"
+                        fileExt=".pdb,.cif"
                         onFileChange={async (selectedFile: File) => {
-                          const isPDBValid =
-                            await pdbFileSchema.isValid(selectedFile)
-                          if (isPDBValid) {
-                            const reader = new FileReader()
-                            reader.onload = (e) => {
-                              const fileContent = e.target?.result as string
-                              const parsedChainIds = parsePDBFile(fileContent)
-                              setChainIds(parsedChainIds)
-                            }
-                            reader.readAsText(selectedFile)
+                          const isCif = selectedFile.name
+                            .toLowerCase()
+                            .endsWith('.cif')
+                          const reader = new FileReader()
+                          reader.onload = (e) => {
+                            const content = e.target?.result as string
+                            setChainIds(
+                              isCif
+                                ? parseCIFFile(content)
+                                : parsePDBFile(content)
+                            )
+                          }
+                          reader.readAsText(selectedFile)
+
+                          if (!isCif) {
+                            const [gaffFound, metalFound] = await Promise.all([
+                              detectGaffCofactors(selectedFile),
+                              detectMetalCofactors(selectedFile)
+                            ])
+                            setPdbInfo(
+                              gaffFound.length > 0
+                                ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
+                                : ''
+                            )
+                            setPdbWarning(
+                              metalFound.length > 0 ? (
+                                <>
+                                  The following metal-containing residues
+                                  have no force-field parameters and will
+                                  be removed before MD:{' '}
+                                  {metalFound.join(', ')}. If these
+                                  residues are important for your system,
+                                  consider using{' '}
+                                  <Button
+                                    href="https://charmm-gui.org/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    variant="outlined"
+                                    color="info"
+                                    endIcon={<LaunchIcon />}
+                                    sx={{
+                                      textTransform: 'none',
+                                      py: 0,
+                                      px: 0.75,
+                                      minHeight: 0,
+                                      fontSize: 'inherit',
+                                      lineHeight: 'inherit',
+                                      verticalAlign: 'baseline'
+                                    }}
+                                  >
+                                    CHARMM-GUI
+                                  </Button>{' '}
+                                  to properly parameterize your structure.
+                                </>
+                              ) : (
+                                ''
+                              )
+                            )
                           } else {
-                            setChainIds([])
+                            setPdbInfo('')
+                            setPdbWarning('')
                           }
                         }}
                       />
@@ -404,7 +452,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             ? errors.rg_min
                             : 'Min value of Rg ...(between 10 and 100)'
                         }
-                        inputProps={{ min: 10, max: 100 }}
+                        slotProps={{ htmlInput: { min: 10, max: 100 } }}
                       />
                     </Grid>
 
@@ -426,7 +474,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        inputProps={{ min: 0, max: 100 }}
+                        slotProps={{ htmlInput: { min: 0, max: 100 } }}
                       />
                     </Grid>
 

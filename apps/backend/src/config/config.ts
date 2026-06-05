@@ -45,5 +45,6 @@ export const config = {
     AlphaFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_ALPHAFOLD),
     MultiEnabled: toBoolean(process.env.ENABLE_BILBOMD_MULTI),
     ScoperEnabled: toBoolean(process.env.ENABLE_BILBOMD_SCOPER)
-  }
+  },
+  orcidAuthEnabled: toBoolean(process.env.ORCID_AUTH_ENABLED)
 }

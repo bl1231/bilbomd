@@ -72,7 +72,7 @@ describe('BilboMDNerscStep', () => {
       { stepName: 'nersc_submit_slurm_batch', friendlyName: 'NERSC Submit Slurm Batch File' },
       { stepName: 'nersc_job_status', friendlyName: 'NERSC Job Status' },
       { stepName: 'alphafold', friendlyName: 'AlphaFold2' },
-      { stepName: 'pae', friendlyName: 'Define MD Domains from AlphaFold PAE matrix' },
+      { stepName: 'pae', friendlyName: 'Define MD Domains from PAE/PDE Matrix' },
       { stepName: 'autorg', friendlyName: 'AutoRg' },
       { stepName: 'pdb2crd', friendlyName: 'Convert PDB to CRD' },
       { stepName: 'minimize', friendlyName: 'Minimize' },

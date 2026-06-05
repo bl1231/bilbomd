@@ -41,7 +41,7 @@ function drawChainBoundaryLines(
   ctx.strokeStyle = 'rgba(0,0,0,0.6)'
   ctx.setLineDash([4, 3])
   for (let i = 0; i < viz.chains.length - 1; ++i) {
-    const chain = viz.chains[i]
+    const chain = viz.chains[i]!
     // Draw boundary after chain.end (inclusive), so boundary is after this residue
     const boundaryIdx = chain.end
     // The pixel position is after residue boundaryIdx
@@ -118,11 +118,11 @@ function colormap(val: number): string {
 
   // Find stops between which t falls
   let i = 0
-  while (i < stops.length - 1 && t > stops[i + 1][0]) {
+  while (i < stops.length - 1 && t > stops[i + 1]![0]) {
     i++
   }
-  const [t0, c0] = stops[i]
-  const [t1, c1] = stops[i + 1]
+  const [t0, c0] = stops[i]!
+  const [t1, c1] = stops[i + 1]!
 
   // Linear interpolation factor
   const f = (t - t0) / (t1 - t0)
@@ -177,7 +177,7 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
       // Paint heatmap
       for (let i = 0; i < nRows; i++) {
         for (let j = 0; j < nCols; j++) {
-          ctx.fillStyle = colormap(matrix[i][j])
+          ctx.fillStyle = colormap(matrix[i]![j]!)
           ctx.fillRect(j * cellW, i * cellH, cellW, cellH)
         }
       }
@@ -197,10 +197,10 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
           const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
           const colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc']
           for (let i = 0; i < viz.chains.length; i++) {
-            const chain = viz.chains[i]
+            const chain = viz.chains[i]!
             const startPx = residueToPx(chain.start, size, s, nCols)
             const endPx = residueToPx(chain.end + 1, size, s, nCols)
-            schematicCtx.fillStyle = colors[i % colors.length]
+            schematicCtx.fillStyle = colors[i % colors.length]!
             schematicCtx.fillRect(startPx, 0, endPx - startPx, 20)
             // Add chain ID text
             schematicCtx.fillStyle = 'black'
@@ -226,10 +226,10 @@ const PAEMatrixPlot: React.FC<PAEMatrixPlotProps> = ({
           const s = viz.downsample ?? Math.max(1, Math.round(L / matrix.length))
           const colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc']
           for (let i = 0; i < viz.chains.length; i++) {
-            const chain = viz.chains[i]
+            const chain = viz.chains[i]!
             const startPx = residueToPx(chain.start, size, s, nCols)
             const endPx = residueToPx(chain.end + 1, size, s, nCols)
-            schematicCtx.fillStyle = colors[i % colors.length]
+            schematicCtx.fillStyle = colors[i % colors.length]!
             schematicCtx.fillRect(0, startPx, 20, endPx - startPx)
             // Add chain ID text (rotated vertically)
             schematicCtx.save()

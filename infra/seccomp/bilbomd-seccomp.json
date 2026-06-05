@@ -1,0 +1,73 @@
+{
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "architectures": [
+    "SCMP_ARCH_X86_64",
+    "SCMP_ARCH_X86",
+    "SCMP_ARCH_X32",
+    "SCMP_ARCH_AARCH64"
+  ],
+  "syscalls": [
+    {
+      "comment": "Block AF_ALG sockets (CVE-2026-31431 — kernel page-cache write primitive via algif_aead). AF_ALG = 38.",
+      "names": ["socket"],
+      "action": "SCMP_ACT_ERRNO",
+      "args": [
+        {
+          "index": 0,
+          "value": 38,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "comment": "Block kernel loading and container filesystem escape vectors.",
+      "names": [
+        "kexec_load",
+        "kexec_file_load",
+        "open_by_handle_at",
+        "pivot_root",
+        "init_module",
+        "finit_module",
+        "delete_module",
+        "create_module",
+        "query_module",
+        "get_kernel_syms"
+      ],
+      "action": "SCMP_ACT_ERRNO"
+    },
+    {
+      "comment": "Block cross-process memory access (not needed, undermines process isolation).",
+      "names": [
+        "ptrace",
+        "process_vm_readv",
+        "process_vm_writev"
+      ],
+      "action": "SCMP_ACT_ERRNO"
+    },
+    {
+      "comment": "Block kernel keyring syscalls (frequently abused for credential theft and privilege escalation).",
+      "names": [
+        "add_key",
+        "request_key",
+        "keyctl"
+      ],
+      "action": "SCMP_ACT_ERRNO"
+    },
+    {
+      "comment": "Block userfaultfd (race-condition primitive used in many kernel exploit chains).",
+      "names": ["userfaultfd"],
+      "action": "SCMP_ACT_ERRNO"
+    },
+    {
+      "comment": "Block system-level operations that BilboMD containers have no need for.",
+      "names": [
+        "acct",
+        "reboot",
+        "swapon",
+        "swapoff",
+        "syslog"
+      ],
+      "action": "SCMP_ACT_ERRNO"
+    }
+  ]
+}

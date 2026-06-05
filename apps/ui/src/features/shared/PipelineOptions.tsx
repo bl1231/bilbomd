@@ -1,4 +1,6 @@
+import React from 'react'
 import {
+  Box,
   List,
   Paper,
   Avatar,
@@ -12,18 +14,15 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 interface PipelineType {
   title: string
   description: string
-  imagePath: {
-    light: string
-    dark: string
-  }
+  schematic: React.ReactNode
 }
 
 interface PipelineOptionsProps {
   pipelines: PipelineType[]
-  isLightMode: boolean
+  isLightMode?: boolean
 }
 
-const PipelineOptions = ({ pipelines, isLightMode }: PipelineOptionsProps) => (
+const PipelineOptions = ({ pipelines }: PipelineOptionsProps) => (
   <List>
     {pipelines.map((pipeline, index) => (
       <Paper
@@ -49,17 +48,9 @@ const PipelineOptions = ({ pipelines, isLightMode }: PipelineOptionsProps) => (
             secondary={pipeline.description}
             sx={{ flex: '1 1 auto', minWidth: '200px' }}
           />
-          <img
-            src={
-              isLightMode ? pipeline.imagePath.light : pipeline.imagePath.dark
-            }
-            alt={`Overview of ${pipeline.title}`}
-            style={{
-              maxWidth: '65%',
-              maxHeight: '200px',
-              objectFit: 'contain'
-            }}
-          />
+          <Box sx={{ maxWidth: '65%', width: '100%' }}>
+            {pipeline.schematic}
+          </Box>
         </ListItem>
       </Paper>
     ))}

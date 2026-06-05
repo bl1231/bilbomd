@@ -15,6 +15,12 @@ import AdditionalInfo from '../shared/AdditionalInfo'
 import { Grid } from '@mui/system'
 import { blue } from '@mui/material/colors'
 import { useTheme } from '@mui/material/styles'
+import BilboMDBibTeX from 'components/Common/BilboMDBibTeX'
+import AFOpenMMPipelineSchematic from 'features/alphafoldjob/AFOpenMMPipelineSchematic'
+import ClassicPDBOpenMMPipelineSchematic from 'features/jobs/ClassicPDBOpenMMPipelineSchematic'
+import ClassicCRDPipelineSchematic from 'features/jobs/ClassicCRDPipelineSchematic'
+import AutoOpenMMPipelineSchematic from 'features/autojob/AutoOpenMMPipelineSchematic'
+import OF3OpenMMPipelineSchematic from 'features/openfoldjob/OF3OpenMMPipelineSchematic'
 
 const Help = ({ title = 'BilboMD: Help' }) => {
   useTitle(title)
@@ -76,22 +82,22 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             variant="body2"
             sx={{ mx: 5, my: 2 }}
           >
-            Pelikan M, Hura GL, Hammel M.{' '}
+            Classen S, Del Mundo J, Kulkarni D, Prabhakar S, Hicks A, Hammel M.{' '}
             <b>
-              Structure and flexibility within proteins as identified through
-              small angle X-ray scattering.
+              BilboMD: a web-accessible SAXS and AlphaFold-guided modeling
+              pipeline.
             </b>{' '}
-            Gen Physiol Biophys. 2009 Jun;28(2):174-89. doi:
-            10.4149/gpb_2009_02_174. PMID:{' '}
+            Nucleic Acids Research. 2026; gkag377. doi:{' '}
             <Link
-              href="https://pubmed.ncbi.nlm.nih.gov/19592714/"
+              href="https://doi.org/10.1093/nar/gkag377"
               target="_blank"
               rel="noopener noreferrer"
             >
-              19592714
+              10.1093/nar/gkag377
             </Link>
-            ; PMCID: PMC3773563.
+            .
           </Typography>
+          <BilboMDBibTeX />
         </Introduction>
 
         <Box sx={{ m: 1, p: 0 }}>
@@ -162,8 +168,23 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                   }}
                 >
                   <ListItemText
-                    primary="BilboMD AF (Alphafold)"
+                    primary="BilboMD AF (Alphafold2)"
                     secondary='This pipeline runs Alphafold2 on your input sequence. The "best" Alphafold model and PAE matrix are used as starting structures and to define flexible regions for the MD steps.'
+                  />
+                </ListItem>
+                <ListItem
+                  sx={{
+                    backgroundColor:
+                      tabValue === 4
+                        ? theme.palette.mode === 'dark'
+                          ? blue[700]
+                          : blue[100]
+                        : 'transparent'
+                  }}
+                >
+                  <ListItemText
+                    primary="BilboMD OF3 (OpenFold3)"
+                    secondary='This pipeline runs OpenFold3 on your input sequence. The "best" predicted model and PAE matrix are used as starting structures and to define flexible regions for the MD steps.'
                   />
                 </ListItem>
                 <ListItem>
@@ -191,37 +212,15 @@ const Help = ({ title = 'BilboMD: Help' }) => {
                   <Tab label="Classic CRD" />
                   <Tab label="Auto" />
                   <Tab label="AF" />
+                  <Tab label="OF3" />
                 </Tabs>
               </Box>
               <Box sx={{ mt: 2 }}>
-                {tabValue === 0 && (
-                  <img
-                    src="/images/bilbomd-classic-pdb-schematic.png"
-                    alt="BilboMD Classic PDB Schematic"
-                    style={{ width: '100%' }}
-                  />
-                )}
-                {tabValue === 1 && (
-                  <img
-                    src="/images/bilbomd-classic-crd-schematic.png"
-                    alt="BilboMD Classic CRD Schematic"
-                    style={{ width: '100%' }}
-                  />
-                )}
-                {tabValue === 2 && (
-                  <img
-                    src="/images/bilbomd-auto-schematic.png"
-                    alt="BilboMD Auto Schematic"
-                    style={{ width: '100%' }}
-                  />
-                )}
-                {tabValue === 3 && (
-                  <img
-                    src="/images/bilbomd-af-schematic.png"
-                    alt="BilboMD AF Schematic"
-                    style={{ width: '100%' }}
-                  />
-                )}
+                {tabValue === 0 && <ClassicPDBOpenMMPipelineSchematic />}
+                {tabValue === 1 && <ClassicCRDPipelineSchematic />}
+                {tabValue === 2 && <AutoOpenMMPipelineSchematic />}
+                {tabValue === 3 && <AFOpenMMPipelineSchematic />}
+                {tabValue === 4 && <OF3OpenMMPipelineSchematic />}
               </Box>
             </Box>
           </Box>

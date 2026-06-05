@@ -16,6 +16,7 @@ describe('JobActionsMenu', () => {
     jobTitle: 'Test Job',
     jobStatus: 'Completed',
     resultsReady: true,
+    isAdmin: false,
     anchorEl: document.createElement('div'),
     open: true,
     onClose: mockOnClose,
@@ -171,7 +172,7 @@ describe('JobActionsMenu', () => {
         const deleteButton = screen.getByText('Delete')
         await user.click(deleteButton)
 
-        expect(mockOnDelete).toHaveBeenCalledWith('job-123', 'Test Job')
+        expect(mockOnDelete).toHaveBeenCalledWith('job-123', 'Test Job', status)
         expect(mockOnDelete).toHaveBeenCalledTimes(1)
       })
 
@@ -260,6 +261,34 @@ describe('JobActionsMenu', () => {
 
       const deleteButton = screen.getByText('Delete').closest('li')
       expect(deleteButton).toHaveStyle({ color: 'rgb(211, 47, 47)' })
+    })
+  })
+
+  describe('Delete button - admin overrides', () => {
+    const stuckStatuses = ['Running', 'Submitted']
+
+    stuckStatuses.forEach((status) => {
+      it(`should enable Delete for admins when status is ${status}`, () => {
+        renderWithProviders(
+          <JobActionsMenu {...defaultProps} jobStatus={status} isAdmin={true} />
+        )
+
+        const deleteButton = screen.getByText('Delete').closest('li')
+        expect(deleteButton).not.toHaveClass('Mui-disabled')
+      })
+
+      it(`should call onDelete with status arg for admins when status is ${status}`, async () => {
+        const user = userEvent.setup()
+        renderWithProviders(
+          <JobActionsMenu {...defaultProps} jobStatus={status} isAdmin={true} />
+        )
+
+        const deleteButton = screen.getByText('Delete')
+        await user.click(deleteButton)
+
+        expect(mockOnDelete).toHaveBeenCalledWith('job-123', 'Test Job', status)
+        expect(mockOnDelete).toHaveBeenCalledTimes(1)
+      })
     })
   })
 

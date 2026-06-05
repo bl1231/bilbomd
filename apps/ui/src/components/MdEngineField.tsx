@@ -34,15 +34,15 @@ const MdEngineField = ({
       name="md_engine"
     >
       <FormControlLabel
+        value="openmm"
+        control={<Radio />}
+        label="OpenMM"
+      />
+      <FormControlLabel
         value="charmm"
         control={<Radio />}
         label="CHARMM"
         disabled={disableCharmm}
-      />
-      <FormControlLabel
-        value="openmm"
-        control={<Radio />}
-        label="OpenMM"
       />
     </RadioGroup>
   </FormControl>

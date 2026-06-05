@@ -12,6 +12,7 @@ import Grid from '@mui/material/Grid'
 import Divider from '@mui/material/Divider'
 import { Link } from 'react-router'
 import useTitle from 'hooks/useTitle'
+import { logger } from 'utils/logger'
 import { axiosInstance } from 'app/api/axios'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
@@ -84,13 +85,9 @@ const MagickLink = () => {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
           // error message from backend available in data.message
-          //console.log(err.response)
           setError(err.response.data.message)
           setSuccess(null)
           setStatus(err)
-          // console.log(err.response.data.message)
-          // console.log(err.response.status)
-          // console.log(err.response.headers)
         }
       })
     if (response?.data) {
@@ -102,7 +99,6 @@ const MagickLink = () => {
   }
 
   const resendVerificationCode = async (email: string) => {
-    // console.log('resend code for:', email)
     await axiosInstance
       .post(
         VERIFICATION_CODE_URL,
@@ -112,12 +108,11 @@ const MagickLink = () => {
           withCredentials: true
         }
       )
-      .then((res) => {
-        console.log('done', res.status, res.data.message)
+      .then(() => {
         setVerified(true)
       })
       .catch((err) => {
-        console.log(err)
+        logger.error(err)
       })
   }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { runStripIons, runStripCofactors, runCifToPdb } from '../pdb-to-crd.js'
+import { runPrepPdb, runStripCofactors, runCifToPdb } from '../pdb-to-crd.js'
 import { logger } from '../../../helpers/loggers.js'
 import { spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
@@ -47,35 +47,35 @@ describe('pdb-to-crd', () => {
   })
 
   // -------------------------------------------------------------------------
-  // runStripIons
+  // runPrepPdb
   // -------------------------------------------------------------------------
-  describe('runStripIons', () => {
-    it('resolves when strip_ions.py exits 0', async () => {
+  describe('runPrepPdb', () => {
+    it('resolves when prep_pdb.py exits 0', async () => {
       await expect(
-        runStripIons({ uuid: 'test-uuid', pdb_file: 'input.pdb' })
+        runPrepPdb({ uuid: 'test-uuid', pdb_file: 'input.pdb' })
       ).resolves.toBeUndefined()
     })
 
     it('spawns the correct script path', async () => {
-      await runStripIons({ uuid: 'test-uuid', pdb_file: 'input.pdb' })
+      await runPrepPdb({ uuid: 'test-uuid', pdb_file: 'input.pdb' })
       expect(vi.mocked(spawn)).toHaveBeenCalledWith(
         '/opt/envs/base/bin/python',
-        expect.arrayContaining(['/app/scripts/strip_ions.py']),
+        expect.arrayContaining(['/app/scripts/prep_pdb.py']),
         expect.any(Object)
       )
     })
 
-    it('rejects when strip_ions.py exits non-zero', async () => {
+    it('rejects when prep_pdb.py exits non-zero', async () => {
       vi.mocked(spawn).mockReturnValueOnce(makeProc(1) as ReturnType<typeof spawn>)
       await expect(
-        runStripIons({ uuid: 'test-uuid', pdb_file: 'input.pdb' })
-      ).rejects.toThrow('strip_ions.py exited with code 1')
+        runPrepPdb({ uuid: 'test-uuid', pdb_file: 'input.pdb' })
+      ).rejects.toThrow('prep_pdb.py exited with code 1')
     })
 
     it('logs info on success', async () => {
-      await runStripIons({ uuid: 'abc', pdb_file: 'x.pdb' })
+      await runPrepPdb({ uuid: 'abc', pdb_file: 'x.pdb' })
       expect(vi.mocked(logger).info).toHaveBeenCalledWith(
-        expect.stringContaining('runStripIons')
+        expect.stringContaining('runPrepPdb')
       )
     })
   })

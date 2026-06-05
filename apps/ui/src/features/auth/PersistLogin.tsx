@@ -5,6 +5,7 @@ import usePersist from '../../hooks/usePersist'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from '../../slices/authSlice'
 import { Alert, Button, CircularProgress } from '@mui/material'
+import { logger } from 'utils/logger'
 import Grid from '@mui/material/Grid'
 
 const PersistLogin = () => {
@@ -22,15 +23,13 @@ const PersistLogin = () => {
         await refresh(undefined).unwrap()
         setTrueSuccess(true)
       } catch (err) {
-        console.error('Refresh failed:', err)
+        logger.error('Refresh failed:', err)
       }
     }
     if (persist && !token) {
       void verifyRefreshToken()
     }
   }, [persist, refresh, token])
-
-  // console.log('PersistLogin:', { token, persist })
 
   let content
 
@@ -91,12 +90,9 @@ const PersistLogin = () => {
     )
   } else if (isSuccess && trueSuccess) {
     //persist: yes, token: yes
-    // console.log('success')
     content = <Outlet />
   } else if (token && isUninitialized) {
     //persist: yes, token: yes
-    // console.log('token and uninitialized')
-    // console.log('isUninitialized:', isUninitialized)
     content = <Outlet />
   }
 
