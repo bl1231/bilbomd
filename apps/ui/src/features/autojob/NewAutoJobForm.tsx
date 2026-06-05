@@ -1,12 +1,5 @@
 import { ReactNode, useState } from 'react'
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Alert,
-  Paper
-} from '@mui/material'
+import { Box, Button, TextField, Typography, Alert, Paper } from '@mui/material'
 import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
@@ -18,7 +11,8 @@ import NewAutoJobFormInstructions from './AutoJobFormInstructions'
 import { BilboMDAutoJobSchema } from 'schemas/BilboMDAutoJobSchema'
 import {
   detectGaffCofactors,
-  detectMetalCofactors
+  detectMetalCofactors,
+  isPlddtColumnAllZero
 } from 'schemas/ValidationFunctions'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
@@ -313,25 +307,25 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             useExampleData ? 'example-auto.pdb' : undefined
                           }
                           onFileChange={async (file: File) => {
-                            const [gaffFound, metalFound] = await Promise.all([
-                              detectGaffCofactors(file),
-                              detectMetalCofactors(file)
-                            ])
+                            const [gaffFound, metalFound, plddtAllZero] =
+                              await Promise.all([
+                                detectGaffCofactors(file),
+                                detectMetalCofactors(file),
+                                isPlddtColumnAllZero(file)
+                              ])
                             setPdbInfo(
                               gaffFound.length > 0
                                 ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
                                 : ''
                             )
-                            setPdbWarning(
+                            const metalWarning =
                               metalFound.length > 0 ? (
-                                <>
-                                  The following metal-containing
-                                  residues have no force-field
-                                  parameters and will be removed
-                                  before MD:{' '}
-                                  {metalFound.join(', ')}. If these
-                                  residues are important for your
-                                  system, consider using{' '}
+                                <Box>
+                                  The following metal-containing residues have
+                                  no force-field parameters and will be removed
+                                  before MD: {metalFound.join(', ')}. If these
+                                  residues are important for your system,
+                                  consider using{' '}
                                   <Button
                                     href="https://charmm-gui.org/"
                                     target="_blank"
@@ -352,11 +346,35 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   >
                                     CHARMM-GUI
                                   </Button>{' '}
-                                  to properly parameterize your
-                                  structure, then submit a Classic job
-                                  with CRD and PSF files using the
-                                  CHARMM engine option.
-                                </>
+                                  to properly parameterize your structure, then
+                                  submit a Classic job with CRD and PSF files
+                                  using the CHARMM engine option.
+                                </Box>
+                              ) : null
+                            const plddtWarning = plddtAllZero ? (
+                              <Box>
+                                All B-factor (pLDDT) values in this structure
+                                are zero. If your PAE JSON is AlphaFold3-style
+                                (contains per-atom pLDDT), BilboMD will attempt
+                                to recover pLDDT automatically; otherwise no
+                                rigid bodies will be defined and the MD step may
+                                produce meaningless results. Consider
+                                re-uploading a structure that retains pLDDT in
+                                the B-factor column.
+                              </Box>
+                            ) : null
+                            setPdbWarning(
+                              metalWarning || plddtWarning ? (
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 1
+                                  }}
+                                >
+                                  {metalWarning}
+                                  {plddtWarning}
+                                </Box>
                               ) : (
                                 ''
                               )
