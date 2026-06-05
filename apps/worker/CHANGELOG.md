@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 2.14.8
+
+### Patch Changes
+
+- 6e4baf7: Auto jobs: recover per-residue pLDDT from the AlphaFold3-style PAE JSON (`atom_plddts`) when the uploaded structure's B-factor column is all zeros. Previously, structures that lost their pLDDT during preparation (e.g. protonation) silently produced no fixed_bodies or rigid_bodies, leaving the model un-flexed. pae2const.py now aligns `atom_plddts` to the structure's heavy atoms and logs the recovery, with a clear warning when neither the B-factor column nor the JSON carry pLDDT.
+- c2ba6c5: Update npm dependencies to latest versions (axios, bullmq, morgan, concurrently, @mui/x-data-grid, react, react-dom, react-router, vite, vitest, typescript-eslint, and related). ioredis intentionally held at 5.10.1 for BullMQ compatibility.
+- Updated dependencies [c2ba6c5]
+  - @bilbomd/md-utils@1.1.18
+
 ## 2.14.7
 
 ### Patch Changes
