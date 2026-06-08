@@ -3,7 +3,8 @@ import type { Request, Response } from 'express'
 
 vi.mock('../../../config/config.js', () => ({
   config: { logLevel: 'info', sendEmailNotifications: false },
-  getEnvVar: vi.fn().mockReturnValue('test-secret')
+  getEnvVar: vi.fn().mockReturnValue('test-secret'),
+  isCookieSecure: vi.fn(() => true)
 }))
 
 const { buildAuthorizationUrlMock, randomStateMock, randomNonceMock } =

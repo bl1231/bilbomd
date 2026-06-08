@@ -5,7 +5,8 @@ import type { IUser } from '@bilbomd/mongodb-schema'
 
 vi.mock('../../../config/config.js', () => ({
   config: { logLevel: 'info', sendEmailNotifications: false },
-  getEnvVar: vi.fn().mockReturnValue('test-secret')
+  getEnvVar: vi.fn().mockReturnValue('test-secret'),
+  isCookieSecure: vi.fn(() => false)
 }))
 
 import { issueTokensAndSetCookie } from '../authTokens.js'

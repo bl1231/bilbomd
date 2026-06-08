@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { clientConfig, discovered } from './orcidClientConfig.js'
 import { buildAuthorizationUrl, randomState, randomNonce } from 'openid-client'
 import { logger } from '../../middleware/loggers.js'
+import { isCookieSecure } from '../../config/config.js'
 
 export async function handleOrcidLogin(req: Request, res: Response) {
   const state = randomState()
@@ -12,7 +13,7 @@ export async function handleOrcidLogin(req: Request, res: Response) {
   // half-finished OAuth flow can sit around.
   const cookieOptions = {
     httpOnly: true,
-    secure: true,
+    secure: isCookieSecure(),
     sameSite: 'lax' as const,
     maxAge: 5 * 60 * 1000
   }
