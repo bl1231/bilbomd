@@ -158,10 +158,14 @@ export default swaggerSpec
 
 // This json file is written purely as an archival record of the API.
 // It is not used by the application at runtime, so failure is non-fatal.
-try {
-  const outputPath = path.resolve('dist/openapi/v1/swagger_v1.json')
-  fs.writeFileSync(outputPath, JSON.stringify(swaggerSpec, null, 2))
-  logger.info(`Swagger file written to ${outputPath}`)
-} catch (err) {
-  logger.warn('Failed to write Swagger JSON (non-fatal):', err)
+// Skip in production: the hardened container runs with a read-only root
+// filesystem, so the write would always fail with EACCES and add log noise.
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    const outputPath = path.resolve('dist/openapi/v1/swagger_v1.json')
+    fs.writeFileSync(outputPath, JSON.stringify(swaggerSpec, null, 2))
+    logger.info(`Swagger file written to ${outputPath}`)
+  } catch (err) {
+    logger.warn('Failed to write Swagger JSON (non-fatal):', err)
+  }
 }
