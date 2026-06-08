@@ -16,6 +16,22 @@ const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
   return process.env[name] || defaultValue
 }
 
+/**
+ * Whether auth/session cookies should carry the `Secure` attribute (HTTPS-only).
+ *
+ * Browsers silently drop `Secure` cookies over plain HTTP, which breaks login,
+ * token refresh, and the ORCID OAuth flow for installs accessed via http://
+ * (e.g. http://localhost:3001 with no TLS-terminating proxy in front).
+ *
+ * Defaults to the previous behavior (`Secure` when BILBOMD_ENV=production). Set
+ * COOKIE_SECURE=false to allow cookies over HTTP on such deployments, or
+ * COOKIE_SECURE=true to force `Secure` regardless of BILBOMD_ENV.
+ */
+export const isCookieSecure = (): boolean =>
+  process.env.COOKIE_SECURE !== undefined
+    ? toBoolean(process.env.COOKIE_SECURE)
+    : process.env.BILBOMD_ENV === 'production'
+
 export const config = {
   sendEmailNotifications: toBoolean(process.env.SEND_EMAIL_NOTIFICATIONS),
   bullmqAttempts: process.env.BULLMQ_ATTEMPTS

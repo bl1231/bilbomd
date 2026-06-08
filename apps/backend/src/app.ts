@@ -17,7 +17,7 @@ import { connectDB } from './config/dbConn.js'
 import { initOrcidClient } from './controllers/auth/orcidClientConfig.js'
 import { CronJob } from 'cron'
 import { deleteOldJobs } from './middleware/jobCleaner.js'
-import { config, getEnvVar } from './config/config.js'
+import { config, getEnvVar, isCookieSecure } from './config/config.js'
 import sfapiRoutes from './routes/sfapi.js'
 import registerRoutes from './routes/register.js'
 import verifyRoutes from './routes/verify.js'
@@ -101,7 +101,7 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // true if HTTPS
+      secure: isCookieSecure(), // HTTPS-only unless COOKIE_SECURE=false
       maxAge: 1000 * 60 * 15 // 15 minutes
     }
   })

@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken'
 import { User, IUser } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { issueTokensAndSetCookie } from './authTokens.js'
-import { getEnvVar } from '../../config/config.js'
+import { getEnvVar, isCookieSecure } from '../../config/config.js'
 
 const refreshTokenSecret = getEnvVar('REFRESH_TOKEN_SECRET')
 
@@ -116,11 +116,10 @@ const logout = (req: Request, res: Response) => {
     return
   }
 
-  const isProduction = process.env.BILBOMD_ENV === 'production'
   res.clearCookie('jwt', {
     httpOnly: true,
     sameSite: 'lax',
-    secure: isProduction
+    secure: isCookieSecure()
   })
   res.json({ message: 'Cookie cleared' })
 }
