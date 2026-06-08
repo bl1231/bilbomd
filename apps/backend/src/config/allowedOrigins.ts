@@ -35,7 +35,17 @@ const bilbomdUrl = process.env.BILBOMD_URL
 const bilbomdUiPort = process.env.BILBOMD_UI_PORT
 if (bilbomdUrl) {
   allowedOrigins.push(bilbomdUrl)
-  if (bilbomdUiPort) {
+  // Only append the UI port when BILBOMD_URL has no explicit port of its own.
+  // If it already does (e.g. http://localhost:3001 for a no-proxy install),
+  // appending would produce an invalid origin like http://localhost:3001:3001.
+  const hasExplicitPort = (() => {
+    try {
+      return new URL(bilbomdUrl).port !== ''
+    } catch {
+      return false
+    }
+  })()
+  if (bilbomdUiPort && !hasExplicitPort) {
     allowedOrigins.push(`${bilbomdUrl}:${bilbomdUiPort}`)
   }
 }
