@@ -1,5 +1,12 @@
 # @bilbomd/backend
 
+## 2.9.8
+
+### Patch Changes
+
+- cc9498f: Avoid deriving an invalid CORS origin when `BILBOMD_URL` already includes an explicit port. Previously the allowed-origins list always appended `:BILBOMD_UI_PORT`, producing junk entries like `http://localhost:3001:3001` for no-proxy installs that set `BILBOMD_URL=http://localhost:3001`. The port is now only appended when `BILBOMD_URL` has no port of its own.
+- cc9498f: Add a `COOKIE_SECURE` environment variable to control the `Secure` attribute on auth and session cookies. Browsers silently drop `Secure` cookies over plain HTTP, which broke login, token refresh, and ORCID for installs accessed via `http://` (e.g. `http://localhost:3001` with no TLS-terminating proxy). The flag defaults to the previous behavior (`Secure` when `BILBOMD_ENV=production`); set `COOKIE_SECURE=false` to allow cookies over HTTP. This also unifies the secure-cookie logic across the refresh-token, session, and ORCID cookies, which previously read inconsistent env vars (`BILBOMD_ENV` vs `NODE_ENV`).
+
 ## 2.9.7
 
 ### Patch Changes
