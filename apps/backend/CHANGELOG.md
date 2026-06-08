@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.9.7
+
+### Patch Changes
+
+- 03df572: reduce logging levels for teh getJobs controller
+
 ## 2.9.6
 
 ### Patch Changes
