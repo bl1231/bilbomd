@@ -82,7 +82,7 @@ const getAllJobs = async (req: Request, res: Response) => {
 
     let jobFilter = {}
     if (!isAdmin && !isManager) {
-      logger.info(
+      logger.debug(
         `User ${username} is not an Admin or Manager - filtering by username`
       )
       const user = await User.findOne({ username }).lean()
@@ -103,7 +103,7 @@ const getAllJobs = async (req: Request, res: Response) => {
       Job.find(jobFilter).populate('user').lean<IJob[]>().exec(),
       MultiJob.find(jobFilter).populate('user').lean<IMultiJob[]>().exec()
     ])
-    logger.info(
+    logger.debug(
       `Fetched ${DBjobs.length} jobs and ${DBmultiJobs.length} multi-jobs`
     )
 
@@ -158,7 +158,7 @@ const getAllJobs = async (req: Request, res: Response) => {
     }
 
     if (!allJobs.length) {
-      logger.info('No jobs found')
+      logger.debug('No jobs found')
       res.status(204).json({ message: 'No jobs found' })
       return
     }
