@@ -49,11 +49,7 @@ redis:
 ui:
   name: ui
   image:
-    registry: ghcr.io
-    owner: bl1231
-    user: null
-    repository: bilbomd-ui
-    build: null
+    repository: ghcr.io/bl1231/bilbomd-ui
     tag: 2.20.4
     pullPolicy: Always
     secret: ghcr
@@ -61,11 +57,7 @@ ui:
 backend:
   name: backend
   image:
-    registry: ghcr.io
-    owner: bl1231
-    user: null
-    repository: bilbomd-backend
-    build: null
+    repository: ghcr.io/bl1231/bilbomd-backend
     tag: 2.9.5
     pullPolicy: Always
     secret: ghcr
@@ -73,11 +65,7 @@ backend:
 worker:
   name: worker
   image:
-    registry: ghcr.io
-    owner: bl1231
-    user: null
-    repository: bilbomd-worker
-    build: null
+    repository: ghcr.io/bl1231/bilbomd-worker
     tag: 2.14.8
     pullPolicy: Always
     secret: ghcr
