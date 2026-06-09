@@ -6,7 +6,19 @@
   "ignorePaths": [
     "apps/scoper/bilbomd-scoper-base.dockerfile"
   ],
+  "helm-values": {
+    "managerFilePatterns": [
+      "/infra/helm/values.*\\.yaml$/"
+    ]
+  },
   "packageRules": [
+    {
+      "description": "Group container image updates across compose and helm into one PR",
+      "matchManagers": ["docker-compose", "helm-values"],
+      "matchDatasources": ["docker"],
+      "groupName": "container images",
+      "groupSlug": "container-images"
+    },
     {
       "description": "Group all minor and patch npm updates into one PR",
       "matchManagers": ["npm"],
