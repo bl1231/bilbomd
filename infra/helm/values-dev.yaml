@@ -58,7 +58,7 @@ backend:
   name: backend
   image:
     repository: ghcr.io/bl1231/bilbomd-backend
-    tag: 2.9.5
+    tag: 2.9.8
     pullPolicy: Always
     secret: ghcr
 
