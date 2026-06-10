@@ -1,0 +1,15 @@
+# Minimal conda environment for running the NERSC spin-helm tls-acme
+# `prepare-values.py` script, which renders values.yaml from a
+# prepare-values-<env>.yaml template. It only needs PyYAML + Jinja2.
+#
+#   conda env create -f environment.yml
+#   conda activate bilbomd-tls-acme
+#
+# See README.md for the full setup workflow.
+name: bilbomd-tls-acme
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pyyaml
+  - jinja2

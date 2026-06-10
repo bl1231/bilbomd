@@ -1,0 +1,19 @@
+# tls-acme configuration for the bilbomd DEVELOPMENT namespace.
+# Copy to prepare-values.yaml and verify your NERSC uid/gid before running
+# prepare-values.py (from NERSC/spin-helm/tls-acme).
+#
+# The generated values.yaml (and any prepare-values.yaml copy) are gitignored —
+# they contain your personal NERSC uid/gid and email address. Keep them local.
+
+nersc_user_id: 62704       # verify with `id` on a NERSC login node
+nersc_user_group: 104818   # bilbomd project group (matches fsGroup in helm deployments)
+service_port: 8080         # port of the tls-acme challenge web server (case2)
+ingress_name: ingress      # name of the Ingress the bilbomd app chart owns; the
+                           # renewal CronJob borrows it. Install tls-acme with
+                           # --set ingress.enabled=false so it doesn't create
+                           # a second Ingress (see README "Ingress ownership").
+email: sclassen@lbl.gov
+cluster: development       # "development" or "production"
+use_case: case2            # case2: chart deploys its own minimal challenge web server
+user_domains:
+  - bilbomd-nersc-dev.bl1231.als.lbl.gov
