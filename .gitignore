@@ -186,6 +186,10 @@ backend-dev-tmp
 .claude/settings.local.json
 .nfs*
 
+# tls-acme generated values (contain NERSC uid/gid and email)
+infra/tls-acme/values*.yaml
+infra/tls-acme/prepare-values.yaml
+
 # pae testing outputs
 tools/python/pae_testing/out
 

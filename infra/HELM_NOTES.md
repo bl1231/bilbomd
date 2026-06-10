@@ -132,7 +132,12 @@ The secrets needed include:
 
 - `bilbomd-secrets` - Contains various ENV setting needed by backend apps.
 - `mongo-secrets` - Contains the root password for the MongoDB database.
-- `ui-tls` - SSL/TLS certificate for the web frontend ui.
+- `ui-tls` - **Deprecated.** Manual InCommon SSL/TLS certificate for the web
+  frontend ui. TLS is now handled automatically by the `tls-acme` CronJob, which
+  renews a Let's Encrypt cert into the `tls-cert` secret every two months — see
+  [`infra/tls-acme/README.md`](./tls-acme/README.md). The `ui-tls`/`ui-tls-dev`
+  secrets are retained only for rollback and can be removed once Let's Encrypt is
+  confirmed stable in production.
 - `ghcr` - A GitHub Personal Access Token needed to pull docker images from `ghcr.io`.
 - `registry-nersc` - This secret is provided automatically by SPIN, and is required to pull images from `registry.nersc.gov`.
 - `sfapi-priv-key` - This contains the private key from our 30-day Superfacility API red client.
@@ -143,7 +148,7 @@ If you have local copies of the secrets as yaml files they can be "applied" to t
 kubectl apply -f helm-secrets/bilbomd-secrets.yaml
 kubectl apply -f helm-secrets/sfapi-priv-key.yaml
 kubectl apply -f helm-secrets/mongo-secrets.yaml
-kubectl apply -f helm-secrets/ui-tls-secrets.yaml
+kubectl apply -f helm-secrets/ui-tls-secrets.yaml   # legacy — superseded by tls-acme (see infra/tls-acme/)
 kubectl apply -f helm-secrets/ghcr.yaml
 ```
 
