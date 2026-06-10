@@ -69,7 +69,10 @@ export default defineConfig({
     forks: { maxForks: 4 },
     server: {
       deps: {
-        inline: ['@mui/x-data-grid']
+        // Inline MUI so Vite resolves its internal directory imports (e.g.
+        // react-transition-group/TransitionGroupContext), which Node's native
+        // ESM loader rejects when the package is externalized.
+        inline: ['@mui/x-data-grid', '@mui/material', 'react-transition-group']
       }
     },
     coverage: {

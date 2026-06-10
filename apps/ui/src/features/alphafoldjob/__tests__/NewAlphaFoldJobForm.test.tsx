@@ -25,16 +25,20 @@ vi.mock('react-router', () => ({
   useNavigate: () => vi.fn()
 }))
 
-vi.mock('@mui/material/styles', () => ({
-  useTheme: vi.fn(() => ({
-    palette: {
-      mode: 'light',
-      success: { main: '#2e7d32' },
-      warning: { main: '#ed6c02' },
-      error: { main: '#d32f2f' }
-    }
-  }))
-}))
+vi.mock('@mui/material/styles', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@mui/material/styles')>()
+  return {
+    ...actual,
+    useTheme: vi.fn(() => ({
+      palette: {
+        mode: 'light',
+        success: { main: '#2e7d32' },
+        warning: { main: '#ed6c02' },
+        error: { main: '#d32f2f' }
+      }
+    }))
+  }
+})
 
 vi.mock('features/jobs/FileSelect', () => ({
   __esModule: true,
