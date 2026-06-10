@@ -38,6 +38,9 @@ ENV HUSKY=0
 COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY apps/scoper apps/scoper
 COPY packages/mongodb-schema packages/mongodb-schema
+# eslint-config is injected (file:) into the root workspace, so pnpm install
+# must be able to read it even though scoper doesn't depend on it directly
+COPY packages/eslint-config packages/eslint-config
 
 # Install only what we need using filters; use cache mount for store
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
