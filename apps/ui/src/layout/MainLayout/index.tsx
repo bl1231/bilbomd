@@ -23,12 +23,13 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import SpeedIcon from '@mui/icons-material/Speed'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { Outlet, useLocation, useNavigate } from 'react-router'
-import { useGetConfigsQuery, ConfigLicense } from 'slices/configsApiSlice'
+import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import useAuth from 'hooks/useAuth'
 import Header from './Header'
 import Breadcrumbs from './Breadcrumbs'
 import Footer from './Footer'
 import CookieConsent from 'components/CookieConsent'
+import LicenseBanner from 'components/LicenseBanner'
 
 const drawerWidth = 190
 
@@ -50,13 +51,6 @@ export default function ClippedDrawer() {
     return <Alert severity="error">Error loading configuration data</Alert>
   if (!config)
     return <Alert severity="warning">No configuration data available</Alert>
-
-  const license = config.license as unknown as ConfigLicense | undefined
-  const licenseInvalid = !!license && license.status !== 'valid'
-  const licenseMessage =
-    license?.status === 'expired'
-      ? `The BilboMD license${license.licensee ? ` for ${license.licensee}` : ''} expired${license.expiresAt ? ` on ${new Date(license.expiresAt).toLocaleDateString()}` : ''}. Job submission is disabled until it is renewed.`
-      : 'This BilboMD installation is unlicensed. Job submission is disabled until a valid license is installed.'
 
   const showBreadcrumbs = config.showBreadcrumbs?.toLowerCase() === 'true'
   const useNersc = config.useNersc?.toLowerCase() === 'true'
@@ -282,14 +276,7 @@ export default function ClippedDrawer() {
           component="main"
           sx={{ flexGrow: 1, p: 3 }}
         >
-          {licenseInvalid && (
-            <Alert
-              severity="warning"
-              sx={{ mb: 2 }}
-            >
-              {licenseMessage}
-            </Alert>
-          )}
+          <LicenseBanner />
           {showBreadcrumbs && <Breadcrumbs />}
           <Outlet />
         </Box>

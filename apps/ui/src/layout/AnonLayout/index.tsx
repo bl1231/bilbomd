@@ -21,6 +21,7 @@ import useAuth from 'hooks/useAuth'
 import Header from './Header'
 import Footer from './Footer'
 import CookieConsent from 'components/CookieConsent'
+import LicenseBanner from 'components/LicenseBanner'
 
 const drawerWidth = 190
 
@@ -207,6 +208,7 @@ export default function ClippedDrawer() {
           component="main"
           sx={{ flexGrow: 1, p: 3 }}
         >
+          <LicenseBanner />
           <Outlet />
         </Box>
       </Box>
