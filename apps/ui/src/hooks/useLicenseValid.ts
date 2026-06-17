@@ -16,4 +16,18 @@ const useLicenseValid = (): boolean => {
   return !license || license.status === 'valid'
 }
 
+/**
+ * Approximate rendered height (px) of the single-line license banner. Layouts
+ * offset page content (and the side nav) down by this amount when the banner is
+ * showing, since the banner itself is position: fixed and out of normal flow.
+ */
+export const LICENSE_BANNER_HEIGHT = 48
+
+/**
+ * Whether the license banner should render — i.e. the license is positively
+ * known to be invalid. The inverse of useLicenseValid (which fails open), so
+ * the banner only appears once config has loaded and reports a non-valid state.
+ */
+export const useLicenseBannerVisible = (): boolean => !useLicenseValid()
+
 export default useLicenseValid

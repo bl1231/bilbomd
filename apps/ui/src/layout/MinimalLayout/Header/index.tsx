@@ -9,6 +9,7 @@ import {
   Typography
 } from '@mui/material'
 import NightModeToggle from 'components/NightModeToggle'
+import LicenseBanner from 'components/LicenseBanner'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
@@ -171,6 +172,18 @@ const Header = () => {
             </Box>
           </Toolbar>
         </AppBar>
+        {/* License warning strip pinned directly below the fixed AppBar */}
+        <Box
+          sx={{
+            position: 'fixed',
+            top: '70px',
+            left: 0,
+            right: 0,
+            zIndex: (theme) => theme.zIndex.drawer + 1
+          }}
+        >
+          <LicenseBanner />
+        </Box>
       </Box>
     </>
   )

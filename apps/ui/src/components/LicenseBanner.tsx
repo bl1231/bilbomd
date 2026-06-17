@@ -1,5 +1,6 @@
 import Alert from '@mui/material/Alert'
 import { useGetConfigsQuery, ConfigLicense } from 'slices/configsApiSlice'
+import { useLicenseBannerVisible } from 'hooks/useLicenseValid'
 
 /**
  * Warns when the BilboMD installation has no valid license. Job submission is
@@ -11,17 +12,21 @@ const LicenseBanner = () => {
   const { data: config } = useGetConfigsQuery('configData')
   const license = config?.license as unknown as ConfigLicense | undefined
 
-  if (!license || license.status === 'valid') return null
+  if (!useLicenseBannerVisible()) return null
 
   const message =
-    license.status === 'expired'
+    license?.status === 'expired'
       ? `The BilboMD license${license.licensee ? ` for ${license.licensee}` : ''} expired${license.expiresAt ? ` on ${new Date(license.expiresAt).toLocaleDateString()}` : ''}. Job submission is disabled until it is renewed.`
       : 'This BilboMD installation is unlicensed. Job submission is disabled until a valid license is installed.'
 
   return (
     <Alert
       severity="warning"
-      sx={{ mb: 2 }}
+      sx={{
+        borderRadius: 0,
+        justifyContent: 'center',
+        fontSize: '1rem'
+      }}
     >
       {message}
     </Alert>
