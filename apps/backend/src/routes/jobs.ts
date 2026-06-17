@@ -15,6 +15,7 @@ import getMovies from '../controllers/movies/getMovies.js'
 import streamVideo from '../controllers/movies/streamVideo.js'
 import { checkFiles } from '../controllers/resubmitController.js'
 import { verifyJWT } from '../middleware/verifyJWT.js'
+import { requireValidLicense } from '../middleware/requireValidLicense.js'
 import { setVideoSession, verifyVideoSession } from '../middleware/videoAuth.js'
 import { logger } from '../middleware/loggers.js'
 const router = express.Router()
@@ -36,7 +37,7 @@ router.use((req, res, next) => {
   })
 })
 
-router.route('/').get(getAllJobs).post(createNewJob)
+router.route('/').get(getAllJobs).post(requireValidLicense, createNewJob)
 
 router.route('/:id').get(getJobById)
 router.route('/:id').delete(deleteJob)
@@ -50,11 +51,11 @@ router
   .route('/:id/movies/:label/:filename')
   .get(verifyVideoSession, streamVideo)
 router.route('/:id/:filename').get(getFile)
-router.route('/bilbomd-auto').post(createNewJob)
-router.route('/bilbomd-scoper').post(createNewJob)
-router.route('/bilbomd-alphafold').post(createNewJob)
-router.route('/bilbomd-openfold').post(createNewJob)
-router.route('/bilbomd-sans').post(createSANSJob)
-router.route('/bilbomd-multi').post(createNewMultiJob)
+router.route('/bilbomd-auto').post(requireValidLicense, createNewJob)
+router.route('/bilbomd-scoper').post(requireValidLicense, createNewJob)
+router.route('/bilbomd-alphafold').post(requireValidLicense, createNewJob)
+router.route('/bilbomd-openfold').post(requireValidLicense, createNewJob)
+router.route('/bilbomd-sans').post(requireValidLicense, createSANSJob)
+router.route('/bilbomd-multi').post(requireValidLicense, createNewMultiJob)
 
 export default router

@@ -281,3 +281,22 @@ The worker has a separate NERSC code path (`bilbomd-nersc.ts`, `bilboMdNerscJobM
 
 - **Hyperion** (SIBYLS beamline): `infra/docker-compose-hyperion.yml` — CPU workflows (Classic, Auto, Multi, SANS, Scoper)
 - **NERSC**: Docker Compose / Helm — GPU workflows (Classic, Auto, AF/AlphaFold)
+
+### Licensing (signed license tokens)
+
+Job submission requires a valid, RS256-signed license token. Validation is fully
+offline: the backend ships only the **public** key
+(`apps/backend/src/license/license-public-key.pem`), while the **private**
+signing key is held offline by the licensor. See
+`apps/backend/src/license/verifyLicense.ts` (verification + startup check) and
+`apps/backend/src/middleware/requireValidLicense.ts` (per-request gate on
+job-creating POST routes). The app stays browsable without a license; only job
+submission returns HTTP 403.
+
+Tokens are installed via `BILBOMD_LICENSE_KEY` (inline) or `BILBOMD_LICENSE_FILE`
+(default `/app/license.jwt`). Issue/inspect tokens with the tooling in
+`apps/backend/scripts/license/` (see its README).
+
+**Rollout caveat:** enforcement applies uniformly to *every* install — including
+Hyperion and NERSC — so each needs a valid token or job submission breaks.
+Self-issue a long-dated token for first-party deployments before upgrading.

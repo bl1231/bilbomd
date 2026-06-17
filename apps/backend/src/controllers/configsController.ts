@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { logger } from '../middleware/loggers.js'
 import axios from 'axios'
+import { getLicenseState } from '../license/verifyLicense.js'
 
 export const getConfigsStuff = async (
   req: Request,
@@ -76,6 +77,9 @@ export const getConfigsStuff = async (
       logger.debug(`${envVar}: ${process.env[envVar]}`)
     })
 
+    // Non-sensitive license status for the UI banner. Never includes the token.
+    const license = getLicenseState()
+
     // Construct the response object
     const configs = {
       mode: process.env.BILBOMD_ENV || '',
@@ -97,7 +101,12 @@ export const getConfigsStuff = async (
       workerVersion: workerInfo.version || '0.0.0',
       workerGitHash: workerInfo.gitHash || 'abc123',
       uiVersion: uiInfo.version || '0.0.0',
-      uiGitHash: uiInfo.gitHash || 'abc123'
+      uiGitHash: uiInfo.gitHash || 'abc123',
+      license: {
+        status: license.status,
+        licensee: license.licensee || '',
+        expiresAt: license.expiresAt || ''
+      }
     }
 
     res.json(configs)

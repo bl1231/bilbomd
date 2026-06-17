@@ -1,5 +1,6 @@
 import express from 'express'
 import { publicJobLimiter } from '../middleware/publicJobLimiter.js'
+import { requireValidLicense } from '../middleware/requireValidLicense.js'
 import { createPublicJob, getPublicJobById } from '../controllers/jobs/index.js'
 import { downloadPublicJobResults } from '../controllers/public/downloadPublicJobResults.js'
 import getPublicFoxsData from '../controllers/public/getPublicFoxsData.js'
@@ -11,8 +12,10 @@ import streamPublicVideo from '../controllers/public/streamPublicVideo.js'
 
 const router = express.Router()
 
-router.route('/').post(publicJobLimiter, createPublicJob)
-router.route('/sans').post(publicJobLimiter, createPublicSANSJob)
+router.route('/').post(publicJobLimiter, requireValidLicense, createPublicJob)
+router
+  .route('/sans')
+  .post(publicJobLimiter, requireValidLicense, createPublicSANSJob)
 router.route('/:publicId').get(getPublicJobById)
 router.route('/:publicId/movies').get(getPublicMovies)
 router.route('/:publicId/movies/:label/:filename').get(streamPublicVideo)
