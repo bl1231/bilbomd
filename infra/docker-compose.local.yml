@@ -65,7 +65,7 @@ services:
     pull_policy: missing
     restart: always
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -81,7 +81,10 @@ services:
       - app-network
 
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.9.8
+    image: ghcr.io/bl1231/bilbomd-backend:pr-901-fc1f7033
+    # bl1231 images are published for linux/amd64 only. On Apple Silicon this
+    # forces the amd64 variant to run under emulation (qemu / Colima Rosetta).
+    platform: linux/amd64
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
@@ -96,60 +99,65 @@ services:
     networks:
       - app-network
     user: "${UID:-1001}:${GID:-1001}"
-    command: [ "node", "dist/server.js" ]
+    command: ["node", "dist/server.js"]
     depends_on:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3500/healthcheck" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:3500/healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
 
-  worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.14.8
-    pull_policy: always
-    security_opt:
-      - seccomp:./seccomp/bilbomd-seccomp.json
-      - no-new-privileges:true
-    read_only: true      
-    cap_drop:
-      - ALL
-    tmpfs:
-      - /tmp
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: "16"
-          memory: "32g"
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
-    env_file:
-      - .env.local
-    networks:
-      - app-network
-    volumes:
-      - ./uploads-dev:/bilbomd/uploads
-      - ./logs/worker:/bilbomd/logs
-    user: "${UID:-1001}:${GID:-1001}"
-    command: [ "node", "dist/worker.js" ]
-    depends_on:
-      - mongodb
-      - redis
-    healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+  # worker:
+  #   image: ghcr.io/bl1231/bilbomd-worker:2.14.8
+  #   # amd64-only image; emulation is SLOW for MD compute — expect long runs.
+  #   platform: linux/amd64
+  #   pull_policy: always
+  #   security_opt:
+  #     - seccomp:./seccomp/bilbomd-seccomp.json
+  #     - no-new-privileges:true
+  #   read_only: true
+  #   cap_drop:
+  #     - ALL
+  #   tmpfs:
+  #     - /tmp
+  #   deploy:
+  #     replicas: 1
+  #     resources:
+  #       limits:
+  #         cpus: "16"
+  #         memory: "32g"
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   env_file:
+  #     - .env.local
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./uploads-dev:/bilbomd/uploads
+  #     - ./logs/worker:/bilbomd/logs
+  #   user: "${UID:-1001}:${GID:-1001}"
+  #   command: ["node", "dist/worker.js"]
+  #   depends_on:
+  #     - mongodb
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "--fail", "http://localhost:3000/config"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s
 
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.20.4
+    image: ghcr.io/bl1231/bilbomd-ui:pr-901-fc1f7033
+    # bl1231 images are published for linux/amd64 only. On Apple Silicon this
+    # forces the amd64 variant to run under emulation (qemu / Colima Rosetta).
+    platform: linux/amd64
     pull_policy: always
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
@@ -165,7 +173,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost/version-info" ]
+      test: ["CMD", "curl", "--fail", "http://localhost/version-info"]
       interval: 30s
       timeout: 10s
       retries: 3
