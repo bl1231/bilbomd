@@ -5,7 +5,6 @@ import { PipelineTrends } from './components/PipelineTrends'
 import { FailureRate } from './components/FailureRate'
 import { DurationStats } from './components/DurationStats'
 import { AccessModeSplit } from './components/AccessModeSplit'
-import { JobsByTypePie } from './components/JobsByTypePie'
 import { grey } from '@mui/material/colors'
 
 export const AnalyticsDashboard: React.FC = () => {
@@ -61,10 +60,6 @@ export const AnalyticsDashboard: React.FC = () => {
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <AccessModeSplit />
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 6 }}>
-            <JobsByTypePie />
           </Grid>
         </Grid>
       </Box>

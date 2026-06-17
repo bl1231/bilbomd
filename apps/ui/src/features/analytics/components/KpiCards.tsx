@@ -6,10 +6,13 @@ import {
   Typography,
   Skeleton,
   Box,
-  Chip,
-  Stack
+  LinearProgress
 } from '@mui/material'
-import { useGetSummaryQuery } from '../../../slices/analyticsApiSlice'
+import {
+  useGetSummaryQuery,
+  useGetJobsByStatusQuery
+} from '../../../slices/analyticsApiSlice'
+import { BreakdownCard } from './BreakdownCard'
 
 const StatCard: React.FC<{
   label: string
@@ -38,22 +41,21 @@ const StatCard: React.FC<{
 
 export const KpiCards: React.FC = () => {
   const { data, isLoading } = useGetSummaryQuery()
+  const { data: byStatus, isLoading: statusLoading } = useGetJobsByStatusQuery()
 
-  const usageChips = (
-    <Stack
-      direction="row"
-      spacing={1}
-      sx={{ flexWrap: 'wrap' }}
-    >
-      {data?.usagePerPipeline?.map((u) => (
-        <Chip
-          key={u.pipeline}
-          label={`${u.pipeline}: ${u.count}`}
-          size="small"
-        />
-      ))}
-    </Stack>
-  )
+  const usageItems =
+    data?.usagePerPipeline?.map((u) => ({
+      label: u.pipeline,
+      value: u.count
+    })) ?? []
+
+  const statusItems =
+    byStatus?.map((s) => ({ label: s.status, value: s.count })) ?? []
+
+  const completed = data?.jobsCompleted ?? 0
+  const failed = data?.jobsFailed ?? 0
+  const terminal = completed + failed
+  const successPct = terminal > 0 ? Math.round((completed / terminal) * 100) : 0
 
   return (
     <Box>
@@ -103,23 +105,66 @@ export const KpiCards: React.FC = () => {
             loading={isLoading}
           />
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <Card variant="outlined">
-            <CardContent>
+
+        <Grid size={{ xs: 12, md: 6, lg: 5 }}>
+          <BreakdownCard
+            title="Usage per pipeline"
+            items={usageItems}
+            isLoading={isLoading}
+            emptyText="No usage events recorded yet."
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6, lg: 5 }}>
+          <BreakdownCard
+            title="Jobs by status"
+            items={statusItems}
+            isLoading={statusLoading}
+            emptyText="No jobs to display."
+          />
+        </Grid>
+        <Grid size={{ xs: 12, lg: 2 }}>
+          <Card
+            variant="outlined"
+            sx={{ height: '100%' }}
+          >
+            <CardContent
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%'
+              }}
+            >
               <Typography
                 variant="subtitle2"
                 color="text.secondary"
                 gutterBottom
               >
-                Usage per pipeline
+                Overall success rate
               </Typography>
               {isLoading ? (
                 <Skeleton
-                  variant="rectangular"
-                  height={36}
+                  variant="text"
+                  width={80}
                 />
               ) : (
-                usageChips
+                <React.Fragment>
+                  <Typography variant="h3">{successPct}%</Typography>
+                  <Box sx={{ width: '100%', mt: 1 }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={successPct}
+                    />
+                  </Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    {completed} completed / {failed} failed
+                  </Typography>
+                </React.Fragment>
               )}
             </CardContent>
           </Card>
