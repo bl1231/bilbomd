@@ -1,5 +1,16 @@
 # @bilbomd/ui
 
+## 2.21.0
+
+### Minor Changes
+
+- 3f1f331: Enrich the admin analytics overview: move the pipeline pie chart into the "Usage per pipeline" card with a color-coded chip legend, add a "Jobs by status" donut, and add an "Overall success rate" card derived from the summary counts. Extract reusable PipelinePie and BreakdownCard components.
+
+### Patch Changes
+
+- f8ad484: Admin dashboard cleanup: remove the deprecated "BilboMD Job Statistics" panel and the legacy `/stats` endpoint (which relied on inaccurate denormalized user counters). Recreate the jobs-by-type pie chart in the Analytics section backed by accurate aggregation of the jobs collection, and add an all-time "Total Submitted" KPI sourced from the usage-event log.
+- 7daa4c7: Update dependencies: form-data 4.0.6 (CVE fix), nodemailer 9.0.1, bullmq 5.78.1, axios 1.18.0, MUI 9.1.1/x-data-grid 9.5.0, react-router 7.18.0, molstar 5.10.1, multer 2.2.0. ioredis remains pinned at 5.10.1 per bullmq requirement.
+
 ## 2.20.4
 
 ### Patch Changes
