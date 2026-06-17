@@ -79,10 +79,10 @@ vi.mock('slices/analyticsApiSlice', async () => {
       isError: false,
       refetch: vi.fn()
     })),
-    useGetJobsByTypeQuery: vi.fn(() => ({
+    useGetJobsByStatusQuery: vi.fn(() => ({
       data: [
-        { pipeline: 'pdb', count: 12 },
-        { pipeline: 'crd', count: 8 }
+        { status: 'Completed', count: 18 },
+        { status: 'Failed', count: 2 }
       ],
       error: null,
       isLoading: false,

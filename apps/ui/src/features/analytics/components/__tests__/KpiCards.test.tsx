@@ -24,6 +24,15 @@ vi.mock('slices/analyticsApiSlice', () => ({
     data: mockData,
     isLoading: false,
     isError: false
+  }),
+  useGetJobsByStatusQuery: () => ({
+    data: [
+      { status: 'Completed', count: 30 },
+      { status: 'Failed', count: 3 },
+      { status: 'Running', count: 2 }
+    ],
+    isLoading: false,
+    isError: false
   })
 }))
 
