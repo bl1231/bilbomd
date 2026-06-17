@@ -35,7 +35,7 @@ mongo:
   name: mongo
   image:
     repository: mongo
-    tag: 8.3.3
+    tag: 8.3.4
     pullPolicy: IfNotPresent
     secret: registry-nersc
   config:

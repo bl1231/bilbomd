@@ -32,7 +32,7 @@ networks:
 services:
   # ------------------------------------------------------------------------------------
   mongodb:
-    image: mongo:8.3.3
+    image: mongo:8.3.4
     pull_policy: missing
     restart: always
     deploy:
