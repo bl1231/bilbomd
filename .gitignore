@@ -186,6 +186,8 @@ backend-dev-tmp
 # Generated license tokens are per-deployment secrets — never commit them.
 *.lic
 license.jwt
+# The license ledger is private bookkeeping — keep it offline, never commit it.
+license-ledger.csv
 *.zip
 .qodo
 .turbo

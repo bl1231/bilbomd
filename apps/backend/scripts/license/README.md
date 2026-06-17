@@ -36,10 +36,12 @@ This writes two files into the current directory:
 ```bash
 cd apps/backend            # so jsonwebtoken resolves
 node scripts/license/sign-license.mjs \
-  --key     /secure/offline/license-private-key.pem \
-  --org     "Acme Biosciences Inc." \
-  --contact "ops@acme.com" \
-  --expires 2027-06-30
+  --key        /secure/offline/license-private-key.pem \
+  --org        "Acme Biosciences Inc." \
+  --contact    "ops@acme.com" \
+  --expires    2027-06-30 \
+  --deployment "third-party"            # optional, ledger only \
+  --notes      "contract #123"          # optional, ledger only
 ```
 
 The signed token is printed to stdout (diagnostics go to stderr, so you can
@@ -51,6 +53,29 @@ redirect just the token to a file). Give it to the licensee, who installs it in
   (default `/app/license.jwt`).
 
 Backend env precedence: `BILBOMD_LICENSE_KEY` wins, otherwise the file is read.
+
+### Ledger (automatic bookkeeping)
+
+Every issuance also appends a row to a CSV ledger so your records stay in sync
+with what you've actually signed. Columns:
+
+```
+issued_at,license_id,org,contact,expires,deployment,notes
+```
+
+The ledger path is resolved in this order:
+
+1. `--ledger <path>`
+2. `$BILBOMD_LICENSE_LEDGER`
+3. `./license-ledger.csv` (default, created with a header on first use)
+
+Keep the ledger in your **private/offline location alongside the signing key**.
+`license-ledger.csv` is gitignored so it never lands in this public repo. The
+`--deployment` and `--notes` fields are ledger-only annotations — they are NOT
+embedded in the token. Pass `--no-ledger` to skip the ledger for a one-off.
+
+> Tip: set `BILBOMD_LICENSE_LEDGER=/secure/offline/license-ledger.csv` once in
+> your shell so every `sign-license.mjs` run records to the same private file.
 
 ## 3. Inspect / verify a token
 
