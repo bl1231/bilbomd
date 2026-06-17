@@ -33,6 +33,7 @@ import useTitle from 'hooks/useTitle'
 import { Debug } from 'components/Debug'
 import NewJobFormInstructions from './NewJobFormInstructions'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
+import useLicenseValid from 'hooks/useLicenseValid'
 import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
@@ -112,6 +113,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     error: configError,
     isLoading: configIsLoading
   } = useGetConfigsQuery('configData')
+  const licenseValid = useLicenseValid()
 
   // Early return and Error handling
   if (configIsLoading) return <LinearProgress />
@@ -884,7 +886,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       <Button
                         type="submit"
                         disabled={
-                          (!isValid && !useExampleData) || !isFormValid(values)
+                          (!isValid && !useExampleData) ||
+                          !isFormValid(values) ||
+                          !licenseValid
                         }
                         loading={isSubmitting}
                         endIcon={<SendIcon />}

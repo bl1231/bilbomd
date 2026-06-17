@@ -36,6 +36,7 @@ import { Entity, NewAlphaFoldJobFormValues } from 'types/alphafoldForm'
 import NewAlphaFoldJobFormInstructions from './NewAlphaFoldJobFormInstructions'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
+import useLicenseValid from 'hooks/useLicenseValid'
 import { useTheme } from '@mui/material/styles'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
@@ -417,17 +418,19 @@ const SubmitButton = ({
   isSubmitting,
   isValid,
   isFormValid,
+  licenseValid,
   status: _status
 }: {
   isSubmitting: boolean
   isValid: boolean
   isFormValid: boolean
+  licenseValid: boolean
   status: string | undefined
 }) => (
   <Grid sx={{ mt: 2 }}>
     <Button
       type="submit"
-      disabled={!isValid || isSubmitting || !isFormValid}
+      disabled={!isValid || isSubmitting || !isFormValid || !licenseValid}
       loading={isSubmitting}
       endIcon={<SendIcon />}
       loadingPosition="end"
@@ -487,6 +490,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     error: configError,
     isLoading: configIsLoading
   } = useGetConfigsQuery('configData')
+  const licenseValid = useLicenseValid()
 
   if (configIsLoading) return <LinearProgress />
   if (configError)
@@ -830,6 +834,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       isSubmitting={isSubmitting}
                       isValid={useExampleData ? true : isValid}
                       isFormValid={isFormValid(values)}
+                      licenseValid={licenseValid}
                       status={status}
                     />
                   </Grid>

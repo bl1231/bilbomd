@@ -31,6 +31,7 @@ import { NewSANSJobFormValues } from '../../types/sansForm'
 import NewSANSJobFormInstructions from './NewSANSJobFormInstructions'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
+import useLicenseValid from 'hooks/useLicenseValid'
 import ChainDeuterationSlider from './ChainDeuterationSlider'
 import {
   detectGaffCofactors,
@@ -103,6 +104,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     error: configError,
     isLoading: configIsLoading
   } = useGetConfigsQuery('configData')
+  const licenseValid = useLicenseValid()
 
   if (configIsLoading) return <LinearProgress />
 
@@ -569,7 +571,10 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       <Button
                         type="submit"
                         disabled={
-                          !isValid || isSubmitting || !isFormValid(values)
+                          !isValid ||
+                          isSubmitting ||
+                          !isFormValid(values) ||
+                          !licenseValid
                         }
                         loading={isSubmitting}
                         endIcon={<SendIcon />}

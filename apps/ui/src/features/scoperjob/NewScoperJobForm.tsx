@@ -25,6 +25,7 @@ import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
 import useTitle from 'hooks/useTitle'
+import useLicenseValid from 'hooks/useLicenseValid'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 import { logger } from 'utils/logger'
@@ -68,6 +69,7 @@ const NewScoperJobForm = ({
 
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const licenseValid = useLicenseValid()
 
   const initialValues = {
     title: '',
@@ -438,7 +440,8 @@ const NewScoperJobForm = ({
                             values.title === '' ||
                             (!useExampleData &&
                               (values.pdb_file === '' ||
-                                values.dat_file === ''))
+                                values.dat_file === '')) ||
+                            !licenseValid
                           }
                           loading={isSubmitting}
                           endIcon={<SendIcon />}
