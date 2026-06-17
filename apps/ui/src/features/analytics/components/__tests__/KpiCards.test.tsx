@@ -9,6 +9,7 @@ const mockData = {
   multijobs: 7,
   jobsCompleted: 30,
   jobsFailed: 3,
+  totalJobsSubmitted: 55,
   usagePerPipeline: [
     { pipeline: 'pdb', count: 10 },
     { pipeline: 'crd', count: 8 },
@@ -39,12 +40,14 @@ describe('KpiCards', () => {
     expect(screen.getByText('MultiJobs')).toBeInTheDocument()
     expect(screen.getByText('Completed')).toBeInTheDocument()
     expect(screen.getByText('Failed')).toBeInTheDocument()
+    expect(screen.getByText('Total Submitted (all-time)')).toBeInTheDocument()
 
     expect(screen.getByText('5')).toBeInTheDocument()
     expect(screen.getByText('42')).toBeInTheDocument()
     expect(screen.getByText('7')).toBeInTheDocument()
     expect(screen.getByText('30')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
+    expect(screen.getByText('55')).toBeInTheDocument()
 
     expect(screen.getByText('pdb: 10')).toBeInTheDocument()
     expect(screen.getByText('crd: 8')).toBeInTheDocument()
