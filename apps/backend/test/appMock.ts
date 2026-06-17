@@ -32,6 +32,15 @@ vi.mock('express-rate-limit', () => ({
   default: vi.fn(() => (req: any, res: any, next: any) => next()) // No-op middleware
 }))
 
+// Treat the install as licensed in integration tests. The license gate's own
+// behavior is covered by middleware/__tests__/requireValidLicense.test.ts; here
+// we only want to exercise the job flows without wiring a real signed token.
+vi.mock('../src/license/verifyLicense.js', () => ({
+  getLicenseState: () => ({ status: 'valid', licensee: 'integration-test' }),
+  initLicense: () => {},
+  verifyLicenseToken: () => ({ status: 'valid' })
+}))
+
 app.use((req: Request, res: Response, next: NextFunction) => {
   req.apiUser = {
     email: 'testuser@example.com'
