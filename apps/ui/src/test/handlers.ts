@@ -348,26 +348,6 @@ export const handlers = [
     })
   }),
 
-  // Stats API
-  http.get('http://localhost:3003/api/v1/stats', () => {
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: {
-          userCount: 10,
-          jobCount: 100,
-          totalJobsFromUsers: 90,
-          jobTypes: { pdb: 50, auto: 30, sans: 20 }
-        }
-      }),
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    )
-  }),
-
   // Configs API
   http.get('http://localhost:3003/api/v1/configs', () => {
     return new Response(

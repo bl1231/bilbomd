@@ -10,6 +10,7 @@ const mockSummaryAnalytics: SummaryAnalytics = {
   multijobs: 25,
   jobsCompleted: 2200,
   jobsFailed: 300,
+  totalJobsSubmitted: 2800,
   usagePerPipeline: [
     { pipeline: 'pdb', count: 800 },
     { pipeline: 'crd', count: 600 },

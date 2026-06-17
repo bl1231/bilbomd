@@ -5,7 +5,7 @@ vi.mock('@bilbomd/mongodb-schema', () => ({
   User: { countDocuments: vi.fn() },
   Job: { countDocuments: vi.fn(), aggregate: vi.fn() },
   MultiJob: { countDocuments: vi.fn() },
-  UsageEvent: { aggregate: vi.fn() }
+  UsageEvent: { aggregate: vi.fn(), countDocuments: vi.fn() }
 }))
 
 vi.mock('../../../../middleware/loggers.js', () => ({
@@ -50,6 +50,7 @@ describe('getSummaryAnalytics', () => {
       .mockReturnValueOnce({ exec: vi.fn().mockResolvedValue(40) } as never) // completed
       .mockReturnValueOnce({ exec: vi.fn().mockResolvedValue(5) } as never)  // failed
     vi.mocked(MultiJob.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(3) } as never)
+    vi.mocked(UsageEvent.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(60) } as never)
     vi.mocked(UsageEvent.aggregate).mockResolvedValue([{ pipeline: 'pdb', count: 20 }] as never)
 
     await getSummaryAnalytics(req, res)
@@ -60,7 +61,8 @@ describe('getSummaryAnalytics', () => {
         jobs: 50,
         multijobs: 3,
         jobsCompleted: 40,
-        jobsFailed: 5
+        jobsFailed: 5,
+        totalJobsSubmitted: 60
       })
     )
   })
@@ -72,6 +74,7 @@ describe('getSummaryAnalytics', () => {
     } as never)
     vi.mocked(DBJob.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(0) } as never)
     vi.mocked(MultiJob.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(0) } as never)
+    vi.mocked(UsageEvent.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(0) } as never)
     vi.mocked(UsageEvent.aggregate).mockResolvedValue([] as never)
 
     await getSummaryAnalytics(req, res)

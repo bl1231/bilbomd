@@ -8,14 +8,21 @@ import {
 
 export const getSummaryAnalytics = async (req: Request, res: Response) => {
   try {
-    const [userCount, jobCount, multiJobCount, completedCount, failedCount] =
-      await Promise.all([
-        User.countDocuments({}).exec(),
-        DBJob.countDocuments({}).exec(),
-        MultiJob.countDocuments({}).exec(),
-        DBJob.countDocuments({ status: 'Completed' }).exec(),
-        DBJob.countDocuments({ status: 'Failed' }).exec()
-      ])
+    const [
+      userCount,
+      jobCount,
+      multiJobCount,
+      completedCount,
+      failedCount,
+      totalJobsSubmitted
+    ] = await Promise.all([
+      User.countDocuments({}).exec(),
+      DBJob.countDocuments({}).exec(),
+      MultiJob.countDocuments({}).exec(),
+      DBJob.countDocuments({ status: 'Completed' }).exec(),
+      DBJob.countDocuments({ status: 'Failed' }).exec(),
+      UsageEvent.countDocuments({ event_type: 'job_submitted' }).exec()
+    ])
 
     const perPipeline = await UsageEvent.aggregate([
       { $group: { _id: '$pipeline', count: { $sum: 1 } } },
@@ -28,6 +35,7 @@ export const getSummaryAnalytics = async (req: Request, res: Response) => {
       multijobs: multiJobCount,
       jobsCompleted: completedCount,
       jobsFailed: failedCount,
+      totalJobsSubmitted,
       usagePerPipeline: perPipeline
     })
   } catch (error) {

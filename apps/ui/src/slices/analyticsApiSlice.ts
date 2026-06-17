@@ -36,6 +36,7 @@ export interface SummaryAnalytics {
   multijobs: number
   jobsCompleted: number
   jobsFailed: number
+  totalJobsSubmitted: number
   usagePerPipeline: PerPipelineCount[]
 }
 

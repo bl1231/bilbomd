@@ -29,7 +29,6 @@ import af2paeRoutes from './routes/af2pae.js'
 import autorgRoutes from './routes/autorg.js'
 import bullmqRoutes from './routes/bullmq.js'
 import configsRoutes from './routes/configs.js'
-import statsRoutes from './routes/stats.js'
 import adminAnalyticsRoutes from './routes/admin-analytics.js'
 import externalRoutes from './routes/external.js'
 import adminApiRoutes from './routes/admin-api.js'
@@ -130,7 +129,6 @@ v1Router.use('/af2pae', af2paeRoutes)
 v1Router.use('/autorg', autorgRoutes)
 v1Router.use('/bullmq', bullmqRoutes)
 v1Router.use('/configs', configsRoutes)
-v1Router.use('/stats', statsRoutes)
 v1Router.use(
   '/external/jobs',
   cors(corsOptionsPublic),

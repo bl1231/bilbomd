@@ -96,6 +96,13 @@ export const KpiCards: React.FC = () => {
             loading={isLoading}
           />
         </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3, lg: 2 }}>
+          <StatCard
+            label="Total Submitted (all-time)"
+            value={data?.totalJobsSubmitted}
+            loading={isLoading}
+          />
+        </Grid>
         <Grid size={{ xs: 12 }}>
           <Card variant="outlined">
             <CardContent>

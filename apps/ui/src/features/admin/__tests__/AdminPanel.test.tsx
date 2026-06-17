@@ -34,27 +34,6 @@ vi.mock('slices/adminApiSlice', async () => {
   }
 })
 
-vi.mock('slices/statsApiSlice', async () => {
-  const actual = await vi.importActual('slices/statsApiSlice')
-  return {
-    ...actual,
-    useGetStatsQuery: vi.fn(() => ({
-      data: {
-        userCount: 1,
-        jobCount: 2,
-        totalJobsFromUsers: 3,
-        jobTypes: { pdb: 1, crd: 1 }
-      },
-      error: null,
-      isLoading: false,
-      isFetching: false,
-      isSuccess: true,
-      isError: false,
-      refetch: vi.fn()
-    }))
-  }
-})
-
 vi.mock('slices/configsApiSlice', async () => {
   const actual = await vi.importActual('slices/configsApiSlice')
   return {
@@ -87,11 +66,24 @@ vi.mock('slices/analyticsApiSlice', async () => {
         multijobs: 5,
         jobsCompleted: 18,
         jobsFailed: 2,
+        totalJobsSubmitted: 25,
         usagePerPipeline: [
           { pipeline: 'pdb', count: 12 },
           { pipeline: 'crd', count: 8 }
         ]
       },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      isSuccess: true,
+      isError: false,
+      refetch: vi.fn()
+    })),
+    useGetJobsByTypeQuery: vi.fn(() => ({
+      data: [
+        { pipeline: 'pdb', count: 12 },
+        { pipeline: 'crd', count: 8 }
+      ],
       error: null,
       isLoading: false,
       isFetching: false,
@@ -162,8 +154,6 @@ describe('AdminPanel', () => {
     renderWithProviders(<AdminPanel />)
 
     expect(screen.getByText(/BullMQ Dashboard/i)).toBeInTheDocument()
-    expect(screen.getByText(/BilboMD Job Statistics/i)).toBeInTheDocument()
-    expect(screen.getByText(/deprecated/i)).toBeInTheDocument()
     expect(screen.getByText(/BilboMD Analytics/i)).toBeInTheDocument()
     // expect(screen.getByText(/configuration/i)).toBeInTheDocument()
   })
