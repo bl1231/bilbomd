@@ -31,6 +31,7 @@ import { Instructions } from './Instructions.tsx'
 import { Formik, Form, Field } from 'formik'
 import { Debug } from 'components/Debug'
 import useAuth from 'hooks/useAuth'
+import useLicenseValid from 'hooks/useLicenseValid'
 import { formatDateSafe } from 'utils/dates'
 import { logger } from 'utils/logger'
 
@@ -51,6 +52,7 @@ const NewMultiMDJobForm: React.FC = () => {
   useTitle('BilboMD: New Multi Job')
   const [addNewJob, { isSuccess }] = useAddNewMultiJobMutation()
   const { username } = useAuth()
+  const licenseValid = useLicenseValid()
   const {
     data: jobs,
     isLoading,
@@ -380,7 +382,7 @@ const NewMultiMDJobForm: React.FC = () => {
                         )}
                         <Button
                           type="submit"
-                          disabled={!isValid || isSubmitting}
+                          disabled={!isValid || isSubmitting || !licenseValid}
                           loading={isSubmitting}
                           endIcon={<SendIcon />}
                           loadingPosition="end"

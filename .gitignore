@@ -180,6 +180,14 @@ backend-dev-tmp
 *.csr
 *.key
 *.pem
+# Exception: the BilboMD license PUBLIC key is meant to be committed and shipped.
+# (The private signing key is generated offline and never enters the repo.)
+!apps/backend/src/license/license-public-key.pem
+# Generated license tokens are per-deployment secrets — never commit them.
+*.lic
+license.jwt
+# The license ledger is private bookkeeping — keep it offline, never commit it.
+license-ledger.csv
 *.zip
 .qodo
 .turbo

@@ -29,6 +29,10 @@ import Header from './Header'
 import Breadcrumbs from './Breadcrumbs'
 import Footer from './Footer'
 import CookieConsent from 'components/CookieConsent'
+import {
+  useLicenseBannerVisible,
+  LICENSE_BANNER_HEIGHT
+} from 'hooks/useLicenseValid'
 
 const drawerWidth = 190
 
@@ -43,6 +47,7 @@ export default function ClippedDrawer() {
   const navigate = useNavigate()
   const location = useLocation()
   const theme = useTheme()
+  const bannerVisible = useLicenseBannerVisible()
   const isSettingsPage = location.pathname.startsWith('/settings')
 
   if (configIsLoading) return <CircularProgress />
@@ -247,7 +252,14 @@ export default function ClippedDrawer() {
         minHeight: '100vh'
       }}
     >
-      <Box sx={{ display: 'flex', mb: 8 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          mb: bannerVisible
+            ? `calc(${theme.spacing(8)} + ${LICENSE_BANNER_HEIGHT}px)`
+            : 8
+        }}
+      >
         <Header />
       </Box>
 
@@ -261,7 +273,9 @@ export default function ClippedDrawer() {
               [`& .MuiDrawer-paper`]: {
                 width: drawerWidth,
                 boxSizing: 'border-box',
-                top: '24px'
+                top: bannerVisible
+                  ? `calc(24px + ${LICENSE_BANNER_HEIGHT}px)`
+                  : '24px'
               }
             }}
           >

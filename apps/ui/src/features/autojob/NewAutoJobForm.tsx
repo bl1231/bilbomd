@@ -20,6 +20,7 @@ import HeaderBox from 'components/HeaderBox'
 import useTitle from 'hooks/useTitle'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
+import useLicenseValid from 'hooks/useLicenseValid'
 import { useTheme } from '@mui/material/styles'
 import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
@@ -85,6 +86,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     error: configError,
     isLoading: configIsLoading
   } = useGetConfigsQuery('configData')
+  const licenseValid = useLicenseValid()
 
   if (configIsLoading) return <LinearProgress />
   if (configError)
@@ -433,7 +435,8 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           type="submit"
                           disabled={
                             (!isValid && !useExampleData) ||
-                            !isFormValid(values)
+                            !isFormValid(values) ||
+                            !licenseValid
                           }
                           loading={isSubmitting}
                           endIcon={<SendIcon />}

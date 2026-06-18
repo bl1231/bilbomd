@@ -18,6 +18,7 @@ import { initOrcidClient } from './controllers/auth/orcidClientConfig.js'
 import { CronJob } from 'cron'
 import { deleteOldJobs } from './middleware/jobCleaner.js'
 import { config, getEnvVar, isCookieSecure } from './config/config.js'
+import { initLicense } from './license/verifyLicense.js'
 import sfapiRoutes from './routes/sfapi.js'
 import registerRoutes from './routes/register.js'
 import verifyRoutes from './routes/verify.js'
@@ -56,6 +57,10 @@ mongoose.set('sanitizeFilter', true)
 
 // Connect to MongoDB
 connectDB()
+
+// Validate the BilboMD license. This only logs a banner at startup; per-request
+// enforcement happens in the requireValidLicense middleware on job submission.
+initLicense()
 
 // Initialize the ORCID client configuration only when ORCID auth is enabled.
 // See https://github.com/bl1231/bilbomd/issues/817 — ORCID is gated behind a

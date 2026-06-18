@@ -16,6 +16,7 @@ import { useState } from 'react'
 import useAuth from 'hooks/useAuth'
 import LogOut from 'features/auth/LogOut'
 import NightModeToggle from 'components/NightModeToggle'
+import LicenseBanner from 'components/LicenseBanner'
 import PersonIcon from '@mui/icons-material/Person'
 import { useNavigate } from 'react-router'
 import { Link } from 'react-router'
@@ -232,6 +233,18 @@ const Header = () => {
             </Box>
           </Toolbar>
         </AppBar>
+        {/* License warning strip pinned directly below the fixed AppBar */}
+        <Box
+          sx={{
+            position: 'fixed',
+            top: '70px',
+            left: 0,
+            right: 0,
+            zIndex: (theme) => theme.zIndex.drawer + 1
+          }}
+        >
+          <LicenseBanner />
+        </Box>
       </Box>
     </>
   )

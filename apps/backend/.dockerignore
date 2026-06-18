@@ -30,6 +30,8 @@ test.rest
 *.pfx
 *.crt
 *.cer
+# Exception: the BilboMD license PUBLIC key must ship inside the image.
+!src/license/license-public-key.pem
 id_rsa*
 id_ed25519*
 id_dsa*
