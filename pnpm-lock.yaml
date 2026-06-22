@@ -146,10 +146,10 @@ importers:
         version: 2.2.0
       nodemailer:
         specifier: ^9.0.0
-        version: 9.0.0
+        version: 9.0.1
       nodemailer-express-handlebars:
         specifier: ^7.0.0
-        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.0)
+        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.1)
       openid-client:
         specifier: ~6.8.4
         version: 6.8.4
@@ -255,10 +255,10 @@ importers:
         version: 9.7.0
       nodemailer:
         specifier: ^9.0.0
-        version: 9.0.0
+        version: 9.0.1
       nodemailer-express-handlebars:
         specifier: ^7.0.0
-        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.0)
+        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.1)
       winston:
         specifier: ^3.19.0
         version: 3.19.0
@@ -485,10 +485,10 @@ importers:
         version: 9.7.0
       nodemailer:
         specifier: ^9.0.0
-        version: 9.0.0
+        version: 9.0.1
       nodemailer-express-handlebars:
         specifier: ^7.0.0
-        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.0)
+        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.1)
       p-limit:
         specifier: ^7.3.0
         version: 7.3.0
@@ -3774,8 +3774,8 @@ packages:
       express-handlebars: '>= 8.0.0'
       nodemailer: '>= 6.0.0'
 
-  nodemailer@9.0.0:
-    resolution: {integrity: sha512-tbPTid7d/p9jAA8CRZ3iomvrMaST0o6NYuY7v6JQZHpPRZ61mLFSPKYd7342NtOFuej9/+L48SOIxwfu2uDvtw==}
+  nodemailer@9.0.1:
+    resolution: {integrity: sha512-Gwv8SQewT616ZM/URn0H54b8PWo/Wum7md3EW2aWy1lO27+WZCX+Xyak3J+NlmHUjDh5ME+uesJUDRbR3Ye8Bw==}
     engines: {node: '>=6.0.0'}
 
   nodemon@3.1.14:
@@ -6354,10 +6354,10 @@ snapshots:
     dependencies:
       '@types/webidl-conversions': 7.0.3
 
-  '@typescript-eslint/eslint-plugin@8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)':
+  '@typescript-eslint/eslint-plugin@8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(supports-color@5.5.0)(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
-      '@typescript-eslint/parser': 8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)
+      '@typescript-eslint/parser': 8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(supports-color@5.5.0)(typescript@6.0.3)
       '@typescript-eslint/scope-manager': 8.61.1
       '@typescript-eslint/type-utils': 8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)
       '@typescript-eslint/utils': 8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)
@@ -6370,10 +6370,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/eslint-plugin@8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@typescript-eslint/eslint-plugin@8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(supports-color@5.5.0)(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
-      '@typescript-eslint/parser': 8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)
+      '@typescript-eslint/parser': 8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(supports-color@5.5.0)(typescript@6.0.3)
       '@typescript-eslint/scope-manager': 8.61.1
       '@typescript-eslint/type-utils': 8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)
       '@typescript-eslint/utils': 8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)
@@ -6403,7 +6403,7 @@ snapshots:
       - supports-color
     optional: true
 
-  '@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)':
+  '@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(supports-color@5.5.0)(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.61.1
       '@typescript-eslint/types': 8.61.1
@@ -8698,12 +8698,12 @@ snapshots:
 
   node-releases@2.0.47: {}
 
-  nodemailer-express-handlebars@7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.0):
+  nodemailer-express-handlebars@7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.1):
     dependencies:
       express-handlebars: 8.0.5
-      nodemailer: 9.0.0
+      nodemailer: 9.0.1
 
-  nodemailer@9.0.0: {}
+  nodemailer@9.0.1: {}
 
   nodemon@3.1.14:
     dependencies:
@@ -9698,8 +9698,8 @@ snapshots:
 
   typescript-eslint@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3):
     dependencies:
-      '@typescript-eslint/eslint-plugin': 8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)
-      '@typescript-eslint/parser': 8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)
+      '@typescript-eslint/eslint-plugin': 8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(supports-color@5.5.0)(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)
+      '@typescript-eslint/parser': 8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(supports-color@5.5.0)(typescript@6.0.3)
       '@typescript-eslint/typescript-estree': 8.61.1(typescript@6.0.3)
       '@typescript-eslint/utils': 8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3)
       eslint: 10.5.0(jiti@2.7.0)(supports-color@5.5.0)
@@ -9709,7 +9709,7 @@ snapshots:
 
   typescript-eslint@8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3):
     dependencies:
-      '@typescript-eslint/eslint-plugin': 8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/eslint-plugin': 8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0)(supports-color@5.5.0))(supports-color@5.5.0)(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)
       '@typescript-eslint/parser': 8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)
       '@typescript-eslint/typescript-estree': 8.61.1(typescript@6.0.3)
       '@typescript-eslint/utils': 8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)
