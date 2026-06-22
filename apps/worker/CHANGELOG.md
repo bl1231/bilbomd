@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 2.14.10
+
+### Patch Changes
+
+- 6284830: Update dependencies to latest: bullmq, mongoose, nodemailer, uuid, @bull-board/\*, @mui/x-data-grid, react-router 8, and root tooling (@types/node 26, lint-staged). Pin ioredis to 5.10.1 to match the version bundled with bullmq and avoid duplicate-package type conflicts.
+- Updated dependencies [6284830]
+  - @bilbomd/md-utils@1.1.19
+  - @bilbomd/mongodb-schema@2.7.2
+
 ## 2.14.9
 
 ### Patch Changes
