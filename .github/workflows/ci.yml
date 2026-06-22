@@ -37,7 +37,7 @@ jobs:
       schema: ${{ steps.filter.outputs.schema }}
       md-utils: ${{ steps.filter.outputs.md-utils }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Paths filter
         id: filter
@@ -102,7 +102,7 @@ jobs:
     runs-on: [ubuntu-24.04]
     needs: [changes]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -177,7 +177,7 @@ jobs:
       group: backend-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -257,7 +257,7 @@ jobs:
       group: ui-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -336,7 +336,7 @@ jobs:
       group: worker-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -415,7 +415,7 @@ jobs:
       group: scoper-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -488,7 +488,7 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -573,7 +573,7 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -666,7 +666,7 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -737,7 +737,7 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -809,7 +809,7 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -868,7 +868,7 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -924,7 +924,7 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -1001,7 +1001,7 @@ jobs:
       REFRESH_TOKEN_SECRET: test-refresh-secret
       BILBOMD_API_TOKEN: test-external-api-token
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -1126,7 +1126,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
