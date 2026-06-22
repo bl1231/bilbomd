@@ -98,10 +98,19 @@ app.use(
     secret: getEnvVar('SESSION_SECRET'),
     resave: false,
     saveUninitialized: false,
+    // `rolling` slides the expiry forward on every request so an active user's
+    // session never lapses mid-use. This matters for MD movie playback: native
+    // <video> requests can't carry the JWT, so they authenticate via this
+    // cookie (see middleware/videoAuth.ts). Without rolling + a long maxAge the
+    // cookie expired 15 min after creation while the 7-day refresh token kept
+    // the app working, so movies 401'd with "Video access attempt without valid
+    // session". maxAge now matches the refresh-token lifetime. See issue #911.
+    rolling: true,
     cookie: {
       httpOnly: true,
       secure: isCookieSecure(), // HTTPS-only unless COOKIE_SECURE=false
-      maxAge: 1000 * 60 * 15 // 15 minutes
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days, matches refresh-token lifetime
     }
   })
 )
