@@ -89,11 +89,29 @@ image_summary() {
   echo "--------------------------------"
 }
 
+# Print the chart version + appVersion from the local Chart.yaml.
+chart_summary() {
+  local chart_file="$CHART_PATH/Chart.yaml"
+  local version app_version
+  version=$(yq '.version' "$chart_file")
+  app_version=$(yq '.appVersion' "$chart_file")
+  echo -e "${BLUE}🧩 Chart $(basename "$chart_file"):${NC}"
+  printf "   %-12s %s\n" "version" "$version"
+  printf "   %-12s %s\n" "appVersion" "$app_version"
+  echo "--------------------------------"
+}
+
 # Read-only status block; reused at the end of deploy/rollback.
 show_status() {
+  chart_summary
+
   echo -e "${BLUE}📜 Helm status for $RELEASE:${NC}"
   helm status "$RELEASE" 2>/dev/null | grep -E '^(NAME|LAST DEPLOYED|NAMESPACE|STATUS|REVISION):' || \
     echo -e "${YELLOW}   (no release found)${NC}"
+  echo "--------------------------------"
+
+  echo -e "${BLUE}📜 Helm history for $RELEASE (last 5):${NC}"
+  helm history "$RELEASE" --max 5 2>/dev/null || echo -e "${YELLOW}   (no prior release)${NC}"
   echo "--------------------------------"
 
   echo -e "${BLUE}🚀 Deployments & pods in $NS:${NC}"
