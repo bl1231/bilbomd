@@ -128,7 +128,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -136,7 +136,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -516,7 +516,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -524,7 +524,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -541,7 +541,7 @@ jobs:
 
       # Only cache TS incremental build info for schema package (keep pnpm store local)
       - name: Cache TS incremental (schema)
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             packages/mongodb-schema/tsconfig.tsbuildinfo
@@ -601,7 +601,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -609,7 +609,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -626,7 +626,7 @@ jobs:
 
       # Only cache TS incremental build info for md-utils package (keep pnpm store local)
       - name: Cache TS incremental (md-utils)
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             packages/md-utils/tsconfig.tsbuildinfo
@@ -692,7 +692,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -700,7 +700,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -763,7 +763,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -771,7 +771,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -835,7 +835,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -894,7 +894,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -950,7 +950,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -1027,7 +1027,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
