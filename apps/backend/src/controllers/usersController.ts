@@ -36,16 +36,15 @@ const getAllUsers = async (req: Request, res: Response) => {
   }
 }
 
+// Admins edit a user's roles, active status, and email. The username is the
+// login identity (often ORCID-derived) and is intentionally NOT editable here,
+// so it is neither required in the request nor changed.
 const updateUser = async (req: Request, res: Response): Promise<void> => {
-  const { id, username, roles, active, email } = req.body
+  const { id, roles, active, email } = req.body
 
   // Validate inputs
   if (!id) {
     res.status(400).json({ success: false, message: 'User ID is required' })
-    return
-  }
-  if (!username || !isValidUsername(username)) {
-    res.status(400).json({ success: false, message: 'Invalid username format' })
     return
   }
   if (!Array.isArray(roles) || !roles.length) {
@@ -71,17 +70,17 @@ const updateUser = async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const duplicate = await User.findOne({ username })
+    // Guard against assigning an email already used by another account.
+    const duplicate = await User.findOne({ email })
       .collation({ locale: 'en', strength: 2 }) // provide case-insensitive search
       .lean()
       .exec()
 
     if (duplicate && duplicate?._id.toString() !== id) {
-      res.status(409).json({ success: false, message: 'Duplicate username' })
+      res.status(409).json({ success: false, message: 'Duplicate email' })
       return
     }
 
-    user.username = username
     user.roles = roles
     user.active = active
     user.email = email

@@ -71,12 +71,38 @@ describe('userSignInSchema', () => {
 })
 
 describe('editUserSchema', () => {
-  it('accepts valid boolean active', async () => {
-    await expect(editUserSchema.isValid({ active: true })).resolves.toBe(true)
-    await expect(editUserSchema.isValid({ active: false })).resolves.toBe(true)
+  const validUser = {
+    email: 'user@example.com',
+    roles: ['User'],
+    active: true
+  }
+
+  it('accepts a valid user with email, roles, and active', async () => {
+    await expect(editUserSchema.isValid(validUser)).resolves.toBe(true)
+    await expect(
+      editUserSchema.isValid({ ...validUser, active: false })
+    ).resolves.toBe(true)
   })
 
-  it('accepts empty object (active is not required)', async () => {
-    await expect(editUserSchema.isValid({})).resolves.toBe(true)
+  it('rejects an invalid email', async () => {
+    await expect(
+      editUserSchema.isValid({ ...validUser, email: 'not-an-email' })
+    ).resolves.toBe(false)
+  })
+
+  it('rejects a missing email', async () => {
+    await expect(
+      editUserSchema.isValid({ roles: ['User'], active: true })
+    ).resolves.toBe(false)
+  })
+
+  it('rejects an empty roles array', async () => {
+    await expect(
+      editUserSchema.isValid({ ...validUser, roles: [] })
+    ).resolves.toBe(false)
+  })
+
+  it('rejects an empty object', async () => {
+    await expect(editUserSchema.isValid({})).resolves.toBe(false)
   })
 })

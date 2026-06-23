@@ -9,6 +9,7 @@ import {
   FormLabel,
   FormControl,
   FormGroup,
+  FormHelperText,
   Select,
   Typography,
   InputLabel,
@@ -145,6 +146,8 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
           >
             {({
               values,
+              errors,
+              touched,
               isSubmitting,
               handleChange,
               handleBlur,
@@ -162,11 +165,11 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                       label="Username"
                       type="text"
                       autoComplete="off"
-                      disabled={isSubmitting}
+                      fullWidth
                       component={TextField}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
                       value={values.username || ''}
+                      helperText="Username cannot be changed"
+                      slotProps={{ input: { readOnly: true } }}
                     />
                   </Grid>
                   <Grid sx={{ my: 2, width: '300px' }}>
@@ -182,6 +185,8 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       value={values.email || ''}
+                      error={touched.email && Boolean(errors.email)}
+                      helperText={touched.email && errors.email}
                     />
                   </Grid>
 
@@ -202,11 +207,15 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                     {/* https://github.com/jaredpalmer/formik/issues/2123 */}
 
                     <FormLabel component="legend">Assign Roles</FormLabel>
-                    <FormControl sx={{ my: 2, width: 300 }}>
+                    <FormControl
+                      sx={{ my: 2, width: 300 }}
+                      error={touched.roles && Boolean(errors.roles)}
+                    >
                       <InputLabel id="roles">Roles</InputLabel>
                       <Select
                         labelId="roles"
                         id="roles"
+                        name="roles"
                         multiple={true}
                         value={values.roles}
                         onChange={(e) => {
@@ -215,6 +224,7 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                           )
                           void setFieldValue('roles', next)
                         }}
+                        onBlur={handleBlur}
                         input={<OutlinedInput label="Roles" />}
                         renderValue={(selected) =>
                           (selected as string[]).join(', ')
@@ -233,6 +243,11 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
                           </MenuItem>
                         ))}
                       </Select>
+                      {touched.roles && errors.roles ? (
+                        <FormHelperText>
+                          {errors.roles as string}
+                        </FormHelperText>
+                      ) : null}
                     </FormControl>
                   </Grid>
                   <Grid>
