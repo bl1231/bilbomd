@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { EventEmitter } from 'node:events'
 import {
   initializeJob,
   cleanupJob,
@@ -6,7 +7,8 @@ import {
   makeFile,
   generateInputFile,
   handleError,
-  runPipelineStep
+  runPipelineStep,
+  spawnCharmm
 } from '../job-utils.js'
 import { User, type IJob, type IUser } from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
@@ -16,6 +18,10 @@ import { config } from '../../../config/config.js'
 import fs from 'fs-extra'
 import { updateStepStatus, updateJobStatus } from '../mongo-utils.js'
 import { Types } from 'mongoose'
+
+const { spawnMock } = vi.hoisted(() => ({ spawnMock: vi.fn() }))
+
+vi.mock('node:child_process', () => ({ spawn: spawnMock }))
 
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: {
@@ -56,9 +62,20 @@ vi.mock('@bilbomd/mongodb-schema', async () => {
   }
 })
 
+// Minimal fake CHARMM ChildProcess: an EventEmitter with a stdout emitter.
+const makeCharmmChild = () => {
+  const child = new EventEmitter() as EventEmitter & { stdout: EventEmitter }
+  child.stdout = new EventEmitter()
+  return child
+}
+
 describe('job-utils', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   describe('initializeJob', () => {
@@ -473,6 +490,164 @@ describe('job-utils', () => {
       // 'end md' must NOT be logged after a failure
       expect(mockMQJob.log).toHaveBeenCalledWith('start md')
       expect(mockMQJob.log).not.toHaveBeenCalledWith('end md')
+    })
+  })
+
+  describe('fetchJobUser (via cleanupJob)', () => {
+    it('treats an invalid ObjectId user reference as no user', async () => {
+      const mockMQJob = {} as unknown as BullMQJob
+      const mockDBJob = {
+        _id: new Types.ObjectId(),
+        uuid: 'bad-user-uuid',
+        user: 'not-a-valid-object-id',
+        status: 'Running',
+        time_completed: undefined,
+        progress: 0,
+        save: vi.fn().mockResolvedValue(undefined)
+      } as unknown as IJob
+
+      await cleanupJob(mockMQJob, mockDBJob)
+
+      expect(User.findById).not.toHaveBeenCalled()
+      expect(mockDBJob.progress).toBe(100)
+      expect(mockDBJob.status).toBe('Completed')
+      expect(sendJobCompleteEmail).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('handleJobEmailNotification (via cleanupJob)', () => {
+    it('skips email when the user has no email address', async () => {
+      const mockUser = {
+        _id: new Types.ObjectId(),
+        username: 'noemail'
+      } as IUser
+      const mockMQJob = { log: vi.fn() } as unknown as BullMQJob
+      const mockDBJob = {
+        _id: new Types.ObjectId(),
+        uuid: 'no-email-uuid',
+        user: mockUser,
+        status: 'Running',
+        time_completed: undefined,
+        save: vi.fn().mockResolvedValue(undefined)
+      } as unknown as IJob
+
+      vi.mocked(config).sendEmailNotifications = true
+
+      await cleanupJob(mockMQJob, mockDBJob)
+
+      expect(sendJobCompleteEmail).not.toHaveBeenCalled()
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('user email is undefined')
+      )
+    })
+  })
+
+  describe('writeInputFile (via generateInputFile)', () => {
+    it('logs and throws when writing the input file fails', async () => {
+      const mockParams = {
+        charmm_template: 'minimize',
+        charmm_inp_file: 'minimize.inp',
+        out_dir: '/tmp/job-dir'
+      }
+
+      vi.mocked(fs.readFile).mockResolvedValue('template {{charmm_inp_file}}')
+      vi.mocked(fs.promises.writeFile).mockRejectedValue(new Error('EACCES'))
+      vi.mocked(config).charmmTemplateDir = '/templates'
+
+      await expect(generateInputFile(mockParams)).rejects.toThrow('EACCES')
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Error in writeInputFile')
+      )
+    })
+  })
+
+  describe('handleError (additional branches)', () => {
+    it('logs but does not rethrow when updating the step status fails', async () => {
+      const mockDBJob = {
+        _id: new Types.ObjectId(),
+        uuid: 'step-fail-uuid',
+        title: 'Step Fail Job',
+        __t: 'BilboMDPDBJob',
+        status: 'Running'
+      } as unknown as IJob
+
+      vi.mocked(updateJobStatus).mockResolvedValue(undefined)
+      vi.mocked(updateStepStatus).mockRejectedValue(new Error('step write failed'))
+
+      await expect(handleError(new Error('boom'), mockDBJob, 'md')).rejects.toThrow(
+        "BilboMD failed in step 'md': boom"
+      )
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to update step status for step md')
+      )
+    })
+  })
+
+  describe('spawnCharmm', () => {
+    const params = {
+      charmm_inp_file: 'minimize.inp',
+      charmm_out_file: 'minimize.out',
+      out_dir: '/tmp/job-dir'
+    }
+
+    it('spawns CHARMM with the configured binary and args, resolving on close 0', async () => {
+      const child = makeCharmmChild()
+      spawnMock.mockReturnValue(child)
+      vi.mocked(config).charmmBin = '/usr/local/bin/charmm'
+
+      const p = spawnCharmm(params)
+      child.emit('close', 0)
+
+      await expect(p).resolves.toBeUndefined()
+      expect(spawnMock).toHaveBeenCalledWith(
+        '/usr/local/bin/charmm',
+        ['-o', 'minimize.out', '-i', 'minimize.inp'],
+        { cwd: '/tmp/job-dir' }
+      )
+    })
+
+    it('rejects with the accumulated stdout when CHARMM exits non-zero', async () => {
+      const child = makeCharmmChild()
+      spawnMock.mockReturnValue(child)
+
+      const p = spawnCharmm(params)
+      child.stdout.emit('data', Buffer.from('CHARMM> abnormal termination'))
+      child.emit('close', 1)
+
+      await expect(p).rejects.toThrow('CHARMM> abnormal termination')
+    })
+
+    it('rejects when the CHARMM process emits an error', async () => {
+      const child = makeCharmmChild()
+      spawnMock.mockReturnValue(child)
+
+      const p = spawnCharmm(params)
+      child.emit('error', new Error('ENOENT'))
+
+      await expect(p).rejects.toThrow(/CHARMM process encountered an error: ENOENT/)
+    })
+
+    it('emits heartbeat progress updates while running when given an MQ job', async () => {
+      vi.useFakeTimers()
+      const child = makeCharmmChild()
+      spawnMock.mockReturnValue(child)
+      const MQjob = {
+        updateProgress: vi.fn(),
+        log: vi.fn()
+      } as unknown as BullMQJob
+
+      const p = spawnCharmm(params, MQjob)
+      await vi.advanceTimersByTimeAsync(10_000)
+      child.emit('close', 0)
+
+      await expect(p).resolves.toBeUndefined()
+      expect(MQjob.updateProgress).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'running' })
+      )
+      expect(MQjob.log).toHaveBeenCalledWith(
+        expect.stringContaining('Heartbeat')
+      )
     })
   })
 })
