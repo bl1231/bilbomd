@@ -45,11 +45,11 @@ interface MyUser {
   email: string
 }
 
-const generateValidToken = (): string => {
+const generateValidToken = (roles: string[] = ['User']): string => {
   const accessTokenPayload: JwtPayload = {
     UserInfo: {
       username: 'testuser1',
-      roles: ['User'],
+      roles,
       email: 'testuser1@example.com'
     }
   }
@@ -126,7 +126,7 @@ describe('GET /api/v1/users', () => {
     expect(res.body.message).toBe('Unauthorized')
   })
   test('should return users', async () => {
-    const token = generateValidToken()
+    const token = generateValidToken(['Admin'])
     // console.log('token--->', token)
     const res = await await request(app)
       .get('/api/v1/users')
@@ -155,7 +155,7 @@ describe('PATCH /api/v1/users', () => {
   let testUser1: IUser
   let token: string
   beforeEach(async () => {
-    token = generateValidToken()
+    token = generateValidToken(['Admin'])
     // Create the test user and store it in the variable
     testUser1 = await User.create({
       username: 'testuser1',
@@ -177,7 +177,7 @@ describe('PATCH /api/v1/users', () => {
     expect(res.body.message).toBe('Unauthorized')
   })
   test('should return error if you dont provide valid user object', async () => {
-    const token = generateValidToken()
+    const token = generateValidToken(['Admin'])
     const res = await await request(app)
       .patch('/api/v1/users')
       .send({})
@@ -232,7 +232,7 @@ describe('DELETE /api/v1/users', () => {
   let testUser1: IUser
   let token: string
   beforeEach(async () => {
-    token = generateValidToken()
+    token = generateValidToken(['Admin'])
     // Create the test user and store it in the variable
     testUser1 = await User.create({
       username: 'testuser1',
