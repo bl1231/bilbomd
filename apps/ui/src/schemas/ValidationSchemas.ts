@@ -1,4 +1,4 @@
-import { boolean, object, string } from 'yup'
+import { array, boolean, object, string } from 'yup'
 
 export const userRegisterSchema = object().shape({
   email: string().email('Please enter a valid email').required('Required'),
@@ -13,5 +13,10 @@ export const userSignInSchema = object().shape({
 })
 
 export const editUserSchema = object().shape({
-  active: boolean()
+  email: string().email('Please enter a valid email').required('Required'),
+  roles: array()
+    .of(string())
+    .min(1, 'At least one role is required')
+    .required('At least one role is required'),
+  active: boolean().required('Required')
 })
