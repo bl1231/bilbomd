@@ -1,0 +1,89 @@
+name: Monthly Release Reminder
+
+# Opens a reminder issue on the 1st of each month to consider cutting a new
+# umbrella GitHub release (versioned to match @bilbomd/ui). Umbrella releases
+# are a human milestone marker, separate from the per-package Changesets tags
+# that fire on every merge to main.
+
+on:
+  schedule:
+    # 14:13 UTC on the 1st of every month (off the :00 mark on purpose)
+    - cron: '13 14 1 * *'
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  open-reminder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read current UI version
+        id: ui
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const res = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'apps/ui/package.json'
+            })
+            const pkg = JSON.parse(Buffer.from(res.data.content, 'base64').toString())
+            core.setOutput('version', pkg.version)
+
+      - name: Open reminder issue
+        uses: actions/github-script@v7
+        env:
+          UI_VERSION: ${{ steps.ui.outputs.version }}
+        with:
+          script: |
+            const month = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+            const uiVersion = process.env.UI_VERSION
+            const title = `Cut monthly umbrella release — ${month}`
+
+            // Skip if an open reminder issue already exists.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'release-reminder'
+            })
+            if (existing.data.length > 0) {
+              core.info(`Open reminder issue already exists (#${existing.data[0].number}); skipping.`)
+              return
+            }
+
+            const latest = await github.rest.repos.getLatestRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            }).catch(() => null)
+            const prevTag = latest?.data?.tagName ?? 'PREVIOUS_TAG'
+
+            const body = [
+              `Monthly nudge to consider cutting a new **umbrella GitHub release**.`,
+              ``,
+              `- Current \`@bilbomd/ui\` version: **${uiVersion}** (umbrella releases are tagged to match this)`,
+              `- Latest umbrella release: **${prevTag}**`,
+              ``,
+              `Skip this month if nothing meaningful has shipped — these are milestone markers, not a per-merge changelog.`,
+              ``,
+              `### Checklist`,
+              `- [ ] Confirm \`main\` is green and the latest Version Packages PR has merged`,
+              `- [ ] Decide the version (match the current \`@bilbomd/ui\` version)`,
+              `- [ ] Draft categorized release notes from \`git log ${prevTag}..HEAD\``,
+              `- [ ] Create annotated tag \`v<version>\` on \`main\` HEAD and push it`,
+              `- [ ] Publish the GitHub release (marked Latest) at https://github.com/${context.repo.owner}/${context.repo.repo}/releases`,
+              `- [ ] Close this issue`,
+              ``,
+              `_Tip: Claude Code can draft the release notes and create the tag/release in one pass — just ask it to "cut the umbrella release."_`
+            ].join('\n')
+
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['release-reminder']
+            })
+            core.info(`Opened reminder issue #${issue.data.number}`)
