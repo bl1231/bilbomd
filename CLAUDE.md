@@ -8,7 +8,7 @@ BilboMD is a SAXS (Small Angle X-ray Scattering) modeling platform that uses mol
 
 ## Monorepo Structure
 
-Turborepo + pnpm workspaces. Node v26.3.0 (see `.nvmrc`).
+Turborepo + pnpm workspaces. Node v26.4.0 (see `.nvmrc`).
 
 **Apps:**
 
