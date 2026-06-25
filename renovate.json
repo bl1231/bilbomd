@@ -13,6 +13,17 @@
   },
   "packageRules": [
     {
+      "description": "In-house bilbomd images are auto-bumped on release by the sync-infra-image-tags CI job; Renovate ignores them",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "ghcr.io/bl1231/bilbomd-backend",
+        "ghcr.io/bl1231/bilbomd-ui",
+        "ghcr.io/bl1231/bilbomd-worker",
+        "ghcr.io/bl1231/bilbomd-scoper"
+      ],
+      "enabled": false
+    },
+    {
       "description": "Group container image updates across compose and helm into one PR",
       "matchManagers": ["docker-compose", "helm-values"],
       "matchDatasources": ["docker"],

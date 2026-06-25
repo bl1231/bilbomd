@@ -57,6 +57,12 @@ jobs:
         if: steps.check_changesets.outputs.count != '0'
         uses: changesets/action@v1
         with:
-          version: pnpm changeset version
+          # Bump package versions AND sync the in-house image tags in the
+          # infra compose/helm files in the same Version Packages PR, so the
+          # deployment files are already up to date the moment the release
+          # merges (no waiting for Renovate). changesets/action stages all
+          # working-tree changes (git add .), so the infra edits are committed
+          # onto the release branch alongside the version bumps.
+          version: pnpm run changeset:version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
