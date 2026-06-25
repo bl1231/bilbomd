@@ -87,7 +87,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.9.13
+    image: ghcr.io/bl1231/bilbomd-backend:2.9.14
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
@@ -121,7 +121,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.14.11
+    image: ghcr.io/bl1231/bilbomd-worker:2.14.12
     pull_policy: always
     security_opt:
       - no-new-privileges:true
@@ -251,7 +251,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.21.4
+    image: ghcr.io/bl1231/bilbomd-ui:2.21.5
     pull_policy: missing
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
