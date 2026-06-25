@@ -43,7 +43,7 @@
     "handlebars": "^4.7.9",
     "ioredis": "5.10.1",
     "moment-timezone": "^0.6.2",
-    "mongoose": "^9.7.1",
+    "mongoose": "^9.7.2",
     "nodemailer": "^9.0.1",
     "nodemailer-express-handlebars": "^7.0.0",
     "winston": "^3.19.0",
