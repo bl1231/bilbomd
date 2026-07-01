@@ -1,5 +1,15 @@
 # @bilbomd/ui
 
+## 2.22.0
+
+### Minor Changes
+
+- 6f514cb: Show the Superfacility API token expiration live instead of from a hand-maintained value. The backend adds an authenticated `/sfapi/account/clients` endpoint that reads the configured client's `expiresAt` directly from NERSC, and the UI TokenExpirationChip now sources its date from that endpoint. The static `SFAPI_TOKEN_EXPIRES` config value (and the `sfapi.token_expires` Helm value / configmap entry) is removed, so the expiration display can no longer drift out of date.
+
+### Patch Changes
+
+- 4ed54e3: Remove vestigial `VITE_*` configuration that was never read at runtime. Deletes the unused `apps/ui/.env`, the dead `bilbomd-ui-config` ConfigMap and its `envFrom` mount in the UI deployment, and the stale `VITE_BILBOMD_BACKEND_PORT` type declaration. Runtime UI configuration (including the Superfacility token expiry) flows through the backend `/configs` endpoint, not these build-time variables.
+
 ## 2.21.5
 
 ### Patch Changes
