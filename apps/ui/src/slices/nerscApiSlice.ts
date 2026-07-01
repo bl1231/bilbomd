@@ -28,6 +28,12 @@ interface ProjectHours {
   gpu_hours_used: number
 }
 
+interface SfapiClientExpiration {
+  clientId: string
+  name: string
+  expiresAt: string
+}
+
 type NerscSystemStatuses = NerscSystemStatus[]
 type NerscPlannedOutages = NerscPlannedOutage[]
 
@@ -53,6 +59,13 @@ export const nerscApiSlice = superfacilityApiSlice.injectEndpoints({
         method: 'GET'
       }),
       providesTags: ['Project']
+    }),
+    getSfapiClientExpiration: builder.query<SfapiClientExpiration, void>({
+      query: () => ({
+        url: 'account/clients',
+        method: 'GET'
+      }),
+      providesTags: ['ClientExpiration']
     })
   })
 })
@@ -60,5 +73,6 @@ export const nerscApiSlice = superfacilityApiSlice.injectEndpoints({
 export const {
   useGetNerscStatusQuery,
   useGetNerscOutagesQuery,
-  useGetProjectHoursQuery
+  useGetProjectHoursQuery,
+  useGetSfapiClientExpirationQuery
 } = nerscApiSlice
