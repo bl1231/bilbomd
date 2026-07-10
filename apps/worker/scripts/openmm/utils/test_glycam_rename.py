@@ -8,7 +8,13 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
-from glycam_rename import rename_glycam_residues, _is_alpha_anomer, Residue, Atom
+from glycam_rename import (
+    rename_glycam_residues,
+    _is_alpha_anomer,
+    _linkage_prefix,
+    Residue,
+    Atom,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -118,8 +124,8 @@ class TestNLinkedRenaming:
         for line in result.splitlines():
             if "A 903" in line and line.startswith(("ATOM", "HETATM")):
                 resname = line[17:20].strip()
-                # Should be 0NB (terminal beta GlcNAc) or 0NA (alpha)
-                assert resname.startswith("0N"), f"Expected 0N*, got {resname!r}: {line!r}"
+                # Terminal GlcNAc (GLYCAM letter Y) → 0YB (beta) or 0YA (alpha)
+                assert resname.startswith("0Y"), f"Expected 0Y*, got {resname!r}: {line!r}"
 
     def test_log_mentions_nln(self):
         _, log = rename_glycam_residues(_n_linked_nag_pdb())
@@ -263,3 +269,91 @@ class TestAnomerDetermination:
         # NAG with no coordinates → DEFAULT_BETA
         res = Residue(resname="NAG", chain_id="A", resseq=1, icode="")
         assert _is_alpha_anomer(res) is False
+
+
+# ---------------------------------------------------------------------------
+# Tests: branched / reducing-end GLYCAM linkage naming
+# ---------------------------------------------------------------------------
+
+def _resnames_by_resseq(pdb_text: str) -> dict:
+    """Map residue sequence number → GLYCAM residue name (first atom seen)."""
+    out: dict = {}
+    for line in pdb_text.splitlines():
+        if line.startswith(("ATOM", "HETATM")):
+            resseq = int(line[22:26])
+            out.setdefault(resseq, line[17:20].strip())
+    return out
+
+
+def _reducing_end_4yb_pdb() -> str:
+    """ASN A1 N-linked to NAG A2 (O4-substituted → 4YB) and NAG A3 terminal (→ 0YB)."""
+    lines = [
+        _atom_line(1, "ND2", "ASN", "A", 1, 0.0, 0.0, 0.0),
+        _atom_line(2, "CG",  "ASN", "A", 1, -1.4, 0.0, 0.0),
+        # reducing GlcNAc: C1 bonded to ND2, O4 substituted by the next GlcNAc
+        _atom_line(3, "C1", "NAG", "A", 2, 1.44, 0.0, 0.0, "HETATM"),
+        _atom_line(4, "C2", "NAG", "A", 2, 2.90, 0.0, 0.0, "HETATM"),
+        _atom_line(5, "O5", "NAG", "A", 2, 1.44, 1.5, 0.0, "HETATM"),
+        _atom_line(6, "O4", "NAG", "A", 2, 1.44, 5.0, 0.0, "HETATM"),
+        # terminal GlcNAc: C1 bonded to A2's O4
+        _atom_line(7, "C1", "NAG", "A", 3, 1.44, 6.4, 0.0, "HETATM"),
+        _atom_line(8, "O5", "NAG", "A", 3, 1.44, 7.9, 0.0, "HETATM"),
+    ]
+    return "".join(lines)
+
+
+def _branched_mannose_pdb() -> str:
+    """Core BMA A10 branched at O3 and O6 (→ VMB) with two terminal MAN children (→ 0MA)."""
+    lines = [
+        _atom_line(1, "C1", "BMA", "A", 10, 0.0, 0.0, 0.0, "HETATM"),
+        _atom_line(2, "C2", "BMA", "A", 10, 1.5, 0.0, 0.0, "HETATM"),
+        _atom_line(3, "O5", "BMA", "A", 10, 0.0, 1.5, 0.0, "HETATM"),
+        _atom_line(4, "O1", "BMA", "A", 10, 0.0, 0.0, -1.5, "HETATM"),  # beta
+        _atom_line(5, "O3", "BMA", "A", 10, 10.0, 0.0, 0.0, "HETATM"),
+        _atom_line(6, "O6", "BMA", "A", 10, 0.0, 10.0, 0.0, "HETATM"),
+        # child mannose bonded at O3
+        _atom_line(7, "C1", "MAN", "A", 11, 11.4, 0.0, 0.0, "HETATM"),
+        # child mannose bonded at O6
+        _atom_line(8, "C1", "MAN", "A", 12, 0.0, 11.4, 0.0, "HETATM"),
+    ]
+    return "".join(lines)
+
+
+class TestBranchedGlycanNaming:
+    def test_reducing_end_glcnac_gets_branch_prefix(self):
+        result, _ = rename_glycam_residues(_reducing_end_4yb_pdb())
+        names = _resnames_by_resseq(result)
+        assert names[1] == "NLN"
+        assert names[2] == "4YB"  # O4-substituted reducing end, NOT 0YB
+        assert names[3] == "0YB"  # terminal
+
+    def test_double_branched_mannose_gets_letter_code(self):
+        result, _ = rename_glycam_residues(_branched_mannose_pdb())
+        names = _resnames_by_resseq(result)
+        assert names[10] == "VMB"  # 3,6-branched beta-mannose
+        assert names[11] == "0MA"
+        assert names[12] == "0MA"
+
+
+class TestLinkagePrefix:
+    @pytest.mark.parametrize(
+        "positions,expected",
+        [
+            (frozenset(), "0"),
+            (frozenset({2}), "2"),
+            (frozenset({4}), "4"),
+            (frozenset({2, 3}), "Z"),
+            (frozenset({2, 6}), "X"),
+            (frozenset({3, 4}), "W"),
+            (frozenset({3, 6}), "V"),
+            (frozenset({4, 6}), "U"),
+            (frozenset({2, 3, 4}), "T"),
+            (frozenset({3, 4, 6}), "Q"),
+            (frozenset({2, 3, 4, 6}), "P"),
+        ],
+    )
+    def test_prefix_mapping(self, positions, expected):
+        assert _linkage_prefix(positions) == expected
+
+    def test_unknown_pattern_falls_back_to_lowest_position(self):
+        assert _linkage_prefix(frozenset({5})) == "5"
