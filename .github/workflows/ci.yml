@@ -403,6 +403,75 @@ jobs:
             WORKER_VERSION=${{ env.VERSION }}
           # Removed local cache-from/cache-to for GitHub-hosted runners
 
+  # Fast feedback: run the OpenMM-free Python tests (tools/python + the stdlib
+  # worker script tests). OpenMM-dependent tests skip here (see importorskip) and
+  # run for real in worker-python-tests below.
+  python-tests-light:
+    name: Python tests (light)
+    if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    needs: [changes]
+    runs-on: [ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/python/requirements-test.txt
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tools/python/requirements-test.txt
+
+      - name: Run Python tests (OpenMM-free)
+        run: pytest
+
+  # Authoritative: run the OpenMM-dependent worker tests inside the built worker
+  # image (the only place the conda openmm/pdbfixer stack exists). Reuses the
+  # worker job's build cache and loads the image locally instead of pushing.
+  worker-python-tests:
+    name: Worker Python tests (in image)
+    if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    needs: [changes, lint, worker]
+    runs-on: [ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Free up disk space
+        run: |
+          # The worker image is large (~12 GB); reclaim space so `load` has room.
+          sudo rm -rf /opt/hostedtoolcache /usr/local/lib/android /usr/share/dotnet /usr/local/.ghcup || true
+          df -h /
+
+      - name: Read version
+        run: echo "VERSION=$(jq -r .version 'apps/worker/package.json')" >> $GITHUB_ENV
+
+      - name: Build worker image (load locally)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/worker/bilbomd-worker.dockerfile
+          load: true
+          push: false
+          tags: bilbomd-worker:pytest
+          cache-from: type=gha,scope=worker
+          build-args: |
+            USER_ID=${{ vars.USER_ID || '1001' }}
+            GROUP_ID=${{ vars.GROUP_ID || '1234' }}
+            WORKER_GIT_HASH=${{ github.sha }}
+            WORKER_VERSION=${{ env.VERSION }}
+
+      - name: Run OpenMM Python tests inside the image
+        run: |
+          docker run --rm bilbomd-worker:pytest \
+            /opt/envs/openmm/bin/python -m pytest \
+            /app/scripts/openmm /app/scripts/test_strip_cofactors.py \
+            -o addopts="-q" -p no:cacheprovider
+
   scoper:
     name: Build & Push scoper
     if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
@@ -1088,6 +1157,8 @@ jobs:
         scoper-unit-tests,
         scoper-typecheck,
         backend-integration-tests,
+        python-tests-light,
+        worker-python-tests,
       ]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     env:
@@ -1104,11 +1175,13 @@ jobs:
       SCOPER_UNIT: ${{ needs['scoper-unit-tests'].result }}
       SCOPER_TYPE: ${{ needs['scoper-typecheck'].result }}
       BACKEND_INT: ${{ needs['backend-integration-tests'].result }}
+      PY_LIGHT: ${{ needs['python-tests-light'].result }}
+      WORKER_PY: ${{ needs['worker-python-tests'].result }}
     steps:
       - name: Check build results
         run: |
           set -e
-          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT UI_UNIT WORKER_UNIT SCOPER_UNIT SCOPER_TYPE BACKEND_INT; do
+          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT UI_UNIT WORKER_UNIT SCOPER_UNIT SCOPER_TYPE BACKEND_INT PY_LIGHT WORKER_PY; do
             result="${!job}"
             echo "$job result: $result"
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then

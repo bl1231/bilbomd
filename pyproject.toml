@@ -1,0 +1,20 @@
+# Root pytest configuration for the repository's Python code.
+#
+# The Python lives in two trees with different dependency weights:
+#   - tools/python/**            (numpy / biopython / igraph — pip-installable)
+#   - apps/worker/scripts/**     (some modules need the OpenMM conda stack)
+#
+# Tests that require OpenMM guard themselves with `pytest.importorskip("openmm")`
+# so they are skipped (not errored) in lightweight environments and run for real
+# inside the worker image. See CONTRIBUTING / the CI workflow for how each tier
+# is executed.
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q --strict-markers"
+testpaths = ["apps/worker/scripts", "tools/python"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*", "*Tests"]
+python_functions = ["test_*"]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]

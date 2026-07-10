@@ -1,0 +1,8 @@
+# Dependencies for the lightweight (no-OpenMM) Python test job.
+# Covers the tools/python test targets; the apps/worker/scripts stdlib tests
+# need nothing beyond pytest. OpenMM-dependent tests are skipped in this tier.
+pytest
+numpy
+pyyaml
+biopython
+python-igraph
