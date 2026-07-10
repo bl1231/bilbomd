@@ -329,6 +329,8 @@ jobs:
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     permissions:
       contents: read
       packages: write
@@ -385,6 +387,7 @@ jobs:
       # Removed local buildx cache setup for GitHub-hosted runners
 
       - name: Build & Push
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -433,41 +436,33 @@ jobs:
   # worker job's build cache and loads the image locally instead of pushing.
   worker-python-tests:
     name: Worker Python tests (in image)
-    if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    # Runs the OpenMM-dependent tests inside the exact image the worker job just
+    # pushed (pulled by digest — no rebuild). Skips on forks, which don't push.
+    if: needs.changes.outputs.worker == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint, worker]
     runs-on: [ubuntu-24.04]
+    permissions:
+      contents: read
+      packages: read
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: docker/setup-buildx-action@v4
-
       - name: Free up disk space
         run: |
-          # The worker image is large (~12 GB); reclaim space so `load` has room.
+          # The worker image is large (~12 GB); reclaim space for the pull.
           sudo rm -rf /opt/hostedtoolcache /usr/local/lib/android /usr/share/dotnet /usr/local/.ghcup || true
           df -h /
 
-      - name: Read version
-        run: echo "VERSION=$(jq -r .version 'apps/worker/package.json')" >> $GITHUB_ENV
-
-      - name: Build worker image (load locally)
-        uses: docker/build-push-action@v7
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
         with:
-          context: .
-          file: apps/worker/bilbomd-worker.dockerfile
-          load: true
-          push: false
-          tags: bilbomd-worker:pytest
-          cache-from: type=gha,scope=worker
-          build-args: |
-            USER_ID=${{ vars.USER_ID || '1001' }}
-            GROUP_ID=${{ vars.GROUP_ID || '1234' }}
-            WORKER_GIT_HASH=${{ github.sha }}
-            WORKER_VERSION=${{ env.VERSION }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run OpenMM Python tests inside the image
+      - name: Run OpenMM Python tests inside the pushed image
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/bilbomd-worker@${{ needs.worker.outputs.digest }}
         run: |
-          docker run --rm bilbomd-worker:pytest \
+          docker run --rm "$IMAGE" \
             /opt/envs/openmm/bin/python -m pytest \
             /app/scripts/openmm /app/scripts/test_strip_cofactors.py \
             -o addopts="-q" -p no:cacheprovider
