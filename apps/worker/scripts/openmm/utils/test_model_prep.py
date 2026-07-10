@@ -15,6 +15,10 @@ import pytest
 # scripts/openmm on the path so `from utils.<mod>` (used inside model_prep) resolves
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Skip (rather than error) where the OpenMM conda stack is unavailable, e.g. the
+# lightweight CI job. These tests run for real inside the worker image.
+pytest.importorskip("openmm")
+
 from openmm import Vec3
 from openmm.app import Element, ForceField, Topology
 from openmm.unit import angstroms
