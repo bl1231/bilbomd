@@ -212,7 +212,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   colabfold-service:
-    image: ghcr.io/bl1231/bilbomd-colabfold-service:0.1.0
+    image: ghcr.io/bl1231/bilbomd-colabfold-service:0.2.0
     pull_policy: missing
     shm_size: "16gb"
     security_opt:
@@ -233,6 +233,7 @@ services:
     environment:
       - UPLOAD_DIR=/bilbomd/uploads
       - COLABFOLD_DATA_DIR=/cache
+      - COLABFOLD_TIMEOUT_S=${COLABFOLD_TIMEOUT_S:-3300}
     volumes:
       - /bilbomd/prod/uploads:/bilbomd/uploads
       - /bilbomd/colabfold-cache:/cache:ro
