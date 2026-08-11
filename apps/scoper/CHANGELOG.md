@@ -1,5 +1,49 @@
 # @bilbomd/scoper
 
+## 1.7.20
+
+### Patch Changes
+
+- 27739a6: Update dependencies to their latest compatible versions (bullmq 5.81.3, ioredis 5.11.1, mongoose 9.8.1, axios 1.19.0, @bull-board 8.4.0, @mui/x-data-grid 9.10.1, molstar 5.11.0, react 19.2.8, react-router 8.3.0, recharts 3.10.1, vite 8.1.5, eslint 10.8.0, typescript-eslint 8.65.0, prettier 3.9.6, turbo 2.10.7, and others).
+
+  Major upgrades: connect-redis 10 (only breaking change is dropping Node 18/20 support; the store API is unchanged), jsdom 30 and @testing-library/jest-dom 7 (both test-only).
+
+  ioredis is pinned to exact 5.11.1 to match the exact version required by bullmq 5.81.3. TypeScript is intentionally held at v6 because typescript-eslint does not yet support TypeScript 7 (peer range `<6.1.0`).
+
+  Removed react-dropzone from @bilbomd/ui — it was declared but never imported anywhere in the source or the built bundle.
+
+  Fixed the HeaderBox style assertion: jsdom 30 resolves `rem` to absolute px in `getComputedStyle` (jsdom 29 did not), so the expected padding is now `16px 8px` rather than `16px 0.5rem`.
+
+- Updated dependencies [27739a6]
+  - @bilbomd/mongodb-schema@2.7.5
+
+## 1.7.19
+
+### Patch Changes
+
+- e04ad77: Update dependencies to their latest compatible versions (bullmq 5.79.3, mongoose 9.7.4, nodemailer 9.0.3, @bull-board 8.1.2, redis 6.1.0, MUI 9.2.0, @mui/x-data-grid 9.8.0, react-router 8.2.0, recharts 3.9.2, vite 8.1.4, vitest 4.1.10, eslint 10.6.0, typescript-eslint 8.63.0, prettier 3.9.5, turbo 2.10.4, and others).
+
+  ioredis is pinned to 5.10.1 to match the exact version required by bullmq. TypeScript is intentionally held at v6 because typescript-eslint does not yet support TypeScript 7 (peer range `<6.1.0`).
+
+- Updated dependencies [e04ad77]
+  - @bilbomd/mongodb-schema@2.7.4
+
+## 1.7.18
+
+### Patch Changes
+
+- cd7b271: Update Node.js to 26.4.0 and bump dependencies to latest (axios, mongoose, @mui/material, @mui/system, recharts, vite, @vitejs/plugin-react, globals, typescript-eslint). ioredis remains pinned to 5.10.1 to match bullmq's exact requirement.
+- Updated dependencies [cd7b271]
+  - @bilbomd/mongodb-schema@2.7.3
+
+## 1.7.17
+
+### Patch Changes
+
+- 6284830: Update dependencies to latest: bullmq, mongoose, nodemailer, uuid, @bull-board/\*, @mui/x-data-grid, react-router 8, and root tooling (@types/node 26, lint-staged). Pin ioredis to 5.10.1 to match the version bundled with bullmq and avoid duplicate-package type conflicts.
+- Updated dependencies [6284830]
+  - @bilbomd/mongodb-schema@2.7.2
+
 ## 1.7.16
 
 ### Patch Changes

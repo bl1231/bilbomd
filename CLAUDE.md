@@ -8,51 +8,10 @@ BilboMD is a SAXS (Small Angle X-ray Scattering) modeling platform that uses mol
 
 ## Monorepo Structure
 
-Turborepo + pnpm workspaces. Node v26.3.0 (see `.nvmrc`).
+Turborepo + pnpm workspaces. Non-obvious bits the code won't tell you:
 
-**Apps:**
-
-- `apps/backend` (`@bilbomd/backend`) — Express.js REST API with MongoDB + Redis, JWT auth, BullMQ job queue
-- `apps/ui` (`@bilbomd/ui`) — React SPA with RTK Query, Material-UI, Formik, Recharts, Molstar
-- `apps/worker` (`@bilbomd/worker`) — Node.js BullMQ job processor running MD simulations, supports both local (Hyperion) and NERSC/Perlmutter (Slurm) execution
-- `apps/scoper` (`@bilbomd/scoper`) — Specialized worker for Mg2+ ion prediction in RNA
-
-**Packages:**
-
-- `packages/bilbomd-types` (`@bilbomd/bilbomd-types`) — Shared TypeScript type definitions
-- `packages/mongodb-schema` (`@bilbomd/mongodb-schema`) — Mongoose schemas with dual exports: `@bilbomd/mongodb-schema` (full, for backend/worker) and `@bilbomd/mongodb-schema/frontend` (frontend-safe subset)
-- `packages/md-utils` (`@bilbomd/md-utils`) — Molecular dynamics constraint utilities
-- `packages/eslint-config` (`@bilbomd/eslint-config`) — Shared ESLint config
-
-## Build & Dev Commands
-
-```bash
-pnpm install          # Install all dependencies
-pnpm build            # Build everything (turbo, respects dependency order)
-pnpm dev              # Start all services in dev mode (parallel)
-pnpm lint             # Lint all packages
-pnpm test             # Run all tests
-pnpm format           # Format with prettier
-pnpm format:check     # Check formatting
-```
-
-### Per-package commands
-
-```bash
-# Filter to a specific package
-pnpm -F @bilbomd/backend run dev
-pnpm -F @bilbomd/ui run dev
-pnpm test --filter @bilbomd/backend
-pnpm test --filter @bilbomd/ui
-
-# Backend-specific
-pnpm -F @bilbomd/backend run test:watch
-pnpm -F @bilbomd/backend run test:integration
-
-# UI-specific
-pnpm -F @bilbomd/ui run test:watch
-pnpm -F @bilbomd/ui run test:ui          # Vitest UI
-```
+- `@bilbomd/mongodb-schema` has dual exports: `@bilbomd/mongodb-schema` (full, for backend/worker) and `@bilbomd/mongodb-schema/frontend` (frontend-safe subset) — importing the wrong one leaks server-only code into the SPA.
+- `apps/worker` has two execution paths: local (Hyperion) and NERSC/Perlmutter (Slurm).
 
 ### Docker (local dev)
 
@@ -66,7 +25,6 @@ Environment: copy `infra/.env.example` to `infra/.env.local`.
 
 ## Testing
 
-- Framework: **Vitest** for all packages. React Testing Library for UI components.
 - Place test files in `__tests__` directories within each module, not at project root.
   - Example: `src/controllers/jobs/__tests__/getAllJobs.test.ts`
 - Do not use `--reporter=verbose` flag.
@@ -74,12 +32,10 @@ Environment: copy `infra/.env.example` to `infra/.env.local`.
 
 ## Code Style
 
-- **Prettier** config: no semicolons, single quotes, no trailing commas, 80-char width, `singleAttributePerLine: true`
 - Prefer **arrow functions**: `const myFunc = () => {}`
 - Avoid `any` — use proper types or generics
 - Prefer functional patterns over classes
 - All modules use ESM (`"type": "module"`)
-- TypeScript target: ES2022, module: NodeNext
 
 ## Development Workflow
 
@@ -101,32 +57,7 @@ See [Git Branch Naming Convention](#git-branch-naming-convention) for prefix gui
 
 ### 2. Verify All Checks Pass Before Completion
 
-**Before considering work complete**, ensure all of the following pass without errors:
-
-```bash
-# 1. Linting - must pass with zero warnings/errors
-pnpm lint
-
-# 2. Build - must complete successfully
-pnpm build
-
-# 3. Tests - all tests must pass
-pnpm test
-```
-
-**For package-specific work**, run the checks filtered to that package:
-
-```bash
-# Example for UI package
-pnpm -F @bilbomd/ui lint
-pnpm -F @bilbomd/ui build
-pnpm -F @bilbomd/ui test
-
-# Example for backend package
-pnpm -F @bilbomd/backend lint
-pnpm -F @bilbomd/backend build
-pnpm -F @bilbomd/backend test
-```
+**Before considering work complete**, `pnpm lint`, `pnpm build`, and `pnpm test` must all pass without errors. For package-specific work, run them filtered to that package (`pnpm -F @bilbomd/<pkg> lint`, etc.).
 
 ### 3. Fix Any Issues
 
@@ -157,54 +88,7 @@ pnpm changeset        # Select packages, choose semver bump, write summary
 
 Changesets are applied on merge to `main`, producing git tags and Docker image semver tags. `updateInternalDependencies: "patch"` is enabled — bumping an internal package auto-bumps dependents.
 
-### Manual Changeset Creation
-
-**IMPORTANT**: The `pnpm changeset` command is interactive and won't work in non-TTY environments (like Claude Code CLI). When this happens, create changeset files manually:
-
-1. **Create a new file** in `.changeset/` with a descriptive kebab-case name:
-   - Pattern: `.changeset/descriptive-name.md`
-   - Examples: `worker-code-quality-improvements.md`, `backend-security-fixes.md`
-
-2. **File format** (YAML front matter + description):
-   ```markdown
-   ---
-   '@bilbomd/package-name': patch|minor|major
-   ---
-
-   Brief description of changes. Focus on user/developer impact, not implementation details.
-   ```
-
-3. **Semver guidelines**:
-   - `patch` - Bug fixes, minor improvements, internal refactoring
-   - `minor` - New features, significant improvements (backwards compatible)
-   - `major` - Breaking changes
-
-4. **Examples**:
-   ```markdown
-   ---
-   '@bilbomd/worker': patch
-   ---
-
-   Improve worker reliability with graceful shutdown handling and MongoDB connection retry logic.
-   ```
-
-   ```markdown
-   ---
-   '@bilbomd/worker': minor
-   ---
-
-   Add comprehensive test coverage for critical infrastructure (mongo-utils, job-utils, workerControl). Extract magic numbers to centralized config/constants.ts. Consolidate error handling utilities.
-   ```
-
-5. **Multiple packages** (if changes affect multiple):
-   ```markdown
-   ---
-   '@bilbomd/backend': patch
-   '@bilbomd/mongodb-schema': patch
-   ---
-
-   Fix user authentication schema validation and update backend handlers.
-   ```
+**IMPORTANT**: `pnpm changeset` is interactive and won't work in non-TTY environments (like Claude Code CLI). Write the changeset file by hand instead — see the `changeset` skill (`.claude/skills/changeset/SKILL.md`) for the format and examples.
 
 ## Git Branch Naming Convention
 

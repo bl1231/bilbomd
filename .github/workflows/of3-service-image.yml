@@ -23,7 +23,7 @@ jobs:
       IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/bilbomd-of3-service
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -101,9 +101,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
           platforms: linux/amd64
-          cache-from: |
-            type=gha,scope=of3-service
-            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: |
-            type=gha,scope=of3-service,mode=max
-            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          # No type=gha cache here: this image is ~19GB, far above the 10GB
+          # per-repo Actions cache limit, so the export could never be reused
+          # and evicted the caches that could (e.g. pnpm-store used by CI).
+          # The registry buildcache already supplies every layer.
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max

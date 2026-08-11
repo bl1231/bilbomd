@@ -3,5 +3,3 @@ docker_registry: registry.nersc.gov
 nersc_repo: m4659
 cfs_dir: /global/cfs/cdirs
 pscratch: /pscratch/sd/s/sclassen
-sfapi:
-  token_expires: '2026-07-01 13:02'

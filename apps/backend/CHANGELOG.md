@@ -1,5 +1,79 @@
 # @bilbomd/backend
 
+## 2.10.2
+
+### Patch Changes
+
+- 27739a6: Update dependencies to their latest compatible versions (bullmq 5.81.3, ioredis 5.11.1, mongoose 9.8.1, axios 1.19.0, @bull-board 8.4.0, @mui/x-data-grid 9.10.1, molstar 5.11.0, react 19.2.8, react-router 8.3.0, recharts 3.10.1, vite 8.1.5, eslint 10.8.0, typescript-eslint 8.65.0, prettier 3.9.6, turbo 2.10.7, and others).
+
+  Major upgrades: connect-redis 10 (only breaking change is dropping Node 18/20 support; the store API is unchanged), jsdom 30 and @testing-library/jest-dom 7 (both test-only).
+
+  ioredis is pinned to exact 5.11.1 to match the exact version required by bullmq 5.81.3. TypeScript is intentionally held at v6 because typescript-eslint does not yet support TypeScript 7 (peer range `<6.1.0`).
+
+  Removed react-dropzone from @bilbomd/ui — it was declared but never imported anywhere in the source or the built bundle.
+
+  Fixed the HeaderBox style assertion: jsdom 30 resolves `rem` to absolute px in `getComputedStyle` (jsdom 29 did not), so the expected padding is now `16px 8px` rather than `16px 0.5rem`.
+
+- Updated dependencies [27739a6]
+  - @bilbomd/md-utils@1.1.22
+  - @bilbomd/mongodb-schema@2.7.5
+
+## 2.10.1
+
+### Patch Changes
+
+- e04ad77: Update dependencies to their latest compatible versions (bullmq 5.79.3, mongoose 9.7.4, nodemailer 9.0.3, @bull-board 8.1.2, redis 6.1.0, MUI 9.2.0, @mui/x-data-grid 9.8.0, react-router 8.2.0, recharts 3.9.2, vite 8.1.4, vitest 4.1.10, eslint 10.6.0, typescript-eslint 8.63.0, prettier 3.9.5, turbo 2.10.4, and others).
+
+  ioredis is pinned to 5.10.1 to match the exact version required by bullmq. TypeScript is intentionally held at v6 because typescript-eslint does not yet support TypeScript 7 (peer range `<6.1.0`).
+
+- Updated dependencies [e04ad77]
+  - @bilbomd/md-utils@1.1.21
+  - @bilbomd/mongodb-schema@2.7.4
+
+## 2.10.0
+
+### Minor Changes
+
+- 6f514cb: Show the Superfacility API token expiration live instead of from a hand-maintained value. The backend adds an authenticated `/sfapi/account/clients` endpoint that reads the configured client's `expiresAt` directly from NERSC, and the UI TokenExpirationChip now sources its date from that endpoint. The static `SFAPI_TOKEN_EXPIRES` config value (and the `sfapi.token_expires` Helm value / configmap entry) is removed, so the expiration display can no longer drift out of date.
+
+## 2.9.14
+
+### Patch Changes
+
+- cd7b271: Update Node.js to 26.4.0 and bump dependencies to latest (axios, mongoose, @mui/material, @mui/system, recharts, vite, @vitejs/plugin-react, globals, typescript-eslint). ioredis remains pinned to 5.10.1 to match bullmq's exact requirement.
+- Updated dependencies [cd7b271]
+  - @bilbomd/mongodb-schema@2.7.3
+  - @bilbomd/md-utils@1.1.20
+
+## 2.9.13
+
+### Patch Changes
+
+- 538d4f7: Fix Admin "Edit User" failing with "Invalid username format" when changing a user's roles. The backend no longer requires (or changes) the username on update — admins edit roles, active status, and email only. The username is now shown read-only in the form. Added real client-side validation (valid email, at least one role) and a friendly duplicate-email check on the backend.
+
+## 2.9.12
+
+### Patch Changes
+
+- e81b638: Fix the `Prefetch` component so it dispatches into the real app store via `useAppDispatch` instead of creating a throw-away store with `setupStore()`. Previously every prefetch request went out without an Authorization header (the throw-away store had no auth state) and silently 401'd, so the component did no useful caching. Also skip prefetching the user list for non-Manager/Admin users since they can't view it.
+
+  Close backend authorization gaps on the `/users` routes. Administrative endpoints (`GET /users`, `PATCH /users`, `GET /users/:id`, `DELETE /users/:id`) now require the Manager/Admin role via `verifyRoles` — previously any authenticated user could list all users, edit arbitrary users (including escalating their own roles to Admin), or delete users. Self-service endpoints (`DELETE /users/delete-user-by-username/:username`, `POST /users/change-email`, `/verify-otp`, `/resend-otp`) now enforce account ownership via a new `verifyAccountOwnership` middleware, so callers can only act on their own account.
+
+## 2.9.11
+
+### Patch Changes
+
+- 6284830: Update dependencies to latest: bullmq, mongoose, nodemailer, uuid, @bull-board/\*, @mui/x-data-grid, react-router 8, and root tooling (@types/node 26, lint-staged). Pin ioredis to 5.10.1 to match the version bundled with bullmq and avoid duplicate-package type conflicts.
+- Updated dependencies [6284830]
+  - @bilbomd/md-utils@1.1.19
+  - @bilbomd/mongodb-schema@2.7.2
+
+## 2.9.10
+
+### Patch Changes
+
+- 6819d5e: Fix MD movie playback failing with "Video access attempt without valid session". Native `<video>` requests authenticate via the `bilbomd-session` cookie (they can't carry the JWT), but the cookie expired 15 minutes after creation while the 7-day refresh token kept the app working — so movies 401'd after a short idle. The session is now `rolling` (expiry slides forward on each request) with a `maxAge` matching the 7-day refresh-token lifetime. See issue #911.
+
 ## 2.9.9
 
 ### Patch Changes

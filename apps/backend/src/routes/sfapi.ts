@@ -3,7 +3,8 @@ import {
   getStatus,
   getOutages,
   getUser,
-  getProjectHours
+  getProjectHours,
+  getClientExpiration
 } from '../controllers/sfapiController.js'
 import { ensureSFAuthenticated } from '../middleware/tokenManager.js'
 // import verifyJWT from '../middleware/verifyJWT'
@@ -21,6 +22,7 @@ router.use(ensureSFAuthenticated)
 
 // Protected routes
 router.route('/account').get(getUser)
+router.route('/account/clients').get(getClientExpiration)
 router.route('/account/projects/:repocode').get(getProjectHours)
 
 export default router

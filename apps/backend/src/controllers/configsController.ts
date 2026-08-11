@@ -53,7 +53,6 @@ export const getConfigsStuff = async (
 
     // Log environment variables for debugging.
     const envVars = [
-      'SFAPI_TOKEN_EXPIRES',
       'USE_NERSC',
       'NERSC_PROJECT',
       'SENDMAIL_USER',
@@ -82,7 +81,6 @@ export const getConfigsStuff = async (
       deploySite: process.env.BILBOMD_DEPLOY_SITE || '',
       useNersc: process.env.USE_NERSC || 'false',
       nerscProject: process.env.NERSC_PROJECT || 'm1234',
-      tokenExpires: process.env.SFAPI_TOKEN_EXPIRES || '2024-05-22 04:20',
       sendMailUser: process.env.SENDMAIL_USER || 'bilbomd@lbl.gov',
       enableBilboMdSANS: process.env.ENABLE_BILBOMD_SANS || 'false',
       enableBilboMdMulti: process.env.ENABLE_BILBOMD_MULTI || 'false',

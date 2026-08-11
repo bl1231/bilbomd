@@ -133,6 +133,13 @@ async function makeUnauthenticatedSFApiRequest<T>({
   }
 }
 
+interface SfapiClient {
+  name: string
+  clientId: string
+  expiresAt: string
+  comments?: string | null
+}
+
 const getStatus = async (req: Request, res: Response) => {
   const { success, data, error } = await makeUnauthenticatedSFApiRequest({
     endpoint: '/status'
@@ -226,4 +233,43 @@ const getProjectHours = async (req: Request, res: Response) => {
   }
 }
 
-export { getStatus, getOutages, getUser, getProjectHours }
+// Return the expiration for our own SFAPI client. /account/clients lists all of
+// the account's clients (GREEN scope, which our RED client token also satisfies);
+// we filter to the configured SFAPI_CLIENT_ID so the UI can show a live, always
+// up-to-date expiration instead of a hand-maintained value.
+const getClientExpiration = async (req: Request, res: Response) => {
+  if (!req.sfApiToken) {
+    res.status(401).json({ error: 'No SF API token provided.' })
+    return
+  }
+
+  const clientId = process.env.SFAPI_CLIENT_ID
+  if (!clientId) {
+    res.status(500).json({ error: 'SFAPI_CLIENT_ID is not configured.' })
+    return
+  }
+
+  const { success, data, error } = await makeSFApiRequest<SfapiClient[]>({
+    endpoint: '/account/clients',
+    token: req.sfApiToken as string
+  })
+
+  if (!success) {
+    res.status(500).json({ error })
+    return
+  }
+
+  const client = data?.find((c) => c.clientId === clientId)
+  if (!client) {
+    res.status(404).json({ error: 'Configured SF API client not found.' })
+    return
+  }
+
+  res.json({
+    clientId: client.clientId,
+    name: client.name,
+    expiresAt: client.expiresAt
+  })
+}
+
+export { getStatus, getOutages, getUser, getProjectHours, getClientExpiration }

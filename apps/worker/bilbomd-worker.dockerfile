@@ -71,6 +71,11 @@ COPY --chown=bilbo:bilbomd --from=build /out/ .
 # Copy centralized shared scripts (e.g., autorg.py)
 COPY --chown=bilbo:bilbomd tools/python/ /app/scripts/
 
+# Install pytest into the OpenMM env so the image is self-testable — CI runs the
+# Python test suite (including OpenMM-dependent tests) inside this image. Small
+# footprint and not on the runtime hot path.
+RUN /opt/envs/openmm/bin/pip install --no-cache-dir pytest pytest-cov
+
 ENV NODE_ENV=production
 USER bilbo:bilbomd
 EXPOSE 3000

@@ -32,7 +32,7 @@ networks:
 services:
   # ------------------------------------------------------------------------------------
   mongodb:
-    image: mongo:8.3.4
+    image: mongo:8.3.7
     pull_policy: missing
     restart: always
     deploy:
@@ -61,7 +61,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   redis:
-    image: redis:8.8.0
+    image: redis:8.10.0
     pull_policy: missing
     restart: always
     deploy:
@@ -87,7 +87,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.9.8
+    image: ghcr.io/bl1231/bilbomd-backend:2.10.2
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
@@ -121,7 +121,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.14.8
+    image: ghcr.io/bl1231/bilbomd-worker:2.15.1
     pull_policy: always
     security_opt:
       - no-new-privileges:true
@@ -216,7 +216,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   colabfold-service:
-    image: ghcr.io/bl1231/bilbomd-colabfold-service:0.1.0
+    image: ghcr.io/bl1231/bilbomd-colabfold-service:0.2.0
     pull_policy: missing
     shm_size: "16gb"
     security_opt:
@@ -237,6 +237,7 @@ services:
     environment:
       - UPLOAD_DIR=/bilbomd/uploads
       - COLABFOLD_DATA_DIR=/cache
+      - COLABFOLD_TIMEOUT_S=${COLABFOLD_TIMEOUT_S:-3300}
     volumes:
       - /bilbomd/dev/uploads:/bilbomd/uploads
       - /bilbomd/colabfold-cache:/cache:ro
@@ -251,7 +252,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.20.4
+    image: ghcr.io/bl1231/bilbomd-ui:2.22.2
     pull_policy: missing
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json

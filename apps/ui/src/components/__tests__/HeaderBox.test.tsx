@@ -17,7 +17,10 @@ describe('HeaderBox', () => {
       borderTopLeftRadius: '4px',
       borderTopRightRadius: '4px',
       fontWeight: '500',
-      padding: '16px 0.5rem 16px 0.5rem', // Updated padding
+      // py: 2 -> 16px vertical; padding: '0.5rem' -> 8px horizontal. jsdom >=30
+      // resolves rem to absolute px in getComputedStyle (jsdom 29 did not), so
+      // this must be asserted in px rather than as '0.5rem'.
+      padding: '16px 8px',
       background: '#888',
       color: '#fff',
       letterSpacing: '1px'

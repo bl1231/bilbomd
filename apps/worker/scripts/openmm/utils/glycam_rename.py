@@ -4,8 +4,11 @@ Converts standard PDB carbohydrate residue names and their attached protein resi
 into the GLYCAM naming scheme required by amber14/GLYCAM_06j-1.xml.
 
 GLYCAM naming convention (3-character codes):
-  - Character 1: linkage position on THIS residue (0 = reducing-end free/protein-linked,
-    2/3/4/6 = which oxygen bonds to C1 of the non-reducing sugar in the chain)
+  - Character 1: which hydroxyl oxygen(s) of THIS residue are substituted by a
+    child sugar. 0 = none (terminal); 2/3/4/6 = a single O2/O3/O4/O6 linkage;
+    branched sugars use a letter code (e.g. V = 3,6; X = 2,6; W = 3,4; U = 4,6).
+    The residue's own C1 bond (to its parent sugar or the protein/aglycon) is
+    always implied.
   - Character 2: sugar identity letter (Y=GlcNAc, M=Man, G=Glc, A=Gal, F=Fuc, ...)
   - Character 3: anomeric configuration (A=alpha, B=beta)
 
@@ -311,6 +314,8 @@ def rename_glycam_residues(pdb_text: str) -> tuple[str, list[str]]:
     protein_renames: dict[tuple, str] = {}
     # Maps sugar residue key → new GLYCAM name
     sugar_renames: dict[tuple, str] = {}
+    # Maps protein-linked (reducing-end) sugar key → human-readable link description
+    protein_linked_sugars: dict[tuple, str] = {}
 
     log_lines: list[str] = []
 
@@ -331,21 +336,21 @@ def rename_glycam_residues(pdb_text: str) -> tuple[str, list[str]]:
 
         # Identify which is protein and which is sugar
         pairs = [(res1, atom1, res2, atom2), (res2, atom2, res1, atom1)]
-        for prot_res, prot_atom_name, sug_res, sug_atom_name in pairs:
+        for prot_res, prot_atom_name, sug_res, _sug_atom_name in pairs:
             if (prot_res.resname in PROTEIN_RESNAMES and
                     sug_res.resname in CARBOHYDRATE_RESNAMES):
                 _handle_glycan_link(
-                    prot_res, prot_atom_name, sug_res, sug_atom_name,
-                    protein_renames, sugar_renames, log_lines
+                    prot_res, prot_atom_name, sug_res,
+                    protein_renames, protein_linked_sugars, log_lines
                 )
                 break
 
-    # Distance-based fallback for sugar residues not yet renamed
-    # (handles PDB files without LINK records, e.g. some deposited structures)
+    # Distance-based fallback for protein-linked sugars not covered by a LINK
+    # record (handles PDB files without LINK records, e.g. some deposited structures)
     for key, res in residues.items():
         if res.resname not in CARBOHYDRATE_RESNAMES:
             continue
-        if key in sugar_renames:
+        if key in protein_linked_sugars:
             continue  # already handled via LINK
 
         c1 = res.get_atom("C1")
@@ -364,32 +369,49 @@ def rename_glycam_residues(pdb_text: str) -> tuple[str, list[str]]:
                 continue
 
             _handle_glycan_link(
-                prot_res, candidate_atom.name, res, "C1",
-                protein_renames, sugar_renames, log_lines
+                prot_res, candidate_atom.name, res,
+                protein_renames, protein_linked_sugars, log_lines
             )
+            break
 
-    # Sugar-to-sugar linkage: assign linkage-position prefix for mid-chain sugars
+    # Assign the GLYCAM linkage-position prefix for every carbohydrate residue,
+    # based on the full set of hydroxyls substituted by child sugars. This handles
+    # branched sugars (e.g. a 3,6-linked core mannose → VMB) and protein-linked
+    # reducing ends alike: a reducing-end sugar's name still reflects downstream
+    # substitution (e.g. an O4-substituted N-linked GlcNAc → 4YB, not 0YB).
     for key, res in residues.items():
         if res.resname not in CARBOHYDRATE_RESNAMES:
             continue
-        if key in sugar_renames:
-            continue  # already renamed (protein-linked reducing end)
 
-        # This sugar is not directly bonded to protein — it's mid-chain or terminal.
-        # Determine what oxygen of a neighbouring sugar C1 bonds to this residue.
         sugar_letter = SUGAR_LETTER.get(res.resname)
         if sugar_letter is None:
+            log_lines.append(
+                f"  WARNING: unknown sugar {res.resname} {res.chain_id}"
+                f"{res.resseq:4d} — skipping GLYCAM rename"
+            )
             continue
 
-        linkage_pos = _find_incoming_linkage_position(res, residues, atom_index)
+        positions = _find_child_linkage_positions(res, atom_index)
+        prefix = _linkage_prefix(positions)
         is_alpha = _is_alpha_anomer(res)
         anomer = "A" if is_alpha else "B"
-        glycam_name = f"{linkage_pos}{sugar_letter}{anomer}"
+        glycam_name = f"{prefix}{sugar_letter}{anomer}"
         sugar_renames[key] = glycam_name
-        log_lines.append(
-            f"  {res.resname} {res.chain_id}{res.resseq:4d} → {glycam_name} "
-            f"(mid-chain, linkage at O{linkage_pos}, {'alpha' if is_alpha else 'beta'})"
-        )
+
+        if key in protein_linked_sugars:
+            log_lines.append(
+                f"  {res.resname} {res.chain_id}{res.resseq:4d} → {glycam_name} "
+                f"({protein_linked_sugars[key]}, GLYCAM {glycam_name})"
+            )
+        else:
+            branch = (
+                "terminal" if not positions
+                else "linkage at " + ", ".join(f"O{p}" for p in sorted(positions))
+            )
+            log_lines.append(
+                f"  {res.resname} {res.chain_id}{res.resseq:4d} → {glycam_name} "
+                f"({branch}, {'alpha' if is_alpha else 'beta'})"
+            )
 
     # --- Apply renames to lines ---
     # Build a mapping from line_index → new 3-char resname
@@ -434,12 +456,17 @@ def _handle_glycan_link(
     prot_res: Residue,
     prot_atom_name: str,
     sug_res: Residue,
-    _sug_atom_name: str,
     protein_renames: dict,
-    sugar_renames: dict,
+    protein_linked_sugars: dict,
     log_lines: list,
 ) -> None:
-    """Determine GLYCAM names for a protein-residue / sugar-residue pair."""
+    """Rename a glycosylated protein residue and mark the attached reducing-end sugar.
+
+    Renames ASN→NLN, THR→OLT, SER→OLS and records the linked sugar in
+    ``protein_linked_sugars``. The sugar's own GLYCAM name (including any
+    downstream branch prefix) is assigned later in the unified naming pass, so
+    that a reducing-end sugar substituted at, say, O4 is named 4YB rather than 0YB.
+    """
     sugar_letter = SUGAR_LETTER.get(sug_res.resname)
     if sugar_letter is None:
         log_lines.append(
@@ -448,80 +475,93 @@ def _handle_glycan_link(
         )
         return
 
-    is_alpha = _is_alpha_anomer(sug_res)
-    anomer = "A" if is_alpha else "B"
-
     prot_key = prot_res.key
     sug_key = sug_res.key
 
     if prot_res.resname == "ASN" and prot_atom_name == "ND2":
-        # N-linked glycan: ASN → NLN, sugar → 0YB (beta) or 0YA (alpha) for GlcNAc
-        glycam_sugar = f"0{sugar_letter}{anomer}"
         protein_renames[prot_key] = "NLN"
-        sugar_renames[sug_key] = glycam_sugar
+        protein_linked_sugars[sug_key] = "N-linked reducing end via ND2"
         log_lines.append(
-            f"  ASN {prot_res.chain_id}{prot_res.resseq:4d} → NLN "
-            f"(N-linked via ND2)"
+            f"  ASN {prot_res.chain_id}{prot_res.resseq:4d} → NLN (N-linked via ND2)"
         )
-        log_lines.append(
-            f"  {sug_res.resname} {sug_res.chain_id}{sug_res.resseq:4d} → {glycam_sugar} "
-            f"(N-linked reducing end, {'alpha' if is_alpha else 'beta'}, GLYCAM {glycam_sugar})"
-        )
-
     elif prot_res.resname == "THR" and prot_atom_name in ("OG1", "OG"):
-        # O-linked to Thr: THR → OLT, sugar → 0XA/0XB
-        glycam_sugar = f"0{sugar_letter}{anomer}"
         protein_renames[prot_key] = "OLT"
-        sugar_renames[sug_key] = glycam_sugar
+        protein_linked_sugars[sug_key] = "O-linked reducing end on Thr via OG1"
         log_lines.append(
-            f"  THR {prot_res.chain_id}{prot_res.resseq:4d} → OLT "
-            f"(O-linked via OG1)"
+            f"  THR {prot_res.chain_id}{prot_res.resseq:4d} → OLT (O-linked via OG1)"
         )
-        log_lines.append(
-            f"  {sug_res.resname} {sug_res.chain_id}{sug_res.resseq:4d} → {glycam_sugar} "
-            f"(O-linked reducing end on Thr, {'alpha' if is_alpha else 'beta'})"
-        )
-
     elif prot_res.resname == "SER" and prot_atom_name == "OG":
-        # O-linked to Ser: SER → OLS, sugar → 0XA/0XB
-        glycam_sugar = f"0{sugar_letter}{anomer}"
         protein_renames[prot_key] = "OLS"
-        sugar_renames[sug_key] = glycam_sugar
+        protein_linked_sugars[sug_key] = "O-linked reducing end on Ser via OG"
         log_lines.append(
-            f"  SER {prot_res.chain_id}{prot_res.resseq:4d} → OLS "
-            f"(O-linked via OG)"
-        )
-        log_lines.append(
-            f"  {sug_res.resname} {sug_res.chain_id}{sug_res.resseq:4d} → {glycam_sugar} "
-            f"(O-linked reducing end on Ser, {'alpha' if is_alpha else 'beta'})"
+            f"  SER {prot_res.chain_id}{prot_res.resseq:4d} → OLS (O-linked via OG)"
         )
 
 
-def _find_incoming_linkage_position(
+# GLYCAM linkage-position code (first character of a sugar residue name).
+# The set lists which hydroxyl oxygens (O2/O3/O4/O6) of the sugar are substituted
+# by a child (non-reducing) sugar's anomeric carbon. Mono-substituted sugars use
+# the position digit; multiply-substituted (branched) sugars use a GLYCAM-06
+# letter code. The sugar's own C1 (bond to its parent or the aglycon) is always
+# implied and is not encoded here.
+_LINKAGE_PREFIX: dict[frozenset[int], str] = {
+    frozenset(): "0",
+    frozenset({2}): "2",
+    frozenset({3}): "3",
+    frozenset({4}): "4",
+    frozenset({6}): "6",
+    frozenset({2, 3}): "Z",
+    frozenset({2, 4}): "Y",
+    frozenset({2, 6}): "X",
+    frozenset({3, 4}): "W",
+    frozenset({3, 6}): "V",
+    frozenset({4, 6}): "U",
+    frozenset({2, 3, 4}): "T",
+    frozenset({2, 3, 6}): "S",
+    frozenset({2, 4, 6}): "R",
+    frozenset({3, 4, 6}): "Q",
+    frozenset({2, 3, 4, 6}): "P",
+}
+
+
+def _linkage_prefix(positions: frozenset[int]) -> str:
+    """Map a set of substituted oxygen positions to the GLYCAM residue prefix."""
+    prefix = _LINKAGE_PREFIX.get(positions)
+    if prefix is None:
+        # Non-standard substitution pattern with no GLYCAM-06 code; fall back to
+        # the lowest occupied position as a best effort.
+        prefix = str(min(positions)) if positions else "0"
+    return prefix
+
+
+def _find_child_linkage_positions(
     res: Residue,
-    residues: dict[tuple, Residue],
     atom_index: list,
-) -> str:
-    """Find which oxygen (O2, O3, O4, O6) of this sugar is bonded to C1 of another sugar.
+) -> frozenset[int]:
+    """Return the oxygen positions (2, 3, 4, 6) on this sugar bonded to another
+    sugar's anomeric C1 — i.e. the positions where child sugars attach.
 
-    Returns the position digit as a string (e.g., "4" for O4-C1 linkage), or "0" if
-    this is a non-reducing terminal with no incoming bond.
+    An empty set denotes a non-reducing terminal sugar (prefix "0").
     """
+    positions: set[int] = set()
     for on_name in ("O2", "O3", "O4", "O6"):
         on_atom = res.get_atom(on_name)
         if on_atom is None:
             continue
         on_coords = (on_atom.x, on_atom.y, on_atom.z)
-        for coords, chain_id, resseq, candidate in atom_index:
+        for coords, _chain_id, _resseq, candidate in atom_index:
             if candidate.resname not in CARBOHYDRATE_RESNAMES:
                 continue
             if candidate.name != "C1":
                 continue
-            if (chain_id, resseq, candidate.resname) == (res.chain_id, res.resseq, res.resname):
+            if (candidate.chain_id, candidate.resseq, candidate.icode) == (
+                res.chain_id, res.resseq, res.icode
+            ):
                 continue
             if _distance(on_coords, coords) <= BOND_THRESHOLD:
-                return on_name[1]  # "2", "3", "4", or "6"
-    return "0"
+                positions.add(int(on_name[1]))
+                break
+    return frozenset(positions)
 
 
 # ---------------------------------------------------------------------------

@@ -171,7 +171,7 @@ ingress:
 Then redeploy the app chart:
 
 ```bash
-./infra/deploy-to-nersc.sh deploy <ENV>
+./infra/nersc.sh deploy <ENV>
 ```
 
 nginx now serves the Let's Encrypt cert from `tls-cert`. Because the real cert was

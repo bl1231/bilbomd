@@ -16,6 +16,7 @@ from collections import defaultdict
 from io import StringIO
 
 from openmm.app import ForceField, Modeller, PDBFile
+from openmm.unit import angstroms
 from pdbfixer import PDBFixer
 
 from utils.glycam_rename import rename_glycam_residues
@@ -65,8 +66,23 @@ _GLYCAM_PROTEIN_BONDS: dict[str, list[tuple[str, str]]] = {
 }
 
 
+# Valid first characters of a GLYCAM sugar residue code: the linkage-position
+# digits (0/2/3/4/6) plus the branched-linkage letter codes (P–Z). See
+# glycam_rename._LINKAGE_PREFIX. Letter-prefixed codes (e.g. VMB for a 3,6-linked
+# mannose) must be recognised here or they would be deleted as unknown residues.
+_GLYCAM_LINKAGE_PREFIXES: frozenset[str] = frozenset("0123456789PQRSTUVWXYZ")
+
+
 def _is_glycam_name(name: str) -> bool:
-    return name in _GLYCAM_PROTEIN_NAMES or (len(name) == 3 and name[0].isdigit())
+    if name in _GLYCAM_PROTEIN_NAMES:
+        return True
+    if len(name) != 3:
+        return False
+    return (
+        name[0] in _GLYCAM_LINKAGE_PREFIXES
+        and name[1].isalpha()
+        and name[2] in ("A", "B")
+    )
 
 
 def _repair_glycam_protein_topology(topology) -> int:
@@ -112,6 +128,111 @@ def _repair_glycam_protein_topology(topology) -> int:
             _add_bond(prev_C, atom.get("N"),
                       f"{prev_res.name}[{prev_res.id}].C -- {res.name}[{res.id}].N")
 
+    return added
+
+
+def _add_glycam_sugar_intra_bonds(topology, forcefield: ForceField) -> int:
+    """Add missing intra-residue heavy-atom bonds for GLYCAM sugar residues.
+
+    OpenMM's PDB reader leaves sugar residues (GLYCAM names like 0YB, 4YB, VMB)
+    with no skeleton bonds because their residue names are unknown at parse time.
+    Expected bonds are read directly from the GLYCAM ForceField templates; bonds
+    touching an atom not yet in the topology (e.g. hydrogens, added later by
+    addHydrogens) are skipped. Mirrors _add_charmm36_intra_bonds for CHARMM36
+    backbone residues. Returns the number of bonds added.
+    """
+    existing_bonds: set[tuple[int, int]] = set()
+    for bond in topology.bonds():
+        existing_bonds.add((bond[0].index, bond[1].index))
+        existing_bonds.add((bond[1].index, bond[0].index))
+
+    added = 0
+    for res in topology.residues():
+        if not _is_glycam_name(res.name) or res.name in _GLYCAM_PROTEIN_NAMES:
+            continue
+        tmpl = forcefield._templates.get(res.name)
+        if tmpl is None:
+            continue
+        atom_by_name = {a.name: a for a in res.atoms()}
+        for bond in tmpl.bonds:
+            a1_name = tmpl.atoms[bond[0]].name
+            a2_name = tmpl.atoms[bond[1]].name
+            if a1_name not in atom_by_name or a2_name not in atom_by_name:
+                continue  # atom not yet in topology (e.g. hydrogen)
+            a1 = atom_by_name[a1_name]
+            a2 = atom_by_name[a2_name]
+            if (a1.index, a2.index) not in existing_bonds:
+                topology.addBond(a1, a2)
+                existing_bonds.add((a1.index, a2.index))
+                existing_bonds.add((a2.index, a1.index))
+                added += 1
+    return added
+
+
+# Sugar oxygens that accept a glycosidic bond from another sugar's anomeric C1,
+# and the protein side-chain atoms that accept the reducing-end sugar's C1.
+_GLYCOSIDIC_SUGAR_ACCEPTORS: frozenset[str] = frozenset({"O2", "O3", "O4", "O6"})
+_GLYCOSIDIC_PROTEIN_ACCEPTORS: frozenset[str] = frozenset({"ND2", "OG", "OG1"})
+_GLYCOSIDIC_BOND_CUTOFF = 1.9  # Å — generous upper bound for a covalent bond
+
+
+def _repair_glycam_glycosidic_bonds(topology, positions) -> int:
+    """Add missing glycosidic linkage bonds for a glycan.
+
+    Each sugar's anomeric carbon (C1) is bonded to its acceptor — a protein
+    residue's linking atom (NLN.ND2 / OLS.OG / OLT.OG1) for the reducing end, or a
+    parent sugar's hydroxyl oxygen (O2/O3/O4/O6). The acceptor is chosen by
+    proximity (nearest candidate within the covalent cutoff), reconstructing both
+    protein→sugar and sugar→sugar linkages for arbitrary glycan trees. These bonds
+    are never created by OpenMM's PDB reader because the residues are unknown to it.
+    Returns the number of bonds added.
+
+    Note: only C1-anomeric sugars are handled; sugars linked through a different
+    anomeric carbon (e.g. sialic acid, C2) are not connected here.
+    """
+    coords = positions.value_in_unit(angstroms)
+    cutoff_sq = _GLYCOSIDIC_BOND_CUTOFF ** 2
+
+    existing_bonds: set[tuple[int, int]] = set()
+    for bond in topology.bonds():
+        existing_bonds.add((bond[0].index, bond[1].index))
+        existing_bonds.add((bond[1].index, bond[0].index))
+
+    anomeric_carbons: list = []
+    acceptors: list = []
+    for res in topology.residues():
+        is_sugar = _is_glycam_name(res.name) and res.name not in _GLYCAM_PROTEIN_NAMES
+        for atom in res.atoms():
+            if is_sugar and atom.name == "C1":
+                anomeric_carbons.append(atom)
+            elif is_sugar and atom.name in _GLYCOSIDIC_SUGAR_ACCEPTORS:
+                acceptors.append(atom)
+            elif (res.name in _GLYCAM_PROTEIN_NAMES
+                    and atom.name in _GLYCOSIDIC_PROTEIN_ACCEPTORS):
+                acceptors.append(atom)
+
+    added = 0
+    for c1 in anomeric_carbons:
+        cx = coords[c1.index]
+        best = None
+        best_sq = cutoff_sq
+        for acc in acceptors:
+            if acc.residue.index == c1.residue.index:
+                continue
+            ax = coords[acc.index]
+            d_sq = (cx[0] - ax[0]) ** 2 + (cx[1] - ax[1]) ** 2 + (cx[2] - ax[2]) ** 2
+            if d_sq <= best_sq:
+                best_sq = d_sq
+                best = acc
+        if best is not None and (c1.index, best.index) not in existing_bonds:
+            topology.addBond(c1, best)
+            existing_bonds.add((c1.index, best.index))
+            existing_bonds.add((best.index, c1.index))
+            logger.info(
+                f"  Glycosidic bond: {c1.residue.name}[{c1.residue.id}].C1 -- "
+                f"{best.residue.name}[{best.residue.id}].{best.name}"
+            )
+            added += 1
     return added
 
 
@@ -714,6 +835,17 @@ def prepare_modeller(
         n_repaired = _repair_glycam_protein_topology(fixer.topology)
         if n_repaired:
             logger.info(f"Repaired {n_repaired} missing bond(s) for GLYCAM protein residues.")
+        # GLYCAM sugar residues are unknown to OpenMM's PDB reader, so they arrive
+        # with no heavy-atom skeleton bonds and no glycosidic linkages. Rebuild the
+        # intra-residue bonds from the GLYCAM templates, then the inter-residue
+        # glycosidic bonds (protein→sugar and sugar→sugar) by geometry. Without
+        # these, createSystem() cannot match the NLN/sugar templates.
+        n_intra = _add_glycam_sugar_intra_bonds(fixer.topology, forcefield)
+        if n_intra:
+            logger.info(f"Added {n_intra} intra-residue bond(s) for GLYCAM sugar residues.")
+        n_glyco = _repair_glycam_glycosidic_bonds(fixer.topology, fixer.positions)
+        if n_glyco:
+            logger.info(f"Added {n_glyco} glycosidic linkage bond(s).")
         # Skip addMissingHydrogens: it triggers CCD downloads for GLYCAM residue names
         # whose mmCIF entries contain '?' coordinates that PDBFixer cannot parse.
         # Hydrogens are added below via modeller.addHydrogens() using GLYCAM_06j-1.xml.

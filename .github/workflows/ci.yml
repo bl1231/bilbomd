@@ -37,7 +37,7 @@ jobs:
       schema: ${{ steps.filter.outputs.schema }}
       md-utils: ${{ steps.filter.outputs.md-utils }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Paths filter
         id: filter
@@ -102,12 +102,12 @@ jobs:
     runs-on: [ubuntu-24.04]
     needs: [changes]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
 
@@ -128,7 +128,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -136,7 +136,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -177,7 +177,7 @@ jobs:
       group: backend-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -257,7 +257,7 @@ jobs:
       group: ui-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -329,6 +329,8 @@ jobs:
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     permissions:
       contents: read
       packages: write
@@ -336,7 +338,7 @@ jobs:
       group: worker-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -385,6 +387,7 @@ jobs:
       # Removed local buildx cache setup for GitHub-hosted runners
 
       - name: Build & Push
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -403,6 +406,67 @@ jobs:
             WORKER_VERSION=${{ env.VERSION }}
           # Removed local cache-from/cache-to for GitHub-hosted runners
 
+  # Fast feedback: run the OpenMM-free Python tests (tools/python + the stdlib
+  # worker script tests). OpenMM-dependent tests skip here (see importorskip) and
+  # run for real in worker-python-tests below.
+  python-tests-light:
+    name: Python tests (light)
+    if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    needs: [changes]
+    runs-on: [ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/python/requirements-test.txt
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tools/python/requirements-test.txt
+
+      - name: Run Python tests (OpenMM-free)
+        run: pytest
+
+  # Authoritative: run the OpenMM-dependent worker tests inside the built worker
+  # image (the only place the conda openmm/pdbfixer stack exists). Reuses the
+  # worker job's build cache and loads the image locally instead of pushing.
+  worker-python-tests:
+    name: Worker Python tests (in image)
+    # Runs the OpenMM-dependent tests inside the exact image the worker job just
+    # pushed (pulled by digest — no rebuild). Skips on forks, which don't push.
+    if: needs.changes.outputs.worker == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    needs: [changes, lint, worker]
+    runs-on: [ubuntu-24.04]
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Free up disk space
+        run: |
+          # The worker image is large (~12 GB); reclaim space for the pull.
+          sudo rm -rf /opt/hostedtoolcache /usr/local/lib/android /usr/share/dotnet /usr/local/.ghcup || true
+          df -h /
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run OpenMM Python tests inside the pushed image
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/bilbomd-worker@${{ needs.worker.outputs.digest }}
+        run: |
+          docker run --rm "$IMAGE" \
+            /opt/envs/openmm/bin/python -m pytest \
+            /app/scripts/openmm /app/scripts/test_strip_cofactors.py \
+            -o addopts="-q" -p no:cacheprovider
+
   scoper:
     name: Build & Push scoper
     if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
@@ -415,7 +479,7 @@ jobs:
       group: scoper-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -488,13 +552,13 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       # 1) Setup Node from .nvmrc (NO pnpm cache here)
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
 
@@ -516,7 +580,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -524,7 +588,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -541,7 +605,7 @@ jobs:
 
       # Only cache TS incremental build info for schema package (keep pnpm store local)
       - name: Cache TS incremental (schema)
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             packages/mongodb-schema/tsconfig.tsbuildinfo
@@ -573,13 +637,13 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       # 1) Setup Node from .nvmrc (NO pnpm cache here)
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
 
@@ -601,7 +665,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -609,7 +673,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -626,7 +690,7 @@ jobs:
 
       # Only cache TS incremental build info for md-utils package (keep pnpm store local)
       - name: Cache TS incremental (md-utils)
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             packages/md-utils/tsconfig.tsbuildinfo
@@ -666,12 +730,12 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
 
@@ -692,7 +756,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -700,7 +764,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -737,12 +801,12 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
 
@@ -763,7 +827,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -771,7 +835,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Cache Turborepo outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             .turbo
@@ -809,12 +873,12 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
 
@@ -835,7 +899,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -868,12 +932,12 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
 
@@ -894,7 +958,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -924,12 +988,12 @@ jobs:
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
 
@@ -950,7 +1014,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -1001,12 +1065,12 @@ jobs:
       REFRESH_TOKEN_SECRET: test-refresh-secret
       BILBOMD_API_TOKEN: test-external-api-token
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       - name: Use Node (from .nvmrc if present)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
 
@@ -1027,7 +1091,7 @@ jobs:
         run: echo "store_path=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm_store.outputs.store_path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -1088,6 +1152,8 @@ jobs:
         scoper-unit-tests,
         scoper-typecheck,
         backend-integration-tests,
+        python-tests-light,
+        worker-python-tests,
       ]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     env:
@@ -1104,11 +1170,13 @@ jobs:
       SCOPER_UNIT: ${{ needs['scoper-unit-tests'].result }}
       SCOPER_TYPE: ${{ needs['scoper-typecheck'].result }}
       BACKEND_INT: ${{ needs['backend-integration-tests'].result }}
+      PY_LIGHT: ${{ needs['python-tests-light'].result }}
+      WORKER_PY: ${{ needs['worker-python-tests'].result }}
     steps:
       - name: Check build results
         run: |
           set -e
-          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT UI_UNIT WORKER_UNIT SCOPER_UNIT SCOPER_TYPE BACKEND_INT; do
+          for job in LINT BACKEND UI WORKER SCOPER SCHEMA MDUTILS BACKEND_UNIT UI_UNIT WORKER_UNIT SCOPER_UNIT SCOPER_TYPE BACKEND_INT PY_LIGHT WORKER_PY; do
             result="${!job}"
             echo "$job result: $result"
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
@@ -1126,13 +1194,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'

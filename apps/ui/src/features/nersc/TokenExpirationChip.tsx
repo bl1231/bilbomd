@@ -8,19 +8,18 @@ import {
   subWeeks
 } from 'date-fns'
 import { formatDateSafe, parseDateSafe } from 'utils/dates'
-import { useGetConfigsQuery } from 'slices/configsApiSlice'
+import { useGetSfapiClientExpirationQuery } from 'slices/nerscApiSlice'
 
 const TokenExpirationChip = () => {
   const now = new Date()
-  const { data, error, isLoading } = useGetConfigsQuery('configData')
+  const { data, isLoading } = useGetSfapiClientExpirationQuery()
 
   if (isLoading) return <div>Loading...</div>
-  if (error) return <div>Error loading configuration data</div>
 
-  // Check if data is undefined
-  if (!data) return <div>No configuration data available</div>
-
-  const expirationDate = parseDateSafe(data?.tokenExpires)
+  // The expiration is fetched live from the Superfacility API. If the request
+  // failed (e.g. the client has already expired and can no longer authenticate),
+  // data is undefined and the chip falls back to "Expires: unknown".
+  const expirationDate = parseDateSafe(data?.expiresAt)
 
   let chipColor: string
   let chipLabel: string

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 
 describe('config.ts', () => {
   it('should successfully load config when all required env vars are present', async () => {
@@ -58,5 +58,97 @@ describe('config.ts', () => {
     expect(typeof config.bilbomd.AlphaFoldEnabled).toBe('boolean')
     expect(typeof config.bilbomd.MultiEnabled).toBe('boolean')
     expect(typeof config.bilbomd.ScoperEnabled).toBe('boolean')
+  })
+})
+
+describe('config.ts env parsing', () => {
+  // These tests mutate process.env and re-import the module to exercise the
+  // (non-exported) helper branches. Restore the environment after each test.
+  const ENV_SNAPSHOT = { ...process.env }
+
+  afterEach(() => {
+    process.env = { ...ENV_SNAPSHOT }
+    vi.resetModules()
+  })
+
+  const reimport = async () => {
+    vi.resetModules()
+    return import('../config.js')
+  }
+
+  describe('toBoolean', () => {
+    it('treats "true", "1", and "yes" (any case) as true', async () => {
+      process.env.SEND_EMAIL_NOTIFICATIONS = 'true'
+      process.env.USE_NERSC = '1'
+      process.env.ENABLE_BILBOMD_SANS = 'YES'
+      process.env.ENABLE_BILBOMD_ALPHAFOLD = 'yes'
+      const { config } = await reimport()
+      expect(config.sendEmailNotifications).toBe(true)
+      expect(config.runOnNERSC).toBe(true)
+      expect(config.bilbomd.SANSEnabled).toBe(true)
+      expect(config.bilbomd.AlphaFoldEnabled).toBe(true)
+    })
+
+    it('treats other values and undefined as false', async () => {
+      process.env.SEND_EMAIL_NOTIFICATIONS = 'no'
+      delete process.env.USE_NERSC
+      const { config } = await reimport()
+      expect(config.sendEmailNotifications).toBe(false)
+      expect(config.runOnNERSC).toBe(false)
+    })
+  })
+
+  describe('getEnvVarWithDefault', () => {
+    it('uses the provided value when the env var is set', async () => {
+      process.env.LOG_LEVEL = 'debug'
+      process.env.OPENMM_PYTHON_BIN = '/custom/python'
+      const { config } = await reimport()
+      expect(config.logLevel).toBe('debug')
+      expect(config.openmmPythonBin).toBe('/custom/python')
+    })
+
+    it('falls back to the default when the env var is unset', async () => {
+      delete process.env.LOG_LEVEL
+      delete process.env.OPENMM_PYTHON_BIN
+      const { config } = await reimport()
+      expect(config.logLevel).toBe('info')
+      expect(config.openmmPythonBin).toBe('/opt/envs/openmm/bin/python')
+    })
+  })
+
+  describe('parsePositiveIntEnv', () => {
+    it('parses a valid positive integer and floors it', async () => {
+      process.env.OPENMM_MD_CONCURRENCY = '4.9'
+      const { config } = await reimport()
+      expect(config.openmmMdConcurrency).toBe(4)
+    })
+
+    it('returns the default when unset or empty', async () => {
+      delete process.env.OPENMM_MD_CONCURRENCY
+      process.env.COLABFOLD_TIMEOUT_MS = ''
+      const { config } = await reimport()
+      expect(config.openmmMdConcurrency).toBe(1)
+      expect(config.colabfoldTimeoutMs).toBe(60 * 60 * 1000)
+    })
+
+    it('throws on a non-numeric value', async () => {
+      process.env.OPENMM_MD_CONCURRENCY = 'abc'
+      await expect(reimport()).rejects.toThrow(/is not a positive number/)
+    })
+
+    it('throws on a non-positive value', async () => {
+      process.env.OPENMM_MD_CONCURRENCY = '-1'
+      await expect(reimport()).rejects.toThrow(/is not a positive number/)
+    })
+  })
+
+  describe('validateRequiredEnvVars', () => {
+    it('throws listing the missing required variables', async () => {
+      delete process.env.BILBOMD_URL
+      delete process.env.CHARMM
+      await expect(reimport()).rejects.toThrow(
+        /Missing required environment variables:.*BILBOMD_URL.*CHARMM/
+      )
+    })
   })
 })

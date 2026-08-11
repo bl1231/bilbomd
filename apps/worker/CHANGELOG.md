@@ -1,5 +1,74 @@
 # @bilbomd/worker
 
+## 2.15.1
+
+### Patch Changes
+
+- 27739a6: Update dependencies to their latest compatible versions (bullmq 5.81.3, ioredis 5.11.1, mongoose 9.8.1, axios 1.19.0, @bull-board 8.4.0, @mui/x-data-grid 9.10.1, molstar 5.11.0, react 19.2.8, react-router 8.3.0, recharts 3.10.1, vite 8.1.5, eslint 10.8.0, typescript-eslint 8.65.0, prettier 3.9.6, turbo 2.10.7, and others).
+
+  Major upgrades: connect-redis 10 (only breaking change is dropping Node 18/20 support; the store API is unchanged), jsdom 30 and @testing-library/jest-dom 7 (both test-only).
+
+  ioredis is pinned to exact 5.11.1 to match the exact version required by bullmq 5.81.3. TypeScript is intentionally held at v6 because typescript-eslint does not yet support TypeScript 7 (peer range `<6.1.0`).
+
+  Removed react-dropzone from @bilbomd/ui — it was declared but never imported anywhere in the source or the built bundle.
+
+  Fixed the HeaderBox style assertion: jsdom 30 resolves `rem` to absolute px in `getComputedStyle` (jsdom 29 did not), so the expected padding is now `16px 8px` rather than `16px 0.5rem`.
+
+- Updated dependencies [27739a6]
+  - @bilbomd/md-utils@1.1.22
+  - @bilbomd/mongodb-schema@2.7.5
+
+## 2.15.0
+
+### Minor Changes
+
+- 3aef74d: Fix OpenMM glycoprotein preparation for branched and complex N-glycans. Previously, glycoprotein jobs failed during energy minimization with `Template match failed for residue: NLN` because the GLYCAM-renamed glycan was imported without any glycosidic linkages or sugar-skeleton bonds, and branched/reducing-end sugars were assigned incorrect GLYCAM residue names.
+
+  - `glycam_rename.py`: derive the full set of substituted hydroxyls for every sugar and map it to the correct GLYCAM linkage prefix (including branched letter codes such as `VMB`, `XMA`), so reducing-end and branch-point sugars are named correctly (e.g. an O4-linked reducing GlcNAc is now `4YB`, not `0YB`).
+  - `model_prep.py`: recognize letter-prefixed GLYCAM codes; rebuild sugar intra-residue bonds from the GLYCAM templates; and add protein→sugar and sugar→sugar glycosidic bonds by geometry.
+
+  Verified end-to-end on a previously failing high-mannose glycoprotein job (minimization now completes successfully). Adds Python test coverage for the new naming and bond-repair logic.
+
+### Patch Changes
+
+- 1f118bf: Add Python tests to the CI pipeline. The worker image now bundles `pytest` in its OpenMM environment so the image is self-testable, and CI gains two gated jobs: a fast "Python tests (light)" job for the OpenMM-free tests (tools/python + stdlib worker scripts) and a "Worker Python tests (in image)" job that runs the OpenMM-dependent tests inside the built worker image. Pytest configuration is centralized in a root `pyproject.toml`, and OpenMM-dependent tests self-skip where the stack is unavailable.
+
+## 2.14.13
+
+### Patch Changes
+
+- e04ad77: Update dependencies to their latest compatible versions (bullmq 5.79.3, mongoose 9.7.4, nodemailer 9.0.3, @bull-board 8.1.2, redis 6.1.0, MUI 9.2.0, @mui/x-data-grid 9.8.0, react-router 8.2.0, recharts 3.9.2, vite 8.1.4, vitest 4.1.10, eslint 10.6.0, typescript-eslint 8.63.0, prettier 3.9.5, turbo 2.10.4, and others).
+
+  ioredis is pinned to 5.10.1 to match the exact version required by bullmq. TypeScript is intentionally held at v6 because typescript-eslint does not yet support TypeScript 7 (peer range `<6.1.0`).
+
+- Updated dependencies [e04ad77]
+  - @bilbomd/md-utils@1.1.21
+  - @bilbomd/mongodb-schema@2.7.4
+
+## 2.14.12
+
+### Patch Changes
+
+- cd7b271: Update Node.js to 26.4.0 and bump dependencies to latest (axios, mongoose, @mui/material, @mui/system, recharts, vite, @vitejs/plugin-react, globals, typescript-eslint). ioredis remains pinned to 5.10.1 to match bullmq's exact requirement.
+- Updated dependencies [cd7b271]
+  - @bilbomd/mongodb-schema@2.7.3
+  - @bilbomd/md-utils@1.1.20
+
+## 2.14.11
+
+### Patch Changes
+
+- 4693180: Add unit test coverage for previously untested worker modules: usage-events (context building, event recording), NERSC API token caching/refresh logic, and the rgyr/dmax and feedback python-script spawn wrappers. Extend config tests to cover env-var parsing, validation, and boolean/default helpers. Extend job-utils tests to cover the CHARMM spawn wrapper (spawnCharmm), the writeInputFile failure path, an additional handleError branch, and the invalid-user and missing-email notification paths. Raises worker coverage from ~65% to ~72% statements (43% to 51% branches).
+
+## 2.14.10
+
+### Patch Changes
+
+- 6284830: Update dependencies to latest: bullmq, mongoose, nodemailer, uuid, @bull-board/\*, @mui/x-data-grid, react-router 8, and root tooling (@types/node 26, lint-staged). Pin ioredis to 5.10.1 to match the version bundled with bullmq and avoid duplicate-package type conflicts.
+- Updated dependencies [6284830]
+  - @bilbomd/md-utils@1.1.19
+  - @bilbomd/mongodb-schema@2.7.2
+
 ## 2.14.9
 
 ### Patch Changes
