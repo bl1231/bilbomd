@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.16.0
+
+### Minor Changes
+
+- f70bc38: Changes the writeConfigFile() number_generation and fitting_algorithm parameters.
+
 ## 2.15.1
 
 ### Patch Changes
