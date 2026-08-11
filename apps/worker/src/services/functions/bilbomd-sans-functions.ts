@@ -220,36 +220,36 @@ const writeConfigFile = async (
     GA_inputs: [
       {
         number_iterations: 5,
-        number_generations: 5,
+        number_generations: 50,
         ensemble_size: 2,
         ensemble_split: 0.85,
         crossover_probability: 0.5,
         mutation_probability: 0.15,
-        fitting_algorithm: 'Differential Evolution',
+        fitting_algorithm: 'nelder',
         cutoff_weight: 1e-6,
         fitness_function: 'inverse_absolute',
         parallel: true
       },
       {
         number_iterations: 5,
-        number_generations: 5,
+        number_generations: 50,
         ensemble_size: 3,
         ensemble_split: 0.85,
         crossover_probability: 0.5,
         mutation_probability: 0.15,
-        fitting_algorithm: 'Differential Evolution',
+        fitting_algorithm: 'nelder',
         cutoff_weight: 1e-6,
         fitness_function: 'inverse_absolute',
         parallel: true
       },
       {
         number_iterations: 5,
-        number_generations: 5,
+        number_generations: 50,
         ensemble_size: 4,
         ensemble_split: 0.85,
         crossover_probability: 0.5,
         mutation_probability: 0.15,
-        fitting_algorithm: 'Differential Evolution',
+        fitting_algorithm: 'nelder',
         cutoff_weight: 1e-6,
         fitness_function: 'inverse_absolute',
         parallel: true

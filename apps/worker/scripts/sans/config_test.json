@@ -1,12 +1,12 @@
 {"files": {
-    "experiment":"/Users/9cq/Documents/Projects/Bilbo-MD_SANS/For_Sharique/smoothed_ETF_OXI_3mgL.dat",
-    "scatter_dir":"/Users/9cq/Documents/Projects/Bilbo-MD_SANS/For_Sharique/fit",
+    "experiment":"experiment_data.dat",
+    "scatter_dir":"./fit",
     "structurefile":"structure.csv"
 },
 "max_ensemble_size":4,
 "GA_input1":{
     "number_iterations":5,
-    "number_generations":5,
+    "number_generations":50,
     "ensemble_size":2,
     "ensemble_split":0.85,
     "crossover_probability":0.5,
@@ -18,7 +18,7 @@
 },
 "GA_input2":{
     "number_iterations":5,
-    "number_generations":5,
+    "number_generations":50,
     "ensemble_size":3,
     "ensemble_split":0.85,
     "crossover_probability":0.5,
@@ -30,7 +30,7 @@
 },
 "GA_input3":{
     "number_iterations":5,
-    "number_generations":5,
+    "number_generations":50,
     "ensemble_size":4,
     "ensemble_split":0.85,
     "crossover_probability":0.5,
