@@ -9,8 +9,9 @@
 # host — only Docker access.
 #
 # MULTIPLE DEPLOYMENTS ON ONE HOST
-#   docker compose isolates each stack by its PROJECT NAME. `run.sh` starts
-#   them as bilbomd-local / bilbomd-dev / bilbomd-prod. This script resolves
+#   docker compose isolates each stack by its PROJECT NAME. The script
+#   `deploy-to-beamline.sh` starts them as bilbomd-local / bilbomd-dev /
+#   bilbomd-prod. This script resolves
 #   the mongo container by that project label, so dev and prod never collide:
 #
 #     ./assign-role.sh --target dev  user@example.com    # touches bilbomd-dev
@@ -115,7 +116,7 @@ if [[ "$ACTION" != "list" ]]; then
     || die "Invalid role '$ROLE'. Valid roles: ${VALID_ROLES[*]}"
 fi
 
-# --target is shorthand for the project name run.sh uses.
+# --target is shorthand for the project name deploy-to-beamline.sh uses.
 if [[ -n "$TARGET" ]]; then
   case "$TARGET" in
     local | dev | prod) ;;
@@ -144,7 +145,7 @@ if [[ -z "$PROJECT_NAME" ]]; then
       | sort -u
   )
   case "${#PROJECTS[@]}" in
-    0) die "No running '${SERVICE}' container found. Is a stack up (./run.sh ...)?" ;;
+    0) die "No running '${SERVICE}' container found. Is a stack up (./deploy-to-beamline.sh ...)?" ;;
     1)
       PROJECT_NAME="${PROJECTS[0]}"
       echo "Auto-selected the only running stack: ${PROJECT_NAME}"
