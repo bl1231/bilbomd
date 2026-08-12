@@ -53,7 +53,7 @@ cd infra
 ./build.sh local
 
 # Start all services locally
-./run.sh local
+./deploy-to-beamline.sh local
 ```
 
 The BilboMD UI (served from the Docker container) should now be available at `https://localhost:3001`
@@ -97,9 +97,9 @@ pnpm -F @bilbomd/ui run dev
    # For local development
    docker-compose --env-file .env.local -f infra/docker-compose.local.yml -p bilbomd-local up -d
    
-   # Or use the `run.sh` script
+   # Or use the `deploy-to-beamline.sh` script
    cd infra
-   ./run.sh local
+   ./deploy-to-beamline.sh local
    ```
 
 If you run into setup issues on your platform, feel free to open an issue or discussion.

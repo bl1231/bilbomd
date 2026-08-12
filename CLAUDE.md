@@ -17,8 +17,9 @@ Turborepo + pnpm workspaces. Non-obvious bits the code won't tell you:
 
 ```bash
 cd infra
-./build.sh local     # Build local Docker images
-./run.sh local       # Start all services via docker-compose.local.yml
+./build.sh local                 # Build local Docker images
+./deploy-to-beamline.sh local    # Start all services via docker-compose.local.yml
+./deploy-to-beamline.sh --help   # All commands: up/down/restart/pull/ps/logs/config
 ```
 
 Environment: copy `infra/.env.example` to `infra/.env.local`.
