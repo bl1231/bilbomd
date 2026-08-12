@@ -48,9 +48,9 @@ pnpm install
 # Transpile the Typescript
 pnpm build
 
-# Build local Docker images
+# Pull the pre-built Docker images
 cd infra
-./build.sh local
+./deploy-to-beamline.sh pull local
 
 # Start all services locally
 ./deploy-to-beamline.sh local
