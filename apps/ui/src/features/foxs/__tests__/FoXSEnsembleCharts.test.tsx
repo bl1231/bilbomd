@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import FoXSEnsembleCharts from '../FoXSEnsembleCharts'
 import { getEnsembleSizeLabel } from '../foxsUtils'
 import type { FoxsData } from '@bilbomd/bilbomd-types'
@@ -115,5 +116,40 @@ describe('FoXSEnsembleCharts', () => {
     expect(
       screen.queryByText('multi_state_model_1_1_1.dat')
     ).not.toBeInTheDocument()
+  })
+
+  // Part of #971: chi² is surfaced in a header line above the residuals plot,
+  // colour-keyed to each visible ensemble trace.
+  it('renders a chi² chip for each visible ensemble', () => {
+    const foxsData: FoxsData[] = [baseFoxsData, make1State(), make2State()]
+    render(
+      <FoXSEnsembleCharts
+        {...defaultProps}
+        foxsData={foxsData}
+      />
+    )
+    expect(screen.getByText('Ens. Size 1: 1.50')).toBeInTheDocument()
+    expect(screen.getByText('Ens. Size 2: 1.20')).toBeInTheDocument()
+    // The base dataset starts hidden, so it gets no chip.
+    expect(screen.queryByText(/sample\.dat: /)).not.toBeInTheDocument()
+  })
+
+  it('removes an ensemble chip when its checkbox is unchecked', async () => {
+    const user = userEvent.setup()
+    const foxsData: FoxsData[] = [baseFoxsData, make1State(), make2State()]
+    render(
+      <FoXSEnsembleCharts
+        {...defaultProps}
+        foxsData={foxsData}
+      />
+    )
+    expect(screen.getByText('Ens. Size 2: 1.20')).toBeInTheDocument()
+
+    // Table rows skip index 0, so the checkboxes map to ensembles 1 and 2.
+    const checkboxes = screen.getAllByRole('checkbox')
+    await user.click(checkboxes[1]!)
+
+    expect(screen.queryByText('Ens. Size 2: 1.20')).not.toBeInTheDocument()
+    expect(screen.getByText('Ens. Size 1: 1.50')).toBeInTheDocument()
   })
 })

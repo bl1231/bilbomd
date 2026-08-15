@@ -11,7 +11,7 @@ import {
   ReferenceArea,
   ErrorBar
 } from 'recharts'
-import { Typography } from '@mui/material'
+import { Box, Stack, Typography, useTheme } from '@mui/material'
 
 interface DataPoint {
   q: number
@@ -43,75 +43,6 @@ interface FoXSChartProps {
   excludedRanges?: ExcludedRange[]
 }
 
-interface CustomChartLabelProps {
-  chisq: number
-  c1: string
-  c2: string
-  x: number
-  y: number
-}
-
-const ChiSquaredChartLabel = ({
-  chisq,
-  c1,
-  c2,
-  x,
-  y
-}: CustomChartLabelProps) => {
-  return (
-    <>
-      <text
-        x={x}
-        y={y}
-        fill="black"
-        fontSize={16}
-      >
-        Chi²: {chisq.toFixed(2)}
-      </text>
-      <text
-        x={x + 80}
-        y={y}
-        fill="black"
-        fontSize={16}
-      >
-        C
-        <tspan
-          dy="3"
-          fontSize={10}
-        >
-          1
-        </tspan>
-        <tspan
-          dy="-3"
-          fontSize={14}
-        >
-          : {c1}
-        </tspan>
-      </text>
-      <text
-        x={x + 140}
-        y={y}
-        fill="black"
-        fontSize={16}
-      >
-        C
-        <tspan
-          dy="3"
-          fontSize={10}
-        >
-          2
-        </tspan>
-        <tspan
-          dy="-3"
-          fontSize={14}
-        >
-          : {c2}
-        </tspan>
-      </text>
-    </>
-  )
-}
-
 const logDomain = (dataMin: number): number => {
   if (!Number.isFinite(dataMin) || dataMin <= 0) return 0.001
   return Math.pow(10, Math.floor(Math.log10(dataMin)))
@@ -129,8 +60,7 @@ const FoXSChart = ({
   excludedCount = 0,
   excludedRanges = []
 }: FoXSChartProps) => {
-  const labelXPosition = 75
-  const labelYPosition = 20
+  const theme = useTheme()
 
   return (
     <>
@@ -217,6 +147,36 @@ const FoXSChart = ({
       >
         {title} - Chi&sup2; residuals
       </Typography>
+      <Stack
+        direction="row"
+        spacing={2.5}
+        useFlexGap
+        sx={{ pl: 2, mb: 1, flexWrap: 'wrap', color: 'text.primary' }}
+      >
+        <Typography sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          Chi&sup2;: {chisq.toFixed(2)}
+        </Typography>
+        <Typography sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          C
+          <Box
+            component="sub"
+            sx={{ fontSize: '0.7em' }}
+          >
+            1
+          </Box>
+          : {c1}
+        </Typography>
+        <Typography sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          C
+          <Box
+            component="sub"
+            sx={{ fontSize: '0.7em' }}
+          >
+            2
+          </Box>
+          : {c2}
+        </Typography>
+      </Stack>
       <ResponsiveContainer
         width="100%"
         height={200}
@@ -255,16 +215,7 @@ const FoXSChart = ({
           />
           <ReferenceLine
             y={0}
-            stroke="black"
-            label={
-              <ChiSquaredChartLabel
-                chisq={chisq}
-                c1={c1}
-                c2={c2}
-                x={labelXPosition}
-                y={labelYPosition}
-              />
-            }
+            stroke={theme.palette.text.secondary}
           />
         </LineChart>
       </ResponsiveContainer>

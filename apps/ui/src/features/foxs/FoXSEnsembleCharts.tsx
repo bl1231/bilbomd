@@ -1,5 +1,13 @@
 import { useState, Fragment } from 'react'
-import { Checkbox, Paper, TableHead, Typography } from '@mui/material'
+import {
+  Checkbox,
+  Chip,
+  Paper,
+  Stack,
+  TableHead,
+  Typography,
+  useTheme
+} from '@mui/material'
 import Grid from '@mui/material/Grid'
 import {
   Table,
@@ -62,6 +70,7 @@ const FoXSEnsembleCharts = ({
   maxYAxis,
   foxsData
 }: Props) => {
+  const theme = useTheme()
   // Initialize visibility state for each line
   const [visibility, setVisibility] = useState([
     false,
@@ -135,6 +144,28 @@ const FoXSEnsembleCharts = ({
       >
         Ensemble Models - Chi&sup2; residuals
       </Typography>
+      <Stack
+        direction="row"
+        spacing={1}
+        useFlexGap
+        sx={{ pl: 2, mb: 1, flexWrap: 'wrap' }}
+      >
+        {foxsData.map((item, index) =>
+          visibility[index] ? (
+            <Chip
+              key={index}
+              size="small"
+              label={`${getEnsembleSizeLabel(item.filename)}: ${item.chisq.toFixed(2)}`}
+              sx={{
+                bgcolor: getUniqueColor(index),
+                color: 'common.black',
+                fontSize: '0.95rem',
+                fontWeight: 600
+              }}
+            />
+          ) : null
+        )}
+      </Stack>
       <ResponsiveContainer
         width="100%"
         height={200}
@@ -168,7 +199,7 @@ const FoXSEnsembleCharts = ({
           ))}
           <ReferenceLine
             y={0}
-            stroke="black"
+            stroke={theme.palette.text.secondary}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -180,9 +211,15 @@ const FoXSEnsembleCharts = ({
           >
             <TableHead>
               <TableRow>
-                <TableCell>Show</TableCell>
-                <TableCell>Ensemble Filename</TableCell>
-                <TableCell>Chi&sup2;</TableCell>
+                <TableCell sx={{ fontSize: '1rem', fontWeight: 700 }}>
+                  Show
+                </TableCell>
+                <TableCell sx={{ fontSize: '1rem', fontWeight: 700 }}>
+                  Ensemble Filename
+                </TableCell>
+                <TableCell sx={{ fontSize: '1rem', fontWeight: 700 }}>
+                  Chi&sup2;
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -201,10 +238,14 @@ const FoXSEnsembleCharts = ({
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography>{model.filename}</Typography>
+                        <Typography sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                          {model.filename}
+                        </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography>{model.chisq.toFixed(2)}</Typography>
+                        <Typography sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                          {model.chisq.toFixed(2)}
+                        </Typography>
                       </TableCell>
                     </TableRow>
                   )
