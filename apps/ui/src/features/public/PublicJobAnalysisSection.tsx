@@ -42,6 +42,9 @@ const JobAnalysisSection = ({ job }: JobAnalysisSectionProps) => {
           value={tabValue}
           onChange={handleTabChange}
           aria-label="analysis tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
             backgroundColor: '#e4e4e4ff',
             '& .MuiTab-root': {

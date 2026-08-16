@@ -124,7 +124,7 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
         container
         spacing={2}
       >
-        <Grid size={{ xs: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FoXSChart
             title={`Original Model - ${origPDBFile}`}
             data={origData}
@@ -136,7 +136,7 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
             maxYAxis={maxYAxis}
           />
         </Grid>
-        <Grid size={{ xs: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FoXSChart
             title={`Scoper Model - ${scopPDBFile}`}
             data={scopData}

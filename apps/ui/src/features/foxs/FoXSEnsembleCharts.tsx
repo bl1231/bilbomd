@@ -203,7 +203,7 @@ const FoXSEnsembleCharts = ({
           />
         </LineChart>
       </ResponsiveContainer>
-      <Grid sx={{ ml: 8 }}>
+      <Grid sx={{ ml: { xs: 0, md: 8 } }}>
         <TableContainer component={Paper}>
           <Table
             size="small"

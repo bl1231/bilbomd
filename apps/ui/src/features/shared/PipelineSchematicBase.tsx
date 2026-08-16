@@ -140,7 +140,7 @@ const PipelineSchematicBase = ({
   return (
     <svg
       viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-      style={{ width: '100%', display: 'block' }}
+      style={{ width: '100%', maxWidth: '100%', height: 'auto', display: 'block' }}
       aria-label={ariaLabel}
     >
       {row0.map((step, i) => {

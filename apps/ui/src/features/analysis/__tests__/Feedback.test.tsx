@@ -1,6 +1,21 @@
+import { cloneElement, type ReactElement } from 'react'
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import FeedbackChart from '../FeedbackChart'
+
+// jsdom has no layout, so ResponsiveContainer measures 0x0 and never mounts
+// the chart. Substitute a fixed size so the chart contents render.
+vi.mock('recharts', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('recharts')>()
+  return {
+    ...mod,
+    ResponsiveContainer: ({
+      children
+    }: {
+      children: ReactElement<{ width?: number; height?: number }>
+    }) => cloneElement(children, { width: 600, height: 350 })
+  }
+})
 
 describe('FeedbackChart', () => {
   const mockData = {
@@ -16,9 +31,9 @@ describe('FeedbackChart', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders XAxis with correct domain', () => {
-    render(<FeedbackChart data={mockData} />)
-    const xAxis = screen.getByText(/q \(Å⁻¹\)/i)
-    expect(xAxis).toBeInTheDocument()
+  it('renders the X and Y axes', () => {
+    const { container } = render(<FeedbackChart data={mockData} />)
+    expect(container.querySelector('.recharts-xAxis')).not.toBeNull()
+    expect(container.querySelectorAll('.recharts-yAxis')).toHaveLength(2)
   })
 })

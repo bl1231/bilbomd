@@ -47,7 +47,9 @@ const Footer = () => {
             justifyContent: 'center',
             display: 'flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             gap: 1,
+            rowGap: 0.5,
             mb: 1
           }}
         >
@@ -74,7 +76,7 @@ const Footer = () => {
             {' • '}BilboMD v{version}-{gitHash}
           </Typography>
 
-          <Typography sx={{ wordBreak: 'break-all' }}>
+          <Typography>
             <Link
               href="https://github.com/bl1231/bilbomd"
               target="_blank"
@@ -82,7 +84,7 @@ const Footer = () => {
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                ml: 2,
+                ml: { xs: 0, md: 2 },
                 fontWeight: 'bold'
               }}
             >
@@ -103,7 +105,7 @@ const Footer = () => {
 
           <Typography
             variant="caption"
-            sx={{ ml: 2 }}
+            sx={{ ml: { xs: 0, md: 2 } }}
           >
             <Link
               component={RouterLink}

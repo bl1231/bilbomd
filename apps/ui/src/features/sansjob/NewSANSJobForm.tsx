@@ -268,7 +268,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     )}
 
                     {/* Title */}
-                    <Grid sx={{ my: 2, width: '520px' }}>
+                    <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>
                       <Field
                         fullWidth
                         label="Title"
@@ -415,7 +415,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }}
                       />
                     </Grid>
-                    <Grid sx={{ display: 'flex', width: '520px' }}>
+                    <Grid sx={{ display: 'flex', width: '100%', maxWidth: '520px' }}>
                       <Alert severity="info">
                         <Typography>
                           <b>Rg Min</b> and <b>Rg Max</b> will be calculated
@@ -425,17 +425,17 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Alert>
                     </Grid>
                     {isLoading && (
-                      <Box sx={{ my: 1, width: '520px' }}>
+                      <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                         <LinearProgress />
                       </Box>
                     )}
                     {autoRgError && (
-                      <Box sx={{ my: 1, width: '520px' }}>
+                      <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                         <Alert severity="error">{autoRgError}</Alert>
                       </Box>
                     )}
                     {/* Rg Min */}
-                    <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
+                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
                       <Field
                         label="Rg Min"
                         fullWidth
@@ -457,7 +457,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     </Grid>
 
                     {/* rRg Max */}
-                    <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
+                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
                       <Field
                         label="Rg Max"
                         fullWidth
@@ -496,7 +496,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     </Grid>
 
                     {/* D2O Fraction Slider */}
-                    <Grid sx={{ my: 2, width: '520px' }}>
+                    <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>
                       <Typography
                         id="d2o-fraction-slider"
                         gutterBottom
@@ -559,7 +559,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
                     {/* Progress Bar */}
                     {isSubmitting && (
-                      <Box sx={{ my: 1, width: '520px' }}>
+                      <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                         <LinearProgress />
                       </Box>
                     )}

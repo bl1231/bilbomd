@@ -4,6 +4,8 @@ import { logger } from 'utils/logger'
 import useTitle from 'hooks/useTitle'
 import {
   Button,
+  IconButton,
+  Tooltip,
   Typography,
   Alert,
   AlertTitle,
@@ -236,28 +238,26 @@ const SingleJobPage = () => {
         spacing={2}
         rowSpacing={2}
       >
-        <Grid size={{ xs: 3, sm: 2, md: 2, lg: 1, xl: 1 }}>
-          <HeaderBox sx={{ py: '6px' }}>
-            <Typography>Nav</Typography>
-          </HeaderBox>
-          <Item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<KeyboardBackspaceIcon />}
-              onClick={() => navigate(`/dashboard/jobs${returnParams}`)}
-            >
-              Back
-            </Button>
-          </Item>
-        </Grid>
-
-        <Grid size={{ xs: 9, sm: 10, md: 7, lg: 5, xl: 3 }}>
+        <Grid size={{ xs: 12, sm: 12, md: 9, lg: 6, xl: 4 }}>
           <HeaderBox sx={{ py: '6px' }}>
             <Typography>Job Title</Typography>
           </HeaderBox>
           <Item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="h3">{job.mongo.title}</Typography>
+            <Tooltip title="Back to jobs list">
+              <IconButton
+                aria-label="back to jobs list"
+                color="primary"
+                onClick={() => navigate(`/dashboard/jobs${returnParams}`)}
+              >
+                <KeyboardBackspaceIcon />
+              </IconButton>
+            </Tooltip>
+            <Typography
+              variant="h3"
+              sx={{ minWidth: 0, overflowWrap: 'anywhere' }}
+            >
+              {job.mongo.title}
+            </Typography>
           </Item>
         </Grid>
 

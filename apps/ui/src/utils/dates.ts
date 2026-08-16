@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, formatDistanceToNowStrict } from 'date-fns'
 
 export function parseDateSafe(input?: unknown): Date | null {
   if (input === null || input === undefined) return null
@@ -27,6 +27,19 @@ export function formatDateSafe(
   if (d === null) return fallback
   try {
     return format(d, pattern)
+  } catch {
+    return fallback
+  }
+}
+
+export function formatRelativeDateSafe(
+  input: unknown,
+  fallback = ''
+): string {
+  const d = parseDateSafe(input)
+  if (d === null) return fallback
+  try {
+    return formatDistanceToNowStrict(d, { addSuffix: true })
   } catch {
     return fallback
   }

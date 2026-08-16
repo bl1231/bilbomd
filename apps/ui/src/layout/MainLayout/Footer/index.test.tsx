@@ -144,5 +144,10 @@ describe('Footer Component', () => {
         exact: false
       })
     ).toBeInTheDocument()
+
+    // The GitHub link must not use break-all, which shattered the word
+    // letter-by-letter when the footer was squeezed on narrow screens
+    const githubLink = screen.getByText('GitHub').closest('p')
+    expect(githubLink).not.toHaveStyle({ wordBreak: 'break-all' })
   })
 })

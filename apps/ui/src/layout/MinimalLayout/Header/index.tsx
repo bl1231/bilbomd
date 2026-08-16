@@ -15,11 +15,11 @@ import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import nerscLogo from 'assets/nersc-logo.png'
 
 const linkStyles = {
-  display: 'flex-grow',
   fontFamily: 'monospace',
   fontWeight: 900,
-  fontSize: '3em',
-  letterSpacing: '.3rem',
+  fontSize: { xs: '2em', sm: '3em' },
+  letterSpacing: { xs: '.15rem', sm: '.3rem' },
+  whiteSpace: 'nowrap',
   background: 'linear-gradient(to top, #00c9ff, #92fe9d)', // Blue to Light Green
   WebkitBackgroundClip: 'text', // Ensures gradient is applied only to the text
   WebkitTextFillColor: 'transparent', // Makes the text transparent so gradient shows
@@ -124,11 +124,13 @@ const Header = () => {
           sx={{ height: '70px', zIndex: (theme) => theme.zIndex.drawer + 1 }}
         >
           <Toolbar sx={{ m: 0 }}>
-            <Link to='/' style={linkStyles}>
+            <Typography component={Link} to='/' sx={linkStyles}>
               BilboMD
-            </Link>
-            <NerscLogo useNersc={useNersc} mode={mode} />
-            <ModeDisplay useNersc={useNersc} mode={mode} />
+            </Typography>
+            <Box sx={{ display: { xs: 'none', sm: 'flex' } }}>
+              <NerscLogo useNersc={useNersc} mode={mode} />
+              <ModeDisplay useNersc={useNersc} mode={mode} />
+            </Box>
             <Typography
               variant='h5'
               sx={{ display: { xs: 'none', sm: 'flex' }, ml: 8 }}
@@ -138,7 +140,7 @@ const Header = () => {
             <Box
               sx={{
                 display: 'flex',
-                alignItems: 'flex-end',
+                alignItems: 'center',
                 justifyContent: 'flex-end',
                 flexGrow: 1
               }}
@@ -147,23 +149,23 @@ const Header = () => {
                 variant='contained'
                 to='register'
                 component={Link}
-                sx={{ mx: 1, borderRadius: 2 }}
+                sx={{
+                  mx: { xs: 0.5, sm: 1 },
+                  borderRadius: 2,
+                  whiteSpace: 'nowrap'
+                }}
               >
                 Register
               </Button>
-              {/* <Button
-                variant='contained'
-                to='login'
-                component={Link}
-                sx={{ mx: 1, borderRadius: 2 }}
-              >
-                Login
-              </Button> */}
               <Button
                 variant='contained'
                 to='magicklink'
                 component={Link}
-                sx={{ mx: 1, borderRadius: 2 }}
+                sx={{
+                  mx: { xs: 0.5, sm: 1 },
+                  borderRadius: 2,
+                  whiteSpace: 'nowrap'
+                }}
               >
                 Login
               </Button>

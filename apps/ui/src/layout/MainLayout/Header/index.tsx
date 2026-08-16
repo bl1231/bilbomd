@@ -17,6 +17,7 @@ import useAuth from 'hooks/useAuth'
 import LogOut from 'features/auth/LogOut'
 import NightModeToggle from 'components/NightModeToggle'
 import PersonIcon from '@mui/icons-material/Person'
+import MenuIcon from '@mui/icons-material/Menu'
 import { useNavigate } from 'react-router'
 import { Link } from 'react-router'
 import nerscLogo from 'assets/nersc-logo.png'
@@ -132,7 +133,11 @@ const DevMode = ({ mode }: DevModeProps) => (
   </Box>
 )
 
-const Header = () => {
+interface HeaderProps {
+  onMenuClick?: () => void
+}
+
+const Header = ({ onMenuClick }: HeaderProps) => {
   const navigate = useNavigate()
   const { username, status } = useAuth()
   const [anchorElUser, setAnchorElUser] = useState<HTMLElement | null>(null)
@@ -167,16 +172,16 @@ const Header = () => {
   }
 
   const linkStyles = {
-    display: 'flex-grow',
     fontFamily: 'monospace',
     fontWeight: 900,
-    fontSize: '3em',
-    letterSpacing: '.3rem',
+    fontSize: { xs: '2em', sm: '3em' },
+    letterSpacing: { xs: '.15rem', sm: '.3rem' },
     background: 'linear-gradient(to top, #00c9ff, #92fe9d)', // Blue to Light Green
     WebkitBackgroundClip: 'text', // Ensures gradient is applied only to the text
     WebkitTextFillColor: 'transparent', // Makes the text transparent so gradient shows
     color: 'transparent', // Fallback for other browsers
-    textDecoration: 'none'
+    textDecoration: 'none',
+    whiteSpace: 'nowrap'
   }
 
   return (
@@ -189,18 +194,28 @@ const Header = () => {
           sx={{ height: '70px', zIndex: (theme) => theme.zIndex.drawer + 1 }}
         >
           <Toolbar sx={{ display: 'flex', alignItems: 'center', m: 0 }}>
-            {/* Left Side: Logo and Mode Display */}
+            {/* Left Side: Hamburger (mobile), Logo and Mode Display */}
+            <IconButton
+              color="inherit"
+              aria-label="open navigation menu"
+              edge="start"
+              onClick={onMenuClick}
+              sx={{ display: { xs: 'inline-flex', md: 'none' }, mr: 1 }}
+            >
+              <MenuIcon />
+            </IconButton>
             <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 0 }}>
-              <Link
+              <Typography
+                component={Link}
                 to="/dashboard"
-                style={linkStyles}
+                sx={linkStyles}
               >
                 BilboMD
-              </Link>
+              </Typography>
             </Box>
             <Box
               sx={{
-                display: 'flex',
+                display: { xs: 'none', sm: 'flex' },
                 alignItems: 'flex-end',
                 flexGrow: 1,
                 pt: 1.5
@@ -211,12 +226,19 @@ const Header = () => {
             </Box>
 
             {/* Right Side: Night Mode Toggle, User Info, and Menu */}
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <NightModeToggle sx={{ mr: 2 }} />
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                ml: 'auto',
+                minWidth: 0
+              }}
+            >
+              <NightModeToggle sx={{ mr: { xs: 1, md: 2 } }} />
               <Typography
                 variant="h5"
                 sx={{
-                  display: 'flex',
+                  display: { xs: 'none', md: 'flex' },
                   alignItems: 'center',
                   mx: 2
                 }}

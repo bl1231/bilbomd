@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { parseDateSafe, formatDateSafe } from '../dates'
+import {
+  parseDateSafe,
+  formatDateSafe,
+  formatRelativeDateSafe
+} from '../dates'
 
 describe('parseDateSafe', () => {
   it('returns null for null/undefined/empty/whitespace', () => {
@@ -74,5 +78,17 @@ describe('formatDateSafe', () => {
     // date-fns v2 uses lowercase tokens; uppercase causes an error
     const out = formatDateSafe('2023-01-01T00:00:00Z', 'YYYY-MM-DD', 'oops')
     expect(out).toBe('oops')
+  })
+})
+
+describe('formatRelativeDateSafe', () => {
+  it('returns fallback for unparseable input', () => {
+    expect(formatRelativeDateSafe(null)).toBe('')
+    expect(formatRelativeDateSafe('not a date', 'n/a')).toBe('n/a')
+  })
+
+  it('formats a past date as a relative "ago" string', () => {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+    expect(formatRelativeDateSafe(twoHoursAgo)).toBe('2 hours ago')
   })
 })
