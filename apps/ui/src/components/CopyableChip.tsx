@@ -87,7 +87,8 @@ const CopyableChip: React.FC<CopyableChipProps> = ({ label, value, url }) => {
           fontFamily: 'monospace',
           borderColor: 'primary.main',
           backgroundColor: green[100],
-          maxWidth: '100%'
+          maxWidth: '100%',
+          minWidth: 0
         }}
       />
     </>

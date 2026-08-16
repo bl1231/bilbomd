@@ -162,7 +162,7 @@ const MovieGallery = ({ data }: MovieGalleryProps) => {
                         justifyContent: 'space-between'
                       }}
                     >
-                      <Box>
+                      <Box sx={{ minWidth: 0 }}>
                         <Typography
                           variant="subtitle1"
                           noWrap
@@ -193,7 +193,7 @@ const MovieGallery = ({ data }: MovieGalleryProps) => {
                         variant="outlined"
                         size="small"
                         startIcon={<DownloadIcon />}
-                        sx={{ ml: 2, whiteSpace: 'nowrap' }}
+                        sx={{ ml: 2, whiteSpace: 'nowrap', flexShrink: 0 }}
                         onClick={(e) => {
                           e.stopPropagation()
                           const link = document.createElement('a')
