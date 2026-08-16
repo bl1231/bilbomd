@@ -329,7 +329,7 @@ const ResubmitJobForm = () => {
                       >
                         Job Form
                       </Divider>
-                      <Grid sx={{ my: 2, width: '520px' }}>
+                      <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>
                         <Field
                           fullWidth
                           label="Title"
@@ -348,7 +348,7 @@ const ResubmitJobForm = () => {
                         />
                       </Grid>
                       {/* MD Engine selection */}
-                      <Grid sx={{ width: '520px', mb: 1 }}>
+                      <Grid sx={{ width: '100%', maxWidth: '520px', mb: 1 }}>
                         <MdEngineField
                           value={values.md_engine as 'charmm' | 'openmm'}
                           onChange={(val) => {
@@ -375,7 +375,7 @@ const ResubmitJobForm = () => {
                             sx={{
                               display: 'flex',
                               justifyContent: 'space-between',
-                              width: '520px'
+                              width: '100%', maxWidth: '520px'
                             }}
                           >
                             <Grid>
@@ -407,7 +407,7 @@ const ResubmitJobForm = () => {
                             sx={{
                               display: 'flex',
                               justifyContent: 'space-between',
-                              width: '520px'
+                              width: '100%', maxWidth: '520px'
                             }}
                           >
                             <Grid>
@@ -443,7 +443,7 @@ const ResubmitJobForm = () => {
                             sx={{
                               display: 'flex',
                               justifyContent: 'space-between',
-                              width: '520px'
+                              width: '100%', maxWidth: '520px'
                             }}
                           >
                             <Grid>
@@ -536,7 +536,7 @@ const ResubmitJobForm = () => {
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          width: '520px'
+                          width: '100%', maxWidth: '520px'
                         }}
                       >
                         <Grid>
@@ -569,7 +569,7 @@ const ResubmitJobForm = () => {
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          width: '520px'
+                          width: '100%', maxWidth: '520px'
                         }}
                       >
                         <Alert severity="info">
@@ -606,7 +606,7 @@ const ResubmitJobForm = () => {
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          width: '520px'
+                          width: '100%', maxWidth: '520px'
                         }}
                       >
                         <Grid>
@@ -654,7 +654,7 @@ const ResubmitJobForm = () => {
                           />
                         </Grid>
                       </Grid>
-                      <Grid sx={{ display: 'flex', width: '520px' }}>
+                      <Grid sx={{ display: 'flex', width: '100%', maxWidth: '520px' }}>
                         <Typography>
                           <b>Rg Min</b> and <b>Rg Max</b> will be calculated
                           automatically from the selected SAXS data file. Feel
@@ -662,11 +662,11 @@ const ResubmitJobForm = () => {
                         </Typography>
                       </Grid>
                       {isLoading && (
-                        <Box sx={{ my: 1, width: '520px' }}>
+                        <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                           <LinearProgress />
                         </Box>
                       )}
-                      <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
+                      <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
                         <Field
                           label="Rg Min"
                           fullWidth
@@ -685,7 +685,7 @@ const ResubmitJobForm = () => {
                           }
                         />
                       </Grid>
-                      <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
+                      <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
                         <Field
                           label="Rg Max"
                           fullWidth
@@ -704,7 +704,7 @@ const ResubmitJobForm = () => {
                           onBlur={handleBlur}
                         />
                       </Grid>
-                      <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
+                      <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
                         <TextField
                           label="Conformations per Rg"
                           variant="outlined"
@@ -712,7 +712,7 @@ const ResubmitJobForm = () => {
                           name="num_conf"
                           select
                           value={values.num_conf}
-                          sx={{ width: '520px' }}
+                          sx={{ width: '100%', maxWidth: '520px' }}
                           onChange={handleChange}
                           onBlur={handleBlur}
                           error={Boolean(errors.num_conf && touched.num_conf)}
@@ -749,7 +749,7 @@ const ResubmitJobForm = () => {
                         </TextField>
                       </Grid>
                       {isSubmitting && (
-                        <Box sx={{ width: '520px' }}>
+                        <Box sx={{ width: '100%', maxWidth: '520px' }}>
                           <LinearProgress />
                         </Box>
                       )}

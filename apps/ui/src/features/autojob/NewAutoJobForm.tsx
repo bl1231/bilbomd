@@ -209,10 +209,12 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
+                          flexWrap: 'wrap',
+                          rowGap: 1,
                           my: 1
                         }}
                       >
-                        <Box sx={{ minWidth: '520px' }}>
+                        <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
                           <Field
                             label="Title"
                             name="title"
@@ -230,7 +232,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             sx={{ width: '100%' }}
                           />
                         </Box>
-                        <Box sx={{ ml: 8, minWidth: 'fit-content' }}>
+                        <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
                           <Button
                             variant={useExampleData ? 'outlined' : 'contained'}
                             onClick={() => {
@@ -260,7 +262,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               : 'Load Example Data'}
                           </Button>
                         </Box>
-                        <Box sx={{ ml: 2, minWidth: 'fit-content' }}>
+                        <Box sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}>
                           <Button
                             variant="contained"
                             href={'/api/v1/public/examples/auto'}
@@ -423,7 +425,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
                       {/* Progress Bar */}
                       {isSubmitting && (
-                        <Box sx={{ my: 1, width: '520px' }}>
+                        <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                           <LinearProgress />
                         </Box>
                       )}

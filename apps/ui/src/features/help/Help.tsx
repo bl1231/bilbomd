@@ -100,7 +100,7 @@ const Help = ({ title = 'BilboMD: Help' }) => {
           <BilboMDBibTeX />
         </Introduction>
 
-        <Box sx={{ m: 1, p: 0 }}>
+        <Box sx={{ m: 1, p: 0, minWidth: 0 }}>
           <Typography
             variant="h4"
             gutterBottom
@@ -124,7 +124,13 @@ const Help = ({ title = 'BilboMD: Help' }) => {
           >
             BilboMD Pipelines
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'stretch' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'stretch',
+              flexDirection: { xs: 'column', md: 'row' }
+            }}
+          >
             <Box sx={{ flex: 1 }}>
               <List dense>
                 <ListItem
@@ -198,15 +204,19 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             <Box
               sx={{
                 flex: 1,
-                minWidth: 200,
+                minWidth: { xs: 0, md: 200 },
+                maxWidth: '100%',
                 minHeight: 200,
-                ml: 2
+                ml: { xs: 0, md: 2 }
               }}
             >
               <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <Tabs
                   value={tabValue}
                   onChange={handleTabChange}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  allowScrollButtonsMobile
                 >
                   <Tab label="Classic PDB" />
                   <Tab label="Classic CRD" />

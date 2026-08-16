@@ -5,17 +5,59 @@ import { useGetQueueStateQuery } from 'features/bullmq/bullmqApiSlice'
 import HeaderBox from 'components/HeaderBox'
 import Item from 'themes/components/Item'
 
+interface QueueCounts {
+  active_count: number
+  waiting_count: number
+  worker_count: number
+}
+
 interface QueueStatus {
-  bilbomd: {
-    active_count: number
-    waiting_count: number
-    worker_count: number
-  }
-  scoper: {
-    active_count: number
-    waiting_count: number
-    worker_count: number
-  }
+  bilbomd: QueueCounts
+  scoper: QueueCounts
+}
+
+const statChipSx = {
+  mx: { xs: 0.5, sm: 1 },
+  backgroundColor: '#262626',
+  color: '#bae637',
+  fontSize: { xs: '1.2em', sm: '1.6em' },
+  fontWeight: 'bold',
+  '& .MuiChip-label': { px: { xs: 1, sm: 1.5 } }
+}
+
+const QueueStatsRow = ({ counts }: { counts: QueueCounts }) => {
+  const stats: { label: string; count: number }[] = [
+    { label: 'Active', count: counts.active_count },
+    { label: 'Queued', count: counts.waiting_count },
+    { label: 'Workers', count: counts.worker_count }
+  ]
+  return (
+    <Grid
+      sx={{
+        m: 1,
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        rowGap: 1
+      }}
+    >
+      {stats.map(({ label, count }, index) => (
+        <Box
+          key={label}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            ml: index === 0 ? 0 : { xs: 1, sm: 4 }
+          }}
+        >
+          <Typography>
+            {label === 'Active' ? <b>Active</b> : label}:
+          </Typography>
+          <Chip label={count} sx={statChipSx} />
+        </Box>
+      ))}
+    </Grid>
+  )
 }
 
 const BullMQSummary = () => {
@@ -73,86 +115,14 @@ const BullMQSummary = () => {
               <Divider textAlign='left' variant='fullWidth'>
                 <Chip label='BilboMD Queue' />
               </Divider>
-              <Grid sx={{ m: 1, display: 'flex', alignItems: 'center' }}>
-                <Typography>
-                  <b>Active</b>:
-                </Typography>
-                <Chip
-                  label={queueStatus.bilbomd.active_count}
-                  sx={{
-                    mx: 1,
-                    backgroundColor: '#262626',
-                    color: '#bae637',
-                    fontSize: '1.6em',
-                    fontWeight: 'bold'
-                  }}
-                />
-                <Typography sx={{ ml: 4 }}>Queued:</Typography>
-                <Chip
-                  label={queueStatus.bilbomd.waiting_count}
-                  sx={{
-                    mx: 1,
-                    backgroundColor: '#262626',
-                    color: '#bae637',
-                    fontSize: '1.6em',
-                    fontWeight: 'bold'
-                  }}
-                />
-                <Typography sx={{ ml: 4 }}>Workers:</Typography>
-                <Chip
-                  label={queueStatus.bilbomd.worker_count}
-                  sx={{
-                    mx: 1,
-                    backgroundColor: '#262626',
-                    color: '#bae637',
-                    fontSize: '1.6em',
-                    fontWeight: 'bold'
-                  }}
-                />
-              </Grid>
+              <QueueStatsRow counts={queueStatus.bilbomd} />
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
               <Divider textAlign='left' variant='fullWidth'>
                 <Chip label='Scoper Queue' />
               </Divider>
-              <Grid sx={{ m: 1, display: 'flex', alignItems: 'center' }}>
-                <Typography>
-                  <b>Active</b>:
-                </Typography>
-                <Chip
-                  label={queueStatus.scoper.active_count}
-                  sx={{
-                    mx: 1,
-                    backgroundColor: '#262626',
-                    color: '#bae637',
-                    fontSize: '1.6em',
-                    fontWeight: 'bold'
-                  }}
-                />
-                <Typography sx={{ ml: 4 }}>Queued:</Typography>
-                <Chip
-                  label={queueStatus.scoper.waiting_count}
-                  sx={{
-                    mx: 1,
-                    backgroundColor: '#262626',
-                    color: '#bae637',
-                    fontSize: '1.6em',
-                    fontWeight: 'bold'
-                  }}
-                />
-                <Typography sx={{ ml: 4 }}>Workers:</Typography>
-                <Chip
-                  label={queueStatus.scoper.worker_count}
-                  sx={{
-                    mx: 1,
-                    backgroundColor: '#262626',
-                    color: '#bae637',
-                    fontSize: '1.6em',
-                    fontWeight: 'bold'
-                  }}
-                />
-              </Grid>
+              <QueueStatsRow counts={queueStatus.scoper} />
             </Grid>
           </Grid>
         )}

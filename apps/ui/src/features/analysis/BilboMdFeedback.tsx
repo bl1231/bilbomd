@@ -132,13 +132,15 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
         <Grid size={{ xs: 12 }}>
           <Divider sx={{ my: 1 }} />
         </Grid>
-        <FeedbackChart
-          data={{
-            q_ranges: actualFeedback.q_ranges,
-            chi_squares_of_regions: actualFeedback.chi_squares_of_regions,
-            residuals_of_regions: actualFeedback.residuals_of_regions
-          }}
-        />
+        <Grid size={{ xs: 12 }}>
+          <FeedbackChart
+            data={{
+              q_ranges: actualFeedback.q_ranges,
+              chi_squares_of_regions: actualFeedback.chi_squares_of_regions,
+              residuals_of_regions: actualFeedback.residuals_of_regions
+            }}
+          />
+        </Grid>
         <Grid size={{ xs: 12 }}>
           <Divider sx={{ my: 1 }} />
         </Grid>

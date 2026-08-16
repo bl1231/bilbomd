@@ -32,7 +32,13 @@ const BilboMDBibTeX = () => (
       <Typography
         component='pre'
         variant='body2'
-        sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', m: 0 }}
+        sx={{
+          fontFamily: 'monospace',
+          whiteSpace: 'pre-wrap',
+          m: 0,
+          minWidth: 0,
+          overflowWrap: 'anywhere'
+        }}
       >
         {BIBTEX}
       </Typography>

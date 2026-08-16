@@ -167,11 +167,13 @@ describe('PublicJobPage', () => {
         expect(screen.getByText('BilboMD Job Status')).toBeInTheDocument()
       })
 
-      expect(screen.getByText('Job Type: BilboMD Auto')).toBeInTheDocument()
-      expect(
-        screen.getByText(`MD Engine: ${mockJobData.md_engine}`)
-      ).toBeInTheDocument()
-      expect(screen.getByText(`Public Job ID:`)).toBeInTheDocument()
+      expect(screen.getByText('Job Type:')).toBeInTheDocument()
+      expect(screen.getByText('BilboMD Auto')).toBeInTheDocument()
+      expect(screen.getByText('MD Engine:')).toBeInTheDocument()
+      expect(screen.getByText(mockJobData.md_engine!)).toBeInTheDocument()
+      expect(screen.getByText('Submitted:')).toBeInTheDocument()
+      expect(screen.getByText('Public ID:')).toBeInTheDocument()
+      expect(screen.getByText('Permalink:')).toBeInTheDocument()
       expect(screen.getByText('Progress')).toBeInTheDocument()
       expect(screen.getByText('65%')).toBeInTheDocument()
     })
@@ -258,8 +260,8 @@ describe('PublicJobPage', () => {
       renderWithProviders(<PublicJobPage />)
 
       await waitFor(() => {
-        expect(screen.getByText('Job Type: BilboMD Auto')).toBeInTheDocument()
-        expect(screen.getByText('MD Engine: n/a')).toBeInTheDocument()
+        expect(screen.getByText('BilboMD Auto')).toBeInTheDocument()
+        expect(screen.getByText('n/a')).toBeInTheDocument()
       })
     })
 
@@ -327,11 +329,9 @@ describe('PublicJobPage', () => {
           renderWithProviders(<PublicJobPage />)
 
           await waitFor(() => {
+            expect(screen.getByText(displayName)).toBeInTheDocument()
             expect(
-              screen.getByText(`Job Type: ${displayName}`)
-            ).toBeInTheDocument()
-            expect(
-              screen.getByText(`MD Engine: ${mockJobData.md_engine}`)
+              screen.getByText(mockJobData.md_engine!)
             ).toBeInTheDocument()
           })
         })

@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router'
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react'
 import { logger } from 'utils/logger'
 import {
   Alert,
@@ -8,6 +8,7 @@ import {
   Chip,
   CircularProgress,
   Grid,
+  Stack,
   Typography,
   LinearProgress,
   useTheme,
@@ -31,6 +32,33 @@ import CopyableChip from 'components/CopyableChip'
 import { BilboMDScoperTable } from 'features/scoperjob/BilboMDScoperTable'
 import { axiosInstance } from 'app/api/axios'
 import { createJobHandler } from 'features/results/handlers/jobHandlerFactory'
+import { formatDateSafe } from 'utils/dates'
+
+const MetaRow = ({
+  label,
+  children
+}: {
+  label: string
+  children: ReactNode
+}) => (
+  <Box
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      rowGap: 0.5,
+      minWidth: 0
+    }}
+  >
+    <Typography
+      component="span"
+      sx={{ width: '140px', flexShrink: 0, fontWeight: 'bold' }}
+    >
+      {label}:
+    </Typography>
+    {children}
+  </Box>
+)
 
 const getJobTypeDisplayName = (jobType: string): string => {
   try {
@@ -51,8 +79,7 @@ const handleDownload = async (publicId: string) => {
 
     if (response && response.data) {
       const contentDisposition = response.headers['content-disposition'] as
-        | string
-        | undefined
+        string | undefined
       let filename = 'results.tar.gz'
 
       if (contentDisposition) {
@@ -111,21 +138,6 @@ const PublicJobPage = () => {
     (data?.status as JobStatusEnum) || 'Pending',
     theme
   )
-
-  const formatDate = (isoString: string | Date) => {
-    const date = new Date(isoString)
-    const day = date.toLocaleDateString('en-US', { weekday: 'long' })
-    const month = date.toLocaleDateString('en-US', { month: 'long' })
-    const dayNum = date.getDate()
-    const ordinal = (n: number) => {
-      const s = ['th', 'st', 'nd', 'rd']
-      const v = n % 100
-      return n + (s[(v - 20) % 10] || s[v] || s[0]!)
-    }
-    const year = date.getFullYear()
-    const time = date.toLocaleTimeString('en-US', { hour12: false })
-    return `${day} ${month} ${ordinal(dayNum)} ${year} ${time}`
-  }
 
   if (!publicId) {
     return (
@@ -202,37 +214,35 @@ const PublicJobPage = () => {
             <Typography>BilboMD Job Status</Typography>
           </HeaderBox>
           <Item>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-              <Chip
-                label={`Job Type: ${getJobTypeDisplayName(job.jobType)}`}
-                size="small"
-                variant="outlined"
-              />
-              <Chip
-                label={`MD Engine: ${job.md_engine ?? 'n/a'}`}
-                size="small"
-                variant="outlined"
-              />
-              <Chip
-                label={`Submitted: ${job.submittedAt ? formatDate(job.submittedAt) : 'N/A'}`}
-                size="small"
-                variant="outlined"
-              />
-            </Box>
-            <Box sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
-              <span style={{ width: '140px' }}>Public Job ID:</span>
-              <CopyableChip
-                label="Public ID"
-                value={job.publicId}
-              />
-            </Box>
-            <Box sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
-              <span style={{ width: '140px' }}>Results Permalink:</span>
-              <CopyableChip
-                label="Permalink"
-                value={`${window.location.origin}/results/${job.publicId}`}
-              />
-            </Box>
+            <Stack spacing={1.5}>
+              <MetaRow label="Job Type">
+                <Typography component="span">
+                  {getJobTypeDisplayName(job.jobType)}
+                </Typography>
+              </MetaRow>
+              <MetaRow label="MD Engine">
+                <Typography component="span">
+                  {job.md_engine ?? 'n/a'}
+                </Typography>
+              </MetaRow>
+              <MetaRow label="Submitted">
+                <Typography component="span">
+                  {formatDateSafe(job.submittedAt, 'MMM d, yyyy HH:mm', 'N/A')}
+                </Typography>
+              </MetaRow>
+              <MetaRow label="Public ID">
+                <CopyableChip
+                  label="Public ID"
+                  value={job.publicId}
+                />
+              </MetaRow>
+              <MetaRow label="Permalink">
+                <CopyableChip
+                  label="Permalink"
+                  value={`${window.location.origin}/results/${job.publicId}`}
+                />
+              </MetaRow>
+            </Stack>
           </Item>
         </Grid>
 
@@ -242,7 +252,14 @@ const PublicJobPage = () => {
             <Typography>Progress</Typography>
           </HeaderBox>
           <Item sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                rowGap: 1
+              }}
+            >
               <Chip
                 label={job.status}
                 variant="outlined"
@@ -290,7 +307,7 @@ const PublicJobPage = () => {
               <LinearProgress
                 variant="determinate"
                 value={progress}
-                sx={{ flexGrow: 1, mr: 2 }}
+                sx={{ flexGrow: 1, mr: 2, minWidth: 120 }}
               />
               <Typography
                 variant="h3"

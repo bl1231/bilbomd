@@ -5,9 +5,11 @@ import {
   Button,
   CircularProgress,
   CssBaseline,
+  IconButton,
   Toolbar,
   Typography
 } from '@mui/material'
+import MenuIcon from '@mui/icons-material/Menu'
 import NightModeToggle from 'components/NightModeToggle'
 // import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
@@ -16,16 +18,16 @@ import nerscLogo from 'assets/nersc-logo.png'
 import useAuth from 'hooks/useAuth'
 
 const linkStyles = {
-  display: 'flex-grow',
   fontFamily: 'monospace',
   fontWeight: 900,
-  fontSize: '3em',
-  letterSpacing: '.3rem',
+  fontSize: { xs: '2em', sm: '3em' },
+  letterSpacing: { xs: '.15rem', sm: '.3rem' },
   background: 'linear-gradient(to top, #00c9ff, #92fe9d)', // Blue to Light Green
   WebkitBackgroundClip: 'text', // Ensures gradient is applied only to the text
   WebkitTextFillColor: 'transparent', // Makes the text transparent so gradient shows
   color: 'transparent', // Fallback for other browsers
-  textDecoration: 'none'
+  textDecoration: 'none',
+  whiteSpace: 'nowrap'
 }
 
 // interface NerscLogoProps {
@@ -146,7 +148,11 @@ const DevMode = ({ mode }: DevModeProps) => (
   </Box>
 )
 
-const Header = () => {
+interface HeaderProps {
+  onMenuClick?: () => void
+}
+
+const Header = ({ onMenuClick }: HeaderProps) => {
   const { isAuthenticated } = useAuth()
 
   const {
@@ -175,17 +181,27 @@ const Header = () => {
           sx={{ height: '70px', zIndex: (theme) => theme.zIndex.drawer + 1 }}
         >
           <Toolbar sx={{ display: 'flex', alignItems: 'center', m: 0 }}>
+            <IconButton
+              color="inherit"
+              aria-label="open navigation menu"
+              edge="start"
+              onClick={onMenuClick}
+              sx={{ display: { xs: 'inline-flex', md: 'none' }, mr: 1 }}
+            >
+              <MenuIcon />
+            </IconButton>
             <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 0 }}>
-              <Link
+              <Typography
+                component={Link}
                 to="/welcome"
-                style={linkStyles}
+                sx={linkStyles}
               >
                 BilboMD
-              </Link>
+              </Typography>
             </Box>
             <Box
               sx={{
-                display: 'flex',
+                display: { xs: 'none', sm: 'flex' },
                 alignItems: 'flex-end',
                 flexGrow: 1,
                 pt: 1.5
@@ -198,41 +214,36 @@ const Header = () => {
               )}
             </Box>
 
-            <Typography
-              variant="h5"
-              sx={{ display: { xs: 'none', sm: 'flex' }, ml: 8 }}
-            >
-              {/* {time} */}
-            </Typography>
             <Box
               sx={{
                 display: 'flex',
-                alignItems: 'flex-end',
+                alignItems: 'center',
                 justifyContent: 'flex-end',
-                flexGrow: 1
+                flexGrow: 1,
+                ml: 'auto'
               }}
             >
               <Button
                 variant="contained"
                 to="register"
                 component={Link}
-                sx={{ mx: 1, borderRadius: 2 }}
+                sx={{
+                  mx: { xs: 0.5, sm: 1 },
+                  borderRadius: 2,
+                  whiteSpace: 'nowrap'
+                }}
               >
                 Register
               </Button>
-              {/* <Button
-                variant='contained'
-                to='login'
-                component={Link}
-                sx={{ mx: 1, borderRadius: 2 }}
-              >
-                Login
-              </Button> */}
               <Button
                 variant="contained"
                 to="magicklink"
                 component={Link}
-                sx={{ mx: 1, borderRadius: 2 }}
+                sx={{
+                  mx: { xs: 0.5, sm: 1 },
+                  borderRadius: 2,
+                  whiteSpace: 'nowrap'
+                }}
               >
                 Login
               </Button>

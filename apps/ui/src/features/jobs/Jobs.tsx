@@ -32,8 +32,10 @@ import {
   FormControl,
   InputLabel,
   Select,
-  SelectChangeEvent
+  SelectChangeEvent,
+  useMediaQuery
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import { axiosInstance } from 'app/api/axios'
 import {
@@ -43,6 +45,7 @@ import {
   DialogActions
 } from '@mui/material'
 import JobDetails from './JobDetails'
+import JobCardList from './JobCardList'
 import BullMQSummary from '../bullmq/BullMQSummary'
 import NerscStatus from '../nersc/NerscStatus'
 import HeaderBox from 'components/HeaderBox'
@@ -284,6 +287,8 @@ const Jobs = () => {
   const { username, isManager, isAdmin } = useAuth()
   const token = useSelector(selectCurrentToken)
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [searchParams, setSearchParams] = useSearchParams()
 
   const typeFilter = searchParams.get('type') || 'All'
@@ -828,7 +833,16 @@ const Jobs = () => {
             </Button>
             {filteredJobCountChip(rows.length)}
 
-            {rows.length > 0 ? (
+            {rows.length > 0 && isMobile ? (
+              <JobCardList
+                rows={rows.map((row) => ({
+                  ...row,
+                  pipelineName:
+                    jobTypeToPipelineName[row.jobType] ?? row.jobType
+                }))}
+                showUsername={isAdmin || isManager}
+              />
+            ) : rows.length > 0 ? (
               <Box
                 sx={{
                   display: 'flex',
