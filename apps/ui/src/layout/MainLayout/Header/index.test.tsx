@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { Provider } from 'react-redux'
 import { configureStore, Middleware } from '@reduxjs/toolkit'
@@ -165,6 +165,35 @@ describe('Header Component', () => {
     expect(screen.getByText('DEVELOPMENT')).toBeInTheDocument()
     expect(screen.getByAltText('NERSC Logo')).toBeInTheDocument()
     expect(screen.getByText(/testUser/)).toBeInTheDocument()
+  })
+
+  it('calls onMenuClick when the hamburger menu button is clicked', () => {
+    const successState: ConfigQueryResult = {
+      data: mockConfig,
+      error: undefined,
+      isLoading: false,
+      isFetching: false,
+      isSuccess: true,
+      isError: false,
+      isUninitialized: false,
+      status: 'fulfilled',
+      refetch: vi.fn().mockResolvedValue({
+        data: mockConfig,
+        error: undefined,
+        isLoading: false,
+        isSuccess: true,
+        isError: false,
+        status: 'fulfilled'
+      })
+    }
+
+    vi.mocked(useGetConfigsQuery).mockReturnValue(successState)
+    const onMenuClick = vi.fn()
+    renderWithProvider(<Header onMenuClick={onMenuClick} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: /open navigation menu/i })
+    )
+    expect(onMenuClick).toHaveBeenCalledTimes(1)
   })
 
   afterEach(() => {
