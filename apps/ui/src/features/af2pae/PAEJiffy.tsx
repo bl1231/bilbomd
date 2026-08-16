@@ -385,7 +385,7 @@ const Alphafold2PAEJiffy = () => {
                                 <br />
                                 {values && (
                                   <>
-                                    <TableContainer sx={{ width: '400px' }}>
+                                    <TableContainer sx={{ width: '100%', maxWidth: '400px' }}>
                                       <Table aria-label="simple table">
                                         <TableBody>
                                           <TableRow>
@@ -595,7 +595,7 @@ const Alphafold2PAEJiffy = () => {
                           value={values.leiden_resolution}
                         />
                         {isSubmitting && (
-                          <Box sx={{ mt: 1, width: '420px' }}>
+                          <Box sx={{ mt: 1, width: '100%', maxWidth: '420px' }}>
                             <LinearProgress />
                           </Box>
                         )}

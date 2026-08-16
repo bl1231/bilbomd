@@ -17,6 +17,14 @@ const menuGroups: NavMenuItem[][] = [
       path: '/dashboard/jobs',
       onclick: jobsOnClick,
       roles: ['user', 'manager']
+    },
+    {
+      text: 'PAE Jiffy™',
+      icon: <SubjectOutlined />,
+      path: '/jiffy/pae',
+      onclick: vi.fn(),
+      roles: ['user'],
+      hideOnMobile: true
     }
   ],
   [
@@ -95,6 +103,15 @@ describe('NavDrawer', () => {
       '.MuiListItemButton-root'
     )
     expect(adminButton).not.toHaveStyle({ display: 'none' })
+  })
+
+  it('omits hideOnMobile items from the mobile drawer but keeps them on desktop', () => {
+    renderNavDrawer({ mobileOpen: true })
+    // Present once (desktop drawer) instead of twice
+    expect(screen.getAllByText('PAE Jiffy™')).toHaveLength(1)
+    expect(
+      getMobileDrawer().queryByText('PAE Jiffy™')
+    ).not.toBeInTheDocument()
   })
 
   it('calls onMobileClose when the mobile drawer backdrop is clicked', () => {

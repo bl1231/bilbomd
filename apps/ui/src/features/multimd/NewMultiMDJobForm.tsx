@@ -186,7 +186,7 @@ const NewMultiMDJobForm: React.FC = () => {
                       container
                       sx={{ flexDirection: 'column' }}
                     >
-                      <Grid sx={{ my: 2, width: '520px' }}>
+                      <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>
                         <Field
                           fullWidth
                           label="Title"
@@ -212,7 +212,7 @@ const NewMultiMDJobForm: React.FC = () => {
                       </Divider>
                       <Grid>{isLoading && <CircularProgress />}</Grid>
                       {isSubmitting && (
-                        <Box sx={{ my: 1, width: '520px' }}>
+                        <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                           <LinearProgress />
                         </Box>
                       )}

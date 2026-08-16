@@ -19,6 +19,8 @@ export interface NavMenuItem {
   onclick: () => void
   roles: string[]
   endIcon?: React.ReactNode
+  /** Omit this item from the mobile (temporary) drawer */
+  hideOnMobile?: boolean
 }
 
 interface NavDrawerProps {
@@ -37,9 +39,18 @@ const NavDrawer = ({
   const location = useLocation()
   const theme = useTheme()
 
-  const buttonContent = (closeOnNavigate: boolean) => (
+  const buttonContent = (closeOnNavigate: boolean) => {
+    const groups = closeOnNavigate
+      ? menuGroups
+          .map((group) => group.filter((item) => !item.hideOnMobile))
+          .filter((group) => group.length > 0)
+      : menuGroups
+    return buttonGroups(groups, closeOnNavigate)
+  }
+
+  const buttonGroups = (groups: NavMenuItem[][], closeOnNavigate: boolean) => (
     <>
-      {menuGroups.map((group, groupIndex) => (
+      {groups.map((group, groupIndex) => (
         <React.Fragment key={groupIndex}>
           {group.map((item) => (
             <ListItem
@@ -68,7 +79,7 @@ const NavDrawer = ({
               </ListItemButton>
             </ListItem>
           ))}
-          {groupIndex < menuGroups.length - 1 && <Divider />}
+          {groupIndex < groups.length - 1 && <Divider />}
         </React.Fragment>
       ))}
     </>

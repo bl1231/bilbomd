@@ -97,14 +97,16 @@ export default function ClippedDrawer() {
       icon: <AutoAwesome />,
       path: '/jiffy/inp',
       onclick: () => navigate('jiffy/inp'),
-      roles: ['user', 'manager']
+      roles: ['user', 'manager'],
+      hideOnMobile: true
     },
     {
       text: 'PAE Jiffy™',
       icon: <AutoAwesome />,
       path: '/jiffy/pae',
       onclick: () => navigate('jiffy/pae'),
-      roles: ['user']
+      roles: ['user'],
+      hideOnMobile: true
     }
   ]
 

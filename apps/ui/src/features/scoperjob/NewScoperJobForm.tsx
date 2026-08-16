@@ -235,10 +235,12 @@ const NewScoperJobForm = ({
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
+                          flexWrap: 'wrap',
+                          rowGap: 1,
                           my: 1
                         }}
                       >
-                        <Box sx={{ minWidth: '520px' }}>
+                        <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
                           <Field
                             fullWidth
                             label="Title"
@@ -256,7 +258,7 @@ const NewScoperJobForm = ({
                             value={values.title || ''}
                           />
                         </Box>
-                        <Box sx={{ ml: 8, minWidth: 'fit-content' }}>
+                        <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
                           <Button
                             variant={useExampleData ? 'outlined' : 'contained'}
                             onClick={() => {
@@ -288,7 +290,7 @@ const NewScoperJobForm = ({
                               : 'Load Example Data'}
                           </Button>
                         </Box>
-                        <Box sx={{ ml: 2, minWidth: 'fit-content' }}>
+                        <Box sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}>
                           <Button
                             variant="contained"
                             href={'/api/v1/public/examples/scoper'}
@@ -395,7 +397,7 @@ const NewScoperJobForm = ({
                         </Box>
                       </Grid>
 
-                      <Grid sx={{ my: 2, width: '520px' }}>
+                      <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>
                         <Alert
                           severity="info"
                           sx={{
@@ -425,7 +427,7 @@ const NewScoperJobForm = ({
                       </Grid>
 
                       {isSubmitting && (
-                        <Box sx={{ my: 1, width: '520px' }}>
+                        <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                           <LinearProgress />
                         </Box>
                       )}

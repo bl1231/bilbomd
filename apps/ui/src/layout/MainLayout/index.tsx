@@ -132,14 +132,16 @@ export default function ClippedDrawer() {
       icon: <AutoAwesome />,
       path: '/dashboard/jobs/constinp',
       onclick: () => navigate('dashboard/jobs/constinp'),
-      roles: ['user', 'manager']
+      roles: ['user', 'manager'],
+      hideOnMobile: true
     },
     {
       text: 'PAE Jiffy™',
       icon: <AutoAwesome />,
       path: '/dashboard/af2pae',
       onclick: () => navigate('dashboard/af2pae'),
-      roles: ['user']
+      roles: ['user'],
+      hideOnMobile: true
     }
   ]
 

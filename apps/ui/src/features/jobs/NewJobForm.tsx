@@ -260,10 +260,12 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
+                        flexWrap: 'wrap',
+                        rowGap: 1,
                         my: 1
                       }}
                     >
-                      <Box sx={{ minWidth: '520px' }}>
+                      <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
                         <Field
                           label="Title"
                           name="title"
@@ -281,7 +283,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           sx={{ width: '100%' }}
                         />
                       </Box>
-                      <Box sx={{ ml: 8, minWidth: 'fit-content' }}>
+                      <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
                         <Button
                           variant={useExampleData ? 'outlined' : 'contained'}
                           onClick={() => {
@@ -343,7 +345,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             : 'Load Example Data'}
                         </Button>
                       </Box>
-                      <Box sx={{ ml: 2, minWidth: 'fit-content' }}>
+                      <Box sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}>
                         <Button
                           variant="contained"
                           href={
@@ -377,7 +379,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     )}
 
                     {/* MD Engine selection */}
-                    <Grid sx={{ width: '520px' }}>
+                    <Grid sx={{ width: '100%', maxWidth: '520px' }}>
                       <MdEngineField
                         value={values.md_engine as 'charmm' | 'openmm'}
                         onChange={(val) => {
@@ -419,7 +421,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            width: '520px'
+                            width: '100%', maxWidth: '520px'
                           }}
                         >
                           <Grid>
@@ -449,7 +451,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            width: '520px'
+                            width: '100%', maxWidth: '520px'
                           }}
                         >
                           <Grid>
@@ -483,7 +485,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            width: '520px'
+                            width: '100%', maxWidth: '520px'
                           }}
                         >
                           <Grid>
@@ -573,7 +575,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        width: '520px'
+                        width: '100%', maxWidth: '520px'
                       }}
                     >
                       <Grid>
@@ -602,7 +604,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        width: '520px'
+                        width: '100%', maxWidth: '520px'
                       }}
                     >
                       <Alert severity="info">
@@ -625,7 +627,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        width: '520px'
+                        width: '100%', maxWidth: '520px'
                       }}
                     >
                       <Grid>
@@ -742,7 +744,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Grid>
                     </Grid>
                     {saxsData.length > 0 && guinierRegion && (
-                      <Grid sx={{ width: '520px' }}>
+                      <Grid sx={{ width: '100%', maxWidth: '520px' }}>
                         <SAXSGuinierPlot
                           data={saxsData}
                           qmin={guinierRegion.qmin}
@@ -750,7 +752,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         />
                       </Grid>
                     )}
-                    <Grid sx={{ display: 'flex', width: '520px' }}>
+                    <Grid sx={{ display: 'flex', width: '100%', maxWidth: '520px' }}>
                       <Typography>
                         <b>Rg Min</b> and <b>Rg Max</b> will be calculated
                         automatically from the selected SAXS data file. Feel
@@ -758,16 +760,16 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Typography>
                     </Grid>
                     {isLoading && (
-                      <Box sx={{ my: 1, width: '520px' }}>
+                      <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                         <LinearProgress />
                       </Box>
                     )}
                     {autoRgError && (
-                      <Box sx={{ my: 1, width: '520px' }}>
+                      <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                         <Alert severity="error">{autoRgError}</Alert>
                       </Box>
                     )}
-                    <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
+                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
                       <Field
                         label="Rg Min"
                         fullWidth
@@ -786,7 +788,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }
                       />
                     </Grid>
-                    <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
+                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
                       <Field
                         label="Rg Max"
                         fullWidth
@@ -809,7 +811,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       const warning = getRgMaxWarning(values.rg, values.rg_max)
                       if (!warning) return null
                       return (
-                        <Grid sx={{ mb: 2, width: '520px' }}>
+                        <Grid sx={{ mb: 2, width: '100%', maxWidth: '520px' }}>
                           <Alert severity="warning">
                             Your <b>Rg Max</b> ({warning.rgMax} Å) is{' '}
                             {warning.ratio}× your measured Rg ({warning.rg} Å).
@@ -825,7 +827,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Grid>
                       )
                     })()}
-                    <Grid sx={{ my: 2, display: 'flex', width: '520px' }}>
+                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
                       <Field
                         name="num_conf"
                         as={TextField}
@@ -833,7 +835,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         variant="outlined"
                         id="num_conf"
                         select
-                        sx={{ width: '520px' }}
+                        sx={{ width: '100%', maxWidth: '520px' }}
                         onChange={handleChange}
                         onBlur={handleBlur}
                         disabled={isSubmitting || values.md_engine === 'openmm'}
@@ -873,7 +875,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Field>
                     </Grid>
                     {isSubmitting && (
-                      <Box sx={{ width: '520px' }}>
+                      <Box sx={{ width: '100%', maxWidth: '520px' }}>
                         <LinearProgress />
                       </Box>
                     )}

@@ -237,7 +237,7 @@ const ResubmitAutoJobForm = () => {
                         onStatusCheck={handleStatusCheck}
                       />
                     )}
-                    <Grid sx={{ my: 2, width: '520px' }}>
+                    <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>
                       <Field
                         fullWidth
                         label="Title"
@@ -397,7 +397,7 @@ const ResubmitAutoJobForm = () => {
                     </Grid>
 
                     {isSubmitting && (
-                      <Box sx={{ my: 1, width: '520px' }}>
+                      <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                         <LinearProgress />
                       </Box>
                     )}

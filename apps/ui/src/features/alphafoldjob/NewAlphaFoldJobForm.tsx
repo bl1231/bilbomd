@@ -260,7 +260,13 @@ const EntitiesFieldArray = ({
                 return (
                   <Box
                     key={index}
-                    sx={{ mb: 2, display: 'flex', alignItems: 'start' }}
+                    sx={{
+                      mb: 2,
+                      display: 'flex',
+                      alignItems: 'start',
+                      flexWrap: { xs: 'wrap', md: 'nowrap' },
+                      rowGap: 1
+                    }}
                   >
                     {/* Molecule Type */}
                     <TextField
@@ -643,11 +649,13 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
+                        flexWrap: 'wrap',
+                        rowGap: 1,
                         my: 1
                       }}
                     >
                       {/* Title */}
-                      <Box sx={{ minWidth: '520px' }}>
+                      <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
                         <Field
                           fullWidth
                           label="Title"
@@ -665,7 +673,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           value={values.title || ''}
                         />
                       </Box>
-                      <Box sx={{ ml: 8, minWidth: 'fit-content' }}>
+                      <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
                         <Button
                           variant={useExampleData ? 'outlined' : 'contained'}
                           onClick={() => {
@@ -727,7 +735,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             : 'Load Example Data'}
                         </Button>
                       </Box>
-                      <Box sx={{ ml: 2, minWidth: 'fit-content' }}>
+                      <Box sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}>
                         <Button
                           variant="contained"
                           href={'/api/v1/public/examples/af'}
@@ -820,7 +828,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
                     {/* Progress Bar */}
                     {isSubmitting && (
-                      <Box sx={{ my: 1, width: '520px' }}>
+                      <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                         <LinearProgress />
                       </Box>
                     )}
