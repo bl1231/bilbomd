@@ -246,6 +246,7 @@ const SingleJobPage = () => {
             <Tooltip title="Back to jobs list">
               <IconButton
                 aria-label="back to jobs list"
+                color="primary"
                 onClick={() => navigate(`/dashboard/jobs${returnParams}`)}
               >
                 <KeyboardBackspaceIcon />
