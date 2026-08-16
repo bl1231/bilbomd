@@ -37,9 +37,25 @@ const CopyableChip: React.FC<CopyableChipProps> = ({ label, value, url }) => {
         label={
           <Box
             component="span"
-            sx={{ display: 'inline-flex', alignItems: 'center' }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              minWidth: 0,
+              maxWidth: '100%'
+            }}
           >
-            <span style={{ marginRight: '6px' }}>{value}</span>
+            <Box
+              component="span"
+              sx={{
+                mr: '6px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: 0
+              }}
+            >
+              {value}
+            </Box>
             <Tooltip title={`Copy ${label}`}>
               <IconButton
                 size="small"
@@ -70,7 +86,8 @@ const CopyableChip: React.FC<CopyableChipProps> = ({ label, value, url }) => {
           fontSize: '0.80rem',
           fontFamily: 'monospace',
           borderColor: 'primary.main',
-          backgroundColor: green[100]
+          backgroundColor: green[100],
+          maxWidth: '100%'
         }}
       />
     </>

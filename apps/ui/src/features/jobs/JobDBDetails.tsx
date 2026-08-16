@@ -81,7 +81,9 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 0.5
         }}
       >
         <Typography sx={{ fontWeight: 'bold' }}>UUID:</Typography>
@@ -96,7 +98,9 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
             sx={{
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 0.5
             }}
           >
             <Typography sx={{ fontWeight: 'bold' }}>Public UUID:</Typography>
@@ -115,7 +119,12 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
         render ? (
           <Box
             key={label}
-            sx={{ display: 'flex', justifyContent: 'space-between' }}
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 0.5
+            }}
           >
             <Typography sx={{ fontWeight: 'bold' }}>{label}:</Typography>
             {render()}
@@ -124,10 +133,17 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
           value !== undefined && (
             <Box
               key={label}
-              sx={{ display: 'flex', justifyContent: 'space-between' }}
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 0.5
+              }}
             >
               <Typography sx={{ fontWeight: 'bold' }}>{label}:</Typography>
-              <Typography>
+              <Typography
+                sx={{ minWidth: 0, textAlign: 'right', overflowWrap: 'anywhere' }}
+              >
                 {(() => {
                   if (value instanceof Date) {
                     return formatDateSafe(value)

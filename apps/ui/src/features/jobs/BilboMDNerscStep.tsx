@@ -23,9 +23,16 @@ const BilboMDNerscStep = ({
   return (
     <Grid
       key={stepName}
-      sx={{ m: 0.5, display: 'flex', alignItems: 'center' }}
+      sx={{
+        m: 0.5,
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        columnGap: 1,
+        rowGap: 0.5
+      }}
     >
-      <Grid>
+      <Grid sx={{ flexShrink: 0 }}>
         <Tooltip
           title={tooltipMessage}
           arrow
@@ -59,13 +66,8 @@ const BilboMDNerscStep = ({
           />
         </Tooltip>
       </Grid>
-      <Grid>
-        <Typography
-          variant="body2"
-          sx={{ ml: 1 }}
-        >
-          {stepMessage || 'Waiting'}
-        </Typography>
+      <Grid sx={{ minWidth: 0, flex: '1 1 220px' }}>
+        <Typography variant="body2">{stepMessage || 'Waiting'}</Typography>
       </Grid>
     </Grid>
   )
