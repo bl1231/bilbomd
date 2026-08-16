@@ -31,7 +31,8 @@ const sendJobCompleteEmail = (
   url: string,
   jobid: string,
   title: string,
-  isError: boolean
+  isError: boolean,
+  resultsToken?: string
 ) => {
   logger.info(`Sending job complete email, error state is: ${isError}`)
 
@@ -56,6 +57,12 @@ const sendJobCompleteEmail = (
     })
   )
 
+  // The tokened results link works without logging in (issue #978); jobs
+  // created before results_token existed fall back to the dashboard link.
+  const resultsUrl = resultsToken
+    ? `${url}/results/${resultsToken}`
+    : `${url}/dashboard/jobs/${jobid}`
+
   const mail = {
     from: user,
     to: email,
@@ -64,7 +71,8 @@ const sendJobCompleteEmail = (
     context: {
       jobid,
       url,
-      title
+      title,
+      resultsUrl
     }
   }
 

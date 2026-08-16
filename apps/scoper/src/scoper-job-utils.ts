@@ -100,7 +100,8 @@ const handleJobEmailNotification = async (
         config.bilbomdUrl,
         DBjob._id.toString(),
         DBjob.title,
-        false
+        false,
+        DBjob.results_token
       )
       logger.info(`Email notification sent to ${user.email}`)
       await MQjob.log(`Email notification sent to ${user.email}`)

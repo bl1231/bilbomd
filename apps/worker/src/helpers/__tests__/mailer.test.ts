@@ -20,7 +20,33 @@ describe('sendJobCompleteEmail', () => {
     const mailArg = globalThis.__sendMailMock.mock.calls[0][0]
     expect(mailArg.to).toBe('test@example.com')
     expect(mailArg.template).toBe('jobcomplete')
-    expect(mailArg.context).toEqual({ jobid: 'jobid123', url: 'http://url', title: 'Test Job' })
+    expect(mailArg.context).toEqual({
+      jobid: 'jobid123',
+      url: 'http://url',
+      title: 'Test Job',
+      resultsUrl: 'http://url/dashboard/jobs/jobid123'
+    })
+  })
+
+  it('links to the tokened public results page when a results token is provided', () => {
+    sendJobCompleteEmail(
+      'test@example.com',
+      'http://url',
+      'jobid123',
+      'Test Job',
+      false,
+      'aaaabbbb-cccc-dddd-eeee-ffff00001111'
+    )
+    const mailArg = globalThis.__sendMailMock.mock.calls[0][0]
+    expect(mailArg.context.resultsUrl).toBe(
+      'http://url/results/aaaabbbb-cccc-dddd-eeee-ffff00001111'
+    )
+  })
+
+  it('falls back to the dashboard link when no results token exists', () => {
+    sendJobCompleteEmail('test@example.com', 'http://url', 'jobid123', 'Test Job', false)
+    const mailArg = globalThis.__sendMailMock.mock.calls[0][0]
+    expect(mailArg.context.resultsUrl).toBe('http://url/dashboard/jobs/jobid123')
   })
 
   it('calls sendMail with correct template for error', () => {

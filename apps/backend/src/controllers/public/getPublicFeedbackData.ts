@@ -1,9 +1,11 @@
 import { Request, Response } from 'express'
 import { logger } from '../../middleware/loggers.js'
 import { Job } from '@bilbomd/mongodb-schema'
+import { publicJobQuery } from './utils/publicJobQuery.js'
 
 const getPublicFeedbackData = async (req: Request, res: Response) => {
-  const { publicId } = req.params
+  const { publicId: rawPublicId } = req.params
+  const publicId = Array.isArray(rawPublicId) ? rawPublicId[0] : rawPublicId
 
   if (!publicId) {
     res.status(400).json({ message: 'publicId is required.' })
@@ -11,16 +13,12 @@ const getPublicFeedbackData = async (req: Request, res: Response) => {
   }
 
   try {
-    // Only allow access to anonymous jobs via publicId
-    const job = await Job.findOne({
-      public_id: publicId,
-      access_mode: 'anonymous'
-    }).exec()
+    const job = await Job.findOne(publicJobQuery(publicId)).exec()
 
     if (!job) {
       res
         .status(404)
-        .json({ message: `No anonymous job matches publicId ${publicId}.` })
+        .json({ message: `No job matches publicId ${publicId}.` })
       return
     }
 

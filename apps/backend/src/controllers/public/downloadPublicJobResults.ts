@@ -4,40 +4,29 @@ import fs from 'fs-extra'
 import { Job } from '@bilbomd/mongodb-schema'
 import { logger } from '../../middleware/loggers.js'
 import { getEnvVar } from '../../config/config.js'
+import { publicJobQuery } from './utils/publicJobQuery.js'
 
 const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const downloadPublicJobResults = async (req: Request, res: Response) => {
   try {
-    const { publicId } = req.params
+    const { publicId: rawPublicId } = req.params
+    const publicId = Array.isArray(rawPublicId) ? rawPublicId[0] : rawPublicId
 
-    const job = await Job.findOne({
-      public_id: publicId,
-      access_mode: 'anonymous'
-    })
-      .lean()
-      .exec()
+    const job = await Job.findOne(publicJobQuery(publicId)).lean().exec()
 
     if (!job) {
       logger.warn(`downloadPublicJobResults: no job for publicId=${publicId}`)
       return res
         .status(404)
-        .json({ message: `No anonymous job matches publicId ${publicId}.` })
+        .json({ message: `No job matches publicId ${publicId}.` })
     }
 
-    if (!job.public_id) {
-      logger.warn(
-        `downloadPublicJobResults: job exists but public_id is missing for publicId=${publicId}`
-      )
-      return res
-        .status(404)
-        .json({ message: `Job found but public_id is invalid.` })
-    }
-
-    const { uuid, public_id } = job
+    const { uuid } = job
     const outputFolder = path.join(uploadFolder, uuid)
     const uuidPrefix = uuid.split('-')[0]
-    const pubidPrefix = public_id.split('-')[0]
+    // publicId matched either public_id or results_token, so it names this job
+    const pubidPrefix = publicId.split('-')[0]
     const resultsFilenameUUID = `results-${uuidPrefix}.tar.gz`
     const resultsFilenamePubID = `results-${pubidPrefix}.tar.gz`
 

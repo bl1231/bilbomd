@@ -54,6 +54,7 @@ type FakeDBJob = {
   time_started?: Date
   time_completed?: Date
   user: null | string | object
+  results_token?: string
   save: ReturnType<typeof vi.fn>
 }
 
@@ -71,6 +72,7 @@ const makeDBJob = (overrides: Partial<FakeDBJob> = {}): FakeDBJob => ({
   time_started: undefined,
   time_completed: undefined,
   user: null,
+  results_token: 'scoper-results-token',
   save: mockSave,
   ...overrides
 })
@@ -122,7 +124,8 @@ describe('cleanupJob', () => {
       'http://localhost:3000',
       expect.any(String),
       'Test Scoper Job',
-      false
+      false,
+      'scoper-results-token'
     )
   })
 
@@ -151,7 +154,8 @@ describe('cleanupJob', () => {
       expect.any(String),
       expect.any(String),
       expect.any(String),
-      false
+      false,
+      'scoper-results-token'
     )
   })
 
