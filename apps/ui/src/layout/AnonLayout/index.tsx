@@ -138,7 +138,7 @@ export default function ClippedDrawer() {
       }}
     >
       <Box sx={{ display: 'flex', mb: 8 }}>
-        <Header onMenuClick={() => setMobileNavOpen(true)} />
+        <Header onMenuClick={() => setMobileNavOpen((open) => !open)} />
       </Box>
 
       <Box sx={{ display: 'flex', flexGrow: 1 }}>

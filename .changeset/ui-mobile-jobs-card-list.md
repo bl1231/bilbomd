@@ -1,0 +1,5 @@
+---
+'@bilbomd/ui': minor
+---
+
+Improve UI for mobile devices (#967, part 2: jobs list). Below the md breakpoint the jobs DataGrid is replaced by a tappable status card list: each card shows a color-coded status chip, title, pipeline/engine/relative-time metadata, and a progress bar for running jobs. Active jobs sort first and tapping a card opens the job detail page. Also fixes the mobile hamburger button to toggle (not just open) the nav drawer. Desktop keeps the full DataGrid.
