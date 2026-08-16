@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, createRef } from 'react'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
+import MobileControlsShield from './MobileControlsShield'
 import { axiosInstance } from 'app/api/axios'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from '../../slices/authSlice'
@@ -99,6 +102,11 @@ const MolstarViewer = ({
   constraints
 }: MolstarViewerProps) => {
   const token = useSelector(selectCurrentToken)
+  const theme = useTheme()
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'))
+  // On touch devices the Molstar canvas captures pan/zoom gestures, which
+  // hijacks page scrolling — keep an overlay in place until the user opts in.
+  const [mobileControlsEnabled, setMobileControlsEnabled] = useState(false)
   const [ensembleVisibility, setEnsembleVisibility] = useState<
     Record<number, boolean>
   >({})
@@ -524,14 +532,23 @@ const MolstarViewer = ({
             domainColorActive={isDomainColor}
             onColorByDomain={toggleDomainColor}
           />
-          <div
-            ref={parent}
-            style={{
-              width: '100%',
-              height: '600px',
-              position: 'relative'
-            }}
-          />
+          <Box sx={{ position: 'relative', width: '100%' }}>
+            <div
+              ref={parent}
+              style={{
+                width: '100%',
+                height: isSmallScreen ? '420px' : '600px',
+                position: 'relative'
+              }}
+            />
+            {isSmallScreen && (
+              <MobileControlsShield
+                enabled={mobileControlsEnabled}
+                onEnable={() => setMobileControlsEnabled(true)}
+                onDisable={() => setMobileControlsEnabled(false)}
+              />
+            )}
+          </Box>
         </Box>
       </Grid>
     </Item>

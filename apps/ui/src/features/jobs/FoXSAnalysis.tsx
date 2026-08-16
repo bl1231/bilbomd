@@ -229,7 +229,7 @@ const FoXSAnalysis = ({
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '100vh'
+          padding: '64px 0'
         }}
       >
         <CircularProgress />
@@ -272,7 +272,7 @@ const FoXSAnalysis = ({
         container
         spacing={2}
       >
-        <Grid size={{ xs: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FoXSChart
             title={`Original Model`}
             data={origData}
@@ -286,7 +286,7 @@ const FoXSAnalysis = ({
             excludedRanges={origExcludedRanges}
           />
         </Grid>
-        <Grid size={{ xs: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           {hasEnsemble && ensembleData.length ? (
             <FoXSEnsembleCharts
               combinedData={ensembleData}
