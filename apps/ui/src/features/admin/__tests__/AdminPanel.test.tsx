@@ -16,7 +16,6 @@ vi.mock('slices/adminApiSlice', async () => {
             completed: 5,
             delayed: 0,
             failed: 0,
-            paused: 0,
             prioritized: 0,
             waiting: 2,
             'waiting-children': 0

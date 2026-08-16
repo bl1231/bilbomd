@@ -16,7 +16,6 @@ interface QueueInfo {
     completed: number
     delayed: number
     failed: number
-    paused: number
     prioritized: number
     waiting: number
     ['waiting-children']: number
@@ -56,7 +55,6 @@ const QueueOverviewPanel = () => {
       )
     },
     { field: 'active', headerName: 'Active', type: 'number', width: 110 },
-    { field: 'paused', headerName: 'Paused', type: 'number', width: 110 },
     { field: 'waiting', headerName: 'Waiting', type: 'number', width: 110 },
     { field: 'completed', headerName: 'Completed', type: 'number', width: 110 },
     { field: 'failed', headerName: 'Failed', type: 'number', width: 110 },
@@ -86,7 +84,6 @@ const QueueOverviewPanel = () => {
       name: queue.name,
       isPaused: queue.isPaused,
       active: queue.jobCounts.active,
-      paused: queue.jobCounts.paused,
       waiting: queue.jobCounts.waiting,
       completed: queue.jobCounts.completed,
       failed: queue.jobCounts.failed,

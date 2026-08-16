@@ -9,7 +9,6 @@ interface QueueInfo {
     completed: number
     delayed: number
     failed: number
-    paused: number
     prioritized: number
     waiting: number
     ['waiting-children']: number

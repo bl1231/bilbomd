@@ -80,16 +80,16 @@ importers:
         version: link:../../packages/mongodb-schema
       '@bull-board/api':
         specifier: ^8.6.1
-        version: 8.6.1(@bull-board/ui@8.6.1(bullmq@5.81.3(redis@6.2.1)))(bullmq@5.81.3(redis@6.2.1))
+        version: 8.6.1(@bull-board/ui@8.6.1(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1)))(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1))
       '@bull-board/express':
         specifier: ^8.6.1
-        version: 8.6.1(bullmq@5.81.3(redis@6.2.1))
+        version: 8.6.1(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1))
       axios:
         specifier: ^1.19.0
         version: 1.19.0(supports-color@5.5.0)
       bullmq:
-        specifier: ^5.81.3
-        version: 5.81.3(redis@6.2.1)
+        specifier: ^6.1.1
+        version: 6.1.1(ioredis@6.0.0)(redis@6.2.1)
       connect-redis:
         specifier: ^10.0.0
         version: 10.0.0(express-session@1.19.0)(redis@6.2.1)
@@ -124,8 +124,8 @@ importers:
         specifier: ^4.7.9
         version: 4.7.9
       ioredis:
-        specifier: 5.11.1
-        version: 5.11.1
+        specifier: 6.0.0
+        version: 6.0.0
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -233,8 +233,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/mongodb-schema
       bullmq:
-        specifier: ^5.81.3
-        version: 5.81.3(redis@6.2.1)
+        specifier: ^6.1.1
+        version: 6.1.1(ioredis@6.0.0)(redis@6.2.1)
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -245,8 +245,8 @@ importers:
         specifier: ^4.7.9
         version: 4.7.9
       ioredis:
-        specifier: 5.11.1
-        version: 5.11.1
+        specifier: 6.0.0
+        version: 6.0.0
       moment-timezone:
         specifier: ^0.6.3
         version: 0.6.3
@@ -445,8 +445,8 @@ importers:
         specifier: ^4.5.0
         version: 4.5.0(axios@1.19.0)
       bullmq:
-        specifier: ^5.81.3
-        version: 5.81.3(redis@6.2.1)
+        specifier: ^6.1.1
+        version: 6.1.1(ioredis@6.0.0)(redis@6.2.1)
       csv-parser:
         specifier: ^3.2.1
         version: 3.2.1
@@ -466,8 +466,8 @@ importers:
         specifier: ^4.7.9
         version: 4.7.9
       ioredis:
-        specifier: 5.11.1
-        version: 5.11.1
+        specifier: 6.0.0
+        version: 6.0.0
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -993,8 +993,8 @@ packages:
       '@types/node':
         optional: true
 
-  '@ioredis/commands@1.10.0':
-    resolution: {integrity: sha512-UmeW7z4LfctwoQ5wkhVzgq8tXkreED2xZGpX+Bg+zA+WJFZCT6c062AfCK/Dfk81xZnnwdhJCUMkitihRaoC2Q==}
+  '@ioredis/commands@2.0.0':
+    resolution: {integrity: sha512-vrx0AE/T0h7cRZwfo1M39Cr+ZhZrkf0V8mQN75wucKCxCLD9l/VX6no3gFvrLqD1IlG/1LtzWovqEw3t0Vr9zg==}
 
   '@isaacs/cliui@9.0.0':
     resolution: {integrity: sha512-AokJm4tuBHillT+FpMtxQ60n8ObyXBatq7jD2/JA9dxbDDokKQm8KMht5ibGzLVU9IJDIKK4TPKgMHEYMn3lMg==}
@@ -2143,12 +2143,21 @@ packages:
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
 
-  bullmq@5.81.3:
-    resolution: {integrity: sha512-Q7uEH2G92rVjX3Yl2qw3+6VEO15uxehC6DfeTHQBQTehddcRDSDuquD9zuvDjxiCffXsPUaBwrRlvlbVcgKs7g==}
-    engines: {node: '>=12.22.0'}
+  bullmq@6.1.1:
+    resolution: {integrity: sha512-LOJfFyuzRqRqdz+ZaOLdduYQKSnbkwbMmLXwZViTrfTLbeAF5MpmEk1Pr6uTmGYQ2+e6rjGc0dMOUvSp9+4swg==}
+    engines: {node: '>=14.17.0'}
     peerDependencies:
+      bullmq-otel: '>=2.0.0'
+      ioredis: '>=5.0.0'
+      pg: '>=8.0.0'
       redis: '>=5.0.0'
     peerDependenciesMeta:
+      bullmq-otel:
+        optional: true
+      ioredis:
+        optional: true
+      pg:
+        optional: true
       redis:
         optional: true
 
@@ -2381,10 +2390,9 @@ packages:
     resolution: {integrity: sha512-AdmX6xUzdNASswsFtmwSt7Vj8po9IuqXm0UXz7QKPuEUmPB4XyjGfaAr2PSuELMwkRMVH1EpIkX5bTZGRB3eCA==}
     engines: {node: '>=10'}
 
-  cron-parser@4.9.0:
-    resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
-    engines: {node: '>=12.0.0'}
-    deprecated: v4 is no longer maintained, upgrade to v5
+  cron-parser@5.8.1:
+    resolution: {integrity: sha512-fVw5nGEkTVmiPKo3fY0j28Thq6jR00VKWyL22llWrsbII4sDHI+8Kx1kcL+QzGQJfCfk64bbMotrgTZRpzYpLQ==}
+    engines: {node: '>=18'}
 
   cron@4.4.0:
     resolution: {integrity: sha512-fkdfq+b+AHI4cKdhZlppHveI/mgz2qpiYxcm+t5E5TsxX7QrLS1VE0+7GENEk9z0EeGPcpSciGv6ez24duWhwQ==}
@@ -3091,9 +3099,9 @@ packages:
     peerDependencies:
       fp-ts: ^2.5.0
 
-  ioredis@5.11.1:
-    resolution: {integrity: sha512-ehuGcf94bQXhfagULNXrJdfnWO38v070jxSx/qE87Kjzmu2fU7ro5EFAb+OPituLqgfyuQaym5DlrNydW2sJ9A==}
-    engines: {node: '>=12.22.0'}
+  ioredis@6.0.0:
+    resolution: {integrity: sha512-f+Dtubxfpf6KYFq7WVXJoOLn0bk4TJrMrN9SzeE+jrWrCWj7XX3fA6vkryafhADX+GMymRxgDJDOI33COkJc0w==}
+    engines: {node: '>=20.0.0'}
 
   ip-address@10.5.0:
     resolution: {integrity: sha512-R5SnVLJmgYYvf2F2ZgwSBnelz5G4q5AxIC277GDfUaNbrZKNANcBC7RHqYYePlszf4kBolVkJauG0ZjHHFh55g==}
@@ -4184,10 +4192,6 @@ packages:
   redis-info@3.1.0:
     resolution: {integrity: sha512-ER4L9Sh/vm63DkIE0bkSjxluQlioBiBgf5w1UuldaW/3vPcecdljVDisZhmnCMvsxHNiARTTDDHGg9cGwTfrKg==}
 
-  redis-parser@3.0.0:
-    resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
-    engines: {node: '>=4'}
-
   redis@6.2.1:
     resolution: {integrity: sha512-Z9VHtgYs48PiQC77X9O2Er8Hj4T+5BtFjT91/vi5Is1D04N72cA946ZslM1ImJw8ZctFBZWAVjM7S5wJNeHMpg==}
     engines: {node: '>= 20.0.0'}
@@ -5275,17 +5279,17 @@ snapshots:
 
   '@bufbuild/protobuf@2.14.0': {}
 
-  '@bull-board/api@8.6.1(@bull-board/ui@8.6.1(bullmq@5.81.3(redis@6.2.1)))(bullmq@5.81.3(redis@6.2.1))':
+  '@bull-board/api@8.6.1(@bull-board/ui@8.6.1(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1)))(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1))':
     dependencies:
-      '@bull-board/ui': 8.6.1(bullmq@5.81.3(redis@6.2.1))
+      '@bull-board/ui': 8.6.1(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1))
       redis-info: 3.1.0
     optionalDependencies:
-      bullmq: 5.81.3(redis@6.2.1)
+      bullmq: 6.1.1(ioredis@6.0.0)(redis@6.2.1)
 
-  '@bull-board/express@8.6.1(bullmq@5.81.3(redis@6.2.1))':
+  '@bull-board/express@8.6.1(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1))':
     dependencies:
-      '@bull-board/api': 8.6.1(@bull-board/ui@8.6.1(bullmq@5.81.3(redis@6.2.1)))(bullmq@5.81.3(redis@6.2.1))
-      '@bull-board/ui': 8.6.1(bullmq@5.81.3(redis@6.2.1))
+      '@bull-board/api': 8.6.1(@bull-board/ui@8.6.1(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1)))(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1))
+      '@bull-board/ui': 8.6.1(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1))
       ejs: 6.0.1
       express: 5.2.1(supports-color@5.5.0)
     transitivePeerDependencies:
@@ -5293,9 +5297,9 @@ snapshots:
       - bullmq
       - supports-color
 
-  '@bull-board/ui@8.6.1(bullmq@5.81.3(redis@6.2.1))':
+  '@bull-board/ui@8.6.1(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1))':
     dependencies:
-      '@bull-board/api': 8.6.1(@bull-board/ui@8.6.1(bullmq@5.81.3(redis@6.2.1)))(bullmq@5.81.3(redis@6.2.1))
+      '@bull-board/api': 8.6.1(@bull-board/ui@8.6.1(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1)))(bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1))
     transitivePeerDependencies:
       - bull
       - bullmq
@@ -5657,7 +5661,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 26.2.0
 
-  '@ioredis/commands@1.10.0': {}
+  '@ioredis/commands@2.0.0': {}
 
   '@isaacs/cliui@9.0.0': {}
 
@@ -6798,18 +6802,16 @@ snapshots:
 
   buffer-from@1.1.2: {}
 
-  bullmq@5.81.3(redis@6.2.1):
+  bullmq@6.1.1(ioredis@6.0.0)(redis@6.2.1):
     dependencies:
-      cron-parser: 4.9.0
-      ioredis: 5.11.1
+      cron-parser: 5.8.1
       msgpackr: 2.0.5
       node-abort-controller: 3.1.1
       semver: 7.8.5
       tslib: 2.8.1
     optionalDependencies:
+      ioredis: 6.0.0
       redis: 6.2.1
-    transitivePeerDependencies:
-      - supports-color
 
   busboy@1.6.0:
     dependencies:
@@ -7032,7 +7034,7 @@ snapshots:
       path-type: 4.0.0
       yaml: 1.10.3
 
-  cron-parser@4.9.0:
+  cron-parser@5.8.1:
     dependencies:
       luxon: 3.7.2
 
@@ -7811,14 +7813,13 @@ snapshots:
     dependencies:
       fp-ts: 2.16.11
 
-  ioredis@5.11.1:
+  ioredis@6.0.0:
     dependencies:
-      '@ioredis/commands': 1.10.0
+      '@ioredis/commands': 2.0.0
       cluster-key-slot: 1.1.1
       debug: 4.4.3(supports-color@5.5.0)
       denque: 2.1.0
       redis-errors: 1.2.0
-      redis-parser: 3.0.0
       standard-as-callback: 2.1.0
     transitivePeerDependencies:
       - supports-color
@@ -9095,10 +9096,6 @@ snapshots:
   redis-info@3.1.0:
     dependencies:
       lodash: 4.18.1
-
-  redis-parser@3.0.0:
-    dependencies:
-      redis-errors: 1.2.0
 
   redis@6.2.1:
     dependencies:
