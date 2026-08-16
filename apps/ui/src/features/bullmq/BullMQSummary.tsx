@@ -17,11 +17,12 @@ interface QueueStatus {
 }
 
 const statChipSx = {
-  mx: 1,
+  mx: { xs: 0.5, sm: 1 },
   backgroundColor: '#262626',
   color: '#bae637',
-  fontSize: '1.6em',
-  fontWeight: 'bold'
+  fontSize: { xs: '1.2em', sm: '1.6em' },
+  fontWeight: 'bold',
+  '& .MuiChip-label': { px: { xs: 1, sm: 1.5 } }
 }
 
 const QueueStatsRow = ({ counts }: { counts: QueueCounts }) => {
@@ -46,7 +47,7 @@ const QueueStatsRow = ({ counts }: { counts: QueueCounts }) => {
           sx={{
             display: 'flex',
             alignItems: 'center',
-            ml: index === 0 ? 0 : { xs: 1.5, sm: 4 }
+            ml: index === 0 ? 0 : { xs: 1, sm: 4 }
           }}
         >
           <Typography>
