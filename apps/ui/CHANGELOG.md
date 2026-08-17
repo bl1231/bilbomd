@@ -1,5 +1,20 @@
 # @bilbomd/ui
 
+## 2.23.0
+
+### Minor Changes
+
+- 37521ef: Improve UI for mobile devices (#967, part 4: de-breaking pass). All job forms (Classic, Auto, AF, OF3, SANS, Scoper, Multi, resubmit variants, PAE Jiffy) replace hardcoded 520px/400px widths with fluid max-widths, title rows and AF/OF3 entity rows wrap on small screens, and the Help page stacks its pipelines section, scroll-contains its tabs, and wraps the BibTeX block. The inp Jiffy and PAE Jiffy nav items are hidden from the mobile drawer (still available on desktop and by URL). Every page now renders with zero horizontal overflow at phone widths; desktop rendering is unchanged.
+- 37521ef: Improve UI for mobile devices (#967, part 2: jobs list). Below the md breakpoint the jobs DataGrid is replaced by a tappable status card list: each card shows a color-coded status chip, title, pipeline/engine/relative-time metadata, and a progress bar for running jobs. Active jobs sort first and tapping a card opens the job detail page. Also fixes the mobile hamburger button to toggle (not just open) the nav drawer. The BullMQ status panel wraps its queue stats instead of overflowing on narrow screens, with compact count chips below the sm breakpoint so all three stats fit on one line on real phones (e.g. iPhone 15 Pro at 393px). Desktop keeps the full DataGrid.
+- 37521ef: Improve UI for mobile devices (#967, part 5: public/anonymous results page). The public job status page (`/results/:publicId`) now fits phone screens: the Public Job ID and Results Permalink rows wrap with ellipsized copyable chips, the Progress row wraps instead of crushing the progress bar, and the Analysis tabs scroll when they don't fit. The SAXS feedback chart (Chi²/Residuals vs. Q ranges) is now responsive via ResponsiveContainer instead of a fixed 600px width, movie gallery cards truncate long titles instead of pushing the Download button out of the card, and all three layout footers wrap on narrow screens (fixing the "GitHub" link rendering one letter per line). The job metadata (job type, MD engine, submitted date, public ID, permalink) is now presented as an aligned key-value list with a compact date format instead of a row of outlined chips. Desktop rendering is otherwise unchanged.
+- 37521ef: Improve UI for mobile devices (#967, part 1: layout shell). The sidebar now collapses into a hamburger-menu drawer below the md breakpoint, shared between MainLayout and AnonLayout via a new NavDrawer component. Headers adapt on small screens (compact logo, icon-only dark-mode toggle, hidden version/username badges) and the main content area gains overflow guards so wide pages no longer break the layout. Desktop layout is unchanged.
+- 37521ef: Improve UI for mobile devices (#967, part 3: single job page). FoXS analysis charts (Classic and Scoper) stack full-width below the md breakpoint instead of being crushed into half-width columns, and the ensemble model table no longer overflows. The Molstar viewer shrinks to 420px tall on small screens and gains a tap-to-enable overlay so its canvas no longer hijacks page scrolling on touch devices (also applies to the public results page). The separate Nav/Back panel is replaced by a back arrow inline with the job title (desktop and mobile). The Steps and Details accordions are decrowded: step chips keep their full labels with messages wrapping beneath, detail rows wrap instead of overflowing, and the UUID chip ellipsizes so its copy button stays reachable.
+
+### Patch Changes
+
+- Updated dependencies [9ae70fe]
+  - @bilbomd/mongodb-schema@2.8.0
+
 ## 2.22.3
 
 ### Patch Changes
