@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { Job as JobModel, IAssets, IMovieAsset } from '@bilbomd/mongodb-schema'
 import { logger } from '../../middleware/loggers.js'
+import { publicJobQuery } from './utils/publicJobQuery.js'
 
 const getContentType = (filename: string): string => {
   const ext = path.extname(filename).toLowerCase()
@@ -29,12 +30,10 @@ const getContentType = (filename: string): string => {
 
 const streamPublicVideo = async (req: Request, res: Response) => {
   try {
-    const { publicId, label, filename } = req.params
+    const { publicId: rawPublicId, label, filename } = req.params
+    const publicId = Array.isArray(rawPublicId) ? rawPublicId[0] : rawPublicId
 
-    const job = await JobModel.findOne({
-      public_id: publicId,
-      access_mode: 'anonymous'
-    })
+    const job = await JobModel.findOne(publicJobQuery(publicId))
     if (!job) {
       return res.status(404).json({ message: 'Job not found' })
     }

@@ -58,7 +58,8 @@ const handleError = async (
         BILBOMD_URL,
         DBjob._id.toString(),
         DBjob.title,
-        true
+        true,
+        DBjob.results_token
       )
       logger.warn(`email notification sent to ${recipientEmail}`)
       await MQjob.log(`email notification sent to ${recipientEmail}`)

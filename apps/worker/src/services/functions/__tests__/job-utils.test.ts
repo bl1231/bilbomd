@@ -135,6 +135,7 @@ describe('job-utils', () => {
         status: 'Running',
         time_completed: undefined,
         progress: 0,
+        results_token: 'results-token-123',
         save: vi.fn().mockResolvedValue(undefined)
       } as unknown as IJob
 
@@ -156,7 +157,8 @@ describe('job-utils', () => {
         'http://localhost:3000',
         mockDBJob._id.toString(),
         'Test Job',
-        false
+        false,
+        'results-token-123'
       )
     })
 

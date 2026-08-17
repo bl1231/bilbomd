@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { Schema, model } from 'mongoose'
 import { assetsSchema } from './Assets'
 import { resultsSchema } from './Results'
@@ -119,6 +120,13 @@ const jobSchema = new Schema(
         return this.access_mode === 'anonymous'
       },
       index: true
+    },
+    // Unguessable capability token granting unauthenticated read access to
+    // this job's results page (used in job-complete emails). Jobs created
+    // before this field existed won't have one.
+    results_token: {
+      type: String,
+      default: () => randomUUID()
     },
     data_file: { type: String, required: true },
     md_constraints: { type: mdConstraintsSchema, required: false },
@@ -348,6 +356,7 @@ const bilboMdScoperJobSchema = new Schema<IBilboMDScoperJob>({
 
 jobSchema.index({ uuid: 1 })
 jobSchema.index({ client_ip_hash: 1, access_mode: 1, status: 1 })
+jobSchema.index({ results_token: 1 }, { sparse: true })
 
 const Job = model<IJob>('Job', jobSchema)
 const BilboMdPDBJob = Job.discriminator('BilboMdPDB', bilboMdPDBJobSchema)

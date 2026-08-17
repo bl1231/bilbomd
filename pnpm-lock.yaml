@@ -580,6 +580,10 @@ importers:
       mongoose:
         specifier: ^9.9.2
         version: 9.9.2
+    devDependencies:
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
 
 packages:
 
@@ -6110,7 +6114,7 @@ snapshots:
   '@types/compression@1.8.1':
     dependencies:
       '@types/express': 5.0.6
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
 
   '@types/connect@3.4.38':
     dependencies:

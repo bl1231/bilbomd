@@ -197,7 +197,8 @@ const cleanupJob = async (
         config.bilbomdUrl,
         DBjob._id.toString(),
         DBjob.title,
-        message.error ?? false
+        message.error ?? false,
+        DBjob.results_token
       )
       logger.info(`email notification sent to ${user.email}`)
     }

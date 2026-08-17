@@ -3,6 +3,7 @@ import { Job as JobModel } from '@bilbomd/mongodb-schema'
 import type { IJob } from '@bilbomd/mongodb-schema'
 import { logger } from '../../middleware/loggers.js'
 import path from 'path'
+import { publicJobQuery } from './utils/publicJobQuery.js'
 
 interface MovieAsset {
   label: string
@@ -61,10 +62,9 @@ const getPublicMovies = async (
   }
 
   try {
-    const job = (await JobModel.findOne(
-      { public_id: publicId, access_mode: 'anonymous' },
-      { 'assets.movies': 1 }
-    ).lean()) as JobWithAssets | null
+    const job = (await JobModel.findOne(publicJobQuery(publicId), {
+      'assets.movies': 1
+    }).lean()) as JobWithAssets | null
 
     if (!job) {
       return res.status(404).json({ error: 'Job not found' })

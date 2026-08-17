@@ -85,4 +85,40 @@ describe('sendJobCompleteEmail', () => {
       })
     )
   })
+
+  it('links to the tokened public results page when a results token is provided', () => {
+    sendJobCompleteEmail(
+      'user@example.com',
+      'http://bilbomd.example.com',
+      'job-id-789',
+      'Token Job',
+      false,
+      'aaaabbbb-cccc-dddd-eeee-ffff00001111'
+    )
+    expect(mockSendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          resultsUrl:
+            'http://bilbomd.example.com/results/aaaabbbb-cccc-dddd-eeee-ffff00001111'
+        })
+      })
+    )
+  })
+
+  it('falls back to the dashboard link when no results token exists', () => {
+    sendJobCompleteEmail(
+      'user@example.com',
+      'http://bilbomd.example.com',
+      'job-id-789',
+      'Legacy Job',
+      false
+    )
+    expect(mockSendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          resultsUrl: 'http://bilbomd.example.com/dashboard/jobs/job-id-789'
+        })
+      })
+    )
+  })
 })
