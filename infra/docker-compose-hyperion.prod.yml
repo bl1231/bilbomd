@@ -11,7 +11,7 @@ networks:
 
 services:
   scoper:
-    image: ghcr.io/bl1231/bilbomd-scoper:1.7.21
+    image: ghcr.io/bl1231/bilbomd-scoper:1.8.0
     pull_policy: always
     security_opt:
       - no-new-privileges:true

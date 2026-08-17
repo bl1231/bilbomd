@@ -1,5 +1,11 @@
 # @bilbomd/mongodb-schema
 
+## 2.8.0
+
+### Minor Changes
+
+- 9ae70fe: Job-complete emails now link directly to a results page that works without logging in (#978). Every new job gets an unguessable `results_token`, the unauthenticated `/results/:publicId` endpoints accept it alongside anonymous `public_id`s, and the worker/scoper emails link to `/results/<token>` (falling back to the dashboard link for jobs created before the token existed).
+
 ## 2.7.6
 
 ### Patch Changes
