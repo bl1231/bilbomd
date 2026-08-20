@@ -15,6 +15,7 @@ import getMovies from '../controllers/movies/getMovies.js'
 import streamVideo from '../controllers/movies/streamVideo.js'
 import { checkFiles } from '../controllers/resubmitController.js'
 import { verifyJWT } from '../middleware/verifyJWT.js'
+import { verifyJobOwnership } from '../middleware/verifyJobOwnership.js'
 import { setVideoSession, verifyVideoSession } from '../middleware/videoAuth.js'
 import { logger } from '../middleware/loggers.js'
 const router = express.Router()
@@ -38,18 +39,22 @@ router.use((req, res, next) => {
 
 router.route('/').get(getAllJobs).post(createNewJob)
 
-router.route('/:id').get(getJobById)
-router.route('/:id').delete(deleteJob)
-router.route('/:id/results').get(downloadJobResults)
-router.route('/:id/results/foxs').get(getFoxsData)
-router.route('/:id/results/:pdb').get(downloadPDB)
-router.route('/:id/logs').get(getLogForStep)
-router.route('/:id/check-files').get(checkFiles)
+// Every /:id route must pass verifyJobOwnership: the caller has to own the job
+// or hold the Admin/Manager role. The movie routes enforce ownership inline.
+router
+  .route('/:id')
+  .get(verifyJobOwnership, getJobById)
+  .delete(verifyJobOwnership, deleteJob)
+router.route('/:id/results').get(verifyJobOwnership, downloadJobResults)
+router.route('/:id/results/foxs').get(verifyJobOwnership, getFoxsData)
+router.route('/:id/results/:pdb').get(verifyJobOwnership, downloadPDB)
+router.route('/:id/logs').get(verifyJobOwnership, getLogForStep)
+router.route('/:id/check-files').get(verifyJobOwnership, checkFiles)
 router.route('/:id/movies').get(getMovies)
 router
   .route('/:id/movies/:label/:filename')
   .get(verifyVideoSession, streamVideo)
-router.route('/:id/:filename').get(getFile)
+router.route('/:id/:filename').get(verifyJobOwnership, getFile)
 router.route('/bilbomd-auto').post(createNewJob)
 router.route('/bilbomd-scoper').post(createNewJob)
 router.route('/bilbomd-alphafold').post(createNewJob)

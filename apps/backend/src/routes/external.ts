@@ -3,6 +3,7 @@ import { createApiJob } from '../controllers/external/createApiJob.js'
 import { getApiJobStatus } from '../controllers/external/jobStatus.js'
 import { getExternalJobResults } from '../controllers/external/getResults.js'
 import { verifyAPIToken } from '../middleware/verifyAPIToken.js'
+import { verifyJobOwnership } from '../middleware/verifyJobOwnership.js'
 import { logApiRequest } from '../middleware/logApiRequests.js'
 
 const router = express.Router()
@@ -260,6 +261,6 @@ router.get('/:id/status', getApiJobStatus)
  *                 value:
  *                   message: An error occurred while processing your request.
  */
-router.get('/:id/results', getExternalJobResults)
+router.get('/:id/results', verifyJobOwnership, getExternalJobResults)
 
 export default router
