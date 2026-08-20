@@ -59,12 +59,16 @@ interface JobType {
   username: string
 }
 
-const generateAccessToken = (email?: string): string => {
+const generateAccessToken = (
+  email?: string,
+  username = 'testuser1',
+  roles: string[] = ['User']
+): string => {
   const userEmail = email ?? 'testuser1@example.com'
   const accessTokenPayload: JwtPayload = {
     UserInfo: {
-      username: 'testuser1',
-      roles: ['User'],
+      username,
+      roles,
       email: userEmail
     }
   }
@@ -74,6 +78,17 @@ const generateAccessToken = (email?: string): string => {
   })
   return accessToken
 }
+
+const createOtherUser = async (): Promise<IUser> =>
+  User.create({
+    username: 'testuser2',
+    email: 'testuser2@example.com',
+    roles: ['User'],
+    confirmationCode: {
+      code: '67890',
+      expiresAt: new Date(Date.now() + 3600000)
+    }
+  })
 
 const createNewJob = async (user: IUser) => {
   const now = new Date()
@@ -190,6 +205,27 @@ describe('GET /api/v1/jobs/:id', () => {
     const newJob = await createNewJob(testUser1)
     const res = await request(app)
       .get(`/api/v1/jobs/${newJob._id}`)
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toBeDefined()
+  })
+  test("should return 404 for another user's job", async () => {
+    expect.assertions(2)
+    const otherUser = await createOtherUser()
+    const otherJob = await createNewJob(otherUser)
+    const token = generateAccessToken()
+    const res = await request(app)
+      .get(`/api/v1/jobs/${otherJob._id}`)
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.statusCode).toBe(404)
+    expect(res.body.message).toBe(`No job matches ID ${otherJob._id}.`)
+  })
+  test("should allow an Admin to read another user's job", async () => {
+    const otherUser = await createOtherUser()
+    const otherJob = await createNewJob(otherUser)
+    const token = generateAccessToken(undefined, 'testuser1', ['Admin'])
+    const res = await request(app)
+      .get(`/api/v1/jobs/${otherJob._id}`)
       .set('Authorization', `Bearer ${token}`)
     expect(res.statusCode).toBe(200)
     expect(res.body).toBeDefined()
@@ -355,14 +391,25 @@ describe('DELETE /api/v1/jobs/:id', () => {
     expect(res.body.message).toBe('Unauthorized')
   })
 
-  test('should return 202 if Job ID not found (still queued)', async () => {
+  test('should return 404 if Job ID not found', async () => {
     const token = generateAccessToken()
     const id = new mongoose.Types.ObjectId().toString()
     const res = await request(app)
       .delete(`/api/v1/jobs/${id}`)
       .set('Authorization', `Bearer ${token}`)
-    expect(res.statusCode).toBe(202)
-    expect(res.body.message).toMatch(/queued/i)
+    expect(res.statusCode).toBe(404)
+    expect(res.body.message).toBe(`No job matches ID ${id}.`)
+  })
+
+  test("should return 404 when deleting another user's job", async () => {
+    const otherUser = await createOtherUser()
+    const otherJob = await createNewJob(otherUser)
+    const token = generateAccessToken()
+    const res = await request(app)
+      .delete(`/api/v1/jobs/${otherJob._id}`)
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.statusCode).toBe(404)
+    expect(await Job.findById(otherJob._id)).not.toBeNull()
   })
 
   test('should return 202 if directory is missing (worker will handle)', async () => {

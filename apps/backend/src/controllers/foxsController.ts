@@ -34,7 +34,12 @@ const downloadPDB = async (req: Request, res: Response) => {
     res.status(204).json({ message: `No job matches ID ${jobId}.` })
     return
   }
-  const pdbFile = path.join(uploadFolder, job.uuid, 'results', pdbFilename)
+  const pdbFile = path.join(
+    uploadFolder,
+    job.uuid,
+    'results',
+    path.basename(pdbFilename)
+  )
 
   try {
     await fs.promises.access(pdbFile)

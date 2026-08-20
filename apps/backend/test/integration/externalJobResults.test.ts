@@ -78,7 +78,7 @@ describe('/api/v1/external/jobs/:id/results', () => {
       .set('Accept', 'application/json')
 
     expect(res.status).toBe(400)
-    expect(res.body.message).toBe('Invalid job ID format')
+    expect(res.body.message).toBe('Invalid Job ID format.')
   })
 
   test('should return 404 if job not found', async () => {
@@ -91,7 +91,24 @@ describe('/api/v1/external/jobs/:id/results', () => {
       .set('Accept', 'application/json')
 
     expect(res.status).toBe(404)
-    expect(res.body.message).toContain('No job matches that ID')
+    expect(res.body.message).toContain('No job matches ID')
+  })
+
+  test("should return 404 for another API user's job", async () => {
+    const other = await seedApiTokenUser({
+      email: 'other-results@example.com',
+      username: 'apitestuser-other',
+      token: 'other-user-token-0987654321'
+    })
+    const job = await Job.findOne({ title: 'Test Job for Results' })
+
+    const res = await request(app)
+      .get(`/api/v1/external/jobs/${job?._id}/results`)
+      .set('Authorization', `Bearer ${other.token}`)
+      .set('Accept', 'application/json')
+
+    expect(res.status).toBe(404)
+    expect(res.body.message).toContain('No job matches ID')
   })
 
   test('should return 401 if Authorization header is missing', async () => {
