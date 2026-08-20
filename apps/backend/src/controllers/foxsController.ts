@@ -31,7 +31,7 @@ const downloadPDB = async (req: Request, res: Response) => {
   logger.info('Looking up job', { jobId })
   const job = await Job.findOne({ _id: jobId }).exec()
   if (!job) {
-    res.status(204).json({ message: `No job matches ID ${jobId}.` })
+    res.status(404).json({ message: `No job matches ID ${jobId}.` })
     return
   }
   const pdbFile = path.join(
