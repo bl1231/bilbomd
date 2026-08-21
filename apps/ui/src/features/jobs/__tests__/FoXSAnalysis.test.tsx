@@ -42,6 +42,10 @@ vi.mock('features/foxs/FoXSEnsembleCharts', () => ({
   default: () => <div data-testid="foxs-ensemble-charts">Ensemble Charts</div>
 }))
 
+vi.mock('features/foxs/DimensionlessKratkyChart', () => ({
+  default: () => <div data-testid="kratky-chart">Kratky Chart</div>
+}))
+
 describe('FoXSAnalysis', () => {
   const mockFoxsDataSingle: FoxsData[] = [
     {
@@ -596,6 +600,53 @@ describe('FoXSAnalysis', () => {
 
       // Component should process and render the data
       expect(screen.getByText('Original Model')).toBeInTheDocument()
+    })
+  })
+
+  describe('dimensionless Kratky rendering', () => {
+    it('should render the Kratky chart when Guinier data is present', async () => {
+      const mockDataWithGuinier: FoxsData[] = [
+        {
+          ...mockFoxsDataSingle[0]!,
+          guinier: { rg: 40.4, i0: 1234.5, qmin: 0.012, qmax: 0.032, r2: 0.99 }
+        }
+      ]
+
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data: mockDataWithGuinier,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('kratky-chart')).toBeInTheDocument()
+      })
+      expect(
+        screen.queryByText('Dimensionless Kratky plot unavailable')
+      ).not.toBeInTheDocument()
+    })
+
+    it('should show an unavailable alert when Guinier data is absent', async () => {
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data: mockFoxsDataSingle,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Dimensionless Kratky plot unavailable')
+        ).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('kratky-chart')).not.toBeInTheDocument()
     })
   })
 

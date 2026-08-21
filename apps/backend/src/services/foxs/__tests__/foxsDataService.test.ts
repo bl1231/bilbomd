@@ -3,6 +3,9 @@ import { buildBilboFoxsData, buildScoperFoxsData } from '../foxsDataService.js'
 
 vi.mock('fs-extra')
 vi.mock('../foxsParser.js')
+vi.mock('../guinierService.js', () => ({
+  getGuinierFit: vi.fn().mockResolvedValue(undefined)
+}))
 vi.mock('../../../config/config.js', () => ({
   getEnvVar: () => '/data'
 }))
@@ -64,6 +67,36 @@ describe('buildBilboFoxsData', () => {
     const result = await buildBilboFoxsData(makeJob())
     expect(result[0].filename).toMatch(/minimization_output_experiment/)
     expect(result.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('attaches the Guinier fit to the base dataset when available', async () => {
+    const { default: fs } = await import('fs-extra')
+    const parser = await import('../foxsParser.js')
+    const guinierService = await import('../guinierService.js')
+
+    vi.mocked(fs.existsSync).mockReturnValue(true)
+    vi.mocked(fs.access).mockResolvedValue(undefined)
+    vi.mocked(fs.readFile)
+      .mockResolvedValueOnce(makeDatContent() as never)
+      .mockResolvedValue('c1 = 1.05 c2 = 0.02' as never)
+    vi.mocked(fs.readdir).mockResolvedValue([] as never)
+
+    vi.mocked(parser.parseFileContent).mockReturnValue([
+      { q: 0.001, exp_intensity: 100, model_intensity: 99, error: 2 }
+    ])
+    vi.mocked(parser.extractChiSquared).mockReturnValue(1.23)
+    vi.mocked(parser.extractC1C2).mockResolvedValue({ c1: '1.05', c2: '0.02' })
+
+    const fit = { rg: 40.4, i0: 1234.5, qmin: 0.012, qmax: 0.032, r2: 0.99 }
+    vi.mocked(guinierService.getGuinierFit).mockResolvedValue(fit)
+
+    const result = await buildBilboFoxsData(makeJob())
+
+    expect(guinierService.getGuinierFit).toHaveBeenCalledWith(
+      '/data/test-uuid',
+      'experiment.dat'
+    )
+    expect(result[0].guinier).toEqual(fit)
   })
 
   it('throws FOXS_DATA_UNAVAILABLE when no dat and no ensembles', async () => {

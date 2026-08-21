@@ -85,7 +85,7 @@ describe('FoXSEnsembleCharts', () => {
     expect(screen.getByText('Ensemble Models - I vs. q')).toBeInTheDocument()
   })
 
-  it('shows correct filenames in the table for 1-state and 2-state', () => {
+  it('shows a chip for each ensemble for 1-state and 2-state', () => {
     const foxsData: FoxsData[] = [baseFoxsData, make1State(), make2State()]
     render(
       <FoXSEnsembleCharts
@@ -93,15 +93,11 @@ describe('FoXSEnsembleCharts', () => {
         foxsData={foxsData}
       />
     )
-    expect(
-      screen.getByText('multi_state_model_1_1_1.dat')
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('multi_state_model_2_1_1.dat')
-    ).toBeInTheDocument()
+    expect(screen.getByText('Ens. Size 1: 1.50')).toBeInTheDocument()
+    expect(screen.getByText('Ens. Size 2: 1.20')).toBeInTheDocument()
   })
 
-  it('shows correct filename in the table when only 2-state is present', () => {
+  it('shows only the 2-state chip when only 2-state is present', () => {
     // Simulates back-end sending [base, 2-state] (no 1-state)
     const foxsData: FoxsData[] = [baseFoxsData, make2State()]
     render(
@@ -110,17 +106,14 @@ describe('FoXSEnsembleCharts', () => {
         foxsData={foxsData}
       />
     )
-    expect(
-      screen.getByText('multi_state_model_2_1_1.dat')
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText('multi_state_model_1_1_1.dat')
-    ).not.toBeInTheDocument()
+    expect(screen.getByText('Ens. Size 2: 1.20')).toBeInTheDocument()
+    expect(screen.queryByText('Ens. Size 1: 1.50')).not.toBeInTheDocument()
   })
 
   // Part of #971: chi² is surfaced in a header line above the residuals plot,
-  // colour-keyed to each visible ensemble trace.
-  it('renders a chi² chip for each visible ensemble', () => {
+  // colour-keyed to each ensemble trace. The base dataset (index 0) has its
+  // own Original Model charts, so it gets no chip here.
+  it('does not render a chip for the base dataset', () => {
     const foxsData: FoxsData[] = [baseFoxsData, make1State(), make2State()]
     render(
       <FoXSEnsembleCharts
@@ -128,13 +121,10 @@ describe('FoXSEnsembleCharts', () => {
         foxsData={foxsData}
       />
     )
-    expect(screen.getByText('Ens. Size 1: 1.50')).toBeInTheDocument()
-    expect(screen.getByText('Ens. Size 2: 1.20')).toBeInTheDocument()
-    // The base dataset starts hidden, so it gets no chip.
     expect(screen.queryByText(/sample\.dat: /)).not.toBeInTheDocument()
   })
 
-  it('removes an ensemble chip when its checkbox is unchecked', async () => {
+  it('toggles ensemble visibility when its chip is clicked', async () => {
     const user = userEvent.setup()
     const foxsData: FoxsData[] = [baseFoxsData, make1State(), make2State()]
     render(
@@ -143,13 +133,18 @@ describe('FoXSEnsembleCharts', () => {
         foxsData={foxsData}
       />
     )
-    expect(screen.getByText('Ens. Size 2: 1.20')).toBeInTheDocument()
+    const chip2 = screen.getByText('Ens. Size 2: 1.20').closest('[aria-pressed]')
+    expect(chip2).toHaveAttribute('aria-pressed', 'true')
 
-    // Table rows skip index 0, so the checkboxes map to ensembles 1 and 2.
-    const checkboxes = screen.getAllByRole('checkbox')
-    await user.click(checkboxes[1]!)
+    await user.click(chip2!)
+    expect(chip2).toHaveAttribute('aria-pressed', 'false')
 
-    expect(screen.queryByText('Ens. Size 2: 1.20')).not.toBeInTheDocument()
-    expect(screen.getByText('Ens. Size 1: 1.50')).toBeInTheDocument()
+    await user.click(chip2!)
+    expect(chip2).toHaveAttribute('aria-pressed', 'true')
+
+    // The other ensemble is unaffected
+    expect(
+      screen.getByText('Ens. Size 1: 1.50').closest('[aria-pressed]')
+    ).toHaveAttribute('aria-pressed', 'true')
   })
 })
