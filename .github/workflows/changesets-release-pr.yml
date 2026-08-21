@@ -55,7 +55,7 @@ jobs:
 
       - name: Create or update Version Packages PR
         if: steps.check_changesets.outputs.count != '0'
-        uses: changesets/action@v1
+        uses: changesets/action@v2.1.1
         with:
           # Bump package versions AND sync the in-house image tags in the
           # infra compose/helm files in the same Version Packages PR, so the
