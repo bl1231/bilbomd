@@ -28,7 +28,7 @@ import {
   ReferenceLine
 } from 'recharts'
 import { FoxsData } from '@bilbomd/bilbomd-types'
-import { getEnsembleSizeLabel } from './foxsUtils'
+import { getEnsembleSizeLabel, getUniqueColor } from './foxsUtils'
 
 type CombinedFoxsData = {
   q: number
@@ -47,23 +47,6 @@ type Props = {
   minYAxis: number
   maxYAxis: number
 }
-const colors = [
-  '#4e79a7', // muted blue
-  '#f28e2b', // muted safety orange
-  '#59a14f', // muted asparagus green
-  '#e15759', // muted brick red
-  '#b07aa1', // muted purple
-  '#9c755f', // muted chestnut brown
-  '#f1b7b1', // muted raspberry yogurt pink
-  '#bab0ac', // muted middle gray
-  '#bdbf20', // muted curry yellow-green
-  '#76b7b2' // muted blue-teal
-]
-
-const getUniqueColor = (index: number) => {
-  return colors[index % colors.length]
-}
-
 const FoXSEnsembleCharts = ({
   combinedData,
   minYAxis,

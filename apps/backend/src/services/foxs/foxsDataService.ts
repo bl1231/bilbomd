@@ -11,6 +11,7 @@ import {
   extractScoperC1C2,
   readTopKNum
 } from './foxsParser.js'
+import { getGuinierFit } from './guinierService.js'
 
 const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
@@ -141,6 +142,14 @@ const buildBilboFoxsData = async (job: IJob): Promise<FoxsData[]> => {
         details: { datBase: datFileBase }
       }
     )
+  }
+
+  // Attach the Guinier fit of the experimental profile (for dimensionless
+  // Kratky normalization in the UI). Absence is non-fatal — the UI degrades
+  // to an informative alert.
+  const guinier = await getGuinierFit(jobDir, job.data_file)
+  if (guinier && data[0]) {
+    data[0].guinier = guinier
   }
 
   return data

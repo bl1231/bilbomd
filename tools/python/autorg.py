@@ -124,13 +124,21 @@ def calculate_rg(file_path, output_file):
         # Clamp rg_max to be no less than 10 and no more than 100
         rg_max = max(10, min(100, rg_max))
 
-        # Create a dictionary with the results
+        # Create a dictionary with the results.
+        # "rg" stays rounded for MD setup; "rg_exact" and "i0" carry the
+        # unrounded Guinier fit values needed for dimensionless Kratky
+        # normalization downstream.
         result_dict = {
             "rg": round(rg),
             "rg_min": rg_min,
             "rg_max": rg_max,
             "qmin": qmin,
             "qmax": qmax,
+            "rg_exact": rg,
+            "i0": izero,
+            "r2": r_sqr,
+            "qrg_min": qrg_min,
+            "qrg_max": qrg_max,
         }
 
         # Write the results to the output file

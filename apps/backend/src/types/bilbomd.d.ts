@@ -73,6 +73,13 @@ export type AutoRgResults = {
   rg_max: number
   qmin: number
   qmax: number
+  // Optional fields emitted by newer autorg.py versions (absent in cached
+  // results produced before they were added)
+  rg_exact?: number
+  i0?: number
+  r2?: number
+  qrg_min?: number
+  qrg_max?: number
 }
 
 export type DispatchUser = {

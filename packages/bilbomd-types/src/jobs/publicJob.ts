@@ -35,10 +35,22 @@ export type FoxsDataPoint = {
   error: number
 }
 
+// Guinier fit of the experimental SAXS profile, computed server-side by
+// autorg.py. Used to normalize dimensionless Kratky plots: (qRg)²·I(q)/I(0).
+export type GuinierFit = {
+  rg: number // unrounded Rg from the Guinier fit (Å)
+  i0: number // forward scattering intensity I(0)
+  qmin: number // low-q bound of the fit window (Å⁻¹)
+  qmax: number // high-q bound of the fit window (Å⁻¹)
+  r2?: number // coefficient of determination of the fit
+}
+
 export type FoxsData = {
   filename: string
   chisq: number
   c1: string
   c2: string
   data: FoxsDataPoint[]
+  // Present only on the first (experimental/base) dataset when AutoRg succeeds
+  guinier?: GuinierFit
 }

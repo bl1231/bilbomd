@@ -40,11 +40,13 @@ def test_calculate_rg_writes_expected_json(monkeypatch):
     monkeypatch.setattr(
         autorg, "load_profile", lambda fp: ([1, 2, 3], [10, 20, 30], [1, 1, 1])
     )
-    # Mock _auto_guinier to return a fixed rg
+    # Mock _auto_guinier to return a fixed Guinier fit:
+    # (rg, izero, rg_err, izero_err, qmin, qmax, qrg_min, qrg_max,
+    #  idx_min, idx_max, r_sqr)
     monkeypatch.setattr(
         autorg,
         "_auto_guinier",
-        lambda q, i, s: (40.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.99),
+        lambda q, i, s: (40.4, 1234.5, 0, 0, 0.012, 0.032, 0.48, 1.29, 0, 0, 0.99),
     )
 
     with tempfile.NamedTemporaryFile("r+", delete=False) as tmp:
@@ -55,6 +57,16 @@ def test_calculate_rg_writes_expected_json(monkeypatch):
     assert "rg" in data and "rg_min" in data and "rg_max" in data
     assert 10 <= data["rg_min"] <= 100
     assert 10 <= data["rg_max"] <= 100
+    # rg is rounded for MD setup; rg_exact preserves the fit value
+    assert data["rg"] == 40
+    assert data["rg_exact"] == 40.4
+    # Guinier fit values needed for dimensionless Kratky normalization
+    assert data["i0"] == 1234.5
+    assert data["r2"] == 0.99
+    assert data["qmin"] == 0.012
+    assert data["qmax"] == 0.032
+    assert data["qrg_min"] == 0.48
+    assert data["qrg_max"] == 1.29
 
 
 def test_calculate_rg_handles_exceptions(monkeypatch, capsys):

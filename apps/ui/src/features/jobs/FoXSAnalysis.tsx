@@ -7,6 +7,7 @@ import { useGetFoxsAnalysisByIdQuery } from 'slices/jobsApiSlice'
 import { useGetPublicFoxsDataQuery } from 'slices/publicJobsApiSlice'
 import CircularProgress from '@mui/material/CircularProgress'
 import FoXSEnsembleCharts from 'features/foxs/FoXSEnsembleCharts'
+import DimensionlessKratkyChart from 'features/foxs/DimensionlessKratkyChart'
 import Item from 'themes/components/Item'
 import { FoxsData, FoxsDataPoint } from '@bilbomd/bilbomd-types'
 
@@ -265,6 +266,7 @@ const FoXSAnalysis = ({
   const origChiSq = foxsData[0]!.chisq
   const origC1 = foxsData[0]!.c1
   const origC2 = foxsData[0]!.c2
+  const guinier = foxsData[0]!.guinier
 
   return (
     <Item>
@@ -302,6 +304,24 @@ const FoXSAnalysis = ({
               <AlertTitle>No ensemble data</AlertTitle>
               Only a single FoXS dataset is available; ensemble comparison
               charts are hidden.
+            </Alert>
+          )}
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          {guinier ? (
+            <DimensionlessKratkyChart
+              foxsData={foxsData}
+              guinier={guinier}
+            />
+          ) : (
+            <Alert
+              severity="info"
+              variant="outlined"
+            >
+              <AlertTitle>Dimensionless Kratky plot unavailable</AlertTitle>
+              Guinier parameters (R<sub>g</sub>, I(0)) could not be determined
+              from the experimental data, so the dimensionless Kratky plot
+              cannot be displayed.
             </Alert>
           )}
         </Grid>
