@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import {
   LineChart,
   Line,
@@ -23,6 +23,7 @@ import {
 import { FoxsData, GuinierFit } from '@bilbomd/bilbomd-types'
 import { getEnsembleSizeLabel, getUniqueColor } from './foxsUtils'
 import { buildKratkyData, GLOBULAR_QRG, GLOBULAR_PEAK } from './kratkyUtils'
+import ClickableLegend from './ClickableLegend'
 
 type Props = {
   foxsData: FoxsData[]
@@ -32,6 +33,13 @@ type Props = {
 const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
   const theme = useTheme()
   const kratkyData = buildKratkyData(foxsData, guinier)
+
+  // Curves hidden via legend click, keyed by series dataKey. Hidden series
+  // keep their legend entry (grayed out) so they can be toggled back on.
+  const [hiddenSeries, setHiddenSeries] = useState<Record<string, boolean>>({})
+  const toggleSeries = (dataKey: string) => {
+    setHiddenSeries((prev) => ({ ...prev, [dataKey]: !prev[dataKey] }))
+  }
 
   if (!kratkyData.length) return null
 
@@ -87,11 +95,15 @@ const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
             labelFormatter={(label) => `qRg = ${Number(label).toFixed(3)}`}
           />
           <Legend
-            iconType="line"
             verticalAlign="bottom"
             height={30}
-            layout="horizontal"
-            align="center"
+            content={(props) => (
+              <ClickableLegend
+                payload={props.payload}
+                isHidden={(key) => !!hiddenSeries[key]}
+                onToggle={toggleSeries}
+              />
+            )}
           />
           <ReferenceLine
             x={GLOBULAR_QRG}
@@ -122,6 +134,7 @@ const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
             name="Exp"
             stroke="#8884d8"
             dot={false}
+            hide={!!hiddenSeries['exp']}
             isAnimationActive={false}
           />
           {foxsData.map((item, index) => (
@@ -135,8 +148,9 @@ const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
                     : getEnsembleSizeLabel(item.filename)
                 }
                 stroke={getUniqueColor(index)}
-                strokeWidth={index === 0 ? 2.5 : 1}
+                strokeWidth={2.5}
                 dot={false}
+                hide={!!hiddenSeries[`kratky_model_${index}`]}
                 isAnimationActive={false}
               />
             </Fragment>
@@ -150,37 +164,37 @@ const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
         <TableBody>
           <TableRow>
             <TableCell
-              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}
+              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.875rem' }}
             >
               Rg (Guinier)
             </TableCell>
-            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.75rem' }}>
+            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.875rem' }}>
               {guinier.rg.toFixed(2)} Å
             </TableCell>
             <TableCell
-              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}
+              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.875rem' }}
             >
               I(0)
             </TableCell>
-            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.75rem' }}>
+            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.875rem' }}>
               {guinier.i0.toExponential(2)}
             </TableCell>
           </TableRow>
           <TableRow>
             <TableCell
-              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}
+              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.875rem' }}
             >
               Guinier fit range
             </TableCell>
-            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.75rem' }}>
+            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.875rem' }}>
               q: {guinier.qmin.toFixed(4)}–{guinier.qmax.toFixed(4)} Å⁻¹
             </TableCell>
             <TableCell
-              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}
+              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.875rem' }}
             >
               r²
             </TableCell>
-            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.75rem' }}>
+            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.875rem' }}>
               {guinier.r2 != null ? guinier.r2.toFixed(3) : 'n/a'}
             </TableCell>
           </TableRow>

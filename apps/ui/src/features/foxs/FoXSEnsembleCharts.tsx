@@ -1,21 +1,5 @@
-import { useState, Fragment } from 'react'
-import {
-  Checkbox,
-  Chip,
-  Paper,
-  Stack,
-  TableHead,
-  Typography,
-  useTheme
-} from '@mui/material'
-import Grid from '@mui/material/Grid'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow
-} from '@mui/material'
+import { useState } from 'react'
+import { Chip, Stack, Typography, useTheme } from '@mui/material'
 import {
   LineChart,
   Line,
@@ -29,6 +13,7 @@ import {
 } from 'recharts'
 import { FoxsData } from '@bilbomd/bilbomd-types'
 import { getEnsembleSizeLabel, getUniqueColor } from './foxsUtils'
+import ClickableLegend from './ClickableLegend'
 
 type CombinedFoxsData = {
   q: number
@@ -54,17 +39,37 @@ const FoXSEnsembleCharts = ({
   foxsData
 }: Props) => {
   const theme = useTheme()
-  // Initialize visibility state for each line
-  const [visibility, setVisibility] = useState([
-    false,
-    ...new Array(foxsData.length - 1).fill(true)
-  ])
-  // Handle checkbox change
-  const handleCheckboxChange = (index: number) => {
-    const newVisibility = visibility.slice()
-    newVisibility[index] = !newVisibility[index]
-    setVisibility(newVisibility)
+
+  // Series hidden via legend/chip click, keyed by ensemble index (shared
+  // between the I(q) and residual charts so both stay in sync). The
+  // experimental curve maps to index -1. The base dataset (index 0) has its
+  // own "Original Model" charts, so it is not rendered here at all.
+  const [hidden, setHidden] = useState<Record<number, boolean>>({})
+  const toggleIndex = (index: number) => {
+    setHidden((prev) => ({ ...prev, [index]: !prev[index] }))
   }
+  // 'model_intensity_2' / 'residual_2' -> 2, 'exp_intensity' -> -1
+  const seriesIndex = (dataKey: string): number => {
+    const match = dataKey.match(/_(\d+)$/)
+    return match ? Number(match[1]) : -1
+  }
+  const isHiddenKey = (dataKey: string) => !!hidden[seriesIndex(dataKey)]
+  const toggleKey = (dataKey: string) => toggleIndex(seriesIndex(dataKey))
+
+  const legendContent = (props: {
+    payload?: ReadonlyArray<{
+      value?: string | number
+      color?: string
+      dataKey?: unknown
+    }>
+  }) => (
+    <ClickableLegend
+      payload={props.payload}
+      isHidden={isHiddenKey}
+      onToggle={toggleKey}
+    />
+  )
+
   return (
     <>
       <Typography
@@ -90,11 +95,9 @@ const FoXSEnsembleCharts = ({
           />
           <Tooltip />
           <Legend
-            iconType="line"
             verticalAlign="bottom"
             height={30}
-            layout="horizontal"
-            align="center"
+            content={legendContent}
           />
           <Line
             yAxisId="left"
@@ -104,21 +107,22 @@ const FoXSEnsembleCharts = ({
             stroke="#8884d8"
             activeDot={{ r: 8 }}
             dot={{ strokeWidth: 1 }}
+            hide={!!hidden[-1]}
           />
-          {foxsData.map((item, index) => (
-            <Fragment key={index}>
-              {visibility[index] && (
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey={`model_intensity_${index}`}
-                  name={getEnsembleSizeLabel(item.filename)}
-                  stroke={getUniqueColor(index)}
-                  dot={{ strokeWidth: 1 }}
-                />
-              )}
-            </Fragment>
-          ))}
+          {foxsData.map((item, index) =>
+            index === 0 ? null : (
+              <Line
+                key={index}
+                yAxisId="left"
+                type="monotone"
+                dataKey={`model_intensity_${index}`}
+                name={getEnsembleSizeLabel(item.filename)}
+                stroke={getUniqueColor(index)}
+                dot={{ strokeWidth: 1 }}
+                hide={!!hidden[index]}
+              />
+            )
+          )}
         </LineChart>
       </ResponsiveContainer>
       <Typography
@@ -134,16 +138,20 @@ const FoXSEnsembleCharts = ({
         sx={{ pl: 2, mb: 1, flexWrap: 'wrap' }}
       >
         {foxsData.map((item, index) =>
-          visibility[index] ? (
+          index !== 0 ? (
             <Chip
               key={index}
               size="small"
               label={`${getEnsembleSizeLabel(item.filename)}: ${item.chisq.toFixed(2)}`}
+              onClick={() => toggleIndex(index)}
+              aria-pressed={!hidden[index]}
               sx={{
                 bgcolor: getUniqueColor(index),
                 color: 'common.black',
                 fontSize: '0.95rem',
-                fontWeight: 600
+                fontWeight: 600,
+                opacity: hidden[index] ? 0.35 : 1,
+                '&:hover': { bgcolor: getUniqueColor(index) }
               }}
             />
           ) : null
@@ -162,81 +170,28 @@ const FoXSEnsembleCharts = ({
           <YAxis domain={[minYAxis, maxYAxis]} />
           <Tooltip />
           <Legend
-            iconType="line"
             verticalAlign="bottom"
             height={30}
-            layout="horizontal"
-            align="center"
+            content={legendContent}
           />
-          {foxsData.map((item, index) => (
-            <Fragment key={index}>
-              {visibility[index] && (
-                <Line
-                  type="monotone"
-                  dataKey={`residual_${index}`}
-                  name={getEnsembleSizeLabel(item.filename)}
-                  stroke={getUniqueColor(index)}
-                />
-              )}
-            </Fragment>
-          ))}
+          {foxsData.map((item, index) =>
+            index === 0 ? null : (
+              <Line
+                key={index}
+                type="monotone"
+                dataKey={`residual_${index}`}
+                name={getEnsembleSizeLabel(item.filename)}
+                stroke={getUniqueColor(index)}
+                hide={!!hidden[index]}
+              />
+            )
+          )}
           <ReferenceLine
             y={0}
             stroke={theme.palette.text.secondary}
           />
         </LineChart>
       </ResponsiveContainer>
-      <Grid sx={{ ml: { xs: 0, md: 8 } }}>
-        <TableContainer component={Paper}>
-          <Table
-            size="small"
-            aria-label="bilbomd multifoxs ensemble results"
-          >
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontSize: '1rem', fontWeight: 700 }}>
-                  Show
-                </TableCell>
-                <TableCell sx={{ fontSize: '1rem', fontWeight: 700 }}>
-                  Ensemble Filename
-                </TableCell>
-                <TableCell sx={{ fontSize: '1rem', fontWeight: 700 }}>
-                  Chi&sup2;
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {foxsData.slice(0).map(
-                (model, index) =>
-                  index !== 0 && (
-                    <TableRow
-                      key={index}
-                      style={{ backgroundColor: getUniqueColor(index) }}
-                    >
-                      <TableCell sx={{ p: 0 }}>
-                        <Checkbox
-                          checked={visibility[index]}
-                          onChange={() => handleCheckboxChange(index)}
-                          color="default"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                          {model.filename}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                          {model.chisq.toFixed(2)}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Grid>
     </>
   )
 }
