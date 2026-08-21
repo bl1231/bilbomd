@@ -61,7 +61,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   redis:
-    image: redis:8.10.0
+    image: redis:8.10.1
     pull_policy: missing
     restart: always
     deploy:
