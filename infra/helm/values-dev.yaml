@@ -53,7 +53,7 @@ ui:
   name: ui
   image:
     repository: ghcr.io/bl1231/bilbomd-ui
-    tag: 2.23.1
+    tag: 2.24.0
     pullPolicy: Always
     secret: ghcr
 
@@ -61,7 +61,7 @@ backend:
   name: backend
   image:
     repository: ghcr.io/bl1231/bilbomd-backend
-    tag: 2.11.2
+    tag: 2.12.0
     pullPolicy: Always
     secret: ghcr
 
@@ -69,6 +69,6 @@ worker:
   name: worker
   image:
     repository: ghcr.io/bl1231/bilbomd-worker
-    tag: 2.17.1
+    tag: 2.17.2
     pullPolicy: Always
     secret: ghcr
