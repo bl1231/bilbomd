@@ -65,7 +65,7 @@ const FoXSChart = ({
   return (
     <>
       <Typography
-        variant="h5"
+        variant="h4"
         sx={{ pl: 2, m: 1 }}
       >
         {title} - I vs. q
@@ -142,7 +142,7 @@ const FoXSChart = ({
         </LineChart>
       </ResponsiveContainer>
       <Typography
-        variant="h5"
+        variant="h4"
         sx={{ pl: 2, m: 1, mt: 3 }}
       >
         {title} - Chi&sup2; residuals

@@ -38,13 +38,13 @@ const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
   return (
     <Box>
       <Typography
-        variant="h5"
+        variant="h4"
         sx={{ pl: 2, m: 1 }}
       >
         Dimensionless Kratky
       </Typography>
       <Typography
-        variant="body2"
+        variant="body1"
         sx={{ pl: 2, mb: 1, color: 'text.secondary' }}
       >
         (qR<sub>g</sub>)²·I(q)/I(0) vs. qR<sub>g</sub> — crosshairs mark the
@@ -135,6 +135,7 @@ const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
                     : getEnsembleSizeLabel(item.filename)
                 }
                 stroke={getUniqueColor(index)}
+                strokeWidth={index === 0 ? 2.5 : 1}
                 dot={false}
                 isAnimationActive={false}
               />

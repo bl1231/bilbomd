@@ -68,7 +68,7 @@ const FoXSEnsembleCharts = ({
   return (
     <>
       <Typography
-        variant="h5"
+        variant="h4"
         sx={{ pl: 2, m: 1 }}
       >{`Ensemble Models - I vs. q`}</Typography>
       <ResponsiveContainer
@@ -122,7 +122,7 @@ const FoXSEnsembleCharts = ({
         </LineChart>
       </ResponsiveContainer>
       <Typography
-        variant="h5"
+        variant="h4"
         sx={{ pl: 2, m: 1, mt: 3 }}
       >
         Ensemble Models - Chi&sup2; residuals
