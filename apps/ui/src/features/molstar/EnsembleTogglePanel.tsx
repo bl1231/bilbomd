@@ -4,46 +4,64 @@ import Chip from '@mui/material/Chip'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
+import { STARTING_MODEL_CSS_COLOR } from './ensembleColors'
 
 interface EnsembleTogglePanelProps {
   ensembleSizes: number[]
   visibility: Record<number, boolean>
-  onToggle: (size: number) => void
-  onToggleAll: (action: 'show' | 'hide') => void
+  onSelect: (size: number) => void
   hasConstraints?: boolean
   domainColorActive?: boolean
   onColorByDomain?: () => void
+  showConformationColor?: boolean
+  conformationColorActive?: boolean
+  onColorByConformation?: () => void
+  showStartingModel?: boolean
+  startingModelActive?: boolean
+  onToggleStartingModel?: () => void
 }
 
 const EnsembleTogglePanel = ({
   ensembleSizes,
   visibility,
-  onToggle,
-  onToggleAll,
+  onSelect,
   hasConstraints,
   domainColorActive,
-  onColorByDomain
+  onColorByDomain,
+  showConformationColor,
+  conformationColorActive,
+  onColorByConformation,
+  showStartingModel,
+  startingModelActive,
+  onToggleStartingModel
 }: EnsembleTogglePanelProps) => {
   const showEnsembleControls = ensembleSizes.length >= 2
   const showSingleEnsembleChip = ensembleSizes.length === 1
   const showDomainButton = !!hasConstraints && !!onColorByDomain
+  const showConformationButton =
+    !!showConformationColor && !!onColorByConformation
+  const showStartingModelButton =
+    !!showStartingModel && !!onToggleStartingModel
 
-  if (!showEnsembleControls && !showSingleEnsembleChip && !showDomainButton) return null
+  if (
+    !showEnsembleControls &&
+    !showSingleEnsembleChip &&
+    !showDomainButton &&
+    !showConformationButton &&
+    !showStartingModelButton
+  )
+    return null
 
-  const selectedSizes = ensembleSizes.filter((s) => visibility[s])
-  const allVisible = selectedSizes.length === ensembleSizes.length
+  // Exactly one ensemble is displayed at a time, so this is an exclusive
+  // (radio-like) selector.
+  const selectedSize = ensembleSizes.find((s) => visibility[s]) ?? null
 
   const handleChange = (
     _: React.MouseEvent<HTMLElement>,
-    newSelected: number[]
+    newSelected: number | null
   ) => {
-    const oldSet = new Set(selectedSizes)
-    const newSet = new Set(newSelected)
-    for (const size of ensembleSizes) {
-      if (oldSet.has(size) !== newSet.has(size)) {
-        onToggle(size)
-      }
-    }
+    // Ignore attempts to deselect the active button — keep one always shown.
+    if (newSelected !== null) onSelect(newSelected)
   }
 
   return (
@@ -71,17 +89,10 @@ const EnsembleTogglePanel = ({
       {showEnsembleControls && (
         <>
           <Typography variant='body2'>Ensembles:</Typography>
-          <Button
-            size='small'
-            variant='outlined'
-            onClick={() => onToggleAll(allVisible ? 'hide' : 'show')}
-            sx={{ textTransform: 'none', minWidth: 72, alignSelf: 'stretch' }}
-          >
-            {allVisible ? 'Hide All' : 'Show All'}
-          </Button>
           <ToggleButtonGroup
             size='small'
-            value={selectedSizes}
+            exclusive
+            value={selectedSize}
             onChange={handleChange}
           >
             {ensembleSizes.map((size) => (
@@ -115,6 +126,38 @@ const EnsembleTogglePanel = ({
           sx={{ textTransform: 'none', minWidth: 120, alignSelf: 'stretch' }}
         >
           Color by Domain
+        </Button>
+      )}
+
+      {showConformationButton && (
+        <Button
+          size='small'
+          variant={conformationColorActive ? 'contained' : 'outlined'}
+          onClick={onColorByConformation}
+          sx={{ textTransform: 'none', minWidth: 160, alignSelf: 'stretch' }}
+        >
+          Color by Conformation
+        </Button>
+      )}
+
+      {showStartingModelButton && (
+        <Button
+          size='small'
+          variant={startingModelActive ? 'contained' : 'outlined'}
+          onClick={onToggleStartingModel}
+          startIcon={
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                borderRadius: 0.5,
+                backgroundColor: STARTING_MODEL_CSS_COLOR
+              }}
+            />
+          }
+          sx={{ textTransform: 'none', minWidth: 150, alignSelf: 'stretch' }}
+        >
+          Starting Model
         </Button>
       )}
     </Box>
