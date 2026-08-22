@@ -53,7 +53,7 @@ ui:
   name: ui
   image:
     repository: ghcr.io/bl1231/bilbomd-ui
-    tag: 2.24.0
+    tag: 2.25.0
     pullPolicy: Always
     secret: ghcr
 
