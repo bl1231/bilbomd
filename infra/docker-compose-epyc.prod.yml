@@ -248,7 +248,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.24.0
+    image: ghcr.io/bl1231/bilbomd-ui:2.25.0
     pull_policy: missing
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
