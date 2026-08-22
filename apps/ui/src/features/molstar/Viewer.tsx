@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, createRef } from 'react'
+import { useEffect, useMemo, useRef, useState, createRef } from 'react'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import useMediaQuery from '@mui/material/useMediaQuery'
@@ -31,11 +31,18 @@ import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context'
 import { logger } from 'utils/logger'
 import { ViewportComponent } from './Viewport'
 import EnsembleTogglePanel from './EnsembleTogglePanel'
+import EnsembleWeightsPanel from './EnsembleWeightsPanel'
 import {
   ShowButtons,
   StructurePreset,
-  createDomainColorPreset
+  createDomainColorPreset,
+  createUniformColorPreset
 } from './presets'
+import {
+  ensembleMemberColorValue,
+  STARTING_MODEL_COLOR_VALUE,
+  STARTING_MODEL_ALPHA
+} from './ensembleColors'
 import { BuiltInTrajectoryFormat } from 'molstar/lib/mol-plugin-state/formats/trajectory'
 import 'molstar/lib/mol-plugin-ui/skin/light.scss'
 import Item from 'themes/components/Item'
@@ -59,6 +66,35 @@ type PDBsToLoad = LoadParams[]
 
 interface HasEnsembles {
   ensembles: IEnsemble[]
+}
+
+// How structures are colored in the viewer:
+// - 'default': per-structure palette coloring (Molstar structure-index)
+// - 'domain': fixed/rigid/flexible domains from the MD constraints
+// - 'conformation': each ensemble member a distinct color (see ensembleColors)
+type ColorMode = 'default' | 'domain' | 'conformation'
+
+// Job types whose results carry MultiFoXS ensembles, mapped to the key under
+// which those ensembles live in JobResultsDTO.
+const ensembleResultsKeys: Partial<Record<JobType, keyof JobResultsDTO>> = {
+  pdb: 'classic',
+  crd: 'classic',
+  auto: 'auto',
+  alphafold: 'alphafold',
+  openfold: 'openfold',
+  sans: 'sans'
+}
+
+// Extract the ensembles array for a job so the weights panel can render the
+// per-conformation weights that the viewer already loads.
+const getEnsemblesForJob = (
+  jobType: JobType,
+  results: JobResultsDTO
+): IEnsemble[] => {
+  const key = ensembleResultsKeys[jobType]
+  if (!key) return []
+  const jobResults = results?.[key] as HasEnsembles | null | undefined
+  return Array.isArray(jobResults?.ensembles) ? jobResults.ensembles : []
 }
 
 const DefaultViewerOptions = {
@@ -110,15 +146,37 @@ const MolstarViewer = ({
   const [ensembleVisibility, setEnsembleVisibility] = useState<
     Record<number, boolean>
   >({})
-  const [isDomainColor, setIsDomainColor] = useState(false)
+  // Default to coloring each ensemble member a distinct color (with the
+  // weights-panel legend) whenever there is a multi-member ensemble to show.
+  const [colorMode, setColorMode] = useState<ColorMode>(() =>
+    getEnsemblesForJob(jobType, results).some((e) => e.size >= 2)
+      ? 'conformation'
+      : 'default'
+  )
   const ensembleStructureRefs = useRef<Map<number, string[]>>(new Map())
   const ensembleVisibilityRef = useRef<Record<number, boolean>>({})
-  const isDomainColorRef = useRef(false)
+  const colorModeRef = useRef<ColorMode>('default')
   const allStructureRefs = useRef<string[]>([])
+
+  // The original starting (minimized input) model, toggled independently of the
+  // ensembles for comparison. Kept out of allStructureRefs / ensembleStructureRefs
+  // so color-mode and ensemble-visibility changes never touch it.
+  const startingModelRef = useRef<string | null>(null)
+  const [hasStartingModel, setHasStartingModel] = useState(false)
+  const [showStartingModel, setShowStartingModel] = useState(false)
 
   const hasConstraints =
     (constraints?.fixed_bodies?.length ?? 0) > 0 ||
     (constraints?.rigid_bodies?.length ?? 0) > 0
+
+  const ensembles = useMemo(
+    () => getEnsemblesForJob(jobType, results),
+    [jobType, results]
+  )
+
+  // Color-by-conformation is only meaningful when at least one visible ensemble
+  // has multiple members to distinguish.
+  const showConformationColor = ensembles.some((e) => e.size >= 2)
 
   const createLoadParamsArray = async (
     id: string,
@@ -241,8 +299,8 @@ const MolstarViewer = ({
   }, [ensembleVisibility])
 
   useEffect(() => {
-    isDomainColorRef.current = isDomainColor
-  }, [isDomainColor])
+    colorModeRef.current = colorMode
+  }, [colorMode])
 
   const hasRun = useRef(false)
 
@@ -367,8 +425,12 @@ const MolstarViewer = ({
           // Track all loaded structure refs for domain coloring
           structRefs.push(struct.ref)
 
+          // A member's index within its ensemble is its position in the refs
+          // array — this matches the weights-panel row order and legend colors.
+          let memberIndex = 0
           if (ensembleSize !== undefined) {
             const refs = ensembleStructureRefs.current.get(ensembleSize) ?? []
+            memberIndex = refs.length
             refs.push(struct.ref)
             ensembleStructureRefs.current.set(ensembleSize, refs)
           }
@@ -379,9 +441,15 @@ const MolstarViewer = ({
             (s) => s.cell.transform.ref === struct.ref
           )
           if (structureRef) {
+            // Color each ensemble member distinctly when conformation coloring
+            // is the active default; otherwise use the standard preset.
+            const preset =
+              colorMode === 'conformation' && ensembleSize !== undefined
+                ? createUniformColorPreset(ensembleMemberColorValue(memberIndex))
+                : StructurePreset
             await plugin.managers.structure.component.applyPreset(
               [structureRef],
-              StructurePreset
+              preset
             )
           }
         }
@@ -437,6 +505,52 @@ const MolstarViewer = ({
             }
         }
       }
+
+      // Load the original starting (minimized input) model so it can be toggled
+      // on for comparison with the ensemble models. Hidden by default, colored a
+      // neutral gray, and deliberately kept out of the ref maps that drive
+      // coloring/visibility so it stays independent of them.
+      if (ensembleResultsKeys[jobType] && window.molstar) {
+        const startingUrl = isPublic
+          ? `/public/jobs/${publicId}/results/minimization_output.pdb`
+          : `/jobs/${id}/results/minimization_output.pdb`
+        try {
+          const startingData = await fetchPdbData(startingUrl)
+          if (startingData) {
+            const plugin = window.molstar
+            const data = await plugin.builders.data.rawData({
+              data: startingData,
+              label: 'minimization_output.pdb'
+            })
+            const trajectory =
+              await plugin.builders.structure.parseTrajectory(data, 'pdb')
+            const model = await plugin.builders.structure.createModel(trajectory)
+            const struct =
+              await plugin.builders.structure.createStructure(model)
+            startingModelRef.current = struct.ref
+            const structureRef =
+              plugin.managers.structure.hierarchy.current.structures.find(
+                (s) => s.cell.transform.ref === struct.ref
+              )
+            if (structureRef) {
+              await plugin.managers.structure.component.applyPreset(
+                [structureRef],
+                createUniformColorPreset(
+                  STARTING_MODEL_COLOR_VALUE,
+                  STARTING_MODEL_ALPHA
+                )
+              )
+              plugin.managers.structure.hierarchy.toggleVisibility(
+                [structureRef],
+                'hide'
+              )
+            }
+            setHasStartingModel(true)
+          }
+        } catch {
+          // No starting model available for this job; leave the toggle hidden.
+        }
+      }
     }
 
     void init()
@@ -447,34 +561,44 @@ const MolstarViewer = ({
       hasRun.current = false
       refsMap.clear()
       structRefs.length = 0
+      startingModelRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const toggleDomainColor = async () => {
+  const applyColorMode = async (nextMode: ColorMode) => {
     const plugin = window.molstar
-    if (!plugin || !constraints) return
+    if (!plugin) return
+    if (nextMode === 'domain' && !constraints) return
 
-    const nextMode = !isDomainColorRef.current
     const allStructures = plugin.managers.structure.hierarchy.current.structures
-    const targets = allStructures.filter((s) =>
-      allStructureRefs.current.includes(s.cell.transform.ref)
-    )
-
-    if (targets.length === 0) return
 
     try {
-      if (nextMode) {
-        const domainPreset = createDomainColorPreset(constraints)
-        await plugin.managers.structure.component.applyPreset(
-          targets,
-          domainPreset
-        )
+      if (nextMode === 'conformation') {
+        // Color each ensemble member its own palette color, indexed by its
+        // position within the ensemble so it matches the weights-panel legend.
+        for (const refs of ensembleStructureRefs.current.values()) {
+          for (let i = 0; i < refs.length; i++) {
+            const target = allStructures.find(
+              (s) => s.cell.transform.ref === refs[i]
+            )
+            if (!target) continue
+            await plugin.managers.structure.component.applyPreset(
+              [target],
+              createUniformColorPreset(ensembleMemberColorValue(i))
+            )
+          }
+        }
       } else {
-        await plugin.managers.structure.component.applyPreset(
-          targets,
-          StructurePreset
+        const targets = allStructures.filter((s) =>
+          allStructureRefs.current.includes(s.cell.transform.ref)
         )
+        if (targets.length === 0) return
+        const preset =
+          nextMode === 'domain' && constraints
+            ? createDomainColorPreset(constraints)
+            : StructurePreset
+        await plugin.managers.structure.component.applyPreset(targets, preset)
       }
 
       // Re-apply ensemble visibility after rebuilding representations
@@ -483,40 +607,56 @@ const MolstarViewer = ({
       ).reapplyVisibility
       if (typeof reapply === 'function') reapply()
 
-      setIsDomainColor(nextMode)
+      setColorMode(nextMode)
     } catch (error) {
-      logger.error('Failed to apply domain color preset:', error)
+      logger.error('Failed to apply color preset:', error)
     }
   }
 
-  const toggleAllEnsembles = (action: 'show' | 'hide') => {
+  const toggleDomainColor = () =>
+    applyColorMode(colorModeRef.current === 'domain' ? 'default' : 'domain')
+
+  const toggleConformationColor = () =>
+    applyColorMode(
+      colorModeRef.current === 'conformation' ? 'default' : 'conformation'
+    )
+
+  const toggleStartingModel = () => {
+    const plugin = window.molstar
+    const ref = startingModelRef.current
+    if (!plugin || !ref) return
+    const target = plugin.managers.structure.hierarchy.current.structures.find(
+      (s) => s.cell.transform.ref === ref
+    )
+    if (!target) return
+    const next = !showStartingModel
+    plugin.managers.structure.hierarchy.toggleVisibility(
+      [target],
+      next ? 'show' : 'hide'
+    )
+    setShowStartingModel(next)
+  }
+
+  // Show exactly one ensemble at a time: reveal the chosen size and hide all
+  // others.
+  const selectEnsemble = (size: number) => {
     const plugin = window.molstar
     if (!plugin) return
-    const allRefs = Array.from(ensembleStructureRefs.current.values()).flat()
-    const targets = plugin.managers.structure.hierarchy.current.structures.filter(
-      (s) => allRefs.includes(s.cell.transform.ref)
-    )
-    if (targets.length > 0) {
-      plugin.managers.structure.hierarchy.toggleVisibility(targets, action)
-    }
+    const allStructures = plugin.managers.structure.hierarchy.current.structures
     const sizes = Array.from(ensembleStructureRefs.current.keys())
-    setEnsembleVisibility(
-      Object.fromEntries(sizes.map((s) => [s, action === 'show']))
-    )
-  }
-
-  const toggleEnsemble = (size: number) => {
-    const plugin = window.molstar
-    if (!plugin) return
-    const refs = ensembleStructureRefs.current.get(size) ?? []
-    const action = ensembleVisibility[size] ? 'hide' : 'show'
-    const targets = plugin.managers.structure.hierarchy.current.structures.filter(
-      (s) => refs.includes(s.cell.transform.ref)
-    )
-    if (targets.length > 0) {
-      plugin.managers.structure.hierarchy.toggleVisibility(targets, action)
+    for (const s of sizes) {
+      const refs = ensembleStructureRefs.current.get(s) ?? []
+      const targets = allStructures.filter((st) =>
+        refs.includes(st.cell.transform.ref)
+      )
+      if (targets.length > 0) {
+        plugin.managers.structure.hierarchy.toggleVisibility(
+          targets,
+          s === size ? 'show' : 'hide'
+        )
+      }
     }
-    setEnsembleVisibility((prev) => ({ ...prev, [size]: !prev[size] }))
+    setEnsembleVisibility(Object.fromEntries(sizes.map((s) => [s, s === size])))
   }
 
   return (
@@ -526,11 +666,16 @@ const MolstarViewer = ({
           <EnsembleTogglePanel
             ensembleSizes={Object.keys(ensembleVisibility).map(Number)}
             visibility={ensembleVisibility}
-            onToggle={toggleEnsemble}
-            onToggleAll={toggleAllEnsembles}
+            onSelect={selectEnsemble}
             hasConstraints={hasConstraints}
-            domainColorActive={isDomainColor}
+            domainColorActive={colorMode === 'domain'}
             onColorByDomain={toggleDomainColor}
+            showConformationColor={showConformationColor}
+            conformationColorActive={colorMode === 'conformation'}
+            onColorByConformation={toggleConformationColor}
+            showStartingModel={hasStartingModel}
+            startingModelActive={showStartingModel}
+            onToggleStartingModel={toggleStartingModel}
           />
           <Box sx={{ position: 'relative', width: '100%' }}>
             <div
@@ -549,6 +694,11 @@ const MolstarViewer = ({
               />
             )}
           </Box>
+          <EnsembleWeightsPanel
+            ensembles={ensembles}
+            visibility={ensembleVisibility}
+            showColors={colorMode === 'conformation'}
+          />
         </Box>
       </Grid>
     </Item>

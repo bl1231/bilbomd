@@ -7,8 +7,7 @@ import EnsembleTogglePanel from '../EnsembleTogglePanel'
 const baseProps = {
   ensembleSizes: [],
   visibility: {},
-  onToggle: vi.fn(),
-  onToggleAll: vi.fn()
+  onSelect: vi.fn()
 }
 
 describe('EnsembleTogglePanel', () => {
@@ -54,9 +53,21 @@ describe('EnsembleTogglePanel', () => {
         />
       )
       expect(screen.getByText('Ensembles:')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Show All' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Size 1' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Size 2' })).toBeInTheDocument()
+    })
+
+    it('does not render a Show All / Hide All button', () => {
+      renderWithProviders(
+        <EnsembleTogglePanel
+          {...baseProps}
+          ensembleSizes={[1, 2]}
+          visibility={{ 1: true, 2: false }}
+        />
+      )
+      expect(
+        screen.queryByRole('button', { name: /Hide All|Show All/ })
+      ).not.toBeInTheDocument()
     })
 
     it('renders both ensemble controls and domain button when both apply', () => {
@@ -141,18 +152,7 @@ describe('EnsembleTogglePanel', () => {
   })
 
   describe('ensemble controls', () => {
-    it('shows "Hide All" when all ensembles are visible', () => {
-      renderWithProviders(
-        <EnsembleTogglePanel
-          {...baseProps}
-          ensembleSizes={[1, 2]}
-          visibility={{ 1: true, 2: true }}
-        />
-      )
-      expect(screen.getByRole('button', { name: 'Hide All' })).toBeInTheDocument()
-    })
-
-    it('shows "Show All" when not all ensembles are visible', () => {
+    it('marks the visible ensemble size as selected (exclusive)', () => {
       renderWithProviders(
         <EnsembleTogglePanel
           {...baseProps}
@@ -160,35 +160,91 @@ describe('EnsembleTogglePanel', () => {
           visibility={{ 1: true, 2: false }}
         />
       )
-      expect(screen.getByRole('button', { name: 'Show All' })).toBeInTheDocument()
-    })
-
-    it('calls onToggleAll with "hide" when Hide All is clicked', async () => {
-      const onToggleAll = vi.fn()
-      renderWithProviders(
-        <EnsembleTogglePanel
-          {...baseProps}
-          ensembleSizes={[1, 2]}
-          visibility={{ 1: true, 2: true }}
-          onToggleAll={onToggleAll}
-        />
+      expect(screen.getByRole('button', { name: 'Size 1' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
       )
-      await userEvent.click(screen.getByRole('button', { name: 'Hide All' }))
-      expect(onToggleAll).toHaveBeenCalledWith('hide')
+      expect(screen.getByRole('button', { name: 'Size 2' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      )
     })
 
-    it('calls onToggle when an ensemble size button is clicked', async () => {
-      const onToggle = vi.fn()
+    it('calls onSelect when a different ensemble size is clicked', async () => {
+      const onSelect = vi.fn()
       renderWithProviders(
         <EnsembleTogglePanel
           {...baseProps}
           ensembleSizes={[1, 2]}
           visibility={{ 1: true, 2: false }}
-          onToggle={onToggle}
+          onSelect={onSelect}
         />
       )
       await userEvent.click(screen.getByRole('button', { name: 'Size 2' }))
-      expect(onToggle).toHaveBeenCalledWith(2)
+      expect(onSelect).toHaveBeenCalledWith(2)
+    })
+
+    it('does not call onSelect when the already-selected size is clicked', async () => {
+      const onSelect = vi.fn()
+      renderWithProviders(
+        <EnsembleTogglePanel
+          {...baseProps}
+          ensembleSizes={[1, 2]}
+          visibility={{ 1: true, 2: false }}
+          onSelect={onSelect}
+        />
+      )
+      // Clicking the active button would deselect it in an exclusive group;
+      // the panel ignores that so one ensemble is always shown.
+      await userEvent.click(screen.getByRole('button', { name: 'Size 1' }))
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('starting model toggle', () => {
+    it('is hidden when no starting model is available', () => {
+      renderWithProviders(
+        <EnsembleTogglePanel
+          {...baseProps}
+          ensembleSizes={[2]}
+          visibility={{ 2: true }}
+        />
+      )
+      expect(
+        screen.queryByRole('button', { name: /Starting Model/ })
+      ).not.toBeInTheDocument()
+    })
+
+    it('shows the toggle when a starting model is available', () => {
+      renderWithProviders(
+        <EnsembleTogglePanel
+          {...baseProps}
+          ensembleSizes={[2]}
+          visibility={{ 2: true }}
+          showStartingModel
+          onToggleStartingModel={vi.fn()}
+        />
+      )
+      expect(
+        screen.getByRole('button', { name: /Starting Model/ })
+      ).toBeInTheDocument()
+    })
+
+    it('calls onToggleStartingModel when clicked', async () => {
+      const onToggleStartingModel = vi.fn()
+      renderWithProviders(
+        <EnsembleTogglePanel
+          {...baseProps}
+          ensembleSizes={[2]}
+          visibility={{ 2: true }}
+          showStartingModel
+          onToggleStartingModel={onToggleStartingModel}
+        />
+      )
+      await userEvent.click(
+        screen.getByRole('button', { name: /Starting Model/ })
+      )
+      expect(onToggleStartingModel).toHaveBeenCalledTimes(1)
     })
   })
 })

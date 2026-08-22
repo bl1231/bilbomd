@@ -509,6 +509,115 @@ export const InteractionsPreset = StructureRepresentationPresetProvider({
   }
 })
 
+// Colors an entire structure's polymer (protein + nucleic) a single uniform
+// color, keeping ligands/ions/branched element-colored. Used to give each
+// ensemble member structure its own distinct color ("Color by Conformation").
+export const createUniformColorPreset = (colorValue: number, alpha = 1) =>
+  StructureRepresentationPresetProvider({
+    id: 'preset-uniform-color',
+    display: { name: 'Uniform Color' },
+    params: () => PresetParams,
+    async apply(ref, params, plugin) {
+      const structureCell = StateObjectRef.resolveAndCheck(plugin.state.data, ref)
+      if (!structureCell) return {}
+
+      const color = Color(colorValue)
+
+      const components = {
+        ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
+        protein: await presetStaticComponent(plugin, structureCell, 'protein'),
+        nucleic: await plugin.builders.structure.tryCreateComponentFromSelection(
+          structureCell,
+          nucleicResidueQuery,
+          'nucleic'
+        ),
+        ions: await presetStaticComponent(plugin, structureCell, 'ion'),
+        branched: await presetStaticComponent(plugin, structureCell, 'branched')
+      }
+
+      const { update, builder, typeParams } =
+        StructureRepresentationPresetProvider.reprBuilder(plugin, params)
+      const representations = {
+        ligand: builder.buildRepresentation(
+          update,
+          components.ligand,
+          {
+            type: 'ball-and-stick',
+            typeParams: {
+              ...typeParams,
+              material: CustomMaterial,
+              sizeFactor: 0.35,
+              alpha
+            },
+            color: 'element-symbol',
+            colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
+          },
+          { tag: 'ligand' }
+        ),
+        protein: builder.buildRepresentation(
+          update,
+          components.protein,
+          {
+            type: 'cartoon',
+            typeParams: { ...typeParams, material: CustomMaterial, alpha },
+            color: 'uniform',
+            colorParams: { value: color }
+          },
+          { tag: 'protein' }
+        ),
+        nucleic: builder.buildRepresentation(
+          update,
+          components.nucleic,
+          {
+            type: 'cartoon',
+            typeParams: { ...typeParams, material: CustomMaterial, alpha },
+            color: 'uniform',
+            colorParams: { value: color }
+          },
+          { tag: 'nucleic' }
+        ),
+        ions: builder.buildRepresentation(
+          update,
+          components.ions,
+          {
+            type: 'spacefill',
+            typeParams: {
+              ...typeParams,
+              material: CustomMaterial,
+              sizeFactor: 1.0,
+              alpha
+            },
+            color: 'element-symbol',
+            colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
+          },
+          { tag: 'ions' }
+        ),
+        branched: builder.buildRepresentation(
+          update,
+          components.branched,
+          {
+            type: 'ball-and-stick',
+            typeParams: {
+              ...typeParams,
+              material: CustomMaterial,
+              sizeFactor: 0.35,
+              alpha
+            },
+            color: 'element-symbol',
+            colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
+          },
+          { tag: 'branched' }
+        )
+      }
+
+      await update.commit({ revertOnError: true })
+      await shinyStyle(plugin)
+      plugin.managers.interactivity.setProps({ granularity: 'residue' })
+
+      return { components, representations }
+    }
+  })
+
 export const ShowButtons = PluginConfig.item('showButtons', true)
 
 // Colors matching MDConstraintsRenderer
