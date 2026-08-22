@@ -63,6 +63,6 @@ jobs:
           # merges (no waiting for Renovate). changesets/action stages all
           # working-tree changes (git add .), so the infra edits are committed
           # onto the release branch alongside the version bumps.
-          version: pnpm run changeset:version
+          version-script: pnpm run changeset:version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
