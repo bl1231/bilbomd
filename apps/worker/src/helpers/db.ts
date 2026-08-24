@@ -12,21 +12,27 @@ const {
 
 const url = `mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOSTNAME}:${MONGO_PORT}/${MONGO_DB}?authSource=${MONGO_AUTH_SRC}`
 
-const connectDB = async (retries = 5, delay = 5000) => {
-  for (let i = 0; i < retries; i++) {
+const INITIAL_RETRY_DELAY_MS = 5_000
+const MAX_RETRY_DELAY_MS = 60_000
+
+// Retry forever with capped exponential backoff rather than giving up after a
+// fixed number of attempts: a mongod that is briefly unreachable during a
+// deploy or an NFS lock-recovery window can outlast a finite retry budget, and
+// connectDB() is called fire-and-forget, so a throw here becomes an unhandled
+// rejection that kills the worker. Mirrors the backend's dbConn.ts.
+const connectDB = async (): Promise<void> => {
+  for (let attempt = 1; ; attempt++) {
     try {
       await mongoose.connect(url)
       logger.info('Successfully connected to MongoDB')
       return
     } catch (err) {
-      logger.error(
-        `MongoDB connection attempt ${i + 1}/${retries} failed: ${err}`
+      const delay = Math.min(
+        INITIAL_RETRY_DELAY_MS * 2 ** (attempt - 1),
+        MAX_RETRY_DELAY_MS
       )
-      if (i === retries - 1) {
-        logger.error('All MongoDB connection attempts failed')
-        throw err
-      }
-      logger.info(`Retrying in ${delay / 1000} seconds...`)
+      logger.error(`MongoDB connection attempt ${attempt} failed: ${err}`)
+      logger.info(`Retrying MongoDB connection in ${delay / 1000} seconds...`)
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
   }
