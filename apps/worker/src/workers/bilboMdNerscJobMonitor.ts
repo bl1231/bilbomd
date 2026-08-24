@@ -84,8 +84,24 @@ const queryNERSCForJobState = async (job: IJob): Promise<INerscInfo | null> => {
     }
     const nerscState = await fetchNERSCJobState(jobid)
     if (!nerscState) {
-      logger.warn(`Failed to fetch NERSC state for job ${jobid}.`)
-      await handleStateFetchFailure(job)
+      // A freshly submitted job can take a minute or two to show up in Slurm
+      // accounting (sacct), during which the API returns an empty result. If
+      // the stored state is still PENDING this is expected — report a benign
+      // waiting status instead of a false error.
+      if (job.nersc?.state === NerscStatus.PENDING) {
+        logger.info(
+          `NERSC job ${jobid} not yet in Slurm accounting (state: PENDING) — will retry on next poll.`
+        )
+        await updateSingleJobStep(
+          job,
+          'nersc_job_status',
+          'Waiting',
+          'Waiting for job to appear in Slurm accounting...'
+        )
+      } else {
+        logger.warn(`Failed to fetch NERSC state for job ${jobid}.`)
+        await handleStateFetchFailure(job)
+      }
       return null
     }
     return nerscState
@@ -622,4 +638,4 @@ const updateJobStepsFromSlurmStatusFile = async (
   }
 }
 
-export { monitorAndCleanupJobs }
+export { monitorAndCleanupJobs, queryNERSCForJobState }
