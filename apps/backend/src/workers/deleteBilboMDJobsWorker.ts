@@ -4,13 +4,9 @@ import path from 'path'
 import fs from 'fs-extra'
 import { logger } from '../middleware/loggers.js'
 import { getEnvVar } from '../config/config.js'
+import { redis as connection } from '../queues/redisConn.js'
 
 const uploadFolder = path.join(getEnvVar('DATA_VOL'))
-
-const connection = {
-  host: 'redis',
-  port: 6379
-}
 
 function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
   return (
