@@ -41,6 +41,7 @@ import PipelineSchematic from './PipelineSchematic'
 import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
 import type { BilboMDCRDDTO, BilboMDPDBDTO } from '@bilbomd/bilbomd-types'
 import MdEngineField from 'components/MdEngineField'
+import TitleField from 'components/TitleField'
 
 const ResubmitJobForm = () => {
   useTitle('BilboMD: Resubmit Classic Job')
@@ -330,22 +331,7 @@ const ResubmitJobForm = () => {
                         Job Form
                       </Divider>
                       <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>
-                        <Field
-                          fullWidth
-                          label="Title"
-                          name="title"
-                          id="title"
-                          type="text"
-                          disabled={isSubmitting}
-                          as={TextField}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          error={errors.title && touched.title}
-                          helperText={
-                            errors.title && touched.title ? errors.title : ''
-                          }
-                          value={values.title || ''}
-                        />
+                        <TitleField />
                       </Grid>
                       {/* MD Engine selection */}
                       <Grid sx={{ width: '100%', maxWidth: '520px', mb: 1 }}>

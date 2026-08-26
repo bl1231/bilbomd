@@ -2,7 +2,6 @@ import { useState } from 'react'
 import {
   Box,
   Button,
-  TextField,
   Typography,
   Alert,
   Paper,
@@ -24,6 +23,7 @@ import { bilbomdScoperJobSchema } from 'schemas/ScoperValidationSchema'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
+import TitleField from 'components/TitleField'
 import useTitle from 'hooks/useTitle'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
@@ -220,8 +220,6 @@ const NewScoperJobForm = ({
                   touched,
                   isValid,
                   isSubmitting,
-                  handleChange,
-                  handleBlur,
                   setFieldValue,
                   setFieldTouched,
                   validateForm
@@ -241,22 +239,7 @@ const NewScoperJobForm = ({
                         }}
                       >
                         <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
-                          <Field
-                            fullWidth
-                            label="Title"
-                            name="title"
-                            id="title"
-                            type="text"
-                            disabled={isSubmitting}
-                            as={TextField}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            error={errors.title && touched.title}
-                            helperText={
-                              errors.title && touched.title ? errors.title : ''
-                            }
-                            value={values.title || ''}
-                          />
+                          <TitleField />
                         </Box>
                         <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
                           <Button

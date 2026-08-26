@@ -26,6 +26,7 @@ import { expdataSchema } from 'schemas/ExpdataSchema'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
+import TitleField from 'components/TitleField'
 import useTitle from 'hooks/useTitle'
 import { NewSANSJobFormValues } from '../../types/sansForm'
 import NewSANSJobFormInstructions from './NewSANSJobFormInstructions'
@@ -269,22 +270,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
                     {/* Title */}
                     <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>
-                      <Field
-                        fullWidth
-                        label="Title"
-                        name="title"
-                        id="title"
-                        type="text"
-                        disabled={isSubmitting}
-                        as={TextField}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={errors.title && touched.title}
-                        helperText={
-                          errors.title && touched.title ? errors.title : ''
-                        }
-                        value={values.title || ''}
-                      />
+                      <TitleField />
                     </Grid>
 
                     {/* PDB file */}

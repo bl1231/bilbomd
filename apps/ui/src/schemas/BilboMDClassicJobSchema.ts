@@ -15,17 +15,14 @@ import {
   pdbOrCifChainIdCheck,
   pdbOrCifResidueCheck
 } from './fieldTests/fieldTests'
+import { titleSchema } from './titleSchema'
 
 const BilboMDClassicJobSchema = object().shape({
   bilbomd_mode: string().required('Selection is required'),
   md_engine: string()
     .oneOf(['charmm', 'openmm'], 'Invalid MD engine')
     .required('Please select an MD engine'),
-  title: string()
-    .required('Please provide a title for your BilboMD Job.')
-    .min(4, 'Title must contain at least 4 characters.')
-    .max(24, 'Title must contain less than 24 characters.')
-    .matches(/^[\w\s-]+$/, 'no spaces or special characters allowed'),
+  title: titleSchema('BilboMD Job'),
   psf_file: mixed().when('bilbomd_mode', {
     is: 'crd_psf',
     then: () =>

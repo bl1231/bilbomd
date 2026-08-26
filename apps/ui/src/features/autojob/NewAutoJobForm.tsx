@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react'
-import { Box, Button, TextField, Typography, Alert, Paper } from '@mui/material'
+import { Box, Button, Typography, Alert, Paper } from '@mui/material'
 import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
@@ -17,6 +17,7 @@ import {
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
+import TitleField from 'components/TitleField'
 import useTitle from 'hooks/useTitle'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
@@ -188,8 +189,6 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                   touched,
                   isValid,
                   isSubmitting,
-                  handleChange,
-                  handleBlur,
                   setFieldValue,
                   setFieldTouched,
                   validateForm
@@ -215,22 +214,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }}
                       >
                         <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
-                          <Field
-                            label="Title"
-                            name="title"
-                            id="title"
-                            type="text"
-                            disabled={isSubmitting}
-                            as={TextField}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            error={errors.title && touched.title}
-                            helperText={
-                              errors.title && touched.title ? errors.title : ''
-                            }
-                            value={values.title || ''}
-                            sx={{ width: '100%' }}
-                          />
+                          <TitleField />
                         </Box>
                         <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
                           <Button

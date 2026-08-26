@@ -12,16 +12,13 @@ import {
   fileExtTest,
   constInpCheck
 } from './fieldTests/fieldTests'
+import { titleSchema } from './titleSchema'
 
 const BilboMDSANSJobSchema = object().shape({
   md_engine: string()
     .oneOf(['charmm', 'openmm'], 'Invalid MD engine')
     .required('Please select an MD engine'),
-  title: string()
-    .required('Please provide a title for your BilboMD SANS Job.')
-    .min(4, 'Title must contain at least 4 characters.')
-    .max(30, 'Title must contain less than 30 characters.')
-    .matches(/^[\w\s-]+$/, 'No special characters allowed'),
+  title: titleSchema('BilboMD SANS Job'),
   pdb_file: requiredFile('A PDB or CIF file is required')
     .concat(pdbOrCifChainIdCheck())
     .concat(singleModelCheck())
