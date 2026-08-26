@@ -1,12 +1,9 @@
-import { mixed, object, string } from 'yup'
+import { mixed, object } from 'yup'
 import { noSpaces, isSaxsData, isRNA } from './ValidationFunctions'
+import { titleSchema } from './titleSchema'
 
 export const bilbomdScoperJobSchema = object().shape({
-  title: string()
-    .required('Please provide a title for your BilboMD Scoper Job.')
-    .min(4, 'Title must contain at least 4 characters.')
-    .max(30, 'Title must contain less than 30 characters.')
-    .matches(/^[\w\s-]+$/, 'no special characters allowed'),
+  title: titleSchema('BilboMD Scoper Job'),
 
   pdb_file: mixed()
     .required('An RNA PDB file is required')

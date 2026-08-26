@@ -7,6 +7,7 @@ import {
   noSpacesTest,
   saxsCheck
 } from './fieldTests/fieldTests'
+import { titleSchema } from './titleSchema'
 
 const isAminoAcidSequence = (sequence: string) =>
   /^[ACDEFGHIKLMNPQRSTVWY]+$/i.test(sequence)
@@ -16,11 +17,7 @@ const isDnaSequence = (sequence: string) => /^[ACGT]+$/i.test(sequence)
 const isRnaSequence = (sequence: string) => /^[ACGU]+$/i.test(sequence)
 
 const BilboMDOpenFoldJobSchema = object().shape({
-  title: string()
-    .required('Please provide a title for your BilboMD Job.')
-    .min(4, 'Title must contain at least 4 characters.')
-    .max(30, 'Title must contain less than 30 characters.')
-    .matches(/^[\w\s-]+$/, 'No spaces or special characters allowed'),
+  title: titleSchema('BilboMD Job'),
 
   dat_file: requiredFile('Experimental SAXS data is required')
     .concat(fileSizeTest(2_000_000))

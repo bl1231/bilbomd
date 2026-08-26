@@ -13,7 +13,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Typography,
   Alert,
   Paper,
@@ -26,9 +25,11 @@ import Grid from '@mui/material/Grid'
 import SendIcon from '@mui/icons-material/Send'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import HeaderBox from 'components/HeaderBox'
+import TitleField from 'components/TitleField'
+import { titleSchema } from 'schemas/titleSchema'
 import useTitle from 'hooks/useTitle'
 import { Instructions } from './Instructions.tsx'
-import { Formik, Form, Field } from 'formik'
+import { Formik, Form } from 'formik'
 import { Debug } from 'components/Debug'
 import useAuth from 'hooks/useAuth'
 import { formatDateSafe } from 'utils/dates'
@@ -70,11 +71,7 @@ const NewMultiMDJobForm: React.FC = () => {
   }
 
   const validationSchema = Yup.object({
-    title: Yup.string()
-      .required('Please provide a title for your BilboMD Multi Job.')
-      .min(4, 'Title must contain at least 4 characters.')
-      .max(30, 'Title must contain less than 30 characters.')
-      .matches(/^[\w\s-]+$/, 'No special characters allowed'),
+    title: titleSchema('BilboMD Multi Job'),
     bilbomd_uuids: Yup.array().min(2, 'Select at least two jobs to combine'),
     data_file_from: Yup.string()
       .required(
@@ -173,12 +170,9 @@ const NewMultiMDJobForm: React.FC = () => {
                 {({
                   values,
                   errors,
-                  touched,
                   isValid,
                   isSubmitting,
-                  handleChange,
                   setFieldValue,
-                  handleBlur,
                   status
                 }) => (
                   <Form>
@@ -187,22 +181,7 @@ const NewMultiMDJobForm: React.FC = () => {
                       sx={{ flexDirection: 'column' }}
                     >
                       <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>
-                        <Field
-                          fullWidth
-                          label="Title"
-                          name="title"
-                          id="title"
-                          type="text"
-                          disabled={isSubmitting}
-                          as={TextField}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          error={errors.title && touched.title}
-                          helperText={
-                            errors.title && touched.title ? errors.title : ''
-                          }
-                          value={values.title || ''}
-                        />
+                        <TitleField />
                       </Grid>
                       <Divider
                         textAlign="left"

@@ -39,6 +39,7 @@ import { BilboMDClassicJobFormValues } from '../../types/classicJobForm'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from './JobSuccessAlert'
 import MdEngineField from 'components/MdEngineField'
+import TitleField from 'components/TitleField'
 import { getRgMaxWarning } from './rgMaxWarning'
 
 type NewJobFormProps = {
@@ -266,22 +267,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       }}
                     >
                       <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
-                        <Field
-                          label="Title"
-                          name="title"
-                          id="title"
-                          type="text"
-                          disabled={isSubmitting}
-                          as={TextField}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          error={errors.title && touched.title}
-                          helperText={
-                            errors.title && touched.title ? errors.title : ''
-                          }
-                          value={values.title || ''}
-                          sx={{ width: '100%' }}
-                        />
+                        <TitleField />
                       </Box>
                       <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
                         <Button

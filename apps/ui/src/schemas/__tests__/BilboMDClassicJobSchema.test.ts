@@ -97,17 +97,16 @@ describe('BilboMDClassicJobSchema - title', () => {
     ).rejects.toThrow('at least 4 characters')
   })
 
-  // Classic schema max is 24 characters (not 30 like other schemas)
-  it('rejects title longer than 24 characters', async () => {
+  it('rejects title longer than 30 characters', async () => {
     await expect(
-      BilboMDClassicJobSchema.validateAt('title', { title: 'a'.repeat(25) })
-    ).rejects.toThrow('less than 24 characters')
+      BilboMDClassicJobSchema.validateAt('title', { title: 'a'.repeat(31) })
+    ).rejects.toThrow('less than 30 characters')
   })
 
-  it('accepts title of exactly 24 characters', async () => {
+  it('accepts title of exactly 30 characters', async () => {
     await expect(
-      BilboMDClassicJobSchema.validateAt('title', { title: 'a'.repeat(24) })
-    ).resolves.toBe('a'.repeat(24))
+      BilboMDClassicJobSchema.validateAt('title', { title: 'a'.repeat(30) })
+    ).resolves.toBe('a'.repeat(30))
   })
 
   it('rejects title with special characters', async () => {
