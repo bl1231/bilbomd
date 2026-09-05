@@ -1,6 +1,6 @@
 # Use an official NVIDIA image as a parent image
 # FROM nvidia/cuda:12.2.2-devel-ubuntu22.04
-FROM nvidia/cuda:12.9.2-devel-ubuntu22.04
+FROM nvidia/cuda:13.3.1-devel-ubuntu22.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
