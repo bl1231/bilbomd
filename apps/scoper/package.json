@@ -44,18 +44,16 @@
     "ioredis": "6.0.0",
     "moment-timezone": "^0.6.3",
     "mongoose": "^9.9.5",
-    "nodemailer": "^9.0.5",
+    "nodemailer": "^10.0.2",
     "nodemailer-express-handlebars": "^7.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
-    "@types/nodemailer": "^8.0.1",
-    "@types/nodemailer-express-handlebars": "^4.0.6",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^5.0.0",
     "nodemon": "^3.1.14",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.0"
   },
   "_moduleAliases": {
     "@services": "build/services",

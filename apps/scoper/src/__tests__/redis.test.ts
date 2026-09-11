@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { MockRedis } = vi.hoisted(() => ({
   // Must be a real constructor — Redis is used with `new`
@@ -9,9 +9,19 @@ const { MockRedis } = vi.hoisted(() => ({
 
 vi.mock('ioredis', () => ({ Redis: MockRedis }))
 
-import { redis } from '../helpers/redis.js'
+type RedisModule = typeof import('../helpers/redis.js')
 
 describe('redis', () => {
+  let redis: RedisModule['redis']
+
+  // The Redis client is constructed as a module side effect. Vitest clears
+  // mock call records before every test, so re-import the module per test to
+  // observe the constructor call.
+  beforeEach(async () => {
+    vi.resetModules()
+    ;({ redis } = await import('../helpers/redis.js'))
+  })
+
   it('exports a Redis instance', () => {
     expect(redis).toBeDefined()
   })

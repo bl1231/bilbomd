@@ -1,23 +1,23 @@
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-type MockTransporter = {
-  sendMail: Mock
-  use: Mock
-}
-
-// Mock nodemailer before importing the module under test
-vi.mock('nodemailer', () => {
+// Hoisted so the same transporter instance survives vi.resetModules() below —
+// mock factories re-run on re-import, which would otherwise hand the module a
+// different transporter than the one we assert on.
+const { createTransport, mockTransporter } = vi.hoisted(() => {
+  const mockTransporter = {
+    sendMail: vi.fn().mockResolvedValue({ messageId: 'test-message-id' }),
+    use: vi.fn()
+  }
   return {
-    default: {
-      createTransport: vi.fn(() => ({
-        sendMail: vi.fn().mockResolvedValue({ messageId: 'test-message-id' }),
-        use: vi.fn()
-      }))
-    }
+    mockTransporter,
+    createTransport: vi.fn<
+      (config: Record<string, unknown>) => typeof mockTransporter
+    >(() => mockTransporter)
   }
 })
 
-// Mock logger
+vi.mock('nodemailer', () => ({ default: { createTransport } }))
+
 vi.mock('../../middleware/loggers.js', () => ({
   logger: {
     info: vi.fn(),
@@ -25,54 +25,40 @@ vi.mock('../../middleware/loggers.js', () => ({
   }
 }))
 
-// Import after mocking
-import * as mailer from '../nodemailerConfig.js'
-import nodemailer from 'nodemailer'
+type MailerModule = typeof import('../nodemailerConfig.js')
+
+let mailer: MailerModule
+
+// The transporter is created as a module side effect. Vitest clears mock call
+// records before every test, so re-import the module per test to observe the
+// createTransport call. Call history on mockTransporter is cleared by the same
+// mechanism, so each test starts fresh.
+beforeEach(async () => {
+  vi.resetModules()
+  mailer = await import('../nodemailerConfig.js')
+})
 
 describe('transporter configuration', () => {
+  const transportConfig = () => createTransport.mock.calls[0][0]
+
   it('uses secure: false by default', () => {
-    const createTransportMock = nodemailer.createTransport as Mock
-    const config = createTransportMock.mock.calls[0]?.[0]
-    expect(config.secure).toBe(false)
+    expect(transportConfig().secure).toBe(false)
   })
 
   it('omits auth when BILBOMD_MAILER_USER/PASS are not set', () => {
-    const createTransportMock = nodemailer.createTransport as Mock
-    const config = createTransportMock.mock.calls[0]?.[0]
-    expect(config.auth).toBeUndefined()
+    expect(transportConfig().auth).toBeUndefined()
   })
 
   it('uses smtp-relay.gmail.com as default host', () => {
-    const createTransportMock = nodemailer.createTransport as Mock
-    const config = createTransportMock.mock.calls[0]?.[0]
-    expect(config.host).toBe('smtp-relay.gmail.com')
+    expect(transportConfig().host).toBe('smtp-relay.gmail.com')
   })
 
   it('uses port 25 as default', () => {
-    const createTransportMock = nodemailer.createTransport as Mock
-    const config = createTransportMock.mock.calls[0]?.[0]
-    expect(config.port).toBe(25)
+    expect(transportConfig().port).toBe(25)
   })
 })
 
 describe('nodemailerConfig', () => {
-  let mockTransporter: MockTransporter
-
-  beforeEach(() => {
-    // IMPORTANT: Do NOT clear all mocks here; the transporter instance
-    // is created during module import time. Clearing all mocks would
-    // erase nodemailer's recorded call and its returned instance.
-    // Instead, retrieve the already-created transporter and clear only
-    // its method call history to start fresh per test.
-    const createTransportMock = nodemailer.createTransport as Mock
-    const created = createTransportMock.mock.results[0]?.value
-    // Fallback: if not created for some reason, create once now.
-    mockTransporter = created || createTransportMock()
-    if (mockTransporter.use?.mockClear) mockTransporter.use.mockClear()
-    if (mockTransporter.sendMail?.mockClear)
-      mockTransporter.sendMail.mockClear()
-  })
-
   it('sendVerificationEmail sends correct mail', async () => {
     await mailer.sendVerificationEmail(
       'test@example.com',
