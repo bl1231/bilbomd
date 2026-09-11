@@ -1,13 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EventEmitter } from 'events'
 
-vi.mock('../../middleware/loggers.js', () => ({
+// Hoisted so the same instances survive vi.resetModules() below — mock
+// factories re-run on re-import, which would otherwise hand the module under
+// test different vi.fn()s than the ones we assert on.
+const { createClientMock, logger } = vi.hoisted(() => ({
+  createClientMock: vi.fn(),
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
 }))
 
-const { createClientMock } = vi.hoisted(() => ({
-  createClientMock: vi.fn()
-}))
+vi.mock('../../middleware/loggers.js', () => ({ logger }))
 
 vi.mock('redis', async () => {
   const { EventEmitter } = await import('events')
@@ -19,10 +21,21 @@ vi.mock('redis', async () => {
   }
 })
 
-import { logger } from '../../middleware/loggers.js'
-import { sessionRedis, sessionRedisReconnectStrategy } from '../sessionRedisConn.js'
+type SessionRedisModule = typeof import('../sessionRedisConn.js')
 
 describe('sessionRedisConn', () => {
+  let sessionRedis: SessionRedisModule['sessionRedis']
+  let sessionRedisReconnectStrategy: SessionRedisModule['sessionRedisReconnectStrategy']
+
+  // The client is created as a module side effect. Vitest clears mock call
+  // records before every test, so re-import the module per test to observe
+  // the createClient call.
+  beforeEach(async () => {
+    vi.resetModules()
+    ;({ sessionRedis, sessionRedisReconnectStrategy } =
+      await import('../sessionRedisConn.js'))
+  })
+
   it('configures the client with a reconnect strategy', () => {
     expect(createClientMock).toHaveBeenCalledTimes(1)
     const config = createClientMock.mock.calls[0][0] as {
