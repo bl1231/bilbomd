@@ -459,7 +459,7 @@ update_status alphafold Running
 echo "Running AlphaFold..."
 srun --gpus=4 \\
      --job-name alphafold \\
-     podman-hpc run --rm --gpu \\
+     podman-hpc run --network slirp4netns --rm --gpu \\
         -v $WORKDIR:/bilbomd/work \\
         $AF_WORKER /bin/bash -c "
             set -e
@@ -570,7 +570,7 @@ srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name pae2constraints \\
-     podman-hpc run --rm \\
+     podman-hpc run --network slirp4netns --rm \\
         -v $WORKDIR:/bilbomd/work \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
@@ -594,7 +594,7 @@ def generate_pdb2crd_input_files_af(config):
 update_status pdb2crd Running
 echo "Generating pdb2crd input files..."
 srun --job-name af-pdb2crd \\
-    podman-hpc run --rm \\
+    podman-hpc run --network slirp4netns --rm \\
         -v $WORKDIR:/bilbomd/work \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
@@ -622,7 +622,7 @@ while IFS= read -r filename; do
          --cpus-per-task=$cpus \\
          --cpu-bind=cores \\
          --job-name pdb2crd \\
-         podman-hpc run --rm \\
+         podman-hpc run --network slirp4netns --rm \\
             -v $WORKDIR:/bilbomd/work \\
             $BILBOMD_WORKER /bin/bash -c "
                 set -e
@@ -656,7 +656,7 @@ def generate_pdb2crd_input_files(config, params):
 update_status pdb2crd Running
 echo "Generating pdb2crd input files..."
 srun --job-name pdb2crd \\
-    podman-hpc run --rm \\
+    podman-hpc run --network slirp4netns --rm \\
         -v $WORKDIR:/bilbomd/work \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
@@ -699,7 +699,7 @@ while IFS= read -r filename; do
          --cpus-per-task=$cpus \\
          --cpu-bind=cores \\
          --job-name pdb2crd \\
-         podman-hpc run --rm \\
+         podman-hpc run --network slirp4netns --rm \\
             -v $WORKDIR:/bilbomd/work \\
             $BILBOMD_WORKER /bin/bash -c "
                 set -e
@@ -733,7 +733,7 @@ srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name meld \\
-     podman-hpc run --rm \\
+     podman-hpc run --network slirp4netns --rm \\
         -v $WORKDIR:/bilbomd/work \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
@@ -757,7 +757,7 @@ srun --ntasks=1 \\
      --gpus-per-task=1 \\
      --cpu-bind=cores \\
      --job-name minimize \\
-     podman-hpc run --rm --gpu \\
+     podman-hpc run --network slirp4netns --rm --gpu \\
         -v $WORKDIR:/bilbomd/work \\
         -v $UPLOAD_DIR:/cfs \\
         $BILBOMD_WORKER /bin/bash -c "
@@ -821,7 +821,7 @@ srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name initfoxs \\
-     podman-hpc run --rm \\
+     podman-hpc run --network slirp4netns --rm \\
         -v $WORKDIR:/bilbomd/work \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
@@ -850,7 +850,7 @@ srun --ntasks=1 \\
      --gpus-per-task=1 \\
      --cpu-bind=cores \\
      --job-name heat \\
-     podman-hpc run --rm --gpu \\
+     podman-hpc run --network slirp4netns --rm --gpu \\
         -v $WORKDIR:/bilbomd/work \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
@@ -914,7 +914,7 @@ else
          --cpus-per-task={cores_per_task} \\
          --cpu-bind=cores \\
          --job-name md_rg{rg_value} \\
-         podman-hpc run --rm \\
+         podman-hpc run --network slirp4netns --rm \\
              -v $WORKDIR:/bilbomd/work \\
              $BILBOMD_WORKER /bin/bash -c "
                 set -e
@@ -1123,7 +1123,7 @@ for inp_file in "${{dcd2pdb_files[@]}}"; do
          --cpus-per-task={cores_per_job} \\
          --cpu-bind=cores \\
          --job-name dcd2pdb \\
-         podman-hpc run --rm \\
+         podman-hpc run --network slirp4netns --rm \\
             -v $WORKDIR:/bilbomd/work \\
             $BILBOMD_WORKER /bin/bash -c "
                 set -e
@@ -1222,7 +1222,7 @@ srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name foxs \\
-     podman-hpc run --rm \\
+     podman-hpc run --network slirp4netns --rm \\
         -v $WORKDIR:/bilbomd/work \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
@@ -1249,7 +1249,7 @@ srun --ntasks=1 \\
      --cpus-per-task={config["num_cores"]} \\
      --cpu-bind=cores \\
      --job-name multifoxs \\
-     podman-hpc run --rm \\
+     podman-hpc run --network slirp4netns --rm \\
          -v $WORKDIR:/bilbomd/work \\
          $BILBOMD_WORKER /bin/bash -c "
             set -e
