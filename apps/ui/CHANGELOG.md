@@ -1,5 +1,33 @@
 # @bilbomd/ui
 
+## 2.26.0
+
+### Minor Changes
+
+- c335b0e: Add χ²free (Rambo & Tainer 2013) and volatility of ratio, Vr (Hura et al. 2013), to the FoXS fit results (beta). The backend computes both for the original model and every ensemble size from the fit curves it already serves, so existing completed jobs get them too. The UI shows a new "Fit quality" table with χ², χ²free and Vr per fit. Dmax is estimated as 3 × the Guinier Rg (there is no P(r) step yet), χ²free is the median over 1000 seeded random one-point-per-Shannon-channel subsets, and Vr uses q ≤ 0.3 Å⁻¹.
+- b04d274: New jobs and MD movie progress now reach the browser without polling. The backend announces each newly submitted job (a `created` event), so the owner's job list, and every Admin's and Manager's, picks it up right away. The movie enqueuer and movie worker publish a `movies` event when movies are queued, start rendering, become ready or fail, and the job page refreshes its movies from it. While the stream is connected the job page polls movies only every 2 minutes instead of every 15 seconds.
+- efe535e: The public job page now updates live. `GET /api/v1/public/jobs/:publicId/events` streams changes to that one job, using the same access rule as the public job page (an anonymous job's `public_id` or a results token). Each client may hold up to 10 of these streams open at once. The page refreshes the job, and its MD movies, which previously never refreshed, when events arrive, and while connected polls every 2 minutes instead of every 10 seconds.
+- 910d809: Push job updates to the browser instead of relying on polling. The worker publishes a small "job changed" event on Redis (`JOB_EVENTS_CHANNEL`) whenever a job's status, a step, or its progress changes, throttled to about one event per second per job. The backend forwards those events to logged-in browsers over Server-Sent Events at `GET /api/v1/jobs/events`, filtered by the same access rule as the job endpoints, with a 25s heartbeat. The UI keeps one stream per tab and invalidates the changed jobs' RTK Query tags in batches, so the job page and the Jobs list refresh within a couple of seconds. While the stream is connected, pages poll only every 2 minutes as a safety net; if it drops they go back to their old intervals.
+
+  Deleting a job no longer removes it from the list optimistically, or refetches right after the request. The request only queues the deletion, so the row shows "Deleting" with its actions disabled until the server confirms. The delete worker announces `deleted` once the document is gone, or `delete_failed` after its last attempt. The UI nginx config gets an unbuffered, uncached location for the stream.
+
+### Patch Changes
+
+- b029dd1: Enforce upload limits while requests stream instead of after files land on disk. All multer uploads now go through a shared `createUpload()` factory with per-file (120 MB, 2 MB for AutoRg), file-count, and field limits; oversize files return 413 and the job directory is cleaned up on any upload error. JSON/urlencoded body limits drop from 150 MB to 1 MB since uploads are multipart.
+
+  The unauthenticated `POST /autorg` and `POST /af2pae` endpoints are now rate limited (20 requests per 10 minutes per IP, each endpoint counted separately).
+
+  Raise the UI nginx `/api` body limit (80M → 140M) and the Helm ingress `proxy-body-size` (100m → 140m) so AlphaFold submissions with PAE files up to the 120 MB validation limit are no longer rejected by the proxies.
+
+- Updated dependencies [a785312]
+- Updated dependencies [c335b0e]
+- Updated dependencies [ce062e3]
+- Updated dependencies [b04d274]
+- Updated dependencies [910d809]
+- Updated dependencies [1e77e9e]
+  - @bilbomd/bilbomd-types@1.8.0
+  - @bilbomd/mongodb-schema@2.9.0
+
 ## 2.25.1
 
 ### Patch Changes

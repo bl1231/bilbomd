@@ -1,5 +1,44 @@
 # @bilbomd/worker
 
+## 2.18.0
+
+### Minor Changes
+
+- a785312: Deleting a job now stops it. The backend's delete worker removes any not-yet-started BullMQ entries for the job and publishes a cancel message on `JOB_CANCEL_CHANNEL`; the worker running it aborts the job's AbortSignal, which kills its current external process (TERM, then KILL) and makes any further tool calls fail immediately. Cancelled jobs fail with an `UnrecoverableError`, so BullMQ doesn't retry them, and deleting a job also cancels its movie renders.
+
+  In the worker, each job runs in an `AsyncLocalStorage` context holding its signal and `runProcess` uses it by default, so no pipeline or step signatures change. BullMQ's own processor signal is honoured too. NERSC (Slurm) jobs and running SCOPER jobs are not cancelled yet.
+
+- 910d809: Push job updates to the browser instead of relying on polling. The worker publishes a small "job changed" event on Redis (`JOB_EVENTS_CHANNEL`) whenever a job's status, a step, or its progress changes, throttled to about one event per second per job. The backend forwards those events to logged-in browsers over Server-Sent Events at `GET /api/v1/jobs/events`, filtered by the same access rule as the job endpoints, with a 25s heartbeat. The UI keeps one stream per tab and invalidates the changed jobs' RTK Query tags in batches, so the job page and the Jobs list refresh within a couple of seconds. While the stream is connected, pages poll only every 2 minutes as a safety net; if it drops they go back to their old intervals.
+
+  Deleting a job no longer removes it from the list optimistically, or refetches right after the request. The request only queues the deletion, so the row shows "Deleting" with its actions disabled until the server confirms. The delete worker announces `deleted` once the document is gone, or `delete_failed` after its last attempt. The UI nginx config gets an unbuffered, uncached location for the stream.
+
+- b4e670f: Run every external tool through the shared `runProcess` helper: CHARMM (all steps and pdb2crd), FoXS (initial and per-file), MultiFoXS, Pepsi-SANS, GA-SANS, PyMOL movies, ffmpeg, and the Python helper scripts (feedback, rgyr/Dmax, AutoRg, pae2const, pdb2crd, prep_pdb, cif_to_pdb, strip_cofactors).
+
+  - Every process now has a timeout, configurable per tool via `PROCESS_TIMEOUT_*` (see `infra/.env.example`); defaults are ~3-4x the longest runs seen in production.
+  - Fixes processes that could hang forever on a full stdio pipe: per-file FoXS and Pepsi-SANS and the ffmpeg poster/thumbnail calls never read their output. `runProcess` now ignores stdout nobody consumes and always drains stderr.
+  - Failures report what happened plus the last stderr lines ("MultiFoXS exited with code 2", "CHARMM md_rg25.inp timed out after 21600s", "GA-SANS failed to start: … ENOENT") instead of generic messages. CHARMM failures show only the CHARMM error lines, not the whole output. GA-SANS no longer crashes the worker when its interpreter is missing.
+  - pae2const's timeout goes from a hard 5 min SIGKILL to 15 min with a TERM grace period.
+
+### Patch Changes
+
+- 757b0b4: Refactor the six local BilboMD pipelines (pdb, crd, auto, alphafold, openfold, sans) onto a shared declarative runner (`runPipeline`) and reusable step sequences (`pipelines/steps.ts`). Pipelines shrink from ~1,100 to ~250 lines. Behaviour is unchanged (pinned by new characterization tests) except that the CRD pipeline now logs its MD engine and runs its steps through `runPipelineStep` like the others, so a failing CRD step marks the job and step as Error in the same way.
+- ce062e3: Publish job update events from the rest of the job lifecycle, so pages that rely on the event stream stay current for every job type. The NERSC job monitor publishes one event per job whose status, progress, steps or NERSC state changed during a monitoring pass, and none for jobs that didn't change. The multi pipeline publishes when it starts, saves progress, fails or completes. SCOPER publishes from its step, progress and results updates and when a job starts or completes. The throttled publisher moves into `@bilbomd/bilbomd-types` as `createJobEventNotifier`, shared by the worker and SCOPER, and the SCOPER image now builds that package.
+- b04d274: New jobs and MD movie progress now reach the browser without polling. The backend announces each newly submitted job (a `created` event), so the owner's job list, and every Admin's and Manager's, picks it up right away. The movie enqueuer and movie worker publish a `movies` event when movies are queued, start rendering, become ready or fail, and the job page refreshes its movies from it. While the stream is connected the job page polls movies only every 2 minutes instead of every 15 seconds.
+- 1ca40e5: Fix multi jobs reporting success when MultiFoXS or results gathering fails. Those steps used to swallow their errors: the step was marked Error, but the job carried on, was marked Completed, and the user got a success email. A failing step now fails the job. The job's status is set to Error, no completion email is sent, and BullMQ records the run as failed. A failure in any other multi step (e.g. building the `.dat` file list) also marks the job as Error, where before it stayed at Running.
+- 1e77e9e: Record per-step timing. `IStepStatus` gains optional `started_at`, `completed_at` and `duration_ms`, stamped server-side (`$$NOW`) by the new `buildStepStatusUpdate()` pipeline builder whenever a step moves to Running / Success / Error. Parallel runs that share a step (e.g. per-Rg MD) keep the first start and the last finish. The worker and scoper `updateStepStatus`/`handleStepError` and the worker's FoXS progress updates now use it, so no call sites change. Existing jobs are unaffected; NERSC jobs, whose steps are rebuilt from the remote status file, are not timed yet.
+- fc2a58a: Tidy the NERSC and multi pipelines, the last part of the worker module split. `bilbomd-step-functions-nersc.ts` is renamed `nersc-slurm.ts` and loses its unused `copyBilboMDResults` / `sendBilboMDEmail` (the NERSC monitor uses the versions in `job-monitor-functions.ts`). The monitor now uses the shared `prepareBilboMDResults` from `prepare-results.ts` instead of its own copy, so a NERSC job's results step is recorded the same way as on the local pipelines, with timing, and OpenFold jobs are accepted. The NERSC submission and multi pipelines share one helper each for building their usage events. Both pipelines are pinned by new characterization tests.
+- 98afea6: Add a shared `runProcess` / `spawnProcess` helper for running external tools: output streamed to log files (flushed before the promise settles) and/or line callbacks, a stderr tail for error messages, TERM→KILL timeouts, AbortSignal cancellation and an optional heartbeat. `runPythonStep` is now a thin wrapper over it with an unchanged contract. OpenMM timeouts move to `config.processTimeouts` and can be overridden with `PROCESS_TIMEOUT_OPENMM_SETUP_MS` (default 1h, unchanged) and `PROCESS_TIMEOUT_OPENMM_MD_MS`; the per-run MD default rises from 2h to 4h, based on a longest observed production run of ~63 min.
+- 759485f: Split the worker's two catch-all step modules into domain modules. `bilbomd-step-functions.ts` becomes `charmm-md.ts` (minimize/heat/dynamics), `pae-constraints.ts`, `autorg.ts` and `multifoxs.ts`, with `runPdb2Crd` moving into `pdb-to-crd.ts`. `bilbomd-sans-functions.ts` becomes `sans-trajectory.ts`, `sans-pepsisans.ts`, `sans-gasans.ts` and `sans-results.ts`. The local pipelines' `prepareBilboMDResults` step moves from the NERSC module to `prepare-results.ts`, the job type guards move to `job-type-guards.ts`, and SANS reuses the classic `writeSegidToChainid` instead of keeping a copy. Function bodies are moved unchanged, so no behaviour changes.
+- Updated dependencies [a785312]
+- Updated dependencies [c335b0e]
+- Updated dependencies [ce062e3]
+- Updated dependencies [b04d274]
+- Updated dependencies [910d809]
+- Updated dependencies [1e77e9e]
+  - @bilbomd/bilbomd-types@1.8.0
+  - @bilbomd/mongodb-schema@2.9.0
+  - @bilbomd/md-utils@1.1.26
+
 ## 2.17.5
 
 ### Patch Changes

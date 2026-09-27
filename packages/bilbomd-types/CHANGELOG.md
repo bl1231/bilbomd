@@ -1,5 +1,20 @@
 # @bilbomd/bilbomd-types
 
+## 1.8.0
+
+### Minor Changes
+
+- a785312: Deleting a job now stops it. The backend's delete worker removes any not-yet-started BullMQ entries for the job and publishes a cancel message on `JOB_CANCEL_CHANNEL`; the worker running it aborts the job's AbortSignal, which kills its current external process (TERM, then KILL) and makes any further tool calls fail immediately. Cancelled jobs fail with an `UnrecoverableError`, so BullMQ doesn't retry them, and deleting a job also cancels its movie renders.
+
+  In the worker, each job runs in an `AsyncLocalStorage` context holding its signal and `runProcess` uses it by default, so no pipeline or step signatures change. BullMQ's own processor signal is honoured too. NERSC (Slurm) jobs and running SCOPER jobs are not cancelled yet.
+
+- c335b0e: Add χ²free (Rambo & Tainer 2013) and volatility of ratio, Vr (Hura et al. 2013), to the FoXS fit results (beta). The backend computes both for the original model and every ensemble size from the fit curves it already serves, so existing completed jobs get them too. The UI shows a new "Fit quality" table with χ², χ²free and Vr per fit. Dmax is estimated as 3 × the Guinier Rg (there is no P(r) step yet), χ²free is the median over 1000 seeded random one-point-per-Shannon-channel subsets, and Vr uses q ≤ 0.3 Å⁻¹.
+- ce062e3: Publish job update events from the rest of the job lifecycle, so pages that rely on the event stream stay current for every job type. The NERSC job monitor publishes one event per job whose status, progress, steps or NERSC state changed during a monitoring pass, and none for jobs that didn't change. The multi pipeline publishes when it starts, saves progress, fails or completes. SCOPER publishes from its step, progress and results updates and when a job starts or completes. The throttled publisher moves into `@bilbomd/bilbomd-types` as `createJobEventNotifier`, shared by the worker and SCOPER, and the SCOPER image now builds that package.
+- b04d274: New jobs and MD movie progress now reach the browser without polling. The backend announces each newly submitted job (a `created` event), so the owner's job list, and every Admin's and Manager's, picks it up right away. The movie enqueuer and movie worker publish a `movies` event when movies are queued, start rendering, become ready or fail, and the job page refreshes its movies from it. While the stream is connected the job page polls movies only every 2 minutes instead of every 15 seconds.
+- 910d809: Push job updates to the browser instead of relying on polling. The worker publishes a small "job changed" event on Redis (`JOB_EVENTS_CHANNEL`) whenever a job's status, a step, or its progress changes, throttled to about one event per second per job. The backend forwards those events to logged-in browsers over Server-Sent Events at `GET /api/v1/jobs/events`, filtered by the same access rule as the job endpoints, with a 25s heartbeat. The UI keeps one stream per tab and invalidates the changed jobs' RTK Query tags in batches, so the job page and the Jobs list refresh within a couple of seconds. While the stream is connected, pages poll only every 2 minutes as a safety net; if it drops they go back to their old intervals.
+
+  Deleting a job no longer removes it from the list optimistically, or refetches right after the request. The request only queues the deletion, so the row shows "Deleting" with its actions disabled until the server confirms. The delete worker announces `deleted` once the document is gone, or `delete_failed` after its last attempt. The UI nginx config gets an unbuffered, uncached location for the stream.
+
 ## 1.7.0
 
 ### Minor Changes

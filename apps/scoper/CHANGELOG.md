@@ -1,5 +1,23 @@
 # @bilbomd/scoper
 
+## 1.9.0
+
+### Minor Changes
+
+- ce062e3: Publish job update events from the rest of the job lifecycle, so pages that rely on the event stream stay current for every job type. The NERSC job monitor publishes one event per job whose status, progress, steps or NERSC state changed during a monitoring pass, and none for jobs that didn't change. The multi pipeline publishes when it starts, saves progress, fails or completes. SCOPER publishes from its step, progress and results updates and when a job starts or completes. The throttled publisher moves into `@bilbomd/bilbomd-types` as `createJobEventNotifier`, shared by the worker and SCOPER, and the SCOPER image now builds that package.
+
+### Patch Changes
+
+- 1e77e9e: Record per-step timing. `IStepStatus` gains optional `started_at`, `completed_at` and `duration_ms`, stamped server-side (`$$NOW`) by the new `buildStepStatusUpdate()` pipeline builder whenever a step moves to Running / Success / Error. Parallel runs that share a step (e.g. per-Rg MD) keep the first start and the last finish. The worker and scoper `updateStepStatus`/`handleStepError` and the worker's FoXS progress updates now use it, so no call sites change. Existing jobs are unaffected; NERSC jobs, whose steps are rebuilt from the remote status file, are not timed yet.
+- Updated dependencies [a785312]
+- Updated dependencies [c335b0e]
+- Updated dependencies [ce062e3]
+- Updated dependencies [b04d274]
+- Updated dependencies [910d809]
+- Updated dependencies [1e77e9e]
+  - @bilbomd/bilbomd-types@1.8.0
+  - @bilbomd/mongodb-schema@2.9.0
+
 ## 1.8.1
 
 ### Patch Changes
