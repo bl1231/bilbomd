@@ -2,17 +2,35 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import path from 'node:path'
 import type { IMultiJob } from '@bilbomd/mongodb-schema'
 
-const { runProcessMock } = vi.hoisted(() => ({ runProcessMock: vi.fn() }))
+const { runProcessMock, updateStepStatusMock, makeDirMock } = vi.hoisted(
+  () => ({
+    runProcessMock: vi.fn(),
+    updateStepStatusMock: vi.fn(),
+    makeDirMock: vi.fn()
+  })
+)
 
 vi.mock('../../../helpers/runProcess.js', () => ({
   runProcess: runProcessMock
+}))
+
+vi.mock('../mongo-utils.js', () => ({
+  updateStepStatus: updateStepStatusMock
+}))
+
+vi.mock('../job-utils.js', () => ({
+  makeDir: makeDirMock
 }))
 
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
 
-import { spawnMultiFoxs } from '../bilbomd-multi-functions.js'
+import {
+  spawnMultiFoxs,
+  runMultiFoxs,
+  prepareMultiMDResults
+} from '../bilbomd-multi-functions.js'
 import { config } from '../../../config/config.js'
 
 const makeJob = (overrides: Partial<IMultiJob> = {}) =>
@@ -69,5 +87,58 @@ describe('bilbomd-multi-functions - spawnMultiFoxs', () => {
     await expect(spawnMultiFoxs(makeJob())).rejects.toThrow(
       'MultiFoXS timed out after 7200s'
     )
+  })
+})
+
+const stepStatuses = () =>
+  updateStepStatusMock.mock.calls.map(([, step, s]) => [step, s.status])
+
+describe('bilbomd-multi-functions - runMultiFoxs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    runProcessMock.mockResolvedValue({ code: 0 })
+    makeDirMock.mockResolvedValue(undefined)
+  })
+
+  it('marks the multifoxs step as done', async () => {
+    await runMultiFoxs(makeJob())
+
+    expect(stepStatuses()).toEqual([
+      ['multifoxs', 'Running'],
+      ['multifoxs', 'Success']
+    ])
+  })
+
+  it('marks the step as failed and rethrows when MultiFoXS fails', async () => {
+    runProcessMock.mockRejectedValue(new Error('MultiFoXS exited with code 1'))
+
+    await expect(runMultiFoxs(makeJob())).rejects.toThrow(
+      'MultiFoXS exited with code 1'
+    )
+    expect(stepStatuses()).toEqual([
+      ['multifoxs', 'Running'],
+      ['multifoxs', 'Error']
+    ])
+    expect(updateStepStatusMock.mock.calls.at(-1)?.[2].message).toContain(
+      'MultiFoXS exited with code 1'
+    )
+  })
+})
+
+describe('bilbomd-multi-functions - prepareMultiMDResults', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('marks the results step as failed and rethrows', async () => {
+    makeDirMock.mockRejectedValue(new Error('EACCES: permission denied'))
+
+    await expect(prepareMultiMDResults(makeJob())).rejects.toThrow(
+      'EACCES: permission denied'
+    )
+    expect(stepStatuses()).toEqual([
+      ['results', 'Running'],
+      ['results', 'Error']
+    ])
   })
 })
