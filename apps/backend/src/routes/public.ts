@@ -8,12 +8,14 @@ import { downloadPublicJobResultFile } from '../controllers/public/downloadPubli
 import { createPublicSANSJob } from '../controllers/jobs/sansJobController.js'
 import getPublicMovies from '../controllers/public/getPublicMovies.js'
 import streamPublicVideo from '../controllers/public/streamPublicVideo.js'
+import { streamPublicJobEvents } from '../controllers/public/streamPublicJobEvents.js'
 
 const router = express.Router()
 
 router.route('/').post(publicJobLimiter, createPublicJob)
 router.route('/sans').post(publicJobLimiter, createPublicSANSJob)
 router.route('/:publicId').get(getPublicJobById)
+router.route('/:publicId/events').get(streamPublicJobEvents)
 router.route('/:publicId/movies').get(getPublicMovies)
 router.route('/:publicId/movies/:label/:filename').get(streamPublicVideo)
 router.route('/:publicId/results').get(downloadPublicJobResults)

@@ -6,15 +6,18 @@ import {
 } from '@bilbomd/bilbomd-types'
 import { logger } from '../middleware/loggers.js'
 
-// Fans job events from Redis (published by workers and by the delete worker)
-// out to the browsers connected to GET /jobs/events. Each browser only gets
-// events for jobs it may see: its own, or every job for Admins and Managers,
-// the same rule as getAllJobs and verifyJobOwnership.
+// Fans job events from Redis (published by workers and the backend) out to
+// connected browsers. A logged-in browser (GET /jobs/events) gets events for
+// the jobs it may see: its own, or every job for Admins and Managers, the
+// same rule as getAllJobs and verifyJobOwnership. A public job page
+// (GET /public/jobs/:publicId/events) gets events for its one job only.
 
 export interface JobEventClient {
-  // Requesting user's MongoDB _id; unset for privileged clients
+  // Requesting user's MongoDB _id; unset for privileged and public clients
   userId?: string
   privileged: boolean
+  // Set for a public job page: only this job's events, whatever its owner
+  jobId?: string
   send: (event: JobEvent) => void
   close: () => void
 }
@@ -38,9 +41,13 @@ export const jobEventClientCount = (): number => clients.size
 export const canSeeJobEvent = (
   client: JobEventClient,
   event: JobEvent
-): boolean =>
-  client.privileged ||
-  (event.ownerId !== undefined && event.ownerId === client.userId)
+): boolean => {
+  if (client.jobId !== undefined) return event.jobId === client.jobId
+  return (
+    client.privileged ||
+    (event.ownerId !== undefined && event.ownerId === client.userId)
+  )
+}
 
 const parseJobEvent = (raw: string): JobEvent | null => {
   let msg: Partial<JobEvent>

@@ -16,6 +16,8 @@ import {
 } from '@mui/material'
 import useTitle from 'hooks/useTitle'
 import { useGetPublicJobByIdQuery } from 'slices/publicJobsApiSlice'
+import { STREAM_FALLBACK_POLL_MS } from 'slices/jobEventsSlice'
+import { usePublicJobEvents } from 'hooks/usePublicJobEvents'
 import type { PublicJobStatus } from '@bilbomd/bilbomd-types'
 import HeaderBox from 'components/HeaderBox'
 import Item from 'themes/components/Item'
@@ -110,10 +112,17 @@ const PublicJobPage = () => {
   const { publicId } = useParams<{ publicId: string }>()
   const [shouldPoll, setShouldPoll] = useState(true)
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
+  const eventsConnected = usePublicJobEvents(publicId)
 
   const { data, isLoading, isError } = useGetPublicJobByIdQuery(publicId!, {
     skip: !publicId,
-    pollingInterval: shouldPoll ? 10000 : 0
+    // While the event stream is up it drives refreshes; poll only as a
+    // safety net. Finished jobs don't poll either way.
+    pollingInterval: shouldPoll
+      ? eventsConnected
+        ? STREAM_FALLBACK_POLL_MS
+        : 10000
+      : 0
   })
 
   useEffect(() => {

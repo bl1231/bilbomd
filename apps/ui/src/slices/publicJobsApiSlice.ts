@@ -27,7 +27,8 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
       })
     }),
     getPublicJobById: builder.query<PublicJobStatus, string>({
-      query: (publicId) => `/public/jobs/${publicId}`
+      query: (publicId) => `/public/jobs/${publicId}`,
+      providesTags: (_, __, publicId) => [{ type: 'PublicJob', id: publicId }]
     }),
     getPublicFoxsData: builder.query<FoxsData[], string>({
       query: (publicId) => `/public/jobs/${publicId}/results/foxs`
@@ -57,7 +58,10 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
       })
     }),
     getPublicMDMovies: builder.query<JobAssetsDTO, string>({
-      query: (publicId) => `/public/jobs/${publicId}/movies`
+      query: (publicId) => `/public/jobs/${publicId}/movies`,
+      providesTags: (_, __, publicId) => [
+        { type: 'PublicMovieAsset', id: publicId }
+      ]
     })
   })
 })
