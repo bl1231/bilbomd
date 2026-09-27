@@ -8,27 +8,26 @@ import type {
   IBilboMDSANSJob
 } from '@bilbomd/mongodb-schema'
 import {
-  runPdb2Crd,
   runMinimize,
   runHeat,
-  runMolecularDynamics,
-  runMultiFoxs,
-  runPaeToConstInp
-} from '../functions/bilbomd-step-functions.js'
+  runMolecularDynamics
+} from '../functions/charmm-md.js'
+import { runMultiFoxs } from '../functions/multifoxs.js'
+import { runPaeToConstInp } from '../functions/pae-constraints.js'
 import {
   prepareOpenMMConfig,
   runOmmMinimize,
   runOmmHeat,
   runOmmMD
 } from '../functions/openmm-functions.js'
-import { runCifToPdb, runPrepPdb } from '../functions/pdb-to-crd.js'
+import { runCifToPdb, runPdb2Crd, runPrepPdb } from '../functions/pdb-to-crd.js'
 import {
   extractPDBFilesFromDCD,
   remediatePDBFiles
 } from '../functions/bilbomd-functions.js'
 import { runFoXS } from '../functions/foxs-functions.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
-import { prepareBilboMDResults } from '../functions/bilbomd-step-functions-nersc.js'
+import { prepareBilboMDResults } from '../functions/prepare-results.js'
 import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
 import type { PipelineStep } from './runPipeline.js'
 

@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process'
 import readline from 'node:readline'
 import { glob } from 'glob'
 import {
+  IJob,
   IBilboMDPDBJob,
   IBilboMDCRDJob,
   IBilboMDAutoJob,
@@ -14,10 +15,18 @@ import fs from 'fs-extra'
 import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
 import { makeDir, handleError } from './job-utils.js'
+import { updateStepStatus } from './mongo-utils.js'
 import { createReadmeFile } from './create-readme-file.js'
 import { spawnFeedbackScript } from './feedback.js'
 import { spawnRgyrDmaxScript } from './analysis.js'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
+import {
+  isBilboMDCRDJob,
+  isBilboMDPDBJob,
+  isBilboMDAutoJob,
+  isBilboMDAlphaFoldJob,
+  isBilboMDOpenFoldJob
+} from './job-type-guards.js'
 
 const execFilePromise = promisify(execFile)
 
@@ -363,7 +372,46 @@ const getNumEnsembles = async (logFile: string): Promise<number> => {
   return Number(ensembleCount.pop())
 }
 
+// The 'results' pipeline step: prepareResults wrapped in step status.
+// Failures are recorded on the step but not rethrown.
+const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
+  try {
+    await updateStepStatus(DBjob, 'results', {
+      status: 'Running',
+      message: 'Gathering BilboMD job results has started.'
+    })
+
+    // Ensure DBjob is one of the acceptable types before calling prepareResults
+    if (
+      isBilboMDCRDJob(DBjob) ||
+      isBilboMDPDBJob(DBjob) ||
+      isBilboMDAutoJob(DBjob) ||
+      isBilboMDAlphaFoldJob(DBjob) ||
+      isBilboMDOpenFoldJob(DBjob)
+    ) {
+      await prepareResults(DBjob)
+      await updateStepStatus(DBjob, 'results', {
+        status: 'Success',
+        message: 'BilboMD job results gathered successfully.'
+      })
+    } else {
+      throw new Error('Invalid job type')
+    }
+  } catch (error) {
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    await updateStepStatus(DBjob, 'results', {
+      status: 'Error',
+      message: `Failed to gather BilboMD results: ${errorMessage}`
+    })
+    logger.error(`Error during prepareBilboMDResults job: ${errorMessage}`)
+  }
+}
+
 export {
+  prepareBilboMDResults,
   prepareResults,
   getNumEnsembles,
   copyFiles,

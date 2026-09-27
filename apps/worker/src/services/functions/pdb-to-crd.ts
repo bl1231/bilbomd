@@ -1,8 +1,16 @@
 import { Job as BullMQJob } from 'bullmq'
+import {
+  IStepStatus,
+  IBilboMDPDBJob,
+  IBilboMDSANSJob,
+  IBilboMDAutoJob
+} from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import { config } from '../../config/config.js'
 import { runProcess } from '../../helpers/runProcess.js'
 import { runCharmm } from './charmm.js'
+import { updateStepStatus } from './mongo-utils.js'
+import { handleError } from './job-utils.js'
 import path from 'path'
 
 const uploadFolder = process.env.DATA_VOL ?? '/bilbomd/uploads'
@@ -166,7 +174,56 @@ const runStripCofactors = async (data: StripCofactorsData): Promise<void> => {
   logger.info(`runStripCofactors succeeded for ${data.pdb_file}`)
 }
 
+const runPdb2Crd = async (
+  MQjob: BullMQJob,
+  DBjob: IBilboMDPDBJob | IBilboMDSANSJob | IBilboMDAutoJob
+): Promise<void> => {
+  try {
+    logger.info(`Starting pdb2crd for job ${DBjob.uuid}`)
+    let status: IStepStatus = {
+      status: 'Running',
+      message: 'PDB2CRD has started.'
+    }
+    await updateStepStatus(DBjob, 'pdb2crd', status)
+
+    let charmmInpFiles: string[] = []
+
+    logger.debug(`Creating PDB2CRD CHARMM input files`)
+    charmmInpFiles = await createPdb2CrdCharmmInpFiles({
+      uuid: DBjob.uuid,
+      pdb_file: DBjob.pdb_file
+    })
+    logger.debug(
+      `Created CHARMM input files: ${JSON.stringify(charmmInpFiles)}`
+    )
+
+    // CHARMM pdb2crd convert individual chains
+    logger.debug(`Running CHARMM pdb2crd for individual chains`)
+    await spawnPdb2CrdCharmm(MQjob, charmmInpFiles)
+
+    // CHARMM pdb2crd meld individual crd files
+    logger.debug(`Running CHARMM pdb2crd meld step`)
+    charmmInpFiles = ['pdb2crd_charmm_meld.inp']
+    await spawnPdb2CrdCharmm(MQjob, charmmInpFiles)
+
+    // Update MongoDB
+    logger.debug(`Updating job files in database`)
+    DBjob.psf_file = 'bilbomd_pdb2crd.psf'
+    DBjob.crd_file = 'bilbomd_pdb2crd.crd'
+    status = {
+      status: 'Success',
+      message: 'PDB2CRD has completed.'
+    }
+    await updateStepStatus(DBjob, 'pdb2crd', status)
+    logger.info(`Completed pdb2crd for job ${DBjob.uuid}`)
+  } catch (error) {
+    logger.error(`runPdb2Crd failed for job ${DBjob.uuid}: ${error}`)
+    await handleError(error, DBjob, 'pdb2crd')
+  }
+}
+
 export {
+  runPdb2Crd,
   createPdb2CrdCharmmInpFiles,
   spawnPdb2CrdCharmm,
   runPrepPdb,

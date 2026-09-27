@@ -3,11 +3,6 @@ import { Job as BullMQJob } from 'bullmq'
 import {
   IJob,
   IStepStatus,
-  IBilboMDPDBJob,
-  IBilboMDCRDJob,
-  IBilboMDAutoJob,
-  IBilboMDAlphaFoldJob,
-  IBilboMDOpenFoldJob,
   IBilboMDSteps,
   StepStatusEnum
 } from '@bilbomd/mongodb-schema'
@@ -18,7 +13,6 @@ import {
   submitJobToNersc,
   monitorTaskAtNERSC
 } from './nersc-api-functions.js'
-import { prepareResults } from './prepare-results.js'
 import { cleanupJob } from './job-utils.js'
 
 interface INerscTaskResult {
@@ -31,27 +25,6 @@ interface INerscTaskResult {
         output: string
         error: string
       }
-}
-
-// Define some useful type guard functions
-function isBilboMDCRDJob(job: IJob): job is IBilboMDCRDJob {
-  return (job as IBilboMDCRDJob).crd_file !== undefined
-}
-
-function isBilboMDPDBJob(job: IJob): job is IBilboMDPDBJob {
-  return (job as IBilboMDPDBJob).pdb_file !== undefined
-}
-
-function isBilboMDAutoJob(job: IJob): job is IBilboMDAutoJob {
-  return (job as IBilboMDAutoJob).pae_file !== undefined
-}
-
-function isBilboMDAlphaFoldJob(job: IJob): job is IBilboMDAlphaFoldJob {
-  return (job as IBilboMDAlphaFoldJob).alphafold_entities !== undefined
-}
-
-function isBilboMDOpenFoldJob(job: IJob): job is IBilboMDOpenFoldJob {
-  return (job as IBilboMDOpenFoldJob).openfold_entities !== undefined
 }
 
 const updateNerscSpecificSteps = async (DBJob: IJob): Promise<void> => {
@@ -241,49 +214,6 @@ const submitBilboMDSlurm = async (
   }
 }
 
-
-const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
-  try {
-    await updateJobStatus(
-      DBjob,
-      'results',
-      'Running',
-      'Gathering BilboMD job results has started.'
-    )
-
-    // Ensure DBjob is one of the acceptable types before calling prepareResults
-    if (
-      isBilboMDCRDJob(DBjob) ||
-      isBilboMDPDBJob(DBjob) ||
-      isBilboMDAutoJob(DBjob) ||
-      isBilboMDAlphaFoldJob(DBjob) ||
-      isBilboMDOpenFoldJob(DBjob)
-    ) {
-      await prepareResults(DBjob)
-      await updateJobStatus(
-        DBjob,
-        'results',
-        'Success',
-        'BilboMD job results gathered successfully.'
-      )
-    } else {
-      throw new Error('Invalid job type')
-    }
-  } catch (error) {
-    let errorMessage = 'Unknown error'
-    if (error instanceof Error) {
-      errorMessage = error.message
-    }
-    await updateJobStatus(
-      DBjob,
-      'results',
-      'Error',
-      `Failed to gather BilboMD results: ${errorMessage}`
-    )
-    logger.error(`Error during prepareBilboMDResults job: ${errorMessage}`)
-  }
-}
-
 const copyBilboMDResults = async (MQjob: BullMQJob, DBjob: IJob) => {
   try {
     await updateJobStatus(
@@ -369,11 +299,5 @@ export {
   makeBilboMDSlurm,
   submitBilboMDSlurm,
   copyBilboMDResults,
-  prepareBilboMDResults,
-  sendBilboMDEmail,
-  isBilboMDCRDJob,
-  isBilboMDPDBJob,
-  isBilboMDAutoJob,
-  isBilboMDAlphaFoldJob,
-  isBilboMDOpenFoldJob
+  sendBilboMDEmail
 }

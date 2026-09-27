@@ -216,4 +216,4 @@ const writeSegidToChainid = async (inputFile: string): Promise<void> => {
   }
 }
 
-export { extractPDBFilesFromDCD, remediatePDBFiles }
+export { extractPDBFilesFromDCD, remediatePDBFiles, writeSegidToChainid }
