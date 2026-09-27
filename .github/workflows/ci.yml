@@ -551,6 +551,17 @@ jobs:
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
     runs-on: [ubuntu-24.04]
+    services:
+      mongo:
+        image: mongo:8
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-start-period=30s
+          --health-retries=30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -630,6 +641,12 @@ jobs:
 
       - name: Build schema
         run: pnpm -C packages/mongodb-schema run build
+
+      - name: Test schema
+        env:
+          # Enables the update-pipeline tests in stepStatusUpdate.test.ts
+          MONGO_TEST_URI: mongodb://127.0.0.1:27017/schema-test
+        run: pnpm -C packages/mongodb-schema run test
 
   md-utils:
     name: Build & Test md-utils

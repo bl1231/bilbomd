@@ -1,17 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@bilbomd/mongodb-schema', () => ({
-  Job: {
-    updateOne: vi.fn(),
-    findByIdAndUpdate: vi.fn()
+vi.mock('@bilbomd/mongodb-schema', async () => {
+  const actual = await vi.importActual<
+    typeof import('@bilbomd/mongodb-schema')
+  >('@bilbomd/mongodb-schema')
+  return {
+    buildStepStatusUpdate: actual.buildStepStatusUpdate,
+    Job: {
+      updateOne: vi.fn(),
+      findByIdAndUpdate: vi.fn()
+    }
   }
-}))
+})
 
 vi.mock('../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
 }))
 
-import { Job } from '@bilbomd/mongodb-schema'
+import { Job, buildStepStatusUpdate } from '@bilbomd/mongodb-schema'
 import { logger } from '../helpers/loggers.js'
 import {
   updateStepStatus,
@@ -32,7 +38,8 @@ describe('updateStepStatus', () => {
     await updateStepStatus(makeJob(), 'foxs', status)
     expect(Job.updateOne).toHaveBeenCalledWith(
       { _id: 'job123' },
-      { $set: { 'steps.foxs': status } }
+      buildStepStatusUpdate('foxs', status),
+      { updatePipeline: true }
     )
   })
 
@@ -69,8 +76,8 @@ describe('handleStepError', () => {
     await handleStepError('job123', 'foxs', new Error('something broke'))
     expect(Job.findByIdAndUpdate).toHaveBeenCalledWith(
       'job123',
-      { 'steps.foxs.status': 'Error' },
-      { new: true }
+      buildStepStatusUpdate('foxs', { status: 'Error' }),
+      { new: true, updatePipeline: true }
     )
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('something broke')
@@ -92,7 +99,11 @@ describe('updateJobStatus', () => {
     await updateJobStatus(makeJob(), 'results', 'Success', 'all done')
     expect(Job.updateOne).toHaveBeenCalledWith(
       { _id: 'job123' },
-      { $set: { 'steps.results': { status: 'Success', message: 'all done' } } }
+      buildStepStatusUpdate('results', {
+        status: 'Success',
+        message: 'all done'
+      }),
+      { updatePipeline: true }
     )
   })
 })

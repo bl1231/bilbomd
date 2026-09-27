@@ -5,14 +5,18 @@
 # The base image consolidates stages 1–4 (toolchain, RNAView/reduce, Node, Python env)
 
 ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-scoper-base:0.0.3
-ARG PNPM_VERSION=latest
 
 # -----------------------------------------------------------------------------
 # Build stage 5a - deps: prefetch pnpm store for scoped workspaces
 FROM ${BASE_IMAGE} AS deps
 WORKDIR /repo
 
-RUN npm i -g pnpm@${PNPM_VERSION} && \
+# Install the pnpm version pinned in package.json's packageManager (the base
+# image has no corepack). Anything else makes pnpm re-download the pinned
+# version as its standalone binary, which needs libatomic (not in the base).
+COPY package.json ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace(/^pnpm@/, '').split('+')[0]") && \
+    npm i -g "pnpm@${PNPM_VERSION}" && \
     pnpm --version
 
 # Copy only manifests for better caching
@@ -29,7 +33,12 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 FROM ${BASE_IMAGE} AS build
 WORKDIR /repo
 
-RUN npm i -g pnpm@${PNPM_VERSION} && \
+# Install the pnpm version pinned in package.json's packageManager (the base
+# image has no corepack). Anything else makes pnpm re-download the pinned
+# version as its standalone binary, which needs libatomic (not in the base).
+COPY package.json ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace(/^pnpm@/, '').split('+')[0]") && \
+    npm i -g "pnpm@${PNPM_VERSION}" && \
     pnpm --version
 
 ENV HUSKY=0

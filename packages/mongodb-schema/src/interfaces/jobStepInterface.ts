@@ -8,6 +8,10 @@ export const StepStatus = {
 interface IStepStatus {
   status: StepStatusEnum
   message: string
+  // Stamped server-side by buildStepStatusUpdate(); never set by callers.
+  started_at?: Date
+  completed_at?: Date
+  duration_ms?: number
 }
 
 // Interface for steps status

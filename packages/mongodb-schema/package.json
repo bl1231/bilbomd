@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "test": "vitest --run",
     "prepublishOnly": "npm run build",
     "watch": "nodemon --watch src --ext ts,json --exec 'npm run build'"
   },
@@ -28,7 +29,8 @@
     "mongoose": "^9.9.2"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0"
+    "@types/node": "^26.2.0",
+    "vitest": "^4.1.10"
   },
   "exports": {
     ".": {
