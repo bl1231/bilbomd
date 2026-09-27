@@ -15,6 +15,7 @@ import { runCharmm } from './charmm.js'
 import Handlebars from 'handlebars'
 import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
 import { getErrorMessage } from '../../helpers/errors.js'
+import { notifyJobChanged } from '../../helpers/jobEvents.js'
 import { Types } from 'mongoose'
 
 const initializeJob = async (MQJob: BullMQJob, DBjob: IJob): Promise<void> => {
@@ -26,6 +27,7 @@ const initializeJob = async (MQJob: BullMQJob, DBjob: IJob): Promise<void> => {
     DBjob.status = 'Running'
     DBjob.time_started = new Date()
     await DBjob.save()
+    notifyJobChanged(DBjob)
   } catch (error) {
     logger.error(`Error in initializeJob: ${getErrorMessage(error)}`)
     throw error
@@ -62,6 +64,7 @@ const markJobAsCompleted = async (DBjob: IJob): Promise<void> => {
   DBjob.status = 'Completed'
   DBjob.time_completed = new Date()
   await DBjob.save()
+  notifyJobChanged(DBjob)
 }
 
 // Fetch user associated with the job

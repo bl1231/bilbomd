@@ -2,12 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createProgressTracker } from '../progress-tracker.js'
 import { Job as BullMQJob } from 'bullmq'
 import { IJob } from '@bilbomd/mongodb-schema'
+import { notifyJobChanged } from '../../../helpers/jobEvents.js'
+
+vi.mock('../../../helpers/jobEvents.js', () => ({
+  notifyJobChanged: vi.fn()
+}))
 
 describe('progress-tracker', () => {
   let mockMQJob: Partial<BullMQJob>
   let mockDBJob: Partial<IJob>
 
   beforeEach(() => {
+    vi.clearAllMocks()
     mockMQJob = {
       updateProgress: vi.fn().mockResolvedValue(undefined)
     }
@@ -29,6 +35,7 @@ describe('progress-tracker', () => {
     expect(mockMQJob.updateProgress).toHaveBeenCalledWith(50)
     expect(mockDBJob.progress).toBe(50)
     expect(mockDBJob.save).toHaveBeenCalled()
+    expect(notifyJobChanged).toHaveBeenCalledExactlyOnceWith(mockDBJob)
   })
 
   it('should handle multiple progress updates', async () => {
@@ -69,6 +76,7 @@ describe('progress-tracker', () => {
     )
 
     await expect(tracker.update(50)).rejects.toThrow('DB save failed')
+    expect(notifyJobChanged).not.toHaveBeenCalled()
   })
 
   it('should update progress with various percentage values', async () => {

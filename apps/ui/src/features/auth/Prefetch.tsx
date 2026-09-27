@@ -4,12 +4,15 @@ import { configApiSlice } from 'slices/configsApiSlice'
 import { bullmqApiSlice } from 'features/bullmq/bullmqApiSlice'
 import { useAppDispatch } from 'app/hooks'
 import useAuth from 'hooks/useAuth'
+import { useJobEvents } from 'hooks/useJobEvents'
 import { useEffect } from 'react'
 import { Outlet } from 'react-router'
 
 const Prefetch = () => {
   const dispatch = useAppDispatch()
   const { isManager, isAdmin } = useAuth()
+  // One job event stream for the whole logged-in app
+  useJobEvents()
 
   useEffect(() => {
     // Dispatch into the real app store so the logged-in token is attached;

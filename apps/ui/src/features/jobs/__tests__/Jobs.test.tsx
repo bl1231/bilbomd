@@ -444,6 +444,49 @@ describe('Jobs table', () => {
     })
   })
 
+  it('shows a deleted job as Deleting until the server confirms', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([
+          createMockJobDTO({
+            mongo: createMockPdbMongo({ title: 'Doomed Job' })
+          })
+        ])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /more actions/i })
+    )
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: /delete/i })
+    )
+    const dialog = await screen.findByRole('dialog', {
+      name: /confirm delete/i
+    })
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /^delete$/i })
+    )
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: /confirm delete/i })
+      ).not.toBeInTheDocument()
+    })
+
+    // Still listed (the server has only queued the deletion), but marked and
+    // with its actions disabled
+    const row = (await screen.findByText('Doomed Job')).closest('[role="row"]')
+    expect(row).not.toBeNull()
+    expect(
+      await within(row as HTMLElement).findByText('Deleting')
+    ).toBeInTheDocument()
+    expect(
+      within(row as HTMLElement).getByRole('button', { name: /more actions/i })
+    ).toBeDisabled()
+  })
+
   it('shows empty-state info alert when no jobs', async () => {
     server.use(
       http.get('http://localhost:3003/api/v1/jobs', () => {

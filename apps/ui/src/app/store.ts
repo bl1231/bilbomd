@@ -2,12 +2,14 @@ import { configureStore, combineReducers } from '@reduxjs/toolkit'
 import { apiSlice } from './api/apiSlice'
 import { superfacilityApiSlice } from './api/sfapiSlice'
 import authReducer from '../slices/authSlice'
+import jobEventsReducer from '../slices/jobEventsSlice'
 
-const rootReducer = combineReducers({
+export const rootReducer = combineReducers({
   [apiSlice.reducerPath]: apiSlice.reducer,
 
   [superfacilityApiSlice.reducerPath]: superfacilityApiSlice.reducer,
-  auth: authReducer
+  auth: authReducer,
+  jobEvents: jobEventsReducer
 })
 
 export const setupStore = (preloadedState?: Partial<RootState>) => {

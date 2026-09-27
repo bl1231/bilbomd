@@ -15,6 +15,11 @@ import {
 } from 'slices/jobsApiSlice'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from 'slices/authSlice'
+import {
+  STREAM_FALLBACK_POLL_MS,
+  selectJobEventsConnected,
+  selectPendingDeletes
+} from 'slices/jobEventsSlice'
 import useTitle from 'hooks/useTitle'
 import { clsx } from 'clsx'
 import { Box } from '@mui/system'
@@ -286,6 +291,8 @@ const Jobs = () => {
 
   const { username, isManager, isAdmin } = useAuth()
   const token = useSelector(selectCurrentToken)
+  const eventsConnected = useSelector(selectJobEventsConnected)
+  const pendingDeletes = useSelector(selectPendingDeletes)
   const navigate = useNavigate()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -356,7 +363,7 @@ const Jobs = () => {
     isError,
     error
   } = useGetJobsQuery('jobsList', {
-    pollingInterval: 30000,
+    pollingInterval: eventsConnected ? STREAM_FALLBACK_POLL_MS : 30000,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })
@@ -578,8 +585,14 @@ const Jobs = () => {
         job.mongo.status
       )
 
+      // Deletion accepted but not yet confirmed by the server. Rows are keyed
+      // (and deleted) by mongo.id.
+      const deleting = pendingDeletes.includes(job.mongo.id)
+
       return {
         ...job.mongo,
+        status: deleting ? 'Deleting' : job.mongo.status,
+        deleting,
         username: job.username,
         nerscJobid: nerscJobid,
         nerscStatus: nerscStatus,
@@ -762,6 +775,7 @@ const Jobs = () => {
               disableElevation
               size="small"
               className="job-details-button"
+              disabled={params.row.deleting}
               onClick={(e) => handleMenuOpen(e, id)}
               endIcon={<KeyboardArrowDownIcon />}
             >

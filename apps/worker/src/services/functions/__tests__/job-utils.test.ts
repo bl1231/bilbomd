@@ -17,6 +17,11 @@ import { config } from '../../../config/config.js'
 import fs from 'fs-extra'
 import { updateStepStatus, updateJobStatus } from '../mongo-utils.js'
 import { Types } from 'mongoose'
+import { notifyJobChanged } from '../../../helpers/jobEvents.js'
+
+vi.mock('../../../helpers/jobEvents.js', () => ({
+  notifyJobChanged: vi.fn()
+}))
 
 const { runCharmmMock } = vi.hoisted(() => ({ runCharmmMock: vi.fn() }))
 
@@ -88,6 +93,7 @@ describe('job-utils', () => {
       expect(mockDBJob.status).toBe('Running')
       expect(mockDBJob.time_started).toBeInstanceOf(Date)
       expect(mockDBJob.save).toHaveBeenCalledTimes(1)
+      expect(notifyJobChanged).toHaveBeenCalledExactlyOnceWith(mockDBJob)
     })
 
     it('should log and throw error if initialization fails', async () => {
@@ -141,6 +147,7 @@ describe('job-utils', () => {
       expect(mockDBJob.status).toBe('Completed')
       expect(mockDBJob.time_completed).toBeInstanceOf(Date)
       expect(mockDBJob.save).toHaveBeenCalled()
+      expect(notifyJobChanged).toHaveBeenCalledWith(mockDBJob)
       expect(updateStepStatus).toHaveBeenCalledWith(
         mockDBJob,
         'email',

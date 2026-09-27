@@ -17,6 +17,7 @@ import { checkNERSC } from './workers/workerControl.js'
 import { monitorAndCleanupJobs } from './workers/bilboMdNerscJobMonitor.js'
 import { redis } from './queues/redisConn.js'
 import { startCancelListener } from './workers/cancelListener.js'
+import { configureJobEvents } from './helpers/jobEvents.js'
 import { getErrorMessage } from './helpers/errors.js'
 
 dotenv.config()
@@ -96,6 +97,10 @@ const workers = [
 
 // Store interval IDs for cleanup
 const intervals: NodeJS.Timeout[] = []
+
+// Tell the backend (and the UI) when jobs change. Publishing works on the
+// shared connection; only subscribing needs a dedicated one.
+configureJobEvents(redis)
 
 // Listen for cancel requests (e.g. a user deleting a running job). Pub/sub
 // needs a dedicated connection.

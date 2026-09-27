@@ -8,8 +8,10 @@ import { jobsApiSlice } from 'slices/jobsApiSlice'
 import { usersApiSlice } from 'slices/usersApiSlice'
 import { configApiSlice } from 'slices/configsApiSlice'
 import { bullmqApiSlice } from 'features/bullmq/bullmqApiSlice'
+import { useJobEvents } from 'hooks/useJobEvents'
 
 vi.mock('hooks/useAuth', () => ({ default: vi.fn() }))
+vi.mock('hooks/useJobEvents', () => ({ useJobEvents: vi.fn() }))
 vi.mock('app/hooks', () => ({ useAppDispatch: vi.fn() }))
 vi.mock('react-router', () => ({
   Outlet: () => <div data-testid="outlet" />
@@ -45,6 +47,15 @@ const authState = (overrides: Partial<ReturnType<typeof useAuth>> = {}) => ({
 })
 
 describe('Prefetch', () => {
+  it('opens the job event stream for the logged-in app', () => {
+    mockUseAuth.mockReturnValue(authState())
+    mockUseAppDispatch.mockReturnValue(vi.fn() as unknown as AppDispatch)
+
+    render(<Prefetch />)
+
+    expect(useJobEvents).toHaveBeenCalled()
+  })
+
   let dispatch: ReturnType<typeof vi.fn>
 
   beforeEach(() => {

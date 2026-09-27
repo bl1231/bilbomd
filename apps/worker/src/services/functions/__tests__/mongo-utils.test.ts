@@ -12,6 +12,11 @@ import {
   type IBilboMDSteps
 } from '@bilbomd/mongodb-schema'
 import { logger } from '../../../helpers/loggers.js'
+import { notifyJobChanged } from '../../../helpers/jobEvents.js'
+
+vi.mock('../../../helpers/jobEvents.js', () => ({
+  notifyJobChanged: vi.fn()
+}))
 
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: {
@@ -56,6 +61,7 @@ describe('mongo-utils', () => {
         buildStepStatusUpdate('minimize', newStatus),
         { updatePipeline: true }
       )
+      expect(notifyJobChanged).toHaveBeenCalledExactlyOnceWith(mockJob)
     })
 
     it('keeps previously stored fields on the in-memory step', async () => {
@@ -114,6 +120,7 @@ describe('mongo-utils', () => {
           'Error updating step status for job test-job-id'
         )
       )
+      expect(notifyJobChanged).not.toHaveBeenCalled()
     })
 
     it('should work with IMultiJob instances', async () => {
@@ -203,6 +210,7 @@ describe('mongo-utils', () => {
 
       expect(mockJob.status).toBe('Running')
       expect(mockJob.save).toHaveBeenCalledTimes(1)
+      expect(notifyJobChanged).toHaveBeenCalledExactlyOnceWith(mockJob)
     })
 
     it('should update job status to Completed', async () => {
