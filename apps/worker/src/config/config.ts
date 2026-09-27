@@ -93,6 +93,21 @@ export const config = {
   ),
   of3TimeoutMs: parsePositiveIntEnv('OF3_TIMEOUT_MS', 60 * 60 * 1000),
   logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info'),
+  // Per-process timeouts for external tools. Defaults are ~3-4x the longest
+  // runs seen on production (epyc, Dec 2025 - Sep 2026) so they only catch
+  // hangs; override per deployment for unusually large systems.
+  processTimeouts: {
+    // OpenMM minimize / heat: observed max < 1 min
+    openmmSetupMs: parsePositiveIntEnv(
+      'PROCESS_TIMEOUT_OPENMM_SETUP_MS',
+      60 * 60 * 1000
+    ),
+    // One OpenMM MD run (per Rg): observed max ~63 min
+    openmmMdMs: parsePositiveIntEnv(
+      'PROCESS_TIMEOUT_OPENMM_MD_MS',
+      4 * 60 * 60 * 1000
+    )
+  },
   scripts: {
     prepareCHARMMSlurmScript: getEnvVar('PREPARE_CHARMM_SLURM_SCRIPT'),
     prepareOMMSlurmScript: getEnvVar('PREPARE_OMM_SLURM_SCRIPT'),

@@ -142,6 +142,29 @@ describe('config.ts env parsing', () => {
     })
   })
 
+  describe('processTimeouts', () => {
+    it('defaults to 1h for OpenMM setup and 4h per OpenMM MD run', async () => {
+      delete process.env.PROCESS_TIMEOUT_OPENMM_SETUP_MS
+      delete process.env.PROCESS_TIMEOUT_OPENMM_MD_MS
+      const { config } = await reimport()
+      expect(config.processTimeouts.openmmSetupMs).toBe(60 * 60 * 1000)
+      expect(config.processTimeouts.openmmMdMs).toBe(4 * 60 * 60 * 1000)
+    })
+
+    it('can be overridden per deployment', async () => {
+      process.env.PROCESS_TIMEOUT_OPENMM_MD_MS = '28800000'
+      const { config } = await reimport()
+      expect(config.processTimeouts.openmmMdMs).toBe(8 * 60 * 60 * 1000)
+    })
+
+    it('rejects invalid overrides', async () => {
+      process.env.PROCESS_TIMEOUT_OPENMM_SETUP_MS = '0'
+      await expect(reimport()).rejects.toThrow(
+        /PROCESS_TIMEOUT_OPENMM_SETUP_MS.*is not a positive number/
+      )
+    })
+  })
+
   describe('validateRequiredEnvVars', () => {
     it('throws listing the missing required variables', async () => {
       delete process.env.BILBOMD_URL

@@ -345,7 +345,7 @@ const runOmmStep = async (
       cwd: opts?.cwd,
       pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
       env,
-      timeoutMs: opts?.timeoutMs ?? 60 * 60 * 1000,
+      timeoutMs: opts?.timeoutMs ?? config.processTimeouts.openmmSetupMs,
       onStdoutLine: (line) => {
         if (line.startsWith('BILBOMD_OPENMM_ERROR:')) {
           ommErrorDetail = line.slice('BILBOMD_OPENMM_ERROR:'.length).trim()
@@ -513,7 +513,7 @@ const runOmmMD = async (
       cwd: opts?.cwd,
       pythonBin: opts?.pythonBin ?? config.openmmPythonBin,
       env,
-      timeoutMs: opts?.timeoutMs ?? 2 * 60 * 60 * 1000, // 2h default per run
+      timeoutMs: opts?.timeoutMs ?? config.processTimeouts.openmmMdMs,
       onStdoutLine: (line) =>
         logger.info(`[md rg=${rg} GPU=${assignedGpu}][stdout] ${line}`),
       onStderrLine: (line) => {
