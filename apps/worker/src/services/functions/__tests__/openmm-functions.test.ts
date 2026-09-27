@@ -25,7 +25,11 @@ vi.mock('../../../config/config.js', () => ({
   config: {
     uploadDir: '/uploads',
     openmmPythonBin: '/opt/envs/openmm/bin/python',
-    openmmMdConcurrency: 1
+    openmmMdConcurrency: 1,
+    processTimeouts: {
+      openmmSetupMs: 60 * 60 * 1000,
+      openmmMdMs: 4 * 60 * 60 * 1000
+    }
   }
 }))
 
@@ -64,7 +68,10 @@ const makeMQJob = (): BullMQJob => ({}) as BullMQJob
 
 describe('runOmmMD concurrency', () => {
   let runPythonStep: ReturnType<typeof vi.fn>
-  let fs: { pathExists: ReturnType<typeof vi.fn>; readFile: ReturnType<typeof vi.fn> }
+  let fs: {
+    pathExists: ReturnType<typeof vi.fn>
+    readFile: ReturnType<typeof vi.fn>
+  }
   let YAML: { parse: ReturnType<typeof vi.fn> }
 
   beforeEach(async () => {
@@ -157,6 +164,25 @@ describe('runOmmMD concurrency', () => {
     const passedRgs = calls.map((c) => c[2].env.OMM_RG)
     expect(passedRgs).toContain('25')
     expect(passedRgs).toContain('35')
+  })
+
+  it('uses config.processTimeouts.openmmMdMs as the per-run timeout', async () => {
+    setupRgs([25, 35])
+    runPythonStep.mockResolvedValue({ code: 0, signal: null })
+
+    await runOmmMD(makeMQJob(), makeDBJob(), { concurrency: 2 })
+
+    const timeouts = runPythonStep.mock.calls.map((c) => c[2].timeoutMs)
+    expect(timeouts).toEqual([4 * 60 * 60 * 1000, 4 * 60 * 60 * 1000])
+  })
+
+  it('lets opts.timeoutMs override the configured MD timeout', async () => {
+    setupRgs([25])
+    runPythonStep.mockResolvedValue({ code: 0, signal: null })
+
+    await runOmmMD(makeMQJob(), makeDBJob(), { timeoutMs: 1234 })
+
+    expect(runPythonStep.mock.calls[0][2].timeoutMs).toBe(1234)
   })
 
   it('uses config.openmmMdConcurrency as default when opts.concurrency is not passed', async () => {
