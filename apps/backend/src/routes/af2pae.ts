@@ -8,10 +8,11 @@ import {
   getPaePng,
   getVizPng
 } from '../controllers/af2paeController.js'
+import { af2paeLimiter } from '../middleware/uploadUtilityLimiter.js'
 
 const router = express.Router()
 
-router.route('/').get(downloadConstFile).post(createNewConstFile)
+router.route('/').get(downloadConstFile).post(af2paeLimiter, createNewConstFile)
 
 router.route('/status').get(getAf2PaeStatus)
 
