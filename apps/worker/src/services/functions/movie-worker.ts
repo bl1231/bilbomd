@@ -1,6 +1,6 @@
 import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
-import { spawn } from 'node:child_process'
+import { runProcess } from '../../helpers/runProcess.js'
 import fs from 'fs-extra'
 import path from 'path'
 import { Job as BullMQJob } from 'bullmq'
@@ -107,8 +107,7 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
     // poster from first frame of video
     await fs.remove(poster).catch(() => {})
     await fs.remove(thumb).catch(() => {})
-    await spawnPromise(
-      'ffmpeg',
+    await runFfmpeg(
       [
         '-y',
         '-sseof',
@@ -124,8 +123,7 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
       outDir
     )
 
-    await spawnPromise(
-      'ffmpeg',
+    await runFfmpeg(
       [
         '-y',
         '-i',
@@ -240,69 +238,32 @@ const generateMovieFromDCD = async (payload: MovieJobData): Promise<void> => {
     String(crf)
   )
 
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
-
   logger.debug(`[movie-worker] spawning PyMOL for ${label}`)
   logger.debug(`[movie-worker] cmd: python -m pymol ${pymolArgs.join(' ')}`)
   logger.debug(`[movie-worker] cwd: ${outDir}`)
 
-  return new Promise((resolve, reject) => {
-    const pythonBinary = config.openmmPythonBin
-    const pymolCommand = ['-m', 'pymol'].concat(pymolArgs)
-
-    const child = spawn(pythonBinary, pymolCommand, {
-      cwd: outDir,
-      env: {
-        ...process.env,
-        PATH: `/opt/envs/openmm/bin:${process.env.PATH || ''}`
-      }
-    })
-
-    child.stdout?.on('data', (data: Buffer) => {
-      const output = data.toString()
-      logger.debug(`PyMOL stdout (${label}): ${output.trim()}`)
-      logStream.write(output)
-    })
-    child.stderr?.on('data', (data: Buffer) => {
-      const output = data.toString()
-      logger.debug(`PyMOL stderr (${label}): ${output.trim()}`)
-      errorStream.write(output)
-    })
-
-    child.on('error', (error: Error) => {
-      logger.error(`[movie-worker] spawn error (${label}): ${error}`)
-      logStream.end()
-      errorStream.end()
-      reject(error)
-    })
-
-    child.on('exit', (code: number | null, signal: string | null) => {
-      logStream.end()
-      errorStream.end()
-
-      if (code === 0) {
-        logger.info(`[movie-worker] movie generated (${label}) -> ${outMp4}`)
-        resolve()
-      } else {
-        logger.error(
-          `[movie-worker] movie generation failed (${label}) code=${code} signal=${signal}`
-        )
-        reject(new Error(`movie generation failed with exit code ${code}`))
-      }
-    })
+  await runProcess({
+    label: `Movie ${label}`,
+    cmd: config.openmmPythonBin,
+    args: ['-m', 'pymol', ...pymolArgs],
+    cwd: outDir,
+    env: { PATH: `/opt/envs/openmm/bin:${process.env.PATH || ''}` },
+    stdoutFile: logFile,
+    stderrFile: errorFile,
+    timeoutMs: config.processTimeouts.movieMs,
+    onStdoutLine: (line) => logger.debug(`PyMOL stdout (${label}): ${line}`),
+    onStderrLine: (line) => logger.debug(`PyMOL stderr (${label}): ${line}`)
   })
+  logger.info(`[movie-worker] movie generated (${label}) -> ${outMp4}`)
 }
 
-function spawnPromise(cmd: string, args: string[], cwd: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd, env: process.env })
-    child.on('error', reject)
-    child.on('exit', (code) => {
-      if (code === 0) resolve()
-      else reject(new Error(`${cmd} exited with code ${code}`))
-    })
+const runFfmpeg = (args: string[], cwd: string) =>
+  runProcess({
+    label: 'ffmpeg',
+    cmd: 'ffmpeg',
+    args,
+    cwd,
+    timeoutMs: config.processTimeouts.helperScriptMs
   })
-}
 
 export { runGenerateMovies }
