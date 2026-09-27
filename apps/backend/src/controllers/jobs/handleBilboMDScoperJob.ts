@@ -13,6 +13,7 @@ import { ValidationError } from 'yup'
 import { getFileStats } from './utils/jobUtils.js'
 import { config } from '../../config/config.js'
 import { scoperJobSchema } from '../../validation/index.js'
+import { announceNewJob } from '../../services/announceNewJob.js'
 
 const uploadFolder = config.uploadDir
 
@@ -132,6 +133,7 @@ const handleBilboMDScoperJob = async (
 
     // Queue the job
     const BullId = await queueScoperJob(jobDataForQueue)
+    await announceNewJob(newJob)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)

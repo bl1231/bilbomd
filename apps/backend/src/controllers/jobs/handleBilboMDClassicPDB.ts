@@ -31,6 +31,7 @@ import {
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { config } from '../../config/config.js'
+import { announceNewJob } from '../../services/announceNewJob.js'
 
 const uploadFolder = config.uploadDir
 
@@ -349,6 +350,7 @@ const handleBilboMDClassicPDB = async (
 
     // Queue the job
     const BullId = await queueJob(jobDataForQueue)
+    await announceNewJob(newJob)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)

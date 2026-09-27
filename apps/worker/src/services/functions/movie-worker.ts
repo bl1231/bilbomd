@@ -5,6 +5,20 @@ import fs from 'fs-extra'
 import path from 'path'
 import { Job as BullMQJob } from 'bullmq'
 import { Job as Job } from '@bilbomd/mongodb-schema'
+import { notifyJobChanged } from '../../helpers/jobEvents.js'
+
+// Movie jobs carry only the BilboMD job's id; look up its owner so the event
+// reaches their browser. Never throws: a lost event only delays the UI.
+const notifyMoviesChanged = async (jobId: string): Promise<void> => {
+  try {
+    const job = await Job.findById(jobId)
+      .select('user')
+      .lean<{ _id: unknown; user?: unknown }>()
+    if (job) notifyJobChanged(job, 'movies')
+  } catch (error) {
+    logger.warn(`[movie-worker] failed to notify for ${jobId}: ${error}`)
+  }
+}
 
 const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
   const data = MQjob.data as MovieJobData
@@ -35,6 +49,7 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
     },
     { arrayFilters: [{ 'm.label': label }] }
   )
+  await notifyMoviesChanged(jobId)
   await fs.ensureDir(outDir)
 
   const outMp4 = path.join(outDir, 'movie.mp4')
@@ -62,6 +77,7 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
     } catch (e) {
       logger.warn(`[movie-worker] failed to update DB on skip (${label}): ${e}`)
     }
+    await notifyMoviesChanged(jobId)
     return
   }
 
@@ -99,6 +115,7 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
         `[movie-worker] secondary DB update failed (${label}) after error: ${e}`
       )
     }
+    await notifyMoviesChanged(jobId)
     throw err
   }
 
@@ -168,6 +185,7 @@ const runGenerateMovies = async (MQjob: BullMQJob): Promise<void> => {
       `[movie-worker] DB update (ready, final) failed for ${label}: ${e}`
     )
   }
+  await notifyMoviesChanged(jobId)
 
   logger.debug(`[movie-worker] done jobId=${jobId} label=${label}`)
 }

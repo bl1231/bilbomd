@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { Request, Response } from 'express'
 import { handleBilboMDSANSJob } from '../handleBilboMDSANSJob.js'
 import { queueJob } from '../../../queues/bilbomd.js'
+import { announceNewJob } from '../../../services/announceNewJob.js'
 
 // Mocks
 vi.mock('../../middleware/loggers.js', () => ({
@@ -12,6 +13,9 @@ vi.mock('../../middleware/loggers.js', () => ({
   }
 }))
 
+vi.mock('../../../services/announceNewJob.js', () => ({
+  announceNewJob: vi.fn()
+}))
 vi.mock('../../../queues/bilbomd.js', () => ({
   queueJob: vi.fn(async () => 'bull-id-123')
 }))
@@ -159,5 +163,18 @@ describe('handleBilboMDSANSJob', () => {
     const arg = (queueJob as unknown as { mock: { calls: unknown[][] } }).mock
       .calls[0][0] as { md_engine: string }
     expect(arg.md_engine).toBe('OpenMM')
+  })
+
+  it('announces the new job once it is queued', async () => {
+    const { req, res } = makeReqRes({ md_engine: 'openmm' })
+
+    await handleBilboMDSANSJob(req, res, user, UUID, { accessMode: 'user' })
+
+    expect(announceNewJob).toHaveBeenCalledOnce()
+    const announced = vi.mocked(announceNewJob).mock.calls[0][0] as {
+      uuid?: string
+    }
+    const queued = vi.mocked(queueJob).mock.calls[0][0] as { uuid: string }
+    expect(announced.uuid).toBe(queued.uuid)
   })
 })

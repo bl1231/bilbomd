@@ -3,6 +3,7 @@ import type { Request, Response } from 'express'
 import type { IUser } from '@bilbomd/mongodb-schema'
 import { handleBilboMDScoperJob } from '../handleBilboMDScoperJob.js'
 import { queueScoperJob } from '../../../queues/scoper.js'
+import { announceNewJob } from '../../../services/announceNewJob.js'
 import { ValidationError } from 'yup'
 
 vi.mock('../../middleware/loggers.js', () => ({
@@ -13,6 +14,9 @@ vi.mock('../../middleware/loggers.js', () => ({
   }
 }))
 
+vi.mock('../../../services/announceNewJob.js', () => ({
+  announceNewJob: vi.fn()
+}))
 vi.mock('../../../queues/scoper.js', () => ({
   queueScoperJob: vi.fn(async () => 'bull-scoper-id-1')
 }))
@@ -133,6 +137,7 @@ describe('handleBilboMDScoperJob', () => {
       expect(queueArg).not.toHaveProperty('md_engine')
       expect(queueArg.type).toBe('scoper')
       expect(queueArg.uuid).toBe('uuid-123')
+      expect(announceNewJob).toHaveBeenCalledOnce()
     })
 
     it('ignores md_engine even if sent in request body', async () => {

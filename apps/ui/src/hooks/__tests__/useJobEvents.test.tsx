@@ -8,6 +8,7 @@ import {
   INVALIDATE_BATCH_MS,
   createInvalidationBatcher,
   reconnectDelay,
+  tagsForEvent,
   useJobEvents
 } from '../useJobEvents'
 import { selectPendingDeletes } from 'slices/jobEventsSlice'
@@ -137,6 +138,22 @@ describe('useJobEvents', () => {
     expect(invalidateSpy).toHaveBeenCalledWith([{ type: 'Job', id: 'j1' }])
   })
 
+  it('refetches the job list for a new job and the movies for a movie change', async () => {
+    setup()
+    await flush()
+
+    stream().send(jobEvent({ jobId: 'new-job', kind: 'created' }))
+    stream().send(jobEvent({ jobId: 'j1', kind: 'movies' }))
+    stream().send(jobEvent({ jobId: 'j1', kind: 'updated' }))
+    await act(() => vi.advanceTimersByTimeAsync(INVALIDATE_BATCH_MS))
+
+    expect(invalidateSpy).toHaveBeenCalledExactlyOnceWith([
+      { type: 'Job', id: 'LIST' },
+      { type: 'MovieAsset', id: 'j1' },
+      { type: 'Job', id: 'j1' }
+    ])
+  })
+
   it('stops showing a job as deleting when its deletion failed', async () => {
     const { store } = setup({
       jobEvents: { connected: false, pendingDeletes: ['j1', 'j2'] }
@@ -237,10 +254,22 @@ describe('createInvalidationBatcher', () => {
     const flushBatch = vi.fn()
     const batcher = createInvalidationBatcher(flushBatch, 100)
 
-    batcher.add('j1')
+    batcher.add([{ type: 'Job', id: 'j1' }])
     batcher.cancel()
     vi.advanceTimersByTime(100)
 
     expect(flushBatch).not.toHaveBeenCalled()
+  })
+})
+
+describe('tagsForEvent', () => {
+  it.each([
+    ['created', [{ type: 'Job', id: 'LIST' }]],
+    ['updated', [{ type: 'Job', id: 'j1' }]],
+    ['deleted', [{ type: 'Job', id: 'j1' }]],
+    ['delete_failed', [{ type: 'Job', id: 'j1' }]],
+    ['movies', [{ type: 'MovieAsset', id: 'j1' }]]
+  ] as const)("maps '%s' to %j", (kind, tags) => {
+    expect(tagsForEvent({ jobId: 'j1', kind })).toEqual(tags)
   })
 })

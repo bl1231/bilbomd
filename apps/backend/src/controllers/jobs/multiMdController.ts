@@ -14,6 +14,7 @@ import {
 import { User, IUser, MultiJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { queueJob } from '../../queues/multimd.js'
+import { announceNewJob } from '../../services/announceNewJob.js'
 
 const createNewMultiJob = async (req: Request, res: Response) => {
   const UUID = uuid()
@@ -125,6 +126,7 @@ const handleBilboMDMultiJobCreation = async (
       jobid: newMultiJob._id.toString()
     })
     logger.info(`MultiJob queued with BullId: ${BullId}`)
+    await announceNewJob(newMultiJob)
 
     return res
       .status(201)
