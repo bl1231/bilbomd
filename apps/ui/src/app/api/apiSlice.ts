@@ -99,6 +99,8 @@ export const apiSlice = createApi({
     'AdminQueue',
     'Af2PaeViz',
     'MovieAsset',
+    'PublicJob',
+    'PublicMovieAsset',
     'Analytics'
   ],
   endpoints: () => ({})

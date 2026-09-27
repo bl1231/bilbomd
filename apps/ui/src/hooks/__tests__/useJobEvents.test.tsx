@@ -7,10 +7,10 @@ import { setupApiStore } from '../../test/testUtils'
 import {
   INVALIDATE_BATCH_MS,
   createInvalidationBatcher,
-  reconnectDelay,
   tagsForEvent,
   useJobEvents
 } from '../useJobEvents'
+import { reconnectDelay } from 'utils/jobEventStream'
 import { selectPendingDeletes } from 'slices/jobEventsSlice'
 import type { RootState } from 'app/store'
 

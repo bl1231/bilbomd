@@ -221,6 +221,13 @@ export const handlers = [
     return HttpResponse.json(mockAnonJobResponse)
   }),
 
+  // Public job pages open an event stream; answer "no such job" so the
+  // stream stops at once. Tests of the stream itself override this.
+  http.get(
+    'http://localhost:3003/api/v1/public/jobs/:id/events',
+    () => new HttpResponse(null, { status: 404 })
+  ),
+
   http.get('http://localhost:3003/api/v1/public/jobs/:id', ({ params }) => {
     if (params.id === 'nonexistent') {
       return HttpResponse.json({ error: 'Job not found' }, { status: 404 })

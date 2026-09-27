@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { setupApiStore } from '../../test/testUtils'
 import { publicJobsApiSlice } from '../publicJobsApiSlice'
+import { apiSlice } from '../../app/api/apiSlice'
+import { waitFor } from '@testing-library/react'
 import { server } from '../../test/server'
 import { http, HttpResponse } from 'msw'
 import type { PublicJobStatus, AnonJobResponse } from '@bilbomd/bilbomd-types'
@@ -403,4 +405,44 @@ describe('publicJobsApiSlice', () => {
       expect(result.error).toBeUndefined()
     })
   })
+})
+
+describe('public job tags', () => {
+  afterEach(() => {
+    server.resetHandlers()
+  })
+
+  it.each([
+    ['getPublicJobById', 'PublicJob', '/public/jobs/tok'],
+    ['getPublicMDMovies', 'PublicMovieAsset', '/public/jobs/tok/movies']
+  ] as const)(
+    '%s refetches when its %s tag is invalidated for its token',
+    async (endpoint, type, path) => {
+      let requests = 0
+      server.use(
+        http.get(`http://localhost:3003/api/v1${path}`, () => {
+          requests++
+          return HttpResponse.json({})
+        })
+      )
+      const { store } = setupApiStore()
+      const { getPublicJobById, getPublicMDMovies } =
+        publicJobsApiSlice.endpoints
+      const sub =
+        endpoint === 'getPublicJobById'
+          ? store.dispatch(getPublicJobById.initiate('tok'))
+          : store.dispatch(getPublicMDMovies.initiate('tok'))
+      await sub
+
+      // another token's tag leaves this query alone
+      store.dispatch(apiSlice.util.invalidateTags([{ type, id: 'other' }]))
+      store.dispatch(apiSlice.util.invalidateTags([{ type, id: 'tok' }]))
+
+      await waitFor(() => expect(requests).toBe(2))
+      // and no third request turns up from the other token's invalidation
+      await new Promise((r) => setTimeout(r, 50))
+      expect(requests).toBe(2)
+      sub.unsubscribe()
+    }
+  )
 })

@@ -51,6 +51,21 @@ describe('canSeeJobEvent', () => {
     expect(canSeeJobEvent(client(), event({ ownerId: undefined }))).toBe(false)
   })
 
+  it('shows a public job page only its own job', () => {
+    const page = client({ userId: undefined, jobId: 'job-1' })
+    expect(canSeeJobEvent(page, event({ jobId: 'job-1' }))).toBe(true)
+    expect(canSeeJobEvent(page, event({ jobId: 'job-2' }))).toBe(false)
+    // even when the job has no owner, or the event is for the same owner
+    expect(
+      canSeeJobEvent(page, event({ jobId: 'job-1', ownerId: undefined }))
+    ).toBe(true)
+  })
+
+  it('does not widen a public page with privileged set', () => {
+    const page = client({ privileged: true, jobId: 'job-1' })
+    expect(canSeeJobEvent(page, event({ jobId: 'job-2' }))).toBe(false)
+  })
+
   it('shows every job to privileged users', () => {
     const admin = client({ userId: undefined, privileged: true })
     expect(canSeeJobEvent(admin, event({ ownerId: 'user-2' }))).toBe(true)
