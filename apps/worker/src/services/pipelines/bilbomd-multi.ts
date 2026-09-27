@@ -1,5 +1,5 @@
 import { Job as BullMQJob } from 'bullmq'
-import { MultiJob, IUser } from '@bilbomd/mongodb-schema'
+import { MultiJob, IMultiJob, IUser } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import {
   prepareMultiMDdatFileList,
@@ -12,6 +12,15 @@ import {
   recordWorkerUsageEvent,
   buildContext
 } from '../functions/usage-events.js'
+
+// Multi jobs are only submitted by signed-in users
+const usageContext = (job: IMultiJob) =>
+  buildContext({
+    access_mode: 'user',
+    user: job.user as IUser | null | undefined,
+    public_id: undefined,
+    client_ip_hash: undefined
+  })
 
 const processMultiMDJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)
@@ -31,12 +40,7 @@ const processMultiMDJob = async (MQjob: BullMQJob) => {
     pipeline: 'multi',
     eventType: 'job_started',
     status: 'Running',
-    context: buildContext({
-      access_mode: 'user',
-      user: job.user as IUser | null | undefined,
-      public_id: undefined,
-      client_ip_hash: undefined
-    })
+    context: usageContext(job)
   })
 
   // Initialize
@@ -78,12 +82,7 @@ const processMultiMDJob = async (MQjob: BullMQJob) => {
     eventType: 'job_completed',
     status: 'Completed',
     durationMs,
-    context: buildContext({
-      access_mode: 'user',
-      user: job.user as IUser | null | undefined,
-      public_id: undefined,
-      client_ip_hash: undefined
-    })
+    context: usageContext(job)
   })
 }
 

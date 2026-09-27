@@ -11,14 +11,7 @@ import {
   executeNerscScript,
   monitorTaskAtNERSC
 } from './nersc-api-functions.js'
-import {
-  isBilboMDPDBJob,
-  isBilboMDCRDJob,
-  isBilboMDAutoJob,
-  isBilboMDAlphaFoldJob
-} from './job-type-guards.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
-import { prepareResults } from './prepare-results.js'
 
 interface EmailMessage {
   message: string
@@ -78,47 +71,6 @@ const copyBilboMDResults = async (DBjob: IJob) => {
       `Failed to copy BilboMD results from PSCRATCH to CFS: ${errorMessage}`
     )
     logger.error(`Error during copyBilboMDResults job: ${errorMessage}`)
-  }
-}
-
-const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
-  try {
-    await updateSingleJobStep(
-      DBjob,
-      'results',
-      'Running',
-      'Gathering BilboMD job results has started.'
-    )
-
-    // Ensure DBjob is one of the acceptable types before calling prepareResults
-    if (
-      isBilboMDCRDJob(DBjob) ||
-      isBilboMDPDBJob(DBjob) ||
-      isBilboMDAutoJob(DBjob) ||
-      isBilboMDAlphaFoldJob(DBjob)
-    ) {
-      await prepareResults(DBjob)
-      await updateSingleJobStep(
-        DBjob,
-        'results',
-        'Success',
-        'BilboMD job results gathered successfully.'
-      )
-    } else {
-      throw new Error('Invalid job type')
-    }
-  } catch (error) {
-    let errorMessage = 'Unknown error'
-    if (error instanceof Error) {
-      errorMessage = error.message
-    }
-    await updateSingleJobStep(
-      DBjob,
-      'results',
-      'Error',
-      `Failed to gather BilboMD results: ${errorMessage}`
-    )
-    logger.error(`Error during prepareBilboMDResults job: ${errorMessage}`)
   }
 }
 
@@ -227,4 +179,4 @@ const updateSingleJobStep = async (
   }
 }
 
-export { copyBilboMDResults, prepareBilboMDResults, sendBilboMDEmail, updateSingleJobStep }
+export { copyBilboMDResults, sendBilboMDEmail, updateSingleJobStep }

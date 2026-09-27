@@ -30,9 +30,12 @@ vi.mock('../../services/functions/nersc-api-functions.js', () => ({
 
 vi.mock('../../services/functions/job-monitor-functions.js', () => ({
   copyBilboMDResults: vi.fn(),
-  prepareBilboMDResults: vi.fn(),
   sendBilboMDEmail: vi.fn(),
   updateSingleJobStep: vi.fn().mockResolvedValue(undefined)
+}))
+
+vi.mock('../../services/functions/prepare-results.js', () => ({
+  prepareBilboMDResults: vi.fn()
 }))
 
 vi.mock('../../services/functions/usage-events.js', () => ({

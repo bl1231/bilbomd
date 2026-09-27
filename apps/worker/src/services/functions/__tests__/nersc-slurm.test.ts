@@ -21,14 +21,6 @@ vi.mock('../nersc-api-functions.js', () => ({
   monitorTaskAtNERSC: vi.fn()
 }))
 
-vi.mock('../prepare-results.js', () => ({
-  prepareResults: vi.fn().mockResolvedValue(undefined)
-}))
-
-vi.mock('../job-utils.js', () => ({
-  cleanupJob: vi.fn().mockResolvedValue(undefined)
-}))
-
 vi.mock('../../../config/config.js', () => ({
   config: {}
 }))
@@ -47,14 +39,14 @@ const makeMQJob = (): BullMQJob =>
   }) as unknown as BullMQJob
 
 describe('submitBilboMDSlurm', () => {
-  let submitBilboMDSlurm: typeof import('../bilbomd-step-functions-nersc.js').submitBilboMDSlurm
+  let submitBilboMDSlurm: typeof import('../nersc-slurm.js').submitBilboMDSlurm
   let monitorTaskAtNERSC: ReturnType<typeof vi.fn>
 
   beforeEach(async () => {
     vi.clearAllMocks()
     const nerscApi = await import('../nersc-api-functions.js')
     monitorTaskAtNERSC = vi.mocked(nerscApi.monitorTaskAtNERSC)
-    const mod = await import('../bilbomd-step-functions-nersc.js')
+    const mod = await import('../nersc-slurm.js')
     submitBilboMDSlurm = mod.submitBilboMDSlurm
   })
 
