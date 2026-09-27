@@ -26,6 +26,7 @@ import {
 } from '../services/functions/usage-events.js'
 import { discriminatorToPipeline } from '@bilbomd/md-utils'
 import pLimit from 'p-limit'
+import { watchJobsForChanges } from '../helpers/jobEvents.js'
 
 const fetchIncompleteJobs = async (): Promise<IJob[]> => {
   return DBJob.find({
@@ -246,6 +247,7 @@ const syncJobStatusFromNerscState = async (
 }
 
 const monitorAndCleanupJobs = async (): Promise<void> => {
+  let notifyChangedJobs: (() => void) | undefined
   try {
     // Recover any jobs stuck without a nersc sub-document (submitted before the
     // fix was deployed). Idempotent — once recovered they satisfy the normal
@@ -257,6 +259,10 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
     // Step 1: Fetch all jobs where nersc.state is not null from MongoDB
     const jobs = await fetchIncompleteJobs()
     logger.info(`Found ${jobs.length} jobs in with non-Completed state.`)
+
+    // The pass below updates each job through many small writes; tell the UI
+    // about the jobs that changed once it's done (even if it failed partway)
+    notifyChangedJobs = watchJobsForChanges(jobs)
 
     // Process jobs in parallel with concurrency limit of 10
     const limit = pLimit(10)
@@ -404,6 +410,8 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     logger.error(`Error during job monitoring: ${msg}`)
+  } finally {
+    notifyChangedJobs?.()
   }
 }
 

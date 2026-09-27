@@ -1,14 +1,14 @@
 import {
-  JOB_EVENTS_CHANNEL,
-  jobEventOwnerId,
-  type JobEvent,
-  type JobEventKind
+  createJobEventNotifier,
+  type JobEventKind,
+  type JobEventNotifier
 } from '@bilbomd/bilbomd-types'
 import { logger } from './loggers.js'
 import { getErrorMessage } from './errors.js'
 
 // Tells the backend (and through it, the browser) that a job changed, over
-// Redis pub/sub. See JOB_EVENTS_CHANNEL in @bilbomd/bilbomd-types.
+// Redis pub/sub. See JOB_EVENTS_CHANNEL and createJobEventNotifier in
+// @bilbomd/bilbomd-types.
 //
 // Publishing is a no-op until configureJobEvents() is called at worker
 // startup, so modules that notify can be imported (and unit tested) without
@@ -26,70 +26,61 @@ interface NotifiableJob {
   user?: unknown
 }
 
-// Most updates for one job within this window are coalesced into one event
-// sent at the end of it, so a burst (e.g. step status + progress) costs the
-// UI one refetch
-const DEFAULT_THROTTLE_MS = 1000
-
-let publisher: Publisher | null = null
-let throttleMs = DEFAULT_THROTTLE_MS
-// jobs with a throttle window open, and whether they changed again in it
-const windows = new Map<
-  string,
-  { timer: NodeJS.Timeout; pending: JobEvent | null }
->()
-
-const send = (event: JobEvent) => {
-  if (!publisher) return
-  publisher
-    .publish(JOB_EVENTS_CHANNEL, JSON.stringify(event))
-    .catch((error) =>
-      logger.warn(
-        `Failed to publish job event for ${event.jobId}: ${getErrorMessage(error)}`
-      )
-    )
-}
-
-const openWindow = (jobId: string) => {
-  const timer = setTimeout(() => {
-    const pending = windows.get(jobId)?.pending
-    windows.delete(jobId)
-    if (pending) {
-      send(pending)
-      openWindow(jobId)
-    }
-  }, throttleMs)
-  // Don't keep the process alive just to flush an event
-  timer.unref()
-  windows.set(jobId, { timer, pending: null })
-}
+let notifier: JobEventNotifier | null = null
 
 export const configureJobEvents = (
-  p: Publisher | null,
+  publisher: Publisher | null,
   options: { throttleMs?: number } = {}
 ): void => {
-  for (const { timer } of windows.values()) clearTimeout(timer)
-  windows.clear()
-  publisher = p
-  throttleMs = options.throttleMs ?? DEFAULT_THROTTLE_MS
+  notifier?.close()
+  notifier = publisher
+    ? createJobEventNotifier({
+        publish: (channel, message) => publisher.publish(channel, message),
+        throttleMs: options.throttleMs,
+        onError: (error, event) =>
+          logger.warn(
+            `Failed to publish job event for ${event.jobId}: ${getErrorMessage(error)}`
+          )
+      })
+    : null
 }
 
 export const notifyJobChanged = (
   job: NotifiableJob,
   kind: JobEventKind = 'updated'
 ): void => {
-  if (!publisher) return
-  const event: JobEvent = {
-    jobId: String(job._id),
-    ownerId: jobEventOwnerId(job.user),
-    kind
-  }
+  notifier?.notify(job, kind)
+}
 
-  const window = windows.get(event.jobId)
-  if (window) {
-    window.pending = event
-    return
+// What the UI shows about a job; a change in any of these is worth an event
+interface WatchableJob extends NotifiableJob {
+  status?: unknown
+  progress?: unknown
+  steps?: unknown
+  results_ready?: unknown
+  cleanup_in_progress?: unknown
+  nersc?: { state?: unknown } | null
+}
+
+const visibleState = (job: WatchableJob): string =>
+  JSON.stringify({
+    status: job.status,
+    progress: job.progress,
+    steps: job.steps,
+    results_ready: job.results_ready,
+    cleanup: job.cleanup_in_progress,
+    nersc: job.nersc?.state
+  })
+
+// For code that updates many jobs through scattered writes (e.g. the NERSC
+// job monitor): snapshot the jobs' visible state now, and call the returned
+// function afterwards to notify for each job that changed. Jobs that didn't
+// change produce no event, so periodic passes don't make the UI refetch.
+export const watchJobsForChanges = (jobs: WatchableJob[]): (() => void) => {
+  const before = jobs.map(visibleState)
+  return () => {
+    jobs.forEach((job, i) => {
+      if (visibleState(job) !== before[i]) notifyJobChanged(job)
+    })
   }
-  send(event)
-  openWindow(event.jobId)
 }

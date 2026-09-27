@@ -21,12 +21,13 @@ RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace(/^p
 
 # Copy only manifests for better caching
 COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/bilbomd-types/package.json packages/bilbomd-types/package.json
 COPY packages/mongodb-schema/package.json packages/mongodb-schema/package.json
 COPY apps/scoper/package.json apps/scoper/package.json
 
 # Prefetch dependencies into pnpm store (cache mount, not layered)
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm fetch --filter @bilbomd/scoper --filter @bilbomd/mongodb-schema
+    pnpm fetch --filter @bilbomd/scoper --filter @bilbomd/mongodb-schema --filter @bilbomd/bilbomd-types
 
 # -----------------------------------------------------------------------------
 # Build stage 5b - build: install, build schema + scoper, and deploy to /out
@@ -46,6 +47,7 @@ ENV HUSKY=0
 # Copy only needed sources (keep context small)
 COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY apps/scoper apps/scoper
+COPY packages/bilbomd-types packages/bilbomd-types
 COPY packages/mongodb-schema packages/mongodb-schema
 # eslint-config is injected (file:) into the root workspace, so pnpm install
 # must be able to read it even though scoper doesn't depend on it directly
@@ -53,9 +55,10 @@ COPY packages/eslint-config packages/eslint-config
 
 # Install only what we need using filters; use cache mount for store
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --filter @bilbomd/scoper --filter @bilbomd/mongodb-schema
+    pnpm install --frozen-lockfile --filter @bilbomd/scoper --filter @bilbomd/mongodb-schema --filter @bilbomd/bilbomd-types
 
 # Build targets
+RUN pnpm -C packages/bilbomd-types run build
 RUN pnpm -C packages/mongodb-schema run build
 RUN pnpm -C apps/scoper run build
 

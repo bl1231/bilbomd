@@ -8,6 +8,7 @@ import {
   buildStepStatusUpdate
 } from '@bilbomd/mongodb-schema'
 import { logger } from './helpers/loggers.js'
+import { notifyJobChanged } from './helpers/jobEvents.js'
 
 const updateStepStatus = async (
   job: IJob | IMultiJob,
@@ -22,6 +23,7 @@ const updateStepStatus = async (
       buildStepStatusUpdate(stepName, status),
       { updatePipeline: true }
     )
+    notifyJobChanged(job)
     // logger.info(`Successfully updated ${stepName} status for job ${job._id}`)
   } catch (error) {
     logger.error(
@@ -37,6 +39,7 @@ const updateJobResults = async (
 ) => {
   try {
     await Job.updateOne({ _id: job._id }, { $set: fieldUpdates })
+    notifyJobChanged(job)
     // logger.info(`Successfully updated results for job ${job._id}`)
   } catch (error) {
     logger.error(`Error updating results for job ${job._id}: ${error}`)
@@ -77,6 +80,7 @@ const updateJobStatus = async (
 const updateJobProgress = async (job: IJob, progress: number) => {
   try {
     await Job.updateOne({ _id: job._id }, { $set: { progress } })
+    notifyJobChanged(job)
     // logger.info(`Successfully updated progress to ${progress} for job ${job._id}`)
   } catch (error) {
     logger.error(`Error updating progress for job ${job._id}: ${error}`)

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import path from 'node:path'
-import type { IMultiJob } from '@bilbomd/mongodb-schema'
+import { User, type IMultiJob } from '@bilbomd/mongodb-schema'
 
 const { runProcessMock, updateStepStatusMock, makeDirMock } = vi.hoisted(
   () => ({
@@ -22,6 +22,10 @@ vi.mock('../job-utils.js', () => ({
   makeDir: makeDirMock
 }))
 
+vi.mock('../../../helpers/jobEvents.js', () => ({
+  notifyJobChanged: vi.fn()
+}))
+
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
@@ -29,8 +33,11 @@ vi.mock('../../../helpers/loggers.js', () => ({
 import {
   spawnMultiFoxs,
   runMultiFoxs,
-  prepareMultiMDResults
+  prepareMultiMDResults,
+  initializeJob,
+  cleanupJob
 } from '../bilbomd-multi-functions.js'
+import { notifyJobChanged } from '../../../helpers/jobEvents.js'
 import { config } from '../../../config/config.js'
 
 const makeJob = (overrides: Partial<IMultiJob> = {}) =>
@@ -140,5 +147,49 @@ describe('bilbomd-multi-functions - prepareMultiMDResults', () => {
       ['results', 'Running'],
       ['results', 'Error']
     ])
+  })
+})
+
+describe('bilbomd-multi-functions - job start and finish', () => {
+  const userLookup = (user: object | null) =>
+    vi.spyOn(User, 'findById').mockReturnValue({
+      lean: () => ({ exec: async () => user })
+    } as unknown as ReturnType<typeof User.findById>)
+
+  const savingJob = () => {
+    const job = makeJob({ user: 'owner-1' } as unknown as Partial<IMultiJob>)
+    const save = vi.fn(async () => {
+      // notification must come after the change is saved
+      expect(notifyJobChanged).not.toHaveBeenCalled()
+    })
+    Object.assign(job, { save })
+    return { job, save }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+  })
+
+  it('tells the UI once the job is marked Running', async () => {
+    userLookup({ _id: 'owner-1' })
+    const { job, save } = savingJob()
+
+    await initializeJob(job)
+
+    expect(job.status).toBe('Running')
+    expect(save).toHaveBeenCalled()
+    expect(notifyJobChanged).toHaveBeenCalledExactlyOnceWith(job)
+  })
+
+  it('tells the UI once the job is marked Completed', async () => {
+    userLookup(null)
+    const { job, save } = savingJob()
+
+    await cleanupJob(job)
+
+    expect(job.status).toBe('Completed')
+    expect(save).toHaveBeenCalled()
+    expect(notifyJobChanged).toHaveBeenCalledExactlyOnceWith(job)
   })
 })
