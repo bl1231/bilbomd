@@ -48,13 +48,13 @@ describe('createUploadUtilityLimiter', () => {
     expect((await request(app).post('/b')).status).toBe(200)
   })
 
-  it('ignores a spoofed CF-Connecting-IP header', async () => {
+  it('counts each client separately, by CF-Connecting-IP', async () => {
     const app = buildApp(createUploadUtilityLimiter({ name: 'AutoRg', max: 1 }))
+    const from = (ip: string) =>
+      request(app).post('/upload').set('CF-Connecting-IP', ip)
 
-    await request(app).post('/upload').set('CF-Connecting-IP', '203.0.113.1')
-    const res = await request(app)
-      .post('/upload')
-      .set('CF-Connecting-IP', '203.0.113.2')
-    expect(res.status).toBe(429)
+    expect((await from('203.0.113.1')).status).toBe(200)
+    expect((await from('203.0.113.2')).status).toBe(200)
+    expect((await from('203.0.113.1')).status).toBe(429)
   })
 })
