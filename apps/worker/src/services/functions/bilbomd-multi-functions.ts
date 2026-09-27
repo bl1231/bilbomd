@@ -7,6 +7,7 @@ import { updateStepStatus } from './mongo-utils.js'
 import { makeDir } from './job-utils.js'
 import { runProcess } from '../../helpers/runProcess.js'
 import { getErrorMessage } from '../../helpers/errors.js'
+import { notifyJobChanged } from '../../helpers/jobEvents.js'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import {
@@ -318,6 +319,7 @@ const initializeJob = async (DBjob: IMultiJob): Promise<void> => {
     DBjob.status = 'Running'
     DBjob.time_started = new Date()
     await DBjob.save()
+    notifyJobChanged(DBjob)
   } catch (error) {
     logger.error(`Error in initializeJob: ${error}`)
     throw error
@@ -331,6 +333,7 @@ const cleanupJob = async (DBjob: IMultiJob): Promise<void> => {
     DBjob.time_completed = new Date()
     DBjob.progress = 100
     await DBjob.save()
+    notifyJobChanged(DBjob)
 
     // Fetch user associated with the job
     const user = await User.findById(DBjob.user).lean<IUser>().exec()

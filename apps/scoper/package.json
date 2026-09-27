@@ -36,6 +36,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@bilbomd/bilbomd-types": "workspace:*",
     "@bilbomd/mongodb-schema": "workspace:*",
     "bullmq": "^6.1.1",
     "dotenv": "^17.4.2",

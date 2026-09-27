@@ -1,7 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios from 'axios'
-import { IJob, INerscInfo, NerscStatus } from '@bilbomd/mongodb-schema'
-import { queryNERSCForJobState } from '../bilboMdNerscJobMonitor.js'
+import { IJob, INerscInfo, Job, NerscStatus } from '@bilbomd/mongodb-schema'
+import {
+  monitorAndCleanupJobs,
+  queryNERSCForJobState
+} from '../bilboMdNerscJobMonitor.js'
+import { configureJobEvents } from '../../helpers/jobEvents.js'
 import { updateSingleJobStep } from '../../services/functions/job-monitor-functions.js'
 
 vi.mock('../../helpers/loggers.js', () => ({
@@ -154,5 +158,50 @@ describe('queryNERSCForJobState', () => {
     )
     expect(job.status).toBe('Error')
     expect(job.save).toHaveBeenCalled()
+  })
+})
+
+describe('monitorAndCleanupJobs', () => {
+  const findReturning = (jobs: IJob[]) => {
+    vi.spyOn(Job, 'find').mockReturnValue({
+      exec: vi.fn().mockResolvedValue(jobs)
+    } as unknown as ReturnType<typeof Job.find>)
+  }
+
+  const publish = vi.fn().mockResolvedValue(1)
+  const publishedJobIds = () =>
+    publish.mock.calls.map(([, message]) => JSON.parse(message).jobId)
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+    configureJobEvents({ publish })
+  })
+
+  afterEach(() => {
+    configureJobEvents(null)
+  })
+
+  it('tells the UI about a job whose state changed during the pass', async () => {
+    // NERSC query fails, so the job is synced from its stored state; a
+    // RUNNING nersc.state turns a Pending job Running
+    const job = makeJob({ jobid: '', state: NerscStatus.RUNNING })
+    job.status = 'Pending'
+    Object.assign(job, { _id: 'nersc-job-1' })
+    findReturning([job])
+
+    await monitorAndCleanupJobs()
+
+    expect(job.status).toBe('Running')
+    expect(publishedJobIds()).toEqual(['nersc-job-1'])
+  })
+
+  it('stays quiet for jobs the pass left unchanged', async () => {
+    const job = makeJob({ jobid: '', state: NerscStatus.RUNNING })
+    findReturning([job])
+
+    await monitorAndCleanupJobs()
+
+    expect(publish).not.toHaveBeenCalled()
   })
 })

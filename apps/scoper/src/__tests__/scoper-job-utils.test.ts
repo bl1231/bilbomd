@@ -19,6 +19,10 @@ vi.mock('@bilbomd/mongodb-schema', () => ({
   Types
 }))
 
+vi.mock('../helpers/jobEvents.js', () => ({
+  notifyJobChanged: vi.fn()
+}))
+
 vi.mock('../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
 }))
@@ -41,6 +45,7 @@ vi.mock('../mongo-utils.js', () => ({
 
 import { initializeJob, cleanupJob } from '../scoper-job-utils.js'
 import { sendJobCompleteEmail } from '../helpers/mailer.js'
+import { notifyJobChanged } from '../helpers/jobEvents.js'
 import { User } from '@bilbomd/mongodb-schema'
 
 // Keep a plain type for assertions; cast to the real interface when calling functions
@@ -92,6 +97,7 @@ describe('initializeJob', () => {
     expect(DBjob.status).toBe('Running')
     expect(DBjob.time_started).toBeInstanceOf(Date)
     expect(mockSave).toHaveBeenCalledOnce()
+    expect(notifyJobChanged).toHaveBeenCalledExactlyOnceWith(DBjob)
   })
 
   it('throws and propagates when save fails', async () => {
@@ -101,6 +107,7 @@ describe('initializeJob', () => {
     await expect(
       initializeJob(MQjob as unknown as BullMQJob, DBjob as unknown as IBilboMDScoperJob)
     ).rejects.toThrow('save failed')
+    expect(notifyJobChanged).not.toHaveBeenCalled()
   })
 })
 
@@ -112,6 +119,9 @@ describe('cleanupJob', () => {
     expect(DBjob.status).toBe('Completed')
     expect(DBjob.time_completed).toBeInstanceOf(Date)
     expect(sendJobCompleteEmail).not.toHaveBeenCalled()
+    // once when marked Completed, once when progress reaches 100
+    expect(notifyJobChanged).toHaveBeenCalledTimes(2)
+    expect(notifyJobChanged).toHaveBeenLastCalledWith(DBjob)
   })
 
   it('sends email when user is a populated IUser object', async () => {

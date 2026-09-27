@@ -6,7 +6,11 @@ vi.mock('../loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
 
-import { configureJobEvents, notifyJobChanged } from '../jobEvents.js'
+import {
+  configureJobEvents,
+  notifyJobChanged,
+  watchJobsForChanges
+} from '../jobEvents.js'
 import { logger } from '../loggers.js'
 
 const publish = vi.fn()
@@ -114,5 +118,55 @@ describe('notifyJobChanged', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('redis down')
     )
+  })
+})
+
+describe('watchJobsForChanges', () => {
+  const watched = (id: string) => ({
+    _id: id,
+    user: { _id: ownerId },
+    status: 'Running',
+    progress: 10,
+    steps: { md: { status: 'Running' } },
+    nersc: { state: 'RUNNING' }
+  })
+
+  it('notifies only for jobs whose visible state changed', () => {
+    const a = watched('job-a')
+    const b = watched('job-b')
+    const notifyChanged = watchJobsForChanges([a, b])
+
+    a.progress = 50
+
+    notifyChanged()
+    expect(sent().map((e) => e.jobId)).toEqual(['job-a'])
+  })
+
+  it.each([
+    ['status', (j: ReturnType<typeof watched>) => (j.status = 'Completed')],
+    [
+      'a step',
+      (j: ReturnType<typeof watched>) => (j.steps.md.status = 'Success')
+    ],
+    [
+      'the NERSC state',
+      (j: ReturnType<typeof watched>) => (j.nersc.state = 'COMPLETED')
+    ]
+  ])('treats a change to %s as a change', (_, mutate) => {
+    const job = watched('job-a')
+    const notifyChanged = watchJobsForChanges([job])
+
+    mutate(job)
+    notifyChanged()
+
+    expect(publish).toHaveBeenCalledTimes(1)
+  })
+
+  it('stays quiet when nothing changed', () => {
+    const notifyChanged = watchJobsForChanges([watched('job-a')])
+
+    notifyChanged()
+
+    expect(publish).not.toHaveBeenCalled()
   })
 })

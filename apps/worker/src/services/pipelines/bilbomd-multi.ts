@@ -2,6 +2,7 @@ import { Job as BullMQJob } from 'bullmq'
 import { MultiJob, IMultiJob, IUser } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import { getErrorMessage } from '../../helpers/errors.js'
+import { notifyJobChanged } from '../../helpers/jobEvents.js'
 import {
   prepareMultiMDdatFileList,
   runMultiFoxs,
@@ -27,11 +28,18 @@ const markJobAsFailed = async (job: IMultiJob) => {
   try {
     job.status = 'Error'
     await job.save()
+    notifyJobChanged(job)
   } catch (saveError) {
     logger.error(
       `Failed to mark MultiJob ${job.uuid} as Error: ${getErrorMessage(saveError)}`
     )
   }
+}
+
+const saveProgress = async (job: IMultiJob, progress: number) => {
+  job.progress = progress
+  await job.save()
+  notifyJobChanged(job)
 }
 
 const processMultiMDJob = async (MQjob: BullMQJob) => {
@@ -58,23 +66,19 @@ const processMultiMDJob = async (MQjob: BullMQJob) => {
   try {
     // Initialize
     await initializeJob(job)
-    job.progress = 5
-    await job.save()
+    await saveProgress(job, 5)
 
     // create a file that references all .dat files
     await prepareMultiMDdatFileList(job)
-    job.progress = 30
-    await job.save()
+    await saveProgress(job, 30)
 
     // Run MultiFoXS
     await runMultiFoxs(job)
-    job.progress = 80
-    await job.save()
+    await saveProgress(job, 80)
 
     // Gather results
     await prepareMultiMDResults(job)
-    job.progress = 90
-    await job.save()
+    await saveProgress(job, 90)
   } catch (error) {
     // Steps with a status (multifoxs, results) have already marked themselves
     // as Error. Mark the job too so it doesn't stay 'Running', then rethrow

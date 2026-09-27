@@ -61,6 +61,12 @@ vi.mock('../../functions/usage-events.js', () => ({
   toPipeline: vi.fn((p: string) => `pipeline(${p})`)
 }))
 
+vi.mock('../../../helpers/jobEvents.js', () => ({
+  notifyJobChanged: vi.fn(() => {
+    trace.push('notify')
+  })
+}))
+
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
@@ -234,12 +240,16 @@ describe('multi pipeline', () => {
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
           "fn:initializeJob",
           "save:status=-,progress=5",
+          "notify",
           "fn:prepareMultiMDdatFileList",
           "save:status=-,progress=30",
+          "notify",
           "fn:runMultiFoxs",
           "save:status=-,progress=80",
+          "notify",
           "fn:prepareMultiMDResults",
           "save:status=-,progress=90",
+          "notify",
           "fn:cleanupJob",
           "mq.progress:100",
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_completed","status":"Completed","durationMs":60000,"context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
@@ -259,12 +269,16 @@ describe('multi pipeline', () => {
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
           "fn:initializeJob",
           "save:status=-,progress=5",
+          "notify",
           "fn:prepareMultiMDdatFileList",
           "save:status=-,progress=30",
+          "notify",
           "fn:runMultiFoxs",
           "save:status=-,progress=80",
+          "notify",
           "fn:prepareMultiMDResults",
           "save:status=-,progress=90",
+          "notify",
           "fn:cleanupJob",
           "mq.progress:100",
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_completed","status":"Completed","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
@@ -285,10 +299,13 @@ describe('multi pipeline', () => {
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
           "fn:initializeJob",
           "save:status=-,progress=5",
+          "notify",
           "fn:prepareMultiMDdatFileList",
           "save:status=-,progress=30",
+          "notify",
           "fn:runMultiFoxs",
           "save:status=Error,progress=30",
+          "notify",
         ],
       }
     `)
@@ -306,8 +323,10 @@ describe('multi pipeline', () => {
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
           "fn:initializeJob",
           "save:status=-,progress=5",
+          "notify",
           "fn:prepareMultiMDdatFileList",
           "save:status=Error,progress=5",
+          "notify",
         ],
       }
     `)
@@ -325,12 +344,16 @@ describe('multi pipeline', () => {
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
           "fn:initializeJob",
           "save:status=-,progress=5",
+          "notify",
           "fn:prepareMultiMDdatFileList",
           "save:status=-,progress=30",
+          "notify",
           "fn:runMultiFoxs",
           "save:status=-,progress=80",
+          "notify",
           "fn:prepareMultiMDResults",
           "save:status=Error,progress=80",
+          "notify",
         ],
       }
     `)

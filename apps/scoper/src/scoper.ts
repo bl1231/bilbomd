@@ -5,10 +5,15 @@ import { Job, Worker, WorkerOptions } from 'bullmq'
 import { BilboMDScoperJobData } from './bullmq.jobs.js'
 import { processBilboMDScoperJob } from './process.bilbomdscoper.js'
 import { redis } from './helpers/redis.js'
+import { configureJobEvents } from './helpers/jobEvents.js'
 
 dotenv.config()
 
 connectDB()
+
+// Tell the backend (and the UI) when jobs change. Publishing works on the
+// shared connection.
+configureJobEvents(redis)
 
 const workerHandler = async (job: Job<BilboMDScoperJobData>) => {
   logger.info(

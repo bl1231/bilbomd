@@ -10,6 +10,7 @@ import {
 import { sendJobCompleteEmail } from './helpers/mailer.js'
 import { config } from './config/config.js'
 import { updateStepStatus } from './mongo-utils.js'
+import { notifyJobChanged } from './helpers/jobEvents.js'
 import { Types } from 'mongoose'
 
 const getErrorMessage = (e: unknown): string =>
@@ -20,6 +21,7 @@ const markJobAsCompleted = async (DBjob: IJob): Promise<void> => {
   DBjob.status = 'Completed'
   DBjob.time_completed = new Date()
   await DBjob.save()
+  notifyJobChanged(DBjob)
 }
 
 const initializeJob = async (MQJob: BullMQJob, DBjob: IBilboMDScoperJob) => {
@@ -29,6 +31,7 @@ const initializeJob = async (MQJob: BullMQJob, DBjob: IBilboMDScoperJob) => {
     const now = new Date()
     DBjob.time_started = now
     await DBjob.save()
+    notifyJobChanged(DBjob)
   } catch (error) {
     logger.error(`Error in initializeJob: ${getErrorMessage(error)}`)
     throw error
@@ -49,6 +52,7 @@ const cleanupJob = async (MQjob: BullMQJob, DBjob: IBilboMDScoperJob) => {
       )
       DBjob.progress = 100
       await DBjob.save()
+      notifyJobChanged(DBjob)
       return
     }
 

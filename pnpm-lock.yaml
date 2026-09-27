@@ -229,6 +229,9 @@ importers:
 
   apps/scoper:
     dependencies:
+      '@bilbomd/bilbomd-types':
+        specifier: workspace:*
+        version: link:../../packages/bilbomd-types
       '@bilbomd/mongodb-schema':
         specifier: workspace:*
         version: link:../../packages/mongodb-schema

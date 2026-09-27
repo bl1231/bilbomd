@@ -67,6 +67,7 @@ jobs:
             worker:
               - 'apps/worker/**'
               - 'tools/python/**'
+              - 'packages/bilbomd-types/**'
               - 'packages/mongodb-schema/**'
               - 'packages/md-utils/**'
               - 'packages/eslint-config/**'
@@ -76,6 +77,7 @@ jobs:
               - 'apps/worker/bilbomd-worker.dockerfile'
             scoper:
               - 'apps/scoper/**'
+              - 'packages/bilbomd-types/**'
               - 'packages/mongodb-schema/**'
               - 'packages/eslint-config/**'
               - 'pnpm-workspace.yaml'

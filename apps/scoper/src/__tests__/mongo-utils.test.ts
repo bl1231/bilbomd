@@ -13,12 +13,17 @@ vi.mock('@bilbomd/mongodb-schema', async () => {
   }
 })
 
+vi.mock('../helpers/jobEvents.js', () => ({
+  notifyJobChanged: vi.fn()
+}))
+
 vi.mock('../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
 }))
 
 import { Job, buildStepStatusUpdate } from '@bilbomd/mongodb-schema'
 import { logger } from '../helpers/loggers.js'
+import { notifyJobChanged } from '../helpers/jobEvents.js'
 import {
   updateStepStatus,
   updateJobResults,
@@ -122,5 +127,37 @@ describe('updateJobProgress', () => {
     vi.mocked(Job.updateOne).mockRejectedValue(new Error('timeout'))
     await updateJobProgress(makeJob(), 50)
     expect(logger.error).toHaveBeenCalled()
+  })
+})
+
+describe('job change notifications', () => {
+  const writes = [
+    [
+      'updateStepStatus',
+      (job: never) =>
+        updateStepStatus(job, 'foxs', { status: 'Running', message: 'm' })
+    ],
+    [
+      'updateJobResults',
+      (job: never) => updateJobResults(job, { 'results.x': 1 })
+    ],
+    ['updateJobProgress', (job: never) => updateJobProgress(job, 50)]
+  ] as const
+
+  it.each(writes)('%s tells the UI after writing', async (_, write) => {
+    vi.mocked(Job.updateOne).mockResolvedValue({} as never)
+    const job = makeJob()
+
+    await write(job)
+
+    expect(notifyJobChanged).toHaveBeenCalledExactlyOnceWith(job)
+  })
+
+  it.each(writes)('%s stays quiet when the write fails', async (_, write) => {
+    vi.mocked(Job.updateOne).mockRejectedValue(new Error('db error'))
+
+    await write(makeJob())
+
+    expect(notifyJobChanged).not.toHaveBeenCalled()
   })
 })
