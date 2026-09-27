@@ -16,6 +16,7 @@ import { createMultiMDWorker } from './workers/multiMdWorker.js'
 import { checkNERSC } from './workers/workerControl.js'
 import { monitorAndCleanupJobs } from './workers/bilboMdNerscJobMonitor.js'
 import { redis } from './queues/redisConn.js'
+import { startCancelListener } from './workers/cancelListener.js'
 import { getErrorMessage } from './helpers/errors.js'
 
 dotenv.config()
@@ -96,6 +97,17 @@ const workers = [
 // Store interval IDs for cleanup
 const intervals: NodeJS.Timeout[] = []
 
+// Listen for cancel requests (e.g. a user deleting a running job). Pub/sub
+// needs a dedicated connection.
+let stopCancelListener: (() => Promise<void>) | null = null
+startCancelListener(redis.duplicate())
+  .then((stop) => {
+    stopCancelListener = stop
+  })
+  .catch((error) => {
+    logger.error(`Failed to start cancel listener: ${getErrorMessage(error)}`)
+  })
+
 if (config.runOnNERSC) {
   // Setup periodic NERSC token validation
   const tokenCheckInterval = setInterval(async () => {
@@ -174,8 +186,9 @@ const gracefulShutdown = async (signal: string) => {
     logger.error(`Error closing workers: ${getErrorMessage(error)}`)
   }
 
-  // Close Redis connection
+  // Close Redis connections
   try {
+    await stopCancelListener?.()
     await redis.quit()
     logger.info('Redis connection closed')
   } catch (error) {
