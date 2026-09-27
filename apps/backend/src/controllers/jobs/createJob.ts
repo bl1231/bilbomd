@@ -17,6 +17,7 @@ import { handleBilboMDAlphaFoldJob } from './handleBilboMDAlphaFoldJob.js'
 import { handleBilboMDOpenFoldJob } from './handleBilboMDOpenFoldJob.js'
 import applyExampleDataIfRequested from './utils/exampleData.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
+import { clientIp } from '../../middleware/clientIp.js'
 import { recordUsageEvent } from '../../services/usageEvents.js'
 import { toPipeline } from '@bilbomd/md-utils'
 import {
@@ -211,9 +212,7 @@ const createPublicJob = async (req: Request, res: Response) => {
         logger.info(`Public job submission with ID: ${publicId}`)
 
         // Compute client IP hash for quota check and job storage
-        const clientIp =
-          (req.headers['cf-connecting-ip'] as string) || req.ip || 'unknown'
-        const client_ip_hash = hashClientIp(clientIp)
+        const client_ip_hash = hashClientIp(clientIp(req))
 
         // Quota check: Count active jobs for this client IP hash
         const activeStatuses = [

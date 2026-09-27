@@ -1,10 +1,12 @@
-import rateLimit, { Options } from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator, Options } from 'express-rate-limit'
 import { Request, Response, NextFunction } from 'express'
 import { logger } from './loggers.js'
+import { clientIp } from './clientIp.js'
 
 const externalApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limit each IP or token to 100 requests per window
+  keyGenerator: (req) => ipKeyGenerator(clientIp(req)),
   message: {
     message: 'Too many requests from this IP or token, please try again later.'
   },
@@ -14,11 +16,9 @@ const externalApiLimiter = rateLimit({
     next: NextFunction,
     options: Options
   ) => {
-    const clientIp = (req.ip ?? '').includes('::ffff:')
-      ? (req.ip ?? '').split('::ffff:')[1]
-      : (req.ip ?? '')
+    const ip = clientIp(req)
     logger.warn(
-      `Rate limit hit: ${options.message.message}\t${req.method}\t${req.url}\t${clientIp}`,
+      `Rate limit hit: ${options.message.message}\t${req.method}\t${req.url}\t${ip}`,
       'rateLimit.log'
     )
     res.status(options.statusCode).send(options.message)

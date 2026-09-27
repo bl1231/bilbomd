@@ -22,6 +22,7 @@ import {
 import { Request, Response } from 'express'
 import { BilboMDDispatchContext } from '../../types/bilbomd.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
+import { clientIp } from '../../middleware/clientIp.js'
 import { handleBilboMDSANSJob } from './handleBilboMDSANSJob.js'
 import { getEnvVar } from '../../config/config.js'
 
@@ -146,9 +147,7 @@ const createPublicSANSJob = async (req: Request, res: Response) => {
         logger.info(`Public job submission with ID: ${publicId}`)
 
         // Compute client IP hash for quota check and job storage
-        const clientIp =
-          (req.headers['cf-connecting-ip'] as string) || req.ip || 'unknown'
-        const client_ip_hash = hashClientIp(clientIp)
+        const client_ip_hash = hashClientIp(clientIp(req))
         // Quota check: Count active jobs for this client IP hash
         const activeStatuses = [
           JobStatus.Submitted,
