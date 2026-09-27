@@ -64,13 +64,21 @@ vi.mock('../../functions/job-utils.js', () => ({
   )
 }))
 
-vi.mock('../../functions/bilbomd-step-functions.js', () => ({
-  runPdb2Crd: record('runPdb2Crd'),
+vi.mock('../../functions/charmm-md.js', () => ({
   runMinimize: record('runMinimize'),
   runHeat: record('runHeat'),
-  runMolecularDynamics: record('runMolecularDynamics'),
-  runMultiFoxs: record('runMultiFoxs'),
-  runPaeToConstInp: record('runPaeToConstInp'),
+  runMolecularDynamics: record('runMolecularDynamics')
+}))
+
+vi.mock('../../functions/multifoxs.js', () => ({
+  runMultiFoxs: record('runMultiFoxs')
+}))
+
+vi.mock('../../functions/pae-constraints.js', () => ({
+  runPaeToConstInp: record('runPaeToConstInp')
+}))
+
+vi.mock('../../functions/autorg.js', () => ({
   runAutoRg: record('runAutoRg')
 }))
 
@@ -86,7 +94,8 @@ vi.mock('../../functions/pdb-to-crd.js', () => ({
     trace.push('fn:runCifToPdb')
     return 'converted.pdb'
   }),
-  runPrepPdb: record('runPrepPdb')
+  runPrepPdb: record('runPrepPdb'),
+  runPdb2Crd: record('runPdb2Crd')
 }))
 
 vi.mock('../../functions/bilbomd-functions.js', () => ({
@@ -94,12 +103,21 @@ vi.mock('../../functions/bilbomd-functions.js', () => ({
   remediatePDBFiles: record('remediatePDBFiles')
 }))
 
-vi.mock('../../functions/bilbomd-sans-functions.js', () => ({
+vi.mock('../../functions/sans-trajectory.js', () => ({
   extractPDBFilesFromDCD: record('sans.extractPDBFilesFromDCD'),
   remediatePDBFiles: record('sans.remediatePDBFiles'),
-  mirrorOmmMdToPepsiSANS: record('sans.mirrorOmmMdToPepsiSANS'),
-  runPepsiSANSOnPDBFiles: record('sans.runPepsiSANSOnPDBFiles'),
-  runGASANS: record('sans.runGASANS'),
+  mirrorOmmMdToPepsiSANS: record('sans.mirrorOmmMdToPepsiSANS')
+}))
+
+vi.mock('../../functions/sans-pepsisans.js', () => ({
+  runPepsiSANSOnPDBFiles: record('sans.runPepsiSANSOnPDBFiles')
+}))
+
+vi.mock('../../functions/sans-gasans.js', () => ({
+  runGASANS: record('sans.runGASANS')
+}))
+
+vi.mock('../../functions/sans-results.js', () => ({
   prepareBilboMDSANSResults: record('sans.prepareBilboMDSANSResults')
 }))
 
@@ -111,7 +129,7 @@ vi.mock('../../functions/foxs-analysis.js', () => ({
   runSingleFoXS: record('runSingleFoXS')
 }))
 
-vi.mock('../../functions/bilbomd-step-functions-nersc.js', () => ({
+vi.mock('../../functions/prepare-results.js', () => ({
   prepareBilboMDResults: record('prepareBilboMDResults')
 }))
 

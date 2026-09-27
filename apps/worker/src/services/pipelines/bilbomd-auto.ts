@@ -1,6 +1,6 @@
 import { Job as BullMQJob } from 'bullmq'
 import { BilboMdAutoJob, IBilboMDAutoJob } from '@bilbomd/mongodb-schema'
-import { runAutoRg } from '../functions/bilbomd-step-functions.js'
+import { runAutoRg } from '../functions/autorg.js'
 import { runPipeline } from './runPipeline.js'
 import {
   charmmRunners,

@@ -22,7 +22,7 @@ vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
 
-import { spawnPepsiSANS, runGASANS } from '../bilbomd-sans-functions.js'
+import { runGASANS } from '../sans-gasans.js'
 import { config } from '../../../config/config.js'
 
 const makeMQJob = () =>
@@ -33,63 +33,12 @@ let tmp: string
 beforeEach(async () => {
   vi.clearAllMocks()
   runProcessMock.mockResolvedValue({ code: 0 })
-  tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'sans-test-'))
+  tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'gasans-'))
 })
 
 afterEach(async () => {
   await fs.remove(tmp)
 })
-
-describe('spawnPepsiSANS', () => {
-  it('runs Pepsi-SANS once per PDB and writes the results CSV', async () => {
-    const runDir = path.join(tmp, 'rg_25')
-    await fs.ensureDir(runDir)
-    await fs.writeFile(path.join(runDir, 'm1.pdb'), '')
-    await fs.writeFile(path.join(runDir, 'm2.pdb'), '')
-    await fs.writeFile(path.join(runDir, 'readme.txt'), '')
-
-    await spawnPepsiSANS(runDir, ['--deut', '0.5'], makeMQJob())
-
-    expect(runProcessMock).toHaveBeenCalledTimes(2)
-    expect(runProcessMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        label: 'Pepsi-SANS m1.pdb',
-        cmd: 'Pepsi-SANS',
-        args: [
-          path.join(runDir, 'm1.pdb'),
-          '-o',
-          path.join(runDir, 'm1.dat'),
-          '--deut',
-          '0.5'
-        ],
-        timeoutMs: config.processTimeouts.pepsiSansMs
-      })
-    )
-    const csv = await fs.readFile(
-      path.join(runDir, 'pepsisans_rg_25.csv'),
-      'utf8'
-    )
-    expect(csv.split('\n')).toEqual([
-      'PDBNAME,SCATTERINGFILE,DAT_DIRECTORY',
-      'm1.pdb,m1.dat,rg_25',
-      'm2.pdb,m2.dat,rg_25'
-    ])
-  })
-
-  it('fails when any Pepsi-SANS run fails', async () => {
-    const runDir = path.join(tmp, 'rg_25')
-    await fs.ensureDir(runDir)
-    await fs.writeFile(path.join(runDir, 'm1.pdb'), '')
-    runProcessMock.mockRejectedValue(
-      new Error('Pepsi-SANS m1.pdb exited with code 1')
-    )
-
-    await expect(spawnPepsiSANS(runDir, [], makeMQJob())).rejects.toThrow(
-      'Pepsi-SANS m1.pdb exited with code 1'
-    )
-  })
-})
-
 describe('runGASANS', () => {
   const job = { uuid: 'sans-job', title: 'sans' } as unknown as IBilboMDSANSJob
 

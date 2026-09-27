@@ -16,7 +16,7 @@ import {
   isBilboMDCRDJob,
   isBilboMDAutoJob,
   isBilboMDAlphaFoldJob
-} from './bilbomd-step-functions-nersc.js'
+} from './job-type-guards.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { prepareResults } from './prepare-results.js'
 

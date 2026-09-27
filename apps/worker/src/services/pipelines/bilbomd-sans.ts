@@ -7,11 +7,11 @@ import { runOmmMinimize } from '../functions/openmm-functions.js'
 import {
   extractPDBFilesFromDCD,
   mirrorOmmMdToPepsiSANS,
-  remediatePDBFiles,
-  runPepsiSANSOnPDBFiles,
-  runGASANS,
-  prepareBilboMDSANSResults
-} from '../functions/bilbomd-sans-functions.js'
+  remediatePDBFiles
+} from '../functions/sans-trajectory.js'
+import { runPepsiSANSOnPDBFiles } from '../functions/sans-pepsisans.js'
+import { runGASANS } from '../functions/sans-gasans.js'
+import { prepareBilboMDSANSResults } from '../functions/sans-results.js'
 import { runPipeline, type PipelineStep } from './runPipeline.js'
 import {
   charmmRunners,
