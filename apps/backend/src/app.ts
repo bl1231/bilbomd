@@ -76,10 +76,12 @@ app.use(requestLogger)
 app.use(cors(corsOptions))
 
 // built-in middleware to handle urlencoded FORM data
-app.use(express.urlencoded({ extended: true, limit: '150mb' }))
+// File uploads are multipart and go through multer (middleware/upload.ts),
+// so these parsers only ever see small payloads.
+app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 
 // built-in middleware for JSON
-app.use(express.json({ limit: '150mb' }))
+app.use(express.json({ limit: '1mb' }))
 
 // middleware for COOKIES
 app.use(cookieParser())

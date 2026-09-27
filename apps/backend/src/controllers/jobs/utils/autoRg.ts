@@ -1,6 +1,9 @@
 import { logger } from '../../../middleware/loggers.js'
 import { v4 as uuid } from 'uuid'
-import multer from 'multer'
+import {
+  createUpload,
+  getUploadErrorResponse
+} from '../../../middleware/upload.js'
 import fs from 'fs-extra'
 import os from 'os'
 import path from 'path'
@@ -12,6 +15,9 @@ import { getEnvVar } from '../../../config/config.js'
 
 const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
+// Matches the dat_file limit in the job validation schemas.
+const MAX_DAT_FILE_SIZE = 2_000_000
+
 const getAutoRg = async (req: Request, res: Response) => {
   const UUID = uuid()
   const jobDir = path.join(uploadFolder, 'autorg_uploads', UUID)
@@ -19,19 +25,17 @@ const getAutoRg = async (req: Request, res: Response) => {
     await fs.mkdir(jobDir, { recursive: true })
     logger.info(`Create temporary AutoRg directory: ${jobDir}`)
 
-    const storage = multer.diskStorage({
-      destination: function (req, file, cb) {
-        cb(null, jobDir)
-      },
-      filename: function (req, file, cb) {
-        cb(null, 'expdata.dat')
-      }
+    const upload = createUpload({
+      destination: jobDir,
+      filename: () => 'expdata.dat',
+      maxFileSize: MAX_DAT_FILE_SIZE
     })
-    const upload = multer({ storage: storage })
     upload.single('dat_file')(req, res, async (err) => {
       if (err) {
         logger.error(err)
-        return res.status(500).json({ message: 'Failed to upload expdata file' })
+        await fs.remove(jobDir)
+        const { status, message } = getUploadErrorResponse(err)
+        return res.status(status).json({ message })
       }
 
       try {
@@ -95,7 +99,9 @@ const getAutoRg = async (req: Request, res: Response) => {
         }
       } catch (error) {
         logger.error(`Error calculating AutoRg: ${error}`)
-        res.status(500).json({ message: 'Failed to calculate AutoRg', error: error })
+        res
+          .status(500)
+          .json({ message: 'Failed to calculate AutoRg', error: error })
       }
     })
   } catch (error) {
@@ -121,7 +127,8 @@ const spawnAutoRgCalculator = async (
 
     autoRg.stdout?.on('data', (data: Buffer) => {
       const dataString = data.toString().trim()
-      const suppressMessage = "module 'scipy.integrate' has no attribute 'trapz'"
+      const suppressMessage =
+        "module 'scipy.integrate' has no attribute 'trapz'"
 
       // Check if the message should be suppressed
       if (dataString.includes(suppressMessage)) {
@@ -141,7 +148,9 @@ const spawnAutoRgCalculator = async (
 
     autoRg.on('error', (error) => {
       const wrapped = error instanceof Error ? error : new Error(String(error))
-      logger.error(`spawnAutoRgCalculator error: ${wrapped.stack || wrapped.message}`)
+      logger.error(
+        `spawnAutoRgCalculator error: ${wrapped.stack || wrapped.message}`
+      )
       reject(wrapped)
     })
 
@@ -151,13 +160,18 @@ const spawnAutoRgCalculator = async (
 
       if (code === 0) {
         try {
-          const fileContent = await fs.promises.readFile(tempOutputFile, 'utf-8')
+          const fileContent = await fs.promises.readFile(
+            tempOutputFile,
+            'utf-8'
+          )
           const analysisResults = JSON.parse(fileContent)
           logger.info(`spawnAutoRgCalculator success with exit code: ${code}`)
           resolve(analysisResults)
         } catch (parseError) {
           const msg =
-            parseError instanceof Error ? parseError.message : String(parseError)
+            parseError instanceof Error
+              ? parseError.message
+              : String(parseError)
           logger.error(`Error parsing autoRg output file: ${msg}`)
           reject(new Error(`Failed to parse autoRg output: ${msg}`))
         }
