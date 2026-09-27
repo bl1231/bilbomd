@@ -1,6 +1,9 @@
 import { logger } from '../../middleware/loggers.js'
 import { config } from '../../config/config.js'
-import multer from 'multer'
+import {
+  createUpload,
+  getUploadErrorResponse
+} from '../../middleware/upload.js'
 import fs from 'fs-extra'
 import path from 'path'
 import {
@@ -21,16 +24,7 @@ const createNewMultiJob = async (req: Request, res: Response) => {
     await fs.mkdir(jobDir, { recursive: true })
     logger.info(`Created directory: ${jobDir}`)
 
-    const storage = multer.diskStorage({
-      destination: function (req, file, cb) {
-        cb(null, jobDir)
-      },
-      filename: function (req, file, cb) {
-        cb(null, file.originalname.toLowerCase())
-      }
-    })
-
-    const upload = multer({ storage: storage })
+    const upload = createUpload({ destination: jobDir })
 
     upload.fields([{ name: 'bilbomd_uuids', maxCount: 1 }])(
       req,
@@ -38,9 +32,9 @@ const createNewMultiJob = async (req: Request, res: Response) => {
       async (err) => {
         if (err) {
           logger.error(err)
-          res
-            .status(500)
-            .json({ message: 'Failed to upload one or more files' })
+          await fs.remove(jobDir)
+          const { status, message } = getUploadErrorResponse(err)
+          res.status(status).json({ message })
           return
         }
         try {

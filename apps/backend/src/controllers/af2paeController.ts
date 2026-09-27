@@ -1,5 +1,5 @@
 import { logger } from '../middleware/loggers.js'
-import multer from 'multer'
+import { createUpload, getUploadErrorResponse } from '../middleware/upload.js'
 import fs from 'fs-extra'
 import path from 'path'
 import { Request, Response } from 'express'
@@ -101,20 +101,13 @@ const createNewConstFile = async (req: Request, res: Response) => {
     await fs.mkdir(jobDir, { recursive: true })
     logger.info(`Created Directory: ${jobDir}`)
 
-    const storage = multer.diskStorage({
-      destination: function (req, file, cb) {
-        cb(null, jobDir)
-      },
-      filename: function (req, file, cb) {
-        if (file.fieldname === 'pae_file') {
-          cb(null, 'pae.json') // Force standard filename
-        } else {
-          cb(null, file.originalname.toLowerCase())
-        }
-      }
+    const upload = createUpload({
+      destination: jobDir,
+      filename: (file) =>
+        file.fieldname === 'pae_file'
+          ? 'pae.json' // Force standard filename
+          : file.originalname.toLowerCase()
     })
-
-    const upload = multer({ storage: storage })
 
     upload.fields([
       { name: 'pdb_file', maxCount: 1 },
@@ -125,9 +118,9 @@ const createNewConstFile = async (req: Request, res: Response) => {
     ])(req, res, async (err) => {
       if (err) {
         logger.error(err)
-        return res
-          .status(500)
-          .json({ message: 'Failed to upload one or more files' })
+        await fs.remove(jobDir)
+        const { status, message } = getUploadErrorResponse(err)
+        return res.status(status).json({ message })
       }
 
       try {

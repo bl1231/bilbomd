@@ -1,6 +1,9 @@
 import mongoose from 'mongoose'
 import { logger } from '../../middleware/loggers.js'
-import multer from 'multer'
+import {
+  createUpload,
+  getUploadErrorResponse
+} from '../../middleware/upload.js'
 import fs from 'fs-extra'
 import path from 'path'
 import { v4 as uuid } from 'uuid'
@@ -41,12 +44,7 @@ const createNewJob = async (req: Request, res: Response) => {
     await fs.mkdir(jobDir, { recursive: true })
     logger.info(`Created directory: ${jobDir}`)
 
-    const storage = multer.diskStorage({
-      destination: (req, file, cb) => cb(null, jobDir),
-      filename: (req, file, cb) => cb(null, file.originalname.toLowerCase())
-    })
-
-    const upload = multer({ storage: storage })
+    const upload = createUpload({ destination: jobDir })
 
     upload.fields([
       { name: 'bilbomd_mode', maxCount: 1 },
@@ -62,8 +60,9 @@ const createNewJob = async (req: Request, res: Response) => {
       if (err) {
         logger.error(`Multer error during file upload: ${err}`)
         await fs.remove(jobDir)
-        res.status(400).json({
-          message: 'File upload error',
+        const { status, message } = getUploadErrorResponse(err)
+        res.status(status).json({
+          message,
           error: err.message || String(err)
         })
         return
@@ -166,12 +165,7 @@ const createPublicJob = async (req: Request, res: Response) => {
     await fs.mkdir(jobDir, { recursive: true })
     logger.info(`Created directory: ${jobDir}`)
 
-    const storage = multer.diskStorage({
-      destination: (req, file, cb) => cb(null, jobDir),
-      filename: (req, file, cb) => cb(null, file.originalname.toLowerCase())
-    })
-
-    const upload = multer({ storage: storage })
+    const upload = createUpload({ destination: jobDir })
 
     upload.fields([
       { name: 'bilbomd_mode', maxCount: 1 },
@@ -187,8 +181,9 @@ const createPublicJob = async (req: Request, res: Response) => {
       if (err) {
         logger.error(`Multer error during file upload: ${err}`)
         await fs.remove(jobDir)
-        res.status(400).json({
-          message: 'File upload error',
+        const { status, message } = getUploadErrorResponse(err)
+        res.status(status).json({
+          message,
           error: err.message || String(err)
         })
         return
