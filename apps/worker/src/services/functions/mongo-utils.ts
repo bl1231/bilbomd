@@ -7,6 +7,7 @@ import {
   buildStepStatusUpdate
 } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
+import { notifyJobChanged } from '../../helpers/jobEvents.js'
 
 import type { JobStatusEnum } from '@bilbomd/mongodb-schema'
 
@@ -33,6 +34,7 @@ const updateStepStatus = async (
     await job.updateOne(buildStepStatusUpdate(stepName, status), {
       updatePipeline: true
     })
+    notifyJobChanged(job)
     // logger.info(`Successfully updated ${stepName} status for job ${job._id}`)
   } catch (error) {
     logger.error(
@@ -64,6 +66,7 @@ const updateJobStatus = async (
 ): Promise<void> => {
   job.status = status
   await job.save()
+  notifyJobChanged(job)
 }
 
 export { updateStepStatus, handleStepError, updateJobStatus }

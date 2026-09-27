@@ -8,7 +8,6 @@ import { apiSlice } from '../app/api/apiSlice'
 import type { BilboMDJobDTO, JobAssetsDTO } from '@bilbomd/bilbomd-types'
 import { FileCheckResult } from '../types/jobCheckResults'
 import { RootState } from '../app/store'
-import { logger } from 'utils/logger'
 
 interface FoxsData {
   [key: string]: unknown
@@ -114,30 +113,15 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (_, __, arg) => [{ type: 'Job', id: arg.id }]
     }),
+    // The server only queues the deletion (202), so nothing is removed or
+    // refetched here: jobEventsSlice marks the job as pending, and it leaves
+    // the list once the server confirms (a 'deleted' job event, or the next
+    // poll when the event stream is down).
     deleteJob: builder.mutation<void, { id: string }>({
       query: ({ id }) => ({
         url: `/jobs/${id}`,
         method: 'DELETE'
-      }),
-      // Optimistically remove the job from the cache before the server confirms deletion.
-      // If the server request fails, the rollback mechanism (patchResult.undo())
-      // restores the cache to its previous state.
-      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          jobsApiSlice.util.updateQueryData('getJobs', undefined, (draft) => {
-            if ('ids' in draft && 'entities' in draft) {
-              jobsAdapter.removeOne(draft, id)
-            }
-          })
-        )
-        try {
-          await queryFulfilled
-        } catch (error) {
-          logger.error('Error occurred during job deletion:', error)
-          patchResult.undo()
-        }
-      },
-      invalidatesTags: (_, __, arg) => [{ type: 'Job', id: arg.id }]
+      })
     }),
     checkJobFiles: builder.query<FileCheckResult, string>({
       query: (id: string) => ({

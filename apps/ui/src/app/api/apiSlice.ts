@@ -6,10 +6,10 @@ import {
   BaseQueryFn
 } from '@reduxjs/toolkit/query/react'
 import { setCredentials } from '../../slices/authSlice'
-import type { RootState } from '../store'
+import type { AppDispatch, RootState } from '../store'
 import { logger } from 'utils/logger'
 
-const baseURL =
+export const baseURL =
   process.env.NODE_ENV === 'test' ? 'http://localhost:3003/api/v1' : '/api/v1'
 
 const baseQuery = fetchBaseQuery({
@@ -64,6 +64,27 @@ const baseQueryWithReauth: BaseQueryFn<
   }
 
   return result
+}
+
+// Swaps the refresh cookie for a new access token, like baseQueryWithReauth
+// does on a 403. For requests made outside RTK Query (the job event stream).
+// Returns whether a new token was stored.
+export const refreshAccessToken = async (
+  dispatch: AppDispatch
+): Promise<boolean> => {
+  try {
+    const res = await fetch(`${baseURL}/auth/refresh`, {
+      credentials: 'include'
+    })
+    if (!res.ok) return false
+    const { accessToken } = (await res.json()) as { accessToken?: string }
+    if (!accessToken) return false
+    dispatch(setCredentials({ accessToken }))
+    return true
+  } catch (error) {
+    logger.error('Token refresh failed:', error)
+    return false
+  }
 }
 
 export const apiSlice = createApi({

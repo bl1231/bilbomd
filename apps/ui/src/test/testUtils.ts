@@ -1,15 +1,8 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit'
+import { configureStore } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
 import { apiSlice } from '../app/api/apiSlice'
 import { superfacilityApiSlice } from '../app/api/sfapiSlice'
-import authReducer from '../slices/authSlice'
-import type { RootState, AppStore } from '../app/store'
-
-const rootReducer = combineReducers({
-  [apiSlice.reducerPath]: apiSlice.reducer,
-  [superfacilityApiSlice.reducerPath]: superfacilityApiSlice.reducer,
-  auth: authReducer
-})
+import { rootReducer, type RootState, type AppStore } from '../app/store'
 
 interface StoreRef {
   store: AppStore

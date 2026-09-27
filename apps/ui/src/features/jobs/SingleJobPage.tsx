@@ -30,6 +30,10 @@ import { axiosInstance } from 'app/api/axios'
 import MissingJob from 'components/MissingJob'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from 'slices/authSlice'
+import {
+  STREAM_FALLBACK_POLL_MS,
+  selectJobEventsConnected
+} from 'slices/jobEventsSlice'
 import BilboMDNerscSteps from './BilboMDNerscSteps'
 import BilboMDMongoSteps from './BilboMDMongoSteps'
 import HeaderBox from 'components/HeaderBox'
@@ -77,6 +81,7 @@ const SingleJobPage = () => {
   const [tabValue, setTabValue] = useState(0)
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const [jobPollingInterval, setJobPollingInterval] = useState(10000)
+  const eventsConnected = useSelector(selectJobEventsConnected)
   const [deleteJob] = useDeleteJobMutation()
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -98,7 +103,12 @@ const SingleJobPage = () => {
     isLoading,
     isError
   } = useGetJobByIdQuery(id ?? skipToken, {
-    pollingInterval: jobPollingInterval,
+    // While the event stream is up it drives refreshes; poll only as a safety
+    // net. Finished jobs (interval 0) don't poll either way.
+    pollingInterval:
+      eventsConnected && jobPollingInterval > 0
+        ? STREAM_FALLBACK_POLL_MS
+        : jobPollingInterval,
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true
   })

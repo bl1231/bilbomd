@@ -6,6 +6,8 @@ import { logger } from '../middleware/loggers.js'
 import { getEnvVar } from '../config/config.js'
 import { redis as connection } from '../queues/redisConn.js'
 import { requestJobCancellation } from '../queues/cancelJob.js'
+import { jobEventOwnerId } from '@bilbomd/bilbomd-types'
+import { publishJobEvent } from '../services/jobEvents.js'
 
 const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
@@ -72,14 +74,25 @@ export const processDeleteJob = async (job: Job<{ mongoId: string }>) => {
     logger.error(`Failed to request cancellation of ${mongoId}: ${error}`)
   }
 
+  // The job is gone for the UI once its document is: tell it before the
+  // (possibly slow) directory removal
+  const announceDeleted = (user: unknown) =>
+    publishJobEvent(connection, {
+      jobId: mongoId,
+      ownerId: jobEventOwnerId(user),
+      kind: 'deleted'
+    })
+
   if (jobDoc) {
     await jobDoc.deleteOne()
+    await announceDeleted(jobDoc.user)
     await removeJobDirectory(jobDoc.uuid)
     logger.info(`Deleted Job: '${jobDoc.title}' with UUID ${jobDoc.uuid}`)
   }
 
   if (multiJobDoc) {
     await multiJobDoc.deleteOne()
+    await announceDeleted(multiJobDoc.user)
     await removeJobDirectory(multiJobDoc.uuid)
     logger.info(
       `Deleted MultiJob: '${multiJobDoc.title}' with UUID ${multiJobDoc.uuid}`
@@ -89,8 +102,38 @@ export const processDeleteJob = async (job: Job<{ mongoId: string }>) => {
   return { status: 'deleted', mongoId }
 }
 
+// After the last attempt fails, tell the UI the job is still there so it
+// stops showing it as being deleted. If its document is already gone (only
+// the directory removal failed), 'deleted' was announced and there's nothing
+// to undo.
+export const handleDeleteFailed = async (
+  job: Job<{ mongoId: string }> | undefined,
+  error: Error
+) => {
+  if (!job) return
+  const attempts = job.opts.attempts ?? 1
+  if (job.attemptsMade < attempts) return
+
+  const mongoId = job.data.mongoId
+  logger.error(`Giving up deleting job ${mongoId}: ${error.message}`)
+  const doc =
+    (await MongoJob.findById(mongoId)) ?? (await MultiJob.findById(mongoId))
+  if (!doc) return
+
+  await publishJobEvent(connection, {
+    jobId: mongoId,
+    ownerId: jobEventOwnerId(doc.user),
+    kind: 'delete_failed'
+  })
+}
+
 const deleteWorker = new Worker('delete-bilbomd', processDeleteJob, {
   connection
+})
+deleteWorker.on('failed', (job, error) => {
+  handleDeleteFailed(job, error).catch((e) =>
+    logger.error(`Error handling failed deletion: ${e}`)
+  )
 })
 
 export default deleteWorker

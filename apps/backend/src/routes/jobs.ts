@@ -14,6 +14,7 @@ import { getFile } from '../controllers/fileDownloadController.js'
 import getMovies from '../controllers/movies/getMovies.js'
 import streamVideo from '../controllers/movies/streamVideo.js'
 import { checkFiles } from '../controllers/resubmitController.js'
+import { streamJobEvents } from '../controllers/jobs/streamJobEvents.js'
 import { verifyJWT } from '../middleware/verifyJWT.js'
 import { verifyJobOwnership } from '../middleware/verifyJobOwnership.js'
 import { setVideoSession, verifyVideoSession } from '../middleware/videoAuth.js'
@@ -38,6 +39,9 @@ router.use((req, res, next) => {
 })
 
 router.route('/').get(getAllJobs).post(createNewJob)
+
+// Server-Sent Events stream of job changes (must precede /:id)
+router.route('/events').get(streamJobEvents)
 
 // Every /:id route must pass verifyJobOwnership: the caller has to own the job
 // or hold the Admin/Manager role. The movie routes enforce ownership inline.

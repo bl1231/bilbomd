@@ -229,7 +229,7 @@ describe('jobsApiSlice', () => {
   })
 
   describe('deleteJob', () => {
-    it('should delete job successfully', async () => {
+    it('queues the deletion', async () => {
       const result = await storeRef.store.dispatch(
         jobsApiSlice.endpoints.deleteJob.initiate({ id: 'job-123' })
       )
@@ -237,21 +237,31 @@ describe('jobsApiSlice', () => {
       expect(result.data).toEqual({ success: true })
     })
 
-    it('should optimistically remove job from cache', async () => {
-      // This test verifies that delete operation works correctly
-      // RTK Query cache invalidation is handled by the framework
-      const result = await storeRef.store.dispatch(
+    it('leaves the job in the cached list until the server confirms', async () => {
+      const { store } = setupApiStore()
+      let listRequests = 0
+      server.use(
+        http.get('http://localhost:3003/api/v1/jobs', () => {
+          listRequests++
+          return HttpResponse.json([mockJob])
+        })
+      )
+      const list = store.dispatch(
+        jobsApiSlice.endpoints.getJobs.initiate('jobsList')
+      )
+      await list
+
+      await store.dispatch(
         jobsApiSlice.endpoints.deleteJob.initiate({ id: 'job-123' })
       )
+      await waitForApiState(store)
 
-      expect(result.data).toEqual({ success: true })
-    })
-
-    it('should invalidate specific job tags', () => {
-      const endpointDef = jobsApiSlice.endpoints.deleteJob
-      // RTK Query handles tag invalidation internally, we just verify the endpoint exists
-      expect(endpointDef).toBeDefined()
-      expect(endpointDef.initiate).toBeDefined()
+      // no optimistic removal, and no refetch while deletion is only queued
+      expect(
+        selectAllJobs(store.getState() as RootState).map((j) => j.id)
+      ).toEqual(['job-123'])
+      expect(listRequests).toBe(1)
+      list.unsubscribe()
     })
   })
 
