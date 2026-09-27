@@ -127,6 +127,7 @@ const runMultiFoxs = async (DBjob: IMultiJob): Promise<void> => {
     }
     await updateStepStatus(DBjob, 'multifoxs', status)
     logger.error(`MultiFoXS Calculation failed: ${getErrorMessage(error)}`)
+    throw error
   }
 }
 
@@ -155,6 +156,7 @@ const prepareMultiMDResults = async (DBjob: IMultiJob): Promise<void> => {
     logger.error(
       `Prepare BilboMD job results failed: ${getErrorMessage(error)}`
     )
+    throw error
   }
 }
 

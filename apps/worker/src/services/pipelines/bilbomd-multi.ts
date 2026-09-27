@@ -1,6 +1,7 @@
 import { Job as BullMQJob } from 'bullmq'
 import { MultiJob, IMultiJob, IUser } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
+import { getErrorMessage } from '../../helpers/errors.js'
 import {
   prepareMultiMDdatFileList,
   runMultiFoxs,
@@ -21,6 +22,17 @@ const usageContext = (job: IMultiJob) =>
     public_id: undefined,
     client_ip_hash: undefined
   })
+
+const markJobAsFailed = async (job: IMultiJob) => {
+  try {
+    job.status = 'Error'
+    await job.save()
+  } catch (saveError) {
+    logger.error(
+      `Failed to mark MultiJob ${job.uuid} as Error: ${getErrorMessage(saveError)}`
+    )
+  }
+}
 
 const processMultiMDJob = async (MQjob: BullMQJob) => {
   await MQjob.updateProgress(1)
@@ -43,25 +55,33 @@ const processMultiMDJob = async (MQjob: BullMQJob) => {
     context: usageContext(job)
   })
 
-  // Initialize
-  await initializeJob(job)
-  job.progress = 5
-  await job.save()
+  try {
+    // Initialize
+    await initializeJob(job)
+    job.progress = 5
+    await job.save()
 
-  // create a file that references all .dat files
-  await prepareMultiMDdatFileList(job)
-  job.progress = 30
-  await job.save()
+    // create a file that references all .dat files
+    await prepareMultiMDdatFileList(job)
+    job.progress = 30
+    await job.save()
 
-  // Run MultiFoXS
-  await runMultiFoxs(job)
-  job.progress = 80
-  await job.save()
+    // Run MultiFoXS
+    await runMultiFoxs(job)
+    job.progress = 80
+    await job.save()
 
-  // Gather results
-  await prepareMultiMDResults(job)
-  job.progress = 90
-  await job.save()
+    // Gather results
+    await prepareMultiMDResults(job)
+    job.progress = 90
+    await job.save()
+  } catch (error) {
+    // Steps with a status (multifoxs, results) have already marked themselves
+    // as Error. Mark the job too so it doesn't stay 'Running', then rethrow
+    // so BullMQ fails the job.
+    await markJobAsFailed(job)
+    throw error
+  }
 
   // Send results to user
   await cleanupJob(job)

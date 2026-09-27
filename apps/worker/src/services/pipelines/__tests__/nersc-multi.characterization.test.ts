@@ -87,7 +87,9 @@ const makeJob = (fields: Record<string, unknown>) => {
     ...fields
   }
   job.save = vi.fn(async () => {
-    trace.push(`save:progress=${job.progress ?? '-'}`)
+    trace.push(
+      `save:status=${job.status ?? '-'},progress=${job.progress ?? '-'}`
+    )
   })
   return job
 }
@@ -231,13 +233,13 @@ describe('multi pipeline', () => {
           "populate:bilbomd_jobs",
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
           "fn:initializeJob",
-          "save:progress=5",
+          "save:status=-,progress=5",
           "fn:prepareMultiMDdatFileList",
-          "save:progress=30",
+          "save:status=-,progress=30",
           "fn:runMultiFoxs",
-          "save:progress=80",
+          "save:status=-,progress=80",
           "fn:prepareMultiMDResults",
-          "save:progress=90",
+          "save:status=-,progress=90",
           "fn:cleanupJob",
           "mq.progress:100",
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_completed","status":"Completed","durationMs":60000,"context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
@@ -256,13 +258,13 @@ describe('multi pipeline', () => {
           "populate:bilbomd_jobs",
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
           "fn:initializeJob",
-          "save:progress=5",
+          "save:status=-,progress=5",
           "fn:prepareMultiMDdatFileList",
-          "save:progress=30",
+          "save:status=-,progress=30",
           "fn:runMultiFoxs",
-          "save:progress=80",
+          "save:status=-,progress=80",
           "fn:prepareMultiMDResults",
-          "save:progress=90",
+          "save:status=-,progress=90",
           "fn:cleanupJob",
           "mq.progress:100",
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_completed","status":"Completed","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
@@ -282,10 +284,53 @@ describe('multi pipeline', () => {
           "populate:bilbomd_jobs",
           "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
           "fn:initializeJob",
-          "save:progress=5",
+          "save:status=-,progress=5",
           "fn:prepareMultiMDdatFileList",
-          "save:progress=30",
+          "save:status=-,progress=30",
           "fn:runMultiFoxs",
+          "save:status=Error,progress=30",
+        ],
+      }
+    `)
+  })
+
+  it('marks the job as Error when a step without a status throws', async () => {
+    state.failAt = 'prepareMultiMDdatFileList'
+    expect(await run(processMultiMDJob, multiJob())).toMatchInlineSnapshot(`
+      {
+        "error": "prepareMultiMDdatFileList failed",
+        "trace": [
+          "mq.progress:1",
+          "populate:user",
+          "populate:bilbomd_jobs",
+          "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
+          "fn:initializeJob",
+          "save:status=-,progress=5",
+          "fn:prepareMultiMDdatFileList",
+          "save:status=Error,progress=5",
+        ],
+      }
+    `)
+  })
+
+  it('marks the job as Error when gathering results throws', async () => {
+    state.failAt = 'prepareMultiMDResults'
+    expect(await run(processMultiMDJob, multiJob())).toMatchInlineSnapshot(`
+      {
+        "error": "prepareMultiMDResults failed",
+        "trace": [
+          "mq.progress:1",
+          "populate:user",
+          "populate:bilbomd_jobs",
+          "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"multi","eventType":"job_started","status":"Running","context":{"built":{"access_mode":"user","user":{"username":"u"}}}}",
+          "fn:initializeJob",
+          "save:status=-,progress=5",
+          "fn:prepareMultiMDdatFileList",
+          "save:status=-,progress=30",
+          "fn:runMultiFoxs",
+          "save:status=-,progress=80",
+          "fn:prepareMultiMDResults",
+          "save:status=Error,progress=80",
         ],
       }
     `)
