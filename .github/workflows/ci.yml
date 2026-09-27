@@ -494,16 +494,6 @@ jobs:
       - name: Read version
         run: echo "VERSION=$(jq -r .version 'apps/scoper/package.json')" >> $GITHUB_ENV
 
-      # The Dockerfile installs pnpm with npm (no corepack in the base image).
-      # Pin it to packageManager: with the default `latest`, a newer pnpm
-      # re-downloads the pinned version as a standalone binary that needs
-      # libatomic, which the scoper base image lacks.
-      - name: Resolve pnpm version from package.json
-        id: pnpm_version
-        run: |
-          PNPM_VERSION=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*/\1/')
-          echo "pnpm_version=$PNPM_VERSION" >> $GITHUB_OUTPUT
-
       - name: Compute short sha
         run: |
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-8)
@@ -553,7 +543,6 @@ jobs:
             USER_ID=${{ vars.USER_ID || '1001' }}
             GROUP_ID=${{ vars.GROUP_ID || '1234' }}
             SCOPER_GIT_HASH=${{ github.sha }}
-            PNPM_VERSION=${{ steps.pnpm_version.outputs.pnpm_version }}
             SCOPER_VERSION=${{ env.VERSION }}
           # Removed local cache-from/cache-to for GitHub-hosted runners
 
