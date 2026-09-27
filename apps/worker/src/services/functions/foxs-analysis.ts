@@ -1,4 +1,3 @@
-import { spawn, ChildProcess } from 'node:child_process'
 import { IJob } from '@bilbomd/mongodb-schema'
 import fs from 'fs-extra'
 import path from 'node:path'
@@ -7,6 +6,8 @@ import { createInterface } from 'readline'
 import { IStepStatus } from '@bilbomd/mongodb-schema'
 import { updateStepStatus } from './mongo-utils.js'
 import { config } from '../../config/config.js'
+import { runProcess } from '../../helpers/runProcess.js'
+import { getErrorMessage } from '../../helpers/errors.js'
 
 const countDataPoints = async (filePath: string): Promise<number> => {
   const fileStream = fs.createReadStream(filePath)
@@ -35,10 +36,6 @@ const runSingleFoXS = async (DBjob: IJob): Promise<void> => {
   try {
     await updateStepStatus(DBjob, 'initfoxs', status)
     const jobDir = path.join(config.uploadDir, DBjob.uuid)
-    const logFile = path.join(jobDir, 'initial_foxs_analysis.log')
-    const errorFile = path.join(jobDir, 'initial_foxs_analysis_error.log')
-    const logStream = fs.createWriteStream(logFile)
-    const errorStream = fs.createWriteStream(errorFile)
 
     let inputPDB: string
     if (!DBjob.md_engine || DBjob.md_engine === 'CHARMM') {
@@ -50,7 +47,6 @@ const runSingleFoXS = async (DBjob: IJob): Promise<void> => {
     }
     const inputDAT = DBjob.data_file
     const profileSize = await countDataPoints(path.join(jobDir, inputDAT))
-    const foxsOpts = { cwd: jobDir }
     const foxsArgs = [
       '-o',
       '--min_c1=0.99',
@@ -63,64 +59,25 @@ const runSingleFoXS = async (DBjob: IJob): Promise<void> => {
     ]
     logger.info(`runSingleFoXS foxsArgs: ${foxsArgs}`)
 
-    const foxsProcess = () =>
-      new Promise<void>((resolve, reject) => {
-        const foxs: ChildProcess = spawn(config.foxBin, foxsArgs, foxsOpts)
-
-        foxs.stdout?.on('data', (data) => {
-          logStream.write(data.toString())
-        })
-        foxs.stderr?.on('data', (data) => {
-          errorStream.write(data.toString())
-        })
-        foxs.on('error', (error) => {
-          logger.error(`FoXS analysis error: ${error}`)
-          errorStream.end()
-          status = {
-            status: 'Error',
-            message: `FoXS analysis error with exit code: ${error}`
-          }
-          updateStepStatus(DBjob, 'initfoxs', status).then(() => reject(error))
-        })
-        foxs.on('exit', (code) => {
-          Promise.all([
-            new Promise((resolveStream) => logStream.end(resolveStream)),
-            new Promise((resolveStream) => errorStream.end(resolveStream))
-          ])
-            .then(() => {
-              if (code === 0) {
-                logger.info(`FoXS analysis success with exit code: ${code}`)
-                status = {
-                  status: 'Success',
-                  message:
-                    'Initial FoXS Calculations have completed successfully.'
-                }
-                updateStepStatus(DBjob, 'initfoxs', status).then(resolve)
-              } else {
-                logger.error(`FoXS analysis error with exit code: ${code}`)
-                status = {
-                  status: 'Error',
-                  message: `FoXS analysis error with exit code: ${code}`
-                }
-                updateStepStatus(DBjob, 'initfoxs', status).then(() =>
-                  reject(
-                    new Error(`FoXS analysis error with exit code: ${code}`)
-                  )
-                )
-              }
-            })
-            .catch((streamError) => {
-              logger.error(`Error closing file streams: ${streamError}`)
-              reject(streamError)
-            })
-        })
-      })
-
-    await foxsProcess()
+    await runProcess({
+      label: 'Initial FoXS',
+      cmd: config.foxBin,
+      args: foxsArgs,
+      cwd: jobDir,
+      stdoutFile: path.join(jobDir, 'initial_foxs_analysis.log'),
+      stderrFile: path.join(jobDir, 'initial_foxs_analysis_error.log'),
+      timeoutMs: config.processTimeouts.foxsMs
+    })
+    logger.info('Initial FoXS analysis succeeded')
+    status = {
+      status: 'Success',
+      message: 'Initial FoXS Calculations have completed successfully.'
+    }
+    await updateStepStatus(DBjob, 'initfoxs', status)
   } catch (error) {
     status = {
       status: 'Error',
-      message: `FoXS analysis error: ${error}`
+      message: `FoXS analysis error: ${getErrorMessage(error)}`
     }
     await updateStepStatus(DBjob, 'initfoxs', status)
     logger.error(error)
