@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { updateStepStatus, handleStepError, updateJobStatus } from '../mongo-utils.js'
-import { Job, type IJob, type IMultiJob, type IBilboMDSteps } from '@bilbomd/mongodb-schema'
+import {
+  updateStepStatus,
+  handleStepError,
+  updateJobStatus
+} from '../mongo-utils.js'
+import {
+  Job,
+  buildStepStatusUpdate,
+  type IJob,
+  type IMultiJob,
+  type IBilboMDSteps
+} from '@bilbomd/mongodb-schema'
 import { logger } from '../../../helpers/loggers.js'
 
 vi.mock('../../../helpers/loggers.js', () => ({
@@ -42,8 +52,31 @@ describe('mongo-utils', () => {
 
       expect(mockJob.steps.minimize).toEqual(newStatus)
       expect(mockJob.updateOne).toHaveBeenCalledTimes(1)
-      expect(mockJob.updateOne).toHaveBeenCalledWith({
-        $set: { 'steps.minimize': newStatus }
+      expect(mockJob.updateOne).toHaveBeenCalledWith(
+        buildStepStatusUpdate('minimize', newStatus),
+        { updatePipeline: true }
+      )
+    })
+
+    it('keeps previously stored fields on the in-memory step', async () => {
+      const startedAt = new Date('2026-09-26T12:00:00Z')
+      const mockJob = {
+        _id: 'test-job-id',
+        steps: {
+          md: { status: 'Running', message: 'rg 20', started_at: startedAt }
+        } as IBilboMDSteps,
+        updateOne: vi.fn().mockResolvedValue(undefined)
+      } as unknown as IJob
+
+      await updateStepStatus(mockJob, 'md', {
+        status: 'Success',
+        message: 'done'
+      })
+
+      expect(mockJob.steps.md).toEqual({
+        status: 'Success',
+        message: 'done',
+        started_at: startedAt
       })
     })
 
@@ -77,7 +110,9 @@ describe('mongo-utils', () => {
       await updateStepStatus(mockJob, 'md', newStatus)
 
       expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error updating step status for job test-job-id')
+        expect.stringContaining(
+          'Error updating step status for job test-job-id'
+        )
       )
     })
 
@@ -109,8 +144,8 @@ describe('mongo-utils', () => {
 
       expect(Job.findByIdAndUpdate).toHaveBeenCalledWith(
         jobId,
-        { 'steps.foxs.status': 'Error' },
-        { new: true }
+        buildStepStatusUpdate('foxs', { status: 'Error' }),
+        { new: true, updatePipeline: true }
       )
       expect(logger.error).toHaveBeenCalledWith(
         'Error in foxs: FoXS calculation failed'
@@ -128,8 +163,8 @@ describe('mongo-utils', () => {
 
       expect(Job.findByIdAndUpdate).toHaveBeenCalledWith(
         jobId,
-        { 'steps.minimize.status': 'Error' },
-        { new: true }
+        buildStepStatusUpdate('minimize', { status: 'Error' }),
+        { new: true, updatePipeline: true }
       )
       expect(logger.error).toHaveBeenCalledWith(
         'Error in minimize: String error message'
@@ -147,8 +182,8 @@ describe('mongo-utils', () => {
 
       expect(Job.findByIdAndUpdate).toHaveBeenCalledWith(
         jobId,
-        { 'steps.heat.status': 'Error' },
-        { new: true }
+        buildStepStatusUpdate('heat', { status: 'Error' }),
+        { new: true, updatePipeline: true }
       )
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Error in heat:')
@@ -203,7 +238,9 @@ describe('mongo-utils', () => {
         save: vi.fn().mockRejectedValue(new Error('Save failed'))
       } as unknown as IJob
 
-      await expect(updateJobStatus(mockJob, 'Running')).rejects.toThrow('Save failed')
+      await expect(updateJobStatus(mockJob, 'Running')).rejects.toThrow(
+        'Save failed'
+      )
     })
   })
 })

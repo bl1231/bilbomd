@@ -4,7 +4,8 @@ import {
   Job,
   IStepStatus,
   IBilboMDSteps,
-  StepStatusEnum
+  StepStatusEnum,
+  buildStepStatusUpdate
 } from '@bilbomd/mongodb-schema'
 import { logger } from './helpers/loggers.js'
 
@@ -14,10 +15,12 @@ const updateStepStatus = async (
   status: IStepStatus
 ) => {
   try {
-    // Use atomic update to avoid ParallelSaveError
+    // Use atomic update to avoid ParallelSaveError. The pipeline form also
+    // stamps started_at / completed_at / duration_ms server-side.
     await Job.updateOne(
       { _id: job._id },
-      { $set: { [`steps.${stepName}`]: status } }
+      buildStepStatusUpdate(stepName, status),
+      { updatePipeline: true }
     )
     // logger.info(`Successfully updated ${stepName} status for job ${job._id}`)
   } catch (error) {
@@ -42,7 +45,7 @@ const updateJobResults = async (
 
 const handleStepError = async (
   jobId: string,
-  stepName: string,
+  stepName: keyof IBilboMDSteps,
   error: unknown
 ) => {
   // Convert error to string if it's not an Error object
@@ -50,8 +53,8 @@ const handleStepError = async (
   // Update the step status to 'Error'
   await Job.findByIdAndUpdate(
     jobId,
-    { [`steps.${stepName}.status`]: 'Error' },
-    { new: true }
+    buildStepStatusUpdate(stepName, { status: 'Error' }),
+    { new: true, updatePipeline: true }
   )
   // Log the error
   logger.error(`Error in ${stepName}: ${errorMessage}`)

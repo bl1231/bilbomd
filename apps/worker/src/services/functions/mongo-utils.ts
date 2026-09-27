@@ -3,7 +3,8 @@ import {
   IMultiJob,
   Job,
   IStepStatus,
-  IBilboMDSteps
+  IBilboMDSteps,
+  buildStepStatusUpdate
 } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 
@@ -18,15 +19,20 @@ const updateStepStatus = async (
     if (!job.steps) {
       job.steps = {} as IBilboMDSteps
     }
-    // Keep the in-memory document in sync for any later reads/saves
-    job.steps[stepName] = status
+    // Keep the in-memory document in sync for any later reads/saves. Timing
+    // fields are stamped server-side, so the in-memory copy won't have them.
+    job.steps[stepName] = { ...job.steps[stepName], ...status }
 
     // Persist with an atomic field update instead of job.save() to avoid
     // ParallelSaveError ("Can't save() the same doc multiple times in parallel")
     // when concurrent steps — e.g. the parallel per-Rg OpenMM MD runs — report
     // status on the same document instance. updateOne() targets only this nested
-    // field and is not subject to the in-flight-save guard.
-    await job.updateOne({ $set: { [`steps.${stepName}`]: status } })
+    // field and is not subject to the in-flight-save guard. The pipeline form
+    // also stamps started_at / completed_at / duration_ms (see
+    // buildStepStatusUpdate in @bilbomd/mongodb-schema).
+    await job.updateOne(buildStepStatusUpdate(stepName, status), {
+      updatePipeline: true
+    })
     // logger.info(`Successfully updated ${stepName} status for job ${job._id}`)
   } catch (error) {
     logger.error(
@@ -37,7 +43,7 @@ const updateStepStatus = async (
 
 const handleStepError = async (
   jobId: string,
-  stepName: string,
+  stepName: keyof IBilboMDSteps,
   error: unknown
 ) => {
   // Convert error to string if it's not an Error object
@@ -45,8 +51,8 @@ const handleStepError = async (
   // Update the step status to 'Error'
   await Job.findByIdAndUpdate(
     jobId,
-    { [`steps.${stepName}.status`]: 'Error' },
-    { new: true }
+    buildStepStatusUpdate(stepName, { status: 'Error' }),
+    { new: true, updatePipeline: true }
   )
   // Log the error
   logger.error(`Error in ${stepName}: ${errorMessage}`)

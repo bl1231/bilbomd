@@ -7,7 +7,10 @@ const stepStatusEnum = ['Waiting', 'Running', 'Success', 'Error']
 // Schema for step status
 const stepStatusSchema = new Schema({
   status: { type: String, enum: stepStatusEnum, default: 'Waiting' },
-  message: { type: String, required: false }
+  message: { type: String, required: false },
+  started_at: { type: Date, required: false },
+  completed_at: { type: Date, required: false },
+  duration_ms: { type: Number, required: false }
 })
 
 const stepsSchema = new Schema<IBilboMDSteps>({

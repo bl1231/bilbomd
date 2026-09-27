@@ -5,7 +5,8 @@ import {
   IBilboMDAlphaFoldJob,
   IBilboMDOpenFoldJob,
   IStepStatus,
-  Job
+  Job,
+  buildStepStatusUpdate
 } from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
 import { spawn, ChildProcess } from 'node:child_process'
@@ -103,7 +104,12 @@ const spawnFoXSOptimized = async (
   foxsRunDirs: string[],
   MQjob?: BullMQJob,
   maxConcurrency = getEffectiveCpuCount(),
-  DBjob?: IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob | IBilboMDOpenFoldJob
+  DBjob?:
+    | IBilboMDPDBJob
+    | IBilboMDCRDJob
+    | IBilboMDAutoJob
+    | IBilboMDAlphaFoldJob
+    | IBilboMDOpenFoldJob
 ): Promise<void> => {
   try {
     // Collect all PDB files from all directories
@@ -167,9 +173,14 @@ const spawnFoXSOptimized = async (
                 `FoXS progress: ${completed}/${allTasks.length} files completed (${progress}%)`
               )
               if (DBjob) {
-                void Job.findByIdAndUpdate(DBjob._id, {
-                  $set: { 'steps.foxs': { status: 'Running', message: statusMsg } }
-                }).catch((err) =>
+                void Job.findByIdAndUpdate(
+                  DBjob._id,
+                  buildStepStatusUpdate('foxs', {
+                    status: 'Running',
+                    message: statusMsg
+                  }),
+                  { updatePipeline: true }
+                ).catch((err) =>
                   logger.error(`FoXS step status update failed: ${err}`)
                 )
               }
@@ -288,7 +299,9 @@ const prepareFoXSInputs = async (
   }
 
   if (mdSubDirs.length === 0) {
-    logger.warn('No PDB files found in foxs/, openmm/md/, or charmm/md/ directories')
+    logger.warn(
+      'No PDB files found in foxs/, openmm/md/, or charmm/md/ directories'
+    )
     return []
   }
 
