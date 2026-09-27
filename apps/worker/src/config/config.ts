@@ -106,6 +106,42 @@ export const config = {
     openmmMdMs: parsePositiveIntEnv(
       'PROCESS_TIMEOUT_OPENMM_MD_MS',
       4 * 60 * 60 * 1000
+    ),
+    // CHARMM minimize / heat / dcd2pdb / pdb2crd: observed max < 2 min
+    charmmSetupMs: parsePositiveIntEnv(
+      'PROCESS_TIMEOUT_CHARMM_SETUP_MS',
+      60 * 60 * 1000
+    ),
+    // One CHARMM dynamics run: observed max ~22 min, but few CHARMM jobs
+    // remain on disk and one crd job took ~8h end to end, so be generous
+    charmmMdMs: parsePositiveIntEnv(
+      'PROCESS_TIMEOUT_CHARMM_MD_MS',
+      6 * 60 * 60 * 1000
+    ),
+    // One FoXS run (a single PDB, or the initial FoXS fit): seconds
+    foxsMs: parsePositiveIntEnv('PROCESS_TIMEOUT_FOXS_MS', 15 * 60 * 1000),
+    // MultiFoXS: observed max ~10 min
+    multifoxsMs: parsePositiveIntEnv(
+      'PROCESS_TIMEOUT_MULTIFOXS_MS',
+      2 * 60 * 60 * 1000
+    ),
+    // One Pepsi-SANS run (a single PDB): seconds
+    pepsiSansMs: parsePositiveIntEnv(
+      'PROCESS_TIMEOUT_PEPSISANS_MS',
+      15 * 60 * 1000
+    ),
+    // GA-SANS: whole SANS jobs max out at ~64 min
+    gasansMs: parsePositiveIntEnv(
+      'PROCESS_TIMEOUT_GASANS_MS',
+      2 * 60 * 60 * 1000
+    ),
+    // One PyMOL movie render: whole movie stage max ~32 min
+    movieMs: parsePositiveIntEnv('PROCESS_TIMEOUT_MOVIE_MS', 60 * 60 * 1000),
+    // Small Python helpers (feedback, rgyr/Dmax, AutoRg, pae2const,
+    // pdb2crd, prep_pdb, cif_to_pdb, strip_cofactors) and ffmpeg: seconds
+    helperScriptMs: parsePositiveIntEnv(
+      'PROCESS_TIMEOUT_HELPER_SCRIPT_MS',
+      15 * 60 * 1000
     )
   },
   scripts: {

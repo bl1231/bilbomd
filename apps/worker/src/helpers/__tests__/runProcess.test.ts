@@ -62,6 +62,40 @@ describe('spawnProcess', () => {
     expect(await fs.readFile(stderrFile, 'utf8')).toBe('oops\n')
   })
 
+  it('does not block a child that floods stdout when nothing reads it', async () => {
+    // With an unread stdout pipe the child would block once the ~64 KB pipe
+    // buffer fills, and only the timeout would end it.
+    const result = await spawnProcess(
+      js(`process.stdout.write('x'.repeat(2 * 1024 * 1024))`, {
+        timeoutMs: 10_000
+      })
+    )
+
+    expect(result).toMatchObject({ code: 0, timedOut: false })
+  })
+
+  it('appends to existing log files when appendLogs is set', async () => {
+    const stdoutFile = path.join(dir, 'out.log')
+    await fs.writeFile(stdoutFile, 'previous run\n')
+
+    await spawnProcess(
+      js(`console.log('this run')`, { stdoutFile, appendLogs: true })
+    )
+
+    expect(await fs.readFile(stdoutFile, 'utf8')).toBe(
+      'previous run\nthis run\n'
+    )
+  })
+
+  it('truncates existing log files by default', async () => {
+    const stdoutFile = path.join(dir, 'out.log')
+    await fs.writeFile(stdoutFile, 'previous run\n')
+
+    await spawnProcess(js(`console.log('this run')`, { stdoutFile }))
+
+    expect(await fs.readFile(stdoutFile, 'utf8')).toBe('this run\n')
+  })
+
   it('delivers stdout and stderr line by line, handling CRLF', async () => {
     const out: string[] = []
     const err: string[] = []
