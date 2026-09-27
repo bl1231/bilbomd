@@ -12,6 +12,15 @@ import {
   readTopKNum
 } from './foxsParser.js'
 import { getGuinierFit } from './guinierService.js'
+import {
+  CHI2FREE_ROUNDS,
+  DMAX_PER_RG,
+  VR_QMAX,
+  computeChi2Free,
+  computeVr,
+  countShannonChannels,
+  estimateDmax
+} from './fitMetrics.js'
 
 const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
@@ -71,12 +80,7 @@ const buildBilboFoxsData = async (job: IJob): Promise<FoxsData[]> => {
     ),
     path.join(jobDir, `minimized_${datFileBase}.dat`),
     path.join(jobDir, 'minimize', `minimized_${datFileBase}.dat`),
-    path.join(
-      jobDir,
-      'openmm',
-      'minimization',
-      `minimized_${datFileBase}.dat`
-    ),
+    path.join(jobDir, 'openmm', 'minimization', `minimized_${datFileBase}.dat`),
     path.join(resultsDir, `minimization_output_${datFileBase}.dat`),
     path.join(resultsDir, `minimized_${datFileBase}.dat`)
   ]
@@ -150,9 +154,27 @@ const buildBilboFoxsData = async (job: IJob): Promise<FoxsData[]> => {
   const guinier = await getGuinierFit(jobDir, job.data_file)
   if (guinier && data[0]) {
     data[0].guinier = guinier
+    addFitMetrics(data, estimateDmax(guinier.rg))
   }
 
   return data
+}
+
+// Adds χ²free and Vr to every fit, all scored with the same Dmax so they are
+// comparable across the original model and each ensemble size.
+const addFitMetrics = (data: FoxsData[], dmax: number): void => {
+  for (const fit of data) {
+    fit.chi2free = computeChi2Free(fit.data, dmax)
+    fit.vr = computeVr(fit.data, dmax)
+  }
+  data[0]!.fitMetrics = {
+    dmax,
+    dmaxSource: 'guinier_rg',
+    dmaxPerRg: DMAX_PER_RG,
+    shannonChannels: countShannonChannels(data[0]!.data, dmax),
+    chi2freeRounds: CHI2FREE_ROUNDS,
+    vrQmax: VR_QMAX
+  }
 }
 
 const buildScoperFoxsData = async (
@@ -182,12 +204,7 @@ const buildScoperFoxsData = async (
     'foxs_analysis',
     `scoper_combined_newpdb_${pdbNumber}_${datFileBase}.dat`
   )
-  const foxsLog = path.join(
-    uploadFolder,
-    job.uuid,
-    'foxs_analysis',
-    'foxs.log'
-  )
+  const foxsLog = path.join(uploadFolder, job.uuid, 'foxs_analysis', 'foxs.log')
 
   const originalDatContent = fs.readFileSync(originalDat, 'utf8')
   const scoperDatContent = fs.readFileSync(scoperDat, 'utf8')

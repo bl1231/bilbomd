@@ -386,6 +386,12 @@ const Help = ({ title = 'BilboMD: Help' }) => {
             </ListItem>
             <ListItem>
               <ListItemText
+                primary="χ²free and Vr (beta)"
+                secondary="Two extra fit-quality metrics shown in the Fit quality table. χ²free (Rambo & Tainer, 2013) is the median χ² over random subsets containing one point per Shannon channel, so it counts each independent piece of information once and is harder to lower by adding ensemble states. Vr, the volatility of ratio (Hura et al., 2013), measures how much I_exp/I_model varies with q regardless of overall scale, and is less sensitive than χ² to systematic errors such as buffer subtraction. Both need Dmax, which is currently estimated from the Guinier Rg, so compare values between ensemble sizes within a job rather than across jobs."
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemText
                 primary="Radius of gyration and distributions"
                 secondary="Rg values and distributions may be shown to summarize overall compaction/extension across the ensemble."
               />

@@ -8,6 +8,7 @@ import { useGetPublicFoxsDataQuery } from 'slices/publicJobsApiSlice'
 import CircularProgress from '@mui/material/CircularProgress'
 import FoXSEnsembleCharts from 'features/foxs/FoXSEnsembleCharts'
 import DimensionlessKratkyChart from 'features/foxs/DimensionlessKratkyChart'
+import FitMetricsTable from 'features/foxs/FitMetricsTable'
 import Item from 'themes/components/Item'
 import { FoxsData, FoxsDataPoint } from '@bilbomd/bilbomd-types'
 
@@ -69,12 +70,18 @@ const prepData = (
       if (sortedQ[i]! - rangeEnd <= mergeGap) {
         rangeEnd = sortedQ[i]!
       } else {
-        excludedRanges.push({ x1: rangeStart - qStep / 2, x2: rangeEnd + qStep / 2 })
+        excludedRanges.push({
+          x1: rangeStart - qStep / 2,
+          x2: rangeEnd + qStep / 2
+        })
         rangeStart = sortedQ[i]!
         rangeEnd = sortedQ[i]!
       }
     }
-    excludedRanges.push({ x1: rangeStart - qStep / 2, x2: rangeEnd + qStep / 2 })
+    excludedRanges.push({
+      x1: rangeStart - qStep / 2,
+      x2: rangeEnd + qStep / 2
+    })
   }
 
   return { data: good, excludedCount: excluded.length, excludedRanges }
@@ -82,9 +89,7 @@ const prepData = (
 
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
   if (!Array.isArray(foxsDataArray) || foxsDataArray.length < 2) {
-    logger.warn(
-      'FoXSAnalysis: Not enough data to process ensemble comparison.'
-    )
+    logger.warn('FoXSAnalysis: Not enough data to process ensemble comparison.')
     return []
   }
 
@@ -267,6 +272,7 @@ const FoXSAnalysis = ({
   const origC1 = foxsData[0]!.c1
   const origC2 = foxsData[0]!.c2
   const guinier = foxsData[0]!.guinier
+  const fitMetrics = foxsData[0]!.fitMetrics
 
   return (
     <Item>
@@ -307,6 +313,14 @@ const FoXSAnalysis = ({
             </Alert>
           )}
         </Grid>
+        {fitMetrics ? (
+          <Grid size={{ xs: 12 }}>
+            <FitMetricsTable
+              foxsData={foxsData}
+              fitMetrics={fitMetrics}
+            />
+          </Grid>
+        ) : null}
         <Grid size={{ xs: 12 }}>
           {guinier ? (
             <DimensionlessKratkyChart

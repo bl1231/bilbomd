@@ -55,8 +55,7 @@ describe('buildBilboFoxsData', () => {
     ] as never)
 
     // Ensemble reads: each calls access + readFile(dat) + readFile(log)
-    vi.mocked(fs.access)
-      .mockResolvedValue(undefined) // access always succeeds from here on
+    vi.mocked(fs.access).mockResolvedValue(undefined) // access always succeeds from here on
 
     vi.mocked(parser.parseFileContent).mockReturnValue([
       { q: 0.001, exp_intensity: 100, model_intensity: 99, error: 2 }
@@ -97,6 +96,84 @@ describe('buildBilboFoxsData', () => {
       'experiment.dat'
     )
     expect(result[0].guinier).toEqual(fit)
+  })
+
+  describe('fit metrics', () => {
+    // 60 points over q = 0.01–0.30 Å⁻¹; with Rg = 30 Å (Dmax ≈ 90 Å) that
+    // spans several Shannon channels of width π/90 ≈ 0.035 Å⁻¹
+    const curve = Array.from({ length: 60 }, (_, i) => {
+      const q = 0.01 + i * 0.005
+      const model = 1000 * Math.exp(-(q * q * 900) / 3)
+      return {
+        q,
+        exp_intensity: model * (1 + 0.02 * Math.sin(i)),
+        model_intensity: model,
+        error: 0.02 * model
+      }
+    })
+
+    const setup = async (guinier: unknown) => {
+      const { default: fs } = await import('fs-extra')
+      const parser = await import('../foxsParser.js')
+      const guinierService = await import('../guinierService.js')
+
+      vi.mocked(fs.existsSync).mockReturnValue(true)
+      vi.mocked(fs.access).mockResolvedValue(undefined)
+      vi.mocked(fs.readFile).mockResolvedValue('' as never)
+      vi.mocked(fs.readdir).mockResolvedValue([
+        'multi_state_model_1_1_1.dat',
+        'multi_state_model_2_1_1.dat'
+      ] as never)
+      vi.mocked(parser.parseFileContent).mockReturnValue(curve)
+      vi.mocked(parser.extractChiSquared).mockReturnValue(1.1)
+      vi.mocked(parser.extractC1C2).mockResolvedValue({ c1: '1', c2: '0' })
+      vi.mocked(guinierService.getGuinierFit).mockResolvedValue(
+        guinier as never
+      )
+    }
+
+    it('adds χ²free and Vr to every fit, using Dmax estimated from the Guinier Rg', async () => {
+      const {
+        computeChi2Free,
+        computeVr,
+        DMAX_PER_RG,
+        CHI2FREE_ROUNDS,
+        VR_QMAX
+      } = await import('../fitMetrics.js')
+      await setup({ rg: 30, i0: 1000, qmin: 0.01, qmax: 0.04 })
+
+      const result = await buildBilboFoxsData(makeJob())
+
+      const dmax = 30 * DMAX_PER_RG
+      expect(result).toHaveLength(3)
+      for (const fit of result) {
+        expect(fit.chi2free).toBe(computeChi2Free(curve, dmax))
+        expect(fit.vr).toBe(computeVr(curve, dmax))
+        expect(fit.chi2free).toBeGreaterThan(0)
+        expect(fit.vr).toBeGreaterThan(0)
+      }
+      expect(result[0].fitMetrics).toEqual({
+        dmax,
+        dmaxSource: 'guinier_rg',
+        dmaxPerRg: DMAX_PER_RG,
+        shannonChannels: 9,
+        chi2freeRounds: CHI2FREE_ROUNDS,
+        vrQmax: VR_QMAX
+      })
+      expect(result[1].fitMetrics).toBeUndefined()
+    })
+
+    it('omits the metrics when no Guinier fit is available', async () => {
+      await setup(undefined)
+
+      const result = await buildBilboFoxsData(makeJob())
+
+      for (const fit of result) {
+        expect(fit.chi2free).toBeUndefined()
+        expect(fit.vr).toBeUndefined()
+      }
+      expect(result[0].fitMetrics).toBeUndefined()
+    })
   })
 
   it('throws FOXS_DATA_UNAVAILABLE when no dat and no ensembles', async () => {
