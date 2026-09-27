@@ -9,6 +9,7 @@ import { processBilboMDJobNersc } from '../services/pipelines/bilbomd-nersc.js'
 import { processBilboMDPDBJob } from '../services/pipelines/bilbomd-pdb.js'
 import { processBilboMDSANSJob } from '../services/pipelines/bilbomd-sans.js'
 import { WorkerJob } from '../types/jobtypes.js'
+import { runCancellable } from '../helpers/jobCancellation.js'
 
 type PipelineExecutor = (job: Job<WorkerJob>) => Promise<void>
 
@@ -27,7 +28,11 @@ const getPipelineExecutor = (
   return pipelines[type] ?? null
 }
 
-export const bilboMdHandler = async (job: Job<WorkerJob>) => {
+export const bilboMdHandler = async (
+  job: Job<WorkerJob>,
+  _token?: string,
+  signal?: AbortSignal
+) => {
   logger.info(`bilboMdHandler: ${JSON.stringify(job.data)}`)
   try {
     const executor = getPipelineExecutor(job.data.type, config.runOnNERSC)
@@ -36,7 +41,11 @@ export const bilboMdHandler = async (job: Job<WorkerJob>) => {
     }
 
     logger.info(`Start BilboMD ${job.data.type} job: ${job.name}`)
-    await executor(job)
+    await runCancellable(
+      (job.data as { jobid?: string }).jobid,
+      () => executor(job),
+      signal
+    )
     logger.info(`Finished job: ${job.name}`)
   } catch (error) {
     logger.error(`Error processing job ${job.id}: ${error}`)

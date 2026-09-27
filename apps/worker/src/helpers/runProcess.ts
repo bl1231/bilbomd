@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import { finished } from 'node:stream/promises'
 import readline from 'node:readline'
 import type { Readable } from 'node:stream'
+import { currentAbortSignal } from './jobCancellation.js'
 
 export interface SpawnProcessOptions {
   // Human-readable name used in errors, e.g. 'MultiFoXS' or 'CHARMM heat'
@@ -13,7 +14,9 @@ export interface SpawnProcessOptions {
   // Merged over process.env
   env?: NodeJS.ProcessEnv
   timeoutMs?: number
-  // Aborting kills the process the same way a timeout does
+  // Aborting kills the process the same way a timeout does. Defaults to the
+  // running job's signal (see runCancellable), so cancelling a job stops
+  // whatever it is running.
   abortSignal?: AbortSignal
   // First signal sent on timeout/abort; SIGKILL follows after killGraceMs
   killSignal?: NodeJS.Signals
@@ -108,7 +111,7 @@ export const spawnProcess = async (
     cwd,
     env,
     timeoutMs,
-    abortSignal,
+    abortSignal = currentAbortSignal(),
     killSignal = 'SIGTERM',
     killGraceMs = 5000,
     stdoutFile,

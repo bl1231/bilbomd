@@ -1,10 +1,11 @@
-import { Worker } from 'bullmq'
+import { Worker, Job } from 'bullmq'
 import { Job as MongoJob, MultiJob } from '@bilbomd/mongodb-schema'
 import path from 'path'
 import fs from 'fs-extra'
 import { logger } from '../middleware/loggers.js'
 import { getEnvVar } from '../config/config.js'
 import { redis as connection } from '../queues/redisConn.js'
+import { requestJobCancellation } from '../queues/cancelJob.js'
 
 const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
@@ -47,38 +48,49 @@ const removeJobDirectory = async (uuid: string) => {
     }
   }
 
-  throw new Error(`Failed to remove directory ${jobDir} after ${maxAttempts} attempts`)
+  throw new Error(
+    `Failed to remove directory ${jobDir} after ${maxAttempts} attempts`
+  )
 }
 
-const deleteWorker = new Worker(
-  'delete-bilbomd',
-  async (job) => {
-    const mongoId = job.data.mongoId as string
+export const processDeleteJob = async (job: Job<{ mongoId: string }>) => {
+  const mongoId = job.data.mongoId
 
-    const jobDoc = await MongoJob.findById(mongoId)
-    const multiJobDoc = await MultiJob.findById(mongoId)
+  const jobDoc = await MongoJob.findById(mongoId)
+  const multiJobDoc = await MultiJob.findById(mongoId)
 
-    if (!jobDoc && !multiJobDoc) {
-      throw new Error(`No Job or MultiJob found with ID ${mongoId}`)
-    }
+  if (!jobDoc && !multiJobDoc) {
+    throw new Error(`No Job or MultiJob found with ID ${mongoId}`)
+  }
 
-    if (jobDoc) {
-      await jobDoc.deleteOne()
-      await removeJobDirectory(jobDoc.uuid)
-      logger.info(`Deleted Job: '${jobDoc.title}' with UUID ${jobDoc.uuid}`)
-    }
+  // Stop the job first if it is queued or running, so a worker isn't still
+  // writing into the directory we're about to remove. Failing to cancel
+  // shouldn't block the delete.
+  try {
+    await requestJobCancellation(mongoId, 'job deleted by user')
+  } catch (error) {
+    logger.error(`Failed to request cancellation of ${mongoId}: ${error}`)
+  }
 
-    if (multiJobDoc) {
-      await multiJobDoc.deleteOne()
-      await removeJobDirectory(multiJobDoc.uuid)
-      logger.info(
-        `Deleted MultiJob: '${multiJobDoc.title}' with UUID ${multiJobDoc.uuid}`
-      )
-    }
+  if (jobDoc) {
+    await jobDoc.deleteOne()
+    await removeJobDirectory(jobDoc.uuid)
+    logger.info(`Deleted Job: '${jobDoc.title}' with UUID ${jobDoc.uuid}`)
+  }
 
-    return { status: 'deleted', mongoId }
-  },
-  { connection }
-)
+  if (multiJobDoc) {
+    await multiJobDoc.deleteOne()
+    await removeJobDirectory(multiJobDoc.uuid)
+    logger.info(
+      `Deleted MultiJob: '${multiJobDoc.title}' with UUID ${multiJobDoc.uuid}`
+    )
+  }
+
+  return { status: 'deleted', mongoId }
+}
+
+const deleteWorker = new Worker('delete-bilbomd', processDeleteJob, {
+  connection
+})
 
 export default deleteWorker
