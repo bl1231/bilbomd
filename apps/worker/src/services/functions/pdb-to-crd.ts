@@ -1,12 +1,8 @@
 import { Job as BullMQJob } from 'bullmq'
 import { logger } from '../../helpers/loggers.js'
 import { config } from '../../config/config.js'
-import {
-  runProcess,
-  spawnProcess,
-  ProcessError
-} from '../../helpers/runProcess.js'
-import { summarizeCharmmErrors } from './charmm-errors.js'
+import { runProcess } from '../../helpers/runProcess.js'
+import { runCharmm } from './charmm.js'
 import path from 'path'
 
 const uploadFolder = process.env.DATA_VOL ?? '/bilbomd/uploads'
@@ -54,39 +50,15 @@ const runPdb2CrdCharmmFile = async (
   workingDir: string,
   inputFile: string
 ): Promise<string> => {
-  const outputFile = `${inputFile.split('.')[0]}.log`
-  const charmmArgs = ['-o', outputFile, '-i', inputFile]
-  logger.info(`charmmArgs: ${charmmArgs}`)
-
-  const output: string[] = []
-  const label = `CHARMM ${inputFile}`
-  const result = await spawnProcess({
-    label,
-    cmd: CHARMM_BIN,
-    args: charmmArgs,
+  const output = await runCharmm({
+    charmmBin: CHARMM_BIN,
+    inputFile,
+    outputFile: `${inputFile.split('.')[0]}.log`,
     cwd: workingDir,
-    timeoutMs: config.processTimeouts.charmmSetupMs,
-    onStdoutLine: (line) => output.push(line),
-    onStderrLine: (line) => output.push(line)
+    timeoutMs: config.processTimeouts.charmmSetupMs
   })
-
-  if (result.code === 0) {
-    MQJob.log(`pdb2crd done with ${inputFile}`)
-    logger.info(`CHARMM execution succeeded: ${inputFile}, exit code: 0`)
-    return output.join('\n')
-  }
-
-  // Log the full output for debugging, but build a concise error message
-  // for the UI by extracting only CHARMM error lines.
-  logger.error(
-    `CHARMM execution failed: ${inputFile}, exit code: ${result.code}\n${output.join('\n')}`
-  )
-  if (result.timedOut || result.aborted || result.signal) {
-    throw new ProcessError(label, CHARMM_BIN, result)
-  }
-  throw new Error(
-    `CHARMM execution failed: ${inputFile}, exit code: ${result.code}. ${summarizeCharmmErrors(output)}`
-  )
+  MQJob.log(`pdb2crd done with ${inputFile}`)
+  return output
 }
 
 const spawnPdb2CrdCharmm = (
