@@ -1,16 +1,49 @@
 import { Job as BullMQJob } from 'bullmq'
-import { Job } from '@bilbomd/mongodb-schema'
+import { Job, IJob } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
 import {
   updateNerscSpecificSteps,
   makeBilboMDSlurm,
   submitBilboMDSlurm
-} from '../functions/bilbomd-step-functions-nersc.js'
+} from '../functions/nersc-slurm.js'
 import {
   recordWorkerUsageEvent,
   buildContext,
   toPipeline
 } from '../functions/usage-events.js'
+
+// Usage event for the Slurm submission. The job's completion is recorded
+// later by the NERSC job monitor.
+const recordSubmission = (
+  job: IJob,
+  outcome:
+    | { eventType: 'job_started'; nerscJobID: string }
+    | { eventType: 'job_failed'; error: unknown }
+) =>
+  recordWorkerUsageEvent({
+    uuid: job.uuid,
+    jobId: job._id,
+    pipeline: toPipeline(
+      job.__t.replace('BilboMd', '').toLowerCase() || 'auto'
+    ),
+    eventType: outcome.eventType,
+    status: outcome.eventType === 'job_started' ? 'Pending' : 'Failed',
+    nersc: {
+      jobid:
+        outcome.eventType === 'job_started' ? outcome.nerscJobID : undefined,
+      qos: job.nersc?.qos
+    },
+    context: buildContext({
+      access_mode: job.access_mode,
+      user: job.user,
+      public_id: undefined,
+      client_ip_hash: undefined
+    }),
+    metadata:
+      outcome.eventType === 'job_started'
+        ? { stage: 'submitSlurm' }
+        : { stage: 'submitSlurm', error: (outcome.error as Error)?.message }
+  })
 
 const processBilboMDJobNersc = async (MQjob: BullMQJob) => {
   try {
@@ -51,45 +84,14 @@ const processBilboMDJobNersc = async (MQjob: BullMQJob) => {
         `Submitted bilbomd.slurm: ${MQjob.data.uuid} with jobID: ${nerscJobID}`
       )
 
-      // Record NERSC submission as usage event
-      await recordWorkerUsageEvent({
-        uuid: foundJob.uuid,
-        jobId: foundJob._id,
-        pipeline: toPipeline(
-          foundJob.__t.replace('BilboMd', '').toLowerCase() || 'auto'
-        ),
+      await recordSubmission(foundJob, {
         eventType: 'job_started',
-        status: 'Pending',
-        nersc: { jobid: nerscJobID, qos: foundJob.nersc?.qos },
-        context: buildContext({
-          access_mode: foundJob.access_mode,
-          user: foundJob.user,
-          public_id: undefined,
-          client_ip_hash: undefined
-        }),
-        metadata: { stage: 'submitSlurm' }
+        nerscJobID
       })
       await MQjob.updateProgress(100)
     } catch (error) {
       logger.error(`Failed to submit bilbomd.slurm: ${MQjob.data.uuid}`)
-      // Record failure to submit
-      await recordWorkerUsageEvent({
-        uuid: foundJob.uuid,
-        jobId: foundJob._id,
-        pipeline: toPipeline(
-          foundJob.__t.replace('BilboMd', '').toLowerCase() || 'auto'
-        ),
-        eventType: 'job_failed',
-        status: 'Failed',
-        nersc: { jobid: undefined, qos: foundJob.nersc?.qos },
-        context: buildContext({
-          access_mode: foundJob.access_mode,
-          user: foundJob.user,
-          public_id: undefined,
-          client_ip_hash: undefined
-        }),
-        metadata: { stage: 'submitSlurm', error: (error as Error)?.message }
-      })
+      await recordSubmission(foundJob, { eventType: 'job_failed', error })
       throw error
     }
   } catch (error) {

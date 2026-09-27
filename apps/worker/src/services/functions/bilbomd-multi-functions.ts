@@ -6,6 +6,7 @@ import { IMultiJob, IStepStatus, User, IUser } from '@bilbomd/mongodb-schema'
 import { updateStepStatus } from './mongo-utils.js'
 import { makeDir } from './job-utils.js'
 import { runProcess } from '../../helpers/runProcess.js'
+import { getErrorMessage } from '../../helpers/errors.js'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import {
@@ -15,9 +16,6 @@ import {
   createResultsArchive
 } from './prepare-results.js'
 import { createReadmeFile } from './create-readme-file.js'
-
-const getErrorMessage = (e: unknown): string =>
-  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
 const prepareMultiMDdatFileList = async (DBJob: IMultiJob): Promise<void> => {
   const startingDir = path.join(config.uploadDir, DBJob.uuid)

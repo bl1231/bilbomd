@@ -16,10 +16,10 @@ import { JobStatusOutputSacct } from '../types/nersc.js'
 import { getSlurmStatusFile } from '../services/functions/nersc-api-functions.js'
 import {
   copyBilboMDResults,
-  prepareBilboMDResults,
   sendBilboMDEmail,
   updateSingleJobStep
 } from '../services/functions/job-monitor-functions.js'
+import { prepareBilboMDResults } from '../services/functions/prepare-results.js'
 import {
   recordWorkerUsageEvent,
   buildContext

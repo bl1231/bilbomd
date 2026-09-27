@@ -13,7 +13,6 @@ import {
   submitJobToNersc,
   monitorTaskAtNERSC
 } from './nersc-api-functions.js'
-import { cleanupJob } from './job-utils.js'
 
 interface INerscTaskResult {
   id: string
@@ -214,73 +213,6 @@ const submitBilboMDSlurm = async (
   }
 }
 
-const copyBilboMDResults = async (MQjob: BullMQJob, DBjob: IJob) => {
-  try {
-    await updateJobStatus(
-      DBjob,
-      'copy_results_to_cfs',
-      'Running',
-      'Copying results from pscratch to CFS has started.'
-    )
-    await MQjob.log('start copy from pscratch to cfs')
-    const copyID = await executeNerscScript(
-      config.scripts.copyFromScratchToCFSScript,
-      DBjob.uuid
-    )
-    const copyResult = await monitorTaskAtNERSC(copyID)
-    logger.info(`copyResult: ${JSON.stringify(copyResult)}`)
-    await updateJobStatus(
-      DBjob,
-      'copy_results_to_cfs',
-      'Success',
-      'Copying results from pscratch to CFS successful.'
-    )
-    await MQjob.log('end copy from pscratch to cfs')
-  } catch (error) {
-    let errorMessage = 'Unknown error'
-    if (error instanceof Error) {
-      errorMessage = error.message
-    }
-    await updateJobStatus(
-      DBjob,
-      'copy_results_to_cfs',
-      'Error',
-      `Failed to copy BilboMD results from pscratch to cfs: ${errorMessage}`
-    )
-    logger.error(`Error during copyBilboMDResults job: ${errorMessage}`)
-  }
-}
-
-const sendBilboMDEmail = async (
-  MQjob: BullMQJob,
-  DBjob: IJob
-): Promise<void> => {
-  try {
-    await updateJobStatus(
-      DBjob,
-      'email',
-      'Running',
-      'Cleaning up & sending email has started.'
-    )
-    await cleanupJob(MQjob, DBjob)
-    await updateJobStatus(
-      DBjob,
-      'email',
-      'Success',
-      'Cleaning up & sending email successful.'
-    )
-  } catch (error) {
-    let errorMessage = 'Unknown error'
-    if (error instanceof Error) {
-      errorMessage = error.message
-    }
-    const statusMessage = `Failed to send email: ${errorMessage}`
-    await updateJobStatus(DBjob, 'email', 'Error', statusMessage)
-    await updateJobStatus(DBjob, 'nersc_job_status', 'Error', statusMessage)
-    logger.error(`Error during sendBilboMDEmail job: ${errorMessage}`)
-  }
-}
-
 const updateJobStatus = async (
   job: IJob,
   stepName: keyof IBilboMDSteps,
@@ -297,7 +229,5 @@ const updateJobStatus = async (
 export {
   updateNerscSpecificSteps,
   makeBilboMDSlurm,
-  submitBilboMDSlurm,
-  copyBilboMDResults,
-  sendBilboMDEmail
+  submitBilboMDSlurm
 }

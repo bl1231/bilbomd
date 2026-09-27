@@ -39,7 +39,7 @@ vi.mock('@bilbomd/mongodb-schema', () => ({
   MultiJob: { findOne }
 }))
 
-vi.mock('../../functions/bilbomd-step-functions-nersc.js', () => ({
+vi.mock('../../functions/nersc-slurm.js', () => ({
   updateNerscSpecificSteps: record('updateNerscSpecificSteps'),
   makeBilboMDSlurm: record('makeBilboMDSlurm'),
   submitBilboMDSlurm: record('submitBilboMDSlurm', '12345678')
