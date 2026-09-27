@@ -45,6 +45,16 @@ export type GuinierFit = {
   r2?: number // coefficient of determination of the fit
 }
 
+// How χ²free / Vr were computed for a job (beta: Dmax is estimated)
+export type FitMetricsInfo = {
+  dmax: number // Å, used for the Shannon channel width π/Dmax
+  dmaxSource: 'guinier_rg' // Dmax ≈ dmaxPerRg × Guinier Rg
+  dmaxPerRg: number
+  shannonChannels: number // channels spanned by the experimental q-range
+  chi2freeRounds: number // random subsets used for the χ²free median
+  vrQmax: number // Å⁻¹; Vr only uses q up to this
+}
+
 export type FoxsData = {
   filename: string
   chisq: number
@@ -53,4 +63,9 @@ export type FoxsData = {
   data: FoxsDataPoint[]
   // Present only on the first (experimental/base) dataset when AutoRg succeeds
   guinier?: GuinierFit
+  // Fit-quality metrics; present when a Dmax could be estimated
+  chi2free?: number
+  vr?: number
+  // Present only on the first dataset alongside the metrics
+  fitMetrics?: FitMetricsInfo
 }

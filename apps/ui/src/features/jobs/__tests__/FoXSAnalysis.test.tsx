@@ -130,19 +130,21 @@ describe('FoXSAnalysis', () => {
     })
 
     it('should show loading spinner when data is loading (public)', () => {
-      vi.spyOn(
-        publicJobsApiSlice,
-        'useGetPublicFoxsDataQuery'
-      ).mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        isError: false,
-        isSuccess: false,
-        refetch: vi.fn()
-      } as never)
+      vi.spyOn(publicJobsApiSlice, 'useGetPublicFoxsDataQuery').mockReturnValue(
+        {
+          data: undefined,
+          isLoading: true,
+          isError: false,
+          isSuccess: false,
+          refetch: vi.fn()
+        } as never
+      )
 
       renderWithProviders(
-        <FoXSAnalysis publicId="public-123" isPublic={true} />
+        <FoXSAnalysis
+          publicId="public-123"
+          isPublic={true}
+        />
       )
 
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
@@ -171,20 +173,22 @@ describe('FoXSAnalysis', () => {
     })
 
     it('should show error alert when query fails (public)', () => {
-      vi.spyOn(
-        publicJobsApiSlice,
-        'useGetPublicFoxsDataQuery'
-      ).mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        isError: true,
-        error: { status: 404, data: 'Not found' },
-        isSuccess: false,
-        refetch: vi.fn()
-      } as never)
+      vi.spyOn(publicJobsApiSlice, 'useGetPublicFoxsDataQuery').mockReturnValue(
+        {
+          data: undefined,
+          isLoading: false,
+          isError: true,
+          error: { status: 404, data: 'Not found' },
+          isSuccess: false,
+          refetch: vi.fn()
+        } as never
+      )
 
       renderWithProviders(
-        <FoXSAnalysis publicId="public-123" isPublic={true} />
+        <FoXSAnalysis
+          publicId="public-123"
+          isPublic={true}
+        />
       )
 
       expect(screen.getByText('FoXS request failed.')).toBeInTheDocument()
@@ -210,7 +214,9 @@ describe('FoXSAnalysis', () => {
       // Text is split by code element, so check parts
       expect(screen.getByText(/No experimental/i)).toBeInTheDocument()
       expect(screen.getByText('.dat')).toBeInTheDocument()
-      expect(screen.getByText(/or base FoXS dataset was found/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/or base FoXS dataset was found/i)
+      ).toBeInTheDocument()
     })
 
     it('should show info alert when base data is empty', () => {
@@ -278,7 +284,12 @@ describe('FoXSAnalysis', () => {
           refetch: vi.fn()
         } as never)
 
-      renderWithProviders(<FoXSAnalysis id="job-123" isPublic={false} />)
+      renderWithProviders(
+        <FoXSAnalysis
+          id="job-123"
+          isPublic={false}
+        />
+      )
 
       expect(protectedQuerySpy).toHaveBeenCalledWith('job-123', {
         pollingInterval: 0,
@@ -314,7 +325,10 @@ describe('FoXSAnalysis', () => {
         } as never)
 
       renderWithProviders(
-        <FoXSAnalysis publicId="public-123" isPublic={true} />
+        <FoXSAnalysis
+          publicId="public-123"
+          isPublic={true}
+        />
       )
 
       expect(protectedQuerySpy).toHaveBeenCalledWith(undefined, {
@@ -340,7 +354,12 @@ describe('FoXSAnalysis', () => {
           refetch: vi.fn()
         } as never)
 
-      renderWithProviders(<FoXSAnalysis id="job-123" active={false} />)
+      renderWithProviders(
+        <FoXSAnalysis
+          id="job-123"
+          active={false}
+        />
+      )
 
       expect(protectedQuerySpy).toHaveBeenCalledWith('job-123', {
         pollingInterval: 0,
@@ -362,7 +381,11 @@ describe('FoXSAnalysis', () => {
         } as never)
 
       renderWithProviders(
-        <FoXSAnalysis publicId="public-123" isPublic={true} active={false} />
+        <FoXSAnalysis
+          publicId="public-123"
+          isPublic={true}
+          active={false}
+        />
       )
 
       expect(publicQuerySpy).toHaveBeenCalledWith('public-123', {
@@ -562,6 +585,57 @@ describe('FoXSAnalysis', () => {
       })
 
       expect(screen.getByText('Original Model')).toBeInTheDocument()
+    })
+  })
+
+  describe('fit metrics', () => {
+    const mockQuery = (data: FoxsData[]) =>
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+
+    it('shows the fit quality table when the backend provides metrics', async () => {
+      mockQuery([
+        {
+          ...mockFoxsDataEnsemble[0]!,
+          chi2free: 1.8,
+          vr: 0.25,
+          fitMetrics: {
+            dmax: 60,
+            dmaxSource: 'guinier_rg',
+            dmaxPerRg: 3,
+            shannonChannels: 10,
+            chi2freeRounds: 1000,
+            vrQmax: 0.3
+          }
+        },
+        { ...mockFoxsDataEnsemble[1]!, chi2free: 1.1, vr: 0.12 }
+      ])
+
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      expect(
+        await screen.findByRole('table', { name: 'Fit quality metrics' })
+      ).toBeInTheDocument()
+      expect(screen.getByText('1.80')).toBeInTheDocument()
+      expect(screen.getByText('0.120')).toBeInTheDocument()
+    })
+
+    it('hides the table for jobs without metrics', async () => {
+      mockQuery(mockFoxsDataEnsemble)
+
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('foxs-chart')).toBeInTheDocument()
+      })
+      expect(
+        screen.queryByRole('table', { name: 'Fit quality metrics' })
+      ).not.toBeInTheDocument()
     })
   })
 
