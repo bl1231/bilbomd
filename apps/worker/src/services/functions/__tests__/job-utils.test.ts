@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { EventEmitter } from 'node:events'
 import {
   initializeJob,
   cleanupJob,
@@ -19,9 +18,9 @@ import fs from 'fs-extra'
 import { updateStepStatus, updateJobStatus } from '../mongo-utils.js'
 import { Types } from 'mongoose'
 
-const { spawnMock } = vi.hoisted(() => ({ spawnMock: vi.fn() }))
+const { runCharmmMock } = vi.hoisted(() => ({ runCharmmMock: vi.fn() }))
 
-vi.mock('node:child_process', () => ({ spawn: spawnMock }))
+vi.mock('../charmm.js', () => ({ runCharmm: runCharmmMock }))
 
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: {
@@ -62,13 +61,6 @@ vi.mock('@bilbomd/mongodb-schema', async () => {
   }
 })
 
-// Minimal fake CHARMM ChildProcess: an EventEmitter with a stdout emitter.
-const makeCharmmChild = () => {
-  const child = new EventEmitter() as EventEmitter & { stdout: EventEmitter }
-  child.stdout = new EventEmitter()
-  return child
-}
-
 describe('job-utils', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -108,7 +100,9 @@ describe('job-utils', () => {
         save: vi.fn().mockRejectedValue(new Error('Database error'))
       } as unknown as IJob
 
-      await expect(initializeJob(mockMQJob, mockDBJob)).rejects.toThrow('Database error')
+      await expect(initializeJob(mockMQJob, mockDBJob)).rejects.toThrow(
+        'Database error'
+      )
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Error in initializeJob')
       )
@@ -343,7 +337,9 @@ describe('job-utils', () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Template not found'))
       vi.mocked(config).charmmTemplateDir = '/templates'
 
-      await expect(generateInputFile(mockParams)).rejects.toThrow('Template not found')
+      await expect(generateInputFile(mockParams)).rejects.toThrow(
+        'Template not found'
+      )
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Error in readTemplate')
       )
@@ -574,11 +570,13 @@ describe('job-utils', () => {
       } as unknown as IJob
 
       vi.mocked(updateJobStatus).mockResolvedValue(undefined)
-      vi.mocked(updateStepStatus).mockRejectedValue(new Error('step write failed'))
-
-      await expect(handleError(new Error('boom'), mockDBJob, 'md')).rejects.toThrow(
-        "BilboMD failed in step 'md': boom"
+      vi.mocked(updateStepStatus).mockRejectedValue(
+        new Error('step write failed')
       )
+
+      await expect(
+        handleError(new Error('boom'), mockDBJob, 'md')
+      ).rejects.toThrow("BilboMD failed in step 'md': boom")
 
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to update step status for step md')
@@ -588,67 +586,67 @@ describe('job-utils', () => {
 
   describe('spawnCharmm', () => {
     const params = {
+      charmm_template: 'minimize',
       charmm_inp_file: 'minimize.inp',
       charmm_out_file: 'minimize.out',
       out_dir: '/tmp/job-dir'
-    }
+    } as unknown as Parameters<typeof spawnCharmm>[0]
 
-    it('spawns CHARMM with the configured binary and args, resolving on close 0', async () => {
-      const child = makeCharmmChild()
-      spawnMock.mockReturnValue(child)
+    beforeEach(() => {
+      runCharmmMock.mockResolvedValue('')
+    })
+
+    it('runs CHARMM with the configured binary, files and setup timeout', async () => {
       vi.mocked(config).charmmBin = '/usr/local/bin/charmm'
 
-      const p = spawnCharmm(params)
-      child.emit('close', 0)
+      await expect(spawnCharmm(params)).resolves.toBeUndefined()
 
-      await expect(p).resolves.toBeUndefined()
-      expect(spawnMock).toHaveBeenCalledWith(
-        '/usr/local/bin/charmm',
-        ['-o', 'minimize.out', '-i', 'minimize.inp'],
-        { cwd: '/tmp/job-dir' }
+      expect(runCharmmMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          charmmBin: '/usr/local/bin/charmm',
+          inputFile: 'minimize.inp',
+          outputFile: 'minimize.out',
+          cwd: '/tmp/job-dir',
+          timeoutMs: config.processTimeouts.charmmSetupMs,
+          heartbeat: undefined
+        })
       )
     })
 
-    it('rejects with the accumulated stdout when CHARMM exits non-zero', async () => {
-      const child = makeCharmmChild()
-      spawnMock.mockReturnValue(child)
+    it('uses the MD timeout for dynamics runs', async () => {
+      await spawnCharmm({ ...params, charmm_template: 'dynamics' })
 
-      const p = spawnCharmm(params)
-      child.stdout.emit('data', Buffer.from('CHARMM> abnormal termination'))
-      child.emit('close', 1)
-
-      await expect(p).rejects.toThrow('CHARMM> abnormal termination')
+      expect(runCharmmMock.mock.calls[0][0].timeoutMs).toBe(
+        config.processTimeouts.charmmMdMs
+      )
     })
 
-    it('rejects when the CHARMM process emits an error', async () => {
-      const child = makeCharmmChild()
-      spawnMock.mockReturnValue(child)
+    it('propagates CHARMM failures', async () => {
+      runCharmmMock.mockRejectedValue(
+        new Error('CHARMM execution failed: minimize.inp, exit code: 1')
+      )
 
-      const p = spawnCharmm(params)
-      child.emit('error', new Error('ENOENT'))
-
-      await expect(p).rejects.toThrow(/CHARMM process encountered an error: ENOENT/)
+      await expect(spawnCharmm(params)).rejects.toThrow(
+        'CHARMM execution failed: minimize.inp'
+      )
     })
 
-    it('emits heartbeat progress updates while running when given an MQ job', async () => {
-      vi.useFakeTimers()
-      const child = makeCharmmChild()
-      spawnMock.mockReturnValue(child)
+    it('reports heartbeat progress to the MQ job', async () => {
       const MQjob = {
         updateProgress: vi.fn(),
         log: vi.fn()
       } as unknown as BullMQJob
 
-      const p = spawnCharmm(params, MQjob)
-      await vi.advanceTimersByTimeAsync(10_000)
-      child.emit('close', 0)
+      await spawnCharmm(params, MQjob)
+      const { heartbeat } = runCharmmMock.mock.calls[0][0]
+      expect(heartbeat.intervalMs).toBe(10_000)
+      heartbeat.onBeat(10_000)
 
-      await expect(p).resolves.toBeUndefined()
       expect(MQjob.updateProgress).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'running' })
       )
       expect(MQjob.log).toHaveBeenCalledWith(
-        expect.stringContaining('Heartbeat')
+        'Heartbeat: still running minimize.inp'
       )
     })
   })

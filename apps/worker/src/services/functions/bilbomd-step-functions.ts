@@ -1,6 +1,7 @@
 import { logger } from '../../helpers/loggers.js'
 import { config } from '../../config/config.js'
-import { spawn, ChildProcess } from 'node:child_process'
+import { runProcess } from '../../helpers/runProcess.js'
+import { getErrorMessage } from '../../helpers/errors.js'
 import { promisify } from 'util'
 import fs from 'fs-extra'
 import os from 'os'
@@ -73,53 +74,22 @@ const makeFoxsDatFileList = async (dir: string) => {
   }
 }
 
-const spawnMultiFoxs = (params: MultiFoxsParams): Promise<void> => {
+const spawnMultiFoxs = async (params: MultiFoxsParams): Promise<void> => {
   const multiFoxsDir = path.join(params.out_dir, 'multifoxs')
-  const logFile = path.join(multiFoxsDir, 'multi_foxs.log')
-  const errorFile = path.join(multiFoxsDir, 'multi_foxs_error.log')
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
-  const saxsData = path.join(params.out_dir, params.data_file)
-  const multiFoxArgs = ['-o', saxsData, 'foxs_dat_files.txt']
-  const multiFoxOpts = { cwd: multiFoxsDir }
-
-  return new Promise((resolve, reject) => {
-    const multiFoxs: ChildProcess = spawn(
-      config.multifoxsBin,
-      multiFoxArgs,
-      multiFoxOpts
-    )
-    multiFoxs.stdout?.on('data', (data) => {
-      logStream.write(data.toString())
-    })
-    multiFoxs.stderr?.on('data', (data) => {
-      errorStream.write(data.toString())
-    })
-    multiFoxs.on('error', (error) => {
-      logger.error(`spawnMultiFoxs error: ${error}`)
-      reject(error)
-    })
-    multiFoxs.on('exit', (code: number) => {
-      const closeStreamsPromises = [
-        new Promise((resolveStream) => logStream.end(resolveStream)),
-        new Promise((resolveStream) => errorStream.end(resolveStream))
-      ]
-      Promise.all(closeStreamsPromises)
-        .then(() => {
-          if (code === 0) {
-            logger.info(`spawnMultiFoxs close success exit code: ${code}`)
-            resolve()
-          } else {
-            logger.info(`spawnMultiFoxs close error exit code: ${code}`)
-            reject(`spawnMultiFoxs on close reject`)
-          }
-        })
-        .catch((streamError) => {
-          logger.error(`Error closing file streams: ${streamError}`)
-          reject(streamError)
-        })
-    })
+  await runProcess({
+    label: 'MultiFoXS',
+    cmd: config.multifoxsBin,
+    args: [
+      '-o',
+      path.join(params.out_dir, params.data_file),
+      'foxs_dat_files.txt'
+    ],
+    cwd: multiFoxsDir,
+    stdoutFile: path.join(multiFoxsDir, 'multi_foxs.log'),
+    stderrFile: path.join(multiFoxsDir, 'multi_foxs_error.log'),
+    timeoutMs: config.processTimeouts.multifoxsMs
   })
+  logger.info('spawnMultiFoxs completed successfully')
 }
 
 const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
@@ -161,18 +131,6 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
   const logFile = path.join(params.out_dir, 'af2pae.log')
   const errorFile = path.join(params.out_dir, 'af2pae_error.log')
   logger.debug(`Log files: stdout=${logFile}, stderr=${errorFile}`)
-
-  let logStream: fs.WriteStream
-  let errorStream: fs.WriteStream
-
-  try {
-    logStream = fs.createWriteStream(logFile, { flags: 'a' })
-    errorStream = fs.createWriteStream(errorFile, { flags: 'a' })
-    logger.debug(`Log streams created successfully`)
-  } catch (error) {
-    logger.error(`Failed to create log streams: ${error}`)
-    throw error
-  }
 
   const pythonBin = params.python_bin ?? config.basePythonBin
   const af2paeScript = params.script_path ?? '/app/scripts/pae2const.py'
@@ -252,157 +210,21 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
   const args = [af2paeScript, ...fileFlag, ...optionalFlags, params.in_pae]
   logger.debug(`Full command args: ${JSON.stringify(args)}`)
 
-  const opts = { cwd: params.out_dir }
-  logger.debug(`Spawn options: ${JSON.stringify(opts)}`)
+  logger.debug(`Working directory: ${params.out_dir}`)
 
-  // Log the full command that would be executed
-  logger.debug(`Full command: ${pythonBin} ${args.join(' ')}`)
-  logger.debug(`Working directory: ${opts.cwd}`)
-
-  return new Promise((resolve, reject) => {
-    logger.debug(`Starting spawn process...`)
-
-    let runPaeToConst: ChildProcess
-    try {
-      runPaeToConst = spawn(pythonBin, args, opts)
-      logger.debug(`Process spawned successfully, PID: ${runPaeToConst.pid}`)
-    } catch (spawnError) {
-      logger.error(`Failed to spawn process: ${spawnError}`)
-      // Close streams before rejecting
-      Promise.all([
-        new Promise((r) => logStream.end(r)),
-        new Promise((r) => errorStream.end(r))
-      ]).finally(() => reject(spawnError))
-      return
-    }
-
-    // Set up timeout to detect hanging processes
-    const processTimeout = setTimeout(
-      () => {
-        logger.error(`Process timeout after 5 minutes, killing process`)
-        runPaeToConst.kill('SIGKILL')
-      },
-      5 * 60 * 1000
-    ) // 5 minutes
-
-    runPaeToConst.stdout?.on('data', (data) => {
-      const s = data.toString()
-      logger.debug(
-        `runPaeToConst stdout chunk (${s.length} chars): ${s.substring(0, 200)}${s.length > 200 ? '...' : ''}`
-      )
-      try {
-        logStream.write(s)
-      } catch (writeError) {
-        logger.error(`Failed to write to log stream: ${writeError}`)
-      }
-    })
-
-    runPaeToConst.stderr?.on('data', (data) => {
-      const s = data.toString()
-      logger.debug(
-        `runPaeToConst stderr chunk (${s.length} chars): ${s.substring(0, 200)}${s.length > 200 ? '...' : ''}`
-      )
-      logger.error(`runPaeToConst stderr: ${s}`)
-      try {
-        errorStream.write(s)
-      } catch (writeError) {
-        logger.error(`Failed to write to error stream: ${writeError}`)
-      }
-    })
-
-    runPaeToConst.on('error', (error) => {
-      clearTimeout(processTimeout)
-      logger.error(
-        `runPaeToConst process error: error=${(error as Error).message}, code=${(error as NodeJS.ErrnoException).code}, errno=${(error as NodeJS.ErrnoException).errno}, syscall=${(error as NodeJS.ErrnoException).syscall}, path=${(error as NodeJS.ErrnoException).path}`
-      )
-
-      // ensure streams are closed before rejecting
-      Promise.all([
-        new Promise((r) => {
-          try {
-            logStream.end(r)
-          } catch (e) {
-            logger.error(`Error closing log stream: ${e}`)
-            r(undefined)
-          }
-        }),
-        new Promise((r) => {
-          try {
-            errorStream.end(r)
-          } catch (e) {
-            logger.error(`Error closing error stream: ${e}`)
-            r(undefined)
-          }
-        })
-      ]).finally(() => {
-        logger.debug(`Streams closed, rejecting with error`)
-        reject(error)
-      })
-    })
-
-    runPaeToConst.on('exit', (code: number | null, signal: string | null) => {
-      clearTimeout(processTimeout)
-      logger.debug(
-        `runPaeToConst process exited with code: ${code}, signal: ${signal}`
-      )
-
-      const closeStreams = Promise.all([
-        new Promise((r) => {
-          try {
-            logStream.end(r)
-          } catch (e) {
-            logger.error(`Error closing log stream on exit: ${e}`)
-            r(undefined)
-          }
-        }),
-        new Promise((r) => {
-          try {
-            errorStream.end(r)
-          } catch (e) {
-            logger.error(`Error closing error stream on exit: ${e}`)
-            r(undefined)
-          }
-        })
-      ])
-
-      closeStreams
-        .then(() => {
-          logger.debug(`Streams closed successfully`)
-          if (code === 0) {
-            logger.debug(
-              `runPaeToConst completed successfully with exit code: ${code}`
-            )
-            resolve(String(code))
-          } else {
-            logger.error(
-              `runPaeToConst failed with exit code: ${code}, signal: ${signal}`
-            )
-            reject(
-              new Error(
-                `runPaeToConst failed with exit code ${code}${signal ? ` and signal ${signal}` : ''}. Please see the error log file: ${errorFile}`
-              )
-            )
-          }
-        })
-        .catch((streamError) => {
-          logger.error(`Error closing file streams: ${streamError}`)
-          reject(streamError)
-        })
-    })
-
-    runPaeToConst.on('close', (code: number | null, signal: string | null) => {
-      logger.debug(
-        `runPaeToConst process closed with code: ${code}, signal: ${signal}`
-      )
-    })
-
-    // Additional debugging for process state
-    if (runPaeToConst.pid) {
-      logger.debug(`Process started with PID: ${runPaeToConst.pid}`)
-    } else {
-      logger.warn(`Process started but no PID available`)
-    }
+  await runProcess({
+    label: 'pae2const.py',
+    cmd: pythonBin,
+    args,
+    cwd: params.out_dir,
+    stdoutFile: logFile,
+    stderrFile: errorFile,
+    appendLogs: true,
+    timeoutMs: config.processTimeouts.helperScriptMs,
+    onStderrLine: (line) => logger.error(`runPaeToConst stderr: ${line}`)
   })
+  logger.debug('runPaeToConst completed successfully')
+  return '0'
 }
 
 const storeConstraintsInMongoDB = async (
@@ -677,81 +499,50 @@ const runPaeToConstInp = async (
 
 const runAutoRg = async (DBjob: IBilboMDAutoJob): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
-  const logFile = path.join(outputDir, 'autoRg.log')
-  const errorFile = path.join(outputDir, 'autoRg_error.log')
-  const autoRg_script = '/app/scripts/autorg.py'
   const tempOutputFile = path.join(os.tmpdir(), `autoRg_${Date.now()}.json`)
-  const args = [autoRg_script, DBjob.data_file, tempOutputFile]
-
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
 
   logger.info(`Starting autorg for job ${DBjob.uuid}`)
-  let status: IStepStatus = {
+  await updateStepStatus(DBjob, 'autorg', {
     status: 'Running',
     message: 'Calculate Rg has started.'
-  }
-  await updateStepStatus(DBjob, 'autorg', status)
-
-  return new Promise<void>((resolve, reject) => {
-    const autoRg = spawn('/opt/envs/base/bin/python', args, { cwd: outputDir })
-
-    autoRg.stdout?.on('data', (data) => {
-      logStream.write(data.toString())
-    })
-
-    autoRg.stderr?.on('data', (data) => {
-      errorStream.write(data.toString())
-    })
-
-    autoRg.on('error', (error) => {
-      logger.error(`runAutoRg error: ${error}`)
-      errorStream.end() // Ensure error stream is closed on process error
-      logStream.end() // Ensure log stream is closed on process error
-      reject(error)
-    })
-
-    autoRg.on('exit', async (code) => {
-      // Close streams explicitly once the process exits
-      logStream.end()
-      errorStream.end()
-
-      if (code === 0) {
-        try {
-          // Read the output from the temp file
-          const analysisResults = JSON.parse(
-            await fs.promises.readFile(tempOutputFile, 'utf-8')
-          )
-
-          // Save results to the DBjob
-          DBjob.rg = analysisResults.rg
-          DBjob.rg_min = analysisResults.rg_min
-          DBjob.rg_max = analysisResults.rg_max
-          await DBjob.save()
-
-          status = {
-            status: 'Success',
-            message: 'Calculate Rg completed successfully.'
-          }
-          await updateStepStatus(DBjob, 'autorg', status)
-          logger.info(`Completed autorg for job ${DBjob.uuid}`)
-          resolve()
-        } catch (parseError) {
-          reject(parseError)
-        } finally {
-          // Clean up the temporary file
-          await fs.promises.unlink(tempOutputFile)
-        }
-      } else {
-        status = {
-          status: 'Error',
-          message: `AutoRg process exited with code ${code}.`
-        }
-        await updateStepStatus(DBjob, 'autorg', status)
-        reject(new Error(status.message))
-      }
-    })
   })
+
+  try {
+    await runProcess({
+      label: 'AutoRg',
+      cmd: '/opt/envs/base/bin/python',
+      args: ['/app/scripts/autorg.py', DBjob.data_file, tempOutputFile],
+      cwd: outputDir,
+      stdoutFile: path.join(outputDir, 'autoRg.log'),
+      stderrFile: path.join(outputDir, 'autoRg_error.log'),
+      timeoutMs: config.processTimeouts.helperScriptMs
+    })
+  } catch (error) {
+    await updateStepStatus(DBjob, 'autorg', {
+      status: 'Error',
+      message: getErrorMessage(error)
+    })
+    await fs.remove(tempOutputFile)
+    throw error
+  }
+
+  try {
+    const analysisResults = JSON.parse(
+      await fs.promises.readFile(tempOutputFile, 'utf-8')
+    )
+    DBjob.rg = analysisResults.rg
+    DBjob.rg_min = analysisResults.rg_min
+    DBjob.rg_max = analysisResults.rg_max
+    await DBjob.save()
+  } finally {
+    await fs.remove(tempOutputFile)
+  }
+
+  await updateStepStatus(DBjob, 'autorg', {
+    status: 'Success',
+    message: 'Calculate Rg completed successfully.'
+  })
+  logger.info(`Completed autorg for job ${DBjob.uuid}`)
 }
 
 const runMinimize = async (
@@ -950,5 +741,7 @@ export {
   runMolecularDynamics,
   runMultiFoxs,
   generateDCD2PDBInpFile,
-  spawnCharmm
+  spawnCharmm,
+  spawnMultiFoxs,
+  spawnPaeToConst
 }

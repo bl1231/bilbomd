@@ -1,11 +1,13 @@
 import { Job as BullMQJob } from 'bullmq'
 import { logger } from '../../helpers/loggers.js'
-import fs from 'fs-extra'
+import { config } from '../../config/config.js'
+import { runProcess } from '../../helpers/runProcess.js'
+import { runCharmm } from './charmm.js'
 import path from 'path'
-import { spawn } from 'node:child_process'
 
 const uploadFolder = process.env.DATA_VOL ?? '/bilbomd/uploads'
 const CHARMM_BIN = process.env.CHARMM ?? '/usr/local/bin/charmm'
+const PYTHON_BIN = '/opt/envs/base/bin/python'
 
 interface Pdb2CrdCharmmInputData {
   uuid: string
@@ -18,81 +20,47 @@ const createPdb2CrdCharmmInpFiles = async (
   logger.info(`in createCharmmInpFile: ${JSON.stringify(data)}`)
   const workingDir = path.join(uploadFolder, data.uuid)
   const inputPDB = path.join(workingDir, data.pdb_file)
-  const logFile = path.join(workingDir, 'pdb2crd-python.log')
-  const errorFile = path.join(workingDir, 'pdb2crd-python_error.log')
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
-  const pdb2crd_script = '/app/scripts/pdb2crd.py'
-  const args = [pdb2crd_script, inputPDB, '.']
 
-  return new Promise<string[]>((resolve, reject) => {
-    const pdb2crd = spawn('/opt/envs/base/bin/python', args, {
-      cwd: workingDir
-    })
-
-    pdb2crd.stdout.on('data', (data: Buffer) => {
-      logStream.write(data.toString())
-    })
-
-    pdb2crd.stderr.on('data', (data: Buffer) => {
-      const errorString = data.toString().trim()
-      logger.error(`createCharmmInpFile stderr: ${errorString}`)
-      errorStream.write(errorString + '\n')
-    })
-
-    pdb2crd.on('error', (error) => {
-      logger.error(`createCharmmInpFile error: ${error}`)
-      reject(error)
-    })
-
-    pdb2crd.on('close', (code) => {
-      // Close streams explicitly once the process closes
-      const closeStreamsPromises = [
-        new Promise((resolveStream) => logStream.end(resolveStream)),
-        new Promise((resolveStream) => errorStream.end(resolveStream))
-      ]
-
-      Promise.all(closeStreamsPromises)
-        .then(() => {
-          if (code === 0) {
-            // Read the log file to extract the output filenames
-            fs.readFile(logFile, 'utf8', (err, data) => {
-              if (err) {
-                logger.error(`Failed to read log file: ${err}`)
-                reject(new Error('Failed to read log file'))
-                return
-              }
-
-              const outputFiles: string[] = []
-              const lines = data.split('\n')
-              lines.forEach((line) => {
-                line = line.trim()
-                if (line) {
-                  // Only process non-empty lines
-                  logger.info(`inpFile: ${line}`)
-                  outputFiles.push(line)
-                }
-              })
-
-              logger.info(
-                `Successfully parsed output files: ${outputFiles.join(', ')}`
-              )
-              resolve(outputFiles)
-            })
-          } else {
-            logger.error(`createCharmmInpFile error with exit code: ${code}`)
-            reject(
-              new Error(`createCharmmInpFile error with exit code: ${code}`)
-            )
-          }
-        })
-        .catch((streamError) => {
-          logger.error(`Error closing file streams: ${streamError}`)
-          reject(new Error(`Error closing file streams: ${streamError}`))
-        })
-    })
+  // pdb2crd.py prints the name of each CHARMM input file it writes, one per line
+  const outputFiles: string[] = []
+  await runProcess({
+    label: 'pdb2crd.py',
+    cmd: PYTHON_BIN,
+    args: ['/app/scripts/pdb2crd.py', inputPDB, '.'],
+    cwd: workingDir,
+    stdoutFile: path.join(workingDir, 'pdb2crd-python.log'),
+    stderrFile: path.join(workingDir, 'pdb2crd-python_error.log'),
+    timeoutMs: config.processTimeouts.helperScriptMs,
+    onStdoutLine: (line) => {
+      const inpFile = line.trim()
+      if (inpFile) {
+        logger.info(`inpFile: ${inpFile}`)
+        outputFiles.push(inpFile)
+      }
+    },
+    onStderrLine: (line) => logger.error(`createCharmmInpFile stderr: ${line}`)
   })
+
+  logger.info(`Successfully parsed output files: ${outputFiles.join(', ')}`)
+  return outputFiles
 }
+
+const runPdb2CrdCharmmFile = async (
+  MQJob: BullMQJob,
+  workingDir: string,
+  inputFile: string
+): Promise<string> => {
+  const output = await runCharmm({
+    charmmBin: CHARMM_BIN,
+    inputFile,
+    outputFile: `${inputFile.split('.')[0]}.log`,
+    cwd: workingDir,
+    timeoutMs: config.processTimeouts.charmmSetupMs
+  })
+  MQJob.log(`pdb2crd done with ${inputFile}`)
+  return output
+}
+
 const spawnPdb2CrdCharmm = (
   MQJob: BullMQJob,
   inputFiles: string[]
@@ -100,127 +68,51 @@ const spawnPdb2CrdCharmm = (
   const workingDir = path.join(uploadFolder, MQJob.data.uuid)
   logger.info(`inputFiles for job ${MQJob.data.uuid}: ${inputFiles.join('\n')}`)
 
-  // Create an array of promises, each promise corresponds to one charmm job
-  const promises = inputFiles.map((inputFile) => {
-    const outputFile = `${inputFile.split('.')[0]}.log`
-    // logger.info(`in: ${inputFile} out: ${outputFile}`)
-    const charmmArgs = ['-o', outputFile, '-i', inputFile]
-    logger.info(`charmmArgs: ${charmmArgs}`)
-    const charmmOpts = { cwd: workingDir }
-
-    return new Promise<string>((resolve, reject) => {
-      const charmm = spawn(CHARMM_BIN, charmmArgs, charmmOpts)
-      let charmmOutput = ''
-
-      charmm.stdout.on('data', (data) => {
-        charmmOutput += data.toString()
-      })
-
-      charmm.stderr.on('data', (data) => {
-        charmmOutput += data.toString()
-      })
-
-      charmm.on('error', (error) => {
-        logger.error(
-          `CHARMM process for file ${inputFile} encountered an error: ${error.message}`
-        )
-        reject(
-          new Error(
-            `CHARMM process for file ${inputFile} encountered an error: ${error.message}`
-          )
-        )
-      })
-
-      charmm.on('close', (code) => {
-        if (code === 0) {
-          MQJob.log(`pdb2crd done with ${inputFile}`)
-          logger.info(
-            `CHARMM execution succeeded: ${inputFile}, exit code: ${code}`
-          )
-          resolve(charmmOutput)
-        } else {
-          // Log the full output for debugging, but build a concise error
-          // message for the UI by extracting only CHARMM error lines.
-          logger.error(
-            `CHARMM execution failed: ${inputFile}, exit code: ${code}\n${charmmOutput}`
-          )
-          const errorLines = charmmOutput
-            .split('\n')
-            .filter(
-              (line) =>
-                line.includes('***** ERROR') ||
-                line.includes('ABNORMAL TERMINATION') ||
-                line.trimStart().startsWith('?')
-            )
-            .map((line) => line.trim())
-            .filter(Boolean)
-          const errorSummary =
-            errorLines.length > 0
-              ? errorLines.join(' | ')
-              : 'see CHARMM log for details'
-          reject(
-            new Error(
-              `CHARMM execution failed: ${inputFile}, exit code: ${code}. ${errorSummary}`
-            )
-          )
-        }
-      })
-    })
-  })
-
-  return Promise.all(promises)
+  // One CHARMM run per input file, all in parallel
+  return Promise.all(
+    inputFiles.map((inputFile) =>
+      runPdb2CrdCharmmFile(MQJob, workingDir, inputFile)
+    )
+  )
 }
+
+// Runs one of the small PDB preparation scripts: `python <script> ...args`,
+// logging to <logName>.log / <logName>_error.log in the job directory.
+const runPrepScript = (
+  workingDir: string,
+  script: string,
+  args: string[],
+  logName: string,
+  logPrefix: string
+) =>
+  runProcess({
+    label: path.basename(script),
+    cmd: PYTHON_BIN,
+    args: [script, ...args],
+    cwd: workingDir,
+    stdoutFile: path.join(workingDir, `${logName}.log`),
+    stderrFile: path.join(workingDir, `${logName}_error.log`),
+    timeoutMs: config.processTimeouts.helperScriptMs,
+    onStderrLine: (line) => logger.error(`${logPrefix} stderr: ${line}`)
+  })
 
 interface PrepPdbData {
   uuid: string
   pdb_file: string
 }
 
-const runPrepPdb = (data: PrepPdbData): Promise<void> => {
+const runPrepPdb = async (data: PrepPdbData): Promise<void> => {
   const workingDir = path.join(uploadFolder, data.uuid)
-  const pdbPath = path.join(workingDir, data.pdb_file)
-  const logFile = path.join(workingDir, 'prep_pdb.log')
-  const errorFile = path.join(workingDir, 'prep_pdb_error.log')
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
-  const script = '/app/scripts/prep_pdb.py'
-
   logger.info(`runPrepPdb: preparing ${data.pdb_file} for OpenMM`)
 
-  return new Promise<void>((resolve, reject) => {
-    const proc = spawn('/opt/envs/base/bin/python', [script, pdbPath], {
-      cwd: workingDir
-    })
-
-    proc.stdout.on('data', (chunk: Buffer) => {
-      logStream.write(chunk.toString())
-    })
-
-    proc.stderr.on('data', (chunk: Buffer) => {
-      const msg = chunk.toString().trim()
-      logger.error(`runPrepPdb stderr: ${msg}`)
-      errorStream.write(msg + '\n')
-    })
-
-    proc.on('error', (error) => {
-      logger.error(`runPrepPdb spawn error: ${error}`)
-      reject(error)
-    })
-
-    proc.on('close', (code) => {
-      Promise.all([
-        new Promise((r) => logStream.end(r)),
-        new Promise((r) => errorStream.end(r))
-      ]).then(() => {
-        if (code === 0) {
-          logger.info(`runPrepPdb succeeded for ${data.pdb_file}`)
-          resolve()
-        } else {
-          reject(new Error(`prep_pdb.py exited with code ${code}`))
-        }
-      }).catch(reject)
-    })
-  })
+  await runPrepScript(
+    workingDir,
+    '/app/scripts/prep_pdb.py',
+    [path.join(workingDir, data.pdb_file)],
+    'prep_pdb',
+    'runPrepPdb'
+  )
+  logger.info(`runPrepPdb succeeded for ${data.pdb_file}`)
 }
 
 interface CifToPdbData {
@@ -232,52 +124,23 @@ interface CifToPdbData {
  * Convert an mmCIF file to PDB format using biopython.
  * Returns the basename of the output PDB file (the .cif extension replaced with .pdb).
  */
-const runCifToPdb = (data: CifToPdbData): Promise<string> => {
+const runCifToPdb = async (data: CifToPdbData): Promise<string> => {
   const workingDir = path.join(uploadFolder, data.uuid)
-  const inputCif = path.join(workingDir, data.pdb_file)
   const outputPdbName = data.pdb_file.replace(/\.cif$/i, '.pdb')
-  const outputPdb = path.join(workingDir, outputPdbName)
-  const logFile = path.join(workingDir, 'cif_to_pdb.log')
-  const errorFile = path.join(workingDir, 'cif_to_pdb_error.log')
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
-  const script = '/app/scripts/cif_to_pdb.py'
-  const args = [script, inputCif, outputPdb]
-
   logger.info(`runCifToPdb: converting ${data.pdb_file} -> ${outputPdbName}`)
 
-  return new Promise<string>((resolve, reject) => {
-    const proc = spawn('/opt/envs/base/bin/python', args, { cwd: workingDir })
-
-    proc.stdout.on('data', (chunk: Buffer) => {
-      logStream.write(chunk.toString())
-    })
-
-    proc.stderr.on('data', (chunk: Buffer) => {
-      const msg = chunk.toString().trim()
-      logger.error(`runCifToPdb stderr: ${msg}`)
-      errorStream.write(msg + '\n')
-    })
-
-    proc.on('error', (error) => {
-      logger.error(`runCifToPdb spawn error: ${error}`)
-      reject(error)
-    })
-
-    proc.on('close', (code) => {
-      Promise.all([
-        new Promise((r) => logStream.end(r)),
-        new Promise((r) => errorStream.end(r))
-      ]).then(() => {
-        if (code === 0) {
-          logger.info(`runCifToPdb succeeded: ${outputPdbName}`)
-          resolve(outputPdbName)
-        } else {
-          reject(new Error(`cif_to_pdb.py exited with code ${code}`))
-        }
-      }).catch(reject)
-    })
-  })
+  await runPrepScript(
+    workingDir,
+    '/app/scripts/cif_to_pdb.py',
+    [
+      path.join(workingDir, data.pdb_file),
+      path.join(workingDir, outputPdbName)
+    ],
+    'cif_to_pdb',
+    'runCifToPdb'
+  )
+  logger.info(`runCifToPdb succeeded: ${outputPdbName}`)
+  return outputPdbName
 }
 
 interface StripCofactorsData {
@@ -289,51 +152,24 @@ interface StripCofactorsData {
  * Strip molecular cofactors (FAD, HEM, PCA, etc.) that have no parameters in the
  * bundled Amber/GLYCAM force fields. Writes stripped_cofactors.json to the job dir.
  */
-const runStripCofactors = (data: StripCofactorsData): Promise<void> => {
+const runStripCofactors = async (data: StripCofactorsData): Promise<void> => {
   const workingDir = path.join(uploadFolder, data.uuid)
-  const pdbPath = path.join(workingDir, data.pdb_file)
-  const logFile = path.join(workingDir, 'strip_cofactors.log')
-  const errorFile = path.join(workingDir, 'strip_cofactors_error.log')
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
-  const script = '/app/scripts/strip_cofactors.py'
-
   logger.info(`runStripCofactors: stripping cofactors from ${data.pdb_file}`)
 
-  return new Promise<void>((resolve, reject) => {
-    const proc = spawn('/opt/envs/base/bin/python', [script, pdbPath], {
-      cwd: workingDir
-    })
-
-    proc.stdout.on('data', (chunk: Buffer) => {
-      logStream.write(chunk.toString())
-    })
-
-    proc.stderr.on('data', (chunk: Buffer) => {
-      const msg = chunk.toString().trim()
-      logger.error(`runStripCofactors stderr: ${msg}`)
-      errorStream.write(msg + '\n')
-    })
-
-    proc.on('error', (error) => {
-      logger.error(`runStripCofactors spawn error: ${error}`)
-      reject(error)
-    })
-
-    proc.on('close', (code) => {
-      Promise.all([
-        new Promise((r) => logStream.end(r)),
-        new Promise((r) => errorStream.end(r))
-      ]).then(() => {
-        if (code === 0) {
-          logger.info(`runStripCofactors succeeded for ${data.pdb_file}`)
-          resolve()
-        } else {
-          reject(new Error(`strip_cofactors.py exited with code ${code}`))
-        }
-      }).catch(reject)
-    })
-  })
+  await runPrepScript(
+    workingDir,
+    '/app/scripts/strip_cofactors.py',
+    [path.join(workingDir, data.pdb_file)],
+    'strip_cofactors',
+    'runStripCofactors'
+  )
+  logger.info(`runStripCofactors succeeded for ${data.pdb_file}`)
 }
 
-export { createPdb2CrdCharmmInpFiles, spawnPdb2CrdCharmm, runPrepPdb, runStripCofactors, runCifToPdb }
+export {
+  createPdb2CrdCharmmInpFiles,
+  spawnPdb2CrdCharmm,
+  runPrepPdb,
+  runStripCofactors,
+  runCifToPdb
+}

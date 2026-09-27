@@ -5,7 +5,7 @@ import path from 'path'
 import { IMultiJob, IStepStatus, User, IUser } from '@bilbomd/mongodb-schema'
 import { updateStepStatus } from './mongo-utils.js'
 import { makeDir } from './job-utils.js'
-import { spawn, ChildProcess } from 'node:child_process'
+import { runProcess } from '../../helpers/runProcess.js'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import {
@@ -163,10 +163,6 @@ const prepareMultiMDResults = async (DBjob: IMultiJob): Promise<void> => {
 const spawnMultiFoxs = async (DBjob: IMultiJob): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
   const multiFoxsDir = path.join(outputDir, 'multifoxs')
-  const logFile = path.join(multiFoxsDir, 'multi_foxs.log')
-  const errorFile = path.join(multiFoxsDir, 'multi_foxs_error.log')
-  const logStream = fs.createWriteStream(logFile)
-  const errorStream = fs.createWriteStream(errorFile)
   let saxsData: string
   try {
     saxsData = path.join(
@@ -180,46 +176,17 @@ const spawnMultiFoxs = async (DBjob: IMultiJob): Promise<void> => {
     )
     throw error // Re-throw to fail the spawn process
   }
-  const multiFoxArgs = ['-o', saxsData, '../multi_md_foxs_files.txt']
-  const multiFoxOpts = { cwd: multiFoxsDir }
 
-  return new Promise((resolve, reject) => {
-    const multiFoxs: ChildProcess = spawn(
-      config.multifoxsBin,
-      multiFoxArgs,
-      multiFoxOpts
-    )
-    multiFoxs.stdout?.on('data', (data) => {
-      logStream.write(data.toString())
-    })
-    multiFoxs.stderr?.on('data', (data) => {
-      errorStream.write(data.toString())
-    })
-    multiFoxs.on('error', (error) => {
-      logger.error(`spawnMultiFoxs error: ${error}`)
-      reject(error)
-    })
-    multiFoxs.on('exit', (code: number) => {
-      const closeStreamsPromises = [
-        new Promise((resolveStream) => logStream.end(resolveStream)),
-        new Promise((resolveStream) => errorStream.end(resolveStream))
-      ]
-      Promise.all(closeStreamsPromises)
-        .then(() => {
-          if (code === 0) {
-            logger.info(`spawnMultiFoxs close success exit code: ${code}`)
-            resolve()
-          } else {
-            logger.info(`spawnMultiFoxs close error exit code: ${code}`)
-            reject(`spawnMultiFoxs on close reject`)
-          }
-        })
-        .catch((streamError) => {
-          logger.error(`Error closing file streams: ${streamError}`)
-          reject(streamError)
-        })
-    })
+  await runProcess({
+    label: 'MultiFoXS',
+    cmd: config.multifoxsBin,
+    args: ['-o', saxsData, '../multi_md_foxs_files.txt'],
+    cwd: multiFoxsDir,
+    stdoutFile: path.join(multiFoxsDir, 'multi_foxs.log'),
+    stderrFile: path.join(multiFoxsDir, 'multi_foxs_error.log'),
+    timeoutMs: config.processTimeouts.multifoxsMs
   })
+  logger.info('spawnMultiFoxs completed successfully')
 }
 
 const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
@@ -250,13 +217,19 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
     try {
       saxsDataFileName = await getMainSAXSDataFileName(DBjob)
     } catch (error) {
-      logger.warn(`Could not resolve SAXS data file name: ${getErrorMessage(error)}`)
+      logger.warn(
+        `Could not resolve SAXS data file name: ${getErrorMessage(error)}`
+      )
     }
 
     // Copy the primary SAXS data file from the designated sub-job
     if (saxsDataFileName) {
       await copyFiles({
-        source: path.join(config.uploadDir, DBjob.data_file_from, saxsDataFileName),
+        source: path.join(
+          config.uploadDir,
+          DBjob.data_file_from,
+          saxsDataFileName
+        ),
         destination: resultsDir,
         filename: saxsDataFileName,
         isCritical: false
@@ -416,6 +389,7 @@ const handleJobEmailNotification = async (
 export {
   prepareMultiMDdatFileList,
   runMultiFoxs,
+  spawnMultiFoxs,
   prepareMultiMDResults,
   initializeJob,
   cleanupJob

@@ -11,7 +11,7 @@ import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { config } from '../../config/config.js'
 import fs from 'fs-extra'
 import path from 'path'
-import { spawn, ChildProcess } from 'node:child_process'
+import { runCharmm } from './charmm.js'
 import Handlebars from 'handlebars'
 import { updateStepStatus, updateJobStatus } from './mongo-utils.js'
 import { getErrorMessage } from '../../helpers/errors.js'
@@ -209,7 +209,7 @@ const generateInputFile = async (params: CharmmParams): Promise<void> => {
   await writeInputFile(templateString, params)
 }
 
-const spawnCharmm = (
+const spawnCharmm = async (
   params: CharmmParams,
   MQjob?: BullMQJob
 ): Promise<void> => {
@@ -218,17 +218,19 @@ const spawnCharmm = (
     charmm_out_file: outputFile,
     out_dir
   } = params
-  const charmmArgs = ['-o', outputFile, '-i', inputFile]
-  const charmmOpts = { cwd: out_dir }
 
-  return new Promise<void>((resolve, reject) => {
-    const charmm: ChildProcess = spawn(config.charmmBin, charmmArgs, charmmOpts)
-    let charmmOutput = ''
-    let heartbeat: NodeJS.Timeout | null = null
-
-    // Start a heartbeat timer (e.g., every 20 seconds)
-    if (MQjob) {
-      heartbeat = setInterval(() => {
+  await runCharmm({
+    charmmBin: config.charmmBin,
+    inputFile,
+    outputFile,
+    cwd: out_dir,
+    timeoutMs:
+      params.charmm_template === 'dynamics'
+        ? config.processTimeouts.charmmMdMs
+        : config.processTimeouts.charmmSetupMs,
+    heartbeat: MQjob && {
+      intervalMs: 10_000,
+      onBeat: () => {
         MQjob.updateProgress({ status: 'running', timestamp: Date.now() })
         MQjob.log(`Heartbeat: still running ${inputFile}`)
         logger.info(
@@ -237,31 +239,10 @@ const spawnCharmm = (
             { timeZone: 'America/Los_Angeles' }
           )}`
         )
-      }, 10_000)
-    }
-
-    charmm.stdout?.on('data', (data) => {
-      charmmOutput += data.toString()
-    })
-
-    charmm.on('error', (error) => {
-      if (heartbeat) clearInterval(heartbeat)
-      reject(new Error(`CHARMM process encountered an error: ${error.message}`))
-    })
-
-    charmm.on('close', (code: number) => {
-      if (heartbeat) clearInterval(heartbeat)
-      if (code === 0) {
-        logger.info(`CHARMM success: ${inputFile} exit code: ${code}`)
-        resolve()
-      } else {
-        logger.info(`CHARMM error: ${inputFile} exit code: ${code}`)
-        reject(new Error(charmmOutput))
       }
-    })
+    }
   })
 }
-
 
 const handleError = async (
   error: Error | unknown,

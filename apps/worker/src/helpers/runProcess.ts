@@ -21,6 +21,8 @@ export interface SpawnProcessOptions {
   // Raw output is written here; files are fully flushed before the promise settles
   stdoutFile?: string
   stderrFile?: string
+  // Append to existing log files instead of truncating them
+  appendLogs?: boolean
   onStdoutLine?: (line: string) => void
   onStderrLine?: (line: string) => void
   heartbeat?: {
@@ -87,8 +89,11 @@ const readLines = (
   return rl
 }
 
-const openLog = (file?: string): fs.WriteStream | undefined =>
-  file ? fs.createWriteStream(file, { flags: 'w' }) : undefined
+const openLog = (
+  file: string | undefined,
+  append: boolean
+): fs.WriteStream | undefined =>
+  file ? fs.createWriteStream(file, { flags: append ? 'a' : 'w' }) : undefined
 
 // Spawns a process and resolves once it has exited and all output is
 // flushed, whatever the exit code. Rejects only if the process could not be
@@ -108,6 +113,7 @@ export const spawnProcess = async (
     killGraceMs = 5000,
     stdoutFile,
     stderrFile,
+    appendLogs = false,
     onStdoutLine,
     onStderrLine,
     heartbeat,
@@ -126,8 +132,8 @@ export const spawnProcess = async (
   }
 
   const startedAt = Date.now()
-  const stdoutLog = openLog(stdoutFile)
-  const stderrLog = openLog(stderrFile)
+  const stdoutLog = openLog(stdoutFile, appendLogs)
+  const stderrLog = openLog(stderrFile, appendLogs)
   const stderrTail: string[] = []
   let timedOut = false
   let aborted = false
@@ -135,7 +141,10 @@ export const spawnProcess = async (
   const child = spawn(cmd, args, {
     cwd,
     env: { ...process.env, ...env },
-    stdio: ['ignore', 'pipe', 'pipe']
+    // An unread pipe fills up (~64 KB) and blocks the child forever, so only
+    // pipe stdout when something consumes it. stderr is always read for the
+    // error tail.
+    stdio: ['ignore', stdoutLog || onStdoutLine ? 'pipe' : 'ignore', 'pipe']
   })
 
   if (stdoutLog) child.stdout?.pipe(stdoutLog)

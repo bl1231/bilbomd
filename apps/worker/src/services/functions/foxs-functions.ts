@@ -9,7 +9,7 @@ import {
   buildStepStatusUpdate
 } from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
-import { spawn, ChildProcess } from 'node:child_process'
+import { runProcess } from '../../helpers/runProcess.js'
 import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
 import { updateStepStatus } from './mongo-utils.js'
@@ -149,57 +149,48 @@ const spawnFoXSOptimized = async (
 
     // Process a single PDB file with FoXS
     const processSingleFile = async (task: FoxsTask): Promise<void> => {
-      return new Promise<void>((resolve, reject) => {
-        const foxsArgs = ['-p', task.file]
-        const foxsOpts = { cwd: task.dir }
-        const foxs: ChildProcess = spawn(config.foxBin, foxsArgs, foxsOpts)
-
-        foxs.on('exit', (code) => {
-          if (code === 0) {
-            completed++
-
-            // Progress logging - report every 50 completed files
-            if (MQjob && completed % 50 === 0) {
-              const progress = Math.round((completed / allTasks.length) * 100)
-              const statusMsg = `FoXS: ${completed}/${allTasks.length} (${progress}%)`
-              MQjob.updateProgress({
-                status: statusMsg,
-                timestamp: Date.now()
-              })
-              MQjob.log(
-                `FoXS progress: ${completed}/${allTasks.length} files completed`
-              )
-              logger.info(
-                `FoXS progress: ${completed}/${allTasks.length} files completed (${progress}%)`
-              )
-              if (DBjob) {
-                void Job.findByIdAndUpdate(
-                  DBjob._id,
-                  buildStepStatusUpdate('foxs', {
-                    status: 'Running',
-                    message: statusMsg
-                  }),
-                  { updatePipeline: true }
-                ).catch((err) =>
-                  logger.error(`FoXS step status update failed: ${err}`)
-                )
-              }
-            }
-
-            resolve()
-          } else {
-            const errorMsg = `FoXS process for ${task.file} in ${task.dir} exited with code ${code}`
-            logger.error(errorMsg)
-            reject(new Error(errorMsg))
-          }
+      try {
+        await runProcess({
+          label: `FoXS ${task.file}`,
+          cmd: config.foxBin,
+          args: ['-p', task.file],
+          cwd: task.dir,
+          timeoutMs: config.processTimeouts.foxsMs
         })
+      } catch (error) {
+        logger.error(`FoXS failed in ${task.dir}: ${getErrorMessage(error)}`)
+        throw error
+      }
 
-        foxs.on('error', (error) => {
-          const errorMsg = `FoXS process error for ${task.file}: ${error.message}`
-          logger.error(errorMsg)
-          reject(new Error(errorMsg))
+      completed++
+
+      // Progress logging - report every 50 completed files
+      if (MQjob && completed % 50 === 0) {
+        const progress = Math.round((completed / allTasks.length) * 100)
+        const statusMsg = `FoXS: ${completed}/${allTasks.length} (${progress}%)`
+        MQjob.updateProgress({
+          status: statusMsg,
+          timestamp: Date.now()
         })
-      })
+        MQjob.log(
+          `FoXS progress: ${completed}/${allTasks.length} files completed`
+        )
+        logger.info(
+          `FoXS progress: ${completed}/${allTasks.length} files completed (${progress}%)`
+        )
+        if (DBjob) {
+          void Job.findByIdAndUpdate(
+            DBjob._id,
+            buildStepStatusUpdate('foxs', {
+              status: 'Running',
+              message: statusMsg
+            }),
+            { updatePipeline: true }
+          ).catch((err) =>
+            logger.error(`FoXS step status update failed: ${err}`)
+          )
+        }
+      }
     }
 
     // Execute all tasks with concurrency limit
@@ -446,4 +437,4 @@ const runFoXS = async (
   }
 }
 
-export { runFoXS }
+export { runFoXS, spawnFoXSOptimized }

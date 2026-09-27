@@ -8,7 +8,7 @@ import { IStepStatus, IEnsemble } from '@bilbomd/mongodb-schema'
 import { IJob, IBilboMDSANSJob } from '@bilbomd/mongodb-schema'
 import { updateStepStatus } from './mongo-utils.js'
 import { generateDCD2PDBInpFile } from './bilbomd-step-functions.js'
-import { spawn } from 'node:child_process'
+import { runProcess } from '../../helpers/runProcess.js'
 import { makeDir, makeFile } from './job-utils.js'
 import { config } from '../../config/config.js'
 import { Job as BullMQJob } from 'bullmq'
@@ -55,7 +55,6 @@ function isBilboMDSANSJob(job: IJob): job is IBilboMDSANSJob {
   return (job as IBilboMDSANSJob).d2o_fraction !== undefined
 }
 
-
 const writeSegidToChainid = async (inputFile: string): Promise<void> => {
   try {
     const fileContent = await fs.promises.readFile(inputFile, 'utf-8')
@@ -84,46 +83,34 @@ const writeSegidToChainid = async (inputFile: string): Promise<void> => {
 }
 
 // Helper function to run a single Pepsi-SANS process for a given file
-async function runPepsiSANSProcess(
+const runPepsiSANSProcess = async (
   pepsiSansRunDir: string,
   file: string,
   pepsiSANSOpts: string[],
   MQjob: BullMQJob,
   index: number,
   total: number
-): Promise<string> {
+): Promise<string> => {
   const inputPath = path.join(pepsiSansRunDir, file)
   const outputFile = file.replace(/\.pdb$/, '.dat')
   const outputPath = path.join(pepsiSansRunDir, outputFile)
 
-  return new Promise<string>((resolve, reject) => {
-    const proc = spawn('Pepsi-SANS', [
-      inputPath,
-      '-o',
-      outputPath,
-      ...pepsiSANSOpts
-    ])
-
-    proc.on('close', (code) => {
-      if (code === 0) {
-        if (MQjob && index % 20 === 0) {
-          MQjob.updateProgress({
-            status: `Pepsi-SANS ${index + 1}/${total}`,
-            timestamp: Date.now()
-          })
-          MQjob.log(`Pepsi-SANS progress: ${index + 1}/${total}`)
-          logger.info(`Pepsi-SANS progress: ${index + 1}/${total}`)
-        }
-        resolve(`${file},${outputFile},${path.basename(pepsiSansRunDir)}`)
-      } else {
-        reject(new Error(`Pepsi-SANS exited with code ${code} for ${file}`))
-      }
-    })
-
-    proc.on('error', (err) => {
-      reject(new Error(`Pepsi-SANS process error for ${file}: ${err.message}`))
-    })
+  await runProcess({
+    label: `Pepsi-SANS ${file}`,
+    cmd: 'Pepsi-SANS',
+    args: [inputPath, '-o', outputPath, ...pepsiSANSOpts],
+    timeoutMs: config.processTimeouts.pepsiSansMs
   })
+
+  if (MQjob && index % 20 === 0) {
+    MQjob.updateProgress({
+      status: `Pepsi-SANS ${index + 1}/${total}`,
+      timestamp: Date.now()
+    })
+    MQjob.log(`Pepsi-SANS progress: ${index + 1}/${total}`)
+    logger.info(`Pepsi-SANS progress: ${index + 1}/${total}`)
+  }
+  return `${file},${outputFile},${path.basename(pepsiSansRunDir)}`
 }
 
 const spawnPepsiSANS = async (
@@ -497,63 +484,39 @@ const runGASANS = async (
     status: 'Running',
     message: 'GA-SANS analysis has started.'
   }
-  let heartbeat: NodeJS.Timeout | null = null
   try {
-    // Update status to 'Running' at the start
     await updateStepStatus(DBjob, 'gasans', status)
 
-    // Set up the heartbeat for monitoring
-    if (MQjob) {
-      heartbeat = setInterval(() => {
-        MQjob.updateProgress({ status: 'running', timestamp: Date.now() })
-        MQjob.log(`Heartbeat: still running GA-SANS`)
-        logger.info(
-          `runGASANS Heartbeat: still running GA-SANS for: ${
-            DBjob.title
-          } at ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })}`
-        )
-      }, 10_000)
-    }
-
-    // Spawn the GASANS process
-    const gasansProcess = spawn('/opt/envs/base/bin/python', gasansOpts, {
-      cwd: workingDir
-    })
-
-    // Open write streams for stdout and stderr logs
-    const stdoutStream = fs.createWriteStream(stdoutLog, { flags: 'a' })
-    const stderrStream = fs.createWriteStream(stderrLog, { flags: 'a' })
-
-    // Pipe stdout and stderr to their respective log files
-    gasansProcess.stdout?.pipe(stdoutStream)
-    gasansProcess.stderr?.pipe(stderrStream)
-
-    // Handle process completion
-    await new Promise<void>((resolve, reject) => {
-      gasansProcess.on('close', (code) => {
-        stdoutStream.close()
-        stderrStream.close()
-
-        if (code === 0) {
+    await runProcess({
+      label: 'GA-SANS',
+      cmd: '/opt/envs/base/bin/python',
+      args: gasansOpts,
+      cwd: workingDir,
+      stdoutFile: stdoutLog,
+      stderrFile: stderrLog,
+      appendLogs: true,
+      timeoutMs: config.processTimeouts.gasansMs,
+      heartbeat: MQjob && {
+        intervalMs: 10_000,
+        onBeat: () => {
+          MQjob.updateProgress({ status: 'running', timestamp: Date.now() })
+          MQjob.log(`Heartbeat: still running GA-SANS`)
           logger.info(
-            `GASANS process completed successfully. Exit code: ${code}`
+            `runGASANS Heartbeat: still running GA-SANS for: ${
+              DBjob.title
+            } at ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })}`
           )
-          resolve()
-        } else {
-          logger.error(`GASANS process exited with code ${code}`)
-          reject(new Error(`GASANS process exited with code ${code}`))
         }
-      })
+      }
     })
+    logger.info('GASANS process completed successfully')
 
-    // If the process completes successfully, update the status
     status = {
       status: 'Success',
       message: 'GA-SANS analysis has completed successfully.'
     }
     await updateStepStatus(DBjob, 'gasans', status)
   } catch (error) {
-    // Update status to 'Error' if something goes wrong
     status = {
       status: 'Error',
       message: `GA-SANS analysis failed: ${(error as Error).message}`
@@ -561,8 +524,6 @@ const runGASANS = async (
     await updateStepStatus(DBjob, 'gasans', status)
     logger.error(`Error during GASANS analysis: ${(error as Error).message}`)
     throw error
-  } finally {
-    if (heartbeat) clearInterval(heartbeat)
   }
 }
 
@@ -637,7 +598,9 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
         isCritical: false
       })
     } else {
-      logger.warn('No minimized PDB found (checked OpenMM and CHARMM locations).')
+      logger.warn(
+        'No minimized PDB found (checked OpenMM and CHARMM locations).'
+      )
     }
 
     // Copy the DAT file for the minimized PDB
@@ -813,9 +776,7 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
         // Write the final content to the output file
         await fs.promises.writeFile(concatenatedPdbFile, finalContent, 'utf-8')
 
-        logger.info(
-          `Created multi-model PDB file: ${concatenatedPdbFile}`
-        )
+        logger.info(`Created multi-model PDB file: ${concatenatedPdbFile}`)
       }
     }
 
@@ -924,6 +885,7 @@ export {
   mirrorOmmMdToPepsiSANS,
   remediatePDBFiles,
   runPepsiSANSOnPDBFiles,
+  spawnPepsiSANS,
   runGASANS,
   prepareBilboMDSANSResults
 }
