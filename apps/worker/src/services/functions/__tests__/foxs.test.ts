@@ -70,8 +70,8 @@ describe('spawnFoXSOptimized', () => {
     await spawnFoXSOptimized([a, b], undefined, 2)
 
     expect(runProcessMock).toHaveBeenCalledTimes(3)
-    const calls = runProcessMock.mock.calls.map(
-      ([o]: [SpawnProcessOptions]) => o
+    const calls: SpawnProcessOptions[] = runProcessMock.mock.calls.map(
+      (c) => c[0]
     )
     expect(calls).toContainEqual(
       expect.objectContaining({
