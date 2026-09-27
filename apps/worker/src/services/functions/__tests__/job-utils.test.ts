@@ -100,7 +100,9 @@ describe('job-utils', () => {
         save: vi.fn().mockRejectedValue(new Error('Database error'))
       } as unknown as IJob
 
-      await expect(initializeJob(mockMQJob, mockDBJob)).rejects.toThrow('Database error')
+      await expect(initializeJob(mockMQJob, mockDBJob)).rejects.toThrow(
+        'Database error'
+      )
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Error in initializeJob')
       )
@@ -335,7 +337,9 @@ describe('job-utils', () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Template not found'))
       vi.mocked(config).charmmTemplateDir = '/templates'
 
-      await expect(generateInputFile(mockParams)).rejects.toThrow('Template not found')
+      await expect(generateInputFile(mockParams)).rejects.toThrow(
+        'Template not found'
+      )
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Error in readTemplate')
       )
@@ -566,11 +570,13 @@ describe('job-utils', () => {
       } as unknown as IJob
 
       vi.mocked(updateJobStatus).mockResolvedValue(undefined)
-      vi.mocked(updateStepStatus).mockRejectedValue(new Error('step write failed'))
-
-      await expect(handleError(new Error('boom'), mockDBJob, 'md')).rejects.toThrow(
-        "BilboMD failed in step 'md': boom"
+      vi.mocked(updateStepStatus).mockRejectedValue(
+        new Error('step write failed')
       )
+
+      await expect(
+        handleError(new Error('boom'), mockDBJob, 'md')
+      ).rejects.toThrow("BilboMD failed in step 'md': boom")
 
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to update step status for step md')

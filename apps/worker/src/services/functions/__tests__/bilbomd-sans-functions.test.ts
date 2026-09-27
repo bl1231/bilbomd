@@ -65,7 +65,10 @@ describe('spawnPepsiSANS', () => {
         timeoutMs: config.processTimeouts.pepsiSansMs
       })
     )
-    const csv = await fs.readFile(path.join(runDir, 'pepsisans_rg_25.csv'), 'utf8')
+    const csv = await fs.readFile(
+      path.join(runDir, 'pepsisans_rg_25.csv'),
+      'utf8'
+    )
     expect(csv.split('\n')).toEqual([
       'PDBNAME,SCATTERINGFILE,DAT_DIRECTORY',
       'm1.pdb,m1.dat,rg_25',
@@ -115,7 +118,9 @@ describe('runGASANS', () => {
   })
 
   it('marks the step as failed and rethrows', async () => {
-    runProcessMock.mockRejectedValue(new Error('GA-SANS failed to start: ENOENT'))
+    runProcessMock.mockRejectedValue(
+      new Error('GA-SANS failed to start: ENOENT')
+    )
 
     await expect(runGASANS(makeMQJob(), job)).rejects.toThrow(
       'GA-SANS failed to start: ENOENT'

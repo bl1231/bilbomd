@@ -105,7 +105,10 @@ describe('pdb-to-crd', () => {
 
   describe('runCifToPdb', () => {
     it('resolves with the output PDB filename and passes both paths', async () => {
-      const result = await runCifToPdb({ uuid: 'u1', pdb_file: 'structure.cif' })
+      const result = await runCifToPdb({
+        uuid: 'u1',
+        pdb_file: 'structure.cif'
+      })
 
       expect(result).toBe('structure.pdb')
       expect(lastOpts(runProcessMock).args).toEqual([
@@ -149,7 +152,10 @@ describe('pdb-to-crd', () => {
       })
       const mqJob = makeMQJob()
 
-      const outputs = await spawnPdb2CrdCharmm(mqJob, ['seg_a.inp', 'seg_b.inp'])
+      const outputs = await spawnPdb2CrdCharmm(mqJob, [
+        'seg_a.inp',
+        'seg_b.inp'
+      ])
 
       expect(outputs).toEqual(['done seg_a.inp', 'done seg_b.inp'])
       expect(spawnProcessMock).toHaveBeenCalledTimes(2)

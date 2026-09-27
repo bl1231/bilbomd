@@ -55,7 +55,6 @@ function isBilboMDSANSJob(job: IJob): job is IBilboMDSANSJob {
   return (job as IBilboMDSANSJob).d2o_fraction !== undefined
 }
 
-
 const writeSegidToChainid = async (inputFile: string): Promise<void> => {
   try {
     const fileContent = await fs.promises.readFile(inputFile, 'utf-8')
@@ -599,7 +598,9 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
         isCritical: false
       })
     } else {
-      logger.warn('No minimized PDB found (checked OpenMM and CHARMM locations).')
+      logger.warn(
+        'No minimized PDB found (checked OpenMM and CHARMM locations).'
+      )
     }
 
     // Copy the DAT file for the minimized PDB
@@ -775,9 +776,7 @@ const prepareResults = async (DBjob: IBilboMDSANSJob): Promise<void> => {
         // Write the final content to the output file
         await fs.promises.writeFile(concatenatedPdbFile, finalContent, 'utf-8')
 
-        logger.info(
-          `Created multi-model PDB file: ${concatenatedPdbFile}`
-        )
+        logger.info(`Created multi-model PDB file: ${concatenatedPdbFile}`)
       }
     }
 

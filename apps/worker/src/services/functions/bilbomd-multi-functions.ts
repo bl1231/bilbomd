@@ -217,13 +217,19 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
     try {
       saxsDataFileName = await getMainSAXSDataFileName(DBjob)
     } catch (error) {
-      logger.warn(`Could not resolve SAXS data file name: ${getErrorMessage(error)}`)
+      logger.warn(
+        `Could not resolve SAXS data file name: ${getErrorMessage(error)}`
+      )
     }
 
     // Copy the primary SAXS data file from the designated sub-job
     if (saxsDataFileName) {
       await copyFiles({
-        source: path.join(config.uploadDir, DBjob.data_file_from, saxsDataFileName),
+        source: path.join(
+          config.uploadDir,
+          DBjob.data_file_from,
+          saxsDataFileName
+        ),
         destination: resultsDir,
         filename: saxsDataFileName,
         isCritical: false

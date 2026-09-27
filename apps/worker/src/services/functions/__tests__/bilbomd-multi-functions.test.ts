@@ -62,7 +62,9 @@ describe('bilbomd-multi-functions - spawnMultiFoxs', () => {
   })
 
   it('propagates MultiFoXS failures', async () => {
-    runProcessMock.mockRejectedValue(new Error('MultiFoXS timed out after 7200s'))
+    runProcessMock.mockRejectedValue(
+      new Error('MultiFoXS timed out after 7200s')
+    )
 
     await expect(spawnMultiFoxs(makeJob())).rejects.toThrow(
       'MultiFoXS timed out after 7200s'
