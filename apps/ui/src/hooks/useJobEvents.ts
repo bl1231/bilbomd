@@ -13,9 +13,9 @@ import { logger } from 'utils/logger'
 
 // Keeps RTK Query's job cache fresh from the backend's job event stream
 // (GET /jobs/events). Events only name the job that changed; this hook
-// invalidates that job's 'Job' tag and RTK Query refetches whatever is
-// mounted (the job's page, and the job list, which provides every job's tag).
-// Mount once for the logged-in app.
+// invalidates the matching tags (see tagsForEvent) and RTK Query refetches
+// whatever is mounted: the job's page, its movies, and the job list, which
+// provides every listed job's tag. Mount once for the logged-in app.
 
 // Changes are collected and invalidated together, so a burst of events
 // costs one job-list refetch rather than one per event
@@ -26,18 +26,35 @@ const RECONNECT_MAX_MS = 30_000
 export const reconnectDelay = (attempt: number): number =>
   Math.min(RECONNECT_BASE_MS * 2 ** attempt, RECONNECT_MAX_MS)
 
+type InvalidatedTag = { type: 'Job' | 'MovieAsset'; id: string }
+
+// Which cached data an event makes stale
+export const tagsForEvent = (event: JobEvent): InvalidatedTag[] => {
+  switch (event.kind) {
+    case 'created':
+      // A new job isn't in any cached list yet, so its own tag wouldn't
+      // reach the list; refetch the list itself
+      return [{ type: 'Job', id: 'LIST' }]
+    case 'movies':
+      return [{ type: 'MovieAsset', id: event.jobId }]
+    default:
+      // updated, deleted, delete_failed
+      return [{ type: 'Job', id: event.jobId }]
+  }
+}
+
 export const createInvalidationBatcher = (
-  flush: (jobIds: string[]) => void,
+  flush: (tags: InvalidatedTag[]) => void,
   delayMs = INVALIDATE_BATCH_MS
 ) => {
-  const ids = new Set<string>()
+  const tags = new Map<string, InvalidatedTag>()
   let timer: ReturnType<typeof setTimeout> | undefined
   return {
-    add: (jobId: string) => {
-      ids.add(jobId)
+    add: (newTags: InvalidatedTag[]) => {
+      for (const tag of newTags) tags.set(`${tag.type}:${tag.id}`, tag)
       timer ??= setTimeout(() => {
-        const batch = [...ids]
-        ids.clear()
+        const batch = [...tags.values()]
+        tags.clear()
         timer = undefined
         flush(batch)
       }, delayMs)
@@ -45,7 +62,7 @@ export const createInvalidationBatcher = (
     cancel: () => {
       clearTimeout(timer)
       timer = undefined
-      ids.clear()
+      tags.clear()
     }
   }
 }
@@ -72,12 +89,8 @@ export const useJobEvents = (): void => {
     const controller = new AbortController()
     const { signal } = controller
 
-    const batcher = createInvalidationBatcher((jobIds) =>
-      dispatch(
-        apiSlice.util.invalidateTags(
-          jobIds.map((id) => ({ type: 'Job' as const, id }))
-        )
-      )
+    const batcher = createInvalidationBatcher((tags) =>
+      dispatch(apiSlice.util.invalidateTags(tags))
     )
 
     const handleEvent = (event: JobEvent) => {
@@ -85,7 +98,7 @@ export const useJobEvents = (): void => {
       if (event.kind === 'delete_failed') {
         dispatch(clearDeletePending(event.jobId))
       }
-      batcher.add(event.jobId)
+      batcher.add(tagsForEvent(event))
     }
 
     const onSseEvent = ({ event, data }: { event: string; data: string }) => {

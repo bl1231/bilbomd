@@ -1,8 +1,8 @@
 import type { Redis } from 'ioredis'
 import {
+  JOB_EVENT_KINDS,
   JOB_EVENTS_CHANNEL,
-  type JobEvent,
-  type JobEventKind
+  type JobEvent
 } from '@bilbomd/bilbomd-types'
 import { logger } from '../middleware/loggers.js'
 
@@ -22,8 +22,6 @@ export interface JobEventClient {
 interface Publisher {
   publish: (channel: string, message: string) => Promise<unknown>
 }
-
-const KINDS: JobEventKind[] = ['updated', 'deleted', 'delete_failed']
 
 const clients = new Set<JobEventClient>()
 
@@ -52,7 +50,7 @@ const parseJobEvent = (raw: string): JobEvent | null => {
     return null
   }
   if (typeof msg.jobId !== 'string' || !msg.jobId) return null
-  if (!msg.kind || !KINDS.includes(msg.kind)) return null
+  if (!msg.kind || !JOB_EVENT_KINDS.includes(msg.kind)) return null
   if (msg.ownerId !== undefined && typeof msg.ownerId !== 'string') return null
   return { jobId: msg.jobId, ownerId: msg.ownerId, kind: msg.kind }
 }

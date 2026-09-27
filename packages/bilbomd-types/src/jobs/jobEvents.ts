@@ -6,10 +6,25 @@
 // in one place.
 export const JOB_EVENTS_CHANNEL = 'bilbomd:job-events'
 
+// created        a new job was submitted (it isn't in anyone's job list yet)
 // updated        status, step or progress changed
+// movies         one of the job's MD movies changed (queued/running/ready/failed)
 // deleted        the job's document has been removed
 // delete_failed  deleting the job failed after its final attempt
-export type JobEventKind = 'updated' | 'deleted' | 'delete_failed'
+export type JobEventKind =
+  | 'created'
+  | 'updated'
+  | 'movies'
+  | 'deleted'
+  | 'delete_failed'
+
+export const JOB_EVENT_KINDS: readonly JobEventKind[] = [
+  'created',
+  'updated',
+  'movies',
+  'deleted',
+  'delete_failed'
+]
 
 export interface JobEvent {
   // MongoDB _id of the Job / MultiJob (the DTO `id` and RTK Query tag id)

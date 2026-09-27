@@ -26,6 +26,7 @@ import {
   convertInpToYaml,
   extractConstraintsFromYaml
 } from '@bilbomd/md-utils'
+import { announceNewJob } from '../../services/announceNewJob.js'
 
 const uploadFolder = config.uploadDir
 
@@ -317,6 +318,7 @@ const handleBilboMDClassicCRD = async (
 
     // Queue the job
     const BullId = await queueJob(jobDataForQueue)
+    await announceNewJob(newJob)
 
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)

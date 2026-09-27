@@ -18,6 +18,7 @@ import { createOpenFoldQueryJson } from './utils/createOpenFoldQueryJson.js'
 import { parseOpenFoldEntities } from './utils/parseOpenFoldEntities.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { config } from '../../config/config.js'
+import { announceNewJob } from '../../services/announceNewJob.js'
 
 const uploadFolder = config.uploadDir
 
@@ -191,6 +192,7 @@ const handleBilboMDOpenFoldJob = async (
     }
 
     const BullId = await queueJob(jobDataForQueue)
+    await announceNewJob(newJob)
     logger.info(`${bilbomdMode} Job assigned UUID: ${newJob.uuid}`)
     logger.info(`${bilbomdMode} Job assigned BullMQ ID: ${BullId}`)
 

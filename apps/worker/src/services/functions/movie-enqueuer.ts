@@ -5,6 +5,7 @@ import path from 'path'
 import { config } from '../../config/config.js'
 import fs from 'fs-extra'
 import { logger } from '../../helpers/loggers.js'
+import { notifyJobChanged } from '../../helpers/jobEvents.js'
 
 const upsertMovieAsset = async (
   jobId: string,
@@ -215,6 +216,9 @@ const enqueueMakeMovie = async (
         )
       })
   }
+
+  // The job's movies are now listed as queued
+  notifyJobChanged(DBJob, 'movies')
 }
 
 export { enqueueMakeMovie }

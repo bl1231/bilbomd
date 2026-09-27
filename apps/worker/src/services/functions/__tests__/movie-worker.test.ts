@@ -5,9 +5,10 @@ import path from 'node:path'
 import type { Job as BullMQJob } from 'bullmq'
 import type { SpawnProcessOptions } from '../../../helpers/runProcess.js'
 
-const { runProcessMock, updateOneMock } = vi.hoisted(() => ({
+const { runProcessMock, updateOneMock, findByIdMock } = vi.hoisted(() => ({
   runProcessMock: vi.fn(),
-  updateOneMock: vi.fn()
+  updateOneMock: vi.fn(),
+  findByIdMock: vi.fn()
 }))
 
 vi.mock('../../../helpers/runProcess.js', () => ({
@@ -15,7 +16,11 @@ vi.mock('../../../helpers/runProcess.js', () => ({
 }))
 
 vi.mock('@bilbomd/mongodb-schema', () => ({
-  Job: { updateOne: updateOneMock }
+  Job: { updateOne: updateOneMock, findById: findByIdMock }
+}))
+
+vi.mock('../../../helpers/jobEvents.js', () => ({
+  notifyJobChanged: vi.fn()
 }))
 
 vi.mock('../../../helpers/loggers.js', () => ({
@@ -23,6 +28,7 @@ vi.mock('../../../helpers/loggers.js', () => ({
 }))
 
 import { runGenerateMovies } from '../movie-worker.js'
+import { notifyJobChanged } from '../../../helpers/jobEvents.js'
 import { config } from '../../../config/config.js'
 
 let tmp: string
@@ -55,9 +61,17 @@ const pymolWritesMovie = () =>
 
 const lastSet = () => updateOneMock.mock.calls.at(-1)?.[1].$set
 
+const owned = { _id: 'job-id', user: { _id: 'owner-1' } }
+
+// Job events published, as [job, kind]
+const movieEvents = () => vi.mocked(notifyJobChanged).mock.calls
+
 beforeEach(async () => {
   vi.clearAllMocks()
   updateOneMock.mockResolvedValue({})
+  findByIdMock.mockReturnValue({
+    select: () => ({ lean: async () => owned })
+  })
   tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'movie-test-'))
   outDir = path.join(tmp, 'movies', 'rg_25')
   await fs.writeFile(path.join(tmp, 'model.pdb'), '')
@@ -129,5 +143,42 @@ describe('movie-worker - runGenerateMovies', () => {
 
     expect(lastSet()).toMatchObject({ 'assets.movies.$[m].status': 'ready' })
     expect(lastSet()).not.toHaveProperty('assets.movies.$[m].poster')
+  })
+})
+
+describe('movie-worker - job events', () => {
+  it("publishes 'movies' when rendering starts and when the movie is ready", async () => {
+    pymolWritesMovie()
+
+    await runGenerateMovies(makeMQJob())
+
+    expect(movieEvents()).toEqual([
+      [owned, 'movies'],
+      [owned, 'movies']
+    ])
+  })
+
+  it("publishes 'movies' when rendering fails", async () => {
+    runProcessMock.mockRejectedValue(new Error('PyMOL exited with code 1'))
+
+    await expect(runGenerateMovies(makeMQJob())).rejects.toThrow()
+
+    expect(movieEvents()).toEqual([
+      [owned, 'movies'],
+      [owned, 'movies']
+    ])
+    expect(lastSet()['assets.movies.$[m].status']).toBe('failed')
+  })
+
+  it('still renders when the owner lookup fails', async () => {
+    pymolWritesMovie()
+    findByIdMock.mockImplementation(() => {
+      throw new Error('mongo down')
+    })
+
+    await runGenerateMovies(makeMQJob())
+
+    expect(notifyJobChanged).not.toHaveBeenCalled()
+    expect(lastSet()['assets.movies.$[m].status']).toBe('ready')
   })
 })

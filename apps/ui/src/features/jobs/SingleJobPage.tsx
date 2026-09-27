@@ -147,7 +147,8 @@ const SingleJobPage = () => {
     error: moviesError,
     isLoading: moviesLoading
   } = useGetMDMoviesQuery(id ?? skipToken, {
-    pollingInterval: 15000,
+    // Movie events drive refreshes while the stream is up
+    pollingInterval: eventsConnected ? STREAM_FALLBACK_POLL_MS : 15000,
     skipPollingIfUnfocused: true
   })
 

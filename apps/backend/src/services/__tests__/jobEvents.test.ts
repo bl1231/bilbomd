@@ -74,6 +74,18 @@ describe('dispatchJobEvent', () => {
     expect(admin.send).toHaveBeenCalledExactlyOnceWith(event())
   })
 
+  it.each(['created', 'movies', 'deleted', 'delete_failed'] as const)(
+    "forwards '%s' events",
+    (kind) => {
+      const owner = client()
+      addJobEventClient(owner)
+
+      dispatchJobEvent(JSON.stringify(event({ kind })))
+
+      expect(owner.send).toHaveBeenCalledWith(event({ kind }))
+    }
+  )
+
   it('stops sending to removed clients', () => {
     const owner = client()
     const remove = addJobEventClient(owner)
