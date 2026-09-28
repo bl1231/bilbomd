@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import type { ReactNode } from 'react'
 import { apiSlice } from 'app/api/apiSlice'
-import { setupApiStore } from '../../test/testUtils'
+import { setupApiStore, createTestJWT } from '../../test/testUtils'
 import {
   INVALIDATE_BATCH_MS,
   createInvalidationBatcher,
@@ -58,8 +58,18 @@ const eventsInit = (i = 0) => {
   return call[1]
 }
 
+// A decodable access token: the hook names its shared stream after the user
+const TOKEN = createTestJWT({
+  UserInfo: { username: 'alice', roles: ['User'], email: 'a@example.com' }
+})
+
+const NEW_TOKEN = createTestJWT({
+  UserInfo: { username: 'alice', roles: ['User'], email: 'a@example.com' },
+  iat: 2
+})
+
 const setup = (preloaded: Partial<RootState> = {}) => {
-  const { store } = setupApiStore(preloaded)
+  const { store } = setupApiStore({ auth: { token: TOKEN }, ...preloaded })
   const wrapper = ({ children }: { children: ReactNode }) => (
     <Provider store={store}>{children}</Provider>
   )
@@ -99,7 +109,7 @@ describe('useJobEvents', () => {
     expect(eventsCalls()[0]?.[0]).toBe(
       'http://localhost:3003/api/v1/jobs/events'
     )
-    expect(eventsInit().headers.Authorization).toBe('Bearer test-token')
+    expect(eventsInit().headers.Authorization).toBe(`Bearer ${TOKEN}`)
     expect(store.getState().jobEvents.connected).toBe(true)
   })
 
@@ -196,7 +206,7 @@ describe('useJobEvents', () => {
     let first = true
     fetchMock.mockImplementation(async (url: string) => {
       if (url.endsWith('/auth/refresh')) {
-        return { ok: true, json: async () => ({ accessToken: 'new-token' }) }
+        return { ok: true, json: async () => ({ accessToken: NEW_TOKEN }) }
       }
       if (first) {
         first = false
@@ -211,9 +221,9 @@ describe('useJobEvents', () => {
     await flush()
     await flush()
 
-    expect(store.getState().auth.token).toBe('new-token')
+    expect(store.getState().auth.token).toBe(NEW_TOKEN)
     expect(eventsCalls()).toHaveLength(2)
-    expect(eventsInit(1).headers.Authorization).toBe('Bearer new-token')
+    expect(eventsInit(1).headers.Authorization).toBe(`Bearer ${NEW_TOKEN}`)
   })
 
   it('gives up when the token cannot be refreshed', async () => {
