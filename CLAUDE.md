@@ -166,3 +166,4 @@ The worker has a separate NERSC code path (`bilbomd-nersc.ts`, `bilboMdNerscJobM
 
 - **Hyperion** (SIBYLS beamline): `infra/docker-compose-hyperion.yml` — CPU workflows (Classic, Auto, Multi, SANS, Scoper)
 - **NERSC**: Docker Compose / Helm — GPU workflows (Classic, Auto, AF/AlphaFold)
+- `infra/deploy-to-beamline.sh <cmd> dev|prod` drives both beamline hosts from anywhere: it SSHes into the shared-NFS checkout `~/projects/bilbomd` and runs epyc's stack plus SCOPER on hyperion (Intel-only). Env files stay on the servers.
