@@ -139,6 +139,8 @@ Prettier formats the whole repo using the root `.prettierrc`:
 
 Prettier is pinned to an exact version. Upgrade it in its own PR and reformat in that same PR, so formatting changes never mix with code changes.
 
+The repo-wide reformat is listed in `.git-blame-ignore-revs`. GitHub's blame view skips it automatically. For local `git blame`, run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once per clone.
+
 ## Testing Guidelines
 
 ### Requirements
