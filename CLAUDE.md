@@ -37,6 +37,7 @@ Environment: copy `infra/.env.example` to `infra/.env.local`.
 - Avoid `any` — use proper types or generics
 - Prefer functional patterns over classes
 - All modules use ESM (`"type": "module"`)
+- Prettier formats everything (root `.prettierrc`). A pre-commit hook formats staged files, and CI runs `pnpm format:check`
 
 ## Development Workflow
 

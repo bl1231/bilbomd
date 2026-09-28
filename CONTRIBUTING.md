@@ -129,6 +129,16 @@ function processJob(job: BilboMDJobDTO): ProcessedJob {
 }
 ```
 
+### Formatting
+
+Prettier formats the whole repo using the root `.prettierrc`:
+
+- `pnpm install` sets up a pre-commit hook (husky + lint-staged) that formats staged files.
+- CI runs `pnpm format:check` in the Lint job and fails on unformatted files.
+- `pnpm format` formats everything, and `pnpm format:check` reports what's unformatted.
+
+Prettier is pinned to an exact version. Upgrade it in its own PR and reformat in that same PR, so formatting changes never mix with code changes.
+
 ## Testing Guidelines
 
 ### Requirements
