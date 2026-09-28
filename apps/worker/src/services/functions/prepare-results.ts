@@ -53,12 +53,7 @@ const prepareResults = async (
 
     {
       const baseDataName = DBjob.data_file.split('.')[0]
-      const openmmPdb = path.join(
-        jobDir,
-        'openmm',
-        'minimize',
-        'minimized.pdb'
-      )
+      const openmmPdb = path.join(jobDir, 'openmm', 'minimize', 'minimized.pdb')
       const charmmNewPdb = path.join(
         jobDir,
         'charmm',
@@ -261,7 +256,10 @@ const prepareResults = async (
     }
 
     // Copy consolidated Rgyr/Dmax JSON — only present if the analysis script succeeded
-    const rgyrDmaxJson = path.join(multiFoxsDir, 'consolidated_rgyr_dmax_data.json')
+    const rgyrDmaxJson = path.join(
+      multiFoxsDir,
+      'consolidated_rgyr_dmax_data.json'
+    )
     if (await fs.pathExists(rgyrDmaxJson)) {
       await copyFiles({
         source: rgyrDmaxJson,
@@ -270,7 +268,9 @@ const prepareResults = async (
         isCritical: false
       })
     } else {
-      logger.warn('consolidated_rgyr_dmax_data.json not found — Rgyr/Dmax analysis may have failed')
+      logger.warn(
+        'consolidated_rgyr_dmax_data.json not found — Rgyr/Dmax analysis may have failed'
+      )
     }
 
     // Copy MultiFoXS log for debugging
@@ -353,7 +353,9 @@ const createResultsArchive = async (
   uuid: string
 ): Promise<void> => {
   const archiveName = `results-${uuid.split('-')[0]}.tar.gz`
-  await execFilePromise('tar', ['czvf', archiveName, 'results'], { cwd: jobDir })
+  await execFilePromise('tar', ['czvf', archiveName, 'results'], {
+    cwd: jobDir
+  })
 }
 
 const getNumEnsembles = async (logFile: string): Promise<number> => {

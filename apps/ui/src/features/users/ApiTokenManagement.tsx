@@ -58,7 +58,7 @@ const APITokenManager = () => {
                 ? 'warning'
                 : 'error'
           }
-          size='small'
+          size="small"
           sx={{ fontWeight: 'bold', width: '80px' }}
         />
       )
@@ -105,7 +105,7 @@ const APITokenManager = () => {
       width: 100,
       renderCell: (params) => (
         <IconButton
-          edge='end'
+          edge="end"
           onClick={() => handleDelete(params.id.toString())}
         >
           <DeleteIcon />
@@ -167,20 +167,20 @@ const APITokenManager = () => {
           borderColor: grey[500]
         }}
       >
-        <Typography variant='h4'>Create API Tokens</Typography>
+        <Typography variant="h4">Create API Tokens</Typography>
       </Box>
       <Box
         sx={{
           m: 2
         }}
       >
-        <Typography variant='body2'>
+        <Typography variant="body2">
           Need help? Check out our{' '}
           <Link
-            href='/api-docs'
-            target='_blank'
-            rel='noopener noreferrer'
-            underline='hover'
+            href="/api-docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            underline="hover"
           >
             API Documentation
           </Link>
@@ -201,17 +201,20 @@ const APITokenManager = () => {
           }}
         >
           <IconButton
-            size='small'
+            size="small"
             onClick={() => {
               setNewToken(null)
             }}
             sx={{ position: 'absolute', top: 4, right: 4 }}
-            aria-label='Dismiss'
+            aria-label="Dismiss"
           >
-            <CloseIcon fontSize='small' />
+            <CloseIcon fontSize="small" />
           </IconButton>
 
-          <Typography variant='body2' gutterBottom>
+          <Typography
+            variant="body2"
+            gutterBottom
+          >
             This is your new API token. Copy it now — you won’t be able to see
             it again:
           </Typography>
@@ -232,12 +235,15 @@ const APITokenManager = () => {
               overflowWrap: 'anywhere',
               paddingRight: 1
             }}
-            variant='outlined'
+            variant="outlined"
           />
         </Box>
       )}
       <Box sx={{ px: 2 }}>
-        <Typography variant='body2' sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{ mb: 2 }}
+        >
           Choose a token &quot;flavor&quot; based on what you need:
           <br />
           <strong>Green:</strong> Read-only (get job status), valid 30 days.
@@ -248,7 +254,10 @@ const APITokenManager = () => {
         </Typography>
       </Box>
       {tokens.length >= tokenLimit ? (
-        <Alert severity='warning' sx={{ mx: 2, mb: 3 }}>
+        <Alert
+          severity="warning"
+          sx={{ mx: 2, mb: 3 }}
+        >
           You have reached the maximum of 3 active API tokens. Please delete one
           before creating another.
         </Alert>
@@ -265,22 +274,22 @@ const APITokenManager = () => {
           }}
         >
           <Button
-            variant='contained'
-            color='success'
+            variant="contained"
+            color="success"
             onClick={() => handleCreateToken('green', 30)}
           >
             Create Green Token
           </Button>
           <Button
-            variant='contained'
-            color='warning'
+            variant="contained"
+            color="warning"
             onClick={() => handleCreateToken('yellow', 14)}
           >
             Create Yellow Token
           </Button>
           <Button
-            variant='contained'
-            color='error'
+            variant="contained"
+            color="error"
             onClick={() => handleCreateToken('red', 7)}
           >
             Create Red Token
@@ -296,7 +305,7 @@ const APITokenManager = () => {
           borderColor: grey[500]
         }}
       >
-        <Typography variant='h4'>Existing API Tokens</Typography>
+        <Typography variant="h4">Existing API Tokens</Typography>
       </Box>
 
       <Box
@@ -309,9 +318,9 @@ const APITokenManager = () => {
         {isLoading ? (
           <Typography>Loading tokens...</Typography>
         ) : error ? (
-          <Typography color='error'>Error loading tokens</Typography>
+          <Typography color="error">Error loading tokens</Typography>
         ) : tokens.length === 0 ? (
-          <Alert severity='info'>No API tokens yet. Create one above.</Alert>
+          <Alert severity="info">No API tokens yet. Create one above.</Alert>
         ) : (
           <Box sx={{ backgroundColor: grey[200], borderRadius: 1 }}>
             <DataGrid

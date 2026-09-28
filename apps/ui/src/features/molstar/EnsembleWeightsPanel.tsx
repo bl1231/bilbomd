@@ -39,7 +39,10 @@ const EnsembleWeightsPanel = ({
 
   return (
     <Box sx={{ px: 1, py: 1 }}>
-      <Typography variant='subtitle2' sx={{ mb: 0.5 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{ mb: 0.5 }}
+      >
         Conformation weights
       </Typography>
       {visibleEnsembles.map((ensemble) => {
@@ -48,10 +51,13 @@ const EnsembleWeightsPanel = ({
         const bestModel = ensemble.models[0]
         if (!bestModel) return null
         return (
-          <Box key={ensemble.size} sx={{ mb: 1 }}>
+          <Box
+            key={ensemble.size}
+            sx={{ mb: 1 }}
+          >
             <Typography
-              variant='caption'
-              color='text.secondary'
+              variant="caption"
+              color="text.secondary"
               sx={{ display: 'block', mb: 0.5 }}
             >
               {ensemble.size}-state ensemble
@@ -75,7 +81,7 @@ const EnsembleWeightsPanel = ({
                 >
                   {showColors && (
                     <Box
-                      data-testid='conformation-swatch'
+                      data-testid="conformation-swatch"
                       sx={{
                         flex: '0 0 auto',
                         width: 12,
@@ -86,14 +92,14 @@ const EnsembleWeightsPanel = ({
                     />
                   )}
                   <Typography
-                    variant='body2'
+                    variant="body2"
                     sx={{ minWidth: 20, color: 'text.secondary' }}
                   >
                     {index + 1}
                   </Typography>
                   <Tooltip title={label}>
                     <Typography
-                      variant='body2'
+                      variant="body2"
                       sx={{
                         flex: '1 1 auto',
                         minWidth: 0,
@@ -119,12 +125,14 @@ const EnsembleWeightsPanel = ({
                       sx={{
                         width: `${fraction * 100}%`,
                         height: '100%',
-                        backgroundColor: showColors ? memberColor : 'primary.main'
+                        backgroundColor: showColors
+                          ? memberColor
+                          : 'primary.main'
                       }}
                     />
                   </Box>
                   <Typography
-                    variant='body2'
+                    variant="body2"
                     sx={{
                       flex: '0 0 48px',
                       textAlign: 'right',

@@ -7,4 +7,3 @@ Some notes as I develop **BilboMD SANS**
 ```bash
 docker build -t bilbomd/bilbomd-sans:0.0.1 -f bilbomd-sans.dockerfile .
 ```
-

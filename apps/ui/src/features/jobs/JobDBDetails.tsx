@@ -51,10 +51,7 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
       job.mongo.jobType === 'sans'
     ) {
       const specificJob = job.mongo as
-        | BilboMDPDBDTO
-        | BilboMDCRDDTO
-        | BilboMDAutoDTO
-        | BilboMDSANSDTO
+        BilboMDPDBDTO | BilboMDCRDDTO | BilboMDAutoDTO | BilboMDSANSDTO
       void triggerGetFile({
         id: job.mongo.id,
         filename: specificJob.const_inp_file || ''
@@ -142,7 +139,11 @@ const JobDBDetails: React.FC<JobDBDetailsProps> = ({ job }) => {
             >
               <Typography sx={{ fontWeight: 'bold' }}>{label}:</Typography>
               <Typography
-                sx={{ minWidth: 0, textAlign: 'right', overflowWrap: 'anywhere' }}
+                sx={{
+                  minWidth: 0,
+                  textAlign: 'right',
+                  overflowWrap: 'anywhere'
+                }}
               >
                 {(() => {
                   if (value instanceof Date) {

@@ -16,7 +16,7 @@ const EditUser = () => {
 
   if (!user)
     return (
-      <div data-testid='spinner'>
+      <div data-testid="spinner">
         <PulseLoader color={'#222'} />
       </div>
     )

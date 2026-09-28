@@ -19,7 +19,9 @@ const generateMagickLink = async (req: Request, res: Response) => {
 
   if (!foundUser) {
     // Email not found in current emails, check previousEmails
-    const userWithOldEmail = await User.findOne({ previousEmails: email }).exec()
+    const userWithOldEmail = await User.findOne({
+      previousEmails: email
+    }).exec()
 
     if (userWithOldEmail) {
       res.status(400).json({
@@ -51,7 +53,9 @@ const generateMagickLink = async (req: Request, res: Response) => {
     foundUser.otp = otp
     await foundUser.save()
 
-    logger.info(`Magicklink requested by ${foundUser.email} send OTP: ${passcode}`)
+    logger.info(
+      `Magicklink requested by ${foundUser.email} send OTP: ${passcode}`
+    )
 
     if (config.sendEmailNotifications) {
       sendMagickLinkEmail(email, bilboMdUrl, passcode)

@@ -27,7 +27,7 @@ const PipelineOptions = ({ pipelines }: PipelineOptionsProps) => (
     {pipelines.map((pipeline, index) => (
       <Paper
         key={index}
-        className='bilbomd-pipeline'
+        className="bilbomd-pipeline"
         sx={{ mb: 2, display: 'flex', alignItems: 'center' }}
       >
         <ListItem

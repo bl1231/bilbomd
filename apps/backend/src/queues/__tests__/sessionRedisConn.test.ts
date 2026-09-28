@@ -20,7 +20,10 @@ vi.mock('redis', async () => {
 })
 
 import { logger } from '../../middleware/loggers.js'
-import { sessionRedis, sessionRedisReconnectStrategy } from '../sessionRedisConn.js'
+import {
+  sessionRedis,
+  sessionRedisReconnectStrategy
+} from '../sessionRedisConn.js'
 
 // Mocks are cleared before each test, so load the module inside the test to
 // observe the client it creates at import time.

@@ -45,11 +45,14 @@ export default function AppBreadcrumbs() {
 
   return (
     <Breadcrumbs
-      aria-label='breadcrumb'
-      separator={<NavigateNextIcon fontSize='small' />}
+      aria-label="breadcrumb"
+      separator={<NavigateNextIcon fontSize="small" />}
       sx={{ mb: 2 }}
     >
-      <Link component={RouterLink} to='/welcome'>
+      <Link
+        component={RouterLink}
+        to="/welcome"
+      >
         Home
       </Link>
 
@@ -67,11 +70,18 @@ export default function AppBreadcrumbs() {
 
           const isLast = index === pathnames.length - 1
           return isLast ? (
-            <Typography key={to} color='text.primary'>
+            <Typography
+              key={to}
+              color="text.primary"
+            >
               {label}
             </Typography>
           ) : (
-            <Link component={RouterLink} to={to} key={to}>
+            <Link
+              component={RouterLink}
+              to={to}
+              key={to}
+            >
               {label}
             </Link>
           )

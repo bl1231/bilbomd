@@ -9,8 +9,8 @@ const NightModeToggle: React.FC<ButtonProps> = ({ sx, ...props }) => {
   return (
     <Button
       onClick={toggleColorMode}
-      color='inherit'
-      size='large'
+      color="inherit"
+      size="large"
       endIcon={mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
       sx={{
         backgroundColor: mode === 'dark' ? 'grey.800' : 'grey.200',
@@ -28,7 +28,7 @@ const NightModeToggle: React.FC<ButtonProps> = ({ sx, ...props }) => {
       {...props}
     >
       <Box
-        component='span'
+        component="span"
         sx={{ display: { xs: 'none', sm: 'inline' }, whiteSpace: 'nowrap' }}
       >
         {mode === 'dark' ? `light mode` : `dark mode`}

@@ -182,15 +182,11 @@ export const pdbOrCifExtTest = () =>
   )
 
 export const pdbOrCifChainIdCheck = () =>
-  mixed().test(
-    'pdb-or-cif-chainid-check',
-    'Missing Chain ID',
-    async (file) => {
-      if (!(file instanceof File)) return true
-      const isCif = file.name.toLowerCase().endsWith('.cif')
-      return isCif ? cifContainsChainId(file) : containsChainId(file)
-    }
-  )
+  mixed().test('pdb-or-cif-chainid-check', 'Missing Chain ID', async (file) => {
+    if (!(file instanceof File)) return true
+    const isCif = file.name.toLowerCase().endsWith('.cif')
+    return isCif ? cifContainsChainId(file) : containsChainId(file)
+  })
 
 export const pdbOrCifResidueCheck = () =>
   mixed().test('pdb-or-cif-residue-check', '', async function (file) {

@@ -85,19 +85,26 @@ const createReadmeFile = async (
   switch (DBjob.__t) {
     case 'BilboMdCRD': {
       const job = DBjob as IBilboMDCRDJob
-      readmeContent = buildStandardReadme(DBjob, numEnsembles, `
+      readmeContent = buildStandardReadme(
+        DBjob,
+        numEnsembles,
+        `
 - Original CRD file: ${job.crd_file}
 - Original PSF file: ${job.psf_file}
 - Original experimental SAXS data file: ${job.data_file}
 - Original const.inp file: ${job.const_inp_file}
 - Generated minimized PDB file: minimization_output.pdb
 - Generated minimized PDB DAT file: minimization_output_${job.data_file.split('.')[0]}.dat
-`)
+`
+      )
       break
     }
     case 'BilboMdPDB': {
       const job = DBjob as IBilboMDPDBJob
-      readmeContent = buildStandardReadme(DBjob, numEnsembles, `
+      readmeContent = buildStandardReadme(
+        DBjob,
+        numEnsembles,
+        `
 - Original PDB file: ${job.pdb_file}
 - Generated CRD file: ${job.crd_file}
 - Generated PSF file: ${job.psf_file}
@@ -105,12 +112,16 @@ const createReadmeFile = async (
 - Original const.inp file: ${job.const_inp_file}
 - Generated minimized PDB file: minimization_output.pdb
 - Generated minimized PDB DAT file: minimization_output_${job.data_file.split('.')[0]}.dat
-`)
+`
+      )
       break
     }
     case 'BilboMdAuto': {
       const job = DBjob as IBilboMDAutoJob
-      readmeContent = buildStandardReadme(DBjob, numEnsembles, `
+      readmeContent = buildStandardReadme(
+        DBjob,
+        numEnsembles,
+        `
 - Original PDB file: ${job.pdb_file}
 - Original PAE file: ${job.pae_file}
 - Generated CRD file: ${job.crd_file}
@@ -119,12 +130,16 @@ const createReadmeFile = async (
 - Generated const.inp file: ${job.const_inp_file}
 - Generated minimized PDB file: minimization_output.pdb
 - Generated minimized PDB DAT file: minimization_output_${job.data_file.split('.')[0]}.dat
-`)
+`
+      )
       break
     }
     case 'BilboMdAlphaFold': {
       const job = DBjob as IBilboMDAlphaFoldJob
-      readmeContent = buildStandardReadme(DBjob, numEnsembles, `
+      readmeContent = buildStandardReadme(
+        DBjob,
+        numEnsembles,
+        `
 - Original experimental SAXS data file: ${job.data_file}
 - FASTA file: ${job.fasta_file}
 - AlphaFold PDB file: af-rank1.pdb
@@ -134,12 +149,16 @@ const createReadmeFile = async (
 - Generated const.inp file: const.inp
 - Generated minimized PDB file: minimization_output.pdb
 - Generated minimized PDB DAT file: minimization_output_${job.data_file.split('.')[0]}.dat
-`)
+`
+      )
       break
     }
     case 'BilboMdOpenFold': {
       const job = DBjob as IBilboMDOpenFoldJob
-      readmeContent = buildStandardReadme(DBjob, numEnsembles, `
+      readmeContent = buildStandardReadme(
+        DBjob,
+        numEnsembles,
+        `
 - Original experimental SAXS data file: ${job.data_file}
 - OpenFold3 query JSON: of3-query.json
 - OpenFold3 PDB file: of3-rank1.pdb
@@ -149,7 +168,8 @@ const createReadmeFile = async (
 - Generated const.inp file: const.inp
 - Generated minimized PDB file: minimization_output.pdb
 - Generated minimized PDB DAT file: minimization_output_${job.data_file.split('.')[0]}.dat
-`)
+`
+      )
       break
     }
     case 'BilboMdSANS': {
@@ -261,7 +281,9 @@ Thank you for using BilboMD
       break
     }
     default:
-      logger.warn(`createReadmeFile: unhandled job type '${(DBjob as AnyBilboMDJob).__t}'`)
+      logger.warn(
+        `createReadmeFile: unhandled job type '${(DBjob as AnyBilboMDJob).__t}'`
+      )
       readmeContent = `# BilboMD Job Results\n\nNo README template available for job type: ${(DBjob as AnyBilboMDJob).__t}\n`
   }
 

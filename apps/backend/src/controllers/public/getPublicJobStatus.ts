@@ -1,7 +1,11 @@
 import { Request, Response } from 'express'
 import { logger } from '../../middleware/loggers.js'
 import { Job, IJob } from '@bilbomd/mongodb-schema'
-import type { PublicJobStatus, JobResultsDTO, JobStepsDTO } from '@bilbomd/bilbomd-types'
+import type {
+  PublicJobStatus,
+  JobResultsDTO,
+  JobStepsDTO
+} from '@bilbomd/bilbomd-types'
 import { mapDiscriminatorToJobType } from '../jobs/utils/jobDTOMapper.js'
 import { publicJobQuery } from './utils/publicJobQuery.js'
 
@@ -17,14 +21,10 @@ const getPublicJobById = async (req: Request, res: Response) => {
   }
 
   try {
-    const job = await Job.findOne(publicJobQuery(publicId))
-      .lean<IJob>()
-      .exec()
+    const job = await Job.findOne(publicJobQuery(publicId)).lean<IJob>().exec()
 
     if (!job) {
-      res
-        .status(404)
-        .json({ message: `No job matches publicId ${publicId}.` })
+      res.status(404).json({ message: `No job matches publicId ${publicId}.` })
       return
     }
 

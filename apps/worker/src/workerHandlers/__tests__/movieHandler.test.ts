@@ -12,9 +12,8 @@ describe('movieHandler', () => {
   })
 
   it('should re-throw errors from pipeline functions', async () => {
-    const { renderMovieJob } = await import(
-      '../../services/pipelines/dcd-to-mp4.js'
-    )
+    const { renderMovieJob } =
+      await import('../../services/pipelines/dcd-to-mp4.js')
     const { movieHandler } = await import('../movieHandler.js')
 
     // Mock the pipeline to throw an error
@@ -38,9 +37,8 @@ describe('movieHandler', () => {
   })
 
   it('should process render-movie job successfully', async () => {
-    const { renderMovieJob } = await import(
-      '../../services/pipelines/dcd-to-mp4.js'
-    )
+    const { renderMovieJob } =
+      await import('../../services/pipelines/dcd-to-mp4.js')
     const { movieHandler } = await import('../movieHandler.js')
 
     vi.mocked(renderMovieJob).mockResolvedValueOnce(undefined)

@@ -279,7 +279,8 @@ const hasSaxsQualityIssues = (file: File): Promise<SaxsQualityResult> => {
         return
       }
 
-      const pct = totalCount > 0 ? Math.round((lowSnrCount / totalCount) * 100) : 0
+      const pct =
+        totalCount > 0 ? Math.round((lowSnrCount / totalCount) * 100) : 0
       resolve({
         lowSnrCount,
         totalCount,
@@ -291,7 +292,12 @@ const hasSaxsQualityIssues = (file: File): Promise<SaxsQualityResult> => {
       })
     }
     reader.onerror = () =>
-      resolve({ lowSnrCount: 0, totalCount: 0, maxErrorRatio: 0, warning: null })
+      resolve({
+        lowSnrCount: 0,
+        totalCount: 0,
+        maxErrorRatio: 0,
+        warning: null
+      })
   })
 }
 
@@ -566,7 +572,10 @@ const cifIsSingleModel = (file: File): Promise<boolean> => {
   })
 }
 
-const _detectResiduesFromSet = (file: File, residueSet: Set<string>): Promise<string[]> => {
+const _detectResiduesFromSet = (
+  file: File,
+  residueSet: Set<string>
+): Promise<string[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -608,9 +617,7 @@ const isPlddtColumnAllZero = (file: File): Promise<boolean> => {
         return
       }
       const isCif = file.name.toLowerCase().endsWith('.cif')
-      const { data } = isCif
-        ? parsePLDDTFromCIF(text)
-        : parsePLDDTFromPDB(text)
+      const { data } = isCif ? parsePLDDTFromCIF(text) : parsePLDDTFromPDB(text)
       // Only warn when we actually parsed residues and every one is zero.
       resolve(data.length > 0 && data.every((d) => d.plddt === 0))
     }

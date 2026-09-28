@@ -13,7 +13,9 @@ Branch: `238-store-job-stats-in-mongodb`
 Date: 2025-12-15
 
 ## Summary
+
 This changeset introduces end-to-end **usage analytics** across the BilboMD stack:
+
 - Records job lifecycle usage events (submitted, started, completed, failed, cancelled) with context (access mode, user, IP hash, NERSC metadata).
 - Adds a `UsageEvent` MongoDB model + interfaces with indexes for analytics.
 - Implements Admin Analytics API endpoints for summaries and aggregations.
@@ -22,6 +24,7 @@ This changeset introduces end-to-end **usage analytics** across the BilboMD stac
 - Adds documentation for analytics aggregation patterns.
 
 ## Backend
+
 - Routing:
   - [apps/backend/src/app.ts](apps/backend/src/app.ts#L115): Mounts `admin/analytics` router.
   - [apps/backend/src/routes/admin-analytics.ts](apps/backend/src/routes/admin-analytics.ts): Protected Admin/Manager analytics endpoints.
@@ -43,6 +46,7 @@ This changeset introduces end-to-end **usage analytics** across the BilboMD stac
   - [Anonymous](apps/backend/src/controllers/jobs/createJob.ts#L260-L270): `job_submitted` with `publicId` + `clientIpHash`.
 
 ## Worker
+
 - Helpers:
   - [apps/worker/src/services/functions/usageEvents.ts](apps/worker/src/services/functions/usageEvents.ts): `buildContext()`, `recordWorkerUsageEvent()`, `toPipeline()`.
 - Pipelines: start/complete events added
@@ -58,18 +62,21 @@ This changeset introduces end-to-end **usage analytics** across the BilboMD stac
   - Added `@bilbomd/bilbomd-types` to [apps/worker/package.json](apps/worker/package.json#L31-L36); lockfile updated.
 
 ## Scoper
+
 - Helpers:
   - [apps/scoper/src/functions/usageEvents.ts](apps/scoper/src/functions/usageEvents.ts): `buildContext()`, `recordWorkerUsageEvent()`.
 - Integration:
   - Start & complete events in [apps/scoper/src/process.bilbomdscoper.ts#L24-L39], [L58-L79].
 
 ## UI
+
 - RTK Query Slice:
   - [apps/ui/src/slices/analyticsApiSlice.ts](apps/ui/src/slices/analyticsApiSlice.ts): Endpoints for all admin analytics.
 - Store wiring:
   - Reducer/middleware added in [apps/ui/src/app/store.ts#L1-L7], [L15-L20].
 
 ## MongoDB Schema
+
 - Interfaces:
   - New usage event interface [packages/mongodb-schema/src/interfaces/usageEventInterface.ts](packages/mongodb-schema/src/interfaces/usageEventInterface.ts) with `PipelineType`, `EventType`, `IUsageEventContext`, `IUsageEvent`.
   - Re-exports in [interfaces.ts](packages/mongodb-schema/src/interfaces.ts#L8) and [interfaces/index.ts](packages/mongodb-schema/src/interfaces/index.ts#L8).
@@ -79,37 +86,45 @@ This changeset introduces end-to-end **usage analytics** across the BilboMD stac
   - Compound index `{ pipeline: 1, event_type: 1, timestamp: -1 }` for analytics.
 
 ## Shared Types
+
 - DTOs:
   - Usage event DTOs [packages/bilbomd-types/src/usage-events.ts](packages/bilbomd-types/src/usage-events.ts) and aggregation DTOs [packages/bilbomd-types/src/aggregations.ts](packages/bilbomd-types/src/aggregations.ts).
   - Exported via [index.ts](packages/bilbomd-types/src/index.ts#L1-L3). Package.json formatting updated.
 
 ## Documentation
+
 - New guide: [docs/usage-analytics.md](docs/usage-analytics.md) with common aggregation pipelines and index guidance.
 
 ## Miscellaneous
+
 - Copilot instructions wording tweak: [.github/copilot-instructions.md](.github/copilot-instructions.md#L101-L104).
 - tsconfig: Removed `rootDir` in [tsconfig.json](tsconfig.json#L13-L17) to relax build output constraints.
 
 ## Behavioral Changes
+
 - Usage events emitted across backend, worker, scoper for job lifecycle and NERSC actions, including durations and context.
 - Admin analytics API provides aggregated stats for dashboards.
 - UI can fetch analytics via RTK Query.
 - New `UsageEvent` collection; indexes for performant queries.
 
 ## Security & Access
+
 - Admin analytics endpoints protected by `verifyJWT` and `verifyRoles('Admin','Manager')`.
 - Anonymous usage recording avoids storing raw IP; uses hashed client IP.
 
 ## Migration / Ops
+
 - Ensure MongoDB creates `UsageEvent` collection and indexes on first use.
 - No breaking changes to existing APIs; new endpoints only.
 
 ## Testing Suggestions
+
 - Backend: unit tests for each analytics controller, including error paths and role guard.
 - Worker/Scoper: verify event emission on start/complete/fail; duration calculation.
 - UI: endpoint contracts via RTK Query mocks; add admin dashboard views in a follow-up PR.
 
 ## PR Checklist
+
 - [ ] Verify indexes exist in production DB
 - [ ] Smoke-test admin analytics endpoints behind Admin/Manager auth
 - [ ] Validate usage events for both authenticated and anonymous flows

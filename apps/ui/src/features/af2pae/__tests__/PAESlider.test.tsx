@@ -13,7 +13,12 @@ const TestWrapper = () => {
     }
   }
 
-  return <PAESlider value={value} setFieldValue={setFieldValue} />
+  return (
+    <PAESlider
+      value={value}
+      setFieldValue={setFieldValue}
+    />
+  )
 }
 
 describe('PAESlider Component', () => {

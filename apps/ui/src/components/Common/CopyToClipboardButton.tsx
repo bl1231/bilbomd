@@ -16,10 +16,10 @@ const CopyToClipboardButton = ({ text }: CopyToClipboardButtonProps) => {
 
   return (
     <Button
-      variant='outlined'
+      variant="outlined"
       startIcon={<ContentCopyIcon />}
       onClick={handleClick}
-      size='small'
+      size="small"
     >
       Copy
     </Button>

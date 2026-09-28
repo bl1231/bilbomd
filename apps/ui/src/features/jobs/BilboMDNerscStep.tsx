@@ -18,7 +18,6 @@ const BilboMDNerscStep = ({
   stepStatus,
   stepMessage
 }: BilboMDStepProps) => {
-
   const { friendlyName, tooltipMessage } = getStepDetails(stepName)
   return (
     <Grid

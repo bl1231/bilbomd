@@ -27,7 +27,10 @@ const getFile = async (req: Request, res: Response) => {
 
     // Check if the file exists
     if (!fs.existsSync(filePath)) {
-      logger.warn('File not found in job', { filename: sanitizedFilename, jobId: id })
+      logger.warn('File not found in job', {
+        filename: sanitizedFilename,
+        jobId: id
+      })
       res.status(404).json({ error: 'File not found' })
       return
     }

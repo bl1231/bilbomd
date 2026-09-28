@@ -41,7 +41,7 @@ const ProjectHours = ({ projectCode }: { projectCode: string }) => {
           <Chip
             label={projectCode}
             sx={{ mx: 0.5, fontSize: '0.9rem', fontWeight: 'bold' }}
-            variant='outlined'
+            variant="outlined"
             style={{ backgroundColor: 'black', color: '#bae637' }}
           />
         </Grid>
@@ -64,7 +64,7 @@ const ProjectHours = ({ projectCode }: { projectCode: string }) => {
               fontWeight: 'bold',
               width: '60px'
             }}
-            variant='outlined'
+            variant="outlined"
             style={{ backgroundColor: 'black', color: '#bae637' }}
           />
           <Typography sx={{ mx: 1 }}>
@@ -78,7 +78,7 @@ const ProjectHours = ({ projectCode }: { projectCode: string }) => {
               fontWeight: 'bold',
               width: '60px'
             }}
-            variant='outlined'
+            variant="outlined"
             style={{ backgroundColor: 'black', color: '#bae637' }}
           />
 
@@ -87,7 +87,7 @@ const ProjectHours = ({ projectCode }: { projectCode: string }) => {
             <b>GPU Usage:</b>
           </Typography>
           <LinearProgress
-            variant='determinate'
+            variant="determinate"
             value={gpuUsagePercent}
             sx={{
               flexGrow: 1,

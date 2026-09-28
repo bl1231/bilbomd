@@ -30,7 +30,10 @@ const LogOut = () => {
     <>
       <Typography onClick={handleClickOpen}>Logout</Typography>
 
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+      >
         <DialogContent>
           <DialogContentText sx={{ color: 'black' }}>
             Do you want to Logout?
@@ -41,13 +44,17 @@ const LogOut = () => {
         </DialogContent>
         <DialogActions>
           <Button
-            variant='contained'
+            variant="contained"
             // sx={{ backgroundColor: '#ff7875', color: 'black' }}
             onClick={handleClose}
           >
             Actually... Nevermind
           </Button>
-          <Button variant='outlined' onClick={onClickLogout} autoFocus>
+          <Button
+            variant="outlined"
+            onClick={onClickLogout}
+            autoFocus
+          >
             Logout
           </Button>
         </DialogActions>

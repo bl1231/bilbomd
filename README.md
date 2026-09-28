@@ -42,15 +42,17 @@ This pipeline is designed to run Alphafold2 on your provided protein sequence an
 Current test coverage across BilboMD apps:
 
 <!-- COVERAGE-TABLE:START -->
-| App | Statements | Branches | Functions | Lines |
-|-----|-----------|----------|-----------|-------|
-| Backend | 87.05% | 80.65% | 86.84% | 87.38% |
-| UI | 69.82% | 61.26% | 69.11% | 71.07% |
-| Worker | 77.76% | 64.25% | 67.40% | 77.55% |
-| Scoper | 95.11% | 82.14% | 88.00% | 95.11% |
+
+| App     | Statements | Branches | Functions | Lines  |
+| ------- | ---------- | -------- | --------- | ------ |
+| Backend | 87.05%     | 80.65%   | 86.84%    | 87.38% |
+| UI      | 69.82%     | 61.26%   | 69.11%    | 71.07% |
+| Worker  | 77.76%     | 64.25%   | 67.40%    | 77.55% |
+| Scoper  | 95.11%     | 82.14%   | 88.00%    | 95.11% |
+
 <!-- COVERAGE-TABLE:END -->
 
-*Coverage is automatically updated on each push to main.*
+_Coverage is automatically updated on each push to main._
 
 ## Deployment
 
@@ -58,16 +60,16 @@ There are 2 instances of BilboMD available. Each deployment has a different sele
 
 1. Hyperion [https://bilbomd.bl1231.als.lbl.gov](https://bilbomd.bl1231.als.lbl.gov)
 
-    - Classic w/PDB
-    - Classic w/CRD
-    - Auto
-    - Multi
-    - SANS
-    - Scoper
+   - Classic w/PDB
+   - Classic w/CRD
+   - Auto
+   - Multi
+   - SANS
+   - Scoper
 
 2. NERSC [https://bilbomd-nersc.bl1231.als.lbl.gov](https://bilbomd-nersc.bl1231.als.lbl.gov)
 
-    - Classic w/PDB
-    - Classic w/CRD
-    - Auto
-    - AF
+   - Classic w/PDB
+   - Classic w/CRD
+   - Auto
+   - AF

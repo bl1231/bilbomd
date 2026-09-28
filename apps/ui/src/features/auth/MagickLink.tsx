@@ -126,7 +126,10 @@ const MagickLink = () => {
         sx={{ height: '100vh', alignItems: 'center', justifyContent: 'center' }}
       >
         <>
-          <Alert severity='success' variant='outlined'>
+          <Alert
+            severity="success"
+            variant="outlined"
+          >
             <AlertTitle>Woot!</AlertTitle>A new email verification code has been
             sent to <strong>{verifyEmail}</strong>.<br /> Please check your
             inbox and perhaps your Spam folder for an email from{' '}
@@ -139,10 +142,17 @@ const MagickLink = () => {
     content = (
       <>
         {/* Configurable Alert on Login Page */}
-        <Grid container sx={{ justifyContent: 'center' }}>
+        <Grid
+          container
+          sx={{ justifyContent: 'center' }}
+        >
           {config.enableHomePageAlert === 'true' && (
             <Grid>
-              <Alert severity='error' variant='filled' sx={{ my: 2 }}>
+              <Alert
+                severity="error"
+                variant="filled"
+                sx={{ my: 2 }}
+              >
                 <AlertTitle>Important Notice</AlertTitle>
                 An unplanned power outage on Feb 15th has resulted in the{' '}
                 <strong>loss of all user accounts</strong>. If you had an
@@ -155,7 +165,11 @@ const MagickLink = () => {
         <Grid
           container
           columns={12}
-          sx={{ height: '100vh', alignItems: 'center', justifyContent: 'center' }}
+          sx={{
+            height: '100vh',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
         >
           <Grid
             sx={{
@@ -167,7 +181,7 @@ const MagickLink = () => {
             }}
           >
             {success ? (
-              <Alert severity='success'>
+              <Alert severity="success">
                 <AlertTitle>Woot!</AlertTitle>A MagickLink&#8482; has been
                 generated.
                 <br />
@@ -194,10 +208,10 @@ const MagickLink = () => {
                     <TextField
                       fullWidth
                       sx={{ my: 1 }}
-                      label='Email address'
-                      name='email'
-                      type='email'
-                      variant='outlined'
+                      label="Email address"
+                      name="email"
+                      type="email"
+                      variant="outlined"
                       disabled={isSubmitting}
                       onChange={handleChange}
                       onBlur={handleBlur}
@@ -215,12 +229,12 @@ const MagickLink = () => {
                           severity={error == 'Pending' ? 'warning' : 'error'}
                           action={
                             <IconButton
-                              aria-label='close'
-                              color='inherit'
-                              size='small'
+                              aria-label="close"
+                              color="inherit"
+                              size="small"
                               onClick={() => setError('')}
                             >
-                              <CloseIcon fontSize='inherit' />
+                              <CloseIcon fontSize="inherit" />
                             </IconButton>
                           }
                           sx={{ mb: 1 }}
@@ -231,8 +245,8 @@ const MagickLink = () => {
                                 Please verify your email first
                               </Typography>
                               <Button
-                                variant='outlined'
-                                type='button'
+                                variant="outlined"
+                                type="button"
                                 sx={{ my: 1 }}
                                 onClick={() => {
                                   setVerifyEmail(values.email)
@@ -254,26 +268,32 @@ const MagickLink = () => {
                     <Button
                       fullWidth
                       sx={{ my: 2 }}
-                      variant='contained'
-                      type='submit'
-                      color='primary'
+                      variant="contained"
+                      type="submit"
+                      color="primary"
                       disabled={isSubmitting}
                       startIcon={<AutoFixHighIcon />}
                     >
                       Send a MagickLink&#8482;
                     </Button>
-                    <Divider variant='middle' sx={{ my: 3 }} />
-                    <Typography variant='body2' sx={{ mt: 2 }}>
+                    <Divider
+                      variant="middle"
+                      sx={{ my: 3 }}
+                    />
+                    <Typography
+                      variant="body2"
+                      sx={{ mt: 2 }}
+                    >
                       Need an account?
                     </Typography>
                     <Button
                       fullWidth
                       sx={{ my: 2 }}
-                      variant='contained'
-                      type='button'
+                      variant="contained"
+                      type="button"
                       endIcon={<ChevronRightIcon />}
                       component={Link}
-                      to='../register'
+                      to="../register"
                     >
                       Create an Account
                     </Button>

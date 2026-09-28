@@ -42,7 +42,7 @@ describe('FileSelect', () => {
       <FileSelect
         {...baseProps}
         error={true}
-        errorMessage='Invalid file type'
+        errorMessage="Invalid file type"
       />
     )
     expect(screen.getByText('Invalid file type')).toBeInTheDocument()

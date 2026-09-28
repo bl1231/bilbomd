@@ -36,11 +36,17 @@ const queueJob = async (data: BullMQData) => {
 
     const bullJob = await queue.add(data.title, data)
 
-    logger.info('Job added to queue', { jobType: data.type, bullmqId: bullJob.id })
+    logger.info('Job added to queue', {
+      jobType: data.type,
+      bullmqId: bullJob.id
+    })
 
     return bullJob.id
   } catch (error) {
-    logger.error('Error adding Job to queue', { jobType: data.type, error: String(error) })
+    logger.error('Error adding Job to queue', {
+      jobType: data.type,
+      error: String(error)
+    })
     throw error
   }
 }
@@ -88,7 +94,9 @@ const getWaitingPositionText = async (bullmq: BullMQJob): Promise<string> => {
   return `${position} out of ${totalNumberWaiting}`
 }
 
-const getBullMQJob = async (UUID: string): Promise<BilboMDBullMQ | undefined> => {
+const getBullMQJob = async (
+  UUID: string
+): Promise<BilboMDBullMQ | undefined> => {
   const allJobs: BullMQJob[] = await getAllBullMQJobs()
 
   const bulljob = allJobs.find((job) => {

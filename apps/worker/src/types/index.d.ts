@@ -69,4 +69,3 @@ interface FileCopyParams {
   isCritical: boolean
   destFilename?: string
 }
-

@@ -28,34 +28,34 @@ const OrcidError = () => {
   return (
     <Box sx={{ maxWidth: 'sm', mx: 'auto', mt: 8, textAlign: 'center' }}>
       <Alert
-        severity='error'
+        severity="error"
         sx={{ mb: 3 }}
       >
         ORCID Authentication Failed
       </Alert>
       <Typography
-        variant='body1'
+        variant="body1"
         gutterBottom
       >
         Unfortunately, we couldn&apos;t complete your ORCID login.
       </Typography>
       {friendly ? (
         <Typography
-          variant='body1'
+          variant="body1"
           sx={{ mt: 2 }}
         >
           {friendly}
         </Typography>
       ) : (
         <Typography
-          variant='body2'
+          variant="body2"
           gutterBottom
         >
           Reason: <strong>{reason}</strong>
         </Typography>
       )}
       <Button
-        variant='contained'
+        variant="contained"
         sx={{ mt: 4 }}
         onClick={() => navigate('/')}
       >

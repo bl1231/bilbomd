@@ -117,8 +117,8 @@ A changeset file looks like:
 
 ```md
 ---
-"@bilbomd/backend": minor
-"@bilbomd/ui": patch
+'@bilbomd/backend': minor
+'@bilbomd/ui': patch
 ---
 
 Backend: Add /v2 search with filters.
@@ -143,8 +143,9 @@ Guidelines:
 **A:** Add a changeset for the internal package and any apps that need a bump (Changesets can also auto-bump dependents using `updateInternalDependencies: "patch"`—already enabled).
 
 **Q:** Our app built twice after merging—why?  
-**A:** Expected:  
-1. Build from your merge commit.  
+**A:** Expected:
+
+1. Build from your merge commit.
 2. Build from the version bump commit (so we get the semver image tag).
 
 **Q:** Can I do one-off manual bumps like before?  
@@ -165,7 +166,7 @@ git push && git push --tags
 
 ## TL;DR
 
-1. Code changes → 
+1. Code changes →
 
 ```bash
 pnpm dlx @changesets/cli changeset

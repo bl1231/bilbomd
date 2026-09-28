@@ -14,11 +14,11 @@ const renderLogin = () =>
     <MemoryRouter initialEntries={['/login']}>
       <Routes>
         <Route
-          path='/login'
+          path="/login"
           element={<LoginPage />}
         />
         <Route
-          path='/magicklink'
+          path="/magicklink"
           element={<div>MagickLink page</div>}
         />
       </Routes>

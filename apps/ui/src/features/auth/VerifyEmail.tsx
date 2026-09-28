@@ -61,24 +61,24 @@ const VerifyEmail = () => {
         }}
       >
         {verificationStatus === 'loading' && (
-          <Alert severity='info'>
+          <Alert severity="info">
             <AlertTitle>Verifying...</AlertTitle>
           </Alert>
         )}
 
         {verificationStatus === 'success' && (
-          <Alert severity='success'>
+          <Alert severity="success">
             <AlertTitle>Woot! &#128640;</AlertTitle>
             Your email is verified. <br />
             Please login by obtaining a{' '}
             <Button
               sx={{ ml: 2 }}
-              size='small'
-              type='button'
-              variant='contained'
+              size="small"
+              type="button"
+              variant="contained"
               startIcon={<AutoFixHighIcon />}
               component={Link}
-              to='../magicklink'
+              to="../magicklink"
             >
               MagicLink &#8482;
             </Button>
@@ -86,11 +86,11 @@ const VerifyEmail = () => {
         )}
 
         {verificationStatus === 'failure' && (
-          <Alert severity='warning'>
+          <Alert severity="warning">
             <AlertTitle>Nope!</AlertTitle>
             Email Verification Failed.
             <br /> You may have used an outdated token. Please visit the{' '}
-            <Link to='../login'>login</Link> page and try again.
+            <Link to="../login">login</Link> page and try again.
           </Alert>
         )}
       </Grid>

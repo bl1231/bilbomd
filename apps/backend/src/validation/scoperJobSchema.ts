@@ -13,7 +13,10 @@ import {
 } from './helpers/fileValidators.js'
 
 export const scoperJobSchema = yup.object({
-  title: yup.string().required('Job title is required').max(100, 'Title too long'),
+  title: yup
+    .string()
+    .required('Job title is required')
+    .max(100, 'Title too long'),
   bilbomd_mode: yup.string().oneOf(['scoper'], 'Invalid mode').required(),
   email: yup.string().email('Invalid email address').optional(),
   dat_file: requiredFile('Experimental SAXS data is required')

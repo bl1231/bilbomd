@@ -58,4 +58,3 @@ Assuming we have an available `bilbomd-worker-base` image.
 ```bash
 
 ```
-

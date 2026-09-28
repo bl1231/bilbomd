@@ -45,9 +45,7 @@ describe('parseOpenFoldEntities', () => {
 
     it('preserves other entity fields when mapping', () => {
       const result = parseOpenFoldEntities({
-        entities: [
-          { name: 'chainB', sequence: 'GCGC', type: 'RNA', copies: 1 }
-        ]
+        entities: [{ name: 'chainB', sequence: 'GCGC', type: 'RNA', copies: 1 }]
       })
       expect(result[0].name).toBe('chainB')
       expect(result[0].sequence).toBe('GCGC')

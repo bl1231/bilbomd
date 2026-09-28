@@ -101,7 +101,9 @@ const calculateNumEnsembles = async (
   try {
     const files = await fs.promises.readdir(resultsDir)
     const ensemblePdbFilePattern = /ensemble_size_\d+_model\.pdb$/
-    const ensembleFiles = files.filter((file) => ensemblePdbFilePattern.test(file))
+    const ensembleFiles = files.filter((file) =>
+      ensemblePdbFilePattern.test(file)
+    )
     numEnsembles = ensembleFiles.length // Number of ensemble files found
   } catch (error) {
     logger.error(`calculateNumEnsembles Error reading directory: ${error}`)
@@ -134,7 +136,9 @@ const calculateNumEnsembles2 = async (
   try {
     const files = await fs.promises.readdir(dirToScan)
     const ensemblePdbFilePattern = /ensemble_size_\d+_model\.pdb$/
-    const ensembleFiles = files.filter((file) => ensemblePdbFilePattern.test(file))
+    const ensembleFiles = files.filter((file) =>
+      ensemblePdbFilePattern.test(file)
+    )
     const numEnsembles = ensembleFiles.length
 
     if (numEnsembles === 0) {

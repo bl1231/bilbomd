@@ -37,7 +37,10 @@ const ChainCard = ({ chain }: ChainCardProps) => {
   const cardHeaderColor = theme.palette.getContrastText(cardBackgroundColor)
 
   return (
-    <Card elevation={1} sx={{ backgroundColor: cardBackgroundColor }}>
+    <Card
+      elevation={1}
+      sx={{ backgroundColor: cardBackgroundColor }}
+    >
       <CardHeader
         title={`Chain ID: ${chain.id}`}
         sx={{
@@ -46,19 +49,34 @@ const ChainCard = ({ chain }: ChainCardProps) => {
         }}
       />
       <CardContent>
-        <Typography variant='h5' color='textPrimary'>
+        <Typography
+          variant="h5"
+          color="textPrimary"
+        >
           {getTypeFullName(chain.type)}
         </Typography>
-        <Typography variant='body1' color='textSecondary'>
+        <Typography
+          variant="body1"
+          color="textSecondary"
+        >
           Residues: {chain.num_res}
         </Typography>
-        <Typography variant='body1' color='textSecondary'>
+        <Typography
+          variant="body1"
+          color="textSecondary"
+        >
           Atoms: {chain.atoms}
         </Typography>
-        <Typography variant='body1' color='textSecondary'>
+        <Typography
+          variant="body1"
+          color="textSecondary"
+        >
           First Res: {chain.first_res}
         </Typography>
-        <Typography variant='body1' color='textSecondary'>
+        <Typography
+          variant="body1"
+          color="textSecondary"
+        >
           Last Res: {chain.last_res}
         </Typography>
       </CardContent>

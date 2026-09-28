@@ -18,7 +18,9 @@ describe('connectDB', () => {
     mockConnect.mockResolvedValue(undefined)
     await connectDB()
     expect(mockConnect).toHaveBeenCalledOnce()
-    expect(mockConnect).toHaveBeenCalledWith(expect.stringContaining('mongodb://'))
+    expect(mockConnect).toHaveBeenCalledWith(
+      expect.stringContaining('mongodb://')
+    )
   })
 
   it('logs an error when mongoose.connect throws', async () => {

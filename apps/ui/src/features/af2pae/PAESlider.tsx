@@ -72,12 +72,16 @@ export default function PAESlider({ setFieldValue, value }: PAESliderProps) {
       <Typography sx={{ mb: 1 }}>
         Select Leiden <b>Clustering Weight</b> (default is 2)
       </Typography>
-      <Grid container spacing={2} sx={{ alignItems: 'center' }}>
+      <Grid
+        container
+        spacing={2}
+        sx={{ alignItems: 'center' }}
+      >
         <Grid>
           <Chip
             label={value}
-            variant='outlined'
-            color='success'
+            variant="outlined"
+            color="success"
             sx={{
               width: 60, // Set a fixed width
               justifyContent: 'center' // Center the label
@@ -93,13 +97,13 @@ export default function PAESlider({ setFieldValue, value }: PAESliderProps) {
             min={1.0}
             max={10.5}
             marks={marks}
-            valueLabelDisplay='auto'
+            valueLabelDisplay="auto"
             onChange={handleChange}
             track={false}
           />
         </Grid>
       </Grid>
-      <Alert severity='info'>
+      <Alert severity="info">
         A smaller weight will result in fewer clusters (i.e. rigid shapes).
         <br />A larger weight will result in more clusters.
         <br />

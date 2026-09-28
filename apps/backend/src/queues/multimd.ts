@@ -21,13 +21,17 @@ const getQueue = (): Queue => {
 const queueJob = async (data: BullMQData) => {
   try {
     const queue = getQueue()
-    logger.info(`${data.type} Job ${data.title} about to be added to ${queue.name} queue`)
+    logger.info(
+      `${data.type} Job ${data.title} about to be added to ${queue.name} queue`
+    )
 
     const bullJob = await queue.add(data.title, data)
 
     return bullJob.id
   } catch (error) {
-    logger.error(`Error adding ${data.type} Job to ${queue.name} queue: ${error}`)
+    logger.error(
+      `Error adding ${data.type} Job to ${queue.name} queue: ${error}`
+    )
     throw error
   }
 }

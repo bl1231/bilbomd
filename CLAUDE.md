@@ -63,6 +63,7 @@ See [Git Branch Naming Convention](#git-branch-naming-convention) for prefix gui
 ### 3. Fix Any Issues
 
 If any of the checks fail:
+
 - **Linting errors**: Fix ESLint warnings and errors before committing
 - **Build errors**: Resolve TypeScript errors and build issues
 - **Test failures**: Fix failing tests or update tests if behavior changed intentionally

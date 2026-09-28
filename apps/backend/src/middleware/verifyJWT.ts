@@ -17,7 +17,8 @@ const accessTokenSecret = getEnvVar('ACCESS_TOKEN_SECRET')
 
 const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
   // Check both 'authorization' and 'Authorization' headers and cast to string
-  const authHeader = (req.headers.authorization || req.headers.Authorization) as string
+  const authHeader = (req.headers.authorization ||
+    req.headers.Authorization) as string
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ message: 'Unauthorized' })

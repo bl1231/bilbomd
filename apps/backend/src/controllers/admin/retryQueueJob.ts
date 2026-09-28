@@ -26,13 +26,13 @@ const retryQueueJob = async (req: Request, res: Response): Promise<void> => {
     }
 
     await job.retry()
-    res
-      .status(200)
-      .json({
-        message: `Job "${jobId}" retried successfully in queue "${queueName}"`
-      })
+    res.status(200).json({
+      message: `Job "${jobId}" retried successfully in queue "${queueName}"`
+    })
   } catch (error) {
-    logger.error(`Failed to retry job "${jobId}" in queue "${queueName}": ${error}`)
+    logger.error(
+      `Failed to retry job "${jobId}" in queue "${queueName}": ${error}`
+    )
     res.status(500).json({ error: 'Failed to retry job' })
   }
 }

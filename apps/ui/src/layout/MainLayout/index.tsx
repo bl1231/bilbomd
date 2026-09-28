@@ -163,7 +163,7 @@ export default function ClippedDrawer() {
     {
       text: 'BullMQ',
       icon: <SpeedIcon />,
-      endIcon: <OpenInNewIcon fontSize='inherit' />,
+      endIcon: <OpenInNewIcon fontSize="inherit" />,
       path: '/admin/bullmq',
       onclick: () => window.open('/admin/bullmq', '_blank'),
       roles: ['admin']

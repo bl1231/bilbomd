@@ -12,7 +12,7 @@ Object.assign(navigator, {
 
 describe('CopyToClipboardButton', () => {
   it('renders the button with the correct text', () => {
-    render(<CopyToClipboardButton text='Test text' />)
+    render(<CopyToClipboardButton text="Test text" />)
     const button = screen.getByRole('button', { name: /copy/i })
     expect(button).toBeInTheDocument()
   })
@@ -31,7 +31,7 @@ describe('CopyToClipboardButton', () => {
   it('displays a snackbar when the button is clicked', async () => {
     render(
       <SnackbarProvider>
-        <CopyToClipboardButton text='Test text' />
+        <CopyToClipboardButton text="Test text" />
       </SnackbarProvider>
     )
 

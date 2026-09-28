@@ -14,8 +14,7 @@ const getStepDetails = (stepName: string): StepDetails => {
     case 'nersc_submit_slurm_batch':
       return {
         friendlyName: 'NERSC Submit Slurm Batch File',
-        tooltipMessage:
-          'In this step we submit the Slurm batch file to NERSC.'
+        tooltipMessage: 'In this step we submit the Slurm batch file to NERSC.'
       }
     case 'nersc_job_status':
       return {
@@ -104,8 +103,7 @@ const getStepDetails = (stepName: string): StepDetails => {
     case 'pdb_remediate':
       return {
         friendlyName: 'Remediate PDB Files',
-        tooltipMessage:
-          'In this step we attempt to copy SEGID back to CHAINID'
+        tooltipMessage: 'In this step we attempt to copy SEGID back to CHAINID'
       }
     case 'foxs':
       return {

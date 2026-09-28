@@ -23,7 +23,11 @@ describe('announceNewJob', () => {
 
     expect(publishMock).toHaveBeenCalledWith(
       JOB_EVENTS_CHANNEL,
-      JSON.stringify({ jobId: 'job-9', ownerId: '64b1f0c2a9e4b1d2c3e4f5a1', kind: 'created' })
+      JSON.stringify({
+        jobId: 'job-9',
+        ownerId: '64b1f0c2a9e4b1d2c3e4f5a1',
+        kind: 'created'
+      })
     )
   })
 

@@ -28,10 +28,7 @@ interface FoxsRunDir {
 const extractPDBFilesFromDCD = async (
   MQjob: BullMQJob,
   DBjob:
-    | IBilboMDPDBJob
-    | IBilboMDCRDJob
-    | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob
+    IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
 
@@ -97,10 +94,7 @@ const extractPDBFilesFromDCD = async (
 const generateFoxsRunDirs = (
   analysisDir: string,
   DBjob:
-    | IBilboMDPDBJob
-    | IBilboMDCRDJob
-    | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob
+    IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
 ): FoxsRunDir[] => {
   const foxsRunDirs: FoxsRunDir[] = []
   let rgyrList: number[] = []
@@ -140,10 +134,7 @@ const processFoxsRunDir = async (
 
 const remediatePDBFiles = async (
   DBjob:
-    | IBilboMDPDBJob
-    | IBilboMDCRDJob
-    | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob
+    IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
 ): Promise<void> => {
   const outputDir = path.join(config.uploadDir, DBjob.uuid)
   const analysisDir = path.join(outputDir, 'foxs')

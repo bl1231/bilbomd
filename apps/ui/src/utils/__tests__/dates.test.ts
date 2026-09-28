@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  parseDateSafe,
-  formatDateSafe,
-  formatRelativeDateSafe
-} from '../dates'
+import { parseDateSafe, formatDateSafe, formatRelativeDateSafe } from '../dates'
 
 describe('parseDateSafe', () => {
   it('returns null for null/undefined/empty/whitespace', () => {

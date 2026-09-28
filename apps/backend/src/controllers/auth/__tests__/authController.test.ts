@@ -23,7 +23,7 @@ import { User } from '@bilbomd/mongodb-schema'
 import { issueTokensAndSetCookie } from '../authTokens.js'
 import { otp } from '../authController.js'
 
-const makeReq = (body: unknown): Request => ({ body } as Request)
+const makeReq = (body: unknown): Request => ({ body }) as Request
 const makeRes = (): Response => {
   const res = {} as Response
   res.status = vi.fn().mockReturnValue(res)
@@ -80,7 +80,11 @@ describe('otp handler — per-account attempt limiting', () => {
       active: true,
       username: 'scott',
       email: 'scott@example.com',
-      otp: { code: 'abc', expiresAt: new Date(Date.now() + 60000), attempts: 2 },
+      otp: {
+        code: 'abc',
+        expiresAt: new Date(Date.now() + 60000),
+        attempts: 2
+      },
       save: vi.fn()
     }
     vi.mocked(User.findOne).mockResolvedValue(mockUser as never)

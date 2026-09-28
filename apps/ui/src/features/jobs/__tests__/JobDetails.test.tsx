@@ -86,12 +86,7 @@ describe('JobDetails', () => {
   })
 
   describe('different job IDs', () => {
-    const testIds = [
-      'job-1',
-      'job-abc-123',
-      'very-long-job-id-12345678',
-      '123'
-    ]
+    const testIds = ['job-1', 'job-abc-123', 'very-long-job-id-12345678', '123']
 
     testIds.forEach((id) => {
       it(`should handle job id: ${id}`, () => {
@@ -114,8 +109,7 @@ describe('JobDetails', () => {
     })
 
     it('should work with complex search params', () => {
-      vi.mocked(mockLocation).search =
-        '?filter=completed&sort=date&page=2'
+      vi.mocked(mockLocation).search = '?filter=completed&sort=date&page=2'
 
       renderWithProviders(<JobDetails id="job-123" />)
 

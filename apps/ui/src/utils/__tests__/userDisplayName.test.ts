@@ -13,15 +13,13 @@ describe('userDisplayName (UI)', () => {
   })
 
   it('returns first name only when last is missing', () => {
-    expect(
-      userDisplayName({ username: 'u', firstName: 'Scott' })
-    ).toBe('Scott')
+    expect(userDisplayName({ username: 'u', firstName: 'Scott' })).toBe('Scott')
   })
 
   it('returns last name only when first is missing', () => {
-    expect(
-      userDisplayName({ username: 'u', lastName: 'Classen' })
-    ).toBe('Classen')
+    expect(userDisplayName({ username: 'u', lastName: 'Classen' })).toBe(
+      'Classen'
+    )
   })
 
   it('falls back to username when no names', () => {

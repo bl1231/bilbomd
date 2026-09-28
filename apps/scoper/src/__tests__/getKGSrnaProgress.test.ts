@@ -21,7 +21,10 @@ describe('getKGSrnaProgress', () => {
   })
 
   it('returns 0 when no matching pdb files exist', async () => {
-    vi.mocked(fs.readdir).mockResolvedValue(['README.md', 'output.txt'] as never)
+    vi.mocked(fs.readdir).mockResolvedValue([
+      'README.md',
+      'output.txt'
+    ] as never)
     expect(await getKGSrnaProgress('/some/dir')).toBe(0)
   })
 
@@ -36,7 +39,10 @@ describe('getKGSrnaProgress', () => {
   })
 
   it('ignores files that start with newpdb_ but do not end with .pdb', async () => {
-    vi.mocked(fs.readdir).mockResolvedValue(['newpdb_10.txt', 'newpdb_5.pdb'] as never)
+    vi.mocked(fs.readdir).mockResolvedValue([
+      'newpdb_10.txt',
+      'newpdb_5.pdb'
+    ] as never)
     expect(await getKGSrnaProgress('/some/dir')).toBe(5)
   })
 
@@ -49,7 +55,9 @@ describe('getKGSrnaProgress', () => {
   })
 
   it('throws when readdir fails with a non-ENOENT error', async () => {
-    vi.mocked(fs.readdir).mockRejectedValue(new Error('EACCES: permission denied'))
+    vi.mocked(fs.readdir).mockRejectedValue(
+      new Error('EACCES: permission denied')
+    )
     await expect(getKGSrnaProgress('/nonexistent')).rejects.toThrow('EACCES')
   })
 })

@@ -36,7 +36,9 @@ vi.mock('fs/promises', () => ({
 import * as validationFunctions from '../validationFunctions.js'
 import fs from 'fs/promises'
 
-const multerFile = (overrides: Partial<Express.Multer.File> = {}): Express.Multer.File =>
+const multerFile = (
+  overrides: Partial<Express.Multer.File> = {}
+): Express.Multer.File =>
   ({
     originalname: 'test.dat',
     path: '/tmp/test.dat',
@@ -57,7 +59,9 @@ describe('requiredFile', () => {
 
   it('fails when value is undefined', async () => {
     const schema = yup.object({ file: requiredFile('File required') })
-    await expect(schema.validate({ file: undefined })).rejects.toThrow('File required')
+    await expect(schema.validate({ file: undefined })).rejects.toThrow(
+      'File required'
+    )
   })
 })
 
@@ -67,19 +71,23 @@ describe('requiredFile', () => {
 describe('fileExtTest', () => {
   it('passes when extension matches', async () => {
     const schema = yup.object({ file: fileExtTest('pdb') })
-    await expect(schema.validate({ file: multerFile({ originalname: 'model.pdb' }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ originalname: 'model.pdb' }) })
+    ).resolves.toBeDefined()
   })
 
   it('passes for uppercase extension', async () => {
     const schema = yup.object({ file: fileExtTest('pdb') })
-    await expect(schema.validate({ file: multerFile({ originalname: 'model.PDB' }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ originalname: 'model.PDB' }) })
+    ).resolves.toBeDefined()
   })
 
   it('fails when extension does not match', async () => {
     const schema = yup.object({ file: fileExtTest('pdb') })
-    await expect(schema.validate({ file: multerFile({ originalname: 'model.txt' }) })).rejects.toThrow(
-      'Only accepts a *.pdb file.'
-    )
+    await expect(
+      schema.validate({ file: multerFile({ originalname: 'model.txt' }) })
+    ).rejects.toThrow('Only accepts a *.pdb file.')
   })
 })
 
@@ -89,17 +97,23 @@ describe('fileExtTest', () => {
 describe('fileSizeTest', () => {
   it('passes when file size is within limit', async () => {
     const schema = yup.object({ file: fileSizeTest(5_000_000) })
-    await expect(schema.validate({ file: multerFile({ size: 1_000_000 }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ size: 1_000_000 }) })
+    ).resolves.toBeDefined()
   })
 
   it('passes when file size equals limit exactly', async () => {
     const schema = yup.object({ file: fileSizeTest(5_000_000) })
-    await expect(schema.validate({ file: multerFile({ size: 5_000_000 }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ size: 5_000_000 }) })
+    ).resolves.toBeDefined()
   })
 
   it('fails when file size exceeds limit', async () => {
     const schema = yup.object({ file: fileSizeTest(5_000_000) })
-    await expect(schema.validate({ file: multerFile({ size: 6_000_000 }) })).rejects.toThrow('5MB')
+    await expect(
+      schema.validate({ file: multerFile({ size: 6_000_000 }) })
+    ).rejects.toThrow('5MB')
   })
 })
 
@@ -109,19 +123,25 @@ describe('fileSizeTest', () => {
 describe('fileNameLengthTest', () => {
   it('passes for filename <= 30 chars', async () => {
     const schema = yup.object({ file: fileNameLengthTest() })
-    await expect(schema.validate({ file: multerFile({ originalname: 'short.pdb' }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ originalname: 'short.pdb' }) })
+    ).resolves.toBeDefined()
   })
 
   it('passes for exactly 30 char filename', async () => {
     const schema = yup.object({ file: fileNameLengthTest() })
     const name = 'a'.repeat(26) + '.pdb' // 30 chars
-    await expect(schema.validate({ file: multerFile({ originalname: name }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ originalname: name }) })
+    ).resolves.toBeDefined()
   })
 
   it('fails for filename > 30 chars', async () => {
     const schema = yup.object({ file: fileNameLengthTest() })
     const name = 'a'.repeat(27) + '.pdb' // 31 chars
-    await expect(schema.validate({ file: multerFile({ originalname: name }) })).rejects.toThrow('30 characters')
+    await expect(
+      schema.validate({ file: multerFile({ originalname: name }) })
+    ).rejects.toThrow('30 characters')
   })
 })
 
@@ -131,14 +151,16 @@ describe('fileNameLengthTest', () => {
 describe('noSpacesTest', () => {
   it('passes when filename has no spaces', async () => {
     const schema = yup.object({ file: noSpacesTest() })
-    await expect(schema.validate({ file: multerFile({ originalname: 'nospaces.pdb' }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ originalname: 'nospaces.pdb' }) })
+    ).resolves.toBeDefined()
   })
 
   it('fails when filename contains a space', async () => {
     const schema = yup.object({ file: noSpacesTest() })
-    await expect(schema.validate({ file: multerFile({ originalname: 'has space.pdb' }) })).rejects.toThrow(
-      'No spaces'
-    )
+    await expect(
+      schema.validate({ file: multerFile({ originalname: 'has space.pdb' }) })
+    ).rejects.toThrow('No spaces')
   })
 })
 
@@ -158,13 +180,17 @@ describe('saxsCheck', () => {
       message: 'Not enough SAXS lines'
     })
     const schema = yup.object({ file: saxsCheck() })
-    await expect(schema.validate({ file: multerFile() })).rejects.toThrow('Not enough SAXS lines')
+    await expect(schema.validate({ file: multerFile() })).rejects.toThrow(
+      'Not enough SAXS lines'
+    )
   })
 
   it('fails when file has no path', async () => {
     const schema = yup.object({ file: saxsCheck() })
     const file = multerFile({ path: undefined as never })
-    await expect(schema.validate({ file })).rejects.toThrow('Missing SAXS file path')
+    await expect(schema.validate({ file })).rejects.toThrow(
+      'Missing SAXS file path'
+    )
   })
 })
 
@@ -181,12 +207,16 @@ describe('psfCheck', () => {
   it('fails when isPsfData returns false', async () => {
     vi.mocked(validationFunctions.isPsfData).mockResolvedValue(false)
     const schema = yup.object({ file: psfCheck() })
-    await expect(schema.validate({ file: multerFile() })).rejects.toThrow('valid PSF')
+    await expect(schema.validate({ file: multerFile() })).rejects.toThrow(
+      'valid PSF'
+    )
   })
 
   it('passes (skips check) when file has no path', async () => {
     const schema = yup.object({ file: psfCheck() })
-    await expect(schema.validate({ file: multerFile({ path: undefined as never }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ path: undefined as never }) })
+    ).resolves.toBeDefined()
   })
 })
 
@@ -203,7 +233,9 @@ describe('crdCheck', () => {
   it('fails when isCRD returns false', async () => {
     vi.mocked(validationFunctions.isCRD).mockResolvedValue(false)
     const schema = yup.object({ file: crdCheck() })
-    await expect(schema.validate({ file: multerFile() })).rejects.toThrow('valid CRD')
+    await expect(schema.validate({ file: multerFile() })).rejects.toThrow(
+      'valid CRD'
+    )
   })
 })
 
@@ -220,7 +252,9 @@ describe('chainIdCheck', () => {
   it('fails when containsChainId returns false', async () => {
     vi.mocked(validationFunctions.containsChainId).mockResolvedValue(false)
     const schema = yup.object({ file: chainIdCheck() })
-    await expect(schema.validate({ file: multerFile() })).rejects.toThrow('Chain ID')
+    await expect(schema.validate({ file: multerFile() })).rejects.toThrow(
+      'Chain ID'
+    )
   })
 })
 
@@ -229,7 +263,9 @@ describe('chainIdCheck', () => {
 // ---------------------------------------------------------------------------
 describe('pdbResidueCheck', () => {
   it('passes when checkPdbResidues returns valid', async () => {
-    vi.mocked(validationFunctions.checkPdbResidues).mockResolvedValue({ valid: true })
+    vi.mocked(validationFunctions.checkPdbResidues).mockResolvedValue({
+      valid: true
+    })
     const schema = yup.object({ file: pdbResidueCheck() })
     await expect(schema.validate({ file: multerFile() })).resolves.toBeDefined()
   })
@@ -261,14 +297,20 @@ describe('constInpCheck', () => {
     vi.mocked(validationFunctions.isValidConstInpFile).mockResolvedValue(true)
     const schema = yup.object({ file: constInpCheck() })
     const ctx = { context: { bilbomd_mode: 'pdb' } }
-    await expect(schema.validate({ file: multerFile() }, ctx)).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile() }, ctx)
+    ).resolves.toBeDefined()
   })
 
   it('fails with message when isValidConstInpFile returns an error string', async () => {
-    vi.mocked(validationFunctions.isValidConstInpFile).mockResolvedValue('Missing define line')
+    vi.mocked(validationFunctions.isValidConstInpFile).mockResolvedValue(
+      'Missing define line'
+    )
     const schema = yup.object({ file: constInpCheck() })
     const ctx = { context: { bilbomd_mode: 'pdb' } }
-    await expect(schema.validate({ file: multerFile() }, ctx)).rejects.toThrow('Missing define line')
+    await expect(schema.validate({ file: multerFile() }, ctx)).rejects.toThrow(
+      'Missing define line'
+    )
   })
 })
 
@@ -279,17 +321,23 @@ describe('jsonFileCheck', () => {
   it('passes for valid JSON file content', async () => {
     vi.mocked(fs.readFile).mockResolvedValue('{"key": "value"}' as never)
     const schema = yup.object({ file: jsonFileCheck() })
-    await expect(schema.validate({ file: multerFile({ originalname: 'data.json' }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ originalname: 'data.json' }) })
+    ).resolves.toBeDefined()
   })
 
   it('fails for invalid JSON content', async () => {
     vi.mocked(fs.readFile).mockResolvedValue('not json {{' as never)
     const schema = yup.object({ file: jsonFileCheck() })
-    await expect(schema.validate({ file: multerFile({ originalname: 'data.json' }) })).rejects.toThrow('JSON')
+    await expect(
+      schema.validate({ file: multerFile({ originalname: 'data.json' }) })
+    ).rejects.toThrow('JSON')
   })
 
   it('passes (skips check) when file has no path', async () => {
     const schema = yup.object({ file: jsonFileCheck() })
-    await expect(schema.validate({ file: multerFile({ path: undefined as never }) })).resolves.toBeDefined()
+    await expect(
+      schema.validate({ file: multerFile({ path: undefined as never }) })
+    ).resolves.toBeDefined()
   })
 })

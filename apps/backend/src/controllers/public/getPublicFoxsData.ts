@@ -17,16 +17,18 @@ const getPublicFoxsData = async (req: Request, res: Response) => {
     const job = await Job.findOne(publicJobQuery(publicId)).exec()
 
     if (!job) {
-      res
-        .status(404)
-        .json({ message: `No job matches publicId ${publicId}.` })
+      res.status(404).json({ message: `No job matches publicId ${publicId}.` })
       return
     }
 
     const data = await buildBilboFoxsData(job)
     res.json(data)
   } catch (error) {
-    const err = error as Error & { status?: number; code?: string; details?: unknown }
+    const err = error as Error & {
+      status?: number
+      code?: string
+      details?: unknown
+    }
     const status = err.status ?? 500
 
     if (status === 404) {

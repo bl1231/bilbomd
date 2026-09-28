@@ -136,10 +136,9 @@ The production instructions are primarily desinged for deploying on `hyperion` a
 
 We are now building all Docker images automatically using GitHub actions so there really is no reason to build locally. Instead you may need to manually pull the images... I'm not entirely sure this is necessary, but just trying to bring the service up with `up -d` did not automatically pull the needed images.
 
-   ```bash
-   docker compose -f docker-compose.yml -p bilbomd pull
-   ```
-
+```bash
+docker compose -f docker-compose.yml -p bilbomd pull
+```
 
 2. **Starting the Production Instance**:
 

@@ -5,7 +5,7 @@
     "esbenp.prettier-vscode",
 
     // TypeScript / React ecosystem
-    "ms-vscode.vscode-typescript-next", 
+    "ms-vscode.vscode-typescript-next",
     "bradlc.vscode-tailwindcss",
 
     // Python ecosystem

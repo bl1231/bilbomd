@@ -4,7 +4,8 @@ import { User } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { sendVerificationEmail } from '../config/nodemailerConfig.js'
 
-const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const characters =
+  '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 const bilboMdUrl = getEnvVar('BILBOMD_URL')
 
 const verifyNewUser = async (req: Request, res: Response) => {
@@ -24,7 +25,9 @@ const verifyNewUser = async (req: Request, res: Response) => {
       return
     }
 
-    logger.info(`Verification code belongs to user: ${user.username} ${user.email}`)
+    logger.info(
+      `Verification code belongs to user: ${user.username} ${user.email}`
+    )
 
     user.status = 'Active'
     user.confirmationCode = null

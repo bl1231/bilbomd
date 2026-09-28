@@ -36,10 +36,12 @@ import { handleOrcidLogin } from '../handleOrcidLogin.js'
 const makeRes = () => {
   const cookieCalls: Array<[string, string, Record<string, unknown>]> = []
   const res = {
-    cookie: vi.fn((name: string, value: string, opts: Record<string, unknown>) => {
-      cookieCalls.push([name, value, opts])
-      return res
-    }),
+    cookie: vi.fn(
+      (name: string, value: string, opts: Record<string, unknown>) => {
+        cookieCalls.push([name, value, opts])
+        return res
+      }
+    ),
     redirect: vi.fn().mockReturnValue(undefined)
   } as unknown as Response
   return { res, cookieCalls }
@@ -60,7 +62,9 @@ describe('handleOrcidLogin — M1 cookie hardening', () => {
 
     await handleOrcidLogin({} as Request, res)
 
-    const stateCookie = cookieCalls.find(([name]) => name === 'orcid_oauth_state')
+    const stateCookie = cookieCalls.find(
+      ([name]) => name === 'orcid_oauth_state'
+    )
     expect(stateCookie).toBeDefined()
     expect(stateCookie?.[1]).toBe('state-value')
     expect(stateCookie?.[2]).toEqual({
@@ -76,7 +80,9 @@ describe('handleOrcidLogin — M1 cookie hardening', () => {
 
     await handleOrcidLogin({} as Request, res)
 
-    const nonceCookie = cookieCalls.find(([name]) => name === 'orcid_oauth_nonce')
+    const nonceCookie = cookieCalls.find(
+      ([name]) => name === 'orcid_oauth_nonce'
+    )
     expect(nonceCookie).toBeDefined()
     expect(nonceCookie?.[1]).toBe('nonce-value')
     expect(nonceCookie?.[2]).toEqual({

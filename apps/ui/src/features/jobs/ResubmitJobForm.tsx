@@ -361,7 +361,8 @@ const ResubmitJobForm = () => {
                             sx={{
                               display: 'flex',
                               justifyContent: 'space-between',
-                              width: '100%', maxWidth: '520px'
+                              width: '100%',
+                              maxWidth: '520px'
                             }}
                           >
                             <Grid>
@@ -393,7 +394,8 @@ const ResubmitJobForm = () => {
                             sx={{
                               display: 'flex',
                               justifyContent: 'space-between',
-                              width: '100%', maxWidth: '520px'
+                              width: '100%',
+                              maxWidth: '520px'
                             }}
                           >
                             <Grid>
@@ -429,7 +431,8 @@ const ResubmitJobForm = () => {
                             sx={{
                               display: 'flex',
                               justifyContent: 'space-between',
-                              width: '100%', maxWidth: '520px'
+                              width: '100%',
+                              maxWidth: '520px'
                             }}
                           >
                             <Grid>
@@ -473,14 +476,12 @@ const ResubmitJobForm = () => {
                                   setPdbWarning(
                                     metalFound.length > 0 ? (
                                       <>
-                                        The following metal-containing
-                                        residues have no force-field
-                                        parameters and will be removed
-                                        before MD:{' '}
-                                        {metalFound.join(', ')}. If
-                                        these residues are important
-                                        for your system, consider
-                                        using{' '}
+                                        The following metal-containing residues
+                                        have no force-field parameters and will
+                                        be removed before MD:{' '}
+                                        {metalFound.join(', ')}. If these
+                                        residues are important for your system,
+                                        consider using{' '}
                                         <Button
                                           href="https://charmm-gui.org/"
                                           target="_blank"
@@ -501,10 +502,9 @@ const ResubmitJobForm = () => {
                                         >
                                           CHARMM-GUI
                                         </Button>{' '}
-                                        to properly parameterize your
-                                        structure, then return here
-                                        with CRD and PSF files using
-                                        the CHARMM engine option.
+                                        to properly parameterize your structure,
+                                        then return here with CRD and PSF files
+                                        using the CHARMM engine option.
                                       </>
                                     ) : (
                                       ''
@@ -522,7 +522,8 @@ const ResubmitJobForm = () => {
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          width: '100%', maxWidth: '520px'
+                          width: '100%',
+                          maxWidth: '520px'
                         }}
                       >
                         <Grid>
@@ -555,7 +556,8 @@ const ResubmitJobForm = () => {
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          width: '100%', maxWidth: '520px'
+                          width: '100%',
+                          maxWidth: '520px'
                         }}
                       >
                         <Alert severity="info">
@@ -592,7 +594,8 @@ const ResubmitJobForm = () => {
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          width: '100%', maxWidth: '520px'
+                          width: '100%',
+                          maxWidth: '520px'
                         }}
                       >
                         <Grid>
@@ -640,7 +643,13 @@ const ResubmitJobForm = () => {
                           />
                         </Grid>
                       </Grid>
-                      <Grid sx={{ display: 'flex', width: '100%', maxWidth: '520px' }}>
+                      <Grid
+                        sx={{
+                          display: 'flex',
+                          width: '100%',
+                          maxWidth: '520px'
+                        }}
+                      >
                         <Typography>
                           <b>Rg Min</b> and <b>Rg Max</b> will be calculated
                           automatically from the selected SAXS data file. Feel
@@ -652,7 +661,14 @@ const ResubmitJobForm = () => {
                           <LinearProgress />
                         </Box>
                       )}
-                      <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
+                      <Grid
+                        sx={{
+                          my: 2,
+                          display: 'flex',
+                          width: '100%',
+                          maxWidth: '520px'
+                        }}
+                      >
                         <Field
                           label="Rg Min"
                           fullWidth
@@ -671,7 +687,14 @@ const ResubmitJobForm = () => {
                           }
                         />
                       </Grid>
-                      <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
+                      <Grid
+                        sx={{
+                          my: 2,
+                          display: 'flex',
+                          width: '100%',
+                          maxWidth: '520px'
+                        }}
+                      >
                         <Field
                           label="Rg Max"
                           fullWidth
@@ -690,7 +713,14 @@ const ResubmitJobForm = () => {
                           onBlur={handleBlur}
                         />
                       </Grid>
-                      <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
+                      <Grid
+                        sx={{
+                          my: 2,
+                          display: 'flex',
+                          width: '100%',
+                          maxWidth: '520px'
+                        }}
+                      >
                         <TextField
                           label="Conformations per Rg"
                           variant="outlined"

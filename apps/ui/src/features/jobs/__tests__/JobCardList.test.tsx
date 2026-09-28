@@ -20,7 +20,9 @@ const theme = createTheme({
   }
 })
 
-const makeRow = (overrides: Partial<JobCardRow> & { id: string }): JobCardRow => ({
+const makeRow = (
+  overrides: Partial<JobCardRow> & { id: string }
+): JobCardRow => ({
   title: `job-${overrides.id}`,
   status: 'Completed',
   jobType: 'pdb',
@@ -55,9 +57,7 @@ describe('JobCardList', () => {
       makeRow({ id: 'done', status: 'Completed' }),
       makeRow({ id: 'active', status: 'Running', progress: 50 })
     ])
-    const titles = screen
-      .getAllByText(/^job-/)
-      .map((el) => el.textContent)
+    const titles = screen.getAllByText(/^job-/).map((el) => el.textContent)
     expect(titles).toEqual(['job-active', 'job-done'])
   })
 
@@ -90,6 +90,8 @@ describe('JobCardList', () => {
     expect(screen.getAllByText(/^job-/)).toHaveLength(40)
     fireEvent.click(screen.getByRole('button', { name: /load 5 more/i }))
     expect(screen.getAllByText(/^job-/)).toHaveLength(45)
-    expect(screen.queryByRole('button', { name: /load/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /load/i })
+    ).not.toBeInTheDocument()
   })
 })

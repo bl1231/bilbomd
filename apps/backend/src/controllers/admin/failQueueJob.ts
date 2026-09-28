@@ -27,13 +27,13 @@ const failQueueJob = async (req: Request, res: Response): Promise<void> => {
     const reason = req.body?.reason || 'Manually marked as failed'
     await job.moveToFailed(new Error(reason), 'admin-fail')
 
-    res
-      .status(200)
-      .json({
-        message: `Job "${jobId}" in queue "${queueName}" marked as failed`
-      })
+    res.status(200).json({
+      message: `Job "${jobId}" in queue "${queueName}" marked as failed`
+    })
   } catch (error) {
-    logger.error(`Failed to fail job "${jobId}" in queue "${queueName}": ${error}`)
+    logger.error(
+      `Failed to fail job "${jobId}" in queue "${queueName}": ${error}`
+    )
     res.status(500).json({
       message: `Failed to fail job "${jobId}" in queue "${queueName}"`,
       error: (error as Error).message

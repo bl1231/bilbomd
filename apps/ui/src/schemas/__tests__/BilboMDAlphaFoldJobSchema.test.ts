@@ -85,9 +85,9 @@ describe('BilboMDAlphaFoldJobSchema - title', () => {
 
 describe('BilboMDAlphaFoldJobSchema - entities', () => {
   it('accepts valid entity array', async () => {
-    await expect(
-      BilboMDAlphaFoldJobSchema.isValid(validBase)
-    ).resolves.toBe(true)
+    await expect(BilboMDAlphaFoldJobSchema.isValid(validBase)).resolves.toBe(
+      true
+    )
   })
 
   it('rejects empty entities array', async () => {

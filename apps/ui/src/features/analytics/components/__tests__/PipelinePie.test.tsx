@@ -15,7 +15,9 @@ describe('PipelinePie', () => {
       />
     )
     // recharts renders an SVG surface for the pie
-    expect(container.querySelector('.recharts-responsive-container')).not.toBeNull()
+    expect(
+      container.querySelector('.recharts-responsive-container')
+    ).not.toBeNull()
     expect(screen.queryByText(/No data to display/i)).not.toBeInTheDocument()
   })
 

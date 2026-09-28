@@ -77,7 +77,11 @@ swaggerSpec.components.schemas.EntitiesJson = {
         required: ['id', 'type', 'sequence', 'copies'],
         properties: {
           id: { type: 'integer', example: 1 },
-          type: { type: 'string', enum: ['Protein', 'DNA', 'RNA'], example: 'Protein' },
+          type: {
+            type: 'string',
+            enum: ['Protein', 'DNA', 'RNA'],
+            example: 'Protein'
+          },
           sequence: {
             type: 'string',
             example: 'MSEQNNTEMTFQIQRIYTKDISFEAPNAPHVFQKDWLD...'

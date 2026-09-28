@@ -1,6 +1,6 @@
 # Contributing to BilboMD
 
-Welcome to BilboMD! 🎉  
+Welcome to BilboMD! 🎉
 
 This guide outlines how to contribute to our Small Angle X-ray Scattering (SAXS) modeling platform.
 
@@ -80,15 +80,15 @@ pnpm -F @bilbomd/ui run dev
    Probably the main thing you want to check is which Docker images are being used. For example this would pull the `v2.2.0` image from the public GitHub Container:
 
    ```yaml
-     backend:
-       image: ghcr.io/bl1231/bilbomd-backend:2.2.0
+   backend:
+     image: ghcr.io/bl1231/bilbomd-backend:2.2.0
    ```
 
    This would attempt to use a locally built/tagged image:
 
    ```yaml
-     backend:
-       image: bl1231/bilbomd-backend:latest
+   backend:
+     image: bl1231/bilbomd-backend:latest
    ```
 
 3. Start infrastructure services:
@@ -96,7 +96,7 @@ pnpm -F @bilbomd/ui run dev
    ```bash
    # For local development
    docker-compose --env-file .env.local -f infra/docker-compose.local.yml -p bilbomd-local up -d
-   
+
    # Or use the `deploy-to-beamline.sh` script
    cd infra
    ./deploy-to-beamline.sh local

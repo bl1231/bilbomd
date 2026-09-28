@@ -13,12 +13,24 @@ vi.mock('slices/jobsApiSlice', () => ({
 
 describe('DeleteJob', () => {
   it('renders delete button with label', () => {
-    renderWithProviders(<DeleteJob id='abc123' title='Test Job' hide={false} />)
+    renderWithProviders(
+      <DeleteJob
+        id="abc123"
+        title="Test Job"
+        hide={false}
+      />
+    )
     expect(screen.getByRole('button', { name: /trash/i })).toBeInTheDocument()
   })
 
   it('opens confirmation dialog on click', async () => {
-    renderWithProviders(<DeleteJob id='abc123' title='Test Job' hide={false} />)
+    renderWithProviders(
+      <DeleteJob
+        id="abc123"
+        title="Test Job"
+        hide={false}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /trash/i }))
     expect(
       await screen.findByText(/are you sure you want to delete/i)
@@ -29,8 +41,8 @@ describe('DeleteJob', () => {
     const mockOnClose = vi.fn()
     renderWithProviders(
       <DeleteJob
-        id='abc123'
-        title='Test Job'
+        id="abc123"
+        title="Test Job"
         hide={false}
         onClose={mockOnClose}
       />

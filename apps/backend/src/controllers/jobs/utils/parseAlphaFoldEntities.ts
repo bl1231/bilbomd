@@ -6,7 +6,9 @@ interface IAlphaFoldBody {
   [key: string]: unknown
 }
 
-export function parseAlphaFoldEntities(body: IAlphaFoldBody): IAlphaFoldEntity[] {
+export function parseAlphaFoldEntities(
+  body: IAlphaFoldBody
+): IAlphaFoldEntity[] {
   if (body.entities_json) {
     return JSON.parse(body.entities_json)
   } else if (Array.isArray(body.entities)) {

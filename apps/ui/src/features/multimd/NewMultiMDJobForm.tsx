@@ -220,14 +220,14 @@ const NewMultiMDJobForm: React.FC = () => {
                                   .filter((job): job is BilboMDJobDTO =>
                                     Boolean(
                                       job &&
-                                        job.username === username &&
-                                        job.mongo.status === 'Completed' &&
-                                        [
-                                          'pdb',
-                                          'crd',
-                                          'auto',
-                                          'alphafold'
-                                        ].includes(job.mongo.jobType)
+                                      job.username === username &&
+                                      job.mongo.status === 'Completed' &&
+                                      [
+                                        'pdb',
+                                        'crd',
+                                        'auto',
+                                        'alphafold'
+                                      ].includes(job.mongo.jobType)
                                     )
                                   )
                                   .map((job) => (
@@ -297,14 +297,14 @@ const NewMultiMDJobForm: React.FC = () => {
                                   .filter((job): job is BilboMDJobDTO =>
                                     Boolean(
                                       job &&
-                                        job.username === username &&
-                                        job.mongo.status === 'Completed' &&
-                                        [
-                                          'pdb',
-                                          'crd',
-                                          'auto',
-                                          'alphafold'
-                                        ].includes(job.mongo.jobType)
+                                      job.username === username &&
+                                      job.mongo.status === 'Completed' &&
+                                      [
+                                        'pdb',
+                                        'crd',
+                                        'auto',
+                                        'alphafold'
+                                      ].includes(job.mongo.jobType)
                                     )
                                   ).length === 0 && (
                                   <TableRow>

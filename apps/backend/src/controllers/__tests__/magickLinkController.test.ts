@@ -25,7 +25,7 @@ vi.mock('crypto', () => ({
 import { User } from '@bilbomd/mongodb-schema'
 import { generateMagickLink } from '../magickLinkController.js'
 
-const makeReq = (body: unknown): Request => ({ body } as Request)
+const makeReq = (body: unknown): Request => ({ body }) as Request
 const makeRes = (): Response => {
   const res = {} as Response
   res.status = vi.fn().mockReturnValue(res)

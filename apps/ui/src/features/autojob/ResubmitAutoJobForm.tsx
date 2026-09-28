@@ -274,12 +274,11 @@ const ResubmitAutoJobForm = () => {
                           const metalWarning =
                             metalFound.length > 0 ? (
                               <Box>
-                                The following metal-containing
-                                residues have no force-field
-                                parameters and will be removed before
-                                MD: {metalFound.join(', ')}. If these
-                                residues are important for your
-                                system, consider using{' '}
+                                The following metal-containing residues have no
+                                force-field parameters and will be removed
+                                before MD: {metalFound.join(', ')}. If these
+                                residues are important for your system, consider
+                                using{' '}
                                 <Button
                                   href="https://charmm-gui.org/"
                                   target="_blank"
@@ -300,22 +299,20 @@ const ResubmitAutoJobForm = () => {
                                 >
                                   CHARMM-GUI
                                 </Button>{' '}
-                                to properly parameterize your
-                                structure, then submit a Classic job
-                                with CRD and PSF files using the
-                                CHARMM engine option.
+                                to properly parameterize your structure, then
+                                submit a Classic job with CRD and PSF files
+                                using the CHARMM engine option.
                               </Box>
                             ) : null
                           const plddtWarning = plddtAllZero ? (
                             <Box>
-                              All B-factor (pLDDT) values in this
-                              structure are zero. If your PAE JSON is
-                              AlphaFold3-style (contains per-atom
-                              pLDDT), BilboMD will recover pLDDT
-                              automatically; otherwise no rigid bodies
-                              will be defined and your model will not be
-                              flexed. Consider re-uploading a structure
-                              that retains pLDDT in the B-factor column.
+                              All B-factor (pLDDT) values in this structure are
+                              zero. If your PAE JSON is AlphaFold3-style
+                              (contains per-atom pLDDT), BilboMD will recover
+                              pLDDT automatically; otherwise no rigid bodies
+                              will be defined and your model will not be flexed.
+                              Consider re-uploading a structure that retains
+                              pLDDT in the B-factor column.
                             </Box>
                           ) : null
                           setPdbWarning(

@@ -506,9 +506,9 @@ return`
     })
 
     test('convertYamlToInp throws on missing file', async () => {
-      await expect(
-        convertYamlToInp('/nonexistent/file.yaml')
-      ).rejects.toThrow('Failed to convert YAML to INP')
+      await expect(convertYamlToInp('/nonexistent/file.yaml')).rejects.toThrow(
+        'Failed to convert YAML to INP'
+      )
     })
 
     test('validateYamlConstraints throws on non-object YAML', async () => {

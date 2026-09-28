@@ -82,7 +82,10 @@ const isPsfData = async (file: Express.Multer.File): Promise<boolean> => {
     }
 
     // Check for atom lines directly following the !NATOM line
-    const atomLines = lines.slice(natomLineIndex + 1, natomLineIndex + 1 + natom)
+    const atomLines = lines.slice(
+      natomLineIndex + 1,
+      natomLineIndex + 1 + natom
+    )
     if (atomLines.length !== natom) {
       return false
     }
@@ -231,7 +234,6 @@ const isRNA = async (
   }
 }
 
-
 const checkPdbResidues = async (
   file: Express.Multer.File
 ): Promise<{ valid: boolean; message?: string }> => {
@@ -282,7 +284,9 @@ const isValidConstInpFile = async (
       return 'At least one line must start with "define".'
     }
 
-    const hasConsFixSele = lines.some((line) => line.startsWith('cons fix sele'))
+    const hasConsFixSele = lines.some((line) =>
+      line.startsWith('cons fix sele')
+    )
     if (!hasConsFixSele) {
       return 'At least one line must start with "cons fix sele".'
     }
@@ -331,7 +335,9 @@ const isValidConstInpFile = async (
   }
 }
 
-const cifContainsChainId = async (file: Express.Multer.File): Promise<boolean> => {
+const cifContainsChainId = async (
+  file: Express.Multer.File
+): Promise<boolean> => {
   try {
     const text = await fs.readFile(file.path, 'utf8')
     const parsed = parseCifAtomSite(text)

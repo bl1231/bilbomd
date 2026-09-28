@@ -39,14 +39,14 @@ interface JobCardListProps {
 }
 
 const statusIcons: Record<string, React.ReactNode> = {
-  Completed: <CheckCircleOutlineIcon fontSize='inherit' />,
-  Error: <ErrorOutlineIcon fontSize='inherit' />,
-  Failed: <ErrorOutlineIcon fontSize='inherit' />,
-  Running: <AutorenewIcon fontSize='inherit' />,
-  Submitted: <ScheduleIcon fontSize='inherit' />,
-  Pending: <ScheduleIcon fontSize='inherit' />,
-  Cancelled: <BlockIcon fontSize='inherit' />,
-  Unknown: <HelpOutlineIcon fontSize='inherit' />
+  Completed: <CheckCircleOutlineIcon fontSize="inherit" />,
+  Error: <ErrorOutlineIcon fontSize="inherit" />,
+  Failed: <ErrorOutlineIcon fontSize="inherit" />,
+  Running: <AutorenewIcon fontSize="inherit" />,
+  Submitted: <ScheduleIcon fontSize="inherit" />,
+  Pending: <ScheduleIcon fontSize="inherit" />,
+  Cancelled: <BlockIcon fontSize="inherit" />,
+  Unknown: <HelpOutlineIcon fontSize="inherit" />
 }
 
 // Active jobs first (the ones worth checking on a phone), then most recent
@@ -111,7 +111,7 @@ const JobCardList = ({ rows, showUsername }: JobCardListProps) => {
             component={Link}
             to={`/dashboard/jobs/${row.id}`}
             state={{ returnParams: location.search }}
-            variant='outlined'
+            variant="outlined"
             sx={{
               display: 'block',
               p: 1.5,
@@ -130,10 +130,10 @@ const JobCardList = ({ rows, showUsername }: JobCardListProps) => {
               }}
             >
               <Chip
-                size='small'
+                size="small"
                 icon={
                   <Box
-                    component='span'
+                    component="span"
                     sx={{ display: 'inline-flex', fontSize: '1rem', ml: 0.5 }}
                   >
                     {statusIcons[row.status ?? 'Unknown'] ??
@@ -143,16 +143,14 @@ const JobCardList = ({ rows, showUsername }: JobCardListProps) => {
                 label={row.status ?? 'Unknown'}
                 sx={{
                   backgroundColor: statusColor(row.status),
-                  color: theme.palette.getContrastText(
-                    statusColor(row.status)
-                  ),
+                  color: theme.palette.getContrastText(statusColor(row.status)),
                   fontWeight: 600
                 }}
               />
               {!isRunning && row.totalRuntime && (
                 <Typography
-                  variant='caption'
-                  color='text.secondary'
+                  variant="caption"
+                  color="text.secondary"
                 >
                   ran {row.totalRuntime}
                 </Typography>
@@ -169,8 +167,8 @@ const JobCardList = ({ rows, showUsername }: JobCardListProps) => {
               {row.title}
             </Typography>
             <Typography
-              variant='body2'
-              color='text.secondary'
+              variant="body2"
+              color="text.secondary"
               noWrap
             >
               {metadata.join(' · ')}
@@ -178,11 +176,11 @@ const JobCardList = ({ rows, showUsername }: JobCardListProps) => {
             {isRunning && (
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                 <LinearProgress
-                  variant='determinate'
+                  variant="determinate"
                   value={displayProgress}
                   sx={{ flexGrow: 1, mr: 1 }}
                 />
-                <Typography variant='body2'>{displayProgress}%</Typography>
+                <Typography variant="body2">{displayProgress}%</Typography>
               </Box>
             )}
           </Paper>
@@ -191,7 +189,7 @@ const JobCardList = ({ rows, showUsername }: JobCardListProps) => {
 
       {remaining > 0 && (
         <Button
-          variant='outlined'
+          variant="outlined"
           onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
         >
           Load {Math.min(remaining, PAGE_SIZE)} more ({remaining} remaining)

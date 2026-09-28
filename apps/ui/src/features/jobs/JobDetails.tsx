@@ -12,9 +12,9 @@ const JobDetails = ({ id }: JobDetailsProps) => {
 
   return (
     <Button
-      variant='outlined'
-      size='small'
-      className='job-details-button'
+      variant="outlined"
+      size="small"
+      className="job-details-button"
       startIcon={<InfoIcon />}
       component={Link}
       to={`/dashboard/jobs/${id}`}

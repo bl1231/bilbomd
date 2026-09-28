@@ -33,8 +33,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "4"
-          memory: "4g"
+          cpus: '4'
+          memory: '4g'
     healthcheck:
       test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u
         $MONGO_USERNAME -p $MONGO_PASSWORD --quiet | grep 1
@@ -48,7 +48,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
+      - '${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017'
     volumes:
       - mongodb:/data/db
       - /backups/databases/bilbomd:/backups
@@ -63,14 +63,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2"
-          memory: "1g"
+          cpus: '2'
+          memory: '1g'
     healthcheck:
       # REDISCLI_AUTH only when a password is set; an empty AUTH fails.
       test:
         [
-          "CMD-SHELL",
-          '[ -n "$$REDIS_PASSWORD" ] && export REDISCLI_AUTH="$$REDIS_PASSWORD"; redis-cli ping | grep -q PONG',
+          'CMD-SHELL',
+          '[ -n "$$REDIS_PASSWORD" ] && export REDISCLI_AUTH="$$REDIS_PASSWORD"; redis-cli ping | grep -q PONG'
         ]
       interval: 10s
       timeout: 5s
@@ -79,14 +79,14 @@ services:
     env_file:
       - path: .env.prod
     ports:
-      - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
+      - '${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379'
     # --requirepass only when REDIS_PASSWORD is set (from the env_file), so
     # local stacks without a password keep working.
     command:
       [
-        "sh",
-        "-c",
-        'exec redis-server --save 20 1 --loglevel warning $${REDIS_PASSWORD:+--requirepass "$$REDIS_PASSWORD"}',
+        'sh',
+        '-c',
+        'exec redis-server --save 20 1 --loglevel warning $${REDIS_PASSWORD:+--requirepass "$$REDIS_PASSWORD"}'
       ]
     volumes:
       - redis-cache:/data
@@ -103,14 +103,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "4"
-          memory: "4g"
+          cpus: '4'
+          memory: '4g'
     restart: always
-    user: "${UID:-1001}:${GID:-1001}"
+    user: '${UID:-1001}:${GID:-1001}'
     env_file:
       - path: .env.prod
     ports:
-      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
+      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500'
     volumes:
       - /bilbomd/prod/uploads:/bilbomd/uploads
       - /bilbomd/prod/logs:/bilbomd/logs
@@ -121,7 +121,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:3500/healthcheck"]
+      test: ['CMD', 'curl', '--fail', 'http://localhost:3500/healthcheck']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -138,8 +138,8 @@ services:
       replicas: 2
       resources:
         limits:
-          cpus: "18"
-          memory: "32g"
+          cpus: '18'
+          memory: '32g'
         reservations:
           devices:
             - driver: nvidia
@@ -147,7 +147,7 @@ services:
               capabilities: [gpu]
     restart: always
     read_only: true
-    user: "${UID:-1001}:${GID:-1001}"
+    user: '${UID:-1001}:${GID:-1001}'
     cap_drop:
       - ALL
     tmpfs:
@@ -181,7 +181,7 @@ services:
       colabfold-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:3000/config"]
+      test: ['CMD', 'curl', '--fail', 'http://localhost:3000/config']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -191,14 +191,14 @@ services:
   of3-service:
     image: ghcr.io/bl1231/bilbomd-of3-service:0.1.0
     pull_policy: missing
-    shm_size: "16gb"
+    shm_size: '16gb'
     security_opt:
       - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       resources:
         limits:
-          cpus: "4"
+          cpus: '4'
         reservations:
           devices:
             - driver: nvidia
@@ -216,7 +216,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8000/health"]
+      test: ['CMD', 'curl', '--fail', 'http://localhost:8000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -226,14 +226,14 @@ services:
   colabfold-service:
     image: ghcr.io/bl1231/bilbomd-colabfold-service:0.2.0
     pull_policy: missing
-    shm_size: "16gb"
+    shm_size: '16gb'
     security_opt:
       - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json
     deploy:
       resources:
         limits:
-          cpus: "4"
+          cpus: '4'
         reservations:
           devices:
             - driver: nvidia
@@ -252,7 +252,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8000/health"]
+      test: ['CMD', 'curl', '--fail', 'http://localhost:8000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -268,11 +268,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2"
+          cpus: '2'
     env_file:
       - path: .env.prod
     ports:
-      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
+      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80'
     networks:
       - app-network
     depends_on:
@@ -280,7 +280,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost/version-info"]
+      test: ['CMD', 'curl', '--fail', 'http://localhost/version-info']
       interval: 30s
       timeout: 10s
       retries: 3

@@ -24,9 +24,7 @@ const downloadPublicJobResultFile = async (req: Request, res: Response) => {
     const job = await Job.findOne(publicJobQuery(publicId)).exec()
 
     if (!job) {
-      res
-        .status(404)
-        .json({ message: `No job matches publicId ${publicId}.` })
+      res.status(404).json({ message: `No job matches publicId ${publicId}.` })
       return
     }
 

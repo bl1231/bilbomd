@@ -203,7 +203,7 @@ const UserAccount: React.FC = () => {
 
   const SectionHeader: React.FC<{ title: string }> = ({ title }) => (
     <Typography
-      variant='h6'
+      variant="h6"
       sx={{
         backgroundColor: '#888',
         color: 'white',
@@ -224,7 +224,10 @@ const UserAccount: React.FC = () => {
     children: React.ReactNode
     actions: React.ReactNode
   }> = ({ open, onClose, title, children, actions }) => (
-    <Dialog open={open} onClose={onClose}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+    >
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>{children}</DialogContent>
       <DialogActions>{actions}</DialogActions>
@@ -248,7 +251,7 @@ const UserAccount: React.FC = () => {
       <Box sx={{ maxWidth: 1000, margin: 'auto', mt: 4 }}>
         <Card sx={{ mb: 2 }}>
           <CardContent sx={{ p: 0 }}>
-            <SectionHeader title='User Information' />
+            <SectionHeader title="User Information" />
             <Box sx={{ p: 2 }}>
               <Typography>User Name: {username}</Typography>
               <Typography>Email Address: {email}</Typography>
@@ -259,7 +262,7 @@ const UserAccount: React.FC = () => {
 
         <Card sx={{ mb: 2 }}>
           <CardContent sx={{ p: 0 }}>
-            <SectionHeader title='Change Email Address' />
+            <SectionHeader title="Change Email Address" />
             <Box sx={{ p: 2 }}>
               <Formik
                 initialValues={{ newEmail: '' }}
@@ -273,18 +276,18 @@ const UserAccount: React.FC = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label='New Email Address'
-                      name='newEmail'
-                      variant='outlined'
+                      label="New Email Address"
+                      name="newEmail"
+                      variant="outlined"
                       sx={{ mb: 2 }}
-                      placeholder='Enter new email address'
-                      helperText={<ErrorMessage name='newEmail' />}
+                      placeholder="Enter new email address"
+                      helperText={<ErrorMessage name="newEmail" />}
                     />
                     <Button
                       fullWidth
-                      variant='contained'
-                      color='primary'
-                      type='submit'
+                      variant="contained"
+                      color="primary"
+                      type="submit"
                       disabled={!isValid}
                     >
                       Update Email
@@ -300,17 +303,20 @@ const UserAccount: React.FC = () => {
         <CustomDialog
           open={state.isOtpModalOpen}
           onClose={() => dispatch({ type: 'TOGGLE_OTP_MODAL', payload: false })}
-          title='Verify OTP'
+          title="Verify OTP"
           actions={
             <>
-              <Button onClick={handleResendOtp} variant='outlined'>
+              <Button
+                onClick={handleResendOtp}
+                variant="outlined"
+              >
                 Resend OTP
               </Button>
               <Button
-                form='otpForm'
-                type='submit'
-                variant='contained'
-                color='primary'
+                form="otpForm"
+                type="submit"
+                variant="contained"
+                color="primary"
               >
                 Verify OTP
               </Button>
@@ -325,16 +331,16 @@ const UserAccount: React.FC = () => {
             onSubmit={handleVerifyOtp}
           >
             {() => (
-              <Form id='otpForm'>
+              <Form id="otpForm">
                 <Field
                   as={TextField}
                   fullWidth
-                  label='Enter OTP'
-                  name='otp'
-                  variant='outlined'
+                  label="Enter OTP"
+                  name="otp"
+                  variant="outlined"
                   sx={{ mt: 2 }}
-                  placeholder='Enter OTP'
-                  helperText={<ErrorMessage name='otp' />}
+                  placeholder="Enter OTP"
+                  helperText={<ErrorMessage name="otp" />}
                 />
               </Form>
             )}
@@ -347,13 +353,13 @@ const UserAccount: React.FC = () => {
           onClose={() =>
             dispatch({ type: 'TOGGLE_MESSAGE_DIALOG', payload: false })
           }
-          title='Notification'
+          title="Notification"
           actions={
             <Button
               onClick={() =>
                 dispatch({ type: 'TOGGLE_MESSAGE_DIALOG', payload: false })
               }
-              variant='contained'
+              variant="contained"
             >
               OK
             </Button>
@@ -365,11 +371,11 @@ const UserAccount: React.FC = () => {
         {/* Account Deletion Section */}
         <Card>
           <CardContent sx={{ p: 0 }}>
-            <SectionHeader title='Delete Account' />
+            <SectionHeader title="Delete Account" />
             <Box sx={{ p: 2 }}>
               <Button
                 fullWidth
-                variant='contained'
+                variant="contained"
                 sx={{
                   bgcolor: 'black',
                   color: 'white',
@@ -389,21 +395,21 @@ const UserAccount: React.FC = () => {
           onClose={() =>
             dispatch({ type: 'TOGGLE_DELETE_CONFIRM', payload: false })
           }
-          title='Confirm Account Deletion'
+          title="Confirm Account Deletion"
           actions={
             <>
               <Button
                 onClick={() =>
                   dispatch({ type: 'TOGGLE_DELETE_CONFIRM', payload: false })
                 }
-                variant='outlined'
+                variant="outlined"
               >
                 Cancel
               </Button>
               <Button
                 onClick={confirmDeleteAccount}
-                variant='contained'
-                color='error'
+                variant="contained"
+                color="error"
               >
                 Delete Account
               </Button>

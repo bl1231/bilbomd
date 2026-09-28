@@ -29,7 +29,9 @@ describe('EnsembleTogglePanel', () => {
       )
       expect(screen.getByText('Size 1')).toBeInTheDocument()
       expect(screen.getByText('Ensembles:')).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /Hide All|Show All/ })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: /Hide All|Show All/ })
+      ).not.toBeInTheDocument()
     })
 
     it('renders only the domain button when constraints exist but fewer than 2 ensembles', () => {
@@ -40,7 +42,9 @@ describe('EnsembleTogglePanel', () => {
           onColorByDomain={vi.fn()}
         />
       )
-      expect(screen.getByRole('button', { name: 'Color by Domain' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Color by Domain' })
+      ).toBeInTheDocument()
       expect(screen.queryByText('Ensembles:')).not.toBeInTheDocument()
     })
 
@@ -81,7 +85,9 @@ describe('EnsembleTogglePanel', () => {
         />
       )
       expect(screen.getByText('Ensembles:')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Color by Domain' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Color by Domain' })
+      ).toBeInTheDocument()
     })
 
     it('does not render domain button when hasConstraints is false', () => {
@@ -94,7 +100,9 @@ describe('EnsembleTogglePanel', () => {
           onColorByDomain={vi.fn()}
         />
       )
-      expect(screen.queryByRole('button', { name: 'Color by Domain' })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Color by Domain' })
+      ).not.toBeInTheDocument()
     })
 
     it('does not render domain button when onColorByDomain is not provided', () => {
@@ -106,7 +114,9 @@ describe('EnsembleTogglePanel', () => {
           hasConstraints={true}
         />
       )
-      expect(screen.queryByRole('button', { name: 'Color by Domain' })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Color by Domain' })
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -146,7 +156,9 @@ describe('EnsembleTogglePanel', () => {
           onColorByDomain={onColorByDomain}
         />
       )
-      await userEvent.click(screen.getByRole('button', { name: 'Color by Domain' }))
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Color by Domain' })
+      )
       expect(onColorByDomain).toHaveBeenCalledOnce()
     })
   })

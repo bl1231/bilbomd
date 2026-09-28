@@ -44,9 +44,7 @@ describe('parseAlphaFoldEntities', () => {
 
     it('preserves other entity fields when mapping', () => {
       const result = parseAlphaFoldEntities({
-        entities: [
-          { name: 'chainB', sequence: 'GCGC', type: 'rna', copies: 1 }
-        ]
+        entities: [{ name: 'chainB', sequence: 'GCGC', type: 'rna', copies: 1 }]
       })
       expect(result[0].name).toBe('chainB')
       expect(result[0].sequence).toBe('GCGC')

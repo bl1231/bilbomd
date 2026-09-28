@@ -48,14 +48,17 @@ const DeleteJob = ({ id, title, hide, onClose }: DeleteJobProps) => {
           onClick={() => setConfirmOpen(true)}
           disabled={deleting || hide}
           startIcon={<DeleteIcon />}
-          variant='outlined'
-          className='job-details-button'
+          variant="outlined"
+          className="job-details-button"
         >
           Trash
         </Button>
       </span>
 
-      <Dialog open={confirmOpen} onClose={handleCloseDialog}>
+      <Dialog
+        open={confirmOpen}
+        onClose={handleCloseDialog}
+      >
         <DialogContent>
           {deleting && <LinearProgress />}
           <DialogContentText>
@@ -71,10 +74,17 @@ const DeleteJob = ({ id, title, hide, onClose }: DeleteJobProps) => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} disabled={deleting}>
+          <Button
+            onClick={handleCloseDialog}
+            disabled={deleting}
+          >
             Cancel
           </Button>
-          <Button onClick={onClickDelete} autoFocus disabled={deleting}>
+          <Button
+            onClick={onClickDelete}
+            autoFocus
+            disabled={deleting}
+          >
             Delete
           </Button>
         </DialogActions>

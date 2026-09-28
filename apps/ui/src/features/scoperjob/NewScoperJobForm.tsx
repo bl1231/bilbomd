@@ -205,9 +205,12 @@ const NewScoperJobForm = ({
 
           <Paper sx={{ p: 2 }}>
             {scoperWorkerCount === 0 && (
-              <Alert severity='warning' sx={{ mb: 2 }}>
-                No SCOPER worker is running right now. You can still submit,
-                but the job will wait in the queue until one starts.
+              <Alert
+                severity="warning"
+                sx={{ mb: 2 }}
+              >
+                No SCOPER worker is running right now. You can still submit, but
+                the job will wait in the queue until one starts.
               </Alert>
             )}
             {isSuccess ? (
@@ -254,10 +257,18 @@ const NewScoperJobForm = ({
                           my: 1
                         }}
                       >
-                        <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
+                        <Box
+                          sx={{
+                            minWidth: { xs: 0, md: '520px' },
+                            width: '100%',
+                            maxWidth: '520px'
+                          }}
+                        >
                           <TitleField />
                         </Box>
-                        <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
+                        <Box
+                          sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}
+                        >
                           <Button
                             variant={useExampleData ? 'outlined' : 'contained'}
                             onClick={() => {
@@ -289,7 +300,9 @@ const NewScoperJobForm = ({
                               : 'Load Example Data'}
                           </Button>
                         </Box>
-                        <Box sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}>
+                        <Box
+                          sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}
+                        >
                           <Button
                             variant="contained"
                             href={'/api/v1/public/examples/scoper'}

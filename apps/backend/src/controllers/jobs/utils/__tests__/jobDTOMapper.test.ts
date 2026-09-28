@@ -220,7 +220,9 @@ describe('mapJobMongoToDTO - alphafold', () => {
   it('maps all alphafold-specific fields', () => {
     const job: IBilboMDAlphaFoldJob = {
       ...baseJob({ __t: 'BilboMdAlphaFold' }),
-      alphafold_entities: [{ name: 'chainA', sequence: 'MKTL', type: 'protein', copies: 1 }],
+      alphafold_entities: [
+        { name: 'chainA', sequence: 'MKTL', type: 'protein', copies: 1 }
+      ],
       fasta_file: 'mol.fasta',
       pdb_file: 'mol.pdb',
       psf_file: 'mol.psf',
@@ -237,7 +239,9 @@ describe('mapJobMongoToDTO - alphafold', () => {
     expect(dto).toMatchObject({
       fasta_file: 'mol.fasta',
       pae_file: 'mol.json',
-      alphafold_entities: [{ name: 'chainA', sequence: 'MKTL', type: 'protein', copies: 1 }]
+      alphafold_entities: [
+        { name: 'chainA', sequence: 'MKTL', type: 'protein', copies: 1 }
+      ]
     })
   })
 })
@@ -287,7 +291,10 @@ describe('mapJobMongoToDTO - SANS deuteration_fractions', () => {
   it('maps from Map', () => {
     const dto = mapJobMongoToDTO(baseSans())
     const df = (dto as BilboMDSANSDTO)
-      .deuteration_fractions as unknown as Array<{ label: string; fraction: number }>
+      .deuteration_fractions as unknown as Array<{
+      label: string
+      fraction: number
+    }>
     expect(df).toEqual([
       { label: 'chainA', fraction: 0.5 },
       { label: 'chainB', fraction: 0.2 }
@@ -296,11 +303,17 @@ describe('mapJobMongoToDTO - SANS deuteration_fractions', () => {
 
   it('maps from plain object', () => {
     const job = baseSans({
-      deuteration_fractions: { chainA: 0.8, chainC: 0.1 } as unknown as IBilboMDSANSJob['deuteration_fractions']
+      deuteration_fractions: {
+        chainA: 0.8,
+        chainC: 0.1
+      } as unknown as IBilboMDSANSJob['deuteration_fractions']
     })
     const dto = mapJobMongoToDTO(job)
     const df = (dto as BilboMDSANSDTO)
-      .deuteration_fractions as unknown as Array<{ label: string; fraction: number }>
+      .deuteration_fractions as unknown as Array<{
+      label: string
+      fraction: number
+    }>
     const byLabel = Object.fromEntries(df.map((x) => [x.label, x.fraction]))
     expect(byLabel['chainA']).toBe(0.8)
     expect(byLabel['chainC']).toBe(0.1)
@@ -315,7 +328,10 @@ describe('mapJobMongoToDTO - SANS deuteration_fractions', () => {
     })
     const dto = mapJobMongoToDTO(job)
     const df = (dto as BilboMDSANSDTO)
-      .deuteration_fractions as unknown as Array<{ label: string; fraction: number }>
+      .deuteration_fractions as unknown as Array<{
+      label: string
+      fraction: number
+    }>
     expect(df).toEqual([
       { label: 'chainA', fraction: 0.3 },
       { label: 'chainB', fraction: 0.6 }
@@ -333,17 +349,24 @@ describe('mapJobMongoToDTO - SANS deuteration_fractions', () => {
     })
     const dto = mapJobMongoToDTO(job)
     const df = (dto as BilboMDSANSDTO)
-      .deuteration_fractions as unknown as Array<{ label: string; fraction: number }>
+      .deuteration_fractions as unknown as Array<{
+      label: string
+      fraction: number
+    }>
     expect(df).toEqual([{ label: 'chainA', fraction: 0.3 }])
   })
 
   it('returns empty array when deuteration_fractions is undefined', () => {
     const job = baseSans({
-      deuteration_fractions: undefined as unknown as IBilboMDSANSJob['deuteration_fractions']
+      deuteration_fractions:
+        undefined as unknown as IBilboMDSANSJob['deuteration_fractions']
     })
     const dto = mapJobMongoToDTO(job)
     const df = (dto as BilboMDSANSDTO)
-      .deuteration_fractions as unknown as Array<{ label: string; fraction: number }>
+      .deuteration_fractions as unknown as Array<{
+      label: string
+      fraction: number
+    }>
     expect(df).toEqual([])
   })
 })
@@ -369,7 +392,10 @@ describe('mapMultiJobMongoToDTO', () => {
     }) as IMultiJob
 
   it('maps all fields correctly', () => {
-    const raw = mapMultiJobMongoToDTO(makeMultiJob()) as unknown as Record<string, unknown>
+    const raw = mapMultiJobMongoToDTO(makeMultiJob()) as unknown as Record<
+      string,
+      unknown
+    >
     expect(raw['jobType']).toBe('multi')
     expect(raw['id']).toBe('multi-id')
     expect(raw['title']).toBe('Multi Job')
@@ -380,7 +406,9 @@ describe('mapMultiJobMongoToDTO', () => {
   })
 
   it('defaults progress to 0 when undefined', () => {
-    const dto = mapMultiJobMongoToDTO(makeMultiJob({ progress: undefined as unknown as number }))
+    const dto = mapMultiJobMongoToDTO(
+      makeMultiJob({ progress: undefined as unknown as number })
+    )
     expect(dto.progress).toBe(0)
   })
 
@@ -405,20 +433,34 @@ describe('mapMultiJobMongoToDTO', () => {
 
 describe('buildBilboMDJobDTO', () => {
   it('uses username from mongo user when not explicitly provided', () => {
-    const dto = buildBilboMDJobDTO({ jobId: 'job-id', mongo: baseSans(), username: undefined })
+    const dto = buildBilboMDJobDTO({
+      jobId: 'job-id',
+      mongo: baseSans(),
+      username: undefined
+    })
     expect(dto.username).toBe('alice')
     expect(dto.mongo.user?.username).toBe('alice')
     expect(dto.mongo.id).toBe('job-id')
   })
 
   it('uses explicitly provided username over user summary', () => {
-    const dto = buildBilboMDJobDTO({ jobId: 'job-id', mongo: baseSans(), username: 'bob' })
+    const dto = buildBilboMDJobDTO({
+      jobId: 'job-id',
+      mongo: baseSans(),
+      username: 'bob'
+    })
     expect(dto.username).toBe('bob')
   })
 
   it('falls back to "unknown" when user has no _id and no username provided', () => {
-    const job = baseSans({ user: { username: 'ghost', email: 'ghost@example.com' } as IUser })
-    const dto = buildBilboMDJobDTO({ jobId: 'job-id', mongo: job, username: undefined })
+    const job = baseSans({
+      user: { username: 'ghost', email: 'ghost@example.com' } as IUser
+    })
+    const dto = buildBilboMDJobDTO({
+      jobId: 'job-id',
+      mongo: job,
+      username: undefined
+    })
     expect(dto.username).toBe('unknown')
     expect(dto.mongo.user).toBeUndefined()
   })
@@ -445,20 +487,32 @@ describe('buildMultiJobDTO', () => {
     }) as IMultiJob
 
   it('builds DTO with user summary from mongo user', () => {
-    const dto = buildMultiJobDTO({ jobId: 'multi-id', mongo: makeMultiJob(), username: undefined })
+    const dto = buildMultiJobDTO({
+      jobId: 'multi-id',
+      mongo: makeMultiJob(),
+      username: undefined
+    })
     expect(dto.id).toBe('multi-id')
     expect(dto.username).toBe('alice')
     expect(dto.mongo.user?.username).toBe('alice')
   })
 
   it('uses explicitly provided username', () => {
-    const dto = buildMultiJobDTO({ jobId: 'multi-id', mongo: makeMultiJob(), username: 'carol' })
+    const dto = buildMultiJobDTO({
+      jobId: 'multi-id',
+      mongo: makeMultiJob(),
+      username: 'carol'
+    })
     expect(dto.username).toBe('carol')
   })
 
   it('falls back to "unknown" when user has no _id', () => {
     const job = makeMultiJob({ user: { username: 'ghost' } as IUser })
-    const dto = buildMultiJobDTO({ jobId: 'multi-id', mongo: job, username: undefined })
+    const dto = buildMultiJobDTO({
+      jobId: 'multi-id',
+      mongo: job,
+      username: undefined
+    })
     expect(dto.username).toBe('unknown')
   })
 })

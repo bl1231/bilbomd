@@ -8,7 +8,10 @@ describe('BilboMDStep', () => {
   describe('step statuses', () => {
     it('should render "no" status with unchecked icon', () => {
       renderWithProviders(
-        <BilboMDStep stepName="minimize" stepStatus="no" />
+        <BilboMDStep
+          stepName="minimize"
+          stepStatus="no"
+        />
       )
 
       const chip = screen.getByText('minimize')
@@ -17,7 +20,10 @@ describe('BilboMDStep', () => {
 
     it('should render "start" status with running icon and yellow background', () => {
       renderWithProviders(
-        <BilboMDStep stepName="md" stepStatus="start" />
+        <BilboMDStep
+          stepName="md"
+          stepStatus="start"
+        />
       )
 
       const chip = screen.getByText('md')
@@ -29,7 +35,10 @@ describe('BilboMDStep', () => {
 
     it('should render "end" status with success icon', () => {
       renderWithProviders(
-        <BilboMDStep stepName="foxs" stepStatus="end" />
+        <BilboMDStep
+          stepName="foxs"
+          stepStatus="end"
+        />
       )
 
       const chip = screen.getByText('foxs')
@@ -39,7 +48,10 @@ describe('BilboMDStep', () => {
 
     it('should render "error" status with error icon', () => {
       renderWithProviders(
-        <BilboMDStep stepName="minimize" stepStatus="error" />
+        <BilboMDStep
+          stepName="minimize"
+          stepStatus="error"
+        />
       )
 
       const chip = screen.getByText('minimize')
@@ -49,7 +61,10 @@ describe('BilboMDStep', () => {
 
     it('should not render for invalid status', () => {
       const { container } = renderWithProviders(
-        <BilboMDStep stepName="minimize" stepStatus="invalid" />
+        <BilboMDStep
+          stepName="minimize"
+          stepStatus="invalid"
+        />
       )
 
       expect(container.firstChild).toBeNull()
@@ -57,7 +72,10 @@ describe('BilboMDStep', () => {
 
     it('should not render for empty status', () => {
       const { container } = renderWithProviders(
-        <BilboMDStep stepName="minimize" stepStatus="" />
+        <BilboMDStep
+          stepName="minimize"
+          stepStatus=""
+        />
       )
 
       expect(container.firstChild).toBeNull()
@@ -87,8 +105,7 @@ describe('BilboMDStep', () => {
       },
       {
         name: 'heat',
-        tooltip:
-          'In this step we use CHARMM to heat and then cool your model.'
+        tooltip: 'In this step we use CHARMM to heat and then cool your model.'
       },
       {
         name: 'md',
@@ -121,7 +138,12 @@ describe('BilboMDStep', () => {
       it(`should show correct tooltip for ${name} step`, async () => {
         const user = userEvent.setup()
 
-        renderWithProviders(<BilboMDStep stepName={name} stepStatus="no" />)
+        renderWithProviders(
+          <BilboMDStep
+            stepName={name}
+            stepStatus="no"
+          />
+        )
 
         const chip = screen.getByText(name)
         await user.hover(chip)
@@ -134,7 +156,10 @@ describe('BilboMDStep', () => {
       const user = userEvent.setup()
 
       renderWithProviders(
-        <BilboMDStep stepName="unknown" stepStatus="no" />
+        <BilboMDStep
+          stepName="unknown"
+          stepStatus="no"
+        />
       )
 
       const chip = screen.getByText('unknown')
@@ -149,7 +174,10 @@ describe('BilboMDStep', () => {
   describe('chip appearance', () => {
     it('should render chip with small size', () => {
       renderWithProviders(
-        <BilboMDStep stepName="minimize" stepStatus="no" />
+        <BilboMDStep
+          stepName="minimize"
+          stepStatus="no"
+        />
       )
 
       const chip = screen.getByText('minimize').parentElement
@@ -158,7 +186,10 @@ describe('BilboMDStep', () => {
 
     it('should display step name as label', () => {
       renderWithProviders(
-        <BilboMDStep stepName="custom-step" stepStatus="end" />
+        <BilboMDStep
+          stepName="custom-step"
+          stepStatus="end"
+        />
       )
 
       expect(screen.getByText('custom-step')).toBeInTheDocument()
@@ -173,7 +204,10 @@ describe('BilboMDStep', () => {
       steps.forEach((step) => {
         it(`should render ${step} with ${status} status`, () => {
           renderWithProviders(
-            <BilboMDStep stepName={step} stepStatus={status} />
+            <BilboMDStep
+              stepName={step}
+              stepStatus={status}
+            />
           )
 
           expect(screen.getByText(step)).toBeInTheDocument()
@@ -185,7 +219,10 @@ describe('BilboMDStep', () => {
   describe('icons', () => {
     it('should render RadioButtonUnchecked icon for "no" status', () => {
       renderWithProviders(
-        <BilboMDStep stepName="minimize" stepStatus="no" />
+        <BilboMDStep
+          stepName="minimize"
+          stepStatus="no"
+        />
       )
 
       const chip = screen.getByText('minimize').parentElement
@@ -194,7 +231,10 @@ describe('BilboMDStep', () => {
 
     it('should render DirectionsRunRounded icon for "start" status', () => {
       renderWithProviders(
-        <BilboMDStep stepName="md" stepStatus="start" />
+        <BilboMDStep
+          stepName="md"
+          stepStatus="start"
+        />
       )
 
       const chip = screen.getByText('md').parentElement
@@ -205,7 +245,10 @@ describe('BilboMDStep', () => {
 
     it('should render CheckCircle icon for "end" status', () => {
       renderWithProviders(
-        <BilboMDStep stepName="foxs" stepStatus="end" />
+        <BilboMDStep
+          stepName="foxs"
+          stepStatus="end"
+        />
       )
 
       const chip = screen.getByText('foxs').parentElement
@@ -214,7 +257,10 @@ describe('BilboMDStep', () => {
 
     it('should render Error icon for "error" status', () => {
       renderWithProviders(
-        <BilboMDStep stepName="minimize" stepStatus="error" />
+        <BilboMDStep
+          stepName="minimize"
+          stepStatus="error"
+        />
       )
 
       const chip = screen.getByText('minimize').parentElement

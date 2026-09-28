@@ -143,7 +143,9 @@ describe('apiSlice', () => {
     })
 
     it('should handle refresh token failure', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {})
 
       server.use(
         http.get('http://localhost:3003/api/v1/auth/refresh', () => {

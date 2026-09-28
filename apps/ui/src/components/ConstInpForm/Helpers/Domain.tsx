@@ -87,9 +87,9 @@ const Domain: FC<DomainProps> = ({
             sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}
           >
             <TextField
-              label='Chain'
-              variant='outlined'
-              id='chainid'
+              label="Chain"
+              variant="outlined"
+              id="chainid"
               name={`pdb_file.rigid_bodies[${rbidx}].domains[${didx}].chainid`}
               select
               defaultValue={
@@ -117,22 +117,25 @@ const Domain: FC<DomainProps> = ({
                   `pdb_file.rigid_bodies[rbidx].domains[didx].chainid`
                 )
               )}
-              helperText='Chain ID'
+              helperText="Chain ID"
             >
               {values.pdb_file.chains.map((item, index) => (
-                <MenuItem key={index} value={item.id}>
+                <MenuItem
+                  key={index}
+                  value={item.id}
+                >
                   {item.id}
                 </MenuItem>
               ))}
             </TextField>
 
             <Field
-              label='Start'
-              id='start'
+              label="Start"
+              id="start"
               name={`pdb_file.rigid_bodies[${rbidx}].domains[${didx}].start`}
-              type='text'
+              type="text"
               as={TextField}
-              helperText='Starting residue'
+              helperText="Starting residue"
               slotProps={{
                 inputLabel: {
                   style: { backgroundColor: 'transparent', color: 'black' }
@@ -151,12 +154,12 @@ const Domain: FC<DomainProps> = ({
             />
 
             <Field
-              label='End'
-              id='end'
+              label="End"
+              id="end"
               name={`pdb_file.rigid_bodies[${rbidx}].domains[${didx}].end`}
-              type='text'
+              type="text"
               as={TextField}
-              helperText='Ending residue'
+              helperText="Ending residue"
               slotProps={{
                 inputLabel: {
                   style: { backgroundColor: 'transparent', color: 'black' }
@@ -194,7 +197,7 @@ const Domain: FC<DomainProps> = ({
               </Typography>
               <Chip
                 label={`${domain.start} - ${domain.end}`}
-                variant='outlined'
+                variant="outlined"
                 sx={{ backgroundColor: '#a0d919', color: 'black' }}
               />
             </Box>
@@ -205,17 +208,32 @@ const Domain: FC<DomainProps> = ({
           <ErrorMessage
             name={`pdb_file.rigid_bodies[${rbidx}].domains[${didx}].chainid`}
           >
-            {(msg) => <FormikErrorAlert message={msg} severity='error' />}
+            {(msg) => (
+              <FormikErrorAlert
+                message={msg}
+                severity="error"
+              />
+            )}
           </ErrorMessage>
           <ErrorMessage
             name={`pdb_file.rigid_bodies[${rbidx}].domains[${didx}].start`}
           >
-            {(msg) => <FormikErrorAlert message={msg} severity='error' />}
+            {(msg) => (
+              <FormikErrorAlert
+                message={msg}
+                severity="error"
+              />
+            )}
           </ErrorMessage>
           <ErrorMessage
             name={`pdb_file.rigid_bodies[${rbidx}].domains[${didx}].end`}
           >
-            {(msg) => <FormikErrorAlert message={msg} severity='error' />}
+            {(msg) => (
+              <FormikErrorAlert
+                message={msg}
+                severity="error"
+              />
+            )}
           </ErrorMessage>
         </Grid>
       </Grid>

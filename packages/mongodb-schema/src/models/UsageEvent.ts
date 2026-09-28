@@ -26,7 +26,16 @@ const usageEventSchema = new Schema<IUsageEvent>(
     },
     pipeline: {
       type: String,
-      enum: ['pdb', 'crd', 'auto', 'alphafold', 'openfold', 'sans', 'scoper', 'multi'],
+      enum: [
+        'pdb',
+        'crd',
+        'auto',
+        'alphafold',
+        'openfold',
+        'sans',
+        'scoper',
+        'multi'
+      ],
       required: true,
       index: true
     },

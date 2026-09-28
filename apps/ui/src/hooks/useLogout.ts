@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router"
-import { useSendLogoutMutation } from "slices/authApiSlice"
+import { useNavigate } from 'react-router'
+import { useSendLogoutMutation } from 'slices/authApiSlice'
 
 const useLogout = () => {
   const navigate = useNavigate()
@@ -7,7 +7,7 @@ const useLogout = () => {
 
   const logout = async () => {
     await sendLogout(undefined)
-    void navigate("/")
+    void navigate('/')
   }
 
   return logout

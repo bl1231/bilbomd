@@ -75,7 +75,9 @@ describe('verifyJobOwnership middleware', () => {
       mockRequest.roles = ['User']
       await run()
       expect(statusSpy).toHaveBeenCalledWith(400)
-      expect(jsonSpy).toHaveBeenCalledWith({ message: 'Invalid Job ID format.' })
+      expect(jsonSpy).toHaveBeenCalledWith({
+        message: 'Invalid Job ID format.'
+      })
       expect(mockNext).not.toHaveBeenCalled()
     })
   })

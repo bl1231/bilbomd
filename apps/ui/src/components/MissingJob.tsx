@@ -10,7 +10,10 @@ const MissingJob = ({ id }: MissingJobProps) => {
   useTitle('BilboMD: Missing Job')
   return (
     <Box>
-      <Alert severity='warning' variant='outlined'>
+      <Alert
+        severity="warning"
+        variant="outlined"
+      >
         No BilboMD Job with id: {id}
       </Alert>
     </Box>

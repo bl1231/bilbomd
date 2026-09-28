@@ -209,8 +209,7 @@ const Home = ({ title = 'BilboMD' }) => {
             variant="body2"
             sx={{ mx: 5, my: 2 }}
           >
-            Classen S, Del Mundo J, Kulkarni D, Prabhakar S, Hicks A, Hammel
-            M.{' '}
+            Classen S, Del Mundo J, Kulkarni D, Prabhakar S, Hicks A, Hammel M.{' '}
             <b>
               BilboMD: a web-accessible SAXS and AlphaFold-guided modeling
               pipeline.

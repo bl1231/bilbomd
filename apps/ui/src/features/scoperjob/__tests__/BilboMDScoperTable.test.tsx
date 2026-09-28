@@ -20,9 +20,7 @@ describe('BilboMDScoperTable', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('KGS Progress')).toBeInTheDocument()
     expect(screen.getByText('FoXS Top File')).toBeInTheDocument()
-    expect(
-      screen.getByText('Number of predicted Mg ions')
-    ).toBeInTheDocument()
+    expect(screen.getByText('Number of predicted Mg ions')).toBeInTheDocument()
     expect(screen.getByText('KGS Progress Bar')).toBeInTheDocument()
   })
 

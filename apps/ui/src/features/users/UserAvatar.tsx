@@ -19,13 +19,16 @@ const UserAvatar = ({ displayName, email, status }: UserAvatarProps) => {
         borderRadius: 1
       }}
     >
-      <Typography variant='subtitle1'>{displayName}</Typography>
-      <Typography variant='caption' color='textSecondary'>
+      <Typography variant="subtitle1">{displayName}</Typography>
+      <Typography
+        variant="caption"
+        color="textSecondary"
+      >
         {email}
       </Typography>
       <Chip
         label={status}
-        size='small'
+        size="small"
         sx={{
           mt: 0.5,
           bgcolor: purple[300],

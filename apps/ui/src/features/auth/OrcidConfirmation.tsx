@@ -22,14 +22,14 @@ interface ProfileRowProps {
 const ProfileRow = ({ label, value }: ProfileRowProps) => (
   <Box>
     <Typography
-      variant='caption'
-      color='text.secondary'
+      variant="caption"
+      color="text.secondary"
       sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}
     >
       {label}
     </Typography>
     <Typography
-      variant='body1'
+      variant="body1"
       sx={{ fontFamily: 'inherit' }}
     >
       {value || '—'}
@@ -38,8 +38,13 @@ const ProfileRow = ({ label, value }: ProfileRowProps) => (
 )
 
 export default function OrcidConfirmation() {
-  const { data: profile, isLoading, isError } = useGetOrcidSessionQuery(undefined)
-  const [finalizeOrcid, { isLoading: isFinalizing }] = useFinalizeOrcidMutation()
+  const {
+    data: profile,
+    isLoading,
+    isError
+  } = useGetOrcidSessionQuery(undefined)
+  const [finalizeOrcid, { isLoading: isFinalizing }] =
+    useFinalizeOrcidMutation()
 
   if (isLoading) return <Typography>Loading…</Typography>
   if (isError || !profile) {
@@ -64,22 +69,22 @@ export default function OrcidConfirmation() {
   }
 
   return (
-    <Container maxWidth='sm'>
+    <Container maxWidth="sm">
       <Paper sx={{ padding: 3, marginTop: 4 }}>
         <Typography
-          variant='h5'
+          variant="h5"
           gutterBottom
         >
           Confirm your ORCID profile
         </Typography>
         <Typography
-          variant='body2'
-          color='text.secondary'
+          variant="body2"
+          color="text.secondary"
           sx={{ mb: 3 }}
         >
           BilboMD will create a new account using the verified information
-          below. Nothing on this page is editable here — to change any of
-          these values, update them in your ORCID account and sign in again.
+          below. Nothing on this page is editable here — to change any of these
+          values, update them in your ORCID account and sign in again.
         </Typography>
 
         <Stack
@@ -87,35 +92,35 @@ export default function OrcidConfirmation() {
           divider={<Divider flexItem />}
         >
           <ProfileRow
-            label='First name'
+            label="First name"
             value={profile.givenName}
           />
           <ProfileRow
-            label='Last name'
+            label="Last name"
             value={profile.familyName}
           />
           <ProfileRow
-            label='Email'
+            label="Email"
             value={profile.email}
           />
           <ProfileRow
-            label='ORCID iD'
+            label="ORCID iD"
             value={profile.orcidId}
           />
           <ProfileRow
-            label='BilboMD display name'
+            label="BilboMD display name"
             value={displayName}
           />
           <ProfileRow
-            label='BilboMD account ID'
+            label="BilboMD account ID"
             value={internalAccountId}
           />
         </Stack>
 
         <Button
-          type='button'
-          variant='contained'
-          color='primary'
+          type="button"
+          variant="contained"
+          color="primary"
           onClick={handleConfirm}
           disabled={isFinalizing}
           sx={{ mt: 3 }}

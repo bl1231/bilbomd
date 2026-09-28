@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { pauseProcessing, resumeProcessing, checkNERSC } from '../workerControl.js'
+import {
+  pauseProcessing,
+  resumeProcessing,
+  checkNERSC
+} from '../workerControl.js'
 import { Worker } from 'bullmq'
 import { logger } from '../../helpers/loggers.js'
 import { ensureValidToken } from '../../services/functions/nersc-api-token-functions.js'
@@ -40,8 +44,12 @@ describe('workerControl', () => {
 
       expect(mockWorker1.pause).toHaveBeenCalledTimes(1)
       expect(mockWorker2.pause).toHaveBeenCalledTimes(1)
-      expect(logger.info).toHaveBeenCalledWith('BilboMD Worker paused due to invalid NERSC tokens')
-      expect(logger.info).toHaveBeenCalledWith('Movie Worker paused due to invalid NERSC tokens')
+      expect(logger.info).toHaveBeenCalledWith(
+        'BilboMD Worker paused due to invalid NERSC tokens'
+      )
+      expect(logger.info).toHaveBeenCalledWith(
+        'Movie Worker paused due to invalid NERSC tokens'
+      )
     })
 
     it('should handle empty workers array', async () => {

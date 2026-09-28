@@ -5,7 +5,8 @@ import { v4 as uuid } from 'uuid'
 import { Request, Response } from 'express'
 import { sendVerificationEmail } from '../config/nodemailerConfig.js'
 
-const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const characters =
+  '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 const bilboMdUrl = getEnvVar('BILBOMD_URL')
 
 const handleNewUser = async (req: Request, res: Response) => {
@@ -70,7 +71,10 @@ const handleNewUser = async (req: Request, res: Response) => {
 
     //  120000 ms = 2 min
     // 3600000 ms = 1 hour
-    const confirmationCode = { code: code, expiresAt: new Date(Date.now() + 3600000) }
+    const confirmationCode = {
+      code: code,
+      expiresAt: new Date(Date.now() + 3600000)
+    }
 
     // unique UUID for each user
     const UUID = uuid()

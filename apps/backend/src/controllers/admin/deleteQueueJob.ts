@@ -29,7 +29,9 @@ const deleteQueueJob = async (req: Request, res: Response): Promise<void> => {
       .status(200)
       .json({ message: `Job ID "${jobId}" removed from queue "${queueName}"` })
   } catch (error) {
-    logger.error(`Failed to remove job "${jobId}" from queue "${queueName}": ${error}`)
+    logger.error(
+      `Failed to remove job "${jobId}" from queue "${queueName}": ${error}`
+    )
     res.status(500).json({ error: 'Failed to remove job from queue' })
   }
 }

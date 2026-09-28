@@ -69,7 +69,9 @@ describe('PersistLogin', () => {
   it('renders error state with MagickLink and Home buttons on refresh failure', async () => {
     mockUsePersist.mockReturnValue([true, vi.fn()])
     mockUseRefreshMutation.mockReturnValue([
-      vi.fn().mockReturnValue({ unwrap: vi.fn().mockRejectedValue(new Error('Unauthorized')) }),
+      vi.fn().mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('Unauthorized'))
+      }),
       {
         ...baseRefreshState,
         isUninitialized: false,

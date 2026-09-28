@@ -84,8 +84,8 @@ describe('NewJobFormInstructions', () => {
 
       const charmmLinks = screen.getAllByRole('link', { name: /CHARMM/i })
       expect(charmmLinks.length).toBeGreaterThan(0)
-      const mainCharmmLink = charmmLinks.find(link =>
-        link.getAttribute('href') === 'https://academiccharmm.org/'
+      const mainCharmmLink = charmmLinks.find(
+        (link) => link.getAttribute('href') === 'https://academiccharmm.org/'
       )
       expect(mainCharmmLink).toHaveAttribute('target', '_blank')
       expect(mainCharmmLink).toHaveAttribute('rel', 'noopener noreferrer')
@@ -272,7 +272,9 @@ describe('NewJobFormInstructions', () => {
       })
       await user.click(mainAccordion)
 
-      expect(screen.getByText(/-7% to \+25%/, { exact: false })).toBeInTheDocument()
+      expect(
+        screen.getByText(/-7% to \+25%/, { exact: false })
+      ).toBeInTheDocument()
     })
   })
 

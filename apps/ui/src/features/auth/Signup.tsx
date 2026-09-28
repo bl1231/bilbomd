@@ -94,7 +94,7 @@ const Signup = () => {
           }}
         >
           {success ? (
-            <Alert severity='success'>
+            <Alert severity="success">
               <AlertTitle>Woot!</AlertTitle>You have been registered for an
               account. Before you can log in we need you to verify your email.
               Please check your inbox for a verification email from
@@ -122,10 +122,10 @@ const Signup = () => {
                   <TextField
                     fullWidth
                     sx={{ my: 1 }}
-                    label='Pick a User Name'
-                    name='user'
-                    type='text'
-                    variant='outlined'
+                    label="Pick a User Name"
+                    name="user"
+                    type="text"
+                    variant="outlined"
                     disabled={isSubmitting}
                     onChange={handleChange}
                     onBlur={handleBlur}
@@ -139,10 +139,10 @@ const Signup = () => {
                   <TextField
                     fullWidth
                     sx={{ my: 1 }}
-                    label='Enter an Email address'
-                    name='email'
-                    type='email'
-                    variant='outlined'
+                    label="Enter an Email address"
+                    name="email"
+                    type="email"
+                    variant="outlined"
                     disabled={isSubmitting}
                     onChange={handleChange}
                     onBlur={handleBlur}
@@ -156,22 +156,25 @@ const Signup = () => {
                   {error ? (
                     <Collapse in={Boolean(error)}>
                       <Alert
-                        severity='error'
+                        severity="error"
                         action={
                           <IconButton
-                            aria-label='close'
-                            color='inherit'
-                            size='small'
+                            aria-label="close"
+                            color="inherit"
+                            size="small"
                             onClick={() => setError('')}
                           >
-                            <CloseIcon fontSize='inherit' />
+                            <CloseIcon fontSize="inherit" />
                           </IconButton>
                         }
                         sx={{ mb: 1 }}
                       >
                         {error}
                         <br /> If you have an account{' '}
-                        <Link to='../magicklink' className='alert-link'>
+                        <Link
+                          to="../magicklink"
+                          className="alert-link"
+                        >
                           get a MagickLink&#8482;
                         </Link>
                       </Alert>
@@ -183,27 +186,33 @@ const Signup = () => {
                   <Button
                     fullWidth
                     sx={{ my: 2 }}
-                    variant='contained'
-                    type='submit'
+                    variant="contained"
+                    type="submit"
                     disabled={isSubmitting}
                     startIcon={<AddCircleOutlineIcon />}
                   >
                     Create an Account
                   </Button>
-                  <Divider variant='middle' sx={{ my: 3 }} />
+                  <Divider
+                    variant="middle"
+                    sx={{ my: 3 }}
+                  />
 
-                  <Typography variant='body2' sx={{ mt: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 2 }}
+                  >
                     Already have an account?
                   </Typography>
 
                   <Button
                     fullWidth
                     sx={{ my: 2 }}
-                    variant='contained'
-                    type='button'
+                    variant="contained"
+                    type="button"
                     endIcon={<AutoFixHighIcon />}
                     component={Link}
-                    to='../magicklink'
+                    to="../magicklink"
                   >
                     Get a MagickLink&#8482;
                   </Button>

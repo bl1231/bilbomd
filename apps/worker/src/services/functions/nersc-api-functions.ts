@@ -140,7 +140,9 @@ const monitorTaskAtNERSC = async (
 
   do {
     await makeRequest()
-    await new Promise((resolve) => setTimeout(resolve, INTERVALS.NERSC_TASK_POLL))
+    await new Promise((resolve) =>
+      setTimeout(resolve, INTERVALS.NERSC_TASK_POLL)
+    )
   } while (status !== 'completed' && status !== 'failed')
 
   if (!statusResponse) {
@@ -222,7 +224,9 @@ const monitorJobAtNERSC = async (
           logger.error(`Max retries reached for job ${jobID}`)
           throw new Error(`Max retries reached for job ${jobID}`)
         }
-        await new Promise((resolve) => setTimeout(resolve, NERSC_RETRY.RETRY_DELAY))
+        await new Promise((resolve) =>
+          setTimeout(resolve, NERSC_RETRY.RETRY_DELAY)
+        )
         continue // Retry the request
       }
     }
@@ -246,7 +250,9 @@ const monitorJobAtNERSC = async (
         break
       default:
         iterationCount++
-        await new Promise((resolve) => setTimeout(resolve, INTERVALS.NERSC_JOB_POLL))
+        await new Promise((resolve) =>
+          setTimeout(resolve, INTERVALS.NERSC_JOB_POLL)
+        )
         break
     }
   }

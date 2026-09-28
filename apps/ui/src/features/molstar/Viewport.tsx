@@ -27,15 +27,20 @@ export class ViewportComponent extends PluginUIComponent {
     preset: StructureRepresentationPresetProvider
   ) {
     await this.plugin.managers.structure.component.clear(structures)
-    await this.plugin.managers.structure.component.applyPreset(structures, preset)
-    const reapply = (
-      this.plugin.customState as Record<string, unknown>
-    ).reapplyVisibility
+    await this.plugin.managers.structure.component.applyPreset(
+      structures,
+      preset
+    )
+    const reapply = (this.plugin.customState as Record<string, unknown>)
+      .reapplyVisibility
     if (typeof reapply === 'function') reapply()
   }
 
   set = async (preset: StructureRepresentationPresetProvider) => {
-    await this._set(this.plugin.managers.structure.hierarchy.selection.structures, preset)
+    await this._set(
+      this.plugin.managers.structure.hierarchy.selection.structures,
+      preset
+    )
   }
 
   structurePreset = () => this.set(StructurePreset)
@@ -49,7 +54,8 @@ export class ViewportComponent extends PluginUIComponent {
   }
 
   render() {
-    const VPControls = this.plugin.spec.components?.viewport?.controls || ViewportControls
+    const VPControls =
+      this.plugin.spec.components?.viewport?.controls || ViewportControls
 
     return (
       <>

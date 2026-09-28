@@ -21,7 +21,9 @@ export async function handleOrcidCallback(req: Request, res: Response) {
 
   if (!storedState || !storedNonce) {
     logger.warn('ORCID callback hit without state/nonce cookies')
-    res.status(400).send('Missing OAuth session — please restart the sign-in flow')
+    res
+      .status(400)
+      .send('Missing OAuth session — please restart the sign-in flow')
     return
   }
 
@@ -43,7 +45,10 @@ export async function handleOrcidCallback(req: Request, res: Response) {
       idTokenExpected: true
     })
   } catch (err) {
-    logger.error('ORCID authorization-code grant / ID-token verification failed', err)
+    logger.error(
+      'ORCID authorization-code grant / ID-token verification failed',
+      err
+    )
     clearOauthCookies(res)
     return res.redirect('/auth/orcid-error?reason=token_exchange')
   }
@@ -64,8 +69,7 @@ export async function handleOrcidCallback(req: Request, res: Response) {
     typeof claims.given_name === 'string' ? claims.given_name : undefined
   const familyName =
     typeof claims.family_name === 'string' ? claims.family_name : undefined
-  const displayName =
-    typeof claims.name === 'string' ? claims.name : undefined
+  const displayName = typeof claims.name === 'string' ? claims.name : undefined
 
   // Email is not part of the openid scope on ORCID; fetch from the Public API.
   let userinfo: { person?: { emails?: { email?: unknown } } }

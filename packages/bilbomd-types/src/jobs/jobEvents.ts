@@ -12,11 +12,7 @@ export const JOB_EVENTS_CHANNEL = 'bilbomd:job-events'
 // deleted        the job's document has been removed
 // delete_failed  deleting the job failed after its final attempt
 export type JobEventKind =
-  | 'created'
-  | 'updated'
-  | 'movies'
-  | 'deleted'
-  | 'delete_failed'
+  'created' | 'updated' | 'movies' | 'deleted' | 'delete_failed'
 
 export const JOB_EVENT_KINDS: readonly JobEventKind[] = [
   'created',

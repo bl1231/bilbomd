@@ -133,7 +133,8 @@ const cleanupJob = async (
     }
 
     // Get user ID - handles both ObjectId and populated user object
-    const userId = DBjob.user instanceof Types.ObjectId ? DBjob.user : DBjob.user._id
+    const userId =
+      DBjob.user instanceof Types.ObjectId ? DBjob.user : DBjob.user._id
 
     // Retrieve the user email from the associated User model
     const user = await User.findById(userId).lean().exec()

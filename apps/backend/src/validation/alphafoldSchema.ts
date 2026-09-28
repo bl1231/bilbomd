@@ -24,7 +24,10 @@ const alphafoldEntitiesSchema = yup
   .max(20, 'A maximum of 20 entities are allowed')
 
 export const alphafoldJobSchema = yup.object({
-  title: yup.string().required('Job title is required').max(100, 'Title too long'),
+  title: yup
+    .string()
+    .required('Job title is required')
+    .max(100, 'Title too long'),
   bilbomd_mode: yup.string().oneOf(['alphafold'], 'Invalid mode').required(),
   email: yup.string().email('Invalid email address').optional(),
   dat_file: requiredFile('Experimental SAXS data is required')

@@ -49,11 +49,18 @@ const recoverStuckNerscJobs = async (): Promise<void> => {
   }).exec()
 
   if (stuckJobs.length === 0) return
-  logger.info(`Recovering ${stuckJobs.length} stuck NERSC job(s) missing nersc sub-document...`)
+  logger.info(
+    `Recovering ${stuckJobs.length} stuck NERSC job(s) missing nersc sub-document...`
+  )
 
   for (const job of stuckJobs) {
-    const message = (job.steps as Record<string, { status: string; message: string } | undefined>)
-      ?.nersc_submit_slurm_batch?.message ?? ''
+    const message =
+      (
+        job.steps as Record<
+          string,
+          { status: string; message: string } | undefined
+        >
+      )?.nersc_submit_slurm_batch?.message ?? ''
     const match = message.match(/NERSC JobID (\S+)/)
     if (!match) {
       logger.warn(
@@ -297,8 +304,7 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
               ? job.nersc.time_started
               : undefined
           const completed =
-            job.nersc?.time_completed &&
-            job.nersc.time_completed.getTime() > 0
+            job.nersc?.time_completed && job.nersc.time_completed.getTime() > 0
               ? job.nersc.time_completed
               : undefined
           const duration_ms =

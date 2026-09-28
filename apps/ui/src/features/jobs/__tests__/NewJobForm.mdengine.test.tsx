@@ -78,12 +78,8 @@ describe('NewJobForm md_engine', () => {
 
     it('does not show CRD or PSF file uploads by default (OpenMM)', () => {
       render(<NewJobForm />)
-      expect(
-        screen.queryByText(/CHARMM-GUI \*\.crd/i)
-      ).not.toBeInTheDocument()
-      expect(
-        screen.queryByText(/CHARMM-GUI \*\.psf/i)
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText(/CHARMM-GUI \*\.crd/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/CHARMM-GUI \*\.psf/i)).not.toBeInTheDocument()
     })
 
     it('shows CRD file upload after selecting CHARMM engine', async () => {
@@ -113,12 +109,8 @@ describe('NewJobForm md_engine', () => {
       await user.click(screen.getByLabelText(/CHARMM/i))
       await user.click(screen.getByLabelText(/OpenMM/i))
       expect(screen.getByText(/\*\.pdb or \*\.cif/i)).toBeInTheDocument()
-      expect(
-        screen.queryByText(/CHARMM-GUI \*\.crd/i)
-      ).not.toBeInTheDocument()
-      expect(
-        screen.queryByText(/CHARMM-GUI \*\.psf/i)
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText(/CHARMM-GUI \*\.crd/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/CHARMM-GUI \*\.psf/i)).not.toBeInTheDocument()
     })
   })
 })

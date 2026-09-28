@@ -39,8 +39,7 @@ const BilboMDOpenFoldJobSchema = object().shape({
             function (sequence) {
               const { type } = this.parent
               if (!sequence) return true
-              if (type === 'Protein')
-                return isAminoAcidSequence(sequence)
+              if (type === 'Protein') return isAminoAcidSequence(sequence)
               if (type === 'DNA') return isDnaSequence(sequence)
               if (type === 'RNA') return isRnaSequence(sequence)
               return true

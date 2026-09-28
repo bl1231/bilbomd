@@ -30,7 +30,10 @@ describe('JobSuccessAlert', () => {
   describe('rendering', () => {
     it('should render success alert with job type', () => {
       renderWithProviders(
-        <JobSuccessAlert jobResponse={mockJobResponse} jobType="auto" />
+        <JobSuccessAlert
+          jobResponse={mockJobResponse}
+          jobType="auto"
+        />
       )
 
       expect(screen.getByRole('alert')).toBeInTheDocument()
@@ -40,7 +43,10 @@ describe('JobSuccessAlert', () => {
 
     it('should display MD engine in alert text', () => {
       renderWithProviders(
-        <JobSuccessAlert jobResponse={mockJobResponse} jobType="pdb" />
+        <JobSuccessAlert
+          jobResponse={mockJobResponse}
+          jobType="pdb"
+        />
       )
 
       const alert = screen.getByRole('alert')
@@ -49,7 +55,10 @@ describe('JobSuccessAlert', () => {
 
     it('should show monitoring message when jobid is present', () => {
       renderWithProviders(
-        <JobSuccessAlert jobResponse={mockJobResponse} jobType="auto" />
+        <JobSuccessAlert
+          jobResponse={mockJobResponse}
+          jobType="auto"
+        />
       )
 
       expect(
@@ -62,7 +71,10 @@ describe('JobSuccessAlert', () => {
     it('should display OpenMM engine', () => {
       const openMMResponse = { ...mockJobResponse, md_engine: 'OpenMM' }
       renderWithProviders(
-        <JobSuccessAlert jobResponse={openMMResponse} jobType="auto" />
+        <JobSuccessAlert
+          jobResponse={openMMResponse}
+          jobType="auto"
+        />
       )
 
       const alert = screen.getByRole('alert')
@@ -72,7 +84,10 @@ describe('JobSuccessAlert', () => {
     it('should display CHARMM engine', () => {
       const charmmResponse = { ...mockJobResponse, md_engine: 'CHARMM' }
       renderWithProviders(
-        <JobSuccessAlert jobResponse={charmmResponse} jobType="pdb" />
+        <JobSuccessAlert
+          jobResponse={charmmResponse}
+          jobType="pdb"
+        />
       )
 
       const alert = screen.getByRole('alert')
@@ -86,7 +101,10 @@ describe('JobSuccessAlert', () => {
         uuid: 'uuid-456'
       }
       renderWithProviders(
-        <JobSuccessAlert jobResponse={scoperResponse} jobType="scoper" />
+        <JobSuccessAlert
+          jobResponse={scoperResponse}
+          jobType="scoper"
+        />
       )
 
       const alert = screen.getByRole('alert')
@@ -100,7 +118,10 @@ describe('JobSuccessAlert', () => {
   describe('View Job Status button', () => {
     it('should render button when jobid is present', () => {
       renderWithProviders(
-        <JobSuccessAlert jobResponse={mockJobResponse} jobType="auto" />
+        <JobSuccessAlert
+          jobResponse={mockJobResponse}
+          jobType="auto"
+        />
       )
 
       const button = screen.getByRole('button', { name: /View Job Status/i })
@@ -115,7 +136,10 @@ describe('JobSuccessAlert', () => {
         md_engine: 'CHARMM'
       }
       renderWithProviders(
-        <JobSuccessAlert jobResponse={noJobIdResponse} jobType="auto" />
+        <JobSuccessAlert
+          jobResponse={noJobIdResponse}
+          jobType="auto"
+        />
       )
 
       const button = screen.queryByRole('button', { name: /View Job Status/i })
@@ -124,7 +148,10 @@ describe('JobSuccessAlert', () => {
 
     it('should navigate to job page when button is clicked', () => {
       renderWithProviders(
-        <JobSuccessAlert jobResponse={mockJobResponse} jobType="auto" />
+        <JobSuccessAlert
+          jobResponse={mockJobResponse}
+          jobType="auto"
+        />
       )
 
       const button = screen.getByRole('button', { name: /View Job Status/i })
@@ -135,7 +162,10 @@ describe('JobSuccessAlert', () => {
 
     it('should render button with launch icon', () => {
       renderWithProviders(
-        <JobSuccessAlert jobResponse={mockJobResponse} jobType="auto" />
+        <JobSuccessAlert
+          jobResponse={mockJobResponse}
+          jobType="auto"
+        />
       )
 
       const button = screen.getByRole('button', { name: /View Job Status/i })
@@ -150,7 +180,10 @@ describe('JobSuccessAlert', () => {
     jobTypes.forEach((jobType) => {
       it(`should display correct text for ${jobType} job type`, () => {
         renderWithProviders(
-          <JobSuccessAlert jobResponse={mockJobResponse} jobType={jobType} />
+          <JobSuccessAlert
+            jobResponse={mockJobResponse}
+            jobType={jobType}
+          />
         )
 
         expect(
@@ -170,7 +203,10 @@ describe('JobSuccessAlert', () => {
       }
 
       renderWithProviders(
-        <JobSuccessAlert jobResponse={partialResponse} jobType="auto" />
+        <JobSuccessAlert
+          jobResponse={partialResponse}
+          jobType="auto"
+        />
       )
 
       expect(screen.getByRole('alert')).toBeInTheDocument()
@@ -183,7 +219,10 @@ describe('JobSuccessAlert', () => {
       }
 
       renderWithProviders(
-        <JobSuccessAlert jobResponse={noIdResponse} jobType="auto" />
+        <JobSuccessAlert
+          jobResponse={noIdResponse}
+          jobType="auto"
+        />
       )
 
       expect(

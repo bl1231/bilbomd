@@ -6,29 +6,34 @@ import BilboMDNerscSteps from '../BilboMDNerscSteps'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 
 describe('BilboMDNerscSteps', () => {
-  const createMockJob = (jobType: string, status: string, steps: Record<string, unknown> = {}): BilboMDJobDTO => ({
-    id: 'job-123',
-    username: 'testuser',
-    mongo: {
+  const createMockJob = (
+    jobType: string,
+    status: string,
+    steps: Record<string, unknown> = {}
+  ): BilboMDJobDTO =>
+    ({
       id: 'job-123',
-      title: 'Test Job',
-      jobType: jobType as never,
-      uuid: 'test-uuid',
-      access_mode: 'user',
-      status: status as never,
-      data_file: 'test.dat',
-      md_engine: 'CHARMM',
-      time_submitted: new Date('2023-12-01'),
-      progress: 50,
-      cleanup_in_progress: false,
-      user: {
-        id: 'user-123',
-        username: 'testuser',
-        email: 'test@example.com'
-      },
-      steps
-    }
-  } as unknown as BilboMDJobDTO)
+      username: 'testuser',
+      mongo: {
+        id: 'job-123',
+        title: 'Test Job',
+        jobType: jobType as never,
+        uuid: 'test-uuid',
+        access_mode: 'user',
+        status: status as never,
+        data_file: 'test.dat',
+        md_engine: 'CHARMM',
+        time_submitted: new Date('2023-12-01'),
+        progress: 50,
+        cleanup_in_progress: false,
+        user: {
+          id: 'user-123',
+          username: 'testuser',
+          email: 'test@example.com'
+        },
+        steps
+      }
+    }) as unknown as BilboMDJobDTO
 
   const mockNerscSteps = {
     nersc_prepare_slurm_batch: { status: 'Success', message: 'Prepared' },
@@ -169,8 +174,12 @@ describe('BilboMDNerscSteps', () => {
       renderWithProviders(<BilboMDNerscSteps job={job} />)
 
       // NERSC steps
-      expect(screen.getByText('NERSC Prepare Slurm Batch File')).toBeInTheDocument()
-      expect(screen.getByText('NERSC Submit Slurm Batch File')).toBeInTheDocument()
+      expect(
+        screen.getByText('NERSC Prepare Slurm Batch File')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('NERSC Submit Slurm Batch File')
+      ).toBeInTheDocument()
       expect(screen.getByText('NERSC Job Status')).toBeInTheDocument()
 
       // BilboMD steps
@@ -278,8 +287,12 @@ describe('BilboMDNerscSteps', () => {
 
       renderWithProviders(<BilboMDNerscSteps job={job} />)
 
-      expect(screen.getByText('NERSC Prepare Slurm Batch File')).toBeInTheDocument()
-      expect(screen.getByText('NERSC Submit Slurm Batch File')).toBeInTheDocument()
+      expect(
+        screen.getByText('NERSC Prepare Slurm Batch File')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('NERSC Submit Slurm Batch File')
+      ).toBeInTheDocument()
     })
 
     it('should handle job with only BilboMD steps', () => {

@@ -226,8 +226,4 @@ const updateJobStatus = async (
   await updateStepStatus(job, stepName, stepStatus)
 }
 
-export {
-  updateNerscSpecificSteps,
-  makeBilboMDSlurm,
-  submitBilboMDSlurm
-}
+export { updateNerscSpecificSteps, makeBilboMDSlurm, submitBilboMDSlurm }

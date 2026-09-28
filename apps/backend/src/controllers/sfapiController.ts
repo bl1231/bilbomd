@@ -87,7 +87,10 @@ async function makeSFApiRequest<T>({
       }
     } else {
       // Handle non-Axios errors
-      logger.error('Unexpected error in SF API request', { endpoint, error: String(error) })
+      logger.error('Unexpected error in SF API request', {
+        endpoint,
+        error: String(error)
+      })
       return {
         success: false,
         error: 'An unexpected error occurred'
@@ -124,7 +127,10 @@ async function makeUnauthenticatedSFApiRequest<T>({
       }
     } else {
       // Handle non-Axios errors
-      logger.error('Unexpected error in SF API request', { endpoint, error: String(error) })
+      logger.error('Unexpected error in SF API request', {
+        endpoint,
+        error: String(error)
+      })
       return {
         success: false,
         error: 'An unexpected error occurred'
@@ -196,10 +202,12 @@ const getProjectHours = async (req: Request, res: Response) => {
   }
 
   try {
-    const { success, data, error } = await makeSFApiRequest<NerscProjectsArray>({
-      endpoint: '/account/projects',
-      token: req.sfApiToken as string
-    })
+    const { success, data, error } = await makeSFApiRequest<NerscProjectsArray>(
+      {
+        endpoint: '/account/projects',
+        token: req.sfApiToken as string
+      }
+    )
 
     if (!success) {
       res.status(500).json({ error })
@@ -228,7 +236,10 @@ const getProjectHours = async (req: Request, res: Response) => {
     logger.info('Project hours fetched', { projectName, ...response })
     res.json(response)
   } catch (error) {
-    logger.error('Error fetching project hours', { projectName, error: String(error) })
+    logger.error('Error fetching project hours', {
+      projectName,
+      error: String(error)
+    })
     res.status(500).json({ error: 'Failed to fetch project hours.' })
   }
 }

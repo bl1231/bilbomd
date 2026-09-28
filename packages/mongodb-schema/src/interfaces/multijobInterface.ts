@@ -26,10 +26,7 @@ interface IMultiJob extends Document {
   time_completed?: Date
   progress: number
   bilbomd_jobs?: (
-    | IBilboMDPDBJob
-    | IBilboMDCRDJob
-    | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob
+    IBilboMDPDBJob | IBilboMDCRDJob | IBilboMDAutoJob | IBilboMDAlphaFoldJob
   )[]
   steps: IBilboMDSteps
   nersc?: INerscInfo

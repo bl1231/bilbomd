@@ -43,19 +43,26 @@ const ChainDeuterationSlider: React.FC<ChainDeuterationSliderProps> = ({
   return (
     <>
       {chainIds.map((chainId) => (
-        <Grid key={chainId} sx={{ my: 2, width: '520px' }}>
+        <Grid
+          key={chainId}
+          sx={{ my: 2, width: '520px' }}
+        >
           <Typography
             id={`deuteration-fraction-slider-${chainId}`}
             gutterBottom
           >
             Deuteration Fraction for Chain {chainId}
           </Typography>
-          <Grid container spacing={2} sx={{ alignItems: 'center' }}>
+          <Grid
+            container
+            spacing={2}
+            sx={{ alignItems: 'center' }}
+          >
             <Grid>
               <Chip
                 label={`${values[`deuteration_fraction_${chainId}`] || 0}%`}
-                variant='outlined'
-                color='success'
+                variant="outlined"
+                color="success"
                 sx={{
                   width: 60, // Set a fixed width
                   justifyContent: 'center' // Center the label
@@ -77,7 +84,7 @@ const ChainDeuterationSlider: React.FC<ChainDeuterationSliderProps> = ({
                 min={0}
                 max={100}
                 step={1}
-                valueLabelDisplay='off'
+                valueLabelDisplay="off"
                 disabled={isSubmitting}
                 track={false}
               />

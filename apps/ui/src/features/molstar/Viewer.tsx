@@ -257,7 +257,14 @@ const MolstarViewer = ({
       }
     }
 
-    const ensembleJobTypes: JobType[] = ['pdb', 'crd', 'auto', 'alphafold', 'openfold', 'sans']
+    const ensembleJobTypes: JobType[] = [
+      'pdb',
+      'crd',
+      'auto',
+      'alphafold',
+      'openfold',
+      'sans'
+    ]
 
     if (ensembleJobTypes.includes(jobType)) {
       const resultsKey = getResultsKey(jobType)
@@ -445,7 +452,9 @@ const MolstarViewer = ({
             // is the active default; otherwise use the standard preset.
             const preset =
               colorMode === 'conformation' && ensembleSize !== undefined
-                ? createUniformColorPreset(ensembleMemberColorValue(memberIndex))
+                ? createUniformColorPreset(
+                    ensembleMemberColorValue(memberIndex)
+                  )
                 : StructurePreset
             await plugin.managers.structure.component.applyPreset(
               [structureRef],
@@ -481,28 +490,29 @@ const MolstarViewer = ({
             }
           }
 
-          ;(window.molstar.customState as Record<string, unknown>).reapplyVisibility =
-            () => {
-              const plugin = window.molstar
-              if (!plugin) return
-              const allStructs =
-                plugin.managers.structure.hierarchy.current.structures
-              for (const [sizeStr, visible] of Object.entries(
-                ensembleVisibilityRef.current
-              )) {
-                const sz = Number(sizeStr)
-                const refs = refsMap.get(sz) ?? []
-                const targets = allStructs.filter((s) =>
-                  refs.includes(s.cell.transform.ref)
+          ;(
+            window.molstar.customState as Record<string, unknown>
+          ).reapplyVisibility = () => {
+            const plugin = window.molstar
+            if (!plugin) return
+            const allStructs =
+              plugin.managers.structure.hierarchy.current.structures
+            for (const [sizeStr, visible] of Object.entries(
+              ensembleVisibilityRef.current
+            )) {
+              const sz = Number(sizeStr)
+              const refs = refsMap.get(sz) ?? []
+              const targets = allStructs.filter((s) =>
+                refs.includes(s.cell.transform.ref)
+              )
+              if (targets.length > 0) {
+                plugin.managers.structure.hierarchy.toggleVisibility(
+                  targets,
+                  visible ? 'show' : 'hide'
                 )
-                if (targets.length > 0) {
-                  plugin.managers.structure.hierarchy.toggleVisibility(
-                    targets,
-                    visible ? 'show' : 'hide'
-                  )
-                }
               }
             }
+          }
         }
       }
 
@@ -522,9 +532,12 @@ const MolstarViewer = ({
               data: startingData,
               label: 'minimization_output.pdb'
             })
-            const trajectory =
-              await plugin.builders.structure.parseTrajectory(data, 'pdb')
-            const model = await plugin.builders.structure.createModel(trajectory)
+            const trajectory = await plugin.builders.structure.parseTrajectory(
+              data,
+              'pdb'
+            )
+            const model =
+              await plugin.builders.structure.createModel(trajectory)
             const struct =
               await plugin.builders.structure.createStructure(model)
             startingModelRef.current = struct.ref
@@ -602,9 +615,8 @@ const MolstarViewer = ({
       }
 
       // Re-apply ensemble visibility after rebuilding representations
-      const reapply = (
-        plugin.customState as Record<string, unknown>
-      ).reapplyVisibility
+      const reapply = (plugin.customState as Record<string, unknown>)
+        .reapplyVisibility
       if (typeof reapply === 'function') reapply()
 
       setColorMode(nextMode)

@@ -3,13 +3,9 @@
   "extends": ["config:recommended"],
   "timezone": "America/Los_Angeles",
   "schedule": ["before 6am on Monday"],
-  "ignorePaths": [
-    "apps/scoper/bilbomd-scoper-base.dockerfile"
-  ],
+  "ignorePaths": ["apps/scoper/bilbomd-scoper-base.dockerfile"],
   "helm-values": {
-    "managerFilePatterns": [
-      "/infra/helm/values.*\\.yaml$/"
-    ]
+    "managerFilePatterns": ["/infra/helm/values.*\\.yaml$/"]
   },
   "packageRules": [
     {

@@ -198,7 +198,9 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
               </Box>
             </>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <Box
+              sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}
+            >
               <Typography
                 variant="h4"
                 gutterBottom

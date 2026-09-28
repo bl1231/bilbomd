@@ -9,7 +9,10 @@ const readPersist = (): boolean => {
   }
 }
 
-const usePersist = (): [boolean, React.Dispatch<React.SetStateAction<boolean>>] => {
+const usePersist = (): [
+  boolean,
+  React.Dispatch<React.SetStateAction<boolean>>
+] => {
   const [persist, setPersist] = useState<boolean>(readPersist)
 
   useEffect(() => {

@@ -33,11 +33,15 @@ const callOf3Service = async (
   }, 20_000)
 
   try {
-    await axios.post(url, { uuid }, {
-      headers: { 'content-type': 'application/json' },
-      // Use axios instead of native fetch to avoid undici's default 300s headersTimeout
-      timeout: config.of3TimeoutMs
-    })
+    await axios.post(
+      url,
+      { uuid },
+      {
+        headers: { 'content-type': 'application/json' },
+        // Use axios instead of native fetch to avoid undici's default 300s headersTimeout
+        timeout: config.of3TimeoutMs
+      }
+    )
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       throw new Error(
@@ -73,14 +77,18 @@ const collectSamples = async (
 
       const entries = await fs.readdir(seedPath)
       const pdbFiles = entries.filter((f) => f.endsWith('_model.pdb'))
-      const aggFiles = entries.filter((f) => f.endsWith('_confidences_aggregated.json'))
+      const aggFiles = entries.filter((f) =>
+        f.endsWith('_confidences_aggregated.json')
+      )
 
       for (const pdbFile of pdbFiles) {
         // Find matching aggregated confidence file (same sample prefix)
         const samplePrefix = pdbFile.replace('_model.pdb', '')
         const aggFile = aggFiles.find((f) => f.startsWith(samplePrefix))
         if (!aggFile) {
-          logger.warn(`No aggregated confidence file found for ${pdbFile}, skipping`)
+          logger.warn(
+            `No aggregated confidence file found for ${pdbFile}, skipping`
+          )
           continue
         }
 
@@ -145,7 +153,8 @@ const promoteRank1Outputs = async (workDir: string): Promise<void> => {
     fs.stat(pdbDst),
     fs.stat(paeDst)
   ])
-  if (pdbStat.size === 0) throw new Error(`${OF3_RANK1_PDB} copied but is empty`)
+  if (pdbStat.size === 0)
+    throw new Error(`${OF3_RANK1_PDB} copied but is empty`)
   if (paeStat.size === 0) throw new Error(`${OF3_PAE_JSON} copied but is empty`)
 
   logger.info(`Promoted ${path.basename(best.pdbPath)} -> ${OF3_RANK1_PDB}`)

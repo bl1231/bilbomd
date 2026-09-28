@@ -6,7 +6,9 @@ const listAPITokens = async (req: Request, res: Response): Promise<void> => {
   const { username } = req.params
 
   if (!req.user || req.user !== username) {
-    res.status(403).json({ message: 'Unauthorized to list tokens for this user' })
+    res
+      .status(403)
+      .json({ message: 'Unauthorized to list tokens for this user' })
     return
   }
 

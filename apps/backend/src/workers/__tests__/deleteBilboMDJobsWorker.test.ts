@@ -59,7 +59,10 @@ const onWorkerError = workerOnMock.mock.calls.find(
 const bullJob = (mongoId: string) =>
   ({ data: { mongoId } }) as unknown as Job<{ mongoId: string }>
 
-const makeDoc = (uuid: string, user: unknown = { _id: '64b1f0c2a9e4b1d2c3e4f5a1' }) => ({
+const makeDoc = (
+  uuid: string,
+  user: unknown = { _id: '64b1f0c2a9e4b1d2c3e4f5a1' }
+) => ({
   uuid,
   title: 't',
   user,
@@ -119,7 +122,9 @@ describe('processDeleteJob', () => {
   it('cancels multi jobs too', async () => {
     jobFindByIdMock.mockResolvedValue(null)
     // MultiJobs store the owner as a plain ObjectId-like ref
-    multiJobFindByIdMock.mockResolvedValue(makeDoc('multi-uuid', '64b1f0c2a9e4b1d2c3e4f5a2'))
+    multiJobFindByIdMock.mockResolvedValue(
+      makeDoc('multi-uuid', '64b1f0c2a9e4b1d2c3e4f5a2')
+    )
 
     await processDeleteJob(bullJob('mongo-multi'))
 
@@ -185,7 +190,11 @@ describe('handleDeleteFailed', () => {
 
     expect(publishJobEventMock).toHaveBeenCalledExactlyOnceWith(
       expect.anything(),
-      { jobId: 'mongo-1', ownerId: '64b1f0c2a9e4b1d2c3e4f5a1', kind: 'delete_failed' }
+      {
+        jobId: 'mongo-1',
+        ownerId: '64b1f0c2a9e4b1d2c3e4f5a1',
+        kind: 'delete_failed'
+      }
     )
   })
 

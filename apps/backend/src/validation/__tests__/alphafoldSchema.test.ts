@@ -55,7 +55,9 @@ describe('alphafoldJobSchema - title', () => {
 describe('alphafoldJobSchema - bilbomd_mode', () => {
   it('accepts "alphafold"', async () => {
     await expect(
-      alphafoldJobSchema.validateAt('bilbomd_mode', { bilbomd_mode: 'alphafold' })
+      alphafoldJobSchema.validateAt('bilbomd_mode', {
+        bilbomd_mode: 'alphafold'
+      })
     ).resolves.toBe('alphafold')
   })
 

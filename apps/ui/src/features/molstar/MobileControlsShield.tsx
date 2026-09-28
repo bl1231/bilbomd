@@ -19,7 +19,7 @@ const MobileControlsShield = ({
 }: MobileControlsShieldProps) =>
   enabled ? (
     <Chip
-      label='Done'
+      label="Done"
       onClick={onDisable}
       sx={{
         position: 'absolute',
@@ -44,7 +44,7 @@ const MobileControlsShield = ({
       }}
     >
       <Chip
-        label='Tap to enable 3D controls'
+        label="Tap to enable 3D controls"
         sx={{
           backgroundColor: 'rgba(0, 0, 0, 0.65)',
           color: '#fff'

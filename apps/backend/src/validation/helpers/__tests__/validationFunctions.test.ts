@@ -112,18 +112,26 @@ describe('isPsfData', () => {
   })
 
   it('returns false when first line does not contain PSF', async () => {
-    mockReadFile(validPsfContent.replace('PSF EXT CMAP XPLOR', 'XPLOR EXT CMAP'))
+    mockReadFile(
+      validPsfContent.replace('PSF EXT CMAP XPLOR', 'XPLOR EXT CMAP')
+    )
     expect(await isPsfData(mockFile())).toBe(false)
   })
 
   it('returns false when !NTITLE line is missing', async () => {
-    const content = validPsfContent.replace('       1 !NTITLE', '       1 !OTHER')
+    const content = validPsfContent.replace(
+      '       1 !NTITLE',
+      '       1 !OTHER'
+    )
     mockReadFile(content)
     expect(await isPsfData(mockFile())).toBe(false)
   })
 
   it('returns false when !NATOM line is missing', async () => {
-    const content = validPsfContent.replace('       2 !NATOM', '       2 !BONDS')
+    const content = validPsfContent.replace(
+      '       2 !NATOM',
+      '       2 !BONDS'
+    )
     mockReadFile(content)
     expect(await isPsfData(mockFile())).toBe(false)
   })
@@ -234,13 +242,15 @@ describe('isSaxsData', () => {
 describe('containsChainId', () => {
   it('returns true when ATOM line has chain ID at column 22', async () => {
     // PDB format: columns are 1-indexed; column 22 (0-indexed 21) = chain ID
-    const line = 'ATOM      1  N   ALA A   1      11.104  13.207  11.921  1.00 38.06           N'
+    const line =
+      'ATOM      1  N   ALA A   1      11.104  13.207  11.921  1.00 38.06           N'
     mockReadFile(line + '\n')
     expect(await containsChainId(mockFile())).toBe(true)
   })
 
   it('returns true for HETATM line with chain ID', async () => {
-    const line = 'HETATM    1  C1  LIG B   1       1.000   2.000   3.000  1.00  0.00           C'
+    const line =
+      'HETATM    1  C1  LIG B   1       1.000   2.000   3.000  1.00  0.00           C'
     mockReadFile(line + '\n')
     expect(await containsChainId(mockFile())).toBe(true)
   })
@@ -310,9 +320,12 @@ describe('checkPdbResidues', () => {
   })
 
   it('returns valid:false with message listing unsupported residues', async () => {
-    const content = [atomLine('ALA'), atomLine('TPO'), atomLine('UNK'), atomLine('MSE')].join(
-      '\n'
-    )
+    const content = [
+      atomLine('ALA'),
+      atomLine('TPO'),
+      atomLine('UNK'),
+      atomLine('MSE')
+    ].join('\n')
     mockReadFile(content)
     const result = await checkPdbResidues(mockFile())
     expect(result.valid).toBe(false)
@@ -323,7 +336,9 @@ describe('checkPdbResidues', () => {
   })
 
   it('returns valid:true for common ion residues (MG, CA, ZN)', async () => {
-    const content = [atomLine('MG '), atomLine('CA '), atomLine('ZN ')].join('\n')
+    const content = [atomLine('MG '), atomLine('CA '), atomLine('ZN ')].join(
+      '\n'
+    )
     mockReadFile(content)
     const result = await checkPdbResidues(mockFile())
     expect(result.valid).toBe(true)
@@ -357,9 +372,12 @@ describe('isRNA', () => {
     `ATOM      1  P   ${residue} A   1       1.000   2.000   3.000  1.00  0.00           P`
 
   it('returns valid:true for file with only valid RNA nucleotides', async () => {
-    const content = [rnaAtomLine('A'), rnaAtomLine('C'), rnaAtomLine('G'), rnaAtomLine('U')].join(
-      '\n'
-    )
+    const content = [
+      rnaAtomLine('A'),
+      rnaAtomLine('C'),
+      rnaAtomLine('G'),
+      rnaAtomLine('U')
+    ].join('\n')
     mockReadFile(content)
     const result = await isRNA(mockFile())
     expect(result.valid).toBe(true)
@@ -414,7 +432,9 @@ describe('isValidConstInpFile', () => {
   })
 
   it('returns error when last line is not "return"', async () => {
-    mockReadFile('define PROA sele segid PROA end\ncons fix sele PROA end\nnotreturn')
+    mockReadFile(
+      'define PROA sele segid PROA end\ncons fix sele PROA end\nnotreturn'
+    )
     const result = await isValidConstInpFile(mockFile(), 'pdb')
     expect(result).toMatch(/last line must be "return"/)
   })
@@ -432,7 +452,9 @@ describe('isValidConstInpFile', () => {
   })
 
   it('returns error for invalid pdb-mode segid format', async () => {
-    mockReadFile('define BADID sele segid BADID end\ncons fix sele BADID end\nreturn')
+    mockReadFile(
+      'define BADID sele segid BADID end\ncons fix sele BADID end\nreturn'
+    )
     const result = await isValidConstInpFile(mockFile(), 'pdb')
     expect(result).toMatch(/segid must be/)
   })

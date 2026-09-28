@@ -94,14 +94,19 @@ describe('TitleField', () => {
       const user = userEvent.setup()
       renderTitleField()
       await user.type(getInput(), 'ab')
-      expect(screen.queryByText(/at least 4 characters/i)).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/at least 4 characters/i)
+      ).not.toBeInTheDocument()
     })
   })
 
   describe('disabled state', () => {
     it('honors an explicit disabled prop', () => {
       render(
-        <Formik initialValues={{ title: '' }} onSubmit={vi.fn()}>
+        <Formik
+          initialValues={{ title: '' }}
+          onSubmit={vi.fn()}
+        >
           <Form>
             <TitleField disabled />
           </Form>
@@ -119,7 +124,9 @@ describe('TitleField', () => {
         children: <button type="submit">Submit</button>
       })
       await user.click(screen.getByRole('button', { name: /submit/i }))
-      expect(await screen.findByRole('textbox', { name: /title/i })).toBeDisabled()
+      expect(
+        await screen.findByRole('textbox', { name: /title/i })
+      ).toBeDisabled()
     })
   })
 })
