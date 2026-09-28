@@ -27,3 +27,19 @@ pnpm-lock.yaml
 **/build
 
 *.handlebars
+
+# Helm charts are Go templates, not plain YAML
+infra/helm/templates/
+
+# Scientific/example data; served or consumed byte-for-byte
+example-data/
+test_scripts/data/
+
+# Vendored seccomp profile
+infra/seccomp/
+
+# Tool configuration
+**/.claude/
+
+# Not valid JSON (JS string concatenation); a text fixture
+apps/worker/src/services/functions/example-download-file.json
