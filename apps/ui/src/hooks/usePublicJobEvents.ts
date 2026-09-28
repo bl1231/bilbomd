@@ -3,6 +3,7 @@ import type { JobEvent } from '@bilbomd/bilbomd-types'
 import { apiSlice, baseURL } from 'app/api/apiSlice'
 import { useAppDispatch } from 'app/hooks'
 import { runJobEventStream } from 'utils/jobEventStream'
+import { shareJobEventStream } from 'utils/sharedJobEventStream'
 import { createInvalidationBatcher } from './useJobEvents'
 
 // Keeps a public job page fresh from its job's event stream
@@ -31,8 +32,9 @@ export const usePublicJobEvents = (publicId: string | undefined): boolean => {
       dispatch(apiSlice.util.invalidateTags(tags))
     )
 
-    void runJobEventStream({
-      url: `${baseURL}/public/jobs/${encodeURIComponent(publicId)}/events`,
+    // One stream per browser for this job, shared by all its tabs
+    shareJobEventStream({
+      name: `bilbomd-public-job-events:${publicId}`,
       signal: controller.signal,
       onEvent: (event) => batcher.add(publicTagsForEvent(event, publicId)),
       onConnection: (isConnected, resumed) => {
@@ -44,8 +46,15 @@ export const usePublicJobEvents = (publicId: string | undefined): boolean => {
           )
         }
       },
-      // The job doesn't exist (or was deleted): nothing to stream
-      stopOnStatus: [404]
+      open: (signal, onEvent, onConnection) =>
+        runJobEventStream({
+          url: `${baseURL}/public/jobs/${encodeURIComponent(publicId)}/events`,
+          signal,
+          onEvent,
+          onConnection,
+          // The job doesn't exist (or was deleted): nothing to stream
+          stopOnStatus: [404]
+        })
     })
 
     return () => {

@@ -9,6 +9,8 @@ import {
   setJobEventsConnected
 } from 'slices/jobEventsSlice'
 import { runJobEventStream } from 'utils/jobEventStream'
+import { shareJobEventStream } from 'utils/sharedJobEventStream'
+import useAuth from 'hooks/useAuth'
 
 // Keeps RTK Query's job cache fresh from the backend's job event stream
 // (GET /jobs/events). Events only name the job that changed; this hook
@@ -65,6 +67,7 @@ export const createInvalidationBatcher = <
 
 export const useJobEvents = (): void => {
   const token = useSelector(selectCurrentToken)
+  const { username } = useAuth()
   const dispatch = useAppDispatch()
 
   useEffect(() => {
@@ -83,9 +86,9 @@ export const useJobEvents = (): void => {
       batcher.add(tagsForEvent(event))
     }
 
-    void runJobEventStream({
-      url: `${baseURL}/jobs/events`,
-      headers: { Authorization: `Bearer ${token}` },
+    // One stream per browser, shared by all of this user's tabs
+    shareJobEventStream({
+      name: `bilbomd-job-events:${username}`,
       signal: controller.signal,
       onEvent: handleEvent,
       onConnection: (connected, resumed) => {
@@ -95,11 +98,19 @@ export const useJobEvents = (): void => {
           dispatch(apiSlice.util.invalidateTags([{ type: 'Job', id: 'LIST' }]))
         }
       },
-      // A new token re-runs this effect and reconnects. Without one the
-      // session is over, so the stream stops.
-      onUnauthorized: async () => {
-        await refreshAccessToken(dispatch)
-      }
+      open: (signal, onEvent, onConnection) =>
+        runJobEventStream({
+          url: `${baseURL}/jobs/events`,
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+          onEvent,
+          onConnection,
+          // A new token re-runs this effect and reconnects. Without one the
+          // session is over, so the stream stops.
+          onUnauthorized: async () => {
+            await refreshAccessToken(dispatch)
+          }
+        })
     })
 
     return () => {
@@ -107,5 +118,5 @@ export const useJobEvents = (): void => {
       batcher.cancel()
       dispatch(setJobEventsConnected(false))
     }
-  }, [token, dispatch])
+  }, [token, username, dispatch])
 }
