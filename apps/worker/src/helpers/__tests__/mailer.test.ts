@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, Mock } from 'vitest'
+import { describe, it, expect, beforeEach, vi, Mock } from 'vitest'
 import { sendJobCompleteEmail } from '../mailer.js'
 import { logger } from '../loggers.js'
 
@@ -7,11 +7,10 @@ declare global {
   var __sendMailMock: Mock
 }
 
-// Recorded at import, before beforeEach clears the mock.
-const useCallsAtImport = globalThis.__useMock.mock.calls.length
-
-it('registers the handlebars compile plugin once, at import', () => {
-  expect(useCallsAtImport).toBe(1)
+it('registers the handlebars compile plugin once, at import', async () => {
+  vi.resetModules()
+  await import('../mailer.js')
+  expect(globalThis.__useMock).toHaveBeenCalledTimes(1)
 })
 
 describe('sendJobCompleteEmail', () => {

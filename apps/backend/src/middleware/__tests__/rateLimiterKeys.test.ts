@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterAll } from 'vitest'
 import express, { type RequestHandler } from 'express'
 import request from 'supertest'
 
@@ -23,9 +23,13 @@ describe.each([
   ['externalApiLimiter', externalApiLimiter, 10, '198.51.100'],
   ['publicJobLimiter', publicJobLimiter, 5, '192.0.2']
 ])('%s', (_, limiter, max, net) => {
-  const app = buildApp(limiter as RequestHandler)
+  // One listening server per limiter. Passing the bare app would make
+  // supertest start and stop a server for every request, which intermittently
+  // hangs or resets under Node's keep-alive agent.
+  const server = buildApp(limiter as RequestHandler).listen(0)
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())))
   const from = (ip: string) =>
-    request(app).post('/').set('CF-Connecting-IP', ip)
+    request(server).post('/').set('CF-Connecting-IP', ip)
 
   it('limits a client by its CF-Connecting-IP', async () => {
     for (let i = 0; i < max; i++) {

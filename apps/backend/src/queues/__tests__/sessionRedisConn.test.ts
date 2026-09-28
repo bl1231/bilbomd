@@ -22,26 +22,32 @@ vi.mock('redis', async () => {
 import { logger } from '../../middleware/loggers.js'
 import { sessionRedis, sessionRedisReconnectStrategy } from '../sessionRedisConn.js'
 
+// Mocks are cleared before each test, so load the module inside the test to
+// observe the client it creates at import time.
+const importFresh = async () => {
+  vi.resetModules()
+  const mod = await import('../sessionRedisConn.js')
+  return { mod, config: createClientMock.mock.calls[0]?.[0] }
+}
+
 describe('sessionRedisConn', () => {
-  it('configures the client with a reconnect strategy', () => {
+  it('configures the client with a reconnect strategy', async () => {
+    const { mod, config } = await importFresh()
     expect(createClientMock).toHaveBeenCalledTimes(1)
-    const config = createClientMock.mock.calls[0][0] as {
-      socket: { reconnectStrategy: unknown }
-    }
-    expect(config.socket.reconnectStrategy).toBe(sessionRedisReconnectStrategy)
+    expect(config.socket.reconnectStrategy).toBe(
+      mod.sessionRedisReconnectStrategy
+    )
   })
 
-  it('sends no password when REDIS_PASSWORD is unset', () => {
-    expect(createClientMock.mock.calls[0][0]).toMatchObject({ password: undefined })
+  it('sends no password when REDIS_PASSWORD is unset', async () => {
+    const { config } = await importFresh()
+    expect(config).toMatchObject({ password: undefined })
   })
 
   it('passes REDIS_PASSWORD to the client', async () => {
     vi.stubEnv('REDIS_PASSWORD', 's3cret')
-    vi.resetModules()
-    await import('../sessionRedisConn.js')
-    expect(createClientMock.mock.calls.at(-1)?.[0]).toMatchObject({
-      password: 's3cret'
-    })
+    const { config } = await importFresh()
+    expect(config).toMatchObject({ password: 's3cret' })
     vi.unstubAllEnvs()
   })
 
