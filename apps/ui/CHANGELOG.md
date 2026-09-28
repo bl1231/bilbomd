@@ -1,5 +1,17 @@
 # @bilbomd/ui
 
+## 2.26.1
+
+### Patch Changes
+
+- 74f1f40: Three fixes from dev testing:
+  - The MagickLink sign-in page now says why sign-in failed. It had checked for the error shape of the wrong HTTP library, so every failure showed "No Server Response2". "Too many attempts" (with the server's own message), an invalid or expired link, and an unreachable server each get their own message.
+  - A job whose deletion is pending now shows its "Deleting" status in red, in the jobs table and on mobile cards.
+  - A queue with no workers stands out: its Workers count turns red and a warning explains that its jobs will wait. SCOPER is warned about only when it's enabled. The SCOPER job form warns before you submit when no SCOPER worker is running (for signed-in users).
+- 0ace80b: Share one job event stream between all of a browser's tabs. Over HTTP/1.1 a browser keeps at most 6 connections open per site across all tabs, and each open event stream holds one, so with a stream per tab a sixth BilboMD tab left no connection for anything else and hung. The tabs now elect one leader with a Web Lock; it holds the stream and rebroadcasts events over a BroadcastChannel, and another tab takes over when it closes. Logged-in tabs share one stream per user, and public job pages one per job. Browsers without Web Locks or BroadcastChannel keep a stream per tab.
+- Updated dependencies [9ea1c49]
+  - @bilbomd/bilbomd-types@1.8.1
+
 ## 2.26.0
 
 ### Minor Changes
