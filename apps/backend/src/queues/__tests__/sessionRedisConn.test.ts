@@ -31,6 +31,20 @@ describe('sessionRedisConn', () => {
     expect(config.socket.reconnectStrategy).toBe(sessionRedisReconnectStrategy)
   })
 
+  it('sends no password when REDIS_PASSWORD is unset', () => {
+    expect(createClientMock.mock.calls[0][0]).toMatchObject({ password: undefined })
+  })
+
+  it('passes REDIS_PASSWORD to the client', async () => {
+    vi.stubEnv('REDIS_PASSWORD', 's3cret')
+    vi.resetModules()
+    await import('../sessionRedisConn.js')
+    expect(createClientMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      password: 's3cret'
+    })
+    vi.unstubAllEnvs()
+  })
+
   it('retries with backoff capped at 5 seconds', () => {
     expect(sessionRedisReconnectStrategy(1)).toBe(500)
     expect(sessionRedisReconnectStrategy(5)).toBe(2500)

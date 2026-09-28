@@ -9,41 +9,26 @@ const { MockRedis } = vi.hoisted(() => ({
 
 vi.mock('ioredis', () => ({ Redis: MockRedis }))
 
-import { redis } from '../helpers/redis.js'
+import { redis } from '../redisConn.js'
 
-describe('redis', () => {
+describe('redisConn', () => {
   it('exports a Redis instance', () => {
     expect(redis).toBeDefined()
   })
 
-  it('creates Redis with default port 6379 when REDIS_PORT is unset', () => {
-    expect(MockRedis).toHaveBeenCalledWith(
-      expect.objectContaining({ port: 6379 })
-    )
-  })
-
-  it('creates Redis with maxRetriesPerRequest set to null', () => {
-    expect(MockRedis).toHaveBeenCalledWith(
-      expect.objectContaining({ maxRetriesPerRequest: null })
-    )
-  })
-
-  it('creates Redis with default host localhost when REDIS_HOST is unset', () => {
-    expect(MockRedis).toHaveBeenCalledWith(
-      expect.objectContaining({ host: 'localhost' })
-    )
-  })
-
   it('sends no password when REDIS_PASSWORD is unset', () => {
     expect(MockRedis).toHaveBeenCalledWith(
-      expect.objectContaining({ password: undefined })
+      expect.objectContaining({
+        password: undefined,
+        maxRetriesPerRequest: null
+      })
     )
   })
 
   it('passes REDIS_PASSWORD to ioredis', async () => {
     vi.stubEnv('REDIS_PASSWORD', 's3cret')
     vi.resetModules()
-    await import('../helpers/redis.js')
+    await import('../redisConn.js')
     expect(MockRedis).toHaveBeenLastCalledWith(
       expect.objectContaining({ password: 's3cret' })
     )

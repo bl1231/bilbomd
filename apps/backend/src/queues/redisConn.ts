@@ -11,6 +11,7 @@ const redisOptions: RedisOptions = {
       ? parseInt(process.env.REDIS_PORT, 10)
       : 6379,
   host: process.env.REDIS_HOST || 'localhost',
+  password: process.env.REDIS_PASSWORD || undefined,
   maxRetriesPerRequest: null,
   retryStrategy: redisRetryStrategy,
   tls: process.env.REDIS_TLS ? JSON.parse(process.env.REDIS_TLS) : false

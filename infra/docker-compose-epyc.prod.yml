@@ -66,7 +66,12 @@ services:
           cpus: "2"
           memory: "1g"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # REDISCLI_AUTH only when a password is set; an empty AUTH fails.
+      test:
+        [
+          "CMD-SHELL",
+          '[ -n "$$REDIS_PASSWORD" ] && export REDISCLI_AUTH="$$REDIS_PASSWORD"; redis-cli ping | grep -q PONG',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -75,7 +80,14 @@ services:
       - path: .env.prod
     ports:
       - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
-    command: redis-server --save 20 1 --loglevel warning
+    # --requirepass only when REDIS_PASSWORD is set (from the env_file), so
+    # local stacks without a password keep working.
+    command:
+      [
+        "sh",
+        "-c",
+        'exec redis-server --save 20 1 --loglevel warning $${REDIS_PASSWORD:+--requirepass "$$REDIS_PASSWORD"}',
+      ]
     volumes:
       - redis-cache:/data
     networks:
