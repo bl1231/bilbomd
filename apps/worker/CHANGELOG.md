@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.18.4
+
+### Patch Changes
+
+- f52eca1: Fix the PAE step staying "Running" on NERSC OpenMM jobs after it finished. The generated Slurm script now marks the PAE step as Success, or as Error if constraint generation fails.
+
 ## 2.18.3
 
 ### Patch Changes
