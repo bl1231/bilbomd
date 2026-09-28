@@ -6,6 +6,11 @@ export const createMultiMDWorker = (options: WorkerOptions): Worker => {
   const multiMdWorker = new Worker('multimd', multiMdHandler, options)
   logger.info(`BilboMD Multi Worker started`)
 
+  // Without a listener BullMQ prints Redis errors as raw stack traces.
+  multiMdWorker.on('error', (error) => {
+    logger.warn(`BilboMD Multi Worker error: ${error.message}`)
+  })
+
   // Use closure to encapsulate counter instead of module-level state
   let activeJobsCount = 0
 

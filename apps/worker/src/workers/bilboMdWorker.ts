@@ -6,6 +6,11 @@ export const createBilboMdWorker = (options: WorkerOptions): Worker => {
   const bilboMdWorker = new Worker('bilbomd', bilboMdHandler, options)
   logger.info(`BilboMD Worker started`)
 
+  // Without a listener BullMQ prints Redis errors as raw stack traces.
+  bilboMdWorker.on('error', (error) => {
+    logger.warn(`BilboMD Worker error: ${error.message}`)
+  })
+
   // Use closure to encapsulate counter instead of module-level state
   let activeJobsCount = 0
 
