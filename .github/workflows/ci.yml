@@ -552,7 +552,10 @@ jobs:
     name: Build mongodb-schema
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-26.04]
+    # mongo:8 refuses to start on the ubuntu-26.04 runner's kernel (6.19+)
+    # (SERVER-131779, fixed in 8.0.35 / 8.3.14). Move back to ubuntu-26.04
+    # once those images are on Docker Hub.
+    runs-on: [ubuntu-24.04]
     services:
       mongo:
         image: mongo:8
@@ -1064,7 +1067,10 @@ jobs:
     name: Test backend (integration)
     if: needs.changes.outputs.backend == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-26.04]
+    # mongo:8 refuses to start on the ubuntu-26.04 runner's kernel (6.19+)
+    # (SERVER-131779, fixed in 8.0.35 / 8.3.14). Move back to ubuntu-26.04
+    # once those images are on Docker Hub.
+    runs-on: [ubuntu-24.04]
     services:
       mongo:
         image: mongo:8
@@ -1140,7 +1146,7 @@ jobs:
           for i in {1..60}; do
             if (echo > /dev/tcp/127.0.0.1/27017) >/dev/null 2>&1; then
               echo "MongoDB TCP port open";
-              CONTAINER_ID=$(docker ps -q --filter "ancestor=mongo:7" | head -n1)
+              CONTAINER_ID=$(docker ps -q --filter "ancestor=mongo:8" | head -n1)
               if [ -n "$CONTAINER_ID" ]; then
                 if docker exec "$CONTAINER_ID" mongosh --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; then
                   echo "MongoDB ping OK"; break;
