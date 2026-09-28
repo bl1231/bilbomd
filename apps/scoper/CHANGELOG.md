@@ -1,5 +1,16 @@
 # @bilbomd/scoper
 
+## 1.9.3
+
+### Patch Changes
+
+- 5c6f01d: Workers now start taking jobs again after Redis restarts. With bullmq 6.1.1, an idle worker never resumed after any Redis outage, even one of 10 seconds. It logged no errors but stopped picking up jobs until its container was restarted. Upgrading to bullmq 6.3.9 fixes this (taskforcesh/bullmq#4586). The worker's BilboMD, movie and MultiMD workers and the backend's delete worker now log Redis errors instead of printing raw stack traces.
+- d81e6c1: Update dotenv to 18. Nothing we use changed: `import 'dotenv/config'` and `dotenv.config()` work the same. dotenv 18 removed `.env.vault` and `node -r dotenv/config` preloading, which BilboMD doesn't use.
+- 8ba0237: The email template plugin is now registered once when each mailer module loads. Before, every email sent registered another copy on the shared transporter, so the plugin list kept growing and each email was rendered once per earlier registration.
+- afb7a97: Update npm dependencies to their latest minor and patch releases, including mongoose 9.10, MUI 9.4, React 19.3, react-router 8.4, vite 8.3, axios 1.20 and bull-board 9.10. jsdom stays on 30.0.x because vitest 4 can't handle jsdom 30.1's `FormData` internals.
+- Updated dependencies [afb7a97]
+  - @bilbomd/mongodb-schema@2.9.1
+
 ## 1.9.2
 
 ### Patch Changes
