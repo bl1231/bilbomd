@@ -14,8 +14,8 @@ import { announceNewJob } from '../announceNewJob.js'
 
 describe('announceNewJob', () => {
   it.each([
-    ['an embedded owner (Job)', { _id: 'owner-1' }],
-    ['an ObjectId-style ref (MultiJob)', 'owner-1']
+    ['an embedded owner (Job)', { _id: '64b1f0c2a9e4b1d2c3e4f5a1' }],
+    ['an ObjectId-style ref (MultiJob)', '64b1f0c2a9e4b1d2c3e4f5a1']
   ])("publishes 'created' with the owner from %s", async (_, user) => {
     publishMock.mockResolvedValue(1)
 
@@ -23,7 +23,7 @@ describe('announceNewJob', () => {
 
     expect(publishMock).toHaveBeenCalledWith(
       JOB_EVENTS_CHANNEL,
-      JSON.stringify({ jobId: 'job-9', ownerId: 'owner-1', kind: 'created' })
+      JSON.stringify({ jobId: 'job-9', ownerId: '64b1f0c2a9e4b1d2c3e4f5a1', kind: 'created' })
     )
   })
 
