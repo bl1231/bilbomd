@@ -2,6 +2,7 @@ import { Typography, Box, Chip, Alert, AlertTitle } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import Divider from '@mui/material/Divider'
 import { useGetQueueStateQuery } from 'features/bullmq/bullmqApiSlice'
+import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import HeaderBox from 'components/HeaderBox'
 import Item from 'themes/components/Item'
 
@@ -25,7 +26,23 @@ const statChipSx = {
   '& .MuiChip-label': { px: { xs: 1, sm: 1.5 } }
 }
 
-const QueueStatsRow = ({ counts }: { counts: QueueCounts }) => {
+// A queue with no workers never runs its jobs; make that stand out
+const noWorkersChipSx = {
+  ...statChipSx,
+  backgroundColor: 'error.main',
+  color: 'error.contrastText'
+}
+
+const QueueStatsRow = ({
+  counts,
+  name,
+  warnWhenIdle = true
+}: {
+  counts: QueueCounts
+  name: string
+  warnWhenIdle?: boolean
+}) => {
+  const noWorkers = warnWhenIdle && counts.worker_count === 0
   const stats: { label: string; count: number }[] = [
     { label: 'Active', count: counts.active_count },
     { label: 'Queued', count: counts.waiting_count },
@@ -53,9 +70,18 @@ const QueueStatsRow = ({ counts }: { counts: QueueCounts }) => {
           <Typography>
             {label === 'Active' ? <b>Active</b> : label}:
           </Typography>
-          <Chip label={count} sx={statChipSx} />
+          <Chip
+            label={count}
+            sx={label === 'Workers' && noWorkers ? noWorkersChipSx : statChipSx}
+          />
         </Box>
       ))}
+      {noWorkers && (
+        <Alert severity='warning' sx={{ width: '100%', mt: 1 }}>
+          No {name} worker is running, so {name} jobs will wait in the queue
+          until one starts.
+        </Alert>
+      )}
     </Grid>
   )
 }
@@ -78,6 +104,11 @@ const BullMQSummary = () => {
     isError: boolean
     error: Error
   }
+
+  // SCOPER may be switched off on this deployment; then an idle SCOPER
+  // queue is expected, not a problem
+  const { data: config } = useGetConfigsQuery('configData')
+  const scoperEnabled = config?.enableBilboMdScoper?.toLowerCase() === 'true'
 
   const content = (
     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -115,14 +146,18 @@ const BullMQSummary = () => {
               <Divider textAlign='left' variant='fullWidth'>
                 <Chip label='BilboMD Queue' />
               </Divider>
-              <QueueStatsRow counts={queueStatus.bilbomd} />
+              <QueueStatsRow counts={queueStatus.bilbomd} name='BilboMD' />
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
               <Divider textAlign='left' variant='fullWidth'>
                 <Chip label='Scoper Queue' />
               </Divider>
-              <QueueStatsRow counts={queueStatus.scoper} />
+              <QueueStatsRow
+                counts={queueStatus.scoper}
+                name='SCOPER'
+                warnWhenIdle={scoperEnabled}
+              />
             </Grid>
           </Grid>
         )}

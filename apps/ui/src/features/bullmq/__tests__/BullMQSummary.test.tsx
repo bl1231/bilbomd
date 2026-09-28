@@ -7,11 +7,59 @@ vi.mock('features/bullmq/bullmqApiSlice', () => ({
   useGetQueueStateQuery: vi.fn()
 }))
 
+const { configState } = vi.hoisted(() => ({
+  configState: { enableBilboMdScoper: 'true' }
+}))
+vi.mock('slices/configsApiSlice', () => ({
+  useGetConfigsQuery: () => ({ data: configState })
+}))
+
 const useGetQueueStateQueryMock = useGetQueueStateQuery as unknown as Mock
+
+const queues = (bilbomdWorkers: number, scoperWorkers: number) =>
+  useGetQueueStateQueryMock.mockReturnValue({
+    data: {
+      bilbomd: { active_count: 0, waiting_count: 0, worker_count: bilbomdWorkers },
+      scoper: { active_count: 0, waiting_count: 1, worker_count: scoperWorkers }
+    },
+    isLoading: false,
+    isSuccess: true,
+    isError: false,
+    error: undefined
+  })
 
 describe('BullMQSummary', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    configState.enableBilboMdScoper = 'true'
+  })
+
+  it('warns when no SCOPER worker is running', () => {
+    queues(2, 0)
+
+    render(<BullMQSummary />)
+
+    expect(
+      screen.getByText(/No SCOPER worker is running/)
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/No BilboMD worker/)).not.toBeInTheDocument()
+  })
+
+  it('does not warn about SCOPER when SCOPER is switched off', () => {
+    configState.enableBilboMdScoper = 'false'
+    queues(2, 0)
+
+    render(<BullMQSummary />)
+
+    expect(screen.queryByText(/No SCOPER worker/)).not.toBeInTheDocument()
+  })
+
+  it('warns when no BilboMD worker is running', () => {
+    queues(0, 1)
+
+    render(<BullMQSummary />)
+
+    expect(screen.getByText(/No BilboMD worker is running/)).toBeInTheDocument()
   })
 
   it('renders both queues with their counts', () => {

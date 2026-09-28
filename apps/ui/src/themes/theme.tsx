@@ -16,6 +16,8 @@ declare module '@mui/material/styles' {
       failed: string
       cancelled: string
       unknown: string
+      // Deletion requested, not yet confirmed by the server
+      deleting: string
     }
     nerscStatus: {
       running: string
@@ -33,6 +35,7 @@ declare module '@mui/material/styles' {
       failed?: string
       cancelled?: string
       unknown?: string
+      deleting?: string
     }
     nerscStatus?: {
       running?: string
@@ -60,7 +63,8 @@ const getDesignTokens = (mode: PaletteMode) => {
         pending: green[100],
         failed: red[300],
         cancelled: grey[200],
-        unknown: grey[300]
+        unknown: grey[300],
+        deleting: red[100]
       },
       nerscStatus: {
         running: amber[100]

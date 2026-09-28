@@ -1,5 +1,5 @@
 import { renderWithProviders } from 'test/test-utils'
-import { screen, waitFor } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import MagickLinkAuth from '../MagickLinkAuth'
 import { useLoginMutation } from 'slices/authApiSlice'
@@ -108,16 +108,52 @@ describe('MagickLinkAuth Component', () => {
   //   console.log('Test complete')
   // })
 
-  it('renders error message on invalid OTP', async () => {
-    mockLogin.mockRejectedValueOnce({
-      data: { message: 'Invalid OTP' },
-      response: { status: 409 }
+  // RTK Query rejects with { status, data }, the shape unwrap() throws
+  const rejectWith = (error: object) =>
+    mockLogin.mockReturnValueOnce({ unwrap: () => Promise.reject(error) })
+
+  it('explains an invalid OTP with the server message', async () => {
+    rejectWith({ status: 401, data: { message: 'Invalid OTP' } })
+
+    renderWithProviders(<MagickLinkAuth />)
+
+    expect(
+      await screen.findByText(/Maybe your MagickLink/i)
+    ).toBeInTheDocument()
+    expect(screen.getByText('Invalid OTP')).toBeInTheDocument()
+  })
+
+  it('shows why an expired link failed', async () => {
+    rejectWith({ status: 401, data: { error: 'OTP has expired' } })
+
+    renderWithProviders(<MagickLinkAuth />)
+
+    expect(await screen.findByText('OTP has expired')).toBeInTheDocument()
+  })
+
+  it('tells the user to slow down when rate limited', async () => {
+    rejectWith({
+      status: 429,
+      data: {
+        message:
+          'Too many login attempts from this IP, please try again after a 60 second pause'
+      }
     })
 
     renderWithProviders(<MagickLinkAuth />)
 
-    await waitFor(() => {
-      expect(screen.getByText(/Maybe your MagickLink/i)).toBeInTheDocument()
-    })
+    expect(await screen.findByText('Too many attempts')).toBeInTheDocument()
+    expect(screen.getByText(/60 second pause/)).toBeInTheDocument()
+    expect(screen.queryByText(/Maybe your MagickLink/i)).not.toBeInTheDocument()
+  })
+
+  it('says when the server cannot be reached', async () => {
+    rejectWith({ status: 'FETCH_ERROR', error: 'TypeError: Failed to fetch' })
+
+    renderWithProviders(<MagickLinkAuth />)
+
+    expect(
+      await screen.findByText(/Could not reach the BilboMD server/)
+    ).toBeInTheDocument()
   })
 })

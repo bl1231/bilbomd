@@ -7,14 +7,14 @@ import { Alert, AlertTitle, CircularProgress } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import usePersist from 'hooks/usePersist'
 import useTitle from 'hooks/useTitle'
-import { isAxiosError } from 'app/api/axios'
+import { describeLoginFailure, type LoginFailure } from './loginFailure'
 
 const MagickLinkAuth = () => {
   useTitle('BilboMD: Check OTP')
 
   const { otp } = useParams()
   const [success, setSuccess] = useState(false)
-  const [authErrorMsg, setAuthErrorMsg] = useState('')
+  const [failure, setFailure] = useState<LoginFailure | null>(null)
   const [persist, setPersist] = usePersist()
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -25,7 +25,7 @@ const MagickLinkAuth = () => {
 
     const authenticateOTP = async () => {
       if (!otp) {
-        setAuthErrorMsg('No OTP provided')
+        setFailure({ kind: 'rejected', message: 'No OTP provided' })
         return
       }
       try {
@@ -39,11 +39,7 @@ const MagickLinkAuth = () => {
           void navigate('../dashboard/jobs')
         }, 3000)
       } catch (err) {
-        if (isAxiosError(err) && err.response) {
-          setAuthErrorMsg(err.response.data.message || 'No Server Response1')
-        } else {
-          setAuthErrorMsg('No Server Response2')
-        }
+        setFailure(describeLoginFailure(err))
       }
     }
 
@@ -73,6 +69,17 @@ const MagickLinkAuth = () => {
             <AlertTitle>Woot!</AlertTitle>Your OTP has been successfully
             validated. You will be forwarded to your dashboard in a few seconds.
           </Alert>
+        ) : failure?.kind === 'rate_limited' ? (
+          <Alert severity='error'>
+            <AlertTitle>Too many attempts</AlertTitle>
+            {failure.message} You can also{' '}
+            <Link to='../../magicklink'>request a new MagickLink&#8482;</Link>.
+          </Alert>
+        ) : failure?.kind === 'unreachable' || failure?.kind === 'server' ? (
+          <Alert severity='error'>
+            <AlertTitle>Couldn&apos;t sign you in</AlertTitle>
+            {failure.message} If this keeps happening please contact us.
+          </Alert>
         ) : (
           <Alert severity='warning'>
             <AlertTitle>Warning!</AlertTitle>Hmmmmm. Maybe your
@@ -80,7 +87,7 @@ const MagickLinkAuth = () => {
             <Link to='../../magicklink'>generating another</Link>. If that
             doesn&apos;t work please contact us.
             <br />
-            <p>{authErrorMsg}</p>
+            <p>{failure?.message}</p>
           </Alert>
         )}
       </Grid>

@@ -699,6 +699,7 @@ const Jobs = () => {
             pending: params.value === 'Pending',
             failed: params.value === 'Failed',
             cancelled: params.value === 'Cancelled',
+            deleting: params.value === 'Deleting',
             unknown: params.value === 'Unknown'
           })
         }

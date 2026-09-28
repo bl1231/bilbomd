@@ -23,6 +23,7 @@ import { bilbomdScoperJobSchema } from 'schemas/ScoperValidationSchema'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
+import { useGetQueueStateQuery } from 'features/bullmq/bullmqApiSlice'
 import TitleField from 'components/TitleField'
 import useTitle from 'hooks/useTitle'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
@@ -47,6 +48,15 @@ const NewScoperJobForm = ({
   const [addNewPublicJob, { isSuccess: isAnonSuccess, data: anonJobResponse }] =
     useAddNewPublicJobMutation()
   const isSuccess = mode === 'anonymous' ? isAnonSuccess : isAuthSuccess
+
+  // Warn before submitting if no SCOPER worker is running. The queue status
+  // needs a login, so anonymous visitors skip this check.
+  const { data: queueStatus } = useGetQueueStateQuery('queueList', {
+    skip: mode === 'anonymous'
+  })
+  const scoperWorkerCount = (
+    queueStatus as { scoper?: { worker_count?: number } } | undefined
+  )?.scoper?.worker_count
 
   // Transform responses to expected shape
   const publicJobResponse =
@@ -194,6 +204,12 @@ const NewScoperJobForm = ({
           </HeaderBox>
 
           <Paper sx={{ p: 2 }}>
+            {scoperWorkerCount === 0 && (
+              <Alert severity='warning' sx={{ mb: 2 }}>
+                No SCOPER worker is running right now. You can still submit,
+                but the job will wait in the queue until one starts.
+              </Alert>
+            )}
             {isSuccess ? (
               mode === 'anonymous' && publicJobResponse ? (
                 <PublicJobSuccessAlert
