@@ -9,8 +9,12 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "prepare": "husky || true",
     "sync:image-tags": "node infra/scripts/sync-image-tags.mjs",
     "changeset:version": "changeset version && node infra/scripts/sync-image-tags.mjs"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown"
   },
   "devDependencies": {
     "@bilbomd/eslint-config": "workspace:*",

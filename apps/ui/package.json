@@ -35,12 +35,6 @@
     "test:ui": "vitest --ui",
     "related": "vitest related"
   },
-  "lint-staged": {
-    "*.{js,ts,jsx,tsx}": [
-      "vitest related --run",
-      "eslint --fix"
-    ]
-  },
   "dependencies": {
     "@bilbomd/bilbomd-types": "workspace:*",
     "@bilbomd/mongodb-schema": "workspace:*",

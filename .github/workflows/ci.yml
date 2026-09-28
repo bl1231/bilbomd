@@ -161,6 +161,9 @@ jobs:
             pnpm install --frozen-lockfile --prefer-offline
           fi
 
+      - name: Check formatting (prettier)
+        run: pnpm format:check
+
       # Lint
       - name: Lint all apps and packages
         run: |
