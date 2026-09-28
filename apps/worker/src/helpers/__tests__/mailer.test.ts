@@ -7,6 +7,13 @@ declare global {
   var __sendMailMock: Mock
 }
 
+// Recorded at import, before beforeEach clears the mock.
+const useCallsAtImport = globalThis.__useMock.mock.calls.length
+
+it('registers the handlebars compile plugin once, at import', () => {
+  expect(useCallsAtImport).toBe(1)
+})
+
 describe('sendJobCompleteEmail', () => {
   beforeEach(() => {
     globalThis.__useMock.mockClear()
@@ -16,7 +23,7 @@ describe('sendJobCompleteEmail', () => {
 
   it('calls sendMail with correct parameters for job complete', () => {
     sendJobCompleteEmail('test@example.com', 'http://url', 'jobid123', 'Test Job', false)
-    expect(globalThis.__useMock).toHaveBeenCalled()
+    expect(globalThis.__useMock).not.toHaveBeenCalled()
     const mailArg = globalThis.__sendMailMock.mock.calls[0][0]
     expect(mailArg.to).toBe('test@example.com')
     expect(mailArg.template).toBe('jobcomplete')

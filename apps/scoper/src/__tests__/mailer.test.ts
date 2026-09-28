@@ -25,7 +25,19 @@ vi.mock('../helpers/loggers.js', () => ({
 import { sendJobCompleteEmail } from '../helpers/mailer.js'
 import { logger } from '../helpers/loggers.js'
 
+// Recorded at import, before beforeEach clears the mock.
+const useCallsAtImport = mockUse.mock.calls.length
+
 beforeEach(() => vi.clearAllMocks())
+
+it('registers the handlebars compile plugin once, at import', () => {
+  expect(useCallsAtImport).toBe(1)
+})
+
+it('does not register the plugin again when sending', () => {
+  sendJobCompleteEmail('a@example.com', 'http://url', 'jobid', 'T', false)
+  expect(mockUse).not.toHaveBeenCalled()
+})
 
 describe('sendJobCompleteEmail', () => {
   it('sends an email with the jobcomplete template when isError is false', () => {
