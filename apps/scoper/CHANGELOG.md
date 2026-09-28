@@ -1,5 +1,12 @@
 # @bilbomd/scoper
 
+## 1.9.2
+
+### Patch Changes
+
+- e2a8e17: Support Redis authentication. When `REDIS_PASSWORD` is set, the backend (queues, sessions, and the Bull Board admin view), worker, and SCOPER send it to Redis. When it's unset, clients connect without a password as before.
+- 88b78d9: The SCOPER worker now exits if its Redis errors continue for 2 minutes without a 60-second break, so Docker restarts it with a fresh connection. Before this, a worker that lost Redis, for example when epyc's Redis restarted, could keep logging `ECONNREFUSED` indefinitely while the UI reported that no SCOPER worker was running. Worker errors are now logged through the scoper logger instead of printed as raw stack traces.
+
 ## 1.9.1
 
 ### Patch Changes
