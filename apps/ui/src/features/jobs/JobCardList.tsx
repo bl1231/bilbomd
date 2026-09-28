@@ -81,7 +81,8 @@ const JobCardList = ({ rows, showUsername }: JobCardListProps) => {
       Submitted: colors.submitted,
       Pending: colors.pending,
       Failed: colors.failed,
-      Cancelled: colors.cancelled
+      Cancelled: colors.cancelled,
+      Deleting: colors.deleting
     }
     return byStatus[status ?? ''] ?? colors.unknown
   }

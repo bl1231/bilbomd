@@ -58,6 +58,13 @@ export default function DataGrid(theme: Theme) {
             fontWeight: 500,
             textAlign: 'center'
           },
+          '& .bilbomd.deleting': {
+            backgroundColor: theme.palette.bilbomdStatus.deleting,
+            color: '#8b1a1a',
+            fontStyle: 'italic',
+            fontWeight: 600,
+            textAlign: 'center'
+          },
           '& .bilbomd.unknown': {
             backgroundColor: theme.palette.bilbomdStatus.unknown,
             color: theme.palette.secondary.dark,

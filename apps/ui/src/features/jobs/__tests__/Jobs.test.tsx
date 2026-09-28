@@ -482,6 +482,10 @@ describe('Jobs table', () => {
     expect(
       await within(row as HTMLElement).findByText('Deleting')
     ).toBeInTheDocument()
+    // shown in its own reddish style
+    expect(
+      within(row as HTMLElement).getByText('Deleting').closest('.bilbomd')
+    ).toHaveClass('deleting')
     expect(
       within(row as HTMLElement).getByRole('button', { name: /more actions/i })
     ).toBeDisabled()
