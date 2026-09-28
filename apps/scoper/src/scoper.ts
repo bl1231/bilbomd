@@ -6,6 +6,7 @@ import { BilboMDScoperJobData } from './bullmq.jobs.js'
 import { processBilboMDScoperJob } from './process.bilbomdscoper.js'
 import { redis } from './helpers/redis.js'
 import { configureJobEvents } from './helpers/jobEvents.js'
+import { watchRedisErrors } from './helpers/redisWatchdog.js'
 
 dotenv.config()
 
@@ -31,8 +32,10 @@ const workerOptions: WorkerOptions = {
   lockDuration: 90000
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const bilboMdScoperWorker = new Worker('scoper', workerHandler, workerOptions)
+
+// Exit (and let Docker restart us) if Redis errors don't stop.
+watchRedisErrors(bilboMdScoperWorker)
 
 logger.info('Scoper worker started!')
 logger.info(`Concurrency: ${workerOptions.concurrency}`)

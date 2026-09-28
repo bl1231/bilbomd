@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 const { MockWorker } = vi.hoisted(() => ({
   MockWorker: vi.fn(function MockWorker(this: Record<string, unknown>) {
     this.status = 'ready'
+    this.on = vi.fn()
   })
 }))
 
@@ -18,11 +19,13 @@ vi.mock('../helpers/redis.js', () => ({ redis: {} }))
 vi.mock('../process.bilbomdscoper.js', () => ({
   processBilboMDScoperJob: vi.fn()
 }))
+vi.mock('../helpers/redisWatchdog.js', () => ({ watchRedisErrors: vi.fn() }))
 vi.mock('bullmq', () => ({ Job: vi.fn(), Worker: MockWorker }))
 
 // Import at module level so side effects (connectDB, new Worker) run once
 import '../scoper.js'
 import { connectDB } from '../helpers/db.js'
+import { watchRedisErrors } from '../helpers/redisWatchdog.js'
 
 describe('scoper entry point', () => {
   it('creates a BullMQ Worker bound to the scoper queue', () => {
@@ -39,6 +42,10 @@ describe('scoper entry point', () => {
       expect.any(Function),
       expect.objectContaining({ lockDuration: 90000 })
     )
+  })
+
+  it('watches the worker for persistent Redis errors', () => {
+    expect(watchRedisErrors).toHaveBeenCalledWith(MockWorker.mock.instances[0])
   })
 
   it('calls connectDB on startup', () => {
