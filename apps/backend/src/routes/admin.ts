@@ -23,7 +23,7 @@ const redis = new Redis(redisOptions)
 
 // Create instances for both queues
 const bilbomdQueue = new QueueMQ('bilbomd', { connection: redis })
-const bilbomdScoperQueue = new QueueMQ('bilbomd-scoper', { connection: redis })
+const bilbomdScoperQueue = new QueueMQ('scoper', { connection: redis })
 const multimdQueue = new QueueMQ('multimd', { connection: redis })
 const deleteBilbomdQueue = new QueueMQ('delete-bilbomd', { connection: redis })
 
