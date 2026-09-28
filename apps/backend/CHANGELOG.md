@@ -1,5 +1,12 @@
 # @bilbomd/backend
 
+## 2.13.2
+
+### Patch Changes
+
+- 0058fef: The Bull Board admin view now shows the real SCOPER queue (`scoper`). It was pointed at a `bilbomd-scoper` queue that nothing uses, so SCOPER jobs never appeared there.
+- e2a8e17: Support Redis authentication. When `REDIS_PASSWORD` is set, the backend (queues, sessions, and the Bull Board admin view), worker, and SCOPER send it to Redis. When it's unset, clients connect without a password as before.
+
 ## 2.13.1
 
 ### Patch Changes

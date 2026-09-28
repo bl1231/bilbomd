@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.18.2
+
+### Patch Changes
+
+- e2a8e17: Support Redis authentication. When `REDIS_PASSWORD` is set, the backend (queues, sessions, and the Bull Board admin view), worker, and SCOPER send it to Redis. When it's unset, clients connect without a password as before.
+
 ## 2.18.1
 
 ### Patch Changes
