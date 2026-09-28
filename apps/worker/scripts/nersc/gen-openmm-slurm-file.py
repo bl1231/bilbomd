@@ -514,9 +514,12 @@ srun --ntasks=1 \\
                 --no-const
     "
 PAE2CONS_EXIT=$?
+if [ $PAE2CONS_EXIT -ne 0 ]; then
+    update_status pae Error
+fi
 check_exit_code $PAE2CONS_EXIT pae2constraints
 update_status pae2constraints Success
-update_status pae2 Success
+update_status pae Success
 
 # --------------------------------------------------------------------------------------
 # Merge constraints into openmm_config.yaml
