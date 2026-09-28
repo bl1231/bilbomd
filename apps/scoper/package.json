@@ -45,7 +45,7 @@
     "ioredis": "6.0.0",
     "moment-timezone": "^0.6.4",
     "mongoose": "^9.10.2",
-    "nodemailer": "^9.0.5",
+    "nodemailer": "^10.0.0",
     "nodemailer-express-handlebars": "^7.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
