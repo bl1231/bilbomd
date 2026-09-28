@@ -28,7 +28,7 @@ permissions:
 jobs:
   changes:
     name: Detect changes
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       ui: ${{ steps.filter.outputs.ui }}
@@ -101,7 +101,7 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     needs: [changes]
     steps:
       - uses: actions/checkout@v7
@@ -171,7 +171,7 @@ jobs:
     name: Build & Push backend
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     permissions:
       contents: read
       packages: write
@@ -251,7 +251,7 @@ jobs:
     name: Build & Push ui
     if: needs.changes.outputs.ui == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     permissions:
       contents: read
       packages: write
@@ -330,7 +330,7 @@ jobs:
     name: Build & Push worker
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     outputs:
       digest: ${{ steps.build.outputs.digest }}
     permissions:
@@ -415,7 +415,7 @@ jobs:
     name: Python tests (light)
     if: needs.changes.outputs.worker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     steps:
       - uses: actions/checkout@v7
 
@@ -442,7 +442,7 @@ jobs:
     # pushed (pulled by digest — no rebuild). Skips on forks, which don't push.
     if: needs.changes.outputs.worker == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint, worker]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     permissions:
       contents: read
       packages: read
@@ -473,7 +473,7 @@ jobs:
     name: Build & Push scoper
     if: needs.changes.outputs.scoper == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint, scoper-typecheck]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     permissions:
       contents: read
       packages: write
@@ -552,7 +552,7 @@ jobs:
     name: Build mongodb-schema
     if: needs.changes.outputs.schema == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     services:
       mongo:
         image: mongo:8
@@ -654,7 +654,7 @@ jobs:
     name: Build & Test md-utils
     if: needs.changes.outputs.md-utils == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -747,7 +747,7 @@ jobs:
     name: Scoper typecheck
     if: needs.changes.outputs.scoper == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -818,7 +818,7 @@ jobs:
     name: Test ui (unit)
     if: needs.changes.outputs.ui == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -890,7 +890,7 @@ jobs:
     name: Test worker (unit)
     if: needs.changes.outputs.worker == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -949,7 +949,7 @@ jobs:
     name: Test scoper (unit)
     if: needs.changes.outputs.scoper == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -1005,7 +1005,7 @@ jobs:
     name: Test backend (unit)
     if: needs.changes.outputs.backend == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -1064,7 +1064,7 @@ jobs:
     name: Test backend (integration)
     if: needs.changes.outputs.backend == 'true'
     needs: [changes, lint]
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     services:
       mongo:
         image: mongo:8
@@ -1155,7 +1155,7 @@ jobs:
 
   gate:
     name: Branch Protection Gate
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-26.04]
     needs:
       [
         lint,
@@ -1207,7 +1207,7 @@ jobs:
 
   coverage-report:
     name: Coverage Report
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: [backend-unit-tests, ui-unit-tests, worker-unit-tests, scoper-unit-tests]
     if: github.event_name == 'pull_request'
     permissions:
