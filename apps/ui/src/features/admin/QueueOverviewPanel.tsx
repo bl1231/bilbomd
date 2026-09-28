@@ -30,15 +30,12 @@ const QueueOverviewPanel = () => {
     isLoading,
     error,
     isFetching
-  } = useGetQueuesQuery(
-    undefined,
-    {
-      pollingInterval: pollingEnabled ? 5000 : 0
-    }
-  )
+  } = useGetQueuesQuery(undefined, {
+    pollingInterval: pollingEnabled ? 5000 : 0
+  })
 
   if (isLoading) return <CircularProgress />
-  if (error) return <Alert severity='error'>Failed to load queue data</Alert>
+  if (error) return <Alert severity="error">Failed to load queue data</Alert>
 
   const columns: GridColDef[] = [
     { field: 'name', headerName: 'Queue', width: 120 },
@@ -50,7 +47,7 @@ const QueueOverviewPanel = () => {
         <Chip
           label={params.value ? 'Yes' : 'No'}
           color={params.value ? 'warning' : 'success'}
-          size='small'
+          size="small"
         />
       )
     },
@@ -72,7 +69,10 @@ const QueueOverviewPanel = () => {
             queueName={params.row.name}
             isPaused={params.row.isPaused}
           />,
-          <QueueDetails key={`${params.id}-details`} queue={params.row.name} />
+          <QueueDetails
+            key={`${params.id}-details`}
+            queue={params.row.name}
+          />
         ]
       }
     }
@@ -103,7 +103,7 @@ const QueueOverviewPanel = () => {
           borderColor: grey[500]
         }}
       >
-        <Typography variant='h4'>BullMQ Dashboard</Typography>
+        <Typography variant="h4">BullMQ Dashboard</Typography>
       </Box>
 
       <Box>
@@ -115,11 +115,11 @@ const QueueOverviewPanel = () => {
                 onChange={(e) => setPollingEnabled(e.target.checked)}
               />
             }
-            label='Auto-refresh (every 5s)'
+            label="Auto-refresh (every 5s)"
           />
           {pollingEnabled && (
             <AutorenewIcon
-              fontSize='small'
+              fontSize="small"
               sx={{
                 ml: 1,
                 color: isFetching ? 'primary.main' : 'text.disabled',

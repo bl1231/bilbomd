@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { ValidationError } from 'yup'
-import {
-  titleSchema,
-  TITLE_MIN_LENGTH,
-  TITLE_MAX_LENGTH
-} from '../titleSchema'
+import { titleSchema, TITLE_MIN_LENGTH, TITLE_MAX_LENGTH } from '../titleSchema'
 
 describe('titleSchema', () => {
   const schema = titleSchema()

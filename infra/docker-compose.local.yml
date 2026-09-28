@@ -54,7 +54,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: $MONGO_USERNAME
       MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
     ports:
-      - "${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017"
+      - '${MONGO_DEV_BIND_ADDR:?err}:${MONGO_EXTERNAL_PORT:?err}:27017'
     volumes:
       - mongodb:/data/db
     networks:
@@ -68,8 +68,8 @@ services:
       # REDISCLI_AUTH only when a password is set; an empty AUTH fails.
       test:
         [
-          "CMD-SHELL",
-          '[ -n "$$REDIS_PASSWORD" ] && export REDISCLI_AUTH="$$REDIS_PASSWORD"; redis-cli ping | grep -q PONG',
+          'CMD-SHELL',
+          '[ -n "$$REDIS_PASSWORD" ] && export REDISCLI_AUTH="$$REDIS_PASSWORD"; redis-cli ping | grep -q PONG'
         ]
       interval: 10s
       timeout: 5s
@@ -78,14 +78,14 @@ services:
     env_file:
       - path: .env.local
     ports:
-      - "${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379"
+      - '${REDIS_DEV_BIND_ADDR:?err}:${REDIS_EXTERNAL_PORT:?err}:6379'
     # --requirepass only when REDIS_PASSWORD is set (from the env_file), so
     # local stacks without a password keep working.
     command:
       [
-        "sh",
-        "-c",
-        'exec redis-server --save 20 1 --loglevel warning $${REDIS_PASSWORD:+--requirepass "$$REDIS_PASSWORD"}',
+        'sh',
+        '-c',
+        'exec redis-server --save 20 1 --loglevel warning $${REDIS_PASSWORD:+--requirepass "$$REDIS_PASSWORD"}'
       ]
     volumes:
       - redis-cache:/data
@@ -101,19 +101,19 @@ services:
     env_file:
       - path: .env.local
     ports:
-      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500"
+      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_BACKEND_PORT:?err}:3500'
     volumes:
       - ./uploads-dev:/bilbomd/uploads
       - ./logs/backend:/bilbomd/logs
     networks:
       - app-network
-    user: "${UID:-1001}:${GID:-1001}"
-    command: [ "node", "dist/server.js" ]
+    user: '${UID:-1001}:${GID:-1001}'
+    command: ['node', 'dist/server.js']
     depends_on:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3500/healthcheck" ]
+      test: ['CMD', 'curl', '--fail', 'http://localhost:3500/healthcheck']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -125,7 +125,7 @@ services:
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
       - no-new-privileges:true
-    read_only: true      
+    read_only: true
     cap_drop:
       - ALL
     tmpfs:
@@ -134,13 +134,13 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: "16"
-          memory: "32g"
+          cpus: '16'
+          memory: '32g'
         reservations:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [ gpu ]
+              capabilities: [gpu]
     env_file:
       - .env.local
     networks:
@@ -148,13 +148,13 @@ services:
     volumes:
       - ./uploads-dev:/bilbomd/uploads
       - ./logs/worker:/bilbomd/logs
-    user: "${UID:-1001}:${GID:-1001}"
-    command: [ "node", "dist/worker.js" ]
+    user: '${UID:-1001}:${GID:-1001}'
+    command: ['node', 'dist/worker.js']
     depends_on:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:3000/config" ]
+      test: ['CMD', 'curl', '--fail', 'http://localhost:3000/config']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -169,7 +169,7 @@ services:
     env_file:
       - .env.local
     ports:
-      - "${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80"
+      - '${BILBOMD_DEV_BIND_ADDR:?err}:${BILBOMD_UI_PORT:?err}:80'
     networks:
       - app-network
     depends_on:
@@ -177,7 +177,7 @@ services:
       - mongodb
       - redis
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost/version-info" ]
+      test: ['CMD', 'curl', '--fail', 'http://localhost/version-info']
       interval: 30s
       timeout: 10s
       retries: 3

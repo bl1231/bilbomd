@@ -12,7 +12,7 @@ const LoginPage = () => {
   if (configs?.orcidAuthEnabled !== 'true') {
     return (
       <Navigate
-        to='/magicklink'
+        to="/magicklink"
         replace
       />
     )
@@ -23,33 +23,33 @@ const LoginPage = () => {
   }
 
   return (
-    <Container maxWidth='sm'>
+    <Container maxWidth="sm">
       <Box sx={{ mt: 10, textAlign: 'center' }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
           <img
             src={orcidLogo}
-            alt='ORCID iD logo'
+            alt="ORCID iD logo"
             width={100}
-            height='auto'
+            height="auto"
           />
         </Box>
         <Typography
-          variant='h4'
+          variant="h4"
           gutterBottom
         >
           Sign in with ORCID iD
         </Typography>
         <Typography
-          variant='body1'
+          variant="body1"
           sx={{ mb: 4 }}
         >
           BilboMD uses ORCID to authenticate users. Click below to sign in
           securely with your ORCID iD.
         </Typography>
         <Button
-          variant='contained'
-          color='primary'
-          size='large'
+          variant="contained"
+          color="primary"
+          size="large"
           startIcon={<LoginIcon />}
           onClick={handleOrcidLogin}
         >

@@ -15,6 +15,7 @@ This document tracks progress on adding comprehensive test coverage to the Bilbo
 **Status:** All 5 files tested, all tests passing, lint and build verified
 
 **Files Tested:**
+
 1. ✅ `app/api/apiSlice.ts` - Main API slice (95.65% coverage, 10 tests)
 2. ✅ `app/api/sfapiSlice.ts` - SF API slice (100% coverage, 6 tests)
 3. ✅ `features/bullmq/bullmqApiSlice.ts` - BullMQ integration (100% coverage, 4 tests)
@@ -30,6 +31,7 @@ This document tracks progress on adding comprehensive test coverage to the Bilbo
 **Status:** 11 files tested, all tests passing, lint and build verified
 
 **Files Tested:**
+
 1. ✅ `features/jobs/JobDBDisplayProperties.ts` - Job display properties (100% coverage, 16 tests)
 2. ✅ `features/jobs/JobSuccessAlert.tsx` - Success notification (100% coverage, 17 tests)
 3. ✅ `features/jobs/JobError.tsx` - Error display with async fetching (100% coverage, 11 tests)
@@ -45,6 +47,7 @@ This document tracks progress on adding comprehensive test coverage to the Bilbo
 **Total:** 256 tests across 11 files
 
 **Commits:**
+
 - 6808cc4c - "test: add Phase 2 job management component tests (partial)"
 - 2928c712 - "test: add Phase 2 job management component tests (continued)"
 - [Current] - "test: add Phase 2 job management tests for NERSC steps, actions menu, and FoXS analysis"
@@ -52,14 +55,18 @@ This document tracks progress on adding comprehensive test coverage to the Bilbo
 ## Remaining Phases
 
 ### Phase 2: Job Management Components (4 remaining files)
+
 High-priority job lifecycle components still to test:
+
 - `features/jobs/SingleJobPage.tsx`
 - `features/jobs/NewJobForm.tsx`
 - `features/jobs/ResubmitJobForm.tsx`
 - `features/jobs/PipelineSchematic.tsx`
 
 ### Phase 3: Job Type Forms (10 files)
+
 Job submission forms for different pipeline types:
+
 - `features/autojob/NewAutoJobForm.tsx`
 - `features/autojob/ResubmitAutoJobForm.tsx`
 - `features/autojob/AutoJobFormInstructions.tsx`
@@ -72,7 +79,9 @@ Job submission forms for different pipeline types:
 - `features/multimd/MultiMDJobDBDetails.tsx`
 
 ### Phase 4: Validation Schemas (5 files)
+
 Form validation logic:
+
 - `schemas/Alphafold2PAEValidationSchema.ts`
 - `schemas/BilboMDAlphaFoldJobSchema.ts`
 - `schemas/ExpdataSchema.ts`
@@ -80,7 +89,9 @@ Form validation logic:
 - `schemas/ValidationSchemas.ts`
 
 ### Phase 5: Authentication & Authorization (7 files)
+
 Auth-related components:
+
 - `features/auth/Login.tsx`
 - `features/auth/RequireAuth.tsx`
 - `features/auth/PersistLogin.tsx`
@@ -90,7 +101,9 @@ Auth-related components:
 - `features/auth/VerifyEmail.tsx`
 
 ### Phase 6: Admin & Queue Management (5 files)
+
 Admin panel and queue management:
+
 - `features/admin/QueueDetailsPage.tsx`
 - `features/admin/QueueDetails.tsx`
 - `features/admin/QueueJobActionsMenu.tsx`

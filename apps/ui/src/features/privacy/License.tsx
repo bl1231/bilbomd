@@ -27,7 +27,14 @@ const License: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '200px'
+        }}
+      >
         <CircularProgress />
       </Box>
     )
@@ -35,7 +42,14 @@ const License: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '200px'
+        }}
+      >
         <Typography color="error">Error loading license: {error}</Typography>
       </Box>
     )

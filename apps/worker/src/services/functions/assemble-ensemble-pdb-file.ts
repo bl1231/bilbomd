@@ -52,7 +52,7 @@ const assembleEnsemblePdbFiles = async ({
       (state: IEnsembleMember) => {
         // Handle both absolute Docker paths and relative paths
         let resolvedPath: string
-        
+
         if (path.isAbsolute(state.pdb)) {
           // For absolute paths like /bilbomd/work/openmm/md/...
           // Map Docker container path to actual job directory
@@ -69,7 +69,7 @@ const assembleEnsemblePdbFiles = async ({
           // For relative paths, resolve from multiFoxsDir (legacy behavior)
           resolvedPath = path.resolve(multiFoxsDir, state.pdb)
         }
-        
+
         logger.debug(`Resolving PDB path: ${state.pdb} -> ${resolvedPath}`)
         return resolvedPath
       }

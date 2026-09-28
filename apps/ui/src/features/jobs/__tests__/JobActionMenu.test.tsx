@@ -24,7 +24,12 @@ describe('JobActionsMenu', () => {
   })
 
   it('disables Resubmit for non-resubmittable types', () => {
-    render(<JobActionsMenu {...baseProps} jobType='BilboMdAlphaFold' />)
+    render(
+      <JobActionsMenu
+        {...baseProps}
+        jobType="BilboMdAlphaFold"
+      />
+    )
     expect(screen.getByText('Resubmit')).toHaveAttribute(
       'aria-disabled',
       'true'
@@ -32,7 +37,12 @@ describe('JobActionsMenu', () => {
   })
 
   it('disables Delete for running jobs', () => {
-    render(<JobActionsMenu {...baseProps} jobStatus='Running' />)
+    render(
+      <JobActionsMenu
+        {...baseProps}
+        jobStatus="Running"
+      />
+    )
     expect(screen.getByText('Delete')).toHaveAttribute('aria-disabled', 'true')
   })
 
@@ -46,7 +56,11 @@ describe('JobActionsMenu', () => {
   it('calls onDelete and onClose when Delete is clicked', () => {
     render(<JobActionsMenu {...baseProps} />)
     fireEvent.click(screen.getByText('Delete'))
-    expect(baseProps.onDelete).toHaveBeenCalledWith('abc123', 'Test Job', 'Completed')
+    expect(baseProps.onDelete).toHaveBeenCalledWith(
+      'abc123',
+      'Test Job',
+      'Completed'
+    )
     expect(baseProps.onClose).toHaveBeenCalled()
   })
 })

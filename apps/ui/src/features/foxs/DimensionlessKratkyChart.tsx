@@ -164,15 +164,29 @@ const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
         <TableBody>
           <TableRow>
             <TableCell
-              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.875rem' }}
+              sx={{
+                py: 0.25,
+                pr: 2,
+                border: 0,
+                color: 'text.secondary',
+                fontSize: '0.875rem'
+              }}
             >
               Rg (Guinier)
             </TableCell>
-            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.875rem' }}>
+            <TableCell
+              sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.875rem' }}
+            >
               {guinier.rg.toFixed(2)} Å
             </TableCell>
             <TableCell
-              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.875rem' }}
+              sx={{
+                py: 0.25,
+                pr: 2,
+                border: 0,
+                color: 'text.secondary',
+                fontSize: '0.875rem'
+              }}
             >
               I(0)
             </TableCell>
@@ -182,15 +196,29 @@ const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
           </TableRow>
           <TableRow>
             <TableCell
-              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.875rem' }}
+              sx={{
+                py: 0.25,
+                pr: 2,
+                border: 0,
+                color: 'text.secondary',
+                fontSize: '0.875rem'
+              }}
             >
               Guinier fit range
             </TableCell>
-            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.875rem' }}>
+            <TableCell
+              sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.875rem' }}
+            >
               q: {guinier.qmin.toFixed(4)}–{guinier.qmax.toFixed(4)} Å⁻¹
             </TableCell>
             <TableCell
-              sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.875rem' }}
+              sx={{
+                py: 0.25,
+                pr: 2,
+                border: 0,
+                color: 'text.secondary',
+                fontSize: '0.875rem'
+              }}
             >
               r²
             </TableCell>

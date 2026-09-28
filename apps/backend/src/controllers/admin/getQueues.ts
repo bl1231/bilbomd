@@ -13,7 +13,9 @@ const getQueues = async (req: Request, res: Response): Promise<void> => {
     res.json(result)
   } catch (err: unknown) {
     if (err instanceof Error) {
-      res.status(500).json({ message: 'Failed to fetch queue data', error: err.message })
+      res
+        .status(500)
+        .json({ message: 'Failed to fetch queue data', error: err.message })
     } else {
       res
         .status(500)

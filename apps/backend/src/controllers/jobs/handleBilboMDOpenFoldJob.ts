@@ -62,7 +62,10 @@ const handleBilboMDOpenFoldJob = async (
     parsedEntities = parseOpenFoldEntities(req.body)
     logger.info(`Parsed ${parsedEntities.length} OpenFold3 entities`)
   } catch (parseErr) {
-    logger.error('Failed to parse entities_json or reconstruct entities', parseErr)
+    logger.error(
+      'Failed to parse entities_json or reconstruct entities',
+      parseErr
+    )
     res
       .status(400)
       .json({ message: 'Invalid entities_json or malformed form data' })
@@ -123,7 +126,8 @@ const handleBilboMDOpenFoldJob = async (
         `Invalid AutoRg values for job ${req.body.title || UUID}: ${JSON.stringify({ rg, rg_min, rg_max })}`
       )
       res.status(400).json({
-        message: 'Rg values calculated from your SAXS data are outside allowed bounds',
+        message:
+          'Rg values calculated from your SAXS data are outside allowed bounds',
         autorgResults: { rg, rg_min, rg_max },
         schemaLimits: { rg_min: rgMinBound, rg_max: rgMaxBound }
       })

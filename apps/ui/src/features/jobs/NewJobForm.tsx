@@ -266,10 +266,18 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         my: 1
                       }}
                     >
-                      <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
+                      <Box
+                        sx={{
+                          minWidth: { xs: 0, md: '520px' },
+                          width: '100%',
+                          maxWidth: '520px'
+                        }}
+                      >
                         <TitleField />
                       </Box>
-                      <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
+                      <Box
+                        sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}
+                      >
                         <Button
                           variant={useExampleData ? 'outlined' : 'contained'}
                           onClick={() => {
@@ -331,7 +339,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             : 'Load Example Data'}
                         </Button>
                       </Box>
-                      <Box sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}>
+                      <Box
+                        sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}
+                      >
                         <Button
                           variant="contained"
                           href={
@@ -407,7 +417,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            width: '100%', maxWidth: '520px'
+                            width: '100%',
+                            maxWidth: '520px'
                           }}
                         >
                           <Grid>
@@ -437,7 +448,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            width: '100%', maxWidth: '520px'
+                            width: '100%',
+                            maxWidth: '520px'
                           }}
                         >
                           <Grid>
@@ -471,7 +483,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            width: '100%', maxWidth: '520px'
+                            width: '100%',
+                            maxWidth: '520px'
                           }}
                         >
                           <Grid>
@@ -513,13 +526,11 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                 setPdbWarning(
                                   metalFound.length > 0 ? (
                                     <>
-                                      The following metal-containing
-                                      residues have no force-field
-                                      parameters and will be removed
-                                      before MD:{' '}
-                                      {metalFound.join(', ')}. If
-                                      these residues are important for
-                                      your system, consider using{' '}
+                                      The following metal-containing residues
+                                      have no force-field parameters and will be
+                                      removed before MD: {metalFound.join(', ')}
+                                      . If these residues are important for your
+                                      system, consider using{' '}
                                       <Button
                                         href="https://charmm-gui.org/"
                                         target="_blank"
@@ -540,10 +551,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                       >
                                         CHARMM-GUI
                                       </Button>{' '}
-                                      to properly parameterize your
-                                      structure, then return here with
-                                      CRD and PSF files using the
-                                      CHARMM engine option.
+                                      to properly parameterize your structure,
+                                      then return here with CRD and PSF files
+                                      using the CHARMM engine option.
                                     </>
                                   ) : (
                                     ''
@@ -561,7 +571,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        width: '100%', maxWidth: '520px'
+                        width: '100%',
+                        maxWidth: '520px'
                       }}
                     >
                       <Grid>
@@ -590,7 +601,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        width: '100%', maxWidth: '520px'
+                        width: '100%',
+                        maxWidth: '520px'
                       }}
                     >
                       <Alert severity="info">
@@ -613,7 +625,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        width: '100%', maxWidth: '520px'
+                        width: '100%',
+                        maxWidth: '520px'
                       }}
                     >
                       <Grid>
@@ -687,16 +700,8 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   true
                                 )
                                 void setFieldTouched('rg', true, false)
-                                void setFieldTouched(
-                                  'rg_min',
-                                  true,
-                                  false
-                                )
-                                void setFieldTouched(
-                                  'rg_max',
-                                  true,
-                                  false
-                                )
+                                void setFieldTouched('rg_min', true, false)
+                                void setFieldTouched('rg_max', true, false)
                                 setSuggestedRgMax(String(rg_max))
                                 if (
                                   typeof qmin === 'number' &&
@@ -738,7 +743,9 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         />
                       </Grid>
                     )}
-                    <Grid sx={{ display: 'flex', width: '100%', maxWidth: '520px' }}>
+                    <Grid
+                      sx={{ display: 'flex', width: '100%', maxWidth: '520px' }}
+                    >
                       <Typography>
                         <b>Rg Min</b> and <b>Rg Max</b> will be calculated
                         automatically from the selected SAXS data file. Feel
@@ -755,7 +762,14 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         <Alert severity="error">{autoRgError}</Alert>
                       </Box>
                     )}
-                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
+                    <Grid
+                      sx={{
+                        my: 2,
+                        display: 'flex',
+                        width: '100%',
+                        maxWidth: '520px'
+                      }}
+                    >
                       <Field
                         label="Rg Min"
                         fullWidth
@@ -774,7 +788,14 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }
                       />
                     </Grid>
-                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
+                    <Grid
+                      sx={{
+                        my: 2,
+                        display: 'flex',
+                        width: '100%',
+                        maxWidth: '520px'
+                      }}
+                    >
                       <Field
                         label="Rg Max"
                         fullWidth
@@ -813,7 +834,14 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Grid>
                       )
                     })()}
-                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
+                    <Grid
+                      sx={{
+                        my: 2,
+                        display: 'flex',
+                        width: '100%',
+                        maxWidth: '520px'
+                      }}
+                    >
                       <Field
                         name="num_conf"
                         as={TextField}

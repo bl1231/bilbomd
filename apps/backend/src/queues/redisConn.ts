@@ -3,7 +3,8 @@ import { logger } from '../middleware/loggers.js'
 
 // Retry indefinitely with capped backoff so a redis outage during a rolling
 // deploy doesn't crash the backend (see sessionRedisConn.ts).
-const redisRetryStrategy = (times: number): number => Math.min(times * 500, 5000)
+const redisRetryStrategy = (times: number): number =>
+  Math.min(times * 500, 5000)
 
 const redisOptions: RedisOptions = {
   port:

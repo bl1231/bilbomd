@@ -23,9 +23,7 @@
     "/external/jobs": {
       "post": {
         "summary": "Submit a new job",
-        "tags": [
-          "Jobs"
-        ],
+        "tags": ["Jobs"],
         "security": [
           {
             "bearerAuth": []
@@ -50,9 +48,7 @@
                     "properties": {
                       "bilbomd_mode": {
                         "type": "string",
-                        "enum": [
-                          "pdb"
-                        ],
+                        "enum": ["pdb"],
                         "description": "Must be set to \"pdb\" for this job type."
                       },
                       "title": {
@@ -94,9 +90,7 @@
                     "properties": {
                       "bilbomd_mode": {
                         "type": "string",
-                        "enum": [
-                          "crd_psf"
-                        ],
+                        "enum": ["crd_psf"],
                         "description": "Must be set to \"crd_psf\" for this job type."
                       },
                       "title": {
@@ -137,9 +131,7 @@
                     "properties": {
                       "bilbomd_mode": {
                         "type": "string",
-                        "enum": [
-                          "auto"
-                        ],
+                        "enum": ["auto"],
                         "description": "Must be set to \"auto\" for this job type."
                       },
                       "title": {
@@ -174,9 +166,7 @@
                     "properties": {
                       "bilbomd_mode": {
                         "type": "string",
-                        "enum": [
-                          "alphafold"
-                        ],
+                        "enum": ["alphafold"],
                         "description": "Must be set to \"alphafold\" for this job type."
                       },
                       "title": {
@@ -239,9 +229,7 @@
     "/external/jobs/{id}/status": {
       "get": {
         "summary": "Get job status",
-        "tags": [
-          "Jobs"
-        ],
+        "tags": ["Jobs"],
         "security": [
           {
             "bearerAuth": []
@@ -308,9 +296,7 @@
     "/external/jobs/{id}/results": {
       "get": {
         "summary": "Download job results as a tarball archive",
-        "tags": [
-          "Jobs"
-        ],
+        "tags": ["Jobs"],
         "security": [
           {
             "bearerAuth": []
@@ -419,12 +405,7 @@
     "schemas": {
       "User": {
         "title": "User",
-        "required": [
-          "username",
-          "roles",
-          "refreshToken",
-          "email"
-        ],
+        "required": ["username", "roles", "refreshToken", "email"],
         "properties": {
           "username": {
             "type": "string"
@@ -466,10 +447,7 @@
                   "format": "date-time"
                 }
               },
-              "required": [
-                "provider",
-                "name"
-              ]
+              "required": ["provider", "name"]
             }
           },
           "refreshToken": {
@@ -498,9 +476,7 @@
                   "format": "date-time"
                 }
               },
-              "required": [
-                "tokenHash"
-              ]
+              "required": ["tokenHash"]
             }
           },
           "email": {
@@ -527,10 +503,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "Pending",
-              "Active"
-            ]
+            "enum": ["Pending", "Active"]
           },
           "active": {
             "type": "boolean"
@@ -659,12 +632,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -681,12 +649,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -703,12 +666,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -725,12 +683,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -747,12 +700,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -769,12 +717,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -791,12 +734,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -813,12 +751,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -835,12 +768,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -857,12 +785,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -879,12 +802,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -901,12 +819,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -923,12 +836,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -945,12 +853,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -967,12 +870,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -989,12 +887,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -1011,12 +904,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -1033,12 +921,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -1055,12 +938,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -1077,12 +955,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -1099,12 +972,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "Waiting",
-                      "Running",
-                      "Success",
-                      "Error"
-                    ]
+                    "enum": ["Waiting", "Running", "Success", "Error"]
                   },
                   "message": {
                     "type": "string",
@@ -1257,20 +1125,12 @@
           },
           "md_engine": {
             "type": "string",
-            "enum": [
-              "CHARMM",
-              "OpenMM"
-            ],
+            "enum": ["CHARMM", "OpenMM"],
             "required": false
           },
           "conformational_sampling": {
             "type": "number",
-            "enum": [
-              1,
-              2,
-              3,
-              4
-            ]
+            "enum": [1, 2, 3, 4]
           },
           "rg": {
             "type": "number"
@@ -1320,21 +1180,14 @@
       },
       "EntitiesJson": {
         "type": "object",
-        "required": [
-          "entities"
-        ],
+        "required": ["entities"],
         "properties": {
           "entities": {
             "type": "array",
             "description": "List of entities to model, each with type, sequence, and number of copies.",
             "items": {
               "type": "object",
-              "required": [
-                "id",
-                "type",
-                "sequence",
-                "copies"
-              ],
+              "required": ["id", "type", "sequence", "copies"],
               "properties": {
                 "id": {
                   "type": "integer",
@@ -1342,11 +1195,7 @@
                 },
                 "type": {
                   "type": "string",
-                  "enum": [
-                    "Protein",
-                    "DNA",
-                    "RNA"
-                  ],
+                  "enum": ["Protein", "DNA", "RNA"],
                   "example": "Protein"
                 },
                 "sequence": {

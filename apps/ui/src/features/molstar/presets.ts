@@ -103,9 +103,21 @@ const nucleicResidueQuery = StructureSelectionQuery(
     MS.struct.generator.atomGroups({
       'residue-test': MS.core.set.has([
         MS.set(
-          'DA', 'DT', 'DG', 'DC', 'DU', // standard DNA
-          'A', 'G', 'C', 'T', 'U', // standard RNA
-          'ADE', 'GUA', 'CYT', 'THY', 'URA' // CHARMM residue names
+          'DA',
+          'DT',
+          'DG',
+          'DC',
+          'DU', // standard DNA
+          'A',
+          'G',
+          'C',
+          'T',
+          'U', // standard RNA
+          'ADE',
+          'GUA',
+          'CYT',
+          'THY',
+          'URA' // CHARMM residue names
         ),
         MS.ammp('label_comp_id')
       ])
@@ -147,7 +159,11 @@ export const StructurePreset = StructureRepresentationPresetProvider({
         components.ligand,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.35
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -182,7 +198,11 @@ export const StructurePreset = StructureRepresentationPresetProvider({
         components.ions,
         {
           type: 'spacefill',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 1.0 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 1.0
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -193,7 +213,11 @@ export const StructurePreset = StructureRepresentationPresetProvider({
         components.branched,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.35
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -306,7 +330,11 @@ export const SurfacePreset = StructureRepresentationPresetProvider({
         components.ligand,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.26 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.26
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -333,7 +361,11 @@ export const SurfacePreset = StructureRepresentationPresetProvider({
         components.ions,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 1.0 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 1.0
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -344,7 +376,11 @@ export const SurfacePreset = StructureRepresentationPresetProvider({
         components.branched,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.35
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -371,11 +407,12 @@ export const PocketPreset = StructureRepresentationPresetProvider({
 
     const components = {
       ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
-      surroundings: await plugin.builders.structure.tryCreateComponentFromSelection(
-        structureCell,
-        ligandSurroundings,
-        `surroundings`
-      )
+      surroundings:
+        await plugin.builders.structure.tryCreateComponentFromSelection(
+          structureCell,
+          ligandSurroundings,
+          `surroundings`
+        )
     }
 
     const { update, builder, typeParams } =
@@ -386,7 +423,11 @@ export const PocketPreset = StructureRepresentationPresetProvider({
         components.ligand,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.26 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.26
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -430,11 +471,12 @@ export const InteractionsPreset = StructureRepresentationPresetProvider({
 
     const components = {
       ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
-      surroundings: await plugin.builders.structure.tryCreateComponentFromSelection(
-        structureCell,
-        ligandSurroundings,
-        `surroundings`
-      ),
+      surroundings:
+        await plugin.builders.structure.tryCreateComponentFromSelection(
+          structureCell,
+          ligandSurroundings,
+          `surroundings`
+        ),
       interactions: await presetStaticComponent(plugin, structureCell, 'ligand')
     }
 
@@ -446,7 +488,11 @@ export const InteractionsPreset = StructureRepresentationPresetProvider({
         components.ligand,
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.3 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.3
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -518,7 +564,10 @@ export const createUniformColorPreset = (colorValue: number, alpha = 1) =>
     display: { name: 'Uniform Color' },
     params: () => PresetParams,
     async apply(ref, params, plugin) {
-      const structureCell = StateObjectRef.resolveAndCheck(plugin.state.data, ref)
+      const structureCell = StateObjectRef.resolveAndCheck(
+        plugin.state.data,
+        ref
+      )
       if (!structureCell) return {}
 
       const color = Color(colorValue)
@@ -526,11 +575,12 @@ export const createUniformColorPreset = (colorValue: number, alpha = 1) =>
       const components = {
         ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
         protein: await presetStaticComponent(plugin, structureCell, 'protein'),
-        nucleic: await plugin.builders.structure.tryCreateComponentFromSelection(
-          structureCell,
-          nucleicResidueQuery,
-          'nucleic'
-        ),
+        nucleic:
+          await plugin.builders.structure.tryCreateComponentFromSelection(
+            structureCell,
+            nucleicResidueQuery,
+            'nucleic'
+          ),
         ions: await presetStaticComponent(plugin, structureCell, 'ion'),
         branched: await presetStaticComponent(plugin, structureCell, 'branched')
       }
@@ -639,7 +689,10 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
     display: { name: 'Domain Color' },
     params: () => PresetParams,
     async apply(ref, params, plugin) {
-      const structureCell = StateObjectRef.resolveAndCheck(plugin.state.data, ref)
+      const structureCell = StateObjectRef.resolveAndCheck(
+        plugin.state.data,
+        ref
+      )
       if (!structureCell) return {}
 
       // Get typeParams/builder before component creation; update must be created
@@ -651,7 +704,8 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const components: Record<string, any> = {}
-      const allDomainExpressions: ReturnType<typeof buildSegmentExpression>[] = []
+      const allDomainExpressions: ReturnType<typeof buildSegmentExpression>[] =
+        []
 
       // Fixed bodies — blue
       for (const body of constraints.fixed_bodies ?? []) {
@@ -667,11 +721,12 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
             tag,
             MS.struct.modifier.union([expr])
           )
-          components[tag] = await plugin.builders.structure.tryCreateComponentFromSelection(
-            structureCell,
-            q,
-            tag
-          )
+          components[tag] =
+            await plugin.builders.structure.tryCreateComponentFromSelection(
+              structureCell,
+              q,
+              tag
+            )
         }
       }
 
@@ -689,11 +744,12 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
             tag,
             MS.struct.modifier.union([expr])
           )
-          components[tag] = await plugin.builders.structure.tryCreateComponentFromSelection(
-            structureCell,
-            q,
-            tag
-          )
+          components[tag] =
+            await plugin.builders.structure.tryCreateComponentFromSelection(
+              structureCell,
+              q,
+              tag
+            )
         }
       }
 
@@ -718,9 +774,21 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
         )
 
       // Standard non-polymer components
-      components['ligand'] = await presetStaticComponent(plugin, structureCell, 'ligand')
-      components['ions'] = await presetStaticComponent(plugin, structureCell, 'ion')
-      components['branched'] = await presetStaticComponent(plugin, structureCell, 'branched')
+      components['ligand'] = await presetStaticComponent(
+        plugin,
+        structureCell,
+        'ligand'
+      )
+      components['ions'] = await presetStaticComponent(
+        plugin,
+        structureCell,
+        'ion'
+      )
+      components['branched'] = await presetStaticComponent(
+        plugin,
+        structureCell,
+        'branched'
+      )
 
       // All components are now committed to the live state tree.
       // Create the update builder NOW so its snapshot includes them all.
@@ -781,7 +849,11 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
         components['ligand'],
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.35
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -792,7 +864,11 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
         components['ions'],
         {
           type: 'spacefill',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 1.0 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 1.0
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },
@@ -803,7 +879,11 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
         components['branched'],
         {
           type: 'ball-and-stick',
-          typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 },
+          typeParams: {
+            ...typeParams,
+            material: CustomMaterial,
+            sizeFactor: 0.35
+          },
           color: 'element-symbol',
           colorParams: { carbonColor: { name: 'element-symbol', params: {} } }
         },

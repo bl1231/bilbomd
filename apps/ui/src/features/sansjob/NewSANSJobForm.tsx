@@ -114,7 +114,6 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
 
-
   const handleStatusCheck = (isUnavailable: boolean) => {
     setIsPerlmutterUnavailable(isUnavailable)
   }
@@ -317,10 +316,9 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             setPdbWarning(
                               metalFound.length > 0 ? (
                                 <>
-                                  The following metal-containing residues
-                                  have no force-field parameters and will
-                                  be removed before MD:{' '}
-                                  {metalFound.join(', ')}. If these
+                                  The following metal-containing residues have
+                                  no force-field parameters and will be removed
+                                  before MD: {metalFound.join(', ')}. If these
                                   residues are important for your system,
                                   consider using{' '}
                                   <Button
@@ -401,7 +399,9 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }}
                       />
                     </Grid>
-                    <Grid sx={{ display: 'flex', width: '100%', maxWidth: '520px' }}>
+                    <Grid
+                      sx={{ display: 'flex', width: '100%', maxWidth: '520px' }}
+                    >
                       <Alert severity="info">
                         <Typography>
                           <b>Rg Min</b> and <b>Rg Max</b> will be calculated
@@ -421,7 +421,14 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Box>
                     )}
                     {/* Rg Min */}
-                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
+                    <Grid
+                      sx={{
+                        my: 2,
+                        display: 'flex',
+                        width: '100%',
+                        maxWidth: '520px'
+                      }}
+                    >
                       <Field
                         label="Rg Min"
                         fullWidth
@@ -443,7 +450,14 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                     </Grid>
 
                     {/* rRg Max */}
-                    <Grid sx={{ my: 2, display: 'flex', width: '100%', maxWidth: '520px' }}>
+                    <Grid
+                      sx={{
+                        my: 2,
+                        display: 'flex',
+                        width: '100%',
+                        maxWidth: '520px'
+                      }}
+                    >
                       <Field
                         label="Rg Max"
                         fullWidth

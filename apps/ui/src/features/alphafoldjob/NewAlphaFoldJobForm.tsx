@@ -169,11 +169,7 @@ const Instructions = () => (
   </Grid>
 )
 
-const PipelineSchematic = ({
-  mdEngine
-}: {
-  mdEngine: 'charmm' | 'openmm'
-}) => (
+const PipelineSchematic = ({ mdEngine }: { mdEngine: 'charmm' | 'openmm' }) => (
   <Grid size={{ xs: 12 }}>
     <HeaderBox>
       <Typography>BilboMD AF Schematic</Typography>
@@ -504,7 +500,6 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const useAlphaFold = config.enableBilboMdAlphaFold?.toLowerCase() === 'true'
   const useNersc = config.useNersc?.toLowerCase() === 'true'
 
-
   const initialValues: NewAlphaFoldJobFormValues = {
     title: '',
     dat_file: '',
@@ -616,220 +611,233 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                 </Alert>
               )}
               <Formik<NewAlphaFoldJobFormValues>
-              initialValues={initialValues}
-              validationSchema={
-                useExampleData ? undefined : BilboMDAlphaFoldJobSchema
-              }
-              onSubmit={onSubmit}
-            >
-              {({
-                values,
-                errors,
-                touched,
-                isValid,
-                isSubmitting,
-                handleChange,
-                handleBlur,
-                status,
-                setFieldValue,
-                setFieldTouched,
-                validateForm
-              }) => (
-                <Form>
-                  <Grid
-                    container
-                    sx={{ flexDirection: 'column' }}
-                  >
-                    {useNersc && (
-                      <NerscStatusChecker
-                        systemName="perlmutter"
-                        onStatusCheck={handleStatusCheck}
-                      />
-                    )}
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        rowGap: 1,
-                        my: 1
-                      }}
+                initialValues={initialValues}
+                validationSchema={
+                  useExampleData ? undefined : BilboMDAlphaFoldJobSchema
+                }
+                onSubmit={onSubmit}
+              >
+                {({
+                  values,
+                  errors,
+                  touched,
+                  isValid,
+                  isSubmitting,
+                  handleChange,
+                  handleBlur,
+                  status,
+                  setFieldValue,
+                  setFieldTouched,
+                  validateForm
+                }) => (
+                  <Form>
+                    <Grid
+                      container
+                      sx={{ flexDirection: 'column' }}
                     >
-                      {/* Title */}
-                      <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
-                        <TitleField />
-                      </Box>
-                      <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
-                        <Button
-                          variant={useExampleData ? 'outlined' : 'contained'}
-                          onClick={() => {
-                            setUseExampleData(!useExampleData)
-                            if (!useExampleData) {
-                              void setFieldValue(
-                                'title',
-                                'example-alphafold-job'
-                              )
-                              // Set example dat_file
-                              void setFieldValue('dat_file', 'example-saxs.dat')
-                              // Set example entities data
-                              void setFieldValue('entities', [
-                                {
-                                  id: '1',
-                                  name: 'pro-1',
-                                  sequence: [
-                                    'MGKKRTKGKTVPIDDSSETLEPVCRHIRKGLEQGNLKKALVNVEWNICQDCKTDNKVKDKAEEETEEKPSVWLCLKCGHQ',
-                                    'GCGRNSQEQHALKHYLTPRSEPHCLVLSLDNWSVWCYVCDNEVQYCSSNQLGQVVDYVRKQASITTPKPAEKDNGNIELE',
-                                    'NKKLEKESKNEQEREKKENMAKENPPMNSPCQITVKGLSNLGNTCFFNAVMQNLSQTPVLRELLKEVKMSGTIVKIEPPD',
-                                    'LALTEPLEINLEPPGPLTLAMSQFLNEMQETKKGVVTPKELFSQVCKKAVRFKGYQQQDSQELLRYLLDGMRAEEHQRVS',
-                                    'KGILKAFGNSTEKLDEELKNKVKDYEKKKSMPSFVDRIFGGELTSMIMCDQCRTVSLVHESFLDLSLPVLDDQSGKKSVN',
-                                    'DKNLKKTVEDEDQDSEEEKDNDSYIKERSDIPSGTSKHLQKKAKKQAKKQAKNQRRQQKIQGKVLHLNDICTIDHPEDSE',
-                                    'YEAEMSLQGEVNIKSNHISQEGVMHKEYCVNQKDLNGQAKMIESVTDNQKSTEEVDMKNINMDNDLEVLTSSPTRNLNGA',
-                                    'YLTEGSNGEVDISNGFKNLNLNAALHPDEINIEILNDSHTPGTKVYEVVNEDPETAFCTLANREVFNTDECSIQHCLYQF',
-                                    'TRNEKLRDANKLLCEVCTRRQCNGPKANIKGERKHVYTNAKKQMLISLAPPVLTLHLKRFQQAGFNLRKVNKHIKFPEIL',
-                                    'DLAPFCTLKCKNVAEENTRVLYSLYGVVEHSGTMRSGHYTAYAKARTANSHLSNLVLHGDIPQDFEMESKGQWFHISDTH',
-                                    'VQAVPTTKVLNSQAYLLFYERIL'
-                                  ].join(''),
-                                  type: 'Protein',
-                                  copies: 1,
-                                  seq_length: 823
-                                }
-                              ])
-                            } else {
-                              void setFieldValue('title', '')
-                              void setFieldValue('dat_file', '')
-                              // Reset to initial empty entity
-                              void setFieldValue('entities', [
-                                {
-                                  id: '1',
-                                  name: 'pro-1',
-                                  sequence: '',
-                                  type: 'Protein',
-                                  copies: 1,
-                                  seq_length: 0
-                                }
-                              ])
-                            }
-                            // Delay validation to ensure form state has been updated
-                            // Force validation after state update
-                            setTimeout(async () => {
-                              await validateForm()
-                            }, 100)
+                      {useNersc && (
+                        <NerscStatusChecker
+                          systemName="perlmutter"
+                          onStatusCheck={handleStatusCheck}
+                        />
+                      )}
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          rowGap: 1,
+                          my: 1
+                        }}
+                      >
+                        {/* Title */}
+                        <Box
+                          sx={{
+                            minWidth: { xs: 0, md: '520px' },
+                            width: '100%',
+                            maxWidth: '520px'
                           }}
                         >
-                          {useExampleData
-                            ? 'Use Custom Data'
-                            : 'Load Example Data'}
-                        </Button>
-                      </Box>
-                      <Box sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}>
-                        <Button
-                          variant="contained"
-                          href={'/api/v1/public/examples/af'}
+                          <TitleField />
+                        </Box>
+                        <Box
+                          sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}
                         >
-                          Download Example Data
-                        </Button>
+                          <Button
+                            variant={useExampleData ? 'outlined' : 'contained'}
+                            onClick={() => {
+                              setUseExampleData(!useExampleData)
+                              if (!useExampleData) {
+                                void setFieldValue(
+                                  'title',
+                                  'example-alphafold-job'
+                                )
+                                // Set example dat_file
+                                void setFieldValue(
+                                  'dat_file',
+                                  'example-saxs.dat'
+                                )
+                                // Set example entities data
+                                void setFieldValue('entities', [
+                                  {
+                                    id: '1',
+                                    name: 'pro-1',
+                                    sequence: [
+                                      'MGKKRTKGKTVPIDDSSETLEPVCRHIRKGLEQGNLKKALVNVEWNICQDCKTDNKVKDKAEEETEEKPSVWLCLKCGHQ',
+                                      'GCGRNSQEQHALKHYLTPRSEPHCLVLSLDNWSVWCYVCDNEVQYCSSNQLGQVVDYVRKQASITTPKPAEKDNGNIELE',
+                                      'NKKLEKESKNEQEREKKENMAKENPPMNSPCQITVKGLSNLGNTCFFNAVMQNLSQTPVLRELLKEVKMSGTIVKIEPPD',
+                                      'LALTEPLEINLEPPGPLTLAMSQFLNEMQETKKGVVTPKELFSQVCKKAVRFKGYQQQDSQELLRYLLDGMRAEEHQRVS',
+                                      'KGILKAFGNSTEKLDEELKNKVKDYEKKKSMPSFVDRIFGGELTSMIMCDQCRTVSLVHESFLDLSLPVLDDQSGKKSVN',
+                                      'DKNLKKTVEDEDQDSEEEKDNDSYIKERSDIPSGTSKHLQKKAKKQAKKQAKNQRRQQKIQGKVLHLNDICTIDHPEDSE',
+                                      'YEAEMSLQGEVNIKSNHISQEGVMHKEYCVNQKDLNGQAKMIESVTDNQKSTEEVDMKNINMDNDLEVLTSSPTRNLNGA',
+                                      'YLTEGSNGEVDISNGFKNLNLNAALHPDEINIEILNDSHTPGTKVYEVVNEDPETAFCTLANREVFNTDECSIQHCLYQF',
+                                      'TRNEKLRDANKLLCEVCTRRQCNGPKANIKGERKHVYTNAKKQMLISLAPPVLTLHLKRFQQAGFNLRKVNKHIKFPEIL',
+                                      'DLAPFCTLKCKNVAEENTRVLYSLYGVVEHSGTMRSGHYTAYAKARTANSHLSNLVLHGDIPQDFEMESKGQWFHISDTH',
+                                      'VQAVPTTKVLNSQAYLLFYERIL'
+                                    ].join(''),
+                                    type: 'Protein',
+                                    copies: 1,
+                                    seq_length: 823
+                                  }
+                                ])
+                              } else {
+                                void setFieldValue('title', '')
+                                void setFieldValue('dat_file', '')
+                                // Reset to initial empty entity
+                                void setFieldValue('entities', [
+                                  {
+                                    id: '1',
+                                    name: 'pro-1',
+                                    sequence: '',
+                                    type: 'Protein',
+                                    copies: 1,
+                                    seq_length: 0
+                                  }
+                                ])
+                              }
+                              // Delay validation to ensure form state has been updated
+                              // Force validation after state update
+                              setTimeout(async () => {
+                                await validateForm()
+                              }, 100)
+                            }}
+                          >
+                            {useExampleData
+                              ? 'Use Custom Data'
+                              : 'Load Example Data'}
+                          </Button>
+                        </Box>
+                        <Box
+                          sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}
+                        >
+                          <Button
+                            variant="contained"
+                            href={'/api/v1/public/examples/af'}
+                          >
+                            Download Example Data
+                          </Button>
+                        </Box>
                       </Box>
-                    </Box>
 
-                    {useExampleData && (
-                      <Alert
-                        severity="warning"
-                        sx={{ my: 1 }}
-                      >
-                        Using example data for Auto mode
-                      </Alert>
-                    )}
+                      {useExampleData && (
+                        <Alert
+                          severity="warning"
+                          sx={{ my: 1 }}
+                        >
+                          Using example data for Auto mode
+                        </Alert>
+                      )}
 
-                    {submitError && (
-                      <Alert
-                        severity="error"
-                        sx={{ my: 1 }}
-                      >
-                        {submitError}
-                      </Alert>
-                    )}
+                      {submitError && (
+                        <Alert
+                          severity="error"
+                          sx={{ my: 1 }}
+                        >
+                          {submitError}
+                        </Alert>
+                      )}
 
-                    {/* Entities */}
-                    <Grid sx={{ my: 2 }}>
-                      <EntitiesFieldArray
-                        values={values}
-                        errors={errors}
-                        touched={touched}
-                        handleChange={handleChange}
-                        handleBlur={handleBlur}
-                        setFieldValue={setFieldValue}
-                        useExampleData={useExampleData}
+                      {/* Entities */}
+                      <Grid sx={{ my: 2 }}>
+                        <EntitiesFieldArray
+                          values={values}
+                          errors={errors}
+                          touched={touched}
+                          handleChange={handleChange}
+                          handleBlur={handleBlur}
+                          setFieldValue={setFieldValue}
+                          useExampleData={useExampleData}
+                        />
+
+                        {/* Conditionally display error messages for alphafold_entities */}
+                        {Array.isArray(errors.entities) &&
+                        Array.isArray(touched.entities)
+                          ? (errors.entities as FormikErrors<Entity>[]).map(
+                              (error, idx) =>
+                                error && (
+                                  <Box
+                                    key={idx}
+                                    sx={{ my: 2 }}
+                                  >
+                                    {error.sequence && (
+                                      <Alert severity="error">{`Entity ${
+                                        idx + 1
+                                      } sequence: ${error.sequence}`}</Alert>
+                                    )}
+                                    {error.type && (
+                                      <Alert severity="error">{`Entity ${
+                                        idx + 1
+                                      } type: ${error.type}`}</Alert>
+                                    )}
+                                    {error.copies && (
+                                      <Alert severity="error">{`Entity ${
+                                        idx + 1
+                                      } copies: ${error.copies}`}</Alert>
+                                    )}
+                                  </Box>
+                                )
+                            )
+                          : null}
+                      </Grid>
+
+                      {/* SAXS dat file */}
+                      <Grid>
+                        <Field
+                          name="dat_file"
+                          id="dat-file-upload"
+                          as={FileSelect}
+                          title="Select File"
+                          disabled={isSubmitting || useExampleData}
+                          setFieldValue={setFieldValue}
+                          setFieldTouched={setFieldTouched}
+                          error={errors.dat_file && touched.dat_file}
+                          errorMessage={errors.dat_file ? errors.dat_file : ''}
+                          fileType="experimental SAXS data *.dat"
+                          fileExt=".dat"
+                          existingFileName={
+                            useExampleData ? 'example-saxs.dat' : undefined
+                          }
+                        />
+                      </Grid>
+
+                      {/* Progress Bar */}
+                      {isSubmitting && (
+                        <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
+                          <LinearProgress />
+                        </Box>
+                      )}
+
+                      {/* Submit Button */}
+                      <SubmitButton
+                        isSubmitting={isSubmitting}
+                        isValid={useExampleData ? true : isValid}
+                        isFormValid={isFormValid(values)}
+                        status={status}
                       />
-
-                      {/* Conditionally display error messages for alphafold_entities */}
-                      {Array.isArray(errors.entities) &&
-                      Array.isArray(touched.entities)
-                        ? (errors.entities as FormikErrors<Entity>[]).map(
-                            (error, idx) =>
-                              error && (
-                                <Box
-                                  key={idx}
-                                  sx={{ my: 2 }}
-                                >
-                                  {error.sequence && (
-                                    <Alert severity="error">{`Entity ${
-                                      idx + 1
-                                    } sequence: ${error.sequence}`}</Alert>
-                                  )}
-                                  {error.type && (
-                                    <Alert severity="error">{`Entity ${
-                                      idx + 1
-                                    } type: ${error.type}`}</Alert>
-                                  )}
-                                  {error.copies && (
-                                    <Alert severity="error">{`Entity ${
-                                      idx + 1
-                                    } copies: ${error.copies}`}</Alert>
-                                  )}
-                                </Box>
-                              )
-                          )
-                        : null}
                     </Grid>
-
-                    {/* SAXS dat file */}
-                    <Grid>
-                      <Field
-                        name="dat_file"
-                        id="dat-file-upload"
-                        as={FileSelect}
-                        title="Select File"
-                        disabled={isSubmitting || useExampleData}
-                        setFieldValue={setFieldValue}
-                        setFieldTouched={setFieldTouched}
-                        error={errors.dat_file && touched.dat_file}
-                        errorMessage={errors.dat_file ? errors.dat_file : ''}
-                        fileType="experimental SAXS data *.dat"
-                        fileExt=".dat"
-                        existingFileName={
-                          useExampleData ? 'example-saxs.dat' : undefined
-                        }
-                      />
-                    </Grid>
-
-                    {/* Progress Bar */}
-                    {isSubmitting && (
-                      <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
-                        <LinearProgress />
-                      </Box>
-                    )}
-
-                    {/* Submit Button */}
-                    <SubmitButton
-                      isSubmitting={isSubmitting}
-                      isValid={useExampleData ? true : isValid}
-                      isFormValid={isFormValid(values)}
-                      status={status}
-                    />
-                  </Grid>
-                  {import.meta.env.MODE === 'development' ? <Debug /> : ''}
-                </Form>
-              )}
+                    {import.meta.env.MODE === 'development' ? <Debug /> : ''}
+                  </Form>
+                )}
               </Formik>
             </>
           )}

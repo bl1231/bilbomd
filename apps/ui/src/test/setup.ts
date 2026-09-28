@@ -25,19 +25,19 @@ const makeStorageMock = (): Storage => {
     get length() {
       return store.size
     },
-    key: (index: number) => [...store.keys()][index] ?? null,
+    key: (index: number) => [...store.keys()][index] ?? null
   } as Storage
 }
 
 Object.defineProperty(globalThis, 'localStorage', {
   value: makeStorageMock(),
   configurable: true,
-  writable: true,
+  writable: true
 })
 Object.defineProperty(globalThis, 'sessionStorage', {
   value: makeStorageMock(),
   configurable: true,
-  writable: true,
+  writable: true
 })
 
 // Polyfill ResizeObserver for Recharts

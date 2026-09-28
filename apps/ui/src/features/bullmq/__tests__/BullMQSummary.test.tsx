@@ -19,7 +19,11 @@ const useGetQueueStateQueryMock = useGetQueueStateQuery as unknown as Mock
 const queues = (bilbomdWorkers: number, scoperWorkers: number) =>
   useGetQueueStateQueryMock.mockReturnValue({
     data: {
-      bilbomd: { active_count: 0, waiting_count: 0, worker_count: bilbomdWorkers },
+      bilbomd: {
+        active_count: 0,
+        waiting_count: 0,
+        worker_count: bilbomdWorkers
+      },
       scoper: { active_count: 0, waiting_count: 1, worker_count: scoperWorkers }
     },
     isLoading: false,
@@ -39,9 +43,7 @@ describe('BullMQSummary', () => {
 
     render(<BullMQSummary />)
 
-    expect(
-      screen.getByText(/No SCOPER worker is running/)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/No SCOPER worker is running/)).toBeInTheDocument()
     expect(screen.queryByText(/No BilboMD worker/)).not.toBeInTheDocument()
   })
 

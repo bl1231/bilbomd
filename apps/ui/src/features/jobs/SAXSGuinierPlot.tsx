@@ -9,7 +9,14 @@ import {
   ResponsiveContainer,
   ReferenceArea
 } from 'recharts'
-import { Typography, Box, Table, TableBody, TableRow, TableCell } from '@mui/material'
+import {
+  Typography,
+  Box,
+  Table,
+  TableBody,
+  TableRow,
+  TableCell
+} from '@mui/material'
 
 interface SAXSDataPoint {
   q: number
@@ -62,7 +69,10 @@ const SAXSGuinierPlot = ({ data, qmin, qmax }: SAXSGuinierPlotProps) => {
     }
   }
   if (segStart !== null) {
-    lowSnrSegments.push({ x1: segStart, x2: validData[validData.length - 1]!.q })
+    lowSnrSegments.push({
+      x1: segStart,
+      x2: validData[validData.length - 1]!.q
+    })
   }
 
   return (
@@ -153,16 +163,64 @@ const SAXSGuinierPlot = ({ data, qmin, qmax }: SAXSGuinierPlotProps) => {
       >
         <TableBody>
           <TableRow>
-            <TableCell sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}>q min</TableCell>
-            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.75rem' }}>{xDomain[0].toFixed(4)} Å⁻¹</TableCell>
-            <TableCell sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}>I(q) min</TableCell>
-            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.75rem' }}>{yMin.toExponential(2)}</TableCell>
+            <TableCell
+              sx={{
+                py: 0.25,
+                pr: 2,
+                border: 0,
+                color: 'text.secondary',
+                fontSize: '0.75rem'
+              }}
+            >
+              q min
+            </TableCell>
+            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.75rem' }}>
+              {xDomain[0].toFixed(4)} Å⁻¹
+            </TableCell>
+            <TableCell
+              sx={{
+                py: 0.25,
+                pr: 2,
+                border: 0,
+                color: 'text.secondary',
+                fontSize: '0.75rem'
+              }}
+            >
+              I(q) min
+            </TableCell>
+            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.75rem' }}>
+              {yMin.toExponential(2)}
+            </TableCell>
           </TableRow>
           <TableRow>
-            <TableCell sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}>q max</TableCell>
-            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.75rem' }}>{xDomain[1].toFixed(4)} Å⁻¹</TableCell>
-            <TableCell sx={{ py: 0.25, pr: 2, border: 0, color: 'text.secondary', fontSize: '0.75rem' }}>I(q) max</TableCell>
-            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.75rem' }}>{yMax.toExponential(2)}</TableCell>
+            <TableCell
+              sx={{
+                py: 0.25,
+                pr: 2,
+                border: 0,
+                color: 'text.secondary',
+                fontSize: '0.75rem'
+              }}
+            >
+              q max
+            </TableCell>
+            <TableCell sx={{ py: 0.25, pr: 3, border: 0, fontSize: '0.75rem' }}>
+              {xDomain[1].toFixed(4)} Å⁻¹
+            </TableCell>
+            <TableCell
+              sx={{
+                py: 0.25,
+                pr: 2,
+                border: 0,
+                color: 'text.secondary',
+                fontSize: '0.75rem'
+              }}
+            >
+              I(q) max
+            </TableCell>
+            <TableCell sx={{ py: 0.25, border: 0, fontSize: '0.75rem' }}>
+              {yMax.toExponential(2)}
+            </TableCell>
           </TableRow>
         </TableBody>
       </Table>

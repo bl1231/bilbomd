@@ -13,10 +13,9 @@ import {
 
 // Mock the mongoose models
 vi.mock('@bilbomd/mongodb-schema', async () => {
-  const actual =
-    await vi.importActual<typeof import('@bilbomd/mongodb-schema')>(
-      '@bilbomd/mongodb-schema'
-    )
+  const actual = await vi.importActual<
+    typeof import('@bilbomd/mongodb-schema')
+  >('@bilbomd/mongodb-schema')
   return {
     ...actual,
     BilboMdPDBJob: {

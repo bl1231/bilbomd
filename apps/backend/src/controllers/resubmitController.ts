@@ -33,7 +33,9 @@ const checkFiles = async (req: Request, res: Response) => {
     const fileStatus: Record<string, boolean> = {}
 
     for (const [jobField, frontendField] of Object.entries(fieldsToCheck)) {
-      const relPath = (job as unknown as Partial<Record<string, string>>)[jobField]
+      const relPath = (job as unknown as Partial<Record<string, string>>)[
+        jobField
+      ]
       if (typeof relPath === 'string' && relPath.length > 0) {
         const absPath = path.join(uploadFolder, job.uuid, relPath)
         fileStatus[frontendField] = await fs.pathExists(absPath)

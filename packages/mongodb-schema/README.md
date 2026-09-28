@@ -22,11 +22,10 @@ git commit -m "Bump version to x.x.x-dev.x"
 git push
 
 npm show @bl1231/bilbomd-mongodb-schema@dev
-npm dist-tag ls @bl1231/bilbomd-mongodb-schema 
+npm dist-tag ls @bl1231/bilbomd-mongodb-schema
 ```
 
 otherwise any push to `main` will trigger an increment as long as the "version" in package.json is `X.X.X-dev.X`
-
 
 ### stable release
 

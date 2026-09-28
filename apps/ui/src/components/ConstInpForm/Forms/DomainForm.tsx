@@ -50,14 +50,20 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
 
   return (
     <>
-      <Grid container spacing={2}>
+      <Grid
+        container
+        spacing={2}
+      >
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
             <Typography>Instructions</Typography>
           </HeaderBox>
           <Paper sx={{ p: 1 }}>
             <Box>
-              <Typography variant='h4' sx={{ m: 1 }}>
+              <Typography
+                variant="h4"
+                sx={{ m: 1 }}
+              >
                 Define Rigid Bodies
               </Typography>
               <Typography sx={{ m: 1 }}>
@@ -102,7 +108,10 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
           <Paper sx={{ p: 1 }}>
             <Grid container>
               <Grid sx={{ width: '100%' }}>
-                <Typography variant='h5' sx={{ py: 1, ml: 1 }}>
+                <Typography
+                  variant="h5"
+                  sx={{ py: 1, ml: 1 }}
+                >
                   Macromolecule types:
                 </Typography>
                 {macroMolecules.map((chain: string, index: number) => (
@@ -113,13 +122,18 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                       mr: 1,
                       mb: 1,
                       backgroundColor: customColors[chain] || '#9773b9',
-                      color: theme.palette.getContrastText(customColors[chain] ?? '#9773b9')
+                      color: theme.palette.getContrastText(
+                        customColors[chain] ?? '#9773b9'
+                      )
                     }}
                   />
                 ))}
               </Grid>
               <Grid sx={{ width: '100%' }}>
-                <Typography variant='h5' sx={{ py: 1, ml: 1 }}>
+                <Typography
+                  variant="h5"
+                  sx={{ py: 1, ml: 1 }}
+                >
                   Available Chains (and residue range):
                 </Typography>
                 {values.pdb_file.chains.map((chain: Chain, index: number) => (
@@ -138,7 +152,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                 ))}
               </Grid>
               <Grid sx={{ my: 3 }}>
-                <FieldArray name='pdb_file.rigid_bodies'>
+                <FieldArray name="pdb_file.rigid_bodies">
                   {(arrayHelpers) => (
                     <>
                       {values.pdb_file.rigid_bodies.length > 0 &&
@@ -155,18 +169,24 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                                     alignContent: 'baseline'
                                   }}
                                 >
-                                  <Typography variant='h4'>
+                                  <Typography variant="h4">
                                     Rigid Body: <Chip label={rigid_body.id} />
                                   </Typography>
                                   {values.pdb_file.rigid_bodies[index]?.id ===
                                   'PRIMARY' ? (
-                                    <Alert severity='warning' sx={{ ml: 2 }}>
+                                    <Alert
+                                      severity="warning"
+                                      sx={{ ml: 2 }}
+                                    >
                                       Segments in the <b>PRIMARY</b> Rigid Body
                                       will remain <b>fixed</b> during the
                                       Molecular Dynamics steps.
                                     </Alert>
                                   ) : (
-                                    <Alert severity='warning' sx={{ ml: 2 }}>
+                                    <Alert
+                                      severity="warning"
+                                      sx={{ ml: 2 }}
+                                    >
                                       Segments in <b>{rigid_body.id}</b> will
                                       move together <b>and</b> relative to the{' '}
                                       <b>PRIMARY</b> Rigid Body.
@@ -181,13 +201,13 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                                 {values.pdb_file.rigid_bodies[index]?.id !==
                                 'PRIMARY' ? (
                                   <Button
-                                    variant='contained'
-                                    color='error'
+                                    variant="contained"
+                                    color="error"
                                     onClick={() => {
                                       decrementRigidBodyIndex()
                                       arrayHelpers.remove(index)
                                     }}
-                                    size='small'
+                                    size="small"
                                   >
                                     {/* Delete {values.pdb_file.rigid_bodies[index]?.id} */}
                                     Delete Rigid Body
@@ -199,7 +219,10 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                             </Fragment>
                           )
                         )}
-                      <Grid container sx={{ justifyContent: 'flex-end' }}>
+                      <Grid
+                        container
+                        sx={{ justifyContent: 'flex-end' }}
+                      >
                         <Grid
                           size={{ xs: 12 }}
                           sx={{
@@ -209,7 +232,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                           }}
                         >
                           <Button
-                            variant='contained'
+                            variant="contained"
                             onClick={() => {
                               incrementRigidBodyIndex()
                               const new_rigid_body = {
@@ -225,7 +248,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                               arrayHelpers.push(new_rigid_body)
                             }}
                             startIcon={<AddIcon />}
-                            size='large'
+                            size="large"
                             sx={{}}
                           >
                             Add Rigid Body

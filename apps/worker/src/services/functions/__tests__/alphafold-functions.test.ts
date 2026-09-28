@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  RANK1_PAE_PATTERN,
-  RANK1_PDB_PATTERN
-} from '../alphafold-functions.js'
+import { RANK1_PAE_PATTERN, RANK1_PDB_PATTERN } from '../alphafold-functions.js'
 
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: {

@@ -42,7 +42,9 @@ describe('redisConn', () => {
     vi.stubEnv('REDIS_PASSWORD', 's3cret')
     vi.resetModules()
     await import('../redisConn.js')
-    expect(hoisted.constructorCalls.at(-1)).toMatchObject({ password: 's3cret' })
+    expect(hoisted.constructorCalls.at(-1)).toMatchObject({
+      password: 's3cret'
+    })
     vi.unstubAllEnvs()
   })
 
@@ -55,7 +57,10 @@ describe('redisConn', () => {
 
   it('logs connection errors instead of crashing the process', () => {
     expect(() =>
-      (redis as unknown as EventEmitter).emit('error', new Error('connect ECONNREFUSED'))
+      (redis as unknown as EventEmitter).emit(
+        'error',
+        new Error('connect ECONNREFUSED')
+      )
     ).not.toThrow()
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('connect ECONNREFUSED')

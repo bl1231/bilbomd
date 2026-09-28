@@ -16,7 +16,12 @@ vi.mock('@bilbomd/md-utils', () => ({
   discriminatorToPipeline: vi.fn((s: string) => s)
 }))
 
-import { User, Job as DBJob, MultiJob, UsageEvent } from '@bilbomd/mongodb-schema'
+import {
+  User,
+  Job as DBJob,
+  MultiJob,
+  UsageEvent
+} from '@bilbomd/mongodb-schema'
 import { getSummaryAnalytics } from '../summary.js'
 import { getJobsByStatus } from '../jobsByStatus.js'
 import { getJobsByType } from '../jobsByType.js'
@@ -44,14 +49,22 @@ beforeEach(() => vi.clearAllMocks())
 describe('getSummaryAnalytics', () => {
   it('returns aggregated counts and pipeline breakdown', async () => {
     const { req, res, json } = makeMocks()
-    vi.mocked(User.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(10) } as never)
+    vi.mocked(User.countDocuments).mockReturnValue({
+      exec: vi.fn().mockResolvedValue(10)
+    } as never)
     vi.mocked(DBJob.countDocuments)
       .mockReturnValueOnce({ exec: vi.fn().mockResolvedValue(50) } as never) // total jobs
       .mockReturnValueOnce({ exec: vi.fn().mockResolvedValue(40) } as never) // completed
-      .mockReturnValueOnce({ exec: vi.fn().mockResolvedValue(5) } as never)  // failed
-    vi.mocked(MultiJob.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(3) } as never)
-    vi.mocked(UsageEvent.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(60) } as never)
-    vi.mocked(UsageEvent.aggregate).mockResolvedValue([{ pipeline: 'pdb', count: 20 }] as never)
+      .mockReturnValueOnce({ exec: vi.fn().mockResolvedValue(5) } as never) // failed
+    vi.mocked(MultiJob.countDocuments).mockReturnValue({
+      exec: vi.fn().mockResolvedValue(3)
+    } as never)
+    vi.mocked(UsageEvent.countDocuments).mockReturnValue({
+      exec: vi.fn().mockResolvedValue(60)
+    } as never)
+    vi.mocked(UsageEvent.aggregate).mockResolvedValue([
+      { pipeline: 'pdb', count: 20 }
+    ] as never)
 
     await getSummaryAnalytics(req, res)
 
@@ -72,15 +85,23 @@ describe('getSummaryAnalytics', () => {
     vi.mocked(User.countDocuments).mockReturnValue({
       exec: vi.fn().mockRejectedValue(new Error('DB error'))
     } as never)
-    vi.mocked(DBJob.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(0) } as never)
-    vi.mocked(MultiJob.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(0) } as never)
-    vi.mocked(UsageEvent.countDocuments).mockReturnValue({ exec: vi.fn().mockResolvedValue(0) } as never)
+    vi.mocked(DBJob.countDocuments).mockReturnValue({
+      exec: vi.fn().mockResolvedValue(0)
+    } as never)
+    vi.mocked(MultiJob.countDocuments).mockReturnValue({
+      exec: vi.fn().mockResolvedValue(0)
+    } as never)
+    vi.mocked(UsageEvent.countDocuments).mockReturnValue({
+      exec: vi.fn().mockResolvedValue(0)
+    } as never)
     vi.mocked(UsageEvent.aggregate).mockResolvedValue([] as never)
 
     await getSummaryAnalytics(req, res)
 
     expect(status).toHaveBeenCalledWith(500)
-    expect(json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringContaining('summary') }))
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.stringContaining('summary') })
+    )
   })
 })
 
@@ -90,7 +111,10 @@ describe('getSummaryAnalytics', () => {
 describe('getJobsByStatus', () => {
   it('returns aggregated status counts', async () => {
     const { req, res, json } = makeMocks()
-    const data = [{ status: 'Completed', count: 30 }, { status: 'Failed', count: 5 }]
+    const data = [
+      { status: 'Completed', count: 30 },
+      { status: 'Failed', count: 5 }
+    ]
     vi.mocked(DBJob.aggregate).mockResolvedValue(data as never)
 
     await getJobsByStatus(req, res)
@@ -114,7 +138,9 @@ describe('getJobsByStatus', () => {
 describe('getJobsByType', () => {
   it('maps discriminator to pipeline names and returns results', async () => {
     const { req, res, json } = makeMocks()
-    vi.mocked(DBJob.aggregate).mockResolvedValue([{ pipeline: 'pdb', count: 10 }] as never)
+    vi.mocked(DBJob.aggregate).mockResolvedValue([
+      { pipeline: 'pdb', count: 10 }
+    ] as never)
 
     await getJobsByType(req, res)
 
@@ -172,7 +198,12 @@ describe('getJobsTimeSeries', () => {
   it('filters by start/end and status/type from query params', async () => {
     const { res, json } = makeMocks()
     const req = {
-      query: { start: '2025-01-01', end: '2025-12-31', status: 'Completed', type: 'Pdb' }
+      query: {
+        start: '2025-01-01',
+        end: '2025-12-31',
+        status: 'Completed',
+        type: 'Pdb'
+      }
     } as unknown as Request
     vi.mocked(DBJob.aggregate).mockResolvedValue([] as never)
 
@@ -180,7 +211,9 @@ describe('getJobsTimeSeries', () => {
 
     expect(DBJob.aggregate).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ $match: expect.objectContaining({ status: 'Completed' }) })
+        expect.objectContaining({
+          $match: expect.objectContaining({ status: 'Completed' })
+        })
       ])
     )
     expect(json).toHaveBeenCalledWith([])
@@ -236,14 +269,18 @@ describe('getUsageDailyCounts', () => {
 
   it('applies date filters from query params', async () => {
     const { res } = makeMocks()
-    const req = { query: { start: '2025-01-01', end: '2025-06-30' } } as unknown as Request
+    const req = {
+      query: { start: '2025-01-01', end: '2025-06-30' }
+    } as unknown as Request
     vi.mocked(UsageEvent.aggregate).mockResolvedValue([] as never)
 
     await getUsageDailyCounts(req, res)
 
     expect(UsageEvent.aggregate).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ $match: expect.objectContaining({ timestamp: expect.any(Object) }) })
+        expect.objectContaining({
+          $match: expect.objectContaining({ timestamp: expect.any(Object) })
+        })
       ])
     )
   })

@@ -14,7 +14,10 @@ vi.mock('@bilbomd/mongodb-schema', () => ({
   Types
 }))
 
-import { buildContext, recordWorkerUsageEvent } from '../functions/usageEvents.js'
+import {
+  buildContext,
+  recordWorkerUsageEvent
+} from '../functions/usageEvents.js'
 
 beforeEach(() => vi.clearAllMocks())
 
@@ -98,9 +101,7 @@ describe('recordWorkerUsageEvent', () => {
 
   it('does not throw when save fails', async () => {
     mockSave.mockRejectedValue(new Error('mongo down'))
-    await expect(
-      recordWorkerUsageEvent(baseParams)
-    ).resolves.toBeUndefined()
+    await expect(recordWorkerUsageEvent(baseParams)).resolves.toBeUndefined()
   })
 
   it('includes optional durationMs and metadata', async () => {

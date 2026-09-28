@@ -7,11 +7,7 @@ vi.mock('../ValidationFunctions', () => ({
   isRNA: async () => ({ valid: true })
 }))
 
-const makeFile = (
-  name: string,
-  size = 100,
-  type = 'text/plain'
-): File => {
+const makeFile = (name: string, size = 100, type = 'text/plain'): File => {
   const blob = new Blob(['x'.repeat(size)], { type })
   const file = new File([blob], name, { type })
   Object.defineProperty(file, 'size', { value: size })
@@ -78,7 +74,6 @@ describe('bilbomdScoperJobSchema - pdb_file', () => {
       bilbomdScoperJobSchema.validateAt('pdb_file', { pdb_file: file })
     ).rejects.toBeTruthy()
   })
-
 })
 
 describe('bilbomdScoperJobSchema - dat_file', () => {

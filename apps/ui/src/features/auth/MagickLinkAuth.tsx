@@ -65,26 +65,26 @@ const MagickLinkAuth = () => {
         {isLoading ? (
           <CircularProgress />
         ) : success ? (
-          <Alert severity='success'>
+          <Alert severity="success">
             <AlertTitle>Woot!</AlertTitle>Your OTP has been successfully
             validated. You will be forwarded to your dashboard in a few seconds.
           </Alert>
         ) : failure?.kind === 'rate_limited' ? (
-          <Alert severity='error'>
+          <Alert severity="error">
             <AlertTitle>Too many attempts</AlertTitle>
             {failure.message} You can also{' '}
-            <Link to='../../magicklink'>request a new MagickLink&#8482;</Link>.
+            <Link to="../../magicklink">request a new MagickLink&#8482;</Link>.
           </Alert>
         ) : failure?.kind === 'unreachable' || failure?.kind === 'server' ? (
-          <Alert severity='error'>
+          <Alert severity="error">
             <AlertTitle>Couldn&apos;t sign you in</AlertTitle>
             {failure.message} If this keeps happening please contact us.
           </Alert>
         ) : (
-          <Alert severity='warning'>
+          <Alert severity="warning">
             <AlertTitle>Warning!</AlertTitle>Hmmmmm. Maybe your
             MagickLink&#8482; has expired? Please try{' '}
-            <Link to='../../magicklink'>generating another</Link>. If that
+            <Link to="../../magicklink">generating another</Link>. If that
             doesn&apos;t work please contact us.
             <br />
             <p>{failure?.message}</p>

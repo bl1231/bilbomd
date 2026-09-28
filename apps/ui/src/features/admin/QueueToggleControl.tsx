@@ -30,8 +30,8 @@ const QueueToggleControl = ({
         <Switch
           checked={!isPaused}
           onChange={handleToggle}
-          size='small'
-          color='primary'
+          size="small"
+          color="primary"
         />
       }
       label={isPaused ? 'Paused' : 'Running'}

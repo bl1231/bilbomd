@@ -131,7 +131,8 @@ const validationSchemas = [
                       return false
                     }
                     const rigidBodies = ctx.from[2]!.value.rigid_bodies
-                    const numRigidBodies = ctx.from[2]!.value.rigid_bodies.length
+                    const numRigidBodies =
+                      ctx.from[2]!.value.rigid_bodies.length
                     for (let idx = 0; idx < numRigidBodies; idx++) {
                       // loop through domains in rigid body
                       const domains = rigidBodies[idx]!.domains
@@ -219,7 +220,8 @@ const validationSchemas = [
                       return false
                     }
                     const rigidBodies = ctx.from[2]!.value.rigid_bodies
-                    const numRigidBodies = ctx.from[2]!.value.rigid_bodies.length
+                    const numRigidBodies =
+                      ctx.from[2]!.value.rigid_bodies.length
                     for (let idx = 0; idx < numRigidBodies; idx++) {
                       // loop through domains in rigid body
                       const domains = rigidBodies[idx]!.domains

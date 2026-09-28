@@ -31,7 +31,10 @@ const UsersList = () => {
 
   if (isError) {
     content = (
-      <Alert severity='error' variant='outlined'>
+      <Alert
+        severity="error"
+        variant="outlined"
+      >
         An error occurred while fetching users.
       </Alert>
     )
@@ -51,7 +54,7 @@ const UsersList = () => {
           <GridActionsCellItem
             key={params.id}
             icon={<EditIcon />}
-            label='Edit'
+            label="Edit"
             onClick={() => navigate(params.id as string)}
           />
         ]
@@ -85,7 +88,7 @@ const UsersList = () => {
 
   if (isSuccess && users.length === 0) {
     content = (
-      <Typography color='error'>
+      <Typography color="error">
         No users available or data format is invalid.
       </Typography>
     )

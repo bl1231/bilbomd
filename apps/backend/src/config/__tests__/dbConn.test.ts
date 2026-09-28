@@ -36,7 +36,9 @@ describe('connectDB', () => {
     await connectDB()
 
     expect(mockConnect).toHaveBeenCalledTimes(1)
-    expect(logger.info).toHaveBeenCalledWith('Successfully connected to MongoDB')
+    expect(logger.info).toHaveBeenCalledWith(
+      'Successfully connected to MongoDB'
+    )
     expect(logger.error).not.toHaveBeenCalled()
   })
 
@@ -53,7 +55,9 @@ describe('connectDB', () => {
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('MongoDB connection attempt 1 failed')
     )
-    expect(logger.info).toHaveBeenCalledWith('Successfully connected to MongoDB')
+    expect(logger.info).toHaveBeenCalledWith(
+      'Successfully connected to MongoDB'
+    )
   })
 
   it('backs off exponentially between attempts', async () => {
@@ -79,7 +83,9 @@ describe('connectDB', () => {
     await vi.advanceTimersByTimeAsync(20_000)
     await promise
     expect(mockConnect).toHaveBeenCalledTimes(4)
-    expect(logger.info).toHaveBeenCalledWith('Successfully connected to MongoDB')
+    expect(logger.info).toHaveBeenCalledWith(
+      'Successfully connected to MongoDB'
+    )
   })
 
   it('caps the retry delay at 60 seconds', async () => {
@@ -101,7 +107,9 @@ describe('connectDB', () => {
     await vi.advanceTimersByTimeAsync(60_000)
     await promise
     expect(mockConnect).toHaveBeenCalledTimes(7)
-    expect(logger.info).toHaveBeenCalledWith('Successfully connected to MongoDB')
+    expect(logger.info).toHaveBeenCalledWith(
+      'Successfully connected to MongoDB'
+    )
   })
 
   it('never rejects while MongoDB stays down', async () => {

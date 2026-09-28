@@ -25,7 +25,10 @@ const makeEnsemble = (size: number): IEnsemble => ({
 describe('EnsembleWeightsPanel', () => {
   test('renders nothing when there are no ensembles', () => {
     const { container } = render(
-      <EnsembleWeightsPanel ensembles={[]} visibility={{}} />
+      <EnsembleWeightsPanel
+        ensembles={[]}
+        visibility={{}}
+      />
     )
     expect(container).toBeEmptyDOMElement()
   })

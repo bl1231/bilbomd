@@ -1,6 +1,10 @@
 import { Job as BullMQJob, Queue } from 'bullmq'
 import { logger } from '../middleware/loggers.js'
-import { BilboMDBullMQ, BullMQData, BilboMDScoperSteps } from '../types/bilbomd.js'
+import {
+  BilboMDBullMQ,
+  BullMQData,
+  BilboMDScoperSteps
+} from '../types/bilbomd.js'
 import { config } from '../config/config.js'
 import { redis } from './redisConn.js'
 
@@ -28,13 +32,17 @@ const queueScoperJob = async (data: BullMQData) => {
   try {
     const queue = getQueue()
 
-    logger.info(`${data.type} Job ${data.title} about to be added to ${queue.name} queue`)
+    logger.info(
+      `${data.type} Job ${data.title} about to be added to ${queue.name} queue`
+    )
 
     const bullJob = await queue.add(data.title, data)
 
     return bullJob.id
   } catch (error) {
-    logger.error(`Error adding ${data.type} Job to ${queue.name} queue: ${error}`)
+    logger.error(
+      `Error adding ${data.type} Job to ${queue.name} queue: ${error}`
+    )
     throw error
   }
 }
@@ -77,7 +85,9 @@ const getWaitingPositionText = async (bullmq: BullMQJob): Promise<string> => {
   return `${position} out of ${totalNumberWaiting}`
 }
 
-const getBullMQScoperJob = async (UUID: string): Promise<BilboMDBullMQ | undefined> => {
+const getBullMQScoperJob = async (
+  UUID: string
+): Promise<BilboMDBullMQ | undefined> => {
   const allJobs: BullMQJob[] = await getAllBullMQScoperJobs()
 
   const bulljob = allJobs.find((job) => {
@@ -130,7 +140,9 @@ const scoperSteps: BilboMDScoperSteps = {
   email: 'no'
 }
 
-const updateBilboMDSteps = async (bullmq: BullMQJob): Promise<BilboMDScoperSteps> => {
+const updateBilboMDSteps = async (
+  bullmq: BullMQJob
+): Promise<BilboMDScoperSteps> => {
   let logData: { count: number; logs: string[] }
 
   if (bullmq.id) {

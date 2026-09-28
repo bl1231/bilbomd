@@ -46,9 +46,9 @@ const otp = async (req: Request, res: Response) => {
       logger.warn(`OTP attempt limit reached for user: ${user.username}`)
       user.otp = null
       await user.save()
-      res
-        .status(429)
-        .json({ message: 'Too many OTP attempts. Please request a new magic link.' })
+      res.status(429).json({
+        message: 'Too many OTP attempts. Please request a new magic link.'
+      })
       return
     }
 
@@ -58,9 +58,9 @@ const otp = async (req: Request, res: Response) => {
       if (newAttempts >= MAX_OTP_ATTEMPTS) {
         user.otp = null
         await user.save()
-        res
-          .status(429)
-          .json({ message: 'Too many OTP attempts. Please request a new magic link.' })
+        res.status(429).json({
+          message: 'Too many OTP attempts. Please request a new magic link.'
+        })
       } else {
         user.otp.attempts = newAttempts
         await user.save()

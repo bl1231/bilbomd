@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { chainIdCheck, pdbLineStartCheck, singleModelCheck } from '../fieldTests'
+import {
+  chainIdCheck,
+  pdbLineStartCheck,
+  singleModelCheck
+} from '../fieldTests'
 
 const makeFile = (name: string, content: string, type = 'text/plain') => {
   const blob = new Blob([content], { type })

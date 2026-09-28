@@ -49,7 +49,10 @@ import { notifyJobChanged } from '../helpers/jobEvents.js'
 import { User } from '@bilbomd/mongodb-schema'
 
 // Keep a plain type for assertions; cast to the real interface when calling functions
-type FakeMQJob = { clearLogs: ReturnType<typeof vi.fn>; log: ReturnType<typeof vi.fn> }
+type FakeMQJob = {
+  clearLogs: ReturnType<typeof vi.fn>
+  log: ReturnType<typeof vi.fn>
+}
 type FakeDBJob = {
   _id: Types.ObjectId
   uuid: string
@@ -92,7 +95,10 @@ describe('initializeJob', () => {
   it('clears BullMQ logs, sets status to Running, and saves', async () => {
     const MQjob = makeMQJob()
     const DBjob = makeDBJob()
-    await initializeJob(MQjob as unknown as BullMQJob, DBjob as unknown as IBilboMDScoperJob)
+    await initializeJob(
+      MQjob as unknown as BullMQJob,
+      DBjob as unknown as IBilboMDScoperJob
+    )
     expect(MQjob.clearLogs).toHaveBeenCalledOnce()
     expect(DBjob.status).toBe('Running')
     expect(DBjob.time_started).toBeInstanceOf(Date)
@@ -105,7 +111,10 @@ describe('initializeJob', () => {
     const DBjob = makeDBJob()
     mockSave.mockRejectedValueOnce(new Error('save failed'))
     await expect(
-      initializeJob(MQjob as unknown as BullMQJob, DBjob as unknown as IBilboMDScoperJob)
+      initializeJob(
+        MQjob as unknown as BullMQJob,
+        DBjob as unknown as IBilboMDScoperJob
+      )
     ).rejects.toThrow('save failed')
     expect(notifyJobChanged).not.toHaveBeenCalled()
   })
@@ -115,7 +124,10 @@ describe('cleanupJob', () => {
   it('marks job completed and skips email when user is null', async () => {
     const MQjob = makeMQJob()
     const DBjob = makeDBJob({ user: null })
-    await cleanupJob(MQjob as unknown as BullMQJob, DBjob as unknown as IBilboMDScoperJob)
+    await cleanupJob(
+      MQjob as unknown as BullMQJob,
+      DBjob as unknown as IBilboMDScoperJob
+    )
     expect(DBjob.status).toBe('Completed')
     expect(DBjob.time_completed).toBeInstanceOf(Date)
     expect(sendJobCompleteEmail).not.toHaveBeenCalled()
@@ -126,9 +138,16 @@ describe('cleanupJob', () => {
 
   it('sends email when user is a populated IUser object', async () => {
     const MQjob = makeMQJob()
-    const user = { _id: new Types.ObjectId(), email: 'test@example.com', username: 'testuser' }
+    const user = {
+      _id: new Types.ObjectId(),
+      email: 'test@example.com',
+      username: 'testuser'
+    }
     const DBjob = makeDBJob({ user })
-    await cleanupJob(MQjob as unknown as BullMQJob, DBjob as unknown as IBilboMDScoperJob)
+    await cleanupJob(
+      MQjob as unknown as BullMQJob,
+      DBjob as unknown as IBilboMDScoperJob
+    )
     expect(sendJobCompleteEmail).toHaveBeenCalledWith(
       'test@example.com',
       'http://localhost:3000',
@@ -143,7 +162,10 @@ describe('cleanupJob', () => {
     const MQjob = makeMQJob()
     const user = { _id: new Types.ObjectId(), username: 'anon' }
     const DBjob = makeDBJob({ user })
-    await cleanupJob(MQjob as unknown as BullMQJob, DBjob as unknown as IBilboMDScoperJob)
+    await cleanupJob(
+      MQjob as unknown as BullMQJob,
+      DBjob as unknown as IBilboMDScoperJob
+    )
     expect(sendJobCompleteEmail).not.toHaveBeenCalled()
   })
 
@@ -157,7 +179,10 @@ describe('cleanupJob', () => {
       email: 'fetched@example.com',
       username: 'fetched'
     })
-    await cleanupJob(MQjob as unknown as BullMQJob, DBjob as unknown as IBilboMDScoperJob)
+    await cleanupJob(
+      MQjob as unknown as BullMQJob,
+      DBjob as unknown as IBilboMDScoperJob
+    )
     expect(User.findById).toHaveBeenCalledWith(userIdStr)
     expect(sendJobCompleteEmail).toHaveBeenCalledWith(
       'fetched@example.com',
@@ -174,7 +199,10 @@ describe('cleanupJob', () => {
     const DBjob = makeDBJob()
     mockSave.mockRejectedValueOnce(new Error('db write error'))
     await expect(
-      cleanupJob(MQjob as unknown as BullMQJob, DBjob as unknown as IBilboMDScoperJob)
+      cleanupJob(
+        MQjob as unknown as BullMQJob,
+        DBjob as unknown as IBilboMDScoperJob
+      )
     ).rejects.toThrow('db write error')
   })
 })

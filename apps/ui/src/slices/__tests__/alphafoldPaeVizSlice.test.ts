@@ -43,31 +43,40 @@ describe('alphafoldPaeVizSlice', () => {
 
     // Mock pae.bin endpoint - returns binary data
     server.use(
-      http.get(`http://localhost:3003/api/v1/af2pae/${testUuid}/pae.bin`, () => {
-        // Create a small ArrayBuffer for testing
-        const buffer = new Uint8Array([1, 2, 3, 4, 5]).buffer
-        return HttpResponse.arrayBuffer(buffer)
-      })
+      http.get(
+        `http://localhost:3003/api/v1/af2pae/${testUuid}/pae.bin`,
+        () => {
+          // Create a small ArrayBuffer for testing
+          const buffer = new Uint8Array([1, 2, 3, 4, 5]).buffer
+          return HttpResponse.arrayBuffer(buffer)
+        }
+      )
     )
 
     // Mock viz.png endpoint - returns blob
     server.use(
-      http.get(`http://localhost:3003/api/v1/af2pae/${testUuid}/viz.png`, () => {
-        const blob = new Blob(['fake-png-data'], { type: 'image/png' })
-        return new HttpResponse(blob, {
-          headers: { 'Content-Type': 'image/png' }
-        })
-      })
+      http.get(
+        `http://localhost:3003/api/v1/af2pae/${testUuid}/viz.png`,
+        () => {
+          const blob = new Blob(['fake-png-data'], { type: 'image/png' })
+          return new HttpResponse(blob, {
+            headers: { 'Content-Type': 'image/png' }
+          })
+        }
+      )
     )
 
     // Mock pae.png endpoint - returns blob
     server.use(
-      http.get(`http://localhost:3003/api/v1/af2pae/${testUuid}/pae.png`, () => {
-        const blob = new Blob(['fake-pae-png-data'], { type: 'image/png' })
-        return new HttpResponse(blob, {
-          headers: { 'Content-Type': 'image/png' }
-        })
-      })
+      http.get(
+        `http://localhost:3003/api/v1/af2pae/${testUuid}/pae.png`,
+        () => {
+          const blob = new Blob(['fake-pae-png-data'], { type: 'image/png' })
+          return new HttpResponse(blob, {
+            headers: { 'Content-Type': 'image/png' }
+          })
+        }
+      )
     )
   })
 
@@ -136,9 +145,12 @@ describe('alphafoldPaeVizSlice', () => {
       const largeBuffer = new Uint8Array(largeSize).fill(255).buffer
 
       server.use(
-        http.get(`http://localhost:3003/api/v1/af2pae/${testUuid}/pae.bin`, () => {
-          return HttpResponse.arrayBuffer(largeBuffer)
-        })
+        http.get(
+          `http://localhost:3003/api/v1/af2pae/${testUuid}/pae.bin`,
+          () => {
+            return HttpResponse.arrayBuffer(largeBuffer)
+          }
+        )
       )
 
       const result = await storeRef.store.dispatch(

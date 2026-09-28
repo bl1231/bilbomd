@@ -4,7 +4,7 @@ import ConstInpFile from '../ConstInpFile'
 
 vi.mock('components/Common/CopyToClipboardButton', () => ({
   default: ({ text }: { text: string }) => (
-    <button data-testid='copy-button'>{text}</button>
+    <button data-testid="copy-button">{text}</button>
   )
 }))
 

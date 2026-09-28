@@ -119,7 +119,7 @@ const QueueDetailsPage = () => {
 
   if (error) {
     return (
-      <Alert severity='error'>Failed to load queue data: {String(error)}</Alert>
+      <Alert severity="error">Failed to load queue data: {String(error)}</Alert>
     )
   }
 
@@ -134,7 +134,7 @@ const QueueDetailsPage = () => {
   )
 
   if (!matchedQueue) {
-    return <Alert severity='warning'>Queue not found.</Alert>
+    return <Alert severity="warning">Queue not found.</Alert>
   }
 
   const typedJobs: FrontendBullMQJob<BilboMDJobData>[] = (jobs?.jobs ??
@@ -191,17 +191,23 @@ const QueueDetailsPage = () => {
   }
 
   const jobTypeFilterDropdown = (
-    <FormControl sx={{ m: 2, minWidth: 200 }} size='small'>
-      <InputLabel id='job-type-select-label'>Job Type</InputLabel>
+    <FormControl
+      sx={{ m: 2, minWidth: 200 }}
+      size="small"
+    >
+      <InputLabel id="job-type-select-label">Job Type</InputLabel>
       <Select
-        labelId='job-type-select-label'
-        id='job-type-select'
+        labelId="job-type-select-label"
+        id="job-type-select"
         value={typeFilter}
-        label='Job Type'
+        label="Job Type"
         onChange={handleTypeChange}
       >
         {jobTypes.map((type) => (
-          <MenuItem key={String(type)} value={type}>
+          <MenuItem
+            key={String(type)}
+            value={type}
+          >
             {type === 'All' ? 'All' : (type ?? type)}
           </MenuItem>
         ))}
@@ -218,17 +224,23 @@ const QueueDetailsPage = () => {
   )
 
   const statusFilterDropdown = (
-    <FormControl sx={{ m: 2, minWidth: 200 }} size='small'>
-      <InputLabel id='status-select-label'>Status</InputLabel>
+    <FormControl
+      sx={{ m: 2, minWidth: 200 }}
+      size="small"
+    >
+      <InputLabel id="status-select-label">Status</InputLabel>
       <Select
-        labelId='status-select-label'
-        id='status-select'
+        labelId="status-select-label"
+        id="status-select"
         value={statusFilter}
-        label='Status'
+        label="Status"
         onChange={handleStatusChange}
       >
         {['All', ...availableStatuses].map((status) => (
-          <MenuItem key={status} value={status}>
+          <MenuItem
+            key={status}
+            value={status}
+          >
             {status}
           </MenuItem>
         ))}
@@ -262,10 +274,10 @@ const QueueDetailsPage = () => {
         return [
           <Button
             key={`${id}-menu-btn`}
-            variant='outlined'
+            variant="outlined"
             disableElevation
-            size='small'
-            className='job-details-button'
+            size="small"
+            className="job-details-button"
             onClick={(e) => handleMenuOpen(e, id)}
             endIcon={<KeyboardArrowDownIcon />}
           >
@@ -302,7 +314,7 @@ const QueueDetailsPage = () => {
           borderColor: grey[500]
         }}
       >
-        <Typography variant='h4'>
+        <Typography variant="h4">
           Queue Details: {matchedQueue?.name}
         </Typography>
       </Box>
@@ -325,7 +337,10 @@ const QueueDetailsPage = () => {
         </Box>
         <Box sx={{ px: 2 }}>
           {' '}
-          <Typography variant='h6' gutterBottom>
+          <Typography
+            variant="h6"
+            gutterBottom
+          >
             Job Counts:
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
@@ -348,7 +363,10 @@ const QueueDetailsPage = () => {
 
         <Box sx={{ p: 2 }}>
           {' '}
-          <Typography variant='h6' gutterBottom>
+          <Typography
+            variant="h6"
+            gutterBottom
+          >
             Jobs in Queue:
           </Typography>
           {jobsLoading && (
@@ -357,7 +375,7 @@ const QueueDetailsPage = () => {
             </Box>
           )}
           {jobsError && (
-            <Alert severity='error'>
+            <Alert severity="error">
               Failed to load jobs: {String(jobsError)}
             </Alert>
           )}
@@ -365,8 +383,8 @@ const QueueDetailsPage = () => {
           {statusFilterDropdown}
           {/* {userFilterDropdown} */}
           <Button
-            variant='contained'
-            color='primary'
+            variant="contained"
+            color="primary"
             onClick={resetFilters}
             sx={{ m: 2, height: '36px' }}
           >
@@ -417,9 +435,9 @@ const QueueDetailsPage = () => {
                 </Button>
                 <Button
                   onClick={handleDeleteConfirm}
-                  color='error'
+                  color="error"
                   disabled={isDeleting}
-                  variant='contained'
+                  variant="contained"
                 >
                   {isDeleting ? 'Deleting...' : 'Delete'}
                 </Button>

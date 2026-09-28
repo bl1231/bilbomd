@@ -59,7 +59,11 @@ describe('BilboMDNerscStep', () => {
 
     it('should show "Waiting" when no message provided', () => {
       renderWithProviders(
-        <BilboMDNerscStep stepName="heat" stepStatus="Waiting" stepMessage="" />
+        <BilboMDNerscStep
+          stepName="heat"
+          stepStatus="Waiting"
+          stepMessage=""
+        />
       )
 
       expect(screen.getAllByText('Waiting')).toHaveLength(1)
@@ -68,11 +72,20 @@ describe('BilboMDNerscStep', () => {
 
   describe('friendly names', () => {
     const stepMappings = [
-      { stepName: 'nersc_prepare_slurm_batch', friendlyName: 'NERSC Prepare Slurm Batch File' },
-      { stepName: 'nersc_submit_slurm_batch', friendlyName: 'NERSC Submit Slurm Batch File' },
+      {
+        stepName: 'nersc_prepare_slurm_batch',
+        friendlyName: 'NERSC Prepare Slurm Batch File'
+      },
+      {
+        stepName: 'nersc_submit_slurm_batch',
+        friendlyName: 'NERSC Submit Slurm Batch File'
+      },
       { stepName: 'nersc_job_status', friendlyName: 'NERSC Job Status' },
       { stepName: 'alphafold', friendlyName: 'AlphaFold2' },
-      { stepName: 'pae', friendlyName: 'Define MD Domains from PAE/PDE Matrix' },
+      {
+        stepName: 'pae',
+        friendlyName: 'Define MD Domains from PAE/PDE Matrix'
+      },
       { stepName: 'autorg', friendlyName: 'AutoRg' },
       { stepName: 'pdb2crd', friendlyName: 'Convert PDB to CRD' },
       { stepName: 'minimize', friendlyName: 'Minimize' },
@@ -113,7 +126,8 @@ describe('BilboMDNerscStep', () => {
     const tooltipTests = [
       {
         stepName: 'alphafold',
-        tooltip: 'In this step we use ColabFold to run AlphaFold on your molecule.'
+        tooltip:
+          'In this step we use ColabFold to run AlphaFold on your molecule.'
       },
       {
         stepName: 'minimize',
@@ -121,11 +135,13 @@ describe('BilboMDNerscStep', () => {
       },
       {
         stepName: 'md',
-        tooltip: 'In this step we run molecular dynamics to generate possible model conformations.'
+        tooltip:
+          'In this step we run molecular dynamics to generate possible model conformations.'
       },
       {
         stepName: 'foxs',
-        tooltip: 'In this step we use FoXS to calculate SAXS scattering curves from MD models.'
+        tooltip:
+          'In this step we use FoXS to calculate SAXS scattering curves from MD models.'
       }
     ]
 
@@ -209,7 +225,9 @@ describe('BilboMDNerscStep', () => {
         />
       )
 
-      const icon = document.querySelector('[data-testid="RadioButtonUncheckedIcon"]')
+      const icon = document.querySelector(
+        '[data-testid="RadioButtonUncheckedIcon"]'
+      )
       expect(icon).toBeInTheDocument()
     })
 
@@ -222,7 +240,9 @@ describe('BilboMDNerscStep', () => {
         />
       )
 
-      const icon = document.querySelector('[data-testid="DirectionsRunRoundedIcon"]')
+      const icon = document.querySelector(
+        '[data-testid="DirectionsRunRoundedIcon"]'
+      )
       expect(icon).toBeInTheDocument()
     })
 
@@ -314,7 +334,9 @@ describe('BilboMDNerscStep', () => {
         />
       )
 
-      expect(screen.getByText('NERSC Prepare Slurm Batch File')).toBeInTheDocument()
+      expect(
+        screen.getByText('NERSC Prepare Slurm Batch File')
+      ).toBeInTheDocument()
       expect(screen.getByText('Batch file prepared')).toBeInTheDocument()
     })
 
@@ -327,7 +349,9 @@ describe('BilboMDNerscStep', () => {
         />
       )
 
-      expect(screen.getByText('NERSC Submit Slurm Batch File')).toBeInTheDocument()
+      expect(
+        screen.getByText('NERSC Submit Slurm Batch File')
+      ).toBeInTheDocument()
     })
 
     it('should display NERSC job status step', () => {
@@ -371,7 +395,11 @@ describe('BilboMDNerscStep', () => {
 
     it('should display kgs step', () => {
       renderWithProviders(
-        <BilboMDNerscStep stepName="kgs" stepStatus="Running" stepMessage="" />
+        <BilboMDNerscStep
+          stepName="kgs"
+          stepStatus="Running"
+          stepMessage=""
+        />
       )
 
       expect(screen.getByText('KGS')).toBeInTheDocument()

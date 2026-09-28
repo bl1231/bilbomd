@@ -40,8 +40,7 @@ const EnsembleTogglePanel = ({
   const showDomainButton = !!hasConstraints && !!onColorByDomain
   const showConformationButton =
     !!showConformationColor && !!onColorByConformation
-  const showStartingModelButton =
-    !!showStartingModel && !!onToggleStartingModel
+  const showStartingModelButton = !!showStartingModel && !!onToggleStartingModel
 
   if (
     !showEnsembleControls &&
@@ -76,21 +75,21 @@ const EnsembleTogglePanel = ({
     >
       {showSingleEnsembleChip && (
         <>
-          <Typography variant='body2'>Ensembles:</Typography>
+          <Typography variant="body2">Ensembles:</Typography>
           <Chip
             label={`Size ${ensembleSizes[0]}`}
-            size='small'
-            variant='outlined'
-            color='primary'
+            size="small"
+            variant="outlined"
+            color="primary"
           />
         </>
       )}
 
       {showEnsembleControls && (
         <>
-          <Typography variant='body2'>Ensembles:</Typography>
+          <Typography variant="body2">Ensembles:</Typography>
           <ToggleButtonGroup
-            size='small'
+            size="small"
             exclusive
             value={selectedSize}
             onChange={handleChange}
@@ -120,7 +119,7 @@ const EnsembleTogglePanel = ({
 
       {showDomainButton && (
         <Button
-          size='small'
+          size="small"
           variant={domainColorActive ? 'contained' : 'outlined'}
           onClick={onColorByDomain}
           sx={{ textTransform: 'none', minWidth: 120, alignSelf: 'stretch' }}
@@ -131,7 +130,7 @@ const EnsembleTogglePanel = ({
 
       {showConformationButton && (
         <Button
-          size='small'
+          size="small"
           variant={conformationColorActive ? 'contained' : 'outlined'}
           onClick={onColorByConformation}
           sx={{ textTransform: 'none', minWidth: 160, alignSelf: 'stretch' }}
@@ -142,7 +141,7 @@ const EnsembleTogglePanel = ({
 
       {showStartingModelButton && (
         <Button
-          size='small'
+          size="small"
           variant={startingModelActive ? 'contained' : 'outlined'}
           onClick={onToggleStartingModel}
           startIcon={

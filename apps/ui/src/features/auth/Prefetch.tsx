@@ -20,9 +20,7 @@ const Prefetch = () => {
     dispatch(
       configApiSlice.util.prefetch('getConfigs', 'configData', { force: true })
     )
-    dispatch(
-      jobsApiSlice.util.prefetch('getJobs', 'jobsList', { force: true })
-    )
+    dispatch(jobsApiSlice.util.prefetch('getJobs', 'jobsList', { force: true }))
     // The queue summary (getQueueState) is shown to every authenticated user
     // on the Jobs page, so prefetch it for everyone.
     dispatch(

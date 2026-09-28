@@ -330,9 +330,7 @@ describe('PublicJobPage', () => {
 
           await waitFor(() => {
             expect(screen.getByText(displayName)).toBeInTheDocument()
-            expect(
-              screen.getByText(mockJobData.md_engine!)
-            ).toBeInTheDocument()
+            expect(screen.getByText(mockJobData.md_engine!)).toBeInTheDocument()
           })
         })
       })

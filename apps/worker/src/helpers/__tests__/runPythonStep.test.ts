@@ -42,12 +42,19 @@ describe('runPythonStep', () => {
       stderrEmitter.emit('end')
       mockChild.emit('close', 0, null)
     }, 10)
-    await runPythonStep(script, config, { pythonBin: 'python3', cwd: '/tmp', env: { FOO: 'bar' } })
+    await runPythonStep(script, config, {
+      pythonBin: 'python3',
+      cwd: '/tmp',
+      env: { FOO: 'bar' }
+    })
     // Assert
     expect(spawn).toHaveBeenCalledWith(
       'python3',
       [script, config],
-      expect.objectContaining({ cwd: '/tmp', env: expect.objectContaining({ FOO: 'bar' }) })
+      expect.objectContaining({
+        cwd: '/tmp',
+        env: expect.objectContaining({ FOO: 'bar' })
+      })
     )
   })
 
@@ -83,6 +90,8 @@ describe('runPythonStep', () => {
   it('throws error when spawn fails', async () => {
     const spawnError = new Error('ENOENT: python binary not found')
     setTimeout(() => mockChild.emit('error', spawnError), 10)
-    await expect(runPythonStep('a.py', 'b.yaml')).rejects.toThrow('ENOENT: python binary not found')
+    await expect(runPythonStep('a.py', 'b.yaml')).rejects.toThrow(
+      'ENOENT: python binary not found'
+    )
   })
 })

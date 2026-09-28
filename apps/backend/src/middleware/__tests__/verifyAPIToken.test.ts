@@ -51,8 +51,13 @@ describe('verifyAPIToken middleware', () => {
     // But findOne checks 'apiTokens.tokenHash', and the user's apiTokens entry
     // must match. We override the user to have our real hash:
     const crypto = await import('crypto')
-    const hash = crypto.createHash('sha256').update('validtoken123').digest('hex')
-    vi.mocked(User.findOne).mockResolvedValue(mockUser(hash, futureDate) as never)
+    const hash = crypto
+      .createHash('sha256')
+      .update('validtoken123')
+      .digest('hex')
+    vi.mocked(User.findOne).mockResolvedValue(
+      mockUser(hash, futureDate) as never
+    )
 
     await run()
 
@@ -65,7 +70,9 @@ describe('verifyAPIToken middleware', () => {
     mockRequest.headers = {}
     await run()
     expect(statusSpy).toHaveBeenCalledWith(401)
-    expect(jsonSpy).toHaveBeenCalledWith({ message: 'Missing or invalid Authorization header' })
+    expect(jsonSpy).toHaveBeenCalledWith({
+      message: 'Missing or invalid Authorization header'
+    })
     expect(mockNext).not.toHaveBeenCalled()
   })
 
@@ -87,7 +94,10 @@ describe('verifyAPIToken middleware', () => {
 
   it('returns 403 when token is expired', async () => {
     const crypto = await import('crypto')
-    const hash = crypto.createHash('sha256').update('expiredtoken').digest('hex')
+    const hash = crypto
+      .createHash('sha256')
+      .update('expiredtoken')
+      .digest('hex')
     const pastDate = new Date(Date.now() - 1_000_000)
     mockRequest.headers = { authorization: 'Bearer expiredtoken' }
     vi.mocked(User.findOne).mockResolvedValue(mockUser(hash, pastDate) as never)
@@ -102,7 +112,9 @@ describe('verifyAPIToken middleware', () => {
     vi.mocked(User.findOne).mockRejectedValue(new Error('DB down'))
     await run()
     expect(statusSpy).toHaveBeenCalledWith(500)
-    expect(jsonSpy).toHaveBeenCalledWith({ message: 'Internal server error during token verification' })
+    expect(jsonSpy).toHaveBeenCalledWith({
+      message: 'Internal server error during token verification'
+    })
     expect(mockNext).not.toHaveBeenCalled()
   })
 })

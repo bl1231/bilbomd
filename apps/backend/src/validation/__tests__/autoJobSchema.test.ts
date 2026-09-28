@@ -121,7 +121,9 @@ describe('autoJobSchema - required files', () => {
 
   it('accepts a multer file object for each file field', async () => {
     await expect(
-      autoJobSchema.validateAt('pdb_file', { pdb_file: multerFile('model.pdb') })
+      autoJobSchema.validateAt('pdb_file', {
+        pdb_file: multerFile('model.pdb')
+      })
     ).resolves.toBeDefined()
     await expect(
       autoJobSchema.validateAt('pae_file', { pae_file: multerFile('pae.json') })
@@ -141,9 +143,7 @@ describe('autoJobSchema - rg', () => {
   })
 
   it('rejects values outside 10–100', async () => {
-    await expect(
-      autoJobSchema.validateAt('rg', { rg: 9 })
-    ).rejects.toBeTruthy()
+    await expect(autoJobSchema.validateAt('rg', { rg: 9 })).rejects.toBeTruthy()
     await expect(
       autoJobSchema.validateAt('rg', { rg: 101 })
     ).rejects.toBeTruthy()

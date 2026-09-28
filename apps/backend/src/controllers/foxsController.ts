@@ -53,7 +53,11 @@ const downloadPDB = async (req: Request, res: Response) => {
       }
     })
   } catch (error) {
-    logger.error('PDB file not available', { pdbFile, jobId, error: String(error) })
+    logger.error('PDB file not available', {
+      pdbFile,
+      jobId,
+      error: String(error)
+    })
     res.status(500).json({ message: `No ${pdbFile} available.` })
   }
 }
@@ -84,7 +88,11 @@ const getFoxsData = async (req: Request, res: Response) => {
       res.json(data)
     }
   } catch (error) {
-    const err = error as Error & { status?: number; code?: string; details?: unknown }
+    const err = error as Error & {
+      status?: number
+      code?: string
+      details?: unknown
+    }
     const status = err.status ?? 500
 
     if (status === 404) {

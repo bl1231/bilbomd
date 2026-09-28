@@ -61,7 +61,6 @@ describe('af2paeJiffySchema - pdb_file', () => {
       })
     ).rejects.toBeTruthy()
   })
-
 })
 
 describe('af2paeJiffySchema - pae_file', () => {
@@ -95,7 +94,12 @@ describe('af2paeJiffySchema - pae_file', () => {
   })
 
   it('rejects filename longer than 30 characters', async () => {
-    const file = makeFile('a'.repeat(27) + '.json', 100, 'application/json', '{}')
+    const file = makeFile(
+      'a'.repeat(27) + '.json',
+      100,
+      'application/json',
+      '{}'
+    )
     await expect(
       af2paeJiffySchema.validateAt('pae_file', {
         pdb_file: validPdb,

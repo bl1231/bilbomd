@@ -32,10 +32,7 @@ export function formatDateSafe(
   }
 }
 
-export function formatRelativeDateSafe(
-  input: unknown,
-  fallback = ''
-): string {
+export function formatRelativeDateSafe(input: unknown, fallback = ''): string {
   const d = parseDateSafe(input)
   if (d === null) return fallback
   try {

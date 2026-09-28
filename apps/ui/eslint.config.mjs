@@ -69,10 +69,7 @@ export default defineConfig([
 
   // Tests legitimately spy on / reassign console — allow it there.
   {
-    files: [
-      'src/**/__tests__/**/*.{ts,tsx}',
-      'src/**/*.{test,spec}.{ts,tsx}'
-    ],
+    files: ['src/**/__tests__/**/*.{ts,tsx}', 'src/**/*.{test,spec}.{ts,tsx}'],
     rules: {
       'no-console': 'off'
     }

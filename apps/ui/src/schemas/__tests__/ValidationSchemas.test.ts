@@ -13,9 +13,9 @@ describe('userRegisterSchema', () => {
   })
 
   it('rejects missing email', async () => {
-    await expect(
-      userRegisterSchema.isValid({ user: 'alice' })
-    ).resolves.toBe(false)
+    await expect(userRegisterSchema.isValid({ user: 'alice' })).resolves.toBe(
+      false
+    )
   })
 
   it('rejects invalid email format', async () => {

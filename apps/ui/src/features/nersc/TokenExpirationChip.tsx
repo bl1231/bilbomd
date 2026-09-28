@@ -1,12 +1,7 @@
 import Chip from '@mui/material/Chip'
 import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
-import {
-  formatDistanceToNow,
-  isBefore,
-  subDays,
-  subWeeks
-} from 'date-fns'
+import { formatDistanceToNow, isBefore, subDays, subWeeks } from 'date-fns'
 import { formatDateSafe, parseDateSafe } from 'utils/dates'
 import { useGetSfapiClientExpirationQuery } from 'slices/nerscApiSlice'
 

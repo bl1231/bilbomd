@@ -8,7 +8,11 @@ const RequireAuth = ({ allowedRoles }: { allowedRoles: string[] }) => {
   const content = roles.some((role) => allowedRoles.includes(role)) ? (
     <Outlet />
   ) : (
-    <Navigate to='unauthorized' state={{ from: location }} replace />
+    <Navigate
+      to="unauthorized"
+      state={{ from: location }}
+      replace
+    />
   )
 
   return content

@@ -8,7 +8,11 @@ vi.mock('../mongo-utils.js', () => ({
   updateJobProgress: vi.fn()
 }))
 
-import { updateStepStatus, updateJobResults, updateJobProgress } from '../mongo-utils.js'
+import {
+  updateStepStatus,
+  updateJobResults,
+  updateJobProgress
+} from '../mongo-utils.js'
 
 const mockJob = {} as IBilboMDScoperJob
 
@@ -77,7 +81,10 @@ describe('parseScoperLogLine', () => {
   })
 
   it('stores prediction threshold on threshold line', async () => {
-    await parseScoperLogLine('Predicting with a threshold value of 0.5500', mockJob)
+    await parseScoperLogLine(
+      'Predicting with a threshold value of 0.5500',
+      mockJob
+    )
     expect(updateJobResults).toHaveBeenCalledWith(mockJob, {
       'results.scoper.prediction_threshold': 0.55
     })

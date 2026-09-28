@@ -51,7 +51,11 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
   }
 
   return (
-    <StyledMenu anchorEl={anchorEl} open={open} onClose={onClose}>
+    <StyledMenu
+      anchorEl={anchorEl}
+      open={open}
+      onClose={onClose}
+    >
       <MenuItem
         onClick={handleResubmitClick}
         disableRipple
@@ -77,7 +81,7 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
         disabled={['Running', 'Submitted'].includes(jobStatus) && !isAdmin}
         sx={{ color: 'error.main' }}
       >
-        <DeleteIcon color='error' />
+        <DeleteIcon color="error" />
         Delete
       </MenuItem>
     </StyledMenu>

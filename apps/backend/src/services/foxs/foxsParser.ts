@@ -58,7 +58,12 @@ const extractC1C2 = async (
 // from a foxs.log file that contains results for two structures.
 const extractScoperC1C2 = (
   fileContent: string
-): { c1FromOrig: number | null; c1FromScop: number | null; c2FromOrig: number | null; c2FromScop: number | null } => {
+): {
+  c1FromOrig: number | null
+  c1FromScop: number | null
+  c2FromOrig: number | null
+  c2FromScop: number | null
+} => {
   const lines = fileContent.split('\n')
   let c1FromOrig: number | null = null
   let c1FromScop: number | null = null
@@ -86,7 +91,12 @@ const extractScoperC1C2 = (
       }
     }
 
-    if (c1FromOrig !== null && c1FromScop !== null && c2FromOrig !== null && c2FromScop !== null) {
+    if (
+      c1FromOrig !== null &&
+      c1FromScop !== null &&
+      c2FromOrig !== null &&
+      c2FromScop !== null
+    ) {
       break
     }
   }

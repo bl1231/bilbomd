@@ -11,7 +11,6 @@ import Typography from './typography'
 import CustomShadows from './shadows'
 import componentsOverride from './overrides'
 
-
 export default function ThemeCustomization({ children }) {
   const theme = Palette('light', 'default')
   const themeTypography = Typography(`'Quicksand'`)

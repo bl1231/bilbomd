@@ -80,8 +80,7 @@ export const buildContext = (params: {
   const { access_mode, user, public_id, client_ip_hash } = params
 
   let contextUser:
-    | { _id: Types.ObjectId; username: string; email: string }
-    | undefined
+    { _id: Types.ObjectId; username: string; email: string } | undefined
 
   if (access_mode === 'user') {
     if (isPopulatedUserShape(user)) {

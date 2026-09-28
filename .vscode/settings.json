@@ -45,11 +45,8 @@
     "editor.tabSize": 4,
     "editor.insertSpaces": true,
     "editor.detectIndentation": false,
-    "editor.rulers": [
-      79,
-      88
-    ],
-    "editor.formatOnPaste": true,
+    "editor.rulers": [79, 88],
+    "editor.formatOnPaste": true
   },
   // Prettier global options (kept from backend)
   "prettier.semi": false,

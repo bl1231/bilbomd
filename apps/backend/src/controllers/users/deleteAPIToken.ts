@@ -6,7 +6,9 @@ const deleteAPIToken = async (req: Request, res: Response): Promise<void> => {
   const { username, id } = req.params
 
   if (!req.user || req.user !== username) {
-    res.status(403).json({ message: 'Unauthorized to delete token for this user' })
+    res
+      .status(403)
+      .json({ message: 'Unauthorized to delete token for this user' })
     return
   }
 
@@ -18,7 +20,9 @@ const deleteAPIToken = async (req: Request, res: Response): Promise<void> => {
     }
 
     const originalCount = user.apiTokens.length
-    user.apiTokens = user.apiTokens.filter((token) => token._id?.toString() !== id)
+    user.apiTokens = user.apiTokens.filter(
+      (token) => token._id?.toString() !== id
+    )
 
     if (user.apiTokens.length === originalCount) {
       res.status(404).json({ message: 'API token not found' })

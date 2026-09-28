@@ -18,8 +18,12 @@ const createFastaFile = async (
 
   // Generate the sequence lines
   const sequenceLines = entities
-    .flatMap((entity) => Array.from({ length: entity.copies }, () => entity.sequence))
-    .map((sequence, idx, arr) => (idx === arr.length - 1 ? sequence : `${sequence}:`))
+    .flatMap((entity) =>
+      Array.from({ length: entity.copies }, () => entity.sequence)
+    )
+    .map((sequence, idx, arr) =>
+      idx === arr.length - 1 ? sequence : `${sequence}:`
+    )
     .join('\n')
 
   // Combine the header and sequences

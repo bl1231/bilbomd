@@ -38,14 +38,14 @@ const getGuinierFit = async (
       const cached = (await fs.readJson(cacheFile)) as AutoRgResults
       const fit = toGuinierFit(cached)
       if (fit) return fit
-      logger.info(
-        `Stale Guinier cache (missing i0) in ${jobDir} — recomputing`
-      )
+      logger.info(`Stale Guinier cache (missing i0) in ${jobDir} — recomputing`)
     }
 
     const expDatFile = path.join(jobDir, dataFileName)
     if (!(await fs.pathExists(expDatFile))) {
-      logger.warn(`Experimental .dat file not found for Guinier fit: ${expDatFile}`)
+      logger.warn(
+        `Experimental .dat file not found for Guinier fit: ${expDatFile}`
+      )
       return undefined
     }
 

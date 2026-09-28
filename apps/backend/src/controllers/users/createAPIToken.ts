@@ -8,7 +8,9 @@ const createAPIToken = async (req: Request, res: Response): Promise<void> => {
   const { label, expiresAt } = req.body
   logger.info(`Creating API token for user: ${username}`)
   if (!req.user || req.user !== username) {
-    res.status(403).json({ message: 'Unauthorized to create token for this user' })
+    res
+      .status(403)
+      .json({ message: 'Unauthorized to create token for this user' })
     return
   }
 

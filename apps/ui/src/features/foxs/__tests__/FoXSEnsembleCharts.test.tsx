@@ -133,7 +133,9 @@ describe('FoXSEnsembleCharts', () => {
         foxsData={foxsData}
       />
     )
-    const chip2 = screen.getByText('Ens. Size 2: 1.20').closest('[aria-pressed]')
+    const chip2 = screen
+      .getByText('Ens. Size 2: 1.20')
+      .closest('[aria-pressed]')
     expect(chip2).toHaveAttribute('aria-pressed', 'true')
 
     await user.click(chip2!)

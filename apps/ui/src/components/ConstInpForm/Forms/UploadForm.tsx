@@ -271,7 +271,10 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
   const macroMolecules = ['PRO', 'DNA', 'RNA', 'CAR', 'Other']
   return (
     <>
-      <Grid container spacing={3}>
+      <Grid
+        container
+        spacing={3}
+      >
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
             <Typography>Instructions</Typography>
@@ -282,9 +285,9 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
               <Typography sx={{ m: 1 }}>
                 <b>BilboMD</b> uses{' '}
                 <Link
-                  href='https://academiccharmm.org/'
-                  target='_blank'
-                  rel='noopener noreferrer'
+                  href="https://academiccharmm.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   CHARMM
                 </Link>{' '}
@@ -292,9 +295,9 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                 Molecular Dynamics steps to run successfully you must define the
                 rigid and flexible regions of your molecule using proper CHARMM{' '}
                 <Link
-                  href='https://academiccharmm.org/documentation/version/c47b2/select'
-                  target='_blank'
-                  rel='noopener noreferrer'
+                  href="https://academiccharmm.org/documentation/version/c47b2/select"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   atom selection
                 </Link>{' '}
@@ -348,7 +351,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                   }}
                 >
                   <Typography
-                    component='pre'
+                    component="pre"
                     sx={{
                       m: 1,
                       fontFamily:
@@ -384,12 +387,15 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
             <Typography>File Upload</Typography>
           </HeaderBox>
           <Paper sx={{ p: 1 }}>
-            <Grid container sx={{ flexDirection: 'column' }}>
+            <Grid
+              container
+              sx={{ flexDirection: 'column' }}
+            >
               <Grid size={{ xs: 6 }}>
                 <Field
-                  name='pdb_file'
-                  id='pdb_file'
-                  title='Select PDB File'
+                  name="pdb_file"
+                  id="pdb_file"
+                  title="Select PDB File"
                   as={FileField}
                   onChange={onChange}
                   setFieldValue={setFieldValue}
@@ -399,7 +405,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                       ? errors.pdb_file.file || 'Error uploading file'
                       : ''
                   }
-                  fileExt='.pdb'
+                  fileExt=".pdb"
                 />
               </Grid>
             </Grid>
@@ -421,7 +427,9 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                       mr: 1,
                       mb: 1,
                       backgroundColor: customColors[chain] || '#9773b9',
-                      color: theme.palette.getContrastText(customColors[chain] ?? '#9773b9')
+                      color: theme.palette.getContrastText(
+                        customColors[chain] ?? '#9773b9'
+                      )
                     }}
                   />
                 ))}

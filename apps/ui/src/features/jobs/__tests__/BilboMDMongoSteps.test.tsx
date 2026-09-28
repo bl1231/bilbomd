@@ -112,7 +112,9 @@ describe('BilboMDMongoSteps', () => {
 
       renderWithProviders(<BilboMDMongoSteps steps={stepsWithMessages} />)
 
-      expect(screen.getAllByText('Latest message here').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Latest message here').length).toBeGreaterThan(
+        0
+      )
     })
 
     it('should show message in chip', () => {

@@ -30,8 +30,8 @@ const BilboMDBibTeX = () => (
       }}
     >
       <Typography
-        component='pre'
-        variant='body2'
+        component="pre"
+        variant="body2"
         sx={{
           fontFamily: 'monospace',
           whiteSpace: 'pre-wrap',

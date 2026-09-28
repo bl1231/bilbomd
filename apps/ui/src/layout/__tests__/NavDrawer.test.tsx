@@ -91,17 +91,17 @@ describe('NavDrawer', () => {
 
   it('hides admin-only items from non-admin users', () => {
     renderNavDrawer({ isAdmin: false })
-    const adminButton = (screen.getAllByText('Admin')[0] as HTMLElement).closest(
-      '.MuiListItemButton-root'
-    )
+    const adminButton = (
+      screen.getAllByText('Admin')[0] as HTMLElement
+    ).closest('.MuiListItemButton-root')
     expect(adminButton).toHaveStyle({ display: 'none' })
   })
 
   it('shows admin-only items to admins', () => {
     renderNavDrawer({ isAdmin: true })
-    const adminButton = (screen.getAllByText('Admin')[0] as HTMLElement).closest(
-      '.MuiListItemButton-root'
-    )
+    const adminButton = (
+      screen.getAllByText('Admin')[0] as HTMLElement
+    ).closest('.MuiListItemButton-root')
     expect(adminButton).not.toHaveStyle({ display: 'none' })
   })
 
@@ -109,9 +109,7 @@ describe('NavDrawer', () => {
     renderNavDrawer({ mobileOpen: true })
     // Present once (desktop drawer) instead of twice
     expect(screen.getAllByText('PAE Jiffy™')).toHaveLength(1)
-    expect(
-      getMobileDrawer().queryByText('PAE Jiffy™')
-    ).not.toBeInTheDocument()
+    expect(getMobileDrawer().queryByText('PAE Jiffy™')).not.toBeInTheDocument()
   })
 
   it('calls onMobileClose when the mobile drawer backdrop is clicked', () => {

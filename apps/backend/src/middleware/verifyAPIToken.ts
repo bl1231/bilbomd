@@ -8,12 +8,19 @@ const hashToken = (token: string): string => {
   return crypto.createHash('sha256').update(token).digest('hex')
 }
 
-export const verifyAPIToken = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyAPIToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const authHeader = req.headers.authorization || (req.headers.Authorization as string)
+    const authHeader =
+      req.headers.authorization || (req.headers.Authorization as string)
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ message: 'Missing or invalid Authorization header' })
+      res
+        .status(401)
+        .json({ message: 'Missing or invalid Authorization header' })
       return
     }
 
@@ -44,6 +51,8 @@ export const verifyAPIToken = async (req: Request, res: Response, next: NextFunc
     next()
   } catch (err) {
     logger.error('API token verification failed:', err)
-    res.status(500).json({ message: 'Internal server error during token verification' })
+    res
+      .status(500)
+      .json({ message: 'Internal server error during token verification' })
   }
 }

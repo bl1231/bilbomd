@@ -13,7 +13,8 @@ const verifyAccountOwnership = (source: UsernameSource): RequestHandler => {
       return
     }
 
-    const target = source === 'params' ? req.params.username : req.body?.username
+    const target =
+      source === 'params' ? req.params.username : req.body?.username
     const targetUsername = Array.isArray(target) ? target[0] : target
 
     if (!targetUsername || req.user !== targetUsername) {

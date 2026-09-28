@@ -11,7 +11,8 @@ const mailPort = process.env.BILBOMD_MAILER_PORT
 const mailSecure = process.env.BILBOMD_MAILER_SECURE === 'true'
 const mailUser = process.env.BILBOMD_MAILER_USER
 const mailPass = process.env.BILBOMD_MAILER_PASS
-const viewPath = process.env.BILBOMD_MAILER_TEMPLATES || '/app/dist/templates/mailer/'
+const viewPath =
+  process.env.BILBOMD_MAILER_TEMPLATES || '/app/dist/templates/mailer/'
 
 const transporter = nodemailer.createTransport({
   name: name,

@@ -23,10 +23,10 @@ Before building docker image, you need to manually copy a Pepsi-SANS binary zip 
 *--------------- e-mail: sergei.grudinin@inria.fr ----------------*
 *-----------------------------------------------------------------*
 *******************************************************************
-PARSE ERROR:  
+PARSE ERROR:
              Required argument missing: input
 
-Brief USAGE: 
+Brief USAGE:
    ./Pepsi-SANS  <input PDB(s)> <experimental curve> [-o <output file>] [-n
                  <expansion order>] [-ms <max angle>] [-au <angular units
                  option>] [-ns <number of points>] [-cst] [--cstFactor
@@ -48,6 +48,6 @@ Brief USAGE:
                  [--esmodel <excluded solvent model>] [-h] [--version]
                  [-log]
 
-For complete USAGE and HELP type: 
+For complete USAGE and HELP type:
    ./Pepsi-SANS --help
 ```

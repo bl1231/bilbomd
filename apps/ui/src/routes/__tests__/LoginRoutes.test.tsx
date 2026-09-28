@@ -11,28 +11,28 @@ vi.mock('components/Loadable', () => ({
 }))
 
 vi.mock('layout/MinimalLayout', () => ({
-  default: () => <div data-testid='minimal-layout'>Minimal Layout</div>
+  default: () => <div data-testid="minimal-layout">Minimal Layout</div>
 }))
 
 vi.mock('components/Home', () => ({
-  default: () => <div data-testid='home'>Home Component</div>
+  default: () => <div data-testid="home">Home Component</div>
 }))
 
 vi.mock('features/auth/MagickLink', () => ({
-  default: () => <div data-testid='magick-link'>MagickLink Component</div>
+  default: () => <div data-testid="magick-link">MagickLink Component</div>
 }))
 
 vi.mock('features/auth/Signup', () => ({
-  default: () => <div data-testid='signup'>Signup Component</div>
+  default: () => <div data-testid="signup">Signup Component</div>
 }))
 
 vi.mock('features/auth/VerifyEmail', () => ({
-  default: () => <div data-testid='verify-email'>VerifyEmail Component</div>
+  default: () => <div data-testid="verify-email">VerifyEmail Component</div>
 }))
 
 vi.mock('features/auth/MagickLinkAuth', () => ({
   default: () => (
-    <div data-testid='magick-link-auth'>MagickLinkAuth Component</div>
+    <div data-testid="magick-link-auth">MagickLinkAuth Component</div>
   )
 }))
 

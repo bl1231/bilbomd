@@ -49,11 +49,15 @@ const callColabFoldService = async (
   }, 20_000)
 
   try {
-    await axios.post(url, { uuid }, {
-      headers: { 'content-type': 'application/json' },
-      // Use axios instead of native fetch to avoid undici's default 300s headersTimeout
-      timeout: config.colabfoldTimeoutMs
-    })
+    await axios.post(
+      url,
+      { uuid },
+      {
+        headers: { 'content-type': 'application/json' },
+        // Use axios instead of native fetch to avoid undici's default 300s headersTimeout
+        timeout: config.colabfoldTimeoutMs
+      }
+    )
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       throw new Error(

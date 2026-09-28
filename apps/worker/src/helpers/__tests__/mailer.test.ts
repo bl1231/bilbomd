@@ -21,7 +21,13 @@ describe('sendJobCompleteEmail', () => {
   })
 
   it('calls sendMail with correct parameters for job complete', () => {
-    sendJobCompleteEmail('test@example.com', 'http://url', 'jobid123', 'Test Job', false)
+    sendJobCompleteEmail(
+      'test@example.com',
+      'http://url',
+      'jobid123',
+      'Test Job',
+      false
+    )
     expect(globalThis.__useMock).not.toHaveBeenCalled()
     const mailArg = globalThis.__sendMailMock.mock.calls[0][0]
     expect(mailArg.to).toBe('test@example.com')
@@ -50,21 +56,43 @@ describe('sendJobCompleteEmail', () => {
   })
 
   it('falls back to the dashboard link when no results token exists', () => {
-    sendJobCompleteEmail('test@example.com', 'http://url', 'jobid123', 'Test Job', false)
+    sendJobCompleteEmail(
+      'test@example.com',
+      'http://url',
+      'jobid123',
+      'Test Job',
+      false
+    )
     const mailArg = globalThis.__sendMailMock.mock.calls[0][0]
-    expect(mailArg.context.resultsUrl).toBe('http://url/dashboard/jobs/jobid123')
+    expect(mailArg.context.resultsUrl).toBe(
+      'http://url/dashboard/jobs/jobid123'
+    )
   })
 
   it('calls sendMail with correct template for error', () => {
-    sendJobCompleteEmail('test@example.com', 'http://url', 'jobid123', 'Test Job', true)
+    sendJobCompleteEmail(
+      'test@example.com',
+      'http://url',
+      'jobid123',
+      'Test Job',
+      true
+    )
     expect(globalThis.__sendMailMock).toHaveBeenCalled()
     const mailArg = globalThis.__sendMailMock.mock.calls[0][0]
     expect(mailArg.template).toBe('joberror')
   })
 
   it('calls logger.info with expected messages', () => {
-    sendJobCompleteEmail('test@example.com', 'http://url', 'jobid123', 'Test Job', false)
-    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('Sending job complete email'))
+    sendJobCompleteEmail(
+      'test@example.com',
+      'http://url',
+      'jobid123',
+      'Test Job',
+      false
+    )
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('Sending job complete email')
+    )
     expect(logger.info).toHaveBeenCalledWith(
       expect.stringContaining('Using email template: jobcomplete')
     )

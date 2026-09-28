@@ -35,11 +35,15 @@ interface NerscLogoProps {
 const NerscLogo = ({ useNersc, mode }: NerscLogoProps) =>
   useNersc && (
     <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', p: 1 }}>
-      <img src={nerscLogo} alt='NERSC Logo' style={{ height: '30px' }} />
+      <img
+        src={nerscLogo}
+        alt="NERSC Logo"
+        style={{ height: '30px' }}
+      />
       {mode === 'development' && (
         <Typography
-          variant='h5'
-          component='span'
+          variant="h5"
+          component="span"
           sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
         >
           DEVELOPMENT
@@ -52,14 +56,18 @@ const ModeDisplay = ({ useNersc, mode }: NerscLogoProps) =>
   !useNersc && (
     <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', p: 1 }}>
       {mode !== 'local' && (
-        <Typography variant='h5' component='span' sx={{ ml: 1, pb: 0.2 }}>
+        <Typography
+          variant="h5"
+          component="span"
+          sx={{ ml: 1, pb: 0.2 }}
+        >
           BL12.3.1
         </Typography>
       )}
       {mode === 'development' && (
         <Typography
-          variant='h5'
-          component='span'
+          variant="h5"
+          component="span"
           sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
         >
           DEVELOPMENT
@@ -67,12 +75,16 @@ const ModeDisplay = ({ useNersc, mode }: NerscLogoProps) =>
       )}
       {mode === 'local' && (
         <Box>
-          <Typography variant='h5' component='span' sx={{ ml: 1, pb: 0.2 }}>
+          <Typography
+            variant="h5"
+            component="span"
+            sx={{ ml: 1, pb: 0.2 }}
+          >
             LOCAL
           </Typography>
           <Typography
-            variant='h5'
-            component='span'
+            variant="h5"
+            component="span"
             sx={{ ml: 1, pb: 0.2, color: 'yellow' }}
           >
             DEVELOPMENT
@@ -107,9 +119,9 @@ const Header = () => {
 
   if (configIsLoading) return <CircularProgress />
   if (configError)
-    return <Alert severity='error'>Error loading configuration data</Alert>
+    return <Alert severity="error">Error loading configuration data</Alert>
   if (!config)
-    return <Alert severity='warning'>No configuration data available</Alert>
+    return <Alert severity="warning">No configuration data available</Alert>
 
   const useNersc = config.useNersc?.toLowerCase() === 'true'
   const mode = config.mode || 'nope'
@@ -119,20 +131,30 @@ const Header = () => {
       <CssBaseline />
       <Box sx={{ flexGrow: 1 }}>
         <AppBar
-          position='fixed'
+          position="fixed"
           elevation={0}
           sx={{ height: '70px', zIndex: (theme) => theme.zIndex.drawer + 1 }}
         >
           <Toolbar sx={{ m: 0 }}>
-            <Typography component={Link} to='/' sx={linkStyles}>
+            <Typography
+              component={Link}
+              to="/"
+              sx={linkStyles}
+            >
               BilboMD
             </Typography>
             <Box sx={{ display: { xs: 'none', sm: 'flex' } }}>
-              <NerscLogo useNersc={useNersc} mode={mode} />
-              <ModeDisplay useNersc={useNersc} mode={mode} />
+              <NerscLogo
+                useNersc={useNersc}
+                mode={mode}
+              />
+              <ModeDisplay
+                useNersc={useNersc}
+                mode={mode}
+              />
             </Box>
             <Typography
-              variant='h5'
+              variant="h5"
               sx={{ display: { xs: 'none', sm: 'flex' }, ml: 8 }}
             >
               {time}
@@ -146,8 +168,8 @@ const Header = () => {
               }}
             >
               <Button
-                variant='contained'
-                to='register'
+                variant="contained"
+                to="register"
                 component={Link}
                 sx={{
                   mx: { xs: 0.5, sm: 1 },
@@ -158,8 +180,8 @@ const Header = () => {
                 Register
               </Button>
               <Button
-                variant='contained'
-                to='magicklink'
+                variant="contained"
+                to="magicklink"
                 component={Link}
                 sx={{
                   mx: { xs: 0.5, sm: 1 },

@@ -4,21 +4,21 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - "README.md"
-      - "docs/**/*.md"
-      - "infra/**"
-      - "test_scripts/**"
-      - "apps/worker/base-image-version"
-      - "apps/worker/bilbomd-worker-base.dockerfile"
+      - 'README.md'
+      - 'docs/**/*.md'
+      - 'infra/**'
+      - 'test_scripts/**'
+      - 'apps/worker/base-image-version'
+      - 'apps/worker/bilbomd-worker-base.dockerfile'
   pull_request:
     branches: [main]
     paths-ignore:
-      - "README.md"
-      - "docs/**/*.md"
-      - "infra/**"
-      - "test_scripts/**"
-      - "apps/worker/base-image-version"
-      - "apps/worker/bilbomd-worker-base.dockerfile"
+      - 'README.md'
+      - 'docs/**/*.md'
+      - 'infra/**'
+      - 'test_scripts/**'
+      - 'apps/worker/base-image-version'
+      - 'apps/worker/bilbomd-worker-base.dockerfile'
   workflow_dispatch: {}
 
 permissions:
@@ -111,7 +111,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v7
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
 
       - name: Enable Corepack
         run: corepack enable
@@ -421,7 +421,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version: '3.14'
           cache: pip
           cache-dependency-path: tools/python/requirements-test.txt
 
@@ -576,7 +576,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v7
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
 
       # 2) Activate exact pnpm via Corepack
       - name: Enable Corepack
@@ -667,7 +667,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v7
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
 
       # 2) Activate exact pnpm via Corepack
       - name: Enable Corepack
@@ -759,7 +759,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v7
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
 
       - name: Enable Corepack
         run: corepack enable
@@ -830,7 +830,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v7
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
 
       - name: Enable Corepack
         run: corepack enable
@@ -902,7 +902,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v7
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
 
       - name: Enable Corepack
         run: corepack enable
@@ -961,7 +961,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v7
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
 
       - name: Enable Corepack
         run: corepack enable
@@ -1017,7 +1017,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v7
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
 
       - name: Enable Corepack
         run: corepack enable
@@ -1097,7 +1097,7 @@ jobs:
       - name: Use Node (from .nvmrc if present)
         uses: actions/setup-node@v7
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
 
       - name: Enable Corepack
         run: corepack enable
@@ -1178,7 +1178,7 @@ jobs:
         scoper-typecheck,
         backend-integration-tests,
         python-tests-light,
-        worker-python-tests,
+        worker-python-tests
       ]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     env:
@@ -1214,7 +1214,8 @@ jobs:
   coverage-report:
     name: Coverage Report
     runs-on: ubuntu-26.04
-    needs: [backend-unit-tests, ui-unit-tests, worker-unit-tests, scoper-unit-tests]
+    needs:
+      [backend-unit-tests, ui-unit-tests, worker-unit-tests, scoper-unit-tests]
     if: github.event_name == 'pull_request'
     permissions:
       contents: read

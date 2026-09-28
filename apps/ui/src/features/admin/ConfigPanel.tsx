@@ -43,7 +43,7 @@ const ConfigPanel = () => {
   // Error state
   if (configError) {
     return (
-      <Alert severity='error'>
+      <Alert severity="error">
         Error loading data: {configError ? 'configuration' : ''}{' '}
         {configError ? 'and' : ''}{' '}
       </Alert>
@@ -51,15 +51,24 @@ const ConfigPanel = () => {
   }
   // Handle empty/fallback data
   if (!config) {
-    return <Alert severity='warning'>No configuration data available</Alert>
+    return <Alert severity="warning">No configuration data available</Alert>
   }
   return (
     <>
-      <Typography variant='h6' gutterBottom>
+      <Typography
+        variant="h6"
+        gutterBottom
+      >
         Configuration
       </Typography>
-      <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
-        <Table stickyHeader size='small'>
+      <TableContainer
+        component={Paper}
+        sx={{ maxHeight: 500 }}
+      >
+        <Table
+          stickyHeader
+          size="small"
+        >
           <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 'bold' }}>Key</TableCell>

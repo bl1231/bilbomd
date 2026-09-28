@@ -95,8 +95,7 @@ describe('usersApiSlice', () => {
       expect(result.data).toBeDefined()
       expect(result.error).toBeUndefined()
       const data = result.data as
-        | { ids: string[]; entities: Record<string, UserDTO> }
-        | undefined
+        { ids: string[]; entities: Record<string, UserDTO> } | undefined
       expect(data?.entities).toBeDefined()
       expect(data?.ids).toContain('user-123')
       expect(result.data?.entities['user-123']).toMatchObject(expectedUserDTO)

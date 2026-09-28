@@ -35,7 +35,11 @@ const Download = ({ file }: DownloadProps) => {
           alignSelf: 'end'
         }}
       >
-        <Button variant='contained' type='button' onClick={handleDownload}>
+        <Button
+          variant="contained"
+          type="button"
+          onClick={handleDownload}
+        >
           Download
         </Button>
       </Grid>

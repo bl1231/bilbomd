@@ -68,7 +68,7 @@ describe('Download Component', () => {
   })
 
   it('renders the Download button', () => {
-    render(<Download uuid='mock-uuid' />)
+    render(<Download uuid="mock-uuid" />)
     const button = screen.getByRole('button', { name: /download/i })
     expect(button).toBeInTheDocument()
   })
@@ -79,7 +79,7 @@ describe('Download Component', () => {
     })
     ;(axiosInstance.get as Mock).mockResolvedValueOnce({ data: mockBlob })
 
-    render(<Download uuid='mock-uuid' />)
+    render(<Download uuid="mock-uuid" />)
     const button = screen.getByRole('button', { name: /download/i })
     fireEvent.click(button)
 
@@ -98,7 +98,7 @@ describe('Download Component', () => {
       new Error('Download error')
     )
 
-    render(<Download uuid='mock-uuid' />)
+    render(<Download uuid="mock-uuid" />)
     const button = screen.getByRole('button', { name: /download/i })
     fireEvent.click(button)
 

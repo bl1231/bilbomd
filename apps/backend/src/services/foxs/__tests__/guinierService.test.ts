@@ -52,9 +52,8 @@ describe('getGuinierFit', () => {
 
   it('returns the cached fit without spawning AutoRg', async () => {
     const { default: fs } = await import('fs-extra')
-    const { spawnAutoRgCalculator } = await import(
-      '../../../controllers/jobs/utils/autoRg.js'
-    )
+    const { spawnAutoRgCalculator } =
+      await import('../../../controllers/jobs/utils/autoRg.js')
     vi.mocked(fs.pathExists).mockResolvedValue(true as never)
     vi.mocked(fs.readJson).mockResolvedValue(freshAutoRgResults as never)
 
@@ -66,9 +65,8 @@ describe('getGuinierFit', () => {
 
   it('recomputes when the cache predates the i0 field', async () => {
     const { default: fs } = await import('fs-extra')
-    const { spawnAutoRgCalculator } = await import(
-      '../../../controllers/jobs/utils/autoRg.js'
-    )
+    const { spawnAutoRgCalculator } =
+      await import('../../../controllers/jobs/utils/autoRg.js')
     // cache exists (stale), then experimental .dat exists
     vi.mocked(fs.pathExists).mockResolvedValue(true as never)
     vi.mocked(fs.readJson).mockResolvedValue({
@@ -95,9 +93,8 @@ describe('getGuinierFit', () => {
 
   it('computes, caches, and returns the fit on a cache miss', async () => {
     const { default: fs } = await import('fs-extra')
-    const { spawnAutoRgCalculator } = await import(
-      '../../../controllers/jobs/utils/autoRg.js'
-    )
+    const { spawnAutoRgCalculator } =
+      await import('../../../controllers/jobs/utils/autoRg.js')
     // no cache, but experimental .dat present
     vi.mocked(fs.pathExists)
       .mockResolvedValueOnce(false as never)
@@ -121,9 +118,8 @@ describe('getGuinierFit', () => {
 
   it('returns undefined when the experimental .dat file is missing', async () => {
     const { default: fs } = await import('fs-extra')
-    const { spawnAutoRgCalculator } = await import(
-      '../../../controllers/jobs/utils/autoRg.js'
-    )
+    const { spawnAutoRgCalculator } =
+      await import('../../../controllers/jobs/utils/autoRg.js')
     vi.mocked(fs.pathExists).mockResolvedValue(false as never)
 
     const fit = await getGuinierFit('/data/uuid', 'experiment.dat')
@@ -134,9 +130,8 @@ describe('getGuinierFit', () => {
 
   it('returns undefined (does not throw) when AutoRg fails', async () => {
     const { default: fs } = await import('fs-extra')
-    const { spawnAutoRgCalculator } = await import(
-      '../../../controllers/jobs/utils/autoRg.js'
-    )
+    const { spawnAutoRgCalculator } =
+      await import('../../../controllers/jobs/utils/autoRg.js')
     vi.mocked(fs.pathExists)
       .mockResolvedValueOnce(false as never)
       .mockResolvedValueOnce(true as never)

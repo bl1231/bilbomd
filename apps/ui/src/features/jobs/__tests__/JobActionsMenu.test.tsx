@@ -61,7 +61,10 @@ describe('JobActionsMenu', () => {
 
     it('should not render when open is false', () => {
       renderWithProviders(
-        <JobActionsMenu {...defaultProps} open={false} />
+        <JobActionsMenu
+          {...defaultProps}
+          open={false}
+        />
       )
 
       const resubmitButton = screen.queryByText('Resubmit')
@@ -80,7 +83,10 @@ describe('JobActionsMenu', () => {
     enabledJobTypes.forEach((jobType) => {
       it(`should enable Resubmit for ${jobType}`, () => {
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobType={jobType} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobType={jobType}
+          />
         )
 
         const resubmitButton = screen.getByText('Resubmit').closest('li')
@@ -90,7 +96,10 @@ describe('JobActionsMenu', () => {
       it(`should call onResubmit with correct args for ${jobType}`, async () => {
         const user = userEvent.setup()
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobType={jobType} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobType={jobType}
+          />
         )
 
         const resubmitButton = screen.getByText('Resubmit')
@@ -103,7 +112,10 @@ describe('JobActionsMenu', () => {
       it(`should call onClose after Resubmit click for ${jobType}`, async () => {
         const user = userEvent.setup()
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobType={jobType} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobType={jobType}
+          />
         )
 
         const resubmitButton = screen.getByText('Resubmit')
@@ -126,7 +138,10 @@ describe('JobActionsMenu', () => {
     disabledJobTypes.forEach((jobType) => {
       it(`should disable Resubmit for ${jobType}`, () => {
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobType={jobType} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobType={jobType}
+          />
         )
 
         const resubmitButton = screen.getByText('Resubmit').closest('li')
@@ -141,7 +156,10 @@ describe('JobActionsMenu', () => {
     disabledStatuses.forEach((status) => {
       it(`should disable Delete when status is ${status}`, () => {
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobStatus={status} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobStatus={status}
+          />
         )
 
         const deleteButton = screen.getByText('Delete').closest('li')
@@ -156,7 +174,10 @@ describe('JobActionsMenu', () => {
     enabledStatuses.forEach((status) => {
       it(`should enable Delete when status is ${status}`, () => {
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobStatus={status} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobStatus={status}
+          />
         )
 
         const deleteButton = screen.getByText('Delete').closest('li')
@@ -166,7 +187,10 @@ describe('JobActionsMenu', () => {
       it(`should call onDelete with correct args when status is ${status}`, async () => {
         const user = userEvent.setup()
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobStatus={status} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobStatus={status}
+          />
         )
 
         const deleteButton = screen.getByText('Delete')
@@ -179,7 +203,10 @@ describe('JobActionsMenu', () => {
       it(`should call onClose after Delete click when status is ${status}`, async () => {
         const user = userEvent.setup()
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobStatus={status} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobStatus={status}
+          />
         )
 
         const deleteButton = screen.getByText('Delete')
@@ -270,7 +297,11 @@ describe('JobActionsMenu', () => {
     stuckStatuses.forEach((status) => {
       it(`should enable Delete for admins when status is ${status}`, () => {
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobStatus={status} isAdmin={true} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobStatus={status}
+            isAdmin={true}
+          />
         )
 
         const deleteButton = screen.getByText('Delete').closest('li')
@@ -280,7 +311,11 @@ describe('JobActionsMenu', () => {
       it(`should call onDelete with status arg for admins when status is ${status}`, async () => {
         const user = userEvent.setup()
         renderWithProviders(
-          <JobActionsMenu {...defaultProps} jobStatus={status} isAdmin={true} />
+          <JobActionsMenu
+            {...defaultProps}
+            jobStatus={status}
+            isAdmin={true}
+          />
         )
 
         const deleteButton = screen.getByText('Delete')
@@ -295,7 +330,10 @@ describe('JobActionsMenu', () => {
   describe('menu interaction', () => {
     it('should handle menu open state', () => {
       renderWithProviders(
-        <JobActionsMenu {...defaultProps} open={true} />
+        <JobActionsMenu
+          {...defaultProps}
+          open={true}
+        />
       )
 
       // When open, menu items should be in the document

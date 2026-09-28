@@ -33,10 +33,7 @@ import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
 import TitleField from 'components/TitleField'
 import useTitle from 'hooks/useTitle'
-import {
-  OpenFoldEntity,
-  NewOpenFoldJobFormValues
-} from 'types/openfoldForm'
+import { OpenFoldEntity, NewOpenFoldJobFormValues } from 'types/openfoldForm'
 import NewOpenFoldJobFormInstructions from './NewOpenFoldJobFormInstructions'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import { useTheme } from '@mui/material/styles'
@@ -184,10 +181,7 @@ const getChipColor = (count: number, theme: Theme): string => {
   return theme.palette.error.main
 }
 
-const getSequenceLabel = (
-  entityType: string,
-  seqLength: number
-): string => {
+const getSequenceLabel = (entityType: string, seqLength: number): string => {
   if (entityType === 'DNA') return `DNA Sequence (${seqLength})`
   if (entityType === 'RNA') return `RNA Sequence (${seqLength})`
   return `Amino Acid Sequence (${seqLength})`
@@ -480,8 +474,7 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   if (!config)
     return <Alert severity="error">Configuration not available</Alert>
 
-  const useOpenFold =
-    config.enableBilboMdOpenfold?.toLowerCase() === 'true'
+  const useOpenFold = config.enableBilboMdOpenfold?.toLowerCase() === 'true'
 
   const initialValues: NewOpenFoldJobFormValues = {
     title: '',
@@ -614,10 +607,18 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         }}
                       >
                         {/* Title */}
-                        <Box sx={{ minWidth: { xs: 0, md: '520px' }, width: '100%', maxWidth: '520px' }}>
+                        <Box
+                          sx={{
+                            minWidth: { xs: 0, md: '520px' },
+                            width: '100%',
+                            maxWidth: '520px'
+                          }}
+                        >
                           <TitleField />
                         </Box>
-                        <Box sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}>
+                        <Box
+                          sx={{ ml: { xs: 0, md: 8 }, minWidth: 'fit-content' }}
+                        >
                           <Button
                             variant={useExampleData ? 'outlined' : 'contained'}
                             onClick={() => {
@@ -627,7 +628,10 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                                   'title',
                                   'example-openfold-job'
                                 )
-                                void setFieldValue('dat_file', 'example-saxs.dat')
+                                void setFieldValue(
+                                  'dat_file',
+                                  'example-saxs.dat'
+                                )
                                 void setFieldValue('entities', [
                                   {
                                     id: '1',
@@ -679,7 +683,9 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               : 'Load Example Data'}
                           </Button>
                         </Box>
-                        <Box sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}>
+                        <Box
+                          sx={{ ml: { xs: 1, md: 2 }, minWidth: 'fit-content' }}
+                        >
                           <Button
                             variant="contained"
                             href={'/api/v1/public/examples/of3'}

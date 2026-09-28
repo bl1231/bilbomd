@@ -9,9 +9,9 @@ interface QueueDetailsProps {
 const QueueDetails = ({ queue }: QueueDetailsProps) => {
   return (
     <Button
-      variant='outlined'
-      size='small'
-      className='queue-details-button'
+      variant="outlined"
+      size="small"
+      className="queue-details-button"
       startIcon={<InfoIcon />}
       component={RouterLink}
       to={`/queue/${queue}`}

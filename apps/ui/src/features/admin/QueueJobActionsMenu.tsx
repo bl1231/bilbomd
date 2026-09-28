@@ -44,8 +44,15 @@ const QueueJobActionsMenu: React.FC<QueueJobActionsMenuProps> = ({
   }
 
   return (
-    <StyledMenu anchorEl={anchorEl} open={open} onClose={onClose}>
-      <MenuItem onClick={handleRetryClick} disableRipple>
+    <StyledMenu
+      anchorEl={anchorEl}
+      open={open}
+      onClose={onClose}
+    >
+      <MenuItem
+        onClick={handleRetryClick}
+        disableRipple
+      >
         <AutorenewIcon />
         Retry
       </MenuItem>
@@ -55,7 +62,7 @@ const QueueJobActionsMenu: React.FC<QueueJobActionsMenuProps> = ({
         disabled={jobStatus !== 'active'}
         sx={{ color: 'warning.main' }}
       >
-        <AutorenewIcon color='warning' />
+        <AutorenewIcon color="warning" />
         Mark as Failed
       </MenuItem>
       <Divider />
@@ -65,7 +72,7 @@ const QueueJobActionsMenu: React.FC<QueueJobActionsMenuProps> = ({
         disabled={['Running', 'Submitted'].includes(jobStatus)}
         sx={{ color: 'error.main' }}
       >
-        <DeleteIcon color='error' />
+        <DeleteIcon color="error" />
         Delete
       </MenuItem>
     </StyledMenu>

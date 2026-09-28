@@ -45,20 +45,24 @@ const FileField = ({
   return (
     <FormControl error={isError}>
       {/* <FormLabel>test</FormLabel> */}
-      <Grid container spacing={2} sx={{ alignItems: 'center' }}>
+      <Grid
+        container
+        spacing={2}
+        sx={{ alignItems: 'center' }}
+      >
         <Grid>
           <Input
             style={{ display: 'none' }}
             id={id}
             name={name}
-            type='file'
+            type="file"
             onChange={handleFileChange}
             slotProps={{ input: { accept: fileExt } }}
           />
           <label htmlFor={id}>
             <Button
-              variant='contained'
-              component='span'
+              variant="contained"
+              component="span"
               sx={{
                 height: '40px',
                 width: '160px',
@@ -73,8 +77,8 @@ const FileField = ({
         <Grid>
           {fileName && !errorMessage ? (
             <Alert
-              variant='outlined'
-              severity='success'
+              variant="outlined"
+              severity="success"
               sx={{
                 height: '55px',
                 fontSize: '1.1rem',
@@ -86,7 +90,7 @@ const FileField = ({
           ) : null}
           {isError ? (
             <Alert
-              severity='error'
+              severity="error"
               sx={{
                 height: '55px',
                 fontSize: '1.1rem',

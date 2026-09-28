@@ -13,7 +13,9 @@ describe('verifyRoles middleware', () => {
     sendStatusSpy = vi.fn()
     mockNext = vi.fn()
     mockRequest = {}
-    mockResponse = { sendStatus: sendStatusSpy as unknown as Response['sendStatus'] }
+    mockResponse = {
+      sendStatus: sendStatusSpy as unknown as Response['sendStatus']
+    }
   })
 
   const run = (roles: string[], allowedRoles: string[]) => {

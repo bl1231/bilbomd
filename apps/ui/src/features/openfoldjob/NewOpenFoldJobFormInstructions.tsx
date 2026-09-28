@@ -104,8 +104,8 @@ const NewOpenFoldJobFormInstructions = () => {
           <ul>
             <li>
               <Typography>
-                <b>Protein:</b> A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R,
-                S, T, V, W, Y
+                <b>Protein:</b> A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R, S,
+                T, V, W, Y
               </Typography>
             </li>
             <li>

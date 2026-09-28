@@ -67,9 +67,7 @@ const QueueStatsRow = ({
             ml: index === 0 ? 0 : { xs: 1, sm: 4 }
           }}
         >
-          <Typography>
-            {label === 'Active' ? <b>Active</b> : label}:
-          </Typography>
+          <Typography>{label === 'Active' ? <b>Active</b> : label}:</Typography>
           <Chip
             label={count}
             sx={label === 'Workers' && noWorkers ? noWorkersChipSx : statChipSx}
@@ -77,7 +75,10 @@ const QueueStatsRow = ({
         </Box>
       ))}
       {noWorkers && (
-        <Alert severity='warning' sx={{ width: '100%', mt: 1 }}>
+        <Alert
+          severity="warning"
+          sx={{ width: '100%', mt: 1 }}
+        >
           No {name} worker is running, so {name} jobs will wait in the queue
           until one starts.
         </Alert>
@@ -118,13 +119,20 @@ const BullMQSummary = () => {
 
       <Item sx={{ p: 1 }}>
         {isError && (
-          <Alert severity='error' variant='outlined' sx={{ mb: 2 }}>
+          <Alert
+            severity="error"
+            variant="outlined"
+            sx={{ mb: 2 }}
+          >
             <AlertTitle>Error</AlertTitle>
-            <Typography variant='body2'>
+            <Typography variant="body2">
               Failed to load BullMQ Queue Status from the backend.
             </Typography>
             {'status' in error && (
-              <Typography variant='caption' sx={{ fontStyle: 'italic' }}>
+              <Typography
+                variant="caption"
+                sx={{ fontStyle: 'italic' }}
+              >
                 {`Status ${error.status}: ${
                   'data' in error
                     ? JSON.stringify(error.data)
@@ -133,7 +141,10 @@ const BullMQSummary = () => {
               </Typography>
             )}
             {!('status' in error) && error?.message && (
-              <Typography variant='caption' sx={{ fontStyle: 'italic' }}>
+              <Typography
+                variant="caption"
+                sx={{ fontStyle: 'italic' }}
+              >
                 Details: {error.message}
               </Typography>
             )}
@@ -141,21 +152,34 @@ const BullMQSummary = () => {
         )}
 
         {isSuccess && queueStatus && (
-          <Grid container spacing={2} sx={{ display: 'flex' }}>
+          <Grid
+            container
+            spacing={2}
+            sx={{ display: 'flex' }}
+          >
             <Grid size={{ xs: 12, md: 6 }}>
-              <Divider textAlign='left' variant='fullWidth'>
-                <Chip label='BilboMD Queue' />
+              <Divider
+                textAlign="left"
+                variant="fullWidth"
+              >
+                <Chip label="BilboMD Queue" />
               </Divider>
-              <QueueStatsRow counts={queueStatus.bilbomd} name='BilboMD' />
+              <QueueStatsRow
+                counts={queueStatus.bilbomd}
+                name="BilboMD"
+              />
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
-              <Divider textAlign='left' variant='fullWidth'>
-                <Chip label='Scoper Queue' />
+              <Divider
+                textAlign="left"
+                variant="fullWidth"
+              >
+                <Chip label="Scoper Queue" />
               </Divider>
               <QueueStatsRow
                 counts={queueStatus.scoper}
-                name='SCOPER'
+                name="SCOPER"
                 warnWhenIdle={scoperEnabled}
               />
             </Grid>

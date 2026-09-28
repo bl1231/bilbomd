@@ -20,9 +20,9 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: "6"
+          cpus: '6'
     restart: always
-    user: "${UID:-1001}:${GID:-1001}"
+    user: '${UID:-1001}:${GID:-1001}'
     env_file:
       - path: .env.hyperion.prod
     networks:

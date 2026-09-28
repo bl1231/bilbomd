@@ -13,7 +13,10 @@ import {
 } from './helpers/fileValidators.js'
 
 export const autoJobSchema = yup.object({
-  title: yup.string().required('Job title is required').max(100, 'Title too long'),
+  title: yup
+    .string()
+    .required('Job title is required')
+    .max(100, 'Title too long'),
   bilbomd_mode: yup.string().oneOf(['auto'], 'Invalid mode').required(),
   email: yup.string().email('Invalid email address').optional(),
   pdb_file: requiredFile('A PDB or CIF file is required')
@@ -35,7 +38,13 @@ export const autoJobSchema = yup.object({
     .concat(fileSizeTest(2_000_000))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),
-  rg: yup.number().integer().positive().min(10).max(100).required('Rg value is required'),
+  rg: yup
+    .number()
+    .integer()
+    .positive()
+    .min(10)
+    .max(100)
+    .required('Rg value is required'),
   rg_min: yup
     .number()
     .integer()

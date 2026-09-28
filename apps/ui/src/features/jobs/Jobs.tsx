@@ -915,10 +915,11 @@ const Jobs = () => {
                           severity="warning"
                           sx={{ mt: 2 }}
                         >
-                          This job is currently <strong>{deleteTargetStatus}</strong>.
-                          Deleting it will remove the database record and files,
-                          but the underlying simulation process may continue
-                          until it finishes naturally.
+                          This job is currently{' '}
+                          <strong>{deleteTargetStatus}</strong>. Deleting it
+                          will remove the database record and files, but the
+                          underlying simulation process may continue until it
+                          finishes naturally.
                         </Alert>
                       )}
                     </DialogContent>

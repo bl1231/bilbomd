@@ -184,6 +184,7 @@ ENABLE_CHARMM_ENGINE=false
 ```env
 USE_NERSC=false
 ```
+
 ---
 
 ## 5. Create Docker Volumes
@@ -297,4 +298,3 @@ Double-check that your `.env.local` has all required variables set.
 **Permission errors on mounted directories**
 Make sure `UID` and `GID` in `.env.local` match the user running Docker on your
 host (`id -u` / `id -g`).
-

@@ -12,9 +12,8 @@ describe('multiMdHandler', () => {
   })
 
   it('should re-throw errors from pipeline functions', async () => {
-    const { processMultiMDJob } = await import(
-      '../../services/pipelines/bilbomd-multi.js'
-    )
+    const { processMultiMDJob } =
+      await import('../../services/pipelines/bilbomd-multi.js')
     const { multiMdHandler } = await import('../multiMdHandler.js')
 
     // Mock the pipeline to throw an error
@@ -39,9 +38,8 @@ describe('multiMdHandler', () => {
   })
 
   it('should process multi job successfully', async () => {
-    const { processMultiMDJob } = await import(
-      '../../services/pipelines/bilbomd-multi.js'
-    )
+    const { processMultiMDJob } =
+      await import('../../services/pipelines/bilbomd-multi.js')
     const { multiMdHandler } = await import('../multiMdHandler.js')
 
     vi.mocked(processMultiMDJob).mockResolvedValueOnce(undefined)

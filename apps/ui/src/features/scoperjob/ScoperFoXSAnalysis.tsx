@@ -62,10 +62,7 @@ const ScoperFoXSAnalysis = ({ id }: ScoperFoXSAnalysisProps) => {
   })
 
   // Memoize foxsData to prevent unnecessary re-renders
-  const foxsData = useMemo(
-    () => ((data ?? []) as FoxsData[]),
-    [data]
-  )
+  const foxsData = useMemo(() => (data ?? []) as FoxsData[], [data])
 
   // Prepare original data to reduce the number of digits after the decimal point
   // and filter out negative values

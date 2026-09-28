@@ -62,9 +62,9 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
                           />
 
                           <Button
-                            variant='contained'
-                            color='error'
-                            size='small'
+                            variant="contained"
+                            color="error"
+                            size="small"
                             onClick={() => arrayHelpers.remove(index)}
                             // sx={{ alignItems: 'flex-end' }}
                           >
@@ -76,7 +76,10 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
                   )}
                   <Grid sx={{ flex: '1 1 auto', alignItems: 'center' }}>
                     <Box sx={{ justifyContent: 'flex-end', m: 1 }}>
-                      <Grid container sx={{ justifyContent: 'flex-end' }}>
+                      <Grid
+                        container
+                        sx={{ justifyContent: 'flex-end' }}
+                      >
                         <Grid sx={{ mx: 2 }}>
                           <Typography>
                             If you want to add another <b>Rigid Body</b> please
@@ -85,7 +88,7 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
                         </Grid>
                         <Grid>
                           <Button
-                            variant='contained'
+                            variant="contained"
                             onClick={() => {
                               const new_domain = {
                                 chainid: values.pdb_file.chains[0]!.id,
@@ -95,7 +98,7 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
                               arrayHelpers.push(new_domain)
                             }}
                             startIcon={<AddIcon />}
-                            size='small'
+                            size="small"
                             sx={{
                               backgroundColor: lightBlue[50],
                               color: 'black',

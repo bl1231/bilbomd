@@ -64,7 +64,9 @@ describe('openfoldJobSchema - bilbomd_mode', () => {
       openfoldJobSchema.validateAt('bilbomd_mode', { bilbomd_mode: 'pdb' })
     ).rejects.toBeTruthy()
     await expect(
-      openfoldJobSchema.validateAt('bilbomd_mode', { bilbomd_mode: 'alphafold' })
+      openfoldJobSchema.validateAt('bilbomd_mode', {
+        bilbomd_mode: 'alphafold'
+      })
     ).rejects.toBeTruthy()
   })
 
@@ -123,7 +125,9 @@ describe('openfoldJobSchema - dat_file', () => {
 describe('openfoldJobSchema - entities', () => {
   it('accepts a valid protein entity without id (id is a UI-only field)', async () => {
     await expect(
-      openfoldJobSchema.validateAt('entities', { entities: [validProteinEntity] })
+      openfoldJobSchema.validateAt('entities', {
+        entities: [validProteinEntity]
+      })
     ).resolves.toBeDefined()
   })
 
@@ -170,7 +174,9 @@ describe('openfoldJobSchema - entities', () => {
   })
 
   it('rejects more than 20 entities', async () => {
-    const entities = Array.from({ length: 21 }, () => ({ ...validProteinEntity }))
+    const entities = Array.from({ length: 21 }, () => ({
+      ...validProteinEntity
+    }))
     await expect(
       openfoldJobSchema.validateAt('entities', { entities })
     ).rejects.toThrow('20 entities')

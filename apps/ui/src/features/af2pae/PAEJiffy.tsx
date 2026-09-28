@@ -385,7 +385,9 @@ const Alphafold2PAEJiffy = () => {
                                 <br />
                                 {values && (
                                   <>
-                                    <TableContainer sx={{ width: '100%', maxWidth: '400px' }}>
+                                    <TableContainer
+                                      sx={{ width: '100%', maxWidth: '400px' }}
+                                    >
                                       <Table aria-label="simple table">
                                         <TableBody>
                                           <TableRow>

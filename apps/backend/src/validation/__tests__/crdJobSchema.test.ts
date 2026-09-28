@@ -145,9 +145,7 @@ describe('crdJobSchema - rg', () => {
   })
 
   it('rejects values outside 10–100', async () => {
-    await expect(
-      crdJobSchema.validateAt('rg', { rg: 9 })
-    ).rejects.toBeTruthy()
+    await expect(crdJobSchema.validateAt('rg', { rg: 9 })).rejects.toBeTruthy()
     await expect(
       crdJobSchema.validateAt('rg', { rg: 101 })
     ).rejects.toBeTruthy()

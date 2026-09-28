@@ -78,7 +78,9 @@ describe('JobError', () => {
       })
 
       await waitFor(() => {
-        const preElement = screen.getByText(/Minimization failed/).closest('pre')
+        const preElement = screen
+          .getByText(/Minimization failed/)
+          .closest('pre')
         expect(preElement).toBeInTheDocument()
       })
     })

@@ -49,9 +49,9 @@ describe('pdbJobSchema - title', () => {
 
   it('accepts title at exactly 100 characters', async () => {
     const t = 'a'.repeat(100)
-    await expect(
-      pdbJobSchema.validateAt('title', { title: t })
-    ).resolves.toBe(t)
+    await expect(pdbJobSchema.validateAt('title', { title: t })).resolves.toBe(
+      t
+    )
   })
 })
 
@@ -149,15 +149,11 @@ describe('pdbJobSchema - required files', () => {
 // ---------------------------------------------------------------------------
 describe('pdbJobSchema - rg', () => {
   it('accepts values between 10 and 100', async () => {
-    await expect(
-      pdbJobSchema.validateAt('rg', { rg: 50 })
-    ).resolves.toBe(50)
+    await expect(pdbJobSchema.validateAt('rg', { rg: 50 })).resolves.toBe(50)
   })
 
   it('rejects value below 10', async () => {
-    await expect(
-      pdbJobSchema.validateAt('rg', { rg: 9 })
-    ).rejects.toBeTruthy()
+    await expect(pdbJobSchema.validateAt('rg', { rg: 9 })).rejects.toBeTruthy()
   })
 
   it('rejects value above 100', async () => {

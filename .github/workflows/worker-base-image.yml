@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Semver for image (e.g. 1.2.3 or 1.2.3-beta.1)"
+        description: 'Semver for image (e.g. 1.2.3 or 1.2.3-beta.1)'
         required: true
         type: string
 
