@@ -1,0 +1,6 @@
+# Commits that `git blame` should skip. GitHub's blame view reads this file
+# automatically. For local `git blame`, run once per clone:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: format the repo with prettier (#1064)
+4f842356e61470bda795ee85a930cabe8f61e3ef
