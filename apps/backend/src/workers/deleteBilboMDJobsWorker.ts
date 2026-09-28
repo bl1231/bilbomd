@@ -130,6 +130,10 @@ export const handleDeleteFailed = async (
 const deleteWorker = new Worker('delete-bilbomd', processDeleteJob, {
   connection
 })
+// Without a listener BullMQ prints Redis errors as raw stack traces.
+deleteWorker.on('error', (error) => {
+  logger.warn(`Delete worker error: ${error.message}`)
+})
 deleteWorker.on('failed', (job, error) => {
   handleDeleteFailed(job, error).catch((e) =>
     logger.error(`Error handling failed deletion: ${e}`)

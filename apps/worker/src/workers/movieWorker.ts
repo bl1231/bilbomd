@@ -6,6 +6,11 @@ export const createMovieWorker = (options: WorkerOptions): Worker => {
   const movieWorker = new Worker('movie', movieHandler, options)
   logger.info(`Movie Worker started`)
 
+  // Without a listener BullMQ prints Redis errors as raw stack traces.
+  movieWorker.on('error', (error) => {
+    logger.warn(`Movie Worker error: ${error.message}`)
+  })
+
   // Use closure to encapsulate counter instead of module-level state
   let activeJobsCount = 0
 

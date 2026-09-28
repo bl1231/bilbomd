@@ -1,10 +1,12 @@
 import { logger } from './loggers.js'
 
 // Exits the process when the BullMQ worker keeps reporting Redis errors, so
-// Docker's `restart: always` brings up a fresh worker. Without this a scoper
-// that lost Redis (e.g. epyc's Redis restarted) could sit forever logging
-// ECONNREFUSED while the UI says no SCOPER worker is running, even after Redis
-// was reachable again. A stalled job is retried by BullMQ after the restart.
+// Docker's `restart: always` brings up a fresh worker. A backstop: the scoper
+// on hyperion reaches epyc's Redis over the LAN, and a worker stuck in a bad
+// connection state looks to the UI like no SCOPER worker at all. (bullmq
+// < 6.3.3 also left idle workers parked after any Redis restart; see
+// test_scripts/redis-outage-recovery.mjs.) A stalled job is retried by BullMQ
+// after the restart.
 
 interface ErrorSource {
   on: (event: 'error', listener: (error: Error) => void) => unknown

@@ -8,6 +8,7 @@ const {
   pathExistsMock,
   removeMock,
   publishJobEventMock,
+  workerOnMock,
   order
 } = vi.hoisted(() => ({
   requestJobCancellationMock: vi.fn(),
@@ -16,12 +17,13 @@ const {
   pathExistsMock: vi.fn(),
   removeMock: vi.fn(),
   publishJobEventMock: vi.fn(),
+  workerOnMock: vi.fn(),
   order: [] as string[]
 }))
 
 vi.mock('bullmq', () => ({
   Worker: vi.fn(function () {
-    return { on: vi.fn() }
+    return { on: workerOnMock }
   })
 }))
 vi.mock('../../queues/redisConn.js', () => ({ redis: {} }))
@@ -48,6 +50,11 @@ import {
   handleDeleteFailed
 } from '../deleteBilboMDJobsWorker.js'
 import { logger } from '../../middleware/loggers.js'
+
+// Captured before beforeEach's clearAllMocks wipes the constructor-time calls.
+const onWorkerError = workerOnMock.mock.calls.find(
+  ([event]) => event === 'error'
+)?.[1] as ((error: Error) => void) | undefined
 
 const bullJob = (mongoId: string) =>
   ({ data: { mongoId } }) as unknown as Job<{ mongoId: string }>
@@ -76,6 +83,16 @@ beforeEach(() => {
     order.push(`event:${event.kind}`)
   })
   multiJobFindByIdMock.mockResolvedValue(null)
+})
+
+describe('delete worker', () => {
+  it('logs Redis errors instead of letting BullMQ print raw stack traces', () => {
+    expect(onWorkerError).toBeTypeOf('function')
+    onWorkerError?.(new Error('connect ECONNREFUSED'))
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Delete worker error: connect ECONNREFUSED'
+    )
+  })
 })
 
 describe('processDeleteJob', () => {
