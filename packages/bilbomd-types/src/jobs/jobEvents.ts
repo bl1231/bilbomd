@@ -42,10 +42,12 @@ export const JOB_EVENT_SSE_NAME = 'job'
 // user document. Mongoose ObjectIds stringify to their hex id.
 export const jobEventOwnerId = (user: unknown): string | undefined => {
   if (user == null) return undefined
-  if (typeof user === 'object' && '_id' in user && user._id != null) {
-    return String(user._id)
-  }
-  return String(user)
+  const id = typeof user === 'object' && '_id' in user ? user._id : user
+  if (id == null) return undefined
+  // Only a real ObjectId counts. An anonymous job's user is an empty nested
+  // object, which would otherwise stringify to something like "{}".
+  const hex = String(id)
+  return /^[0-9a-f]{24}$/i.test(hex) ? hex : undefined
 }
 
 // Timers exist in every runtime this package is used in (Node and browsers),

@@ -62,11 +62,25 @@ interface WatchableJob extends NotifiableJob {
   nersc?: { state?: unknown } | null
 }
 
+// Each step's status and message. Other fields are left out: rewriting a
+// step, as the NERSC monitor does on every pass, gives it a new _id even when
+// nothing changed.
+const stepSummary = (steps: unknown) => {
+  if (!steps || typeof steps !== 'object') return null
+  const plain = JSON.parse(JSON.stringify(steps)) as Record<string, unknown>
+  return Object.fromEntries(
+    Object.entries(plain).map(([name, step]) => {
+      const s = (step ?? {}) as { status?: unknown; message?: unknown }
+      return [name, { status: s.status, message: s.message }]
+    })
+  )
+}
+
 const visibleState = (job: WatchableJob): string =>
   JSON.stringify({
     status: job.status,
     progress: job.progress,
-    steps: job.steps,
+    steps: stepSummary(job.steps),
     results_ready: job.results_ready,
     cleanup: job.cleanup_in_progress,
     nersc: job.nersc?.state

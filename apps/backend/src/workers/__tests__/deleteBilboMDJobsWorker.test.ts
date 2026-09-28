@@ -52,7 +52,7 @@ import { logger } from '../../middleware/loggers.js'
 const bullJob = (mongoId: string) =>
   ({ data: { mongoId } }) as unknown as Job<{ mongoId: string }>
 
-const makeDoc = (uuid: string, user: unknown = { _id: 'owner-1' }) => ({
+const makeDoc = (uuid: string, user: unknown = { _id: '64b1f0c2a9e4b1d2c3e4f5a1' }) => ({
   uuid,
   title: 't',
   user,
@@ -94,7 +94,7 @@ describe('processDeleteJob', () => {
     expect(removeMock).toHaveBeenCalledWith('/data/uuid-1')
     expect(publishJobEventMock).toHaveBeenCalledWith(expect.anything(), {
       jobId: 'mongo-1',
-      ownerId: 'owner-1',
+      ownerId: '64b1f0c2a9e4b1d2c3e4f5a1',
       kind: 'deleted'
     })
   })
@@ -102,7 +102,7 @@ describe('processDeleteJob', () => {
   it('cancels multi jobs too', async () => {
     jobFindByIdMock.mockResolvedValue(null)
     // MultiJobs store the owner as a plain ObjectId-like ref
-    multiJobFindByIdMock.mockResolvedValue(makeDoc('multi-uuid', 'owner-2'))
+    multiJobFindByIdMock.mockResolvedValue(makeDoc('multi-uuid', '64b1f0c2a9e4b1d2c3e4f5a2'))
 
     await processDeleteJob(bullJob('mongo-multi'))
 
@@ -113,7 +113,7 @@ describe('processDeleteJob', () => {
     expect(order).toEqual(['cancel', 'deleteOne', 'event:deleted', 'remove'])
     expect(publishJobEventMock).toHaveBeenCalledWith(expect.anything(), {
       jobId: 'mongo-multi',
-      ownerId: 'owner-2',
+      ownerId: '64b1f0c2a9e4b1d2c3e4f5a2',
       kind: 'deleted'
     })
   })
@@ -168,7 +168,7 @@ describe('handleDeleteFailed', () => {
 
     expect(publishJobEventMock).toHaveBeenCalledExactlyOnceWith(
       expect.anything(),
-      { jobId: 'mongo-1', ownerId: 'owner-1', kind: 'delete_failed' }
+      { jobId: 'mongo-1', ownerId: '64b1f0c2a9e4b1d2c3e4f5a1', kind: 'delete_failed' }
     )
   })
 

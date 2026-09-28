@@ -18,13 +18,13 @@ describe('SCOPER job events', () => {
     const publish = vi.fn().mockResolvedValue(1)
     configureJobEvents({ publish })
 
-    notifyJobChanged({ _id: 'scoper-job', user: { _id: 'owner-1' } })
+    notifyJobChanged({ _id: 'scoper-job', user: { _id: '64b1f0c2a9e4b1d2c3e4f5a1' } })
 
     expect(publish).toHaveBeenCalledExactlyOnceWith(
       JOB_EVENTS_CHANNEL,
       JSON.stringify({
         jobId: 'scoper-job',
-        ownerId: 'owner-1',
+        ownerId: '64b1f0c2a9e4b1d2c3e4f5a1',
         kind: 'updated'
       })
     )

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { Types } from 'mongoose'
+import { Job } from '@bilbomd/mongodb-schema'
 import { JOB_EVENTS_CHANNEL } from '@bilbomd/bilbomd-types'
 
 vi.mock('../loggers.js', () => ({
@@ -168,5 +169,56 @@ describe('watchJobsForChanges', () => {
     notifyChanged()
 
     expect(publish).not.toHaveBeenCalled()
+  })
+})
+
+// Real (unsaved) Mongoose documents, shaped like the ones the NERSC monitor
+// and pipelines hold. Both regressions below only show up with these.
+describe('with real Job documents', () => {
+  const realJob = (fields: object) =>
+    new Job({ title: 't', uuid: 'u', data_file: 'd.dat', ...fields })
+
+  it('omits the owner of an anonymous job', () => {
+    const job = realJob({ access_mode: 'anonymous' })
+
+    notifyJobChanged(job)
+
+    expect(sent()[0]).not.toHaveProperty('ownerId')
+  })
+
+  it("reads a registered job's owner", () => {
+    const job = realJob({
+      access_mode: 'user',
+      user: { _id: ownerId, username: 'u' }
+    })
+
+    notifyJobChanged(job)
+
+    expect(sent()[0].ownerId).toBe(ownerId.toString())
+  })
+
+  it('ignores a step rewritten with the same status and message', () => {
+    const job = realJob({ access_mode: 'anonymous' })
+    job.steps = {} as never
+    job.steps.nersc_job_status = { status: 'Success', message: 'PENDING' }
+    const notifyChanged = watchJobsForChanges([job])
+
+    // what the NERSC monitor does on every pass
+    job.steps.nersc_job_status = { status: 'Success', message: 'PENDING' }
+    notifyChanged()
+
+    expect(publish).not.toHaveBeenCalled()
+  })
+
+  it("notices a real change to a step's message", () => {
+    const job = realJob({ access_mode: 'anonymous' })
+    job.steps = {} as never
+    job.steps.nersc_job_status = { status: 'Success', message: 'PENDING' }
+    const notifyChanged = watchJobsForChanges([job])
+
+    job.steps.nersc_job_status = { status: 'Success', message: 'RUNNING' }
+    notifyChanged()
+
+    expect(publish).toHaveBeenCalledTimes(1)
   })
 })
