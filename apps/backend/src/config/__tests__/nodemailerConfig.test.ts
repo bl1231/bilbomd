@@ -1,23 +1,22 @@
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
-type MockTransporter = {
-  sendMail: Mock
-  use: Mock
-}
-
-// Mock nodemailer before importing the module under test
-vi.mock('nodemailer', () => {
+// One transporter shared by every import of the module under test, so tests
+// that re-import it (to observe import-time setup) see the same mock.
+const { transporter, createTransport } = vi.hoisted(() => {
+  const transporter = {
+    sendMail: vi.fn().mockResolvedValue({ messageId: 'test-message-id' }),
+    use: vi.fn()
+  }
   return {
-    default: {
-      createTransport: vi.fn(() => ({
-        sendMail: vi.fn().mockResolvedValue({ messageId: 'test-message-id' }),
-        use: vi.fn()
-      }))
-    }
+    transporter,
+    createTransport: vi.fn<
+      (options: Record<string, unknown>) => typeof transporter
+    >(() => transporter)
   }
 })
 
-// Mock logger
+vi.mock('nodemailer', () => ({ default: { createTransport } }))
+
 vi.mock('../../middleware/loggers.js', () => ({
   logger: {
     info: vi.fn(),
@@ -25,70 +24,57 @@ vi.mock('../../middleware/loggers.js', () => ({
   }
 }))
 
-// Import after mocking
 import * as mailer from '../nodemailerConfig.js'
-import nodemailer from 'nodemailer'
+
+// Mocks are cleared before each test, so load the module inside the test to
+// observe what it does at import time.
+const importFresh = async () => {
+  vi.resetModules()
+  await import('../nodemailerConfig.js')
+  return createTransport.mock.calls[0]?.[0] ?? {}
+}
 
 describe('transporter configuration', () => {
-  it('uses secure: false by default', () => {
-    const createTransportMock = nodemailer.createTransport as Mock
-    const config = createTransportMock.mock.calls[0]?.[0]
+  it('uses secure: false by default', async () => {
+    const config = await importFresh()
     expect(config.secure).toBe(false)
   })
 
-  it('omits auth when BILBOMD_MAILER_USER/PASS are not set', () => {
-    const createTransportMock = nodemailer.createTransport as Mock
-    const config = createTransportMock.mock.calls[0]?.[0]
+  it('omits auth when BILBOMD_MAILER_USER/PASS are not set', async () => {
+    const config = await importFresh()
     expect(config.auth).toBeUndefined()
   })
 
-  it('uses smtp-relay.gmail.com as default host', () => {
-    const createTransportMock = nodemailer.createTransport as Mock
-    const config = createTransportMock.mock.calls[0]?.[0]
+  it('uses smtp-relay.gmail.com as default host', async () => {
+    const config = await importFresh()
     expect(config.host).toBe('smtp-relay.gmail.com')
   })
 
-  it('uses port 25 as default', () => {
-    const createTransportMock = nodemailer.createTransport as Mock
-    const config = createTransportMock.mock.calls[0]?.[0]
+  it('uses port 25 as default', async () => {
+    const config = await importFresh()
     expect(config.port).toBe(25)
   })
 
-  it('registers the handlebars compile plugin once, at import', () => {
-    const createTransportMock = nodemailer.createTransport as Mock
-    const transporter = createTransportMock.mock.results[0]?.value
+  it('registers the handlebars compile plugin once, at import', async () => {
+    await importFresh()
     expect(transporter.use).toHaveBeenCalledTimes(1)
-    expect(transporter.use).toHaveBeenCalledWith('compile', expect.any(Function))
+    expect(transporter.use).toHaveBeenCalledWith(
+      'compile',
+      expect.any(Function)
+    )
   })
 })
 
 describe('nodemailerConfig', () => {
-  let mockTransporter: MockTransporter
-
-  beforeEach(() => {
-    // IMPORTANT: Do NOT clear all mocks here; the transporter instance
-    // is created during module import time. Clearing all mocks would
-    // erase nodemailer's recorded call and its returned instance.
-    // Instead, retrieve the already-created transporter and clear only
-    // its method call history to start fresh per test.
-    const createTransportMock = nodemailer.createTransport as Mock
-    const created = createTransportMock.mock.results[0]?.value
-    // Fallback: if not created for some reason, create once now.
-    mockTransporter = created || createTransportMock()
-    if (mockTransporter.use?.mockClear) mockTransporter.use.mockClear()
-    if (mockTransporter.sendMail?.mockClear)
-      mockTransporter.sendMail.mockClear()
-  })
-
   it('sendVerificationEmail sends correct mail', async () => {
     await mailer.sendVerificationEmail(
       'test@example.com',
       'http://url',
       'code123'
     )
-    expect(mockTransporter.use).not.toHaveBeenCalled()
-    expect(mockTransporter.sendMail).toHaveBeenCalled()
-    const mailArg = mockTransporter.sendMail.mock.calls[0][0]
+    expect(transporter.use).not.toHaveBeenCalled()
+    expect(transporter.sendMail).toHaveBeenCalled()
+    const mailArg = transporter.sendMail.mock.calls[0][0]
     expect(mailArg.to).toBe('test@example.com')
     expect(mailArg.template).toBe('signup')
     expect(mailArg.context).toEqual({
@@ -99,9 +85,9 @@ describe('nodemailerConfig', () => {
 
   it('sendMagickLinkEmail sends correct mail', async () => {
     await mailer.sendMagickLinkEmail('test@example.com', 'http://url', 'otp456')
-    expect(mockTransporter.use).not.toHaveBeenCalled()
-    expect(mockTransporter.sendMail).toHaveBeenCalled()
-    const mailArg = mockTransporter.sendMail.mock.calls[0][0]
+    expect(transporter.use).not.toHaveBeenCalled()
+    expect(transporter.sendMail).toHaveBeenCalled()
+    const mailArg = transporter.sendMail.mock.calls[0][0]
     expect(mailArg.template).toBe('magicklink')
     expect(mailArg.context).toEqual({
       onetimepasscode: 'otp456',
@@ -111,9 +97,9 @@ describe('nodemailerConfig', () => {
 
   it('sendOtpEmail sends correct mail', async () => {
     await mailer.sendOtpEmail('test@example.com', 'http://url', 'otp789')
-    expect(mockTransporter.use).not.toHaveBeenCalled()
-    expect(mockTransporter.sendMail).toHaveBeenCalled()
-    const mailArg = mockTransporter.sendMail.mock.calls[0][0]
+    expect(transporter.use).not.toHaveBeenCalled()
+    expect(transporter.sendMail).toHaveBeenCalled()
+    const mailArg = transporter.sendMail.mock.calls[0][0]
     expect(mailArg.template).toBe('otp')
     expect(mailArg.context).toEqual({
       onetimepasscode: 'otp789',
@@ -123,16 +109,16 @@ describe('nodemailerConfig', () => {
 
   it('sendOtpEmailLocal sends correct mail', async () => {
     await mailer.sendOtpEmailLocal('test@example.com', 'http://url', 'otp000')
-    expect(mockTransporter.sendMail).toHaveBeenCalled()
-    const mailArg = mockTransporter.sendMail.mock.calls[0][0]
+    expect(transporter.sendMail).toHaveBeenCalled()
+    const mailArg = transporter.sendMail.mock.calls[0][0]
     expect(mailArg.text).toContain('otp000')
   })
 
   it('sendUpdatedEmailMessage sends correct mail', async () => {
     await mailer.sendUpdatedEmailMessage('new@example.com', 'old@example.com')
-    expect(mockTransporter.use).not.toHaveBeenCalled()
-    expect(mockTransporter.sendMail).toHaveBeenCalled()
-    const mailArg = mockTransporter.sendMail.mock.calls[0][0]
+    expect(transporter.use).not.toHaveBeenCalled()
+    expect(transporter.sendMail).toHaveBeenCalled()
+    const mailArg = transporter.sendMail.mock.calls[0][0]
     expect(mailArg.template).toBe('emailUpdated')
     expect(mailArg.context).toEqual({
       oldEmail: 'old@example.com',
@@ -142,9 +128,9 @@ describe('nodemailerConfig', () => {
 
   it('sendDeleteAccountSuccessEmail sends correct mail', async () => {
     await mailer.sendDeleteAccountSuccessEmail('test@example.com', 'testuser')
-    expect(mockTransporter.use).not.toHaveBeenCalled()
-    expect(mockTransporter.sendMail).toHaveBeenCalled()
-    const mailArg = mockTransporter.sendMail.mock.calls[0][0]
+    expect(transporter.use).not.toHaveBeenCalled()
+    expect(transporter.sendMail).toHaveBeenCalled()
+    const mailArg = transporter.sendMail.mock.calls[0][0]
     expect(mailArg.template).toBe('deleteAccount')
     expect(mailArg.context).toEqual({ username: 'testuser' })
   })
