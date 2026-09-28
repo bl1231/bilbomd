@@ -22,20 +22,23 @@ const transporter = nodemailer.createTransport({
   ...(mailUser && mailPass ? { auth: { user: mailUser, pass: mailPass } } : {})
 })
 
+// Register the handlebars templates once; calling use() on every send would
+// add another copy of the plugin each time.
+transporter.use(
+  'compile',
+  hbs({
+    viewEngine: {
+      extname: '.handlebars',
+      layoutsDir: viewPath,
+      defaultLayout: ''
+    },
+    viewPath,
+    extName: '.handlebars'
+  })
+)
+
 const sendVerificationEmail = (email: string, url: string, code: string) => {
   logger.info(`send verification email to ${email}`)
-  transporter.use(
-    'compile',
-    hbs({
-      viewEngine: {
-        extname: '.handlebars',
-        layoutsDir: viewPath,
-        defaultLayout: ''
-      },
-      viewPath: viewPath,
-      extName: '.handlebars'
-    })
-  )
 
   const mailOptions = {
     from: user,
@@ -60,18 +63,6 @@ const sendVerificationEmail = (email: string, url: string, code: string) => {
 
 const sendMagickLinkEmail = (email: string, url: string, otp: string) => {
   logger.info(`Send MagickLink email to ${email}`)
-  transporter.use(
-    'compile',
-    hbs({
-      viewEngine: {
-        extname: '.handlebars',
-        layoutsDir: viewPath,
-        defaultLayout: ''
-      },
-      viewPath: viewPath,
-      extName: '.handlebars'
-    })
-  )
 
   const mailOptions = {
     from: user,
@@ -97,18 +88,6 @@ const sendMagickLinkEmail = (email: string, url: string, otp: string) => {
 // Function to send OTP email using a template
 const sendOtpEmail = (email: string, url: string, otp: string) => {
   logger.info(`Sending OTP email to ${email} Password is ${otp}`)
-  transporter.use(
-    'compile',
-    hbs({
-      viewEngine: {
-        extname: '.handlebars',
-        layoutsDir: viewPath,
-        defaultLayout: ''
-      },
-      viewPath: viewPath,
-      extName: '.handlebars'
-    })
-  )
 
   const mailOptions = {
     from: user,
@@ -158,20 +137,6 @@ const sendUpdatedEmailMessage = (newEmail: string, oldEmail: string) => {
     `Sending updated email message to ${oldEmail}; new email is ${newEmail}`
   )
 
-  // Configure the Handlebars template engine
-  transporter.use(
-    'compile',
-    hbs({
-      viewEngine: {
-        extname: '.handlebars',
-        layoutsDir: viewPath,
-        defaultLayout: ''
-      },
-      viewPath: viewPath,
-      extName: '.handlebars'
-    })
-  )
-
   const mailOptions = {
     from: user,
     to: oldEmail,
@@ -196,19 +161,6 @@ const sendUpdatedEmailMessage = (newEmail: string, oldEmail: string) => {
 
 const sendDeleteAccountSuccessEmail = (email: string, username: string) => {
   logger.info(`Sending delete account success email to ${email}`)
-
-  transporter.use(
-    'compile',
-    hbs({
-      viewEngine: {
-        extname: '.handlebars',
-        layoutsDir: viewPath,
-        defaultLayout: ''
-      },
-      viewPath: viewPath,
-      extName: '.handlebars'
-    })
-  )
 
   const mailOptions = {
     from: user,

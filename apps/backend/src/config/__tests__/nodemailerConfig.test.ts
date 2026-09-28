@@ -53,6 +53,13 @@ describe('transporter configuration', () => {
     const config = createTransportMock.mock.calls[0]?.[0]
     expect(config.port).toBe(25)
   })
+
+  it('registers the handlebars compile plugin once, at import', () => {
+    const createTransportMock = nodemailer.createTransport as Mock
+    const transporter = createTransportMock.mock.results[0]?.value
+    expect(transporter.use).toHaveBeenCalledTimes(1)
+    expect(transporter.use).toHaveBeenCalledWith('compile', expect.any(Function))
+  })
 })
 
 describe('nodemailerConfig', () => {
@@ -79,10 +86,7 @@ describe('nodemailerConfig', () => {
       'http://url',
       'code123'
     )
-    expect(mockTransporter.use).toHaveBeenCalledWith(
-      'compile',
-      expect.any(Function)
-    )
+    expect(mockTransporter.use).not.toHaveBeenCalled()
     expect(mockTransporter.sendMail).toHaveBeenCalled()
     const mailArg = mockTransporter.sendMail.mock.calls[0][0]
     expect(mailArg.to).toBe('test@example.com')
@@ -95,10 +99,7 @@ describe('nodemailerConfig', () => {
 
   it('sendMagickLinkEmail sends correct mail', async () => {
     await mailer.sendMagickLinkEmail('test@example.com', 'http://url', 'otp456')
-    expect(mockTransporter.use).toHaveBeenCalledWith(
-      'compile',
-      expect.any(Function)
-    )
+    expect(mockTransporter.use).not.toHaveBeenCalled()
     expect(mockTransporter.sendMail).toHaveBeenCalled()
     const mailArg = mockTransporter.sendMail.mock.calls[0][0]
     expect(mailArg.template).toBe('magicklink')
@@ -110,10 +111,7 @@ describe('nodemailerConfig', () => {
 
   it('sendOtpEmail sends correct mail', async () => {
     await mailer.sendOtpEmail('test@example.com', 'http://url', 'otp789')
-    expect(mockTransporter.use).toHaveBeenCalledWith(
-      'compile',
-      expect.any(Function)
-    )
+    expect(mockTransporter.use).not.toHaveBeenCalled()
     expect(mockTransporter.sendMail).toHaveBeenCalled()
     const mailArg = mockTransporter.sendMail.mock.calls[0][0]
     expect(mailArg.template).toBe('otp')
@@ -132,10 +130,7 @@ describe('nodemailerConfig', () => {
 
   it('sendUpdatedEmailMessage sends correct mail', async () => {
     await mailer.sendUpdatedEmailMessage('new@example.com', 'old@example.com')
-    expect(mockTransporter.use).toHaveBeenCalledWith(
-      'compile',
-      expect.any(Function)
-    )
+    expect(mockTransporter.use).not.toHaveBeenCalled()
     expect(mockTransporter.sendMail).toHaveBeenCalled()
     const mailArg = mockTransporter.sendMail.mock.calls[0][0]
     expect(mailArg.template).toBe('emailUpdated')
@@ -147,10 +142,7 @@ describe('nodemailerConfig', () => {
 
   it('sendDeleteAccountSuccessEmail sends correct mail', async () => {
     await mailer.sendDeleteAccountSuccessEmail('test@example.com', 'testuser')
-    expect(mockTransporter.use).toHaveBeenCalledWith(
-      'compile',
-      expect.any(Function)
-    )
+    expect(mockTransporter.use).not.toHaveBeenCalled()
     expect(mockTransporter.sendMail).toHaveBeenCalled()
     const mailArg = mockTransporter.sendMail.mock.calls[0][0]
     expect(mailArg.template).toBe('deleteAccount')

@@ -26,6 +26,21 @@ const transporter = nodemailer.createTransport({
   ...(mailUser && mailPass ? { auth: { user: mailUser, pass: mailPass } } : {})
 })
 
+// Register the handlebars templates once; calling use() on every send would
+// add another copy of the plugin each time.
+transporter.use(
+  'compile',
+  hbs({
+    viewEngine: {
+      extname: '.handlebars',
+      layoutsDir: viewPath,
+      defaultLayout: ''
+    },
+    viewPath,
+    extName: '.handlebars'
+  })
+)
+
 const sendJobCompleteEmail = (
   email: string,
   url: string,
@@ -43,19 +58,6 @@ const sendJobCompleteEmail = (
   } else {
     emailLayout = 'jobcomplete'
   }
-
-  transporter.use(
-    'compile',
-    hbs({
-      viewEngine: {
-        extname: '.handlebars',
-        defaultLayout: '',
-        layoutsDir: viewPath
-      },
-      viewPath,
-      extName: '.handlebars'
-    })
-  )
 
   // The tokened results link works without logging in (issue #978); jobs
   // created before results_token existed fall back to the dashboard link.
