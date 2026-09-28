@@ -34,6 +34,18 @@ describe('redisConn', () => {
     expect(options.maxRetriesPerRequest).toBeNull()
   })
 
+  it('sends no password when REDIS_PASSWORD is unset', () => {
+    expect(hoisted.constructorCalls[0]).toMatchObject({ password: undefined })
+  })
+
+  it('passes REDIS_PASSWORD to ioredis', async () => {
+    vi.stubEnv('REDIS_PASSWORD', 's3cret')
+    vi.resetModules()
+    await import('../redisConn.js')
+    expect(hoisted.constructorCalls.at(-1)).toMatchObject({ password: 's3cret' })
+    vi.unstubAllEnvs()
+  })
+
   it('retries with backoff capped at 5 seconds', () => {
     expect(redisRetryStrategy(1)).toBe(500)
     expect(redisRetryStrategy(5)).toBe(2500)

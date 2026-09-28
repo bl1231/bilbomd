@@ -16,6 +16,7 @@ const sessionRedisReconnectStrategy = (retries: number): number =>
   Math.min(retries * 500, 5000)
 
 const sessionRedis = createClient({
+  password: process.env.REDIS_PASSWORD || undefined,
   socket: useTls
     ? { port, host, tls: true as const, reconnectStrategy: sessionRedisReconnectStrategy }
     : { port, host, reconnectStrategy: sessionRedisReconnectStrategy }
