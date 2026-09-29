@@ -10,16 +10,6 @@ interface TaskStatusResponse {
   result: string
 }
 
-interface JobStatusResponse {
-  api_status: string
-  api_error?: string | null
-  sacct_jobid?: string
-  sacct_state?: string
-  sacct_submit?: string
-  sacct_start?: string
-  sacct_end?: string
-}
-
 interface NerscAccessToken {
   access_token: string
   scope: string
@@ -187,9 +177,4 @@ interface JobStatusOutputSacct {
   workdir: '/global/u2/s/sclassen'
 }
 
-export {
-  TaskStatusResponse,
-  JobStatusResponse,
-  NerscAccessToken,
-  JobStatusOutputSacct
-}
+export { TaskStatusResponse, NerscAccessToken, JobStatusOutputSacct }
