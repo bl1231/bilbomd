@@ -28,6 +28,7 @@ import {
 } from '../services/functions/usage-events.js'
 import { discriminatorToPipeline } from '@bilbomd/md-utils'
 import pLimit from 'p-limit'
+import moment from 'moment-timezone'
 import { watchJobsForChanges } from '../helpers/jobEvents.js'
 
 const fetchIncompleteJobs = async (): Promise<IJob[]> => {
@@ -517,6 +518,20 @@ const cleanSlurmState = (
   }
 }
 
+// sacct reports times as Perlmutter's local wall-clock time with no offset
+// (e.g. '2026-09-28T22:22:05'). new Date() would read that in the worker's
+// own timezone (UTC in our containers), putting every time 7-8 hours early.
+const SLURM_TIMEZONE = 'America/Los_Angeles'
+
+// Parses a sacct time, or returns the epoch placeholder for a missing or
+// unset one ('Unknown', 'N/A', 'None').
+const parseSlurmTime = (value?: string): Date => {
+  const parsed = value
+    ? moment.tz(value, moment.ISO_8601, true, SLURM_TIMEZONE)
+    : null
+  return parsed?.isValid() ? parsed.toDate() : new Date(0)
+}
+
 const fetchNERSCJobState = async (
   jobID: string
 ): Promise<INerscInfo | null> => {
@@ -540,18 +555,13 @@ const fetchNERSCJobState = async (
 
       // Log the entire jobDetails object for debugging
       // logger.info(`Job Details for ${jobID}: ${JSON.stringify(jobDetails, null, 2)}`)
-      const parseDate = (dateStr?: string): Date => {
-        const d = dateStr ? new Date(dateStr) : new Date(NaN)
-        return isNaN(d.getTime()) ? new Date(0) : d
-      }
-
       return {
         jobid: jobID,
         state: cleanSlurmState(jobDetails.state, jobID),
         qos: jobDetails.qos || null,
-        time_submitted: parseDate(jobDetails.submit),
-        time_started: parseDate(jobDetails.start),
-        time_completed: parseDate(jobDetails.end)
+        time_submitted: parseSlurmTime(jobDetails.submit),
+        time_started: parseSlurmTime(jobDetails.start),
+        time_completed: parseSlurmTime(jobDetails.end)
       }
     } else {
       logger.warn(`No output received for NERSC job: ${jobID}`)
@@ -671,4 +681,9 @@ const updateJobStepsFromSlurmStatusFile = async (
   }
 }
 
-export { monitorAndCleanupJobs, queryNERSCForJobState, calculateProgress }
+export {
+  monitorAndCleanupJobs,
+  queryNERSCForJobState,
+  calculateProgress,
+  parseSlurmTime
+}
