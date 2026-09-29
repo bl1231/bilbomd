@@ -2,6 +2,7 @@ import {
   Job as DBJob,
   IJob,
   IBilboMDSteps,
+  IStepStatus,
   StepStatusEnum,
   NerscStatus,
   NerscStatusEnum,
@@ -599,21 +600,30 @@ const performJobCleanup = async (DBjob: IJob) => {
   }
 }
 
+// A job's steps as a plain { name: { status, message } } object. job.steps is
+// a Mongoose subdocument: Object.values() and spreading it return Mongoose
+// internals ($__parent, _doc, ...), not the steps.
+type StepMap = Partial<Record<keyof IBilboMDSteps, IStepStatus>>
+
+const plainSteps = (steps?: IBilboMDSteps): StepMap => {
+  if (!steps) return {}
+  const plain = JSON.parse(JSON.stringify(steps)) as Record<string, unknown>
+  return Object.fromEntries(
+    Object.entries(plain).filter(
+      ([, step]) =>
+        typeof step === 'object' && step !== null && 'status' in step
+    )
+  ) as StepMap
+}
+
 const calculateProgress = async (steps?: IBilboMDSteps): Promise<number> => {
-  if (!steps) return 0
-
-  // Extract all step statuses from the steps object
-  const stepStatuses = Object.values(steps)
-
-  // Filter out undefined steps (in case some steps are optional or not defined yet)
-  const validSteps = stepStatuses.filter((step) => step !== undefined)
-
-  const totalSteps = validSteps.length
+  const stepStatuses = Object.values(plainSteps(steps))
+  const totalSteps = stepStatuses.length
 
   if (totalSteps === 0) return 0 // Avoid division by zero
 
   // Count the steps marked as 'Success'
-  const completedSteps = validSteps.filter(
+  const completedSteps = stepStatuses.filter(
     (step) => step?.status === 'Success'
   ).length
 
@@ -625,10 +635,7 @@ const updateJobStepsFromSlurmStatusFile = async (
   DBJob: IJob
 ): Promise<void> => {
   try {
-    if (!DBJob.steps) {
-      DBJob.steps = {} as IBilboMDSteps
-    }
-    const currentSteps = DBJob.steps
+    const currentSteps = plainSteps(DBJob.steps)
     const UUID = DBJob.uuid
     const contents: string = await getSlurmStatusFile(UUID)
     const lines = contents.split('\n').filter(Boolean) // Filter out empty lines
@@ -643,11 +650,11 @@ const updateJobStepsFromSlurmStatusFile = async (
         }
         return acc
       },
-      { ...currentSteps } as IBilboMDSteps
+      { ...currentSteps }
     )
 
     // Apply the updated steps to the job
-    DBJob.steps = updatedSteps
+    DBJob.steps = updatedSteps as IBilboMDSteps
     await DBJob.save()
   } catch (error) {
     logger.error(`Unable to update job status for ${DBJob._id}: ${error}`)
@@ -655,4 +662,4 @@ const updateJobStepsFromSlurmStatusFile = async (
   }
 }
 
-export { monitorAndCleanupJobs, queryNERSCForJobState }
+export { monitorAndCleanupJobs, queryNERSCForJobState, calculateProgress }

@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios from 'axios'
 import { IJob, INerscInfo, Job, NerscStatus } from '@bilbomd/mongodb-schema'
 import {
+  calculateProgress,
   monitorAndCleanupJobs,
   queryNERSCForJobState
 } from '../bilboMdNerscJobMonitor.js'
 import { configureJobEvents } from '../../helpers/jobEvents.js'
 import { updateSingleJobStep } from '../../services/functions/job-monitor-functions.js'
+import { getSlurmStatusFile } from '../../services/functions/nersc-api-functions.js'
 
 vi.mock('../../helpers/loggers.js', () => ({
   logger: {
@@ -214,5 +216,66 @@ describe('monitorAndCleanupJobs', () => {
     await monitorAndCleanupJobs()
 
     expect(publish).not.toHaveBeenCalled()
+  })
+})
+
+// Real Mongoose documents, not plain objects: job.steps is a subdocument, and
+// Object.values() on it returns Mongoose internals rather than the steps
+const makeRealJob = () => {
+  const job = new Job({
+    uuid: 'real-uuid',
+    status: 'Running',
+    steps: {
+      pae: { status: 'Running', message: 'Running' },
+      minimize: { status: 'Waiting', message: 'Waiting' },
+      md: { status: 'Waiting', message: 'Waiting' },
+      foxs: { status: 'Waiting', message: 'Waiting' }
+    },
+    nersc: {
+      jobid: '12345678',
+      state: NerscStatus.RUNNING,
+      qos: 'gpu_debug',
+      time_submitted: new Date()
+    }
+  })
+  vi.spyOn(job, 'save').mockResolvedValue(job)
+  return job as unknown as IJob
+}
+
+describe('calculateProgress', () => {
+  it('counts the Success steps of a Mongoose job', async () => {
+    const job = makeRealJob()
+    job.steps!.pae = { status: 'Success', message: 'Success' }
+
+    expect(await calculateProgress(job.steps)).toBe(25)
+  })
+
+  it('returns 0 when the job has no steps', async () => {
+    expect(await calculateProgress(undefined)).toBe(0)
+  })
+})
+
+describe('monitorAndCleanupJobs progress', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+  })
+
+  it('updates steps and progress from status.txt while the job runs', async () => {
+    const job = makeRealJob()
+    vi.spyOn(Job, 'find').mockReturnValue({
+      exec: vi.fn().mockResolvedValue([job])
+    } as unknown as ReturnType<typeof Job.find>)
+    mockApiResponse([{ state: 'RUNNING', qos: 'gpu_debug' }])
+    vi.mocked(getSlurmStatusFile).mockResolvedValue(
+      'pae: Success\nminimize: Success\nmd: Running\nfoxs: Waiting\n'
+    )
+
+    await monitorAndCleanupJobs()
+
+    expect(job.steps?.pae?.status).toBe('Success')
+    expect(job.steps?.minimize?.status).toBe('Success')
+    expect(job.steps?.md?.status).toBe('Running')
+    expect(job.progress).toBe(50)
   })
 })
