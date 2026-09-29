@@ -1,5 +1,19 @@
 # @bilbomd/worker
 
+## 2.19.0
+
+### Minor Changes
+
+- c6e8f02: Let users turn off job emails. Settings → Preferences now has a switch, saved as `User.emailNotifications` (on by default, including for existing users), with new `GET`/`PATCH /users/me/preferences` endpoints. The worker and SCOPER skip job complete/failed emails for users who turned them off. Email footers no longer link to the nonexistent `bilbomd.als.lbl.gov` host or to the account-deletion page: job emails link to `{{url}}/settings/preferences`, account emails (sign-in codes, magic links, sign-up) drop the "Unsubscribe" link since they are always sent, and "contact support" links go to bilbomd@lbl.gov.
+- 09e7477: Report failed jobs: once BullMQ stops retrying a failed BilboMD or Multi job, the worker marks it Error, records a `job_failed` usage event (with the failing step and error), and emails the owner. Cancelled jobs record `job_cancelled` instead. NERSC Slurm failures now email the owner too, and the NERSC monitor records started/failed/cancelled events once per status change instead of on every pass. SCOPER records `job_failed` on its last attempt and no longer tries to email anonymous job owners. Failure emails use a "BilboMD Job Failed" subject.
+
+### Patch Changes
+
+- 509572a: Read NERSC Slurm (sacct) start and end times as Perlmutter's Pacific local time instead of UTC. They were stored 7–8 hours early, so the Jobs table showed "Invalid" queue times and run times hours too long for NERSC jobs.
+- Updated dependencies [c6e8f02]
+  - @bilbomd/mongodb-schema@2.10.0
+  - @bilbomd/md-utils@1.1.29
+
 ## 2.18.6
 
 ### Patch Changes
