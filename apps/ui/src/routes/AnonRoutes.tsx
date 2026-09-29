@@ -5,9 +5,6 @@ import AnonLayout from 'layout/AnonLayout'
 const About = Loadable(lazy(() => import('features/about/About')))
 const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
 const NewJobForm = Loadable(lazy(() => import('features/jobs/NewJobForm')))
-const PublicJobPage = Loadable(
-  lazy(() => import('features/public/PublicJobPage'))
-)
 const NewAutoJob = Loadable(
   lazy(() => import('features/autojob/NewAutoJobForm'))
 )
@@ -83,10 +80,6 @@ const AnonRoutes = {
     {
       path: 'jiffy/pae',
       element: <AF2PAEJiffy />
-    },
-    {
-      path: 'results/:publicId',
-      element: <PublicJobPage />
     },
     {
       path: 'help',
