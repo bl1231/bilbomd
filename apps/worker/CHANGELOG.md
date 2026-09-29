@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.18.5
+
+### Patch Changes
+
+- 3e770df: Fix NERSC jobs staying Pending in BilboMD after Slurm ran them. The job monitor now asks Slurm for job state directly (`cached=false`) instead of the Superfacility API's cached job database, which was returning no data for our jobs.
+
 ## 2.18.4
 
 ### Patch Changes
