@@ -58,6 +58,12 @@ const userSchema = new Schema(
       type: Boolean,
       default: true
     },
+    // Job complete / job failed emails. Account emails (sign-in codes, magic
+    // links, email changes) are always sent.
+    emailNotifications: {
+      type: Boolean,
+      default: true
+    },
     confirmationCode: {
       code: {
         type: String

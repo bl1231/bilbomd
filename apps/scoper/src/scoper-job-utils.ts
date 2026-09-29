@@ -8,6 +8,10 @@ import {
   IBilboMDScoperJob
 } from '@bilbomd/mongodb-schema'
 import { sendJobCompleteEmail } from './helpers/mailer.js'
+import {
+  wantsJobEmails,
+  JOB_EMAILS_OFF_MESSAGE
+} from './helpers/emailPreferences.js'
 import { config } from './config/config.js'
 import { updateStepStatus } from './mongo-utils.js'
 import { notifyJobChanged } from './helpers/jobEvents.js'
@@ -89,6 +93,16 @@ const handleJobEmailNotification = async (
     logger.info(
       `Skipping email notification: user email is undefined for job uuid=${DBjob.uuid}`
     )
+    return
+  }
+  if (config.sendEmailNotifications && !(await wantsJobEmails(user))) {
+    logger.info(
+      `Skipping email notification for job uuid=${DBjob.uuid}: the owner turned job emails off`
+    )
+    await updateStepStatus(DBjob, 'email', {
+      status: 'Success',
+      message: JOB_EMAILS_OFF_MESSAGE
+    })
     return
   }
   if (config.sendEmailNotifications) {

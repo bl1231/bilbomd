@@ -13,8 +13,39 @@ interface OtpData {
   otp: string
 }
 
+export interface UserPreferences {
+  emailNotifications: boolean
+}
+
 export const userAccountApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
+    getPreferences: builder.query<UserPreferences, void>({
+      query: () => 'users/me/preferences',
+      providesTags: [{ type: 'User', id: 'ME_PREFERENCES' }]
+    }),
+    updatePreferences: builder.mutation<UserPreferences, UserPreferences>({
+      query: (preferences) => ({
+        url: 'users/me/preferences',
+        method: 'PATCH',
+        body: preferences
+      }),
+      // Show the saved value right away; the refetch confirms it
+      async onQueryStarted(preferences, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          userAccountApiSlice.util.updateQueryData(
+            'getPreferences',
+            undefined,
+            (draft) => Object.assign(draft, preferences)
+          )
+        )
+        try {
+          await queryFulfilled
+        } catch {
+          patch.undo()
+        }
+      },
+      invalidatesTags: [{ type: 'User', id: 'ME_PREFERENCES' }]
+    }),
     updateEmail: builder.mutation<void, EmailData>({
       query: (emailData) => ({
         url: 'users/change-email',
@@ -46,6 +77,8 @@ export const userAccountApiSlice = apiSlice.injectEndpoints({
 })
 
 export const {
+  useGetPreferencesQuery,
+  useUpdatePreferencesMutation,
   useUpdateEmailMutation,
   useVerifyOtpMutation,
   useResendOtpMutation,

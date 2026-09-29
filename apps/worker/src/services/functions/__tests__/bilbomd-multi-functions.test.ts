@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import path from 'node:path'
 import { User, type IMultiJob } from '@bilbomd/mongodb-schema'
 
@@ -26,6 +26,15 @@ vi.mock('../../../helpers/jobEvents.js', () => ({
   notifyJobChanged: vi.fn()
 }))
 
+vi.mock('../../../helpers/mailer.js', () => ({
+  sendJobCompleteEmail: vi.fn()
+}))
+
+vi.mock('../../../helpers/emailPreferences.js', () => ({
+  wantsJobEmails: vi.fn().mockResolvedValue(true),
+  JOB_EMAILS_OFF_MESSAGE: 'Not sent: job emails are turned off in settings'
+}))
+
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
@@ -39,6 +48,8 @@ import {
 } from '../bilbomd-multi-functions.js'
 import { notifyJobChanged } from '../../../helpers/jobEvents.js'
 import { config } from '../../../config/config.js'
+import { sendJobCompleteEmail } from '../../../helpers/mailer.js'
+import { wantsJobEmails } from '../../../helpers/emailPreferences.js'
 
 const makeJob = (overrides: Partial<IMultiJob> = {}) =>
   ({
@@ -191,5 +202,49 @@ describe('bilbomd-multi-functions - job start and finish', () => {
     expect(job.status).toBe('Completed')
     expect(save).toHaveBeenCalled()
     expect(notifyJobChanged).toHaveBeenCalledExactlyOnceWith(job)
+  })
+
+  describe('job emails', () => {
+    const owner = { _id: 'owner-1', email: 'owner@example.com' }
+    let sendEmails: boolean
+
+    beforeEach(() => {
+      sendEmails = config.sendEmailNotifications
+      config.sendEmailNotifications = true
+      vi.mocked(wantsJobEmails).mockResolvedValue(true)
+    })
+    afterEach(() => {
+      config.sendEmailNotifications = sendEmails
+    })
+
+    it('emails the owner when the job completes', async () => {
+      userLookup(owner)
+      const { job } = savingJob()
+      Object.assign(job, { _id: 'multi-id' })
+
+      await cleanupJob(job)
+
+      expect(sendJobCompleteEmail).toHaveBeenCalledWith(
+        'owner@example.com',
+        config.bilbomdUrl,
+        'multi-id',
+        'multi',
+        false
+      )
+    })
+
+    it('skips the email when the owner turned job emails off', async () => {
+      userLookup(owner)
+      vi.mocked(wantsJobEmails).mockResolvedValueOnce(false)
+      const { job } = savingJob()
+
+      await cleanupJob(job)
+
+      expect(sendJobCompleteEmail).not.toHaveBeenCalled()
+      expect(updateStepStatusMock).toHaveBeenCalledWith(job, 'email', {
+        status: 'Success',
+        message: 'Not sent: job emails are turned off in settings'
+      })
+    })
   })
 })

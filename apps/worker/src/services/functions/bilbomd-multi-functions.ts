@@ -11,6 +11,10 @@ import { notifyJobChanged } from '../../helpers/jobEvents.js'
 import { assembleEnsemblePdbFiles } from './assemble-ensemble-pdb-file.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import {
+  wantsJobEmails,
+  JOB_EMAILS_OFF_MESSAGE
+} from '../../helpers/emailPreferences.js'
+import {
   getNumEnsembles,
   copyFiles,
   writeJsonFile,
@@ -353,6 +357,16 @@ const handleJobEmailNotification = async (
   DBjob: IMultiJob,
   user: IUser
 ): Promise<void> => {
+  if (config.sendEmailNotifications && !(await wantsJobEmails(user))) {
+    logger.info(
+      `Skipping email notification for MultiJob ${DBjob.uuid}: the owner turned job emails off`
+    )
+    await updateStepStatus(DBjob, 'email', {
+      status: 'Success',
+      message: JOB_EMAILS_OFF_MESSAGE
+    })
+    return
+  }
   if (config.sendEmailNotifications) {
     let status: IStepStatus = {
       status: 'Running',

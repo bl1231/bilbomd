@@ -11,6 +11,7 @@ import {
   IStepStatus
 } from '@bilbomd/mongodb-schema'
 import { sendJobCompleteEmail } from './helpers/mailer.js'
+import { wantsJobEmails } from './helpers/emailPreferences.js'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 import {
@@ -52,7 +53,7 @@ const handleError = async (
 
   const recipientEmail = (DBjob.user as IUser).email
   if (MQjob.attemptsMade >= config.bullmqAttempts - 1) {
-    if (config.sendEmailNotifications) {
+    if (config.sendEmailNotifications && (await wantsJobEmails(DBjob.user))) {
       sendJobCompleteEmail(
         recipientEmail,
         BILBOMD_URL,

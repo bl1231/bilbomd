@@ -18,6 +18,7 @@ import fs from 'fs-extra'
 import { updateStepStatus, updateJobStatus } from '../mongo-utils.js'
 import { Types } from 'mongoose'
 import { notifyJobChanged } from '../../../helpers/jobEvents.js'
+import { wantsJobEmails } from '../../../helpers/emailPreferences.js'
 
 vi.mock('../../../helpers/jobEvents.js', () => ({
   notifyJobChanged: vi.fn()
@@ -38,6 +39,11 @@ vi.mock('../../../helpers/loggers.js', () => ({
 
 vi.mock('../../../helpers/mailer.js', () => ({
   sendJobCompleteEmail: vi.fn()
+}))
+
+vi.mock('../../../helpers/emailPreferences.js', () => ({
+  wantsJobEmails: vi.fn().mockResolvedValue(true),
+  JOB_EMAILS_OFF_MESSAGE: 'Not sent: job emails are turned off in settings'
 }))
 
 vi.mock('../mongo-utils.js', () => ({
@@ -161,6 +167,33 @@ describe('job-utils', () => {
         false,
         'results-token-123'
       )
+    })
+
+    it('skips the email when the owner turned job emails off', async () => {
+      const mockUser = {
+        _id: new Types.ObjectId(),
+        email: 'user@example.com',
+        username: 'testuser'
+      } as IUser
+      const mockDBJob = {
+        _id: new Types.ObjectId(),
+        uuid: 'test-uuid',
+        title: 'Test Job',
+        user: mockUser,
+        status: 'Running',
+        save: vi.fn().mockResolvedValue(undefined)
+      } as unknown as IJob
+      vi.mocked(config).sendEmailNotifications = true
+      vi.mocked(wantsJobEmails).mockResolvedValueOnce(false)
+
+      await cleanupJob({ log: vi.fn() } as unknown as BullMQJob, mockDBJob)
+
+      expect(wantsJobEmails).toHaveBeenCalledWith(mockUser)
+      expect(sendJobCompleteEmail).not.toHaveBeenCalled()
+      expect(updateStepStatus).toHaveBeenCalledWith(mockDBJob, 'email', {
+        status: 'Success',
+        message: 'Not sent: job emails are turned off in settings'
+      })
     })
 
     it('should cleanup job without user and skip email', async () => {

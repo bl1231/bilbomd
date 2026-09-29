@@ -41,6 +41,8 @@ interface IUser extends Document {
   previousEmails: string[]
   status: string
   active: boolean
+  // Undefined on users created before the setting existed; treat as true
+  emailNotifications?: boolean
   confirmationCode: IConfirmationCode | null
   otp: IOtp | null
   UUID: string
