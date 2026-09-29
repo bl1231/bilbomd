@@ -21,6 +21,10 @@ import {
 } from './mongo-utils.js'
 import { parseScoperLogLine } from './scoperLogParser.js'
 import { getKGSrnaProgress } from './functions/getKGSrnaProgress.js'
+import {
+  recordWorkerUsageEvent,
+  buildContext
+} from './functions/usageEvents.js'
 
 const execPromise = promisify(exec)
 
@@ -48,12 +52,40 @@ const handleError = async (
 
   MQjob.log(error instanceof Error ? error.message : String(error))
 
-  // Send job completion email and log the notification
   logger.info(`Failed Attempts --> ${MQjob.attemptsMade}`)
 
-  const recipientEmail = (DBjob.user as IUser).email
+  // Report the failure once, on the last attempt BullMQ will make
   if (MQjob.attemptsMade >= config.bullmqAttempts - 1) {
-    if (config.sendEmailNotifications && (await wantsJobEmails(DBjob.user))) {
+    await recordWorkerUsageEvent({
+      uuid: DBjob.uuid,
+      jobId: DBjob._id,
+      pipeline: 'scoper',
+      eventType: 'job_failed',
+      status: 'Error',
+      durationMs: DBjob.time_started
+        ? Date.now() - new Date(DBjob.time_started).getTime()
+        : undefined,
+      context: buildContext({
+        access_mode: DBjob.access_mode,
+        user: DBjob.user,
+        public_id: DBjob.public_id,
+        client_ip_hash: DBjob.client_ip_hash
+      }),
+      metadata: {
+        stage: 'worker',
+        step: 'scoper',
+        error: errorMsg,
+        attempts: MQjob.attemptsMade + 1
+      }
+    })
+
+    // Anonymous jobs have no one to email
+    const recipientEmail = (DBjob.user as IUser | undefined)?.email
+    if (
+      config.sendEmailNotifications &&
+      recipientEmail &&
+      (await wantsJobEmails(DBjob.user))
+    ) {
       sendJobCompleteEmail(
         recipientEmail,
         BILBOMD_URL,

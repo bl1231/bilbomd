@@ -1,6 +1,7 @@
 import { multiMdHandler } from '../workerHandlers/multiMdHandler.js'
 import { Worker, WorkerOptions } from 'bullmq'
 import { logger } from '../helpers/loggers.js'
+import { reportFailedJob } from '../services/functions/job-failure.js'
 
 export const createMultiMDWorker = (options: WorkerOptions): Worker => {
   const multiMdWorker = new Worker('multimd', multiMdHandler, options)
@@ -26,11 +27,12 @@ export const createMultiMDWorker = (options: WorkerOptions): Worker => {
     )
   })
 
-  multiMdWorker.on('failed', () => {
+  multiMdWorker.on('failed', (job, error) => {
     activeJobsCount--
     logger.info(
       `BilboMD Multi Worker Active Jobs after failure: ${activeJobsCount}`
     )
+    void reportFailedJob('multimd', job, error)
   })
 
   return multiMdWorker
