@@ -3,8 +3,8 @@ import Loadable from 'components/Loadable'
 import SoftPersistLogin from 'features/auth/SoftPersistLogin'
 import PublicResultsLayout from 'layout/PublicResultsLayout'
 
-const PublicJobPage = Loadable(
-  lazy(() => import('features/public/PublicJobPage'))
+const PublicResultsPage = Loadable(
+  lazy(() => import('features/public/PublicResultsPage'))
 )
 
 // ===========================|| PUBLIC RESULTS ROUTING ||============================ //
@@ -21,7 +21,7 @@ const PublicResultsRoutes = {
       children: [
         {
           path: 'results/:publicId',
-          element: <PublicJobPage />
+          element: <PublicResultsPage />
         }
       ]
     }
