@@ -32,6 +32,7 @@ describe('sendJobCompleteEmail', () => {
     const mailArg = globalThis.__sendMailMock.mock.calls[0][0]
     expect(mailArg.to).toBe('test@example.com')
     expect(mailArg.template).toBe('jobcomplete')
+    expect(mailArg.subject).toBe('BilboMD Job Complete: Test Job')
     expect(mailArg.context).toEqual({
       jobid: 'jobid123',
       url: 'http://url',
@@ -80,6 +81,7 @@ describe('sendJobCompleteEmail', () => {
     expect(globalThis.__sendMailMock).toHaveBeenCalled()
     const mailArg = globalThis.__sendMailMock.mock.calls[0][0]
     expect(mailArg.template).toBe('joberror')
+    expect(mailArg.subject).toBe('BilboMD Job Failed: Test Job')
   })
 
   it('calls logger.info with expected messages', () => {

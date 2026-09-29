@@ -10,6 +10,8 @@ import {
 import { configureJobEvents } from '../../helpers/jobEvents.js'
 import { updateSingleJobStep } from '../../services/functions/job-monitor-functions.js'
 import { getSlurmStatusFile } from '../../services/functions/nersc-api-functions.js'
+import { recordWorkerUsageEvent } from '../../services/functions/usage-events.js'
+import { sendJobFailedEmail } from '../../services/functions/job-failure.js'
 
 vi.mock('../../helpers/loggers.js', () => ({
   logger: {
@@ -48,6 +50,10 @@ vi.mock('../../services/functions/prepare-results.js', () => ({
 vi.mock('../../services/functions/usage-events.js', () => ({
   recordWorkerUsageEvent: vi.fn(),
   buildContext: vi.fn()
+}))
+
+vi.mock('../../services/functions/job-failure.js', () => ({
+  sendJobFailedEmail: vi.fn()
 }))
 
 vi.mock('@bilbomd/md-utils', () => ({
@@ -311,4 +317,60 @@ describe('parseSlurmTime', () => {
       expect(parseSlurmTime(value).getTime()).toBe(0)
     }
   )
+})
+
+describe('monitorAndCleanupJobs usage events', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+  })
+
+  // Failed, cancelled and running jobs are fetched again on every pass
+  const runPass = async (status: IJob['status'], slurmState: string) => {
+    const job = makeRealJob()
+    job.status = status
+    vi.spyOn(Job, 'find').mockReturnValue({
+      exec: vi.fn().mockResolvedValue([job])
+    } as unknown as ReturnType<typeof Job.find>)
+    mockApiResponse([{ state: slurmState, qos: 'gpu_debug' }])
+    vi.mocked(getSlurmStatusFile).mockResolvedValue('')
+    await monitorAndCleanupJobs()
+    return job
+  }
+
+  const recordedEvents = () =>
+    vi.mocked(recordWorkerUsageEvent).mock.calls.map(([e]) => e.eventType)
+
+  it('records job_failed and emails the owner when a job fails', async () => {
+    const job = await runPass('Running', 'FAILED')
+
+    expect(recordedEvents()).toEqual(['job_failed'])
+    expect(sendJobFailedEmail).toHaveBeenCalledExactlyOnceWith(job)
+    expect(job.status).toBe('Failed')
+  })
+
+  it('does not report an already-failed job again', async () => {
+    await runPass('Failed', 'FAILED')
+
+    expect(recordedEvents()).toEqual([])
+    expect(sendJobFailedEmail).not.toHaveBeenCalled()
+  })
+
+  it('records job_cancelled only when the job becomes Cancelled', async () => {
+    await runPass('Running', 'CANCELLED')
+    expect(recordedEvents()).toEqual(['job_cancelled'])
+
+    vi.mocked(recordWorkerUsageEvent).mockClear()
+    await runPass('Cancelled', 'CANCELLED')
+    expect(recordedEvents()).toEqual([])
+  })
+
+  it('records job_started only when the job starts running', async () => {
+    await runPass('Pending', 'RUNNING')
+    expect(recordedEvents()).toEqual(['job_started'])
+
+    vi.mocked(recordWorkerUsageEvent).mockClear()
+    await runPass('Running', 'RUNNING')
+    expect(recordedEvents()).toEqual([])
+  })
 })

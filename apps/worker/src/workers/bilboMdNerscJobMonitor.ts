@@ -21,6 +21,7 @@ import {
   updateSingleJobStep
 } from '../services/functions/job-monitor-functions.js'
 import { prepareBilboMDResults } from '../services/functions/prepare-results.js'
+import { sendJobFailedEmail } from '../services/functions/job-failure.js'
 import {
   recordWorkerUsageEvent,
   buildContext
@@ -295,6 +296,10 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
             return
           }
 
+          // Failed, cancelled and running jobs are fetched again on every
+          // pass; only record their usage events when the status changes.
+          const previousStatus = job.status
+
           // Step 2: Update the job state in MongoDB
           await updateJobStateInMongoDB(job, nerscState)
 
@@ -346,6 +351,7 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
               logger.warn(
                 `Job ${job.nersc?.jobid} failed with state: ${nerscState.state}`
               )
+              if (previousStatus === 'Failed') break
               await recordWorkerUsageEvent({
                 uuid: job.uuid,
                 pipeline,
@@ -359,11 +365,13 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
                 metadata: { stage: 'monitor', reason: nerscState.state }
               })
               await markJobAsFailed(job)
+              await sendJobFailedEmail(job)
               break
 
             case 'CANCELLED':
             case 'PREEMPTED':
               logger.info(`Job ${job.nersc?.jobid} was cancelled or preempted.`)
+              if (previousStatus === 'Cancelled') break
               await recordWorkerUsageEvent({
                 uuid: job.uuid,
                 pipeline,
@@ -384,6 +392,7 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
               break
 
             case 'RUNNING':
+              if (previousStatus === 'Running') break
               await recordWorkerUsageEvent({
                 uuid: job.uuid,
                 pipeline,

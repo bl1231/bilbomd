@@ -11,12 +11,17 @@ const context = new AsyncLocalStorage<AbortSignal>()
 // map to several controllers, e.g. a BilboMD job and its movie renders.
 const running = new Map<string, Set<AbortController>>()
 
+// Thrown when a job fails because it was cancelled. It is an
+// UnrecoverableError, so BullMQ doesn't retry it, and the failure reporter
+// records it as cancelled rather than failed.
+export class JobCancelledError extends UnrecoverableError {}
+
 export const currentAbortSignal = (): AbortSignal | undefined =>
   context.getStore()
 
 // Runs `fn` in a cancellable context. It is aborted when `bullmqSignal`
 // fires or cancelRunningJob(key) is called. If the job fails because it was
-// aborted, the error becomes an UnrecoverableError so BullMQ doesn't retry it.
+// aborted, the error becomes a JobCancelledError so BullMQ doesn't retry it.
 export const runCancellable = async <T>(
   key: string | undefined,
   fn: () => Promise<T>,
@@ -38,7 +43,7 @@ export const runCancellable = async <T>(
   } catch (error) {
     if (controller.signal.aborted) {
       const reason = String(controller.signal.reason ?? 'cancelled')
-      throw new UnrecoverableError(`Job cancelled: ${reason}`)
+      throw new JobCancelledError(`Job cancelled: ${reason}`)
     }
     throw error
   } finally {
