@@ -98,6 +98,17 @@ describe('queryNERSCForJobState', () => {
     expect(updateSingleJobStep).not.toHaveBeenCalled()
   })
 
+  it('queries sacct from Slurm directly, not the SF API cache', async () => {
+    mockApiResponse([{ state: 'RUNNING' }])
+
+    await queryNERSCForJobState(makeJob())
+
+    const url = new URL(vi.mocked(axios.get).mock.calls[0][0])
+    expect(url.pathname).toMatch(/\/compute\/jobs\/perlmutter\/12345678$/)
+    expect(url.searchParams.get('sacct')).toBe('true')
+    expect(url.searchParams.get('cached')).toBe('false')
+  })
+
   it('reports a benign Waiting step when accounting is empty and stored state is PENDING', async () => {
     mockApiResponse([])
     const job = makeJob({ state: NerscStatus.PENDING })
