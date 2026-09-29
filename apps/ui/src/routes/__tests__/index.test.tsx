@@ -3,6 +3,7 @@ import { render } from '@testing-library/react'
 import { useRoutes } from 'react-router'
 import ThemeRoutes from '../index'
 import { AnonRoutes } from '../AnonRoutes'
+import { PublicResultsRoutes } from '../PublicResultsRoutes'
 import { LoginRoutes } from '../LoginRoutes'
 import { ProtectedMainRoutes } from '../MainRoutes'
 
@@ -13,6 +14,13 @@ vi.mock('react-router', () => ({
 vi.mock('../LoginRoutes', () => ({
   LoginRoutes: {
     path: '/login',
+    element: null
+  }
+}))
+
+vi.mock('../PublicResultsRoutes', () => ({
+  PublicResultsRoutes: {
+    path: '/',
     element: null
   }
 }))
@@ -33,6 +41,7 @@ describe('ThemeRoutes', () => {
 
     expect(useRoutes).toHaveBeenCalledWith([
       AnonRoutes,
+      PublicResultsRoutes,
       LoginRoutes,
       ProtectedMainRoutes
     ])
