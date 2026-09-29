@@ -14,6 +14,9 @@ vi.mock('../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }))
 vi.mock('../helpers/mailer.js', () => ({ sendJobCompleteEmail: vi.fn() }))
+vi.mock('../helpers/emailPreferences.js', () => ({
+  wantsJobEmails: vi.fn()
+}))
 vi.mock('../mongo-utils.js', () => ({
   updateStepStatus: vi.fn(),
   updateJobStatus: vi.fn(),
@@ -28,6 +31,7 @@ vi.mock('../functions/usageEvents.js', async (importOriginal) => ({
 import { runScoper } from '../scoper.functions.js'
 import { sendJobCompleteEmail } from '../helpers/mailer.js'
 import { recordWorkerUsageEvent } from '../functions/usageEvents.js'
+import { wantsJobEmails } from '../helpers/emailPreferences.js'
 
 const makeJob = (fields: Partial<IBilboMDScoperJob> = {}) =>
   ({
@@ -44,7 +48,10 @@ const makeJob = (fields: Partial<IBilboMDScoperJob> = {}) =>
 const mqJob = (attemptsMade: number) =>
   ({ attemptsMade, log: vi.fn() }) as unknown as BullMQJob
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(wantsJobEmails).mockResolvedValue(true)
+})
 
 describe('runScoper failure reporting', () => {
   it('does not report a failure BullMQ will retry', async () => {
@@ -81,6 +88,15 @@ describe('runScoper failure reporting', () => {
       true,
       'token'
     )
+  })
+
+  it('records the failure but skips the email when job emails are off', async () => {
+    vi.mocked(wantsJobEmails).mockResolvedValue(false)
+
+    await expect(runScoper(mqJob(1), makeJob())).rejects.toThrow()
+
+    expect(recordWorkerUsageEvent).toHaveBeenCalledOnce()
+    expect(sendJobCompleteEmail).not.toHaveBeenCalled()
   })
 
   it('records anonymous job failures without emailing anyone', async () => {

@@ -14,6 +14,7 @@ import { getErrorMessage } from '../../helpers/errors.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
 import { notifyJobChanged } from '../../helpers/jobEvents.js'
 import { JobCancelledError } from '../../helpers/jobCancellation.js'
+import { wantsJobEmails } from '../../helpers/emailPreferences.js'
 import { recordWorkerUsageEvent, buildContext } from './usage-events.js'
 
 type FailureQueue = 'bilbomd' | 'multimd'
@@ -39,13 +40,14 @@ const ownerEmail = async (
 }
 
 // Emails the job's owner that the job failed. Returns the address it was
-// sent to, or undefined when there is no one to email or emails are off.
+// sent to, or undefined when there is no one to email, emails are off, or
+// the owner turned job emails off.
 export const sendJobFailedEmail = async (
   job: IJob | IMultiJob
 ): Promise<string | undefined> => {
   if (!config.sendEmailNotifications) return undefined
   const email = await ownerEmail(job.user)
-  if (!email) return undefined
+  if (!email || !(await wantsJobEmails(job.user))) return undefined
   sendJobCompleteEmail(
     email,
     config.bilbomdUrl,

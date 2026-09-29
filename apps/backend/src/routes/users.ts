@@ -12,6 +12,10 @@ import {
 import { createAPIToken } from '../controllers/users/createAPIToken.js'
 import { listAPITokens } from '../controllers/users/listAPITokens.js'
 import { deleteAPIToken } from '../controllers/users/deleteAPIToken.js'
+import {
+  getPreferences,
+  updatePreferences
+} from '../controllers/users/preferences.js'
 import { verifyJWT } from '../middleware/verifyJWT.js'
 import { verifyRoles } from '../middleware/verifyRoles.js'
 import { verifyAccountOwnership } from '../middleware/verifyAccountOwnership.js'
@@ -36,6 +40,7 @@ router.delete(
   verifyAccountOwnership('params'),
   deleteUserByUsername
 )
+router.route('/me/preferences').get(getPreferences).patch(updatePreferences)
 router.post('/change-email', verifyAccountOwnership('body'), sendChangeEmailOtp)
 router.post('/verify-otp', verifyAccountOwnership('body'), verifyOtp)
 router.post('/resend-otp', verifyAccountOwnership('body'), resendOtp)

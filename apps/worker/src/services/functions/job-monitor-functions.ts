@@ -12,6 +12,7 @@ import {
   monitorTaskAtNERSC
 } from './nersc-api-functions.js'
 import { sendJobCompleteEmail } from '../../helpers/mailer.js'
+import { wantsJobEmails } from '../../helpers/emailPreferences.js'
 
 interface EmailMessage {
   message: string
@@ -143,8 +144,8 @@ const cleanupJob = async (
       return
     }
 
-    // Send job completion email and log the notification
-    if (config.sendEmailNotifications) {
+    // Send job completion email unless the owner turned job emails off
+    if (config.sendEmailNotifications && (await wantsJobEmails(user))) {
       sendJobCompleteEmail(
         user.email,
         config.bilbomdUrl,

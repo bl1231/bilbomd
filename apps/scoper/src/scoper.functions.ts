@@ -11,6 +11,7 @@ import {
   IStepStatus
 } from '@bilbomd/mongodb-schema'
 import { sendJobCompleteEmail } from './helpers/mailer.js'
+import { wantsJobEmails } from './helpers/emailPreferences.js'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 import {
@@ -80,7 +81,11 @@ const handleError = async (
 
     // Anonymous jobs have no one to email
     const recipientEmail = (DBjob.user as IUser | undefined)?.email
-    if (config.sendEmailNotifications && recipientEmail) {
+    if (
+      config.sendEmailNotifications &&
+      recipientEmail &&
+      (await wantsJobEmails(DBjob.user))
+    ) {
       sendJobCompleteEmail(
         recipientEmail,
         BILBOMD_URL,

@@ -31,6 +31,11 @@ vi.mock('../helpers/mailer.js', () => ({
   sendJobCompleteEmail: vi.fn()
 }))
 
+vi.mock('../helpers/emailPreferences.js', () => ({
+  wantsJobEmails: vi.fn().mockResolvedValue(true),
+  JOB_EMAILS_OFF_MESSAGE: 'Not sent: job emails are turned off in settings'
+}))
+
 vi.mock('../config/config.js', () => ({
   config: {
     bilbomdUrl: 'http://localhost:3000',
@@ -47,6 +52,7 @@ import { initializeJob, cleanupJob } from '../scoper-job-utils.js'
 import { sendJobCompleteEmail } from '../helpers/mailer.js'
 import { notifyJobChanged } from '../helpers/jobEvents.js'
 import { User } from '@bilbomd/mongodb-schema'
+import { wantsJobEmails } from '../helpers/emailPreferences.js'
 
 // Keep a plain type for assertions; cast to the real interface when calling functions
 type FakeMQJob = {
@@ -156,6 +162,23 @@ describe('cleanupJob', () => {
       false,
       'scoper-results-token'
     )
+  })
+
+  it('skips email when the owner turned job emails off', async () => {
+    const MQjob = makeMQJob()
+    const user = {
+      _id: new Types.ObjectId(),
+      email: 'test@example.com',
+      username: 'testuser'
+    }
+    const DBjob = makeDBJob({ user })
+    vi.mocked(wantsJobEmails).mockResolvedValueOnce(false)
+    await cleanupJob(
+      MQjob as unknown as BullMQJob,
+      DBjob as unknown as IBilboMDScoperJob
+    )
+    expect(wantsJobEmails).toHaveBeenCalledWith(user)
+    expect(sendJobCompleteEmail).not.toHaveBeenCalled()
   })
 
   it('skips email when user has no email address', async () => {

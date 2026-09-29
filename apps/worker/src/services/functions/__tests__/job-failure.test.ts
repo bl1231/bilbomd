@@ -12,12 +12,16 @@ import { sendJobCompleteEmail } from '../../../helpers/mailer.js'
 import { notifyJobChanged } from '../../../helpers/jobEvents.js'
 import { recordWorkerUsageEvent } from '../usage-events.js'
 import { config } from '../../../config/config.js'
+import { wantsJobEmails } from '../../../helpers/emailPreferences.js'
 
 vi.mock('../../../config/config.js', () => ({
   config: { sendEmailNotifications: true, bilbomdUrl: 'https://bilbomd' }
 }))
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+}))
+vi.mock('../../../helpers/emailPreferences.js', () => ({
+  wantsJobEmails: vi.fn()
 }))
 vi.mock('../../../helpers/mailer.js', () => ({
   sendJobCompleteEmail: vi.fn()
@@ -72,6 +76,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.restoreAllMocks()
   config.sendEmailNotifications = true
+  vi.mocked(wantsJobEmails).mockResolvedValue(true)
 })
 
 describe('isFinalAttempt', () => {
@@ -253,6 +258,15 @@ describe('sendJobFailedEmail', () => {
 
     expect(await sendJobFailedEmail(job)).toBe('carol@example.com')
     expect(User.findById).toHaveBeenCalledWith(userId)
+  })
+
+  it('sends nothing when the owner turned job emails off', async () => {
+    const job = makePdbJob()
+    vi.mocked(wantsJobEmails).mockResolvedValue(false)
+
+    expect(await sendJobFailedEmail(job)).toBeUndefined()
+    expect(wantsJobEmails).toHaveBeenCalledWith(job.user)
+    expect(sendJobCompleteEmail).not.toHaveBeenCalled()
   })
 
   it('sends nothing when email notifications are off', async () => {
