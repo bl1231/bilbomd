@@ -23,11 +23,15 @@ vi.mock('../../workerHandlers/movieHandler.js', () => ({
 vi.mock('../../workerHandlers/multiMdHandler.js', () => ({
   multiMdHandler: vi.fn()
 }))
+vi.mock('../../services/functions/job-failure.js', () => ({
+  reportFailedJob: vi.fn()
+}))
 
 import { createBilboMdWorker } from '../bilboMdWorker.js'
 import { createMovieWorker } from '../movieWorker.js'
 import { createMultiMDWorker } from '../multiMdWorker.js'
 import { logger } from '../../helpers/loggers.js'
+import { reportFailedJob } from '../../services/functions/job-failure.js'
 
 const options = {} as WorkerOptions
 
@@ -52,5 +56,19 @@ describe.each([
     expect(logger.warn).toHaveBeenCalledWith(
       `${label} error: connect ECONNREFUSED`
     )
+  })
+})
+
+describe.each([
+  ['bilbomd', createBilboMdWorker],
+  ['multimd', createMultiMDWorker]
+])('%s failed listener', (queue, create) => {
+  it('hands failed jobs to the failure reporter', () => {
+    vi.mocked(reportFailedJob).mockClear()
+    const worker = create(options) as unknown as EventEmitter
+    const job = { id: '1' }
+    const error = new Error('boom')
+    worker.emit('failed', job, error)
+    expect(reportFailedJob).toHaveBeenCalledWith(queue, job, error)
   })
 })

@@ -68,7 +68,7 @@ const sendJobCompleteEmail = (
   const mail = {
     from: user,
     to: email,
-    subject: `BilboMD Job Complete: ${title}`,
+    subject: `BilboMD Job ${isError ? 'Failed' : 'Complete'}: ${title}`,
     template: emailLayout,
     context: {
       jobid,

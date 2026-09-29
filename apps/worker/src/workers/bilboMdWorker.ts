@@ -1,6 +1,7 @@
 import { bilboMdHandler } from '../workerHandlers/bilboMdHandler.js'
 import { Worker, WorkerOptions } from 'bullmq'
 import { logger } from '../helpers/loggers.js'
+import { reportFailedJob } from '../services/functions/job-failure.js'
 
 export const createBilboMdWorker = (options: WorkerOptions): Worker => {
   const bilboMdWorker = new Worker('bilbomd', bilboMdHandler, options)
@@ -26,9 +27,10 @@ export const createBilboMdWorker = (options: WorkerOptions): Worker => {
     )
   })
 
-  bilboMdWorker.on('failed', () => {
+  bilboMdWorker.on('failed', (job, error) => {
     activeJobsCount--
     logger.info(`BilboMD Worker Active Jobs after failure: ${activeJobsCount}`)
+    void reportFailedJob('bilbomd', job, error)
   })
 
   return bilboMdWorker

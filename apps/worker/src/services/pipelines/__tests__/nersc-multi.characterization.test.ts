@@ -148,7 +148,8 @@ describe('nersc pipeline', () => {
     `)
   })
 
-  it('records job_failed and rethrows when submission fails', async () => {
+  // job_failed is recorded by the worker's failure reporter, not here
+  it('rethrows when submission fails', async () => {
     state.failAt = 'submitBilboMDSlurm'
     expect(await run(processBilboMDJobNersc, nerscJob()))
       .toMatchInlineSnapshot(`
@@ -163,7 +164,6 @@ describe('nersc pipeline', () => {
           "fn:makeBilboMDSlurm",
           "mq.progress:15",
           "fn:submitBilboMDSlurm",
-          "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"pipeline(pdb)","eventType":"job_failed","status":"Failed","nersc":{"qos":"regular"},"context":{"built":{"access_mode":"user","user":{"username":"u"}}},"metadata":{"stage":"submitSlurm","error":"submitBilboMDSlurm failed"}}",
         ],
       }
     `)

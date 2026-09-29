@@ -3,7 +3,8 @@ import { UnrecoverableError } from 'bullmq'
 import {
   runCancellable,
   cancelRunningJob,
-  currentAbortSignal
+  currentAbortSignal,
+  JobCancelledError
 } from '../jobCancellation.js'
 import { runProcess, spawnProcess } from '../runProcess.js'
 
@@ -57,6 +58,16 @@ describe('runCancellable', () => {
     cancelRunningJob('job-3', 'deleted')
 
     await expect(p).rejects.toBeInstanceOf(UnrecoverableError)
+  })
+
+  it('marks cancellations with JobCancelledError for the failure reporter', async () => {
+    const p = runCancellable('job-5', async () => {
+      await sleep(20)
+      throw new Error('aborted')
+    })
+    cancelRunningJob('job-5', 'deleted')
+
+    await expect(p).rejects.toBeInstanceOf(JobCancelledError)
   })
 
   it('passes ordinary failures through unchanged', async () => {
