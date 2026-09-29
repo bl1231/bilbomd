@@ -4,6 +4,7 @@ import { IJob, INerscInfo, Job, NerscStatus } from '@bilbomd/mongodb-schema'
 import {
   calculateProgress,
   monitorAndCleanupJobs,
+  parseSlurmTime,
   queryNERSCForJobState
 } from '../bilboMdNerscJobMonitor.js'
 import { configureJobEvents } from '../../helpers/jobEvents.js'
@@ -97,6 +98,9 @@ describe('queryNERSCForJobState', () => {
     expect(result).not.toBeNull()
     expect(result?.state).toBe(NerscStatus.RUNNING)
     expect(result?.jobid).toBe('12345678')
+    // sacct times are Pacific wall-clock time (PDT in August)
+    expect(result?.time_started.toISOString()).toBe('2026-08-24T17:05:00.000Z')
+    expect(result?.time_completed.getTime()).toBe(0)
     expect(updateSingleJobStep).not.toHaveBeenCalled()
   })
 
@@ -278,4 +282,33 @@ describe('monitorAndCleanupJobs progress', () => {
     expect(job.steps?.md?.status).toBe('Running')
     expect(job.progress).toBe(50)
   })
+})
+
+describe('parseSlurmTime', () => {
+  // Issue #1076: read as UTC, start times landed 7 hours early, so queue
+  // times went negative ('Invalid') and run times were 7 hours too long
+  it('reads sacct times as Perlmutter (Pacific) local time', () => {
+    expect(parseSlurmTime('2026-09-28T22:22:05').toISOString()).toBe(
+      '2026-09-29T05:22:05.000Z'
+    )
+  })
+
+  it('follows daylight saving time', () => {
+    expect(parseSlurmTime('2026-12-01T09:00:00').toISOString()).toBe(
+      '2026-12-01T17:00:00.000Z'
+    )
+  })
+
+  it('keeps an explicit offset', () => {
+    expect(parseSlurmTime('2026-09-28T22:22:05Z').toISOString()).toBe(
+      '2026-09-28T22:22:05.000Z'
+    )
+  })
+
+  it.each(['Unknown', 'N/A', 'None', '', undefined])(
+    'returns the epoch placeholder for %j',
+    (value) => {
+      expect(parseSlurmTime(value).getTime()).toBe(0)
+    }
+  )
 })
