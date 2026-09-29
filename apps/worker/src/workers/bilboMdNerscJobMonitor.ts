@@ -510,7 +510,10 @@ const cleanSlurmState = (
 const fetchNERSCJobState = async (
   jobID: string
 ): Promise<INerscInfo | null> => {
-  const url = `${config.nerscBaseAPI}/compute/jobs/perlmutter/${jobID}?sacct=true`
+  // cached=false asks Slurm directly. The default (cached=true) reads the SF
+  // API's own job database, which returned no output for our jobs, leaving
+  // them PENDING in BilboMD long after Slurm had run them.
+  const url = `${config.nerscBaseAPI}/compute/jobs/perlmutter/${jobID}?sacct=true&cached=false`
   // logger.info(`Fetching state for NERSC job: ${jobID} from URL: ${url}`)
 
   const token = await ensureValidToken() // Fetch or refresh the token
