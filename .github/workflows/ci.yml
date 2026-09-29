@@ -36,6 +36,7 @@ jobs:
       scoper: ${{ steps.filter.outputs.scoper }}
       schema: ${{ steps.filter.outputs.schema }}
       md-utils: ${{ steps.filter.outputs.md-utils }}
+      worker-python: ${{ steps.filter.outputs.worker-python }}
     steps:
       - uses: actions/checkout@v7
 
@@ -75,6 +76,16 @@ jobs:
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'apps/worker/bilbomd-worker.dockerfile'
+            # What the in-image Python tests (worker-python-tests) exercise
+            worker-python:
+              - 'apps/worker/scripts/openmm/**'
+              - 'apps/worker/scripts/strip_cofactors.py'
+              - 'apps/worker/scripts/test_strip_cofactors.py'
+              - 'tools/python/conftest.py'
+              - 'apps/worker/bilbomd-worker.dockerfile'
+              - 'apps/worker/bilbomd-worker-base.dockerfile'
+              - 'apps/worker/base-image-version'
+              - '.github/workflows/ci.yml'
             scoper:
               - 'apps/scoper/**'
               - 'packages/bilbomd-types/**'
@@ -443,7 +454,9 @@ jobs:
     name: Worker Python tests (in image)
     # Runs the OpenMM-dependent tests inside the exact image the worker job just
     # pushed (pulled by digest — no rebuild). Skips on forks, which don't push.
-    if: needs.changes.outputs.worker == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
+    # On PRs, only when something those tests exercise changed (pulling the
+    # ~12 GB image takes minutes); always on pushes to main.
+    if: needs.changes.outputs.worker == 'true' && (github.event_name == 'push' || needs.changes.outputs.worker-python == 'true') && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'github-actions[bot]')
     needs: [changes, lint, worker]
     runs-on: [ubuntu-26.04]
     permissions:
