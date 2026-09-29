@@ -1,5 +1,12 @@
 # @bilbomd/worker
 
+## 2.18.6
+
+### Patch Changes
+
+- e6fe229: Fix NERSC job progress staying at 0% while the job runs. The monitor now counts completed steps correctly on Mongoose job documents.
+- 32390a8: Remove unused NERSC monitoring code (`monitorJobAtNERSC`, `updateStatus`, `calculateProgress`, `getSlurmOutFile`) and the constants and type only it used. No change in behavior.
+
 ## 2.18.5
 
 ### Patch Changes
