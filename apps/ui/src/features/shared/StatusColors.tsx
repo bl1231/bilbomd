@@ -1,6 +1,9 @@
 import { JobStatusEnum } from '@bilbomd/mongodb-schema/frontend'
 import { Theme } from '@mui/material/styles'
 
+// Background for the running step's chip and strip icon
+export const RUNNING_STEP_BACKGROUND = '#fff566'
+
 export const getStatusColors = (status: JobStatusEnum, theme: Theme) => {
   const statusColors: Record<
     JobStatusEnum,

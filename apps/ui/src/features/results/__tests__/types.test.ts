@@ -1,5 +1,5 @@
 import type { MongoDBProperty, JobHandler, HasConstraintFile } from '../types'
-import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
+import type { JobView } from 'features/jobdetail/jobView'
 
 describe('types', () => {
   describe('MongoDBProperty', () => {
@@ -35,7 +35,7 @@ describe('types', () => {
   describe('JobHandler', () => {
     it('should define correct interface structure', () => {
       const mockHandler: JobHandler = {
-        getJobSpecificProperties: (_job: BilboMDJobDTO) => [],
+        getJobSpecificProperties: (_view: JobView) => [],
         getJobTypeDisplayName: () => 'Test Job'
       }
 

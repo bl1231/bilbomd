@@ -151,7 +151,7 @@ const getStepDetails = (stepName: string): StepDetails => {
       return {
         friendlyName: 'Send Email',
         tooltipMessage:
-          'n this step we send an email to let you know the BilboMD job is complete.'
+          'In this step we send an email to let you know the BilboMD job is complete.'
       }
     default:
       return { friendlyName: stepName, tooltipMessage: '' }
