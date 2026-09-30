@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from 'test/rendersWithProviders'
 import JobDetailPage from '../JobDetailPage'
 import type { JobSource } from '../jobSource'
@@ -52,6 +53,7 @@ const renderPage = (
 
 beforeEach(() => {
   useJobView.mockReset()
+  localStorage.clear()
 })
 
 describe('JobDetailPage', () => {
@@ -82,9 +84,24 @@ describe('JobDetailPage', () => {
     expect(screen.getByText('BilboMD Job')).toBeInTheDocument()
     expect(screen.getByText('Progress')).toBeInTheDocument()
     expect(screen.getByTestId('analysis')).toBeInTheDocument()
-    expect(await screen.findByTestId('molstar')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /load 3d viewer/i })
+    ).toBeInTheDocument()
     expect(screen.getByTestId('results')).toBeInTheDocument()
     expect(screen.getByTestId('inputs')).toBeInTheDocument()
+  })
+
+  it('does not mount Molstar until the viewer is requested', async () => {
+    renderPage(anon, {
+      view: makeView({
+        results: { classic: { total_num_ensembles: 3 } } as never
+      })
+    })
+    expect(screen.queryByTestId('molstar')).not.toBeInTheDocument()
+    await userEvent.click(
+      screen.getByRole('button', { name: /load 3d viewer/i })
+    )
+    expect(await screen.findByTestId('molstar')).toBeInTheDocument()
   })
 
   it('puts the inputs directly under the progress card', () => {
