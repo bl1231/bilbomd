@@ -48,6 +48,7 @@ describe('mongo-utils', () => {
         steps: {
           minimize: { status: 'Pending', message: '' }
         } as IBilboMDSteps,
+        unmarkModified: vi.fn(),
         updateOne: vi.fn().mockResolvedValue(undefined)
       } as unknown as IJob
 
@@ -71,6 +72,7 @@ describe('mongo-utils', () => {
         steps: {
           md: { status: 'Running', message: 'rg 20', started_at: startedAt }
         } as IBilboMDSteps,
+        unmarkModified: vi.fn(),
         updateOne: vi.fn().mockResolvedValue(undefined)
       } as unknown as IJob
 
@@ -90,6 +92,7 @@ describe('mongo-utils', () => {
       const mockJob = {
         _id: 'test-job-id',
         steps: undefined,
+        unmarkModified: vi.fn(),
         updateOne: vi.fn().mockResolvedValue(undefined)
       } as unknown as IJob
 
@@ -106,6 +109,7 @@ describe('mongo-utils', () => {
       const mockJob = {
         _id: 'test-job-id',
         steps: {} as IBilboMDSteps,
+        unmarkModified: vi.fn(),
         updateOne: vi
           .fn()
           .mockRejectedValue(new Error('Database connection failed'))
@@ -127,6 +131,7 @@ describe('mongo-utils', () => {
       const mockMultiJob = {
         _id: 'multi-job-id',
         steps: {} as IBilboMDSteps,
+        unmarkModified: vi.fn(),
         updateOne: vi.fn().mockResolvedValue(undefined)
       } as unknown as IMultiJob
 
