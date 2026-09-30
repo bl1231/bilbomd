@@ -2,6 +2,29 @@ import { JobResultsDTO } from './results.js'
 import { JobType, JobStatusEnum } from './jobs.js'
 import { JobStepsDTO } from './jobSteps.js'
 import { MDConstraintsDTO } from './mdConstraints.js'
+import { OpenMMParametersDTO } from './openmm.js'
+import { CHARMMParametersDTO } from './charmm.js'
+
+// Non-sensitive job inputs shown in the "Inputs & parameters" section of the
+// job page. Explicitly whitelisted: no user or account details.
+export type PublicJobInputsDTO = {
+  data_file?: string
+  pdb_file?: string
+  psf_file?: string
+  crd_file?: string
+  pae_file?: string
+  fasta_file?: string
+  query_json_file?: string
+  const_inp_file?: string
+  openmm_parameters?: OpenMMParametersDTO
+  charmm_parameters?: CHARMMParametersDTO
+  rg?: number
+  rg_min?: number
+  rg_max?: number
+  conformational_sampling?: number
+  d2o_fraction?: number
+  bilbomd_uuids?: string[]
+}
 
 export type PublicJobStatus = {
   publicId: string
@@ -17,6 +40,8 @@ export type PublicJobStatus = {
   completedAt?: Date
   steps?: JobStepsDTO
   results?: JobResultsDTO
+  title?: string
+  inputs?: PublicJobInputsDTO
 }
 
 export type AnonJobResponse = {

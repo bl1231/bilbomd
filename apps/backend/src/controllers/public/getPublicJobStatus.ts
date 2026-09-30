@@ -3,10 +3,38 @@ import { logger } from '../../middleware/loggers.js'
 import { Job, IJob } from '@bilbomd/mongodb-schema'
 import type {
   PublicJobStatus,
+  PublicJobInputsDTO,
   JobResultsDTO,
   JobStepsDTO
 } from '@bilbomd/bilbomd-types'
-import { mapDiscriminatorToJobType } from '../jobs/utils/jobDTOMapper.js'
+import {
+  mapDiscriminatorToJobType,
+  mapJobMongoToDTO
+} from '../jobs/utils/jobDTOMapper.js'
+
+// Whitelist the input fields a public viewer may see; the full DTO also
+// carries user details, which must never leave through this endpoint.
+const pickPublicInputs = (job: IJob): PublicJobInputsDTO => {
+  const dto = mapJobMongoToDTO(job) as PublicJobInputsDTO
+  return {
+    data_file: dto.data_file,
+    pdb_file: dto.pdb_file,
+    psf_file: dto.psf_file,
+    crd_file: dto.crd_file,
+    pae_file: dto.pae_file,
+    fasta_file: dto.fasta_file,
+    query_json_file: dto.query_json_file,
+    const_inp_file: dto.const_inp_file,
+    openmm_parameters: dto.openmm_parameters,
+    charmm_parameters: dto.charmm_parameters,
+    rg: dto.rg,
+    rg_min: dto.rg_min,
+    rg_max: dto.rg_max,
+    conformational_sampling: dto.conformational_sampling,
+    d2o_fraction: dto.d2o_fraction,
+    bilbomd_uuids: dto.bilbomd_uuids
+  }
+}
 import { publicJobQuery } from './utils/publicJobQuery.js'
 
 const getPublicJobById = async (req: Request, res: Response) => {
@@ -42,7 +70,9 @@ const getPublicJobById = async (req: Request, res: Response) => {
       startedAt: job.time_started,
       completedAt: job.time_completed,
       steps: job.steps as JobStepsDTO | undefined,
-      results: job.results as JobResultsDTO
+      results: job.results as JobResultsDTO,
+      title: job.title,
+      inputs: pickPublicInputs(job)
     }
 
     res.status(200).json(response)
