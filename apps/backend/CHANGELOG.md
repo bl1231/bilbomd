@@ -1,5 +1,12 @@
 # @bilbomd/backend
 
+## 2.15.1
+
+### Patch Changes
+
+- 11741d0: Fix job resubmission for Classic (PDB/CRD) and Auto jobs: the Resubmit action is enabled again in the jobs list, the form opens the new job after submitting and shows backend errors, and the backend honours newly uploaded replacement files, reuses only the original files the form asks for (with a clear error if they have been cleaned up), limits reuse to the requester's own jobs, and processes constraint files the same way as a new submission.
+- 85c7dae: Tighten how job submissions resolve their input files: handlers only use uploaded files or files the server itself placed in the job directory (example data, resubmission), upload names are always stored inside the job directory, and the CRD pipeline prepares its constraint file only after validation.
+
 ## 2.15.0
 
 ### Minor Changes

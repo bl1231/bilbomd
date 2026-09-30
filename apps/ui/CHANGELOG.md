@@ -1,5 +1,15 @@
 # @bilbomd/ui
 
+## 2.29.0
+
+### Minor Changes
+
+- e0cca91: Load the Molstar 3D viewer on demand. Job pages no longer download and parse every model PDB on load; a "Load 3D Viewer" button mounts the viewer, with an optional per-browser setting to load it automatically.
+
+### Patch Changes
+
+- 11741d0: Fix job resubmission for Classic (PDB/CRD) and Auto jobs: the Resubmit action is enabled again in the jobs list, the form opens the new job after submitting and shows backend errors, and the backend honours newly uploaded replacement files, reuses only the original files the form asks for (with a clear error if they have been cleaned up), limits reuse to the requester's own jobs, and processes constraint files the same way as a new submission.
+
 ## 2.28.0
 
 ### Minor Changes
