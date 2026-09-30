@@ -17,12 +17,15 @@ const updateStepStatus = async (
   status: IStepStatus
 ) => {
   try {
-    if (!job.steps) {
-      job.steps = {} as IBilboMDSteps
-    }
-    // Keep the in-memory document in sync for any later reads/saves. Timing
-    // fields are stamped server-side, so the in-memory copy won't have them.
+    const createdSteps = !job.steps
+    job.steps ??= {} as IBilboMDSteps
+    // Keep the in-memory document in sync for later reads. Timing fields are
+    // stamped server-side, so this copy lacks them and must not count as a
+    // pending change: otherwise the next job.save() writes it back and wipes
+    // started_at / completed_at / duration_ms.
     job.steps[stepName] = { ...job.steps[stepName], ...status }
+    job.unmarkModified(`steps.${stepName}`)
+    if (createdSteps) job.unmarkModified('steps')
 
     // Persist with an atomic field update instead of job.save() to avoid
     // ParallelSaveError ("Can't save() the same doc multiple times in parallel")
