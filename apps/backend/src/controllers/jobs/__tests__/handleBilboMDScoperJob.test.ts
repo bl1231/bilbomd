@@ -5,6 +5,8 @@ import { handleBilboMDScoperJob } from '../handleBilboMDScoperJob.js'
 import { queueScoperJob } from '../../../queues/scoper.js'
 import { announceNewJob } from '../../../services/announceNewJob.js'
 import { ValidationError } from 'yup'
+import { scoperJobSchema } from '../../../validation/index.js'
+import { setServerFile } from '../utils/serverFiles.js'
 
 vi.mock('../../middleware/loggers.js', () => ({
   logger: {
@@ -174,13 +176,36 @@ describe('handleBilboMDScoperJob', () => {
     })
   })
 
-  describe('example data fallback', () => {
-    it('uses body pdb_file and dat_file when no uploaded files', async () => {
+  describe('server-placed file fallback', () => {
+    it('uses files the server registered when nothing was uploaded', async () => {
+      const { req, res } = makeReqRes({}, {})
+      ;(req.files as Record<string, unknown>)['pdb_file'] = undefined
+      ;(req.files as Record<string, unknown>)['dat_file'] = undefined
+      setServerFile(req, 'pdb_file', 'example-rna.pdb')
+      setServerFile(req, 'dat_file', 'example-saxs.dat')
+
+      await handleBilboMDScoperJob(req, res, user, UUID, {
+        accessMode: 'user'
+      })
+
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(scoperJobSchema.validate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pdb_file: expect.objectContaining({
+            path: expect.stringMatching(
+              new RegExp(`/${UUID}/example-rna\\.pdb$`)
+            )
+          })
+        }),
+        expect.anything()
+      )
+    })
+
+    it('ignores file names sent in the request body', async () => {
       const { req, res } = makeReqRes(
-        { pdb_file: 'example-rna.pdb', dat_file: 'example-saxs.dat' },
+        { pdb_file: '../other/rna.pdb', dat_file: '../other/saxs.dat' },
         {}
       )
-      // Remove the uploaded files so the handler falls back to body values
       ;(req.files as Record<string, unknown>)['pdb_file'] = undefined
       ;(req.files as Record<string, unknown>)['dat_file'] = undefined
 
@@ -188,7 +213,10 @@ describe('handleBilboMDScoperJob', () => {
         accessMode: 'user'
       })
 
-      expect(res.status).toHaveBeenCalledWith(200)
+      expect(scoperJobSchema.validate).toHaveBeenCalledWith(
+        expect.objectContaining({ pdb_file: undefined, dat_file: undefined }),
+        expect.anything()
+      )
     })
   })
 

@@ -1,3 +1,4 @@
+import path from 'path'
 import multer from 'multer'
 
 // Hard ceiling enforced while the request is streaming, before anything is
@@ -21,7 +22,10 @@ interface CreateUploadOptions {
   maxFileSize?: number
 }
 
-const defaultFilename: FilenameFn = (file) => file.originalname.toLowerCase()
+// busboy already strips client-supplied directories from upload names;
+// basename again so the saved file can never land outside `destination`.
+const defaultFilename: FilenameFn = (file) =>
+  path.basename(file.originalname.replace(/\\/g, '/')).toLowerCase()
 
 export const createUpload = ({
   destination,

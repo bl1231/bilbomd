@@ -79,15 +79,7 @@ const createNewJob = async (req: Request, res: Response) => {
         }
 
         // Handle example data if requested
-        const exampleResult = await applyExampleDataIfRequested(req, jobDir)
-        if (exampleResult.usingExampleData) {
-          req.body.dat_file = exampleResult.data_file
-          if (exampleResult.pdb_file) req.body.pdb_file = exampleResult.pdb_file
-          if (exampleResult.crd_file) req.body.crd_file = exampleResult.crd_file
-          if (exampleResult.inp_file) req.body.inp_file = exampleResult.inp_file
-          if (exampleResult.pae_file) req.body.pae_file = exampleResult.pae_file
-          if (exampleResult.psf_file) req.body.psf_file = exampleResult.psf_file
-        }
+        await applyExampleDataIfRequested(req, jobDir)
 
         const email = req.email
 
@@ -200,15 +192,7 @@ const createPublicJob = async (req: Request, res: Response) => {
         }
 
         // Handle example data if requested
-        const exampleResult = await applyExampleDataIfRequested(req, jobDir)
-        if (exampleResult.usingExampleData) {
-          req.body.dat_file = exampleResult.data_file
-          if (exampleResult.pdb_file) req.body.pdb_file = exampleResult.pdb_file
-          if (exampleResult.crd_file) req.body.crd_file = exampleResult.crd_file
-          if (exampleResult.inp_file) req.body.inp_file = exampleResult.inp_file
-          if (exampleResult.pae_file) req.body.pae_file = exampleResult.pae_file
-          if (exampleResult.psf_file) req.body.psf_file = exampleResult.psf_file
-        }
+        await applyExampleDataIfRequested(req, jobDir)
 
         logger.info(`Public job submission with ID: ${publicId}`)
 

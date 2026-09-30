@@ -12,7 +12,6 @@ import { alphafoldJobSchema } from '../../validation/index.js'
 import { ValidationError } from 'yup'
 import { Request, Response } from 'express'
 import { writeJobParams, spawnAutoRgCalculator } from './index.js'
-import { getFileStats } from './utils/jobUtils.js'
 import { queueJob } from '../../queues/bilbomd.js'
 import { createFastaFile } from './utils/createFastaFile.js'
 import { parseAlphaFoldEntities } from './utils/parseAlphaFoldEntities.js'
@@ -20,6 +19,7 @@ import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { config } from '../../config/config.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
+import { serverFile } from './utils/serverFiles.js'
 
 const uploadFolder = config.uploadDir
 
@@ -52,15 +52,9 @@ const handleBilboMDAlphaFoldJob = async (
   logger.info(`bilbomdMode: ${bilbomdMode}`)
   logger.info(`title: ${req.body.title}`)
 
-  // Handle example data files if no uploaded files
-  let datFile = files['dat_file']?.[0]
-  if (!datFile && req.body.dat_file) {
-    datFile = {
-      originalname: req.body.dat_file,
-      path: path.join(jobDir, req.body.dat_file),
-      size: getFileStats(path.join(jobDir, req.body.dat_file)).size
-    } as Express.Multer.File
-  }
+  // Uploaded file, or one the server placed in jobDir (example data or a
+  // resubmission's reused file)
+  const datFile = files['dat_file']?.[0] ?? serverFile(req, jobDir, 'dat_file')
 
   let parsedEntities: IAlphaFoldEntity[] = []
 

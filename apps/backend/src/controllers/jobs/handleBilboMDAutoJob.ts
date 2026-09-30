@@ -12,7 +12,7 @@ import {
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
 import { AutoRgResults } from '../../types/bilbomd.js'
-import { writeJobParams, getFileStats } from './utils/jobUtils.js'
+import { writeJobParams } from './utils/jobUtils.js'
 import { spawnAutoRgCalculator } from './utils/autoRg.js'
 import { autoJobSchema } from '../../validation/index.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
@@ -20,6 +20,7 @@ import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { config } from '../../config/config.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { isResubmitRequest } from './utils/resubmission.js'
+import { serverFile } from './utils/serverFiles.js'
 
 const uploadFolder = config.uploadDir
 
@@ -61,33 +62,15 @@ const handleBilboMDAutoJob = async (
     paeFile = files['pae_file']?.[0]
     datFile = files['dat_file']?.[0]
 
-    // Handle example data or files reused by a resubmission (already copied
-    // into jobDir) if no uploaded files
-    if (!pdbFile && req.body.pdb_file) {
-      pdbFile = {
-        originalname: req.body.pdb_file,
-        path: path.join(jobDir, req.body.pdb_file),
-        size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
-      } as Express.Multer.File
-    }
-    if (!paeFile && req.body.pae_file) {
-      paeFile = {
-        originalname: req.body.pae_file,
-        path: path.join(jobDir, req.body.pae_file),
-        size: getFileStats(path.join(jobDir, req.body.pae_file)).size
-      } as Express.Multer.File
-    }
-    if (!datFile && req.body.dat_file) {
-      datFile = {
-        originalname: req.body.dat_file,
-        path: path.join(jobDir, req.body.dat_file),
-        size: getFileStats(path.join(jobDir, req.body.dat_file)).size
-      } as Express.Multer.File
-    }
+    // Otherwise use a file the server placed in jobDir (example data or a
+    // resubmission's reused file)
+    if (!pdbFile) pdbFile = serverFile(req, jobDir, 'pdb_file')
+    if (!paeFile) paeFile = serverFile(req, jobDir, 'pae_file')
+    if (!datFile) datFile = serverFile(req, jobDir, 'dat_file')
 
-    pdbFileName = pdbFile?.originalname.toLowerCase()
-    paeFileName = paeFile?.originalname.toLowerCase()
-    datFileName = datFile?.originalname.toLowerCase()
+    pdbFileName = pdbFile?.originalname.toLowerCase() ?? ''
+    paeFileName = paeFile?.originalname.toLowerCase() ?? ''
+    datFileName = datFile?.originalname.toLowerCase() ?? ''
 
     logger.info(`PDB File: ${pdbFileName}`)
     logger.info(`PAE File: ${paeFileName}`)

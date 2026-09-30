@@ -1,6 +1,7 @@
 import { Request } from 'express'
 import path from 'path'
 import fs from 'fs/promises'
+import { setServerFile } from './serverFiles.js'
 
 const exampleRoot = process.env.EXAMPLE_DATA
 if (!exampleRoot) {
@@ -126,6 +127,19 @@ const applyExampleDataIfRequested = async (
   // If no data_file but there is pdb_file, use pdb_file as data_file (e.g., for sca2)
   if (!result.data_file && result.pdb_file) {
     result.data_file = result.pdb_file
+  }
+
+  // Register the copies so the job handlers pick them up as inputs
+  if (result.data_file) setServerFile(req, 'dat_file', result.data_file)
+  for (const field of [
+    'pdb_file',
+    'crd_file',
+    'psf_file',
+    'inp_file',
+    'pae_file'
+  ] as const) {
+    const name = result[field]
+    if (name) setServerFile(req, field, name)
   }
 
   return {

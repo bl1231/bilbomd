@@ -11,11 +11,7 @@ import {
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
-import {
-  writeJobParams,
-  sanitizeConstInpFile,
-  getFileStats
-} from './utils/jobUtils.js'
+import { writeJobParams, sanitizeConstInpFile } from './utils/jobUtils.js'
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
@@ -27,6 +23,7 @@ import {
 } from '@bilbomd/md-utils'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { isResubmitRequest } from './utils/resubmission.js'
+import { serverFile } from './utils/serverFiles.js'
 
 const uploadFolder = config.uploadDir
 
@@ -81,46 +78,17 @@ const handleBilboMDClassicCRD = async (
     inpFile = files['inp_file']?.[0]
     datFile = files['dat_file']?.[0]
 
-    // Handle example data or files reused by a resubmission (already copied
-    // into jobDir) if no uploaded files
-    if (!crdFile && req.body.crd_file) {
-      crdFile = {
-        originalname: req.body.crd_file,
-        path: path.join(jobDir, req.body.crd_file),
-        size: getFileStats(path.join(jobDir, req.body.crd_file)).size
-      } as Express.Multer.File
-    }
-    if (!psfFile && req.body.psf_file) {
-      psfFile = {
-        originalname: req.body.psf_file,
-        path: path.join(jobDir, req.body.psf_file),
-        size: getFileStats(path.join(jobDir, req.body.psf_file)).size
-      } as Express.Multer.File
-    }
-    if (!inpFile && req.body.inp_file) {
-      inpFile = {
-        originalname: req.body.inp_file,
-        path: path.join(jobDir, req.body.inp_file),
-        size: getFileStats(path.join(jobDir, req.body.inp_file)).size
-      } as Express.Multer.File
-    }
-    if (!datFile && req.body.dat_file) {
-      datFile = {
-        originalname: req.body.dat_file,
-        path: path.join(jobDir, req.body.dat_file),
-        size: getFileStats(path.join(jobDir, req.body.dat_file)).size
-      } as Express.Multer.File
-    }
+    // Otherwise use a file the server placed in jobDir (example data or a
+    // resubmission's reused file)
+    if (!crdFile) crdFile = serverFile(req, jobDir, 'crd_file')
+    if (!psfFile) psfFile = serverFile(req, jobDir, 'psf_file')
+    if (!inpFile) inpFile = serverFile(req, jobDir, 'inp_file')
+    if (!datFile) datFile = serverFile(req, jobDir, 'dat_file')
 
-    crdFileName = crdFile?.originalname.toLowerCase()
-    psfFileName = psfFile?.originalname.toLowerCase()
-    inpFileName = inpFile?.originalname.toLowerCase()
-    datFileName = datFile?.originalname.toLowerCase()
-
-    const constInpFilePath = path.join(jobDir, inpFileName)
-    const constInpOrigFilePath = path.join(jobDir, `${inpFileName}.orig`)
-    await fs.copyFile(constInpFilePath, constInpOrigFilePath)
-    await sanitizeConstInpFile(constInpFilePath)
+    crdFileName = crdFile?.originalname.toLowerCase() ?? ''
+    psfFileName = psfFile?.originalname.toLowerCase() ?? ''
+    inpFileName = inpFile?.originalname.toLowerCase() ?? ''
+    datFileName = datFile?.originalname.toLowerCase() ?? ''
 
     // Calculate rg values if not provided
     const resolvedRgValues = await maybeAutoCalculateRg(
@@ -168,6 +136,13 @@ const handleBilboMDClassicCRD = async (
         throw validationErr
       }
     }
+
+    // Keep the original upload and sanitize the working copy (only once the
+    // inputs have passed validation)
+    const constInpFilePath = path.join(jobDir, inpFileName)
+    const constInpOrigFilePath = path.join(jobDir, `${inpFileName}.orig`)
+    await fs.copyFile(constInpFilePath, constInpOrigFilePath)
+    await sanitizeConstInpFile(constInpFilePath)
 
     // Initialize BilboMdCRDJob Job Data
     const jobData = {
