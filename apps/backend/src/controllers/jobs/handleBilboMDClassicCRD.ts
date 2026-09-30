@@ -7,7 +7,6 @@ import {
   JobStatus,
   StepStatus,
   BilboMdCRDJob,
-  BilboMdPDBJob,
   IUser
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
@@ -27,6 +26,7 @@ import {
   extractConstraintsFromYaml
 } from '@bilbomd/md-utils'
 import { announceNewJob } from '../../services/announceNewJob.js'
+import { isResubmitRequest } from './utils/resubmission.js'
 
 const uploadFolder = config.uploadDir
 
@@ -42,13 +42,10 @@ const handleBilboMDClassicCRD = async (
   }
 ) => {
   try {
-    const isResubmission = Boolean(
-      req.body.resubmit === true || req.body.resubmit === 'true'
-    )
-    const originalJobId = req.body.original_job_id || null
-    logger.info(
-      `isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`
-    )
+    // Reused files were already copied into jobDir by prepareResubmission
+    const originalJobId: string | null = isResubmitRequest(req)
+      ? req.body.original_job_id
+      : null
 
     const { bilbomd_mode: bilbomdMode } = req.body
 
@@ -78,110 +75,53 @@ const handleBilboMDClassicCRD = async (
 
     const jobDir = path.join(uploadFolder, UUID)
 
-    if (isResubmission && originalJobId) {
-      let originalJob = await BilboMdCRDJob.findById(originalJobId)
-      if (!originalJob) {
-        originalJob = await BilboMdPDBJob.findById(originalJobId)
-      }
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] }
+    crdFile = files['crd_file']?.[0]
+    psfFile = files['psf_file']?.[0]
+    inpFile = files['inp_file']?.[0]
+    datFile = files['dat_file']?.[0]
 
-      if (!originalJob) {
-        res.status(404).json({ message: 'Original job not found' })
-        return
-      }
-      // logger.info(`orig job: ${JSON.stringify(originalJob)}`)
-      const originalDir = path.join(uploadFolder, originalJob.uuid)
-      inpFileName = originalJob.const_inp_file
-      datFileName = originalJob.data_file
-      crdFileName = originalJob.crd_file
-      psfFileName = originalJob.psf_file
-
-      await fs.copy(
-        path.join(originalDir, inpFileName),
-        path.join(jobDir, inpFileName)
-      )
-      await fs.copy(
-        path.join(originalDir, datFileName),
-        path.join(jobDir, datFileName)
-      )
-      await fs.copy(
-        path.join(originalDir, crdFileName),
-        path.join(jobDir, crdFileName)
-      )
-      await fs.copy(
-        path.join(originalDir, psfFileName),
-        path.join(jobDir, psfFileName)
-      )
-      logger.info(
-        `Resubmission: Copied files from original job ${originalJobId} to new job ${UUID}`
-      )
-      // Need to construct this synthetic Multer File object to appease validation functions.
+    // Handle example data or files reused by a resubmission (already copied
+    // into jobDir) if no uploaded files
+    if (!crdFile && req.body.crd_file) {
       crdFile = {
-        originalname: crdFileName,
-        path: path.join(jobDir, crdFileName),
-        size: getFileStats(path.join(jobDir, crdFileName)).size
+        originalname: req.body.crd_file,
+        path: path.join(jobDir, req.body.crd_file),
+        size: getFileStats(path.join(jobDir, req.body.crd_file)).size
       } as Express.Multer.File
-      psfFile = {
-        originalname: psfFileName,
-        path: path.join(jobDir, psfFileName),
-        size: getFileStats(path.join(jobDir, psfFileName)).size
-      } as Express.Multer.File
-      datFile = {
-        originalname: datFileName,
-        path: path.join(jobDir, datFileName),
-        size: getFileStats(path.join(jobDir, datFileName)).size
-      } as Express.Multer.File
-      inpFile = {
-        originalname: inpFileName,
-        path: path.join(jobDir, inpFileName),
-        size: getFileStats(path.join(jobDir, inpFileName)).size
-      } as Express.Multer.File
-    } else {
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] }
-      crdFile = files['crd_file']?.[0]
-      psfFile = files['psf_file']?.[0]
-      inpFile = files['inp_file']?.[0]
-      datFile = files['dat_file']?.[0]
-
-      // Handle example data files if no uploaded files
-      if (!crdFile && req.body.crd_file) {
-        crdFile = {
-          originalname: req.body.crd_file,
-          path: path.join(jobDir, req.body.crd_file),
-          size: getFileStats(path.join(jobDir, req.body.crd_file)).size
-        } as Express.Multer.File
-      }
-      if (!psfFile && req.body.psf_file) {
-        psfFile = {
-          originalname: req.body.psf_file,
-          path: path.join(jobDir, req.body.psf_file),
-          size: getFileStats(path.join(jobDir, req.body.psf_file)).size
-        } as Express.Multer.File
-      }
-      if (!inpFile && req.body.inp_file) {
-        inpFile = {
-          originalname: req.body.inp_file,
-          path: path.join(jobDir, req.body.inp_file),
-          size: getFileStats(path.join(jobDir, req.body.inp_file)).size
-        } as Express.Multer.File
-      }
-      if (!datFile && req.body.dat_file) {
-        datFile = {
-          originalname: req.body.dat_file,
-          path: path.join(jobDir, req.body.dat_file),
-          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
-        } as Express.Multer.File
-      }
-
-      crdFileName = crdFile?.originalname.toLowerCase()
-      psfFileName = psfFile?.originalname.toLowerCase()
-      inpFileName = inpFile?.originalname.toLowerCase()
-      datFileName = datFile?.originalname.toLowerCase()
-
-      const constInpFilePath = path.join(jobDir, inpFileName)
-      const constInpOrigFilePath = path.join(jobDir, `${inpFileName}.orig`)
-      await fs.copyFile(constInpFilePath, constInpOrigFilePath)
-      await sanitizeConstInpFile(constInpFilePath)
     }
+    if (!psfFile && req.body.psf_file) {
+      psfFile = {
+        originalname: req.body.psf_file,
+        path: path.join(jobDir, req.body.psf_file),
+        size: getFileStats(path.join(jobDir, req.body.psf_file)).size
+      } as Express.Multer.File
+    }
+    if (!inpFile && req.body.inp_file) {
+      inpFile = {
+        originalname: req.body.inp_file,
+        path: path.join(jobDir, req.body.inp_file),
+        size: getFileStats(path.join(jobDir, req.body.inp_file)).size
+      } as Express.Multer.File
+    }
+    if (!datFile && req.body.dat_file) {
+      datFile = {
+        originalname: req.body.dat_file,
+        path: path.join(jobDir, req.body.dat_file),
+        size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+      } as Express.Multer.File
+    }
+
+    crdFileName = crdFile?.originalname.toLowerCase()
+    psfFileName = psfFile?.originalname.toLowerCase()
+    inpFileName = inpFile?.originalname.toLowerCase()
+    datFileName = datFile?.originalname.toLowerCase()
+
+    const constInpFilePath = path.join(jobDir, inpFileName)
+    const constInpOrigFilePath = path.join(jobDir, `${inpFileName}.orig`)
+    await fs.copyFile(constInpFilePath, constInpOrigFilePath)
+    await sanitizeConstInpFile(constInpFilePath)
+
     // Calculate rg values if not provided
     const resolvedRgValues = await maybeAutoCalculateRg(
       { rg, rg_min, rg_max },
@@ -264,9 +204,7 @@ const handleBilboMDClassicCRD = async (
           email: { status: StepStatus.Waiting, message: '' }
         })
       },
-      ...(isResubmission && originalJobId
-        ? { resubmitted_from: originalJobId }
-        : {}),
+      ...(originalJobId ? { resubmitted_from: originalJobId } : {}),
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
@@ -286,7 +224,7 @@ const handleBilboMDClassicCRD = async (
     )
 
     // Store MD constraints in MongoDB (CRD only supports CHARMM/const.inp)
-    if (!isResubmission && inpFile) {
+    if (inpFile) {
       try {
         const constraintFilePath = path.join(jobDir, inpFileName)
         await validateInpConstraints(constraintFilePath)

@@ -7,7 +7,6 @@ import {
   JobStatus,
   StepStatus,
   BilboMdPDBJob,
-  BilboMdCRDJob,
   IBilboMDSteps,
   IUser
 } from '@bilbomd/mongodb-schema'
@@ -32,6 +31,7 @@ import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { config } from '../../config/config.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
+import { isResubmitRequest } from './utils/resubmission.js'
 
 const uploadFolder = config.uploadDir
 
@@ -47,13 +47,10 @@ const handleBilboMDClassicPDB = async (
   }
 ) => {
   try {
-    const isResubmission = Boolean(
-      req.body.resubmit === true || req.body.resubmit === 'true'
-    )
-    const originalJobId = req.body.original_job_id || null
-    logger.info(
-      `isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`
-    )
+    // Reused files were already copied into jobDir by prepareResubmission
+    const originalJobId: string | null = isResubmitRequest(req)
+      ? req.body.original_job_id
+      : null
 
     const { bilbomd_mode: bilbomdMode } = req.body
 
@@ -74,90 +71,38 @@ const handleBilboMDClassicPDB = async (
 
     const jobDir = path.join(uploadFolder, UUID)
 
-    if (isResubmission && originalJobId) {
-      let originalJob = await BilboMdPDBJob.findById(originalJobId)
-      if (!originalJob) {
-        originalJob = await BilboMdCRDJob.findById(originalJobId)
-      }
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] }
+    pdbFile = files['pdb_file']?.[0]
+    inpFile = files['inp_file']?.[0] || files['omm_const_file']?.[0] // Accept either file type
+    datFile = files['dat_file']?.[0]
 
-      if (!originalJob) {
-        res.status(404).json({ message: 'Original job not found' })
-        return
-      }
-      const originalDir = path.join(uploadFolder, originalJob.uuid)
-
-      inpFileName = originalJob.const_inp_file
-      datFileName = originalJob.data_file
-      pdbFileName = originalJob.pdb_file
-
-      await fs.copy(
-        path.join(originalDir, inpFileName),
-        path.join(jobDir, inpFileName)
-      )
-      await fs.copy(
-        path.join(originalDir, datFileName),
-        path.join(jobDir, datFileName)
-      )
-      await fs.copy(
-        path.join(originalDir, pdbFileName),
-        path.join(jobDir, pdbFileName)
-      )
-
-      logger.info(
-        `Resubmission: Copied files from original job ${originalJobId} to new job ${UUID}`
-      )
-
-      // Need to construct synthetic Multer File objects
-      datFile = {
-        originalname: datFileName,
-        path: path.join(jobDir, datFileName),
-        size: getFileStats(path.join(jobDir, datFileName)).size
-      } as Express.Multer.File
-
-      inpFile = {
-        originalname: inpFileName,
-        path: path.join(jobDir, inpFileName),
-        size: getFileStats(path.join(jobDir, inpFileName)).size
-      } as Express.Multer.File
-
+    // Handle example data or files reused by a resubmission (already copied
+    // into jobDir) if no uploaded files
+    if (!pdbFile && req.body.pdb_file) {
       pdbFile = {
-        originalname: pdbFileName,
-        path: path.join(jobDir, pdbFileName),
-        size: getFileStats(path.join(jobDir, pdbFileName)).size
+        originalname: req.body.pdb_file,
+        path: path.join(jobDir, req.body.pdb_file),
+        size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
       } as Express.Multer.File
-    } else {
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] }
-      pdbFile = files['pdb_file']?.[0]
-      inpFile = files['inp_file']?.[0] || files['omm_const_file']?.[0] // Accept either file type
-      datFile = files['dat_file']?.[0]
-
-      // Handle example data files if no uploaded files
-      if (!pdbFile && req.body.pdb_file) {
-        pdbFile = {
-          originalname: req.body.pdb_file,
-          path: path.join(jobDir, req.body.pdb_file),
-          size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
-        } as Express.Multer.File
-      }
-      if (!inpFile && req.body.inp_file) {
-        inpFile = {
-          originalname: req.body.inp_file,
-          path: path.join(jobDir, req.body.inp_file),
-          size: getFileStats(path.join(jobDir, req.body.inp_file)).size
-        } as Express.Multer.File
-      }
-      if (!datFile && req.body.dat_file) {
-        datFile = {
-          originalname: req.body.dat_file,
-          path: path.join(jobDir, req.body.dat_file),
-          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
-        } as Express.Multer.File
-      }
-
-      pdbFileName = pdbFile?.originalname.toLowerCase()
-      inpFileName = inpFile?.originalname.toLowerCase()
-      datFileName = datFile?.originalname.toLowerCase()
     }
+    if (!inpFile && req.body.inp_file) {
+      inpFile = {
+        originalname: req.body.inp_file,
+        path: path.join(jobDir, req.body.inp_file),
+        size: getFileStats(path.join(jobDir, req.body.inp_file)).size
+      } as Express.Multer.File
+    }
+    if (!datFile && req.body.dat_file) {
+      datFile = {
+        originalname: req.body.dat_file,
+        path: path.join(jobDir, req.body.dat_file),
+        size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+      } as Express.Multer.File
+    }
+
+    pdbFileName = pdbFile?.originalname.toLowerCase()
+    inpFileName = inpFile?.originalname.toLowerCase()
+    datFileName = datFile?.originalname.toLowerCase()
 
     // Calculate rg values if not provided
     const resolvedRgValues = await maybeAutoCalculateRg(
@@ -204,7 +149,7 @@ const handleBilboMDClassicPDB = async (
     }
 
     // Handle constraint file processing AFTER validation
-    if (!isResubmission && inpFile) {
+    if (inpFile) {
       const standardizedFileName = await processConstraintFile({
         md_engine,
         jobDir,
@@ -280,9 +225,7 @@ const handleBilboMDClassicPDB = async (
           rg_max
         })
       }),
-      ...(isResubmission && originalJobId
-        ? { resubmitted_from: originalJobId }
-        : {}),
+      ...(originalJobId ? { resubmitted_from: originalJobId } : {}),
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId
@@ -302,7 +245,7 @@ const handleBilboMDClassicPDB = async (
     )
 
     // Store MD constraints in MongoDB if constraint file was processed
-    if (!isResubmission && inpFile) {
+    if (inpFile) {
       try {
         const constraintFilePath = path.join(jobDir, inpFileName)
         const isYamlConstraint = inpFileName.endsWith('.yml')
@@ -398,6 +341,12 @@ const handleBilboMDClassicPDB = async (
   }
 }
 
+// A resubmission reuses the original job's already-standardized constraint
+// file, so the source may already be at the standardized path.
+const copyUnlessSame = async (src: string, dest: string) => {
+  if (path.resolve(src) !== path.resolve(dest)) await fs.copyFile(src, dest)
+}
+
 // Helper function to process constraint files based on MD engine
 async function processConstraintFile({
   md_engine,
@@ -443,7 +392,7 @@ async function processConstraintFile({
       // Validate YAML file and copy to standardized filename
       logger.info('Validating YAML constraints file for OpenMM')
       await validateYamlConstraints(filePath)
-      await fs.copyFile(filePath, finalPath)
+      await copyUnlessSame(filePath, finalPath)
       logger.info(
         `YAML constraints file validated for OpenMM: ${standardizedFileName}`
       )
@@ -471,7 +420,7 @@ async function processConstraintFile({
       await validateInpConstraints(filePath)
 
       // Copy to standardized filename and then sanitize
-      await fs.copyFile(filePath, finalPath)
+      await copyUnlessSame(filePath, finalPath)
       await sanitizeConstInpFile(finalPath)
       logger.info(`INP file processed for CHARMM: ${standardizedFileName}`)
     }

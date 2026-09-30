@@ -5,6 +5,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import DownloadIcon from '@mui/icons-material/Download'
 import Divider from '@mui/material/Divider'
 import { StyledMenu } from '../../themes/components/StyledDropdownMenu'
+import { resubmitPathFor } from 'features/jobdetail/jobPageModel'
 
 interface JobActionsMenuProps {
   jobId: string
@@ -59,9 +60,7 @@ const JobActionsMenu: React.FC<JobActionsMenuProps> = ({
       <MenuItem
         onClick={handleResubmitClick}
         disableRipple
-        disabled={
-          !['BilboMdPDB', 'BilboMdCRD', 'BilboMdAuto'].includes(jobType)
-        }
+        disabled={!resubmitPathFor(jobType, jobId)}
       >
         <AutorenewIcon />
         Resubmit

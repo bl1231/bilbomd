@@ -27,10 +27,16 @@ const RESUBMIT_ROUTES: Partial<Record<JobType, string>> = {
   auto: 'auto'
 }
 
-export const resubmitPath = (view: JobView): string | undefined => {
-  const route = RESUBMIT_ROUTES[view.jobType]
-  return route ? `/dashboard/jobs/${route}/resubmit/${view.id}` : undefined
+export const resubmitPathFor = (
+  jobType: string,
+  id: string
+): string | undefined => {
+  const route = RESUBMIT_ROUTES[jobType as JobType]
+  return route ? `/dashboard/jobs/${route}/resubmit/${id}` : undefined
 }
+
+export const resubmitPath = (view: JobView): string | undefined =>
+  resubmitPathFor(view.jobType, view.id)
 
 // Scoper runs KGSRNA rather than MD; jobs from before md_engine existed
 // were all CHARMM. Multi jobs combine other jobs and have no engine.

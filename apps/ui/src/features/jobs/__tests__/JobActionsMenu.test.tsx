@@ -12,7 +12,7 @@ describe('JobActionsMenu', () => {
 
   const defaultProps = {
     jobId: 'job-123',
-    jobType: 'BilboMdPDB',
+    jobType: 'pdb',
     jobTitle: 'Test Job',
     jobStatus: 'Completed',
     resultsReady: true,
@@ -78,7 +78,7 @@ describe('JobActionsMenu', () => {
   })
 
   describe('Resubmit button - enabled job types', () => {
-    const enabledJobTypes = ['BilboMdPDB', 'BilboMdCRD', 'BilboMdAuto']
+    const enabledJobTypes = ['pdb', 'crd', 'auto']
 
     enabledJobTypes.forEach((jobType) => {
       it(`should enable Resubmit for ${jobType}`, () => {
@@ -127,13 +127,7 @@ describe('JobActionsMenu', () => {
   })
 
   describe('Resubmit button - disabled job types', () => {
-    const disabledJobTypes = [
-      'BilboMdAlphaFold',
-      'BilboMdSANS',
-      'BilboMdScoper',
-      'BilboMdMulti',
-      'UnknownType'
-    ]
+    const disabledJobTypes = ['alphafold', 'sans', 'scoper', 'multi', 'unknown']
 
     disabledJobTypes.forEach((jobType) => {
       it(`should disable Resubmit for ${jobType}`, () => {
@@ -347,7 +341,7 @@ describe('JobActionsMenu', () => {
       renderWithProviders(
         <JobActionsMenu
           {...defaultProps}
-          jobType="BilboMdPDB"
+          jobType="pdb"
           jobStatus="Running"
         />
       )
@@ -363,7 +357,7 @@ describe('JobActionsMenu', () => {
       renderWithProviders(
         <JobActionsMenu
           {...defaultProps}
-          jobType="BilboMdScoper"
+          jobType="scoper"
           jobStatus="Completed"
         />
       )
@@ -379,7 +373,7 @@ describe('JobActionsMenu', () => {
       renderWithProviders(
         <JobActionsMenu
           {...defaultProps}
-          jobType="BilboMdScoper"
+          jobType="scoper"
           jobStatus="Running"
         />
       )
@@ -395,7 +389,7 @@ describe('JobActionsMenu', () => {
       renderWithProviders(
         <JobActionsMenu
           {...defaultProps}
-          jobType="BilboMdPDB"
+          jobType="pdb"
           jobStatus="Completed"
         />
       )

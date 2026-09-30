@@ -4,7 +4,7 @@ import { JobActionsMenu } from '../JobActionsMenu'
 
 const baseProps = {
   jobId: 'abc123',
-  jobType: 'BilboMdPDB',
+  jobType: 'pdb',
   jobTitle: 'Test Job',
   jobStatus: 'Completed',
   resultsReady: true,
@@ -27,7 +27,7 @@ describe('JobActionsMenu', () => {
     render(
       <JobActionsMenu
         {...baseProps}
-        jobType="BilboMdAlphaFold"
+        jobType="alphafold"
       />
     )
     expect(screen.getByText('Resubmit')).toHaveAttribute(
@@ -49,7 +49,7 @@ describe('JobActionsMenu', () => {
   it('calls onResubmit and onClose when Resubmit is clicked', () => {
     render(<JobActionsMenu {...baseProps} />)
     fireEvent.click(screen.getByText('Resubmit'))
-    expect(baseProps.onResubmit).toHaveBeenCalledWith('abc123', 'BilboMdPDB')
+    expect(baseProps.onResubmit).toHaveBeenCalledWith('abc123', 'pdb')
     expect(baseProps.onClose).toHaveBeenCalled()
   })
 
