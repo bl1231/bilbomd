@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { renderWithProviders } from 'test/rendersWithProviders'
-import PublicJobPage from '../PublicJobPage'
+import SingleJobPage from '../SingleJobPage'
 
 const mockUseParams = vi.fn()
 vi.mock('react-router', async (importActual) => ({
@@ -19,19 +19,18 @@ beforeEach(() => {
   mockUseParams.mockReset()
 })
 
-describe('PublicJobPage', () => {
-  it('shows the job page for the token in the URL', () => {
-    mockUseParams.mockReturnValue({ publicId: 'tok-1' })
-    renderWithProviders(<PublicJobPage />)
+describe('SingleJobPage', () => {
+  it('shows the job page for the id in the URL', () => {
+    mockUseParams.mockReturnValue({ id: 'job-1' })
+    renderWithProviders(<SingleJobPage />)
     expect(screen.getByTestId('job-detail')).toHaveTextContent(
-      '{"kind":"public","token":"tok-1"}'
+      '{"kind":"owner","id":"job-1"}'
     )
   })
 
-  it('explains a missing token', () => {
+  it('reports a missing id', () => {
     mockUseParams.mockReturnValue({})
-    renderWithProviders(<PublicJobPage />)
-    expect(screen.getByText('Missing job id')).toBeInTheDocument()
-    expect(screen.queryByTestId('job-detail')).not.toBeInTheDocument()
+    renderWithProviders(<SingleJobPage />)
+    expect(screen.getByText(/No BilboMD Job with id/)).toBeInTheDocument()
   })
 })

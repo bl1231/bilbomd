@@ -418,3 +418,17 @@ describe('BilboMDNerscStep', () => {
     })
   })
 })
+
+describe('BilboMDNerscStep duration', () => {
+  it('shows the step duration when given', () => {
+    renderWithProviders(
+      <BilboMDNerscStep
+        stepName="md"
+        stepStatus="Success"
+        stepMessage="done"
+        duration="3m 2s"
+      />
+    )
+    expect(screen.getByText('⏱ 3m 2s')).toBeInTheDocument()
+  })
+})

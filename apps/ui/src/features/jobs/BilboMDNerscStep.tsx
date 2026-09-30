@@ -3,20 +3,48 @@ import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import DirectionsRunRoundedIcon from '@mui/icons-material/DirectionsRunRounded'
 import ErrorIcon from '@mui/icons-material/Error'
 import { Chip, Typography } from '@mui/material'
+import type { SvgIconProps } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import Tooltip from '@mui/material/Tooltip'
 import { getStepDetails } from 'features/shared/stepDetails'
+import { RUNNING_STEP_BACKGROUND } from 'features/shared/StatusColors'
+
+// The icon for each step status, shared with the job page's step strip
+export const StepStatusIcon = ({
+  status,
+  ...props
+}: { status: string } & SvgIconProps) => {
+  switch (status) {
+    case 'Waiting':
+      return <RadioButtonUncheckedIcon {...props} />
+    case 'Running':
+      return (
+        <DirectionsRunRoundedIcon
+          {...props}
+          style={{ color: 'black', ...props.style }}
+        />
+      )
+    case 'Success':
+      return <CheckCircleIcon {...props} />
+    case 'Error':
+      return <ErrorIcon {...props} />
+    default:
+      return null
+  }
+}
 
 interface BilboMDStepProps {
   stepName: string
   stepStatus: string
   stepMessage: string
+  duration?: string
 }
 
 const BilboMDNerscStep = ({
   stepName,
   stepStatus,
-  stepMessage
+  stepMessage,
+  duration
 }: BilboMDStepProps) => {
   const { friendlyName, tooltipMessage } = getStepDetails(stepName)
   return (
@@ -37,17 +65,7 @@ const BilboMDNerscStep = ({
           arrow
         >
           <Chip
-            icon={
-              stepStatus === 'Waiting' ? (
-                <RadioButtonUncheckedIcon />
-              ) : stepStatus === 'Running' ? (
-                <DirectionsRunRoundedIcon style={{ color: 'black' }} />
-              ) : stepStatus === 'Success' ? (
-                <CheckCircleIcon />
-              ) : stepStatus === 'Error' ? (
-                <ErrorIcon />
-              ) : undefined
-            }
+            icon={<StepStatusIcon status={stepStatus} />}
             size="small"
             label={friendlyName}
             color={
@@ -59,7 +77,7 @@ const BilboMDNerscStep = ({
             }
             style={
               stepStatus === 'Running'
-                ? { backgroundColor: '#fff566', color: 'black' }
+                ? { backgroundColor: RUNNING_STEP_BACKGROUND, color: 'black' }
                 : undefined
             }
           />
@@ -68,6 +86,16 @@ const BilboMDNerscStep = ({
       <Grid sx={{ minWidth: 0, flex: '1 1 220px' }}>
         <Typography variant="body2">{stepMessage || 'Waiting'}</Typography>
       </Grid>
+      {duration && (
+        <Grid sx={{ flexShrink: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{ color: 'text.secondary' }}
+          >
+            ⏱ {duration}
+          </Typography>
+        </Grid>
+      )}
     </Grid>
   )
 }

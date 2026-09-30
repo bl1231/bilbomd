@@ -1,4 +1,4 @@
-import { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
+import type { JobView } from 'features/jobdetail/jobView'
 export type MongoDBProperty = {
   label: string
   value?: string | number | Date
@@ -8,7 +8,8 @@ export type MongoDBProperty = {
 
 export interface JobHandler {
   getJobSpecificProperties: (
-    job: BilboMDJobDTO,
+    view: JobView,
+    // Present for owners, who can open the constraint file
     onOpenModal?: () => void
   ) => MongoDBProperty[]
   getJobTypeDisplayName: () => string
