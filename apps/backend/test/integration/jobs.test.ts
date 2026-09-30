@@ -373,6 +373,87 @@ describe('POST /api/v1/jobs', () => {
   })
 })
 
+describe('POST /api/v1/jobs (resubmit)', () => {
+  const pdbData = `${__dirname}/../../../../test_scripts/data/pdb`
+
+  const submitOriginalPdbJob = async () => {
+    const res = await request(app)
+      .post('/api/v1/jobs')
+      .set('Authorization', `Bearer ${generateAccessToken()}`)
+      .field('title', 'Original Job')
+      .attach('pdb_file', `${pdbData}/pro_dna.pdb`)
+      .attach('inp_file', `${pdbData}/const.inp`)
+      .attach('dat_file', `${pdbData}/saxs-data.dat`)
+      .field('rg', 35)
+      .field('rg_min', 30)
+      .field('rg_max', 40)
+      .field('num_conf', 1)
+      .field('bilbomd_mode', 'pdb')
+      .field('md_engine', 'charmm')
+    expect(res.statusCode).toBe(200)
+    return res.body as { jobid: string; uuid: string }
+  }
+
+  const resubmit = (originalJobId: string, token = generateAccessToken()) =>
+    request(app)
+      .post('/api/v1/jobs')
+      .set('Authorization', `Bearer ${token}`)
+      .field('title', 'resubmit_Original Job')
+      .field('resubmit', 'true')
+      .field('original_job_id', originalJobId)
+      .field('reuse_pdb_file', 'true')
+      .field('reuse_inp_file', 'true')
+      .field('reuse_dat_file', 'true')
+      .field('rg', 35)
+      .field('rg_min', 30)
+      .field('rg_max', 40)
+      .field('num_conf', 1)
+      .field('bilbomd_mode', 'pdb')
+      .field('md_engine', 'openmm')
+
+  test('reuses the original files and reprocesses constraints for the new engine', async () => {
+    const original = await submitOriginalPdbJob()
+
+    const res = await resubmit(original.jobid)
+
+    expect(res.statusCode).toBe(200)
+    const newJob = await Job.findById(res.body.jobid)
+    expect(newJob?.get('resubmitted_from')?.toString()).toBe(original.jobid)
+    expect(newJob?.get('md_engine')).toBe('OpenMM')
+    expect(newJob?.get('const_inp_file')).toBe('openmm_const.yml')
+    expect(newJob?.get('md_constraints')).toBeTruthy()
+    const newDir = path.join(dataVolume, res.body.uuid)
+    expect(await fs.pathExists(path.join(newDir, 'pro_dna.pdb'))).toBe(true)
+    expect(await fs.pathExists(path.join(newDir, 'saxs-data.dat'))).toBe(true)
+    expect(await fs.pathExists(path.join(newDir, 'openmm_const.yml'))).toBe(
+      true
+    )
+  })
+
+  test("refuses to reuse another user's job", async () => {
+    const original = await submitOriginalPdbJob()
+    await createOtherUser()
+
+    const res = await resubmit(
+      original.jobid,
+      generateAccessToken('testuser2@example.com', 'testuser2')
+    )
+
+    expect(res.statusCode).toBe(404)
+    expect(res.body.message).toBe('Original job not found')
+  })
+
+  test('asks for a re-upload when an original file is gone', async () => {
+    const original = await submitOriginalPdbJob()
+    await fs.remove(path.join(dataVolume, original.uuid, 'saxs-data.dat'))
+
+    const res = await resubmit(original.jobid)
+
+    expect(res.statusCode).toBe(410)
+    expect(res.body.message).toMatch(/saxs-data\.dat.*upload it again/)
+  })
+})
+
 describe('PATCH /api/v1/jobs', () => {
   //Test cases for the PATCH /api/v1/jobs endpoint
   test('should return error if unauthorized', async () => {

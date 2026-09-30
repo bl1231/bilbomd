@@ -14,12 +14,12 @@ import { ValidationError } from 'yup'
 import { AutoRgResults } from '../../types/bilbomd.js'
 import { writeJobParams, getFileStats } from './utils/jobUtils.js'
 import { spawnAutoRgCalculator } from './utils/autoRg.js'
-import fs from 'fs-extra'
 import { autoJobSchema } from '../../validation/index.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { config } from '../../config/config.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
+import { isResubmitRequest } from './utils/resubmission.js'
 
 const uploadFolder = config.uploadDir
 
@@ -35,13 +35,10 @@ const handleBilboMDAutoJob = async (
   }
 ) => {
   try {
-    const isResubmission = Boolean(
-      req.body.resubmit === true || req.body.resubmit === 'true'
-    )
-    const originalJobId = req.body.original_job_id || null
-    logger.info(
-      `isResubmission: ${isResubmission}, originalJobId: ${originalJobId}`
-    )
+    // Reused files were already copied into jobDir by prepareResubmission
+    const originalJobId: string | null = isResubmitRequest(req)
+      ? req.body.original_job_id
+      : null
 
     const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
     const md_engine: 'CHARMM' | 'OpenMM' =
@@ -59,83 +56,38 @@ const handleBilboMDAutoJob = async (
 
     const jobDir = path.join(uploadFolder, UUID)
 
-    if (isResubmission && originalJobId) {
-      const originalJob = await BilboMdAutoJob.findById(originalJobId)
-      if (!originalJob) {
-        res.status(404).json({ message: 'Original job not found' })
-        return
-      }
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] }
+    pdbFile = files['pdb_file']?.[0]
+    paeFile = files['pae_file']?.[0]
+    datFile = files['dat_file']?.[0]
 
-      const originalDir = path.join(uploadFolder, originalJob.uuid)
-
-      pdbFileName = originalJob.pdb_file
-      paeFileName = originalJob.pae_file
-      datFileName = originalJob.data_file
-
-      await fs.copy(
-        path.join(originalDir, pdbFileName),
-        path.join(jobDir, pdbFileName)
-      )
-      await fs.copy(
-        path.join(originalDir, paeFileName),
-        path.join(jobDir, paeFileName)
-      )
-      await fs.copy(
-        path.join(originalDir, datFileName),
-        path.join(jobDir, datFileName)
-      )
-      logger.info(
-        `Resubmission: Copied files from original job ${originalJobId} to new job ${UUID}`
-      )
-      // Need to construct this synthetic Multer File object to appease validation functions.
+    // Handle example data or files reused by a resubmission (already copied
+    // into jobDir) if no uploaded files
+    if (!pdbFile && req.body.pdb_file) {
       pdbFile = {
-        originalname: pdbFileName,
-        path: path.join(jobDir, pdbFileName),
-        size: getFileStats(path.join(jobDir, pdbFileName)).size
+        originalname: req.body.pdb_file,
+        path: path.join(jobDir, req.body.pdb_file),
+        size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
       } as Express.Multer.File
-      paeFile = {
-        originalname: paeFileName,
-        path: path.join(jobDir, paeFileName),
-        size: getFileStats(path.join(jobDir, paeFileName)).size
-      } as Express.Multer.File
-      datFile = {
-        originalname: datFileName,
-        path: path.join(jobDir, datFileName),
-        size: getFileStats(path.join(jobDir, datFileName)).size
-      } as Express.Multer.File
-    } else {
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] }
-      pdbFile = files['pdb_file']?.[0]
-      paeFile = files['pae_file']?.[0]
-      datFile = files['dat_file']?.[0]
-
-      // Handle example data files if no uploaded files
-      if (!pdbFile && req.body.pdb_file) {
-        pdbFile = {
-          originalname: req.body.pdb_file,
-          path: path.join(jobDir, req.body.pdb_file),
-          size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
-        } as Express.Multer.File
-      }
-      if (!paeFile && req.body.pae_file) {
-        paeFile = {
-          originalname: req.body.pae_file,
-          path: path.join(jobDir, req.body.pae_file),
-          size: getFileStats(path.join(jobDir, req.body.pae_file)).size
-        } as Express.Multer.File
-      }
-      if (!datFile && req.body.dat_file) {
-        datFile = {
-          originalname: req.body.dat_file,
-          path: path.join(jobDir, req.body.dat_file),
-          size: getFileStats(path.join(jobDir, req.body.dat_file)).size
-        } as Express.Multer.File
-      }
-
-      pdbFileName = pdbFile?.originalname.toLowerCase()
-      paeFileName = paeFile?.originalname.toLowerCase()
-      datFileName = datFile?.originalname.toLowerCase()
     }
+    if (!paeFile && req.body.pae_file) {
+      paeFile = {
+        originalname: req.body.pae_file,
+        path: path.join(jobDir, req.body.pae_file),
+        size: getFileStats(path.join(jobDir, req.body.pae_file)).size
+      } as Express.Multer.File
+    }
+    if (!datFile && req.body.dat_file) {
+      datFile = {
+        originalname: req.body.dat_file,
+        path: path.join(jobDir, req.body.dat_file),
+        size: getFileStats(path.join(jobDir, req.body.dat_file)).size
+      } as Express.Multer.File
+    }
+
+    pdbFileName = pdbFile?.originalname.toLowerCase()
+    paeFileName = paeFile?.originalname.toLowerCase()
+    datFileName = datFile?.originalname.toLowerCase()
 
     logger.info(`PDB File: ${pdbFileName}`)
     logger.info(`PAE File: ${paeFileName}`)
@@ -238,9 +190,7 @@ const handleBilboMDAutoJob = async (
           rg_max: autorgResults.rg_max
         })
       }),
-      ...(isResubmission && originalJobId
-        ? { resubmitted_from: originalJobId }
-        : {}),
+      ...(originalJobId ? { resubmitted_from: originalJobId } : {}),
       access_mode: ctx.accessMode,
       ...(user ? { user } : {}),
       ...(ctx.accessMode === 'anonymous' && ctx.publicId

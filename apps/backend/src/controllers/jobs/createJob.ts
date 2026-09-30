@@ -16,6 +16,7 @@ import { handleBilboMDScoperJob } from './handleBilboMDScoperJob.js'
 import { handleBilboMDAlphaFoldJob } from './handleBilboMDAlphaFoldJob.js'
 import { handleBilboMDOpenFoldJob } from './handleBilboMDOpenFoldJob.js'
 import applyExampleDataIfRequested from './utils/exampleData.js'
+import { prepareResubmission } from './utils/resubmission.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
 import { clientIp } from '../../middleware/clientIp.js'
 import { recordUsageEvent } from '../../services/usageEvents.js'
@@ -299,6 +300,9 @@ const createPublicJob = async (req: Request, res: Response) => {
   }
 }
 
+// Only these pipelines have a resubmit form
+const RESUBMITTABLE_MODES = ['pdb', 'crd_psf', 'auto']
+
 const dispatchBilboMDJob = async (ctx: BilboMDDispatchContext) => {
   const {
     req,
@@ -312,6 +316,18 @@ const dispatchBilboMDJob = async (ctx: BilboMDDispatchContext) => {
   } = ctx
 
   logger.info(`Starting BilboMDJob mode: ${bilbomd_mode} (${accessMode})`)
+
+  if (RESUBMITTABLE_MODES.includes(bilbomd_mode)) {
+    const resubmission = await prepareResubmission(
+      req,
+      user,
+      path.join(uploadFolder, UUID)
+    )
+    if (!resubmission.ok) {
+      res.status(resubmission.status).json({ message: resubmission.message })
+      return
+    }
+  }
 
   if (bilbomd_mode === 'pdb') {
     await handleBilboMDClassicPDB(req, res, user, UUID, {

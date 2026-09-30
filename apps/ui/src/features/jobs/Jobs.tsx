@@ -59,6 +59,7 @@ import { INerscInfo } from '@bilbomd/mongodb-schema/frontend'
 import Item from 'themes/components/Item'
 import { useNavigate } from 'react-router'
 import { JobActionsMenu } from './JobActionsMenu'
+import { resubmitPathFor } from 'features/jobdetail/jobPageModel'
 import { useSnackbar } from 'notistack'
 
 const getRunTimeInHours = (
@@ -264,17 +265,6 @@ const filteredJobCountChip = (count: number) => {
   )
 }
 
-const jobTypeToRoute: Record<string, string> = {
-  pdb: 'classic',
-  crd: 'classic',
-  auto: 'auto',
-  scoper: 'scoper',
-  alphafold: 'alphafold',
-  openfold: 'openfold',
-  sans: 'sans',
-  multi: 'multi'
-}
-
 const jobTypeToPipelineName: Record<string, string> = {
   pdb: 'Classic',
   crd: 'Classic',
@@ -406,9 +396,8 @@ const Jobs = () => {
   }
 
   const handleResubmit = (id: string, jobType: string) => {
-    const routeSegment = jobTypeToRoute[jobType]
-    if (!routeSegment) return
-    void navigate(`/dashboard/jobs/${routeSegment}/resubmit/${id}`)
+    const path = resubmitPathFor(jobType, id)
+    if (path) void navigate(path)
   }
 
   const handleDownload = async (id: string) => {

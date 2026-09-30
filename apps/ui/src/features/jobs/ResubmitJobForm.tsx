@@ -62,6 +62,7 @@ const ResubmitJobForm = () => {
   const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // RTK Query to fetch the configuration
   const {
@@ -176,6 +177,7 @@ const ResubmitJobForm = () => {
   }
 
   const onSubmit = async (values: BilboMDClassicJobFormValues) => {
+    setSubmitError(null)
     const form = new FormData()
     form.append('bilbomd_mode', values.bilbomd_mode)
     form.append('title', values.title)
@@ -221,9 +223,13 @@ const ResubmitJobForm = () => {
     try {
       const newJob = await addNewJob(form).unwrap()
       // Navigate to the new job page
-      void navigate(`/dashboard/jobs/${newJob.id}`)
+      void navigate(`/dashboard/jobs/${newJob.jobid}`)
     } catch (error) {
       logger.error('rejected', error)
+      setSubmitError(
+        (error as { data?: { message?: string } }).data?.message ||
+          'An error occurred during submission.'
+      )
     }
   }
 
@@ -791,6 +797,14 @@ const ResubmitJobForm = () => {
                           <Alert severity="success">{status}</Alert>
                         ) : (
                           ''
+                        )}
+                        {submitError && (
+                          <Alert
+                            severity="error"
+                            sx={{ my: 1 }}
+                          >
+                            {submitError}
+                          </Alert>
                         )}
                       </Grid>
                     </Grid>
