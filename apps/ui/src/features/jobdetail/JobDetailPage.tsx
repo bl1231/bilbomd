@@ -1,4 +1,3 @@
-import { lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router'
 import {
   Alert,
@@ -15,7 +14,7 @@ import MissingJob from 'components/MissingJob'
 import Item from 'themes/components/Item'
 import { BilboMDScoperTable } from 'features/scoperjob/BilboMDScoperTable'
 import ScoperFoXSAnalysis from 'features/scoperjob/ScoperFoXSAnalysis'
-import { sourceProps, type JobSource } from './jobSource'
+import type { JobSource } from './jobSource'
 import { isFinishedStatus } from './stepModel'
 import { useJobDownload } from './useJobDownload'
 import { useJobView } from './useJobView'
@@ -27,8 +26,7 @@ import JobAnalysisTabs from './JobAnalysisTabs'
 import { analysisTabs } from './jobPageModel'
 import JobResultsSection from './JobResultsSection'
 import JobInputsSection from './JobInputsSection'
-
-const MolstarViewer = lazy(() => import('features/molstar/Viewer'))
+import MolstarSection from './MolstarSection'
 
 const MOLSTAR_JOB_TYPES: JobType[] = [
   'pdb',
@@ -170,28 +168,10 @@ const JobDetailPage = ({ source }: { source: JobSource }) => {
       {completed &&
         view.results &&
         MOLSTAR_JOB_TYPES.includes(view.jobType) && (
-          <Grid size={{ xs: 12 }}>
-            <HeaderBox sx={{ py: '6px' }}>
-              <Typography>
-                Molstar Viewer
-                <Box
-                  component="span"
-                  sx={{ ml: 1, color: 'yellow', fontSize: '0.75em' }}
-                >
-                  experimental
-                </Box>
-              </Typography>
-            </HeaderBox>
-            <Suspense fallback={<CircularProgress />}>
-              <MolstarViewer
-                id={view.id}
-                jobType={view.jobType}
-                results={view.results}
-                constraints={view.md_constraints}
-                {...sourceProps(source)}
-              />
-            </Suspense>
-          </Grid>
+          <MolstarSection
+            source={source}
+            view={view}
+          />
         )}
 
       {showResults && (
