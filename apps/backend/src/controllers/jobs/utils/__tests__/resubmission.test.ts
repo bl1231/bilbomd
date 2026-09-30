@@ -6,6 +6,7 @@ import type { Request } from 'express'
 import type { IUser } from '@bilbomd/mongodb-schema'
 import { Job } from '@bilbomd/mongodb-schema'
 import { prepareResubmission, isResubmitRequest } from '../resubmission.js'
+import { serverFile, ServerFileField } from '../serverFiles.js'
 
 const { uploadDir } = vi.hoisted(() => ({
   uploadDir: { current: '' }
@@ -22,6 +23,11 @@ vi.mock('../../../../config/config.js', () => ({
     }
   }
 }))
+
+vi.mock('../jobUtils.js', async () => {
+  const { statSync } = await import('fs')
+  return { getFileStats: (filePath: string) => statSync(filePath) }
+})
 
 vi.mock('@bilbomd/mongodb-schema', () => ({
   Job: { findById: vi.fn() }
@@ -51,6 +57,10 @@ const makeReq = (
 describe('prepareResubmission', () => {
   let jobDir: string
   let originalDir: string
+
+  // Name of the file registered for `field`, as the job handlers will see it
+  const serverFileName = (req: Request, field: ServerFileField) =>
+    serverFile(req, jobDir, field)?.originalname
 
   beforeEach(async () => {
     uploadDir.current = await fs.mkdtemp(path.join(os.tmpdir(), 'resubmit-'))
@@ -91,11 +101,9 @@ describe('prepareResubmission', () => {
     const result = await prepareResubmission(req, makeUser(OWNER_ID), jobDir)
 
     expect(result).toEqual({ ok: true })
-    expect(req.body).toMatchObject({
-      pdb_file: 'model.pdb',
-      dat_file: 'saxs.dat',
-      inp_file: 'const.inp'
-    })
+    expect(serverFileName(req, 'pdb_file')).toBe('model.pdb')
+    expect(serverFileName(req, 'dat_file')).toBe('saxs.dat')
+    expect(serverFileName(req, 'inp_file')).toBe('const.inp')
     expect(await fs.readFile(path.join(jobDir, 'const.inp'), 'utf8')).toBe(
       'define'
     )
@@ -108,9 +116,9 @@ describe('prepareResubmission', () => {
     )
     await prepareResubmission(req, makeUser(OWNER_ID), jobDir)
 
-    expect(req.body.dat_file).toBeUndefined()
+    expect(serverFileName(req, 'dat_file')).toBeUndefined()
     expect(await fs.pathExists(path.join(jobDir, 'saxs.dat'))).toBe(false)
-    expect(req.body.pdb_file).toBe('model.pdb')
+    expect(serverFileName(req, 'pdb_file')).toBe('model.pdb')
   })
 
   it('only copies files the form asked to reuse', async () => {
@@ -142,7 +150,7 @@ describe('prepareResubmission', () => {
     const req = makeReq({ reuse_pdb_file: 'true' })
     await prepareResubmission(req, makeUser(OWNER_ID), jobDir)
 
-    expect(req.body.pdb_file).toBe('model.pdb')
+    expect(serverFileName(req, 'pdb_file')).toBe('model.pdb')
     expect(await fs.pathExists(path.join(jobDir, 'model.pdb'))).toBe(true)
   })
 

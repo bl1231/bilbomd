@@ -12,11 +12,7 @@ import {
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
-import {
-  writeJobParams,
-  sanitizeConstInpFile,
-  getFileStats
-} from './utils/jobUtils.js'
+import { writeJobParams, sanitizeConstInpFile } from './utils/jobUtils.js'
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { pdbJobSchema } from '../../validation/index.js'
 import {
@@ -32,6 +28,7 @@ import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { config } from '../../config/config.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { isResubmitRequest } from './utils/resubmission.js'
+import { serverFile } from './utils/serverFiles.js'
 
 const uploadFolder = config.uploadDir
 
@@ -76,33 +73,15 @@ const handleBilboMDClassicPDB = async (
     inpFile = files['inp_file']?.[0] || files['omm_const_file']?.[0] // Accept either file type
     datFile = files['dat_file']?.[0]
 
-    // Handle example data or files reused by a resubmission (already copied
-    // into jobDir) if no uploaded files
-    if (!pdbFile && req.body.pdb_file) {
-      pdbFile = {
-        originalname: req.body.pdb_file,
-        path: path.join(jobDir, req.body.pdb_file),
-        size: getFileStats(path.join(jobDir, req.body.pdb_file)).size
-      } as Express.Multer.File
-    }
-    if (!inpFile && req.body.inp_file) {
-      inpFile = {
-        originalname: req.body.inp_file,
-        path: path.join(jobDir, req.body.inp_file),
-        size: getFileStats(path.join(jobDir, req.body.inp_file)).size
-      } as Express.Multer.File
-    }
-    if (!datFile && req.body.dat_file) {
-      datFile = {
-        originalname: req.body.dat_file,
-        path: path.join(jobDir, req.body.dat_file),
-        size: getFileStats(path.join(jobDir, req.body.dat_file)).size
-      } as Express.Multer.File
-    }
+    // Otherwise use a file the server placed in jobDir (example data or a
+    // resubmission's reused file)
+    if (!pdbFile) pdbFile = serverFile(req, jobDir, 'pdb_file')
+    if (!inpFile) inpFile = serverFile(req, jobDir, 'inp_file')
+    if (!datFile) datFile = serverFile(req, jobDir, 'dat_file')
 
-    pdbFileName = pdbFile?.originalname.toLowerCase()
-    inpFileName = inpFile?.originalname.toLowerCase()
-    datFileName = datFile?.originalname.toLowerCase()
+    pdbFileName = pdbFile?.originalname.toLowerCase() ?? ''
+    inpFileName = inpFile?.originalname.toLowerCase() ?? ''
+    datFileName = datFile?.originalname.toLowerCase() ?? ''
 
     // Calculate rg values if not provided
     const resolvedRgValues = await maybeAutoCalculateRg(

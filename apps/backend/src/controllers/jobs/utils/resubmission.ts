@@ -5,11 +5,12 @@ import { Types } from 'mongoose'
 import { Job, IUser } from '@bilbomd/mongodb-schema'
 import { logger } from '../../../middleware/loggers.js'
 import { config } from '../../../config/config.js'
+import { setServerFile, ServerFileField } from './serverFiles.js'
 
 const PRIVILEGED_ROLES = ['Admin', 'Manager']
 
 // Form field name -> Job document field holding that file's name
-const REUSABLE_FILES: Record<string, string> = {
+const REUSABLE_FILES: Record<ServerFileField, string> = {
   pdb_file: 'pdb_file',
   crd_file: 'crd_file',
   psf_file: 'psf_file',
@@ -26,9 +27,9 @@ const isTrue = (value: unknown) => value === true || value === 'true'
 const isResubmitRequest = (req: Request) => isTrue(req.body.resubmit)
 
 // Copies the original job's files that the resubmit form asked to reuse
-// (`reuse_<field>=true`) into the new job directory and points
-// `req.body.<field>` at them, so the job handlers treat them exactly like
-// example-data files and run the same validation and constraint processing
+// (`reuse_<field>=true`) into the new job directory and registers them as
+// server files, so the job handlers treat them exactly like example-data
+// files and run the same validation and constraint processing
 // as a fresh submission. A newly uploaded file always wins over reuse.
 const prepareResubmission = async (
   req: Request,
@@ -64,7 +65,10 @@ const prepareResubmission = async (
   const originalDir = path.join(config.uploadDir, originalJob.uuid)
   const uploads = req.files as Record<string, Express.Multer.File[]> | undefined
 
-  for (const [field, jobField] of Object.entries(REUSABLE_FILES)) {
+  for (const [field, jobField] of Object.entries(REUSABLE_FILES) as [
+    ServerFileField,
+    string
+  ][]) {
     if (uploads?.[field]?.length) continue
     if (!isTrue(req.body[`reuse_${field}`])) continue
 
@@ -88,7 +92,7 @@ const prepareResubmission = async (
     }
 
     await fs.copy(source, path.join(jobDir, fileName))
-    req.body[field] = fileName
+    setServerFile(req, field, fileName)
   }
 
   logger.info(

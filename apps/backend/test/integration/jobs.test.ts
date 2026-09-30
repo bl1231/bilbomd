@@ -515,3 +515,70 @@ describe('DELETE /api/v1/jobs/:id', () => {
     expect(res.body.message).toMatch(/queued/i)
   })
 })
+
+describe('POST /api/v1/jobs (input file names)', () => {
+  const crdData = `${__dirname}/../../../../test_scripts/data/crd`
+  const pdbData = `${__dirname}/../../../../test_scripts/data/pdb`
+  const longLine = `* ${'x'.repeat(120)}`
+
+  // A file just outside any job directory that a crafted field could target
+  const plantFile = async (ext: string) => {
+    const name = `planted-${uuid()}.${ext}`
+    const filePath = path.join(dataVolume, name)
+    await fs.writeFile(filePath, `${longLine}\n`)
+    return { name, filePath }
+  }
+
+  const expectUntouched = async (filePath: string) => {
+    expect(await fs.readFile(filePath, 'utf8')).toBe(`${longLine}\n`)
+    expect(await fs.pathExists(`${filePath}.orig`)).toBe(false)
+    await fs.remove(filePath)
+  }
+
+  test('ignores a CRD constraint file name sent as a form field', async () => {
+    const planted = await plantFile('inp')
+
+    const res = await request(app)
+      .post('/api/v1/jobs')
+      .set('Authorization', `Bearer ${generateAccessToken()}`)
+      .field('title', 'Crafted CRD Job')
+      .attach('crd_file', `${crdData}/pro_dna.crd`)
+      .attach('psf_file', `${crdData}/pro_dna.psf`)
+      .attach('dat_file', `${crdData}/saxs-data.dat`)
+      .field('inp_file', `../${planted.name}`)
+      .field('rg', 35)
+      .field('rg_min', 30)
+      .field('rg_max', 40)
+      .field('num_conf', 1)
+      .field('bilbomd_mode', 'crd_psf')
+
+    expect(res.statusCode).toBe(400)
+    expect(res.body.message).toBe('Validation failed')
+    await expectUntouched(planted.filePath)
+  })
+
+  test('ignores a data file name sent as a form field', async () => {
+    const planted = await plantFile('dat')
+
+    const res = await request(app)
+      .post('/api/v1/jobs')
+      .set('Authorization', `Bearer ${generateAccessToken()}`)
+      .field('title', 'Crafted PDB Job')
+      .attach('pdb_file', `${pdbData}/pro_dna.pdb`)
+      .attach('inp_file', `${pdbData}/const.inp`)
+      .field('dat_file', `../${planted.name}`)
+      .field('rg', 35)
+      .field('rg_min', 30)
+      .field('rg_max', 40)
+      .field('num_conf', 1)
+      .field('bilbomd_mode', 'pdb')
+
+    expect(res.statusCode).toBe(400)
+    // Treated as missing, not as a (failed) reference to the planted file
+    expect(res.body.errors).toContainEqual({
+      path: 'dat_file',
+      message: 'Experimental SAXS data is required'
+    })
+    await expectUntouched(planted.filePath)
+  })
+})

@@ -10,10 +10,10 @@ import {
 import { Request, Response } from 'express'
 import path from 'path'
 import { ValidationError } from 'yup'
-import { getFileStats } from './utils/jobUtils.js'
 import { config } from '../../config/config.js'
 import { scoperJobSchema } from '../../validation/index.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
+import { serverFile } from './utils/serverFiles.js'
 
 const uploadFolder = config.uploadDir
 
@@ -30,27 +30,15 @@ const handleBilboMDScoperJob = async (
 ) => {
   try {
     const { bilbomd_mode: bilbomdMode, title, fixc1c2 } = req.body
+    const jobDir = path.join(uploadFolder, UUID)
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
 
-    // Handle example data files if no uploaded files
-    let pdbFile = files['pdb_file']?.[0]
-    let datFile = files['dat_file']?.[0]
-    if (!pdbFile && req.body.pdb_file) {
-      pdbFile = {
-        originalname: req.body.pdb_file,
-        path: path.join(uploadFolder, UUID, req.body.pdb_file),
-        size: getFileStats(path.join(uploadFolder, UUID, req.body.pdb_file))
-          .size
-      } as Express.Multer.File
-    }
-    if (!datFile && req.body.dat_file) {
-      datFile = {
-        originalname: req.body.dat_file,
-        path: path.join(uploadFolder, UUID, req.body.dat_file),
-        size: getFileStats(path.join(uploadFolder, UUID, req.body.dat_file))
-          .size
-      } as Express.Multer.File
-    }
+    // Uploaded file, or one the server placed in jobDir (example data or a
+    // resubmission's reused file)
+    const pdbFile =
+      files['pdb_file']?.[0] ?? serverFile(req, jobDir, 'pdb_file')
+    const datFile =
+      files['dat_file']?.[0] ?? serverFile(req, jobDir, 'dat_file')
 
     logger.info(
       `PDB File: ${pdbFile ? pdbFile.originalname.toLowerCase() : 'Not Found'}`

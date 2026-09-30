@@ -53,6 +53,25 @@ describe('createUpload', () => {
     expect(await fs.pathExists(path.join(dir, 'mymodel.pdb'))).toBe(true)
   })
 
+  it.each(['../Escape.PDB', '..\\..\\Escape.PDB', '/tmp/Escape.PDB'])(
+    'keeps an upload named %j inside the destination',
+    async (filepath) => {
+      const res = await request(buildApp(dir))
+        .post('/upload')
+        // `filepath` (unlike `filename`) is sent as-is, directories included;
+        // form-data supports it but superagent's types don't declare it
+        .attach('pdb_file', Buffer.from('ATOM'), {
+          filepath
+        } as unknown as { filename: string })
+
+      expect(res.status).toBe(200)
+      expect(await fs.readdir(dir)).toEqual(['escape.pdb'])
+      expect(await fs.pathExists(path.join(dir, '..', 'escape.pdb'))).toBe(
+        false
+      )
+    }
+  )
+
   it('uses a custom filename function when provided', async () => {
     const res = await request(buildApp(dir, { filename: () => 'expdata.dat' }))
       .post('/upload')
