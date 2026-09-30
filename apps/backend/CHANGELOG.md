@@ -1,5 +1,17 @@
 # @bilbomd/backend
 
+## 2.15.0
+
+### Minor Changes
+
+- 7b71a98: Job step types now include each step's start time, finish time and duration, plus the steps they were missing (openfold, reduce, rnaview, kgs, ionnet, scoper). The public job status response now also returns the job title and a whitelisted set of inputs (input file names, MD parameters, Rg range and so on), which the redesigned job page will use. No user details are exposed.
+
+### Patch Changes
+
+- Updated dependencies [7b71a98]
+  - @bilbomd/bilbomd-types@1.9.0
+  - @bilbomd/md-utils@1.1.30
+
 ## 2.14.0
 
 ### Minor Changes
