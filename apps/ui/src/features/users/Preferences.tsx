@@ -1,6 +1,5 @@
 import {
   Alert,
-  Box,
   CircularProgress,
   FormControlLabel,
   Switch,
@@ -10,6 +9,7 @@ import {
   useGetPreferencesQuery,
   useUpdatePreferencesMutation
 } from 'slices/userAccountApiSlice'
+import SettingsSection from './SettingsSection'
 
 const Preferences = () => {
   const { data, isLoading, isError } = useGetPreferencesQuery()
@@ -22,13 +22,7 @@ const Preferences = () => {
   }
 
   return (
-    <Box>
-      <Typography
-        variant="h6"
-        gutterBottom
-      >
-        Email notifications
-      </Typography>
+    <SettingsSection title="Notifications">
       <FormControlLabel
         control={
           <Switch
@@ -56,7 +50,7 @@ const Preferences = () => {
           Could not save your preference. Please try again.
         </Alert>
       )}
-    </Box>
+    </SettingsSection>
   )
 }
 

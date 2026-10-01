@@ -28,7 +28,7 @@ export const verifyAPIToken = async (
     const hashed = hashToken(token)
 
     const user = await User.findOne({ 'apiTokens.tokenHash': hashed })
-    if (!user) {
+    if (!user || !user.active) {
       res.status(403).json({ message: 'Invalid API token' })
       return
     }

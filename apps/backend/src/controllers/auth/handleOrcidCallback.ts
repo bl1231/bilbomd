@@ -128,6 +128,12 @@ export async function handleOrcidCallback(req: Request, res: Response) {
       return res.redirect('/auth/orcid-error?reason=email_already_registered')
     }
 
+    if (!user.active) {
+      logger.warn(`ORCID sign-in refused: account ${user._id} is deactivated`)
+      clearOauthCookies(res)
+      return res.redirect('/auth/orcid-error?reason=account_inactive')
+    }
+
     if (user.status === 'Active') {
       logger.info(
         `Existing ORCID-linked user ${user.email} authenticated. Skipping confirmation.`

@@ -6,6 +6,8 @@ const REASON_MESSAGES: Record<string, string> = {
     'Your ORCID profile does not have a primary, verified email address. Please add one in your ORCID account settings and try again.',
   email_already_registered:
     'A BilboMD account already exists for the email on your ORCID profile, but it has not been linked to your ORCID iD. Please contact a BilboMD administrator to link your account.',
+  account_inactive:
+    'This BilboMD account is deactivated. If you think this is a mistake, please contact BilboMD support at bilbomd@lbl.gov.',
   token_exchange:
     'We could not verify the response from ORCID. Please return to the home page and try signing in again.',
   missing_id_token:

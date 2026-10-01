@@ -257,6 +257,7 @@ describe('handleOrcidCallback', () => {
       const user = {
         email: 'scott@example.com',
         status: 'Active',
+        active: true,
         oauth: [{ provider: 'orcid', id: ORCID_ID }]
       }
       findOneMock.mockResolvedValue(user)
@@ -266,6 +267,26 @@ describe('handleOrcidCallback', () => {
 
       expect(issueTokensAndSetCookie).toHaveBeenCalledWith(user, res)
       expect(res.redirect).toHaveBeenCalledWith('/welcome')
+    })
+
+    it('refuses a deactivated ORCID-linked user', async () => {
+      tokensWithEmail([
+        { email: 'scott@example.com', primary: true, verified: true }
+      ])
+      findOneMock.mockResolvedValue({
+        email: 'scott@example.com',
+        status: 'Active',
+        active: false,
+        oauth: [{ provider: 'orcid', id: ORCID_ID }]
+      })
+
+      const res = makeRes()
+      await handleOrcidCallback(makeReq(), res)
+
+      expect(issueTokensAndSetCookie).not.toHaveBeenCalled()
+      expect(res.redirect).toHaveBeenCalledWith(
+        '/auth/orcid-error?reason=account_inactive'
+      )
     })
 
     it('routes new users to the confirmation page with profile in session', async () => {

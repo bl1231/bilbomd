@@ -1,4 +1,5 @@
 import { lazy } from 'react'
+import { Navigate } from 'react-router'
 
 // project import
 import Loadable from 'components/Loadable'
@@ -12,8 +13,11 @@ import { ROLES } from 'config/roles'
 // settings-related components
 const SettingsLayout = Loadable(lazy(() => import('features/users/Settings')))
 const Preferences = Loadable(lazy(() => import('features/users/Preferences')))
-const Security = Loadable(lazy(() => import('features/users/Security')))
-const SafetyZone = Loadable(lazy(() => import('features/users/SafetyZone')))
+const Profile = Loadable(lazy(() => import('features/users/Profile')))
+const ChangeEmail = Loadable(lazy(() => import('features/users/ChangeEmail')))
+const DeleteAccount = Loadable(
+  lazy(() => import('features/users/DeleteAccount'))
+)
 const APITokenManager = Loadable(
   lazy(() => import('features/users/ApiTokenManagement'))
 )
@@ -58,7 +62,6 @@ const SingleJobPage = Loadable(
 const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
 const UsersList = Loadable(lazy(() => import('features/users/UsersList')))
 const EditUser = Loadable(lazy(() => import('features/users/EditUser')))
-const UserAccount = Loadable(lazy(() => import('features/users/UserAccount')))
 const AdminPanel = Loadable(lazy(() => import('features/admin/AdminPanel')))
 const QueueDetailsPage = Loadable(
   lazy(() => import('features/admin/QueueDetailsPage'))
@@ -205,7 +208,12 @@ const ProtectedMainRoutes = {
                     },
                     {
                       path: 'account',
-                      element: <UserAccount />
+                      element: (
+                        <Navigate
+                          to="/settings"
+                          replace
+                        />
+                      )
                     }
                   ]
                 },
@@ -213,11 +221,30 @@ const ProtectedMainRoutes = {
                   path: 'settings',
                   element: <SettingsLayout />,
                   children: [
-                    { index: true, element: <APITokenManager /> },
+                    { index: true, element: <Profile /> },
+                    { path: 'profile', element: <Profile /> },
                     { path: 'preferences', element: <Preferences /> },
-                    { path: 'security', element: <Security /> },
-                    { path: 'safety', element: <SafetyZone /> },
-                    { path: 'api-tokens', element: <APITokenManager /> }
+                    { path: 'email', element: <ChangeEmail /> },
+                    { path: 'api-tokens', element: <APITokenManager /> },
+                    { path: 'delete-account', element: <DeleteAccount /> },
+                    {
+                      path: 'security',
+                      element: (
+                        <Navigate
+                          to="/settings/email"
+                          replace
+                        />
+                      )
+                    },
+                    {
+                      path: 'safety',
+                      element: (
+                        <Navigate
+                          to="/settings/delete-account"
+                          replace
+                        />
+                      )
+                    }
                   ]
                 },
                 {

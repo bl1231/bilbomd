@@ -48,6 +48,16 @@ export async function handleOrcidFinalize(req: Request, res: Response) {
         return
       }
 
+      if (!existing.active) {
+        logger.warn(`Finalize refused: account ${existing._id} is deactivated`)
+        delete req.session.orcidProfile
+        res.status(403).json({
+          error: 'account_inactive',
+          message: 'This BilboMD account is deactivated.'
+        })
+        return
+      }
+
       logger.info(`Existing ORCID-linked user ${email} signed in via finalize`)
       delete req.session.orcidProfile
       await issueTokensAndSetCookie(existing, res)

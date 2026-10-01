@@ -58,6 +58,12 @@ const userSchema = new Schema(
       type: Boolean,
       default: true
     },
+    // Set when the user deletes their own account. The record is kept, with
+    // contact details scrubbed, so usage stats still count every account.
+    deletedAt: {
+      type: Date,
+      required: false
+    },
     // Job complete / job failed emails. Account emails (sign-in codes, magic
     // links, email changes) are always sent.
     emailNotifications: {

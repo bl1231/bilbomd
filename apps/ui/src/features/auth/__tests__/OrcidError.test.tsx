@@ -36,6 +36,13 @@ describe('OrcidError', () => {
     ).toBeInTheDocument()
   })
 
+  it('renders the friendly message for account_inactive', () => {
+    renderAt('?reason=account_inactive')
+    expect(
+      screen.getByText(/This BilboMD account is deactivated/i)
+    ).toBeInTheDocument()
+  })
+
   it('renders the friendly message for token_exchange', () => {
     renderAt('?reason=token_exchange')
     expect(
