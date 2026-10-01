@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.19.2
+
+### Patch Changes
+
+- b20a07b: Keep per-step timing (`started_at`, `completed_at`, `duration_ms`) after later job saves, so finished steps show their duration on the job page.
+
 ## 2.19.1
 
 ### Patch Changes
