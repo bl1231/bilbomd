@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.32.1
+
+### Patch Changes
+
+- f118ff4: Job submission forms now list the reasons a job was rejected (for example, too few SAXS data points) under "Validation failed", instead of showing only "Validation failed". The SANS form now shows submission errors at all; it used to show nothing.
+
 ## 2.32.0
 
 ### Minor Changes
