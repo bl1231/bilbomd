@@ -173,6 +173,59 @@ describe('processDeleteJob', () => {
     )
     expect(publishJobEventMock).not.toHaveBeenCalled()
   })
+
+  it('logs the real error instead of retrying when the directory cannot be removed', async () => {
+    jobFindByIdMock.mockResolvedValue(makeDoc('uuid-1'))
+    removeMock.mockRejectedValue(
+      Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' })
+    )
+
+    // Resolving keeps BullMQ from retrying against an already-deleted document
+    await expect(processDeleteJob(bullJob('mongo-1'))).resolves.toEqual({
+      status: 'deleted',
+      mongoId: 'mongo-1'
+    })
+    expect(removeMock).toHaveBeenCalledTimes(1)
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /^Deleted job mongo-1 but failed to remove its directory \/data\/uuid-1: .*EACCES/
+      )
+    )
+  })
+
+  it('logs directory removal failures for multi jobs too', async () => {
+    jobFindByIdMock.mockResolvedValue(null)
+    multiJobFindByIdMock.mockResolvedValue(makeDoc('multi-uuid'))
+    removeMock.mockRejectedValue(new Error('EACCES: permission denied'))
+
+    await expect(
+      processDeleteJob(bullJob('mongo-multi'))
+    ).resolves.toMatchObject({ status: 'deleted' })
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('/data/multi-uuid')
+    )
+  })
+
+  it('retries ENOTEMPTY before giving up on the directory', async () => {
+    vi.useFakeTimers()
+    try {
+      jobFindByIdMock.mockResolvedValue(makeDoc('uuid-1'))
+      removeMock
+        .mockRejectedValueOnce(
+          Object.assign(new Error('ENOTEMPTY'), { code: 'ENOTEMPTY' })
+        )
+        .mockResolvedValueOnce(undefined)
+
+      const done = processDeleteJob(bullJob('mongo-1'))
+      await vi.runAllTimersAsync()
+      await done
+
+      expect(removeMock).toHaveBeenCalledTimes(2)
+      expect(logger.error).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 describe('handleDeleteFailed', () => {

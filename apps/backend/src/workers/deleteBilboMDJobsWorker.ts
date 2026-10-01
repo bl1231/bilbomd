@@ -55,6 +55,19 @@ const removeJobDirectory = async (uuid: string) => {
   )
 }
 
+// Called after the document is gone, so a BullMQ retry couldn't find the job
+// again and would only fail with a misleading "not found". Log the real
+// error instead; the leftover directory needs manual cleanup.
+const removeDeletedJobDirectory = async (mongoId: string, uuid: string) => {
+  try {
+    await removeJobDirectory(uuid)
+  } catch (error) {
+    logger.error(
+      `Deleted job ${mongoId} but failed to remove its directory ${path.join(uploadFolder, uuid)}: ${error}`
+    )
+  }
+}
+
 export const processDeleteJob = async (job: Job<{ mongoId: string }>) => {
   const mongoId = job.data.mongoId
 
@@ -86,14 +99,14 @@ export const processDeleteJob = async (job: Job<{ mongoId: string }>) => {
   if (jobDoc) {
     await jobDoc.deleteOne()
     await announceDeleted(jobDoc.user)
-    await removeJobDirectory(jobDoc.uuid)
+    await removeDeletedJobDirectory(mongoId, jobDoc.uuid)
     logger.info(`Deleted Job: '${jobDoc.title}' with UUID ${jobDoc.uuid}`)
   }
 
   if (multiJobDoc) {
     await multiJobDoc.deleteOne()
     await announceDeleted(multiJobDoc.user)
-    await removeJobDirectory(multiJobDoc.uuid)
+    await removeDeletedJobDirectory(mongoId, multiJobDoc.uuid)
     logger.info(
       `Deleted MultiJob: '${multiJobDoc.title}' with UUID ${multiJobDoc.uuid}`
     )
@@ -103,9 +116,8 @@ export const processDeleteJob = async (job: Job<{ mongoId: string }>) => {
 }
 
 // After the last attempt fails, tell the UI the job is still there so it
-// stops showing it as being deleted. If its document is already gone (only
-// the directory removal failed), 'deleted' was announced and there's nothing
-// to undo.
+// stops showing it as being deleted. If its document is already gone,
+// 'deleted' was announced and there's nothing to undo.
 export const handleDeleteFailed = async (
   job: Job<{ mongoId: string }> | undefined,
   error: Error

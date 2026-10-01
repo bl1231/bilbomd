@@ -209,9 +209,13 @@ services:
               count: 1
               capabilities: [gpu]
     restart: no
+    # Same UID/GID as the worker and backend, so they can delete job dirs
+    user: '${UID:-1001}:${GID:-1001}'
     env_file:
       - path: .env.dev
     environment:
+      # /root isn't writable for a non-root UID; JAX/PyTorch cache under $HOME
+      - HOME=/tmp
       - UPLOAD_DIR=/bilbomd/uploads
       - OF3_DATA_DIR=/bilbomd/of3-data
     volumes:
@@ -244,9 +248,13 @@ services:
               count: 1
               capabilities: [gpu]
     restart: no
+    # Same UID/GID as the worker and backend, so they can delete job dirs
+    user: '${UID:-1001}:${GID:-1001}'
     env_file:
       - path: .env.dev
     environment:
+      # /root isn't writable for a non-root UID; JAX/PyTorch cache under $HOME
+      - HOME=/tmp
       - UPLOAD_DIR=/bilbomd/uploads
       - COLABFOLD_DATA_DIR=/cache
       - COLABFOLD_TIMEOUT_S=${COLABFOLD_TIMEOUT_S:-3300}
