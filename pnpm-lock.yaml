@@ -145,11 +145,11 @@ importers:
         specifier: ^2.4.0
         version: 2.4.0
       nodemailer:
-        specifier: ^9.0.5
-        version: 9.0.5
+        specifier: ^10.0.12
+        version: 10.0.12
       nodemailer-express-handlebars:
         specifier: ^7.0.0
-        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.5)
+        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@10.0.12)
       openid-client:
         specifier: ~6.8.8
         version: 6.8.8
@@ -199,12 +199,6 @@ importers:
       '@types/multer':
         specifier: ^2.2.0
         version: 2.2.0
-      '@types/nodemailer':
-        specifier: ^8.0.2
-        version: 8.0.2
-      '@types/nodemailer-express-handlebars':
-        specifier: ^4.0.6
-        version: 4.0.6
       '@types/supertest':
         specifier: ^7.2.1
         version: 7.2.1
@@ -257,11 +251,11 @@ importers:
         specifier: ^9.10.2
         version: 9.10.2
       nodemailer:
-        specifier: ^9.0.5
-        version: 9.0.5
+        specifier: ^10.0.12
+        version: 10.0.12
       nodemailer-express-handlebars:
         specifier: ^7.0.0
-        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.5)
+        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@10.0.12)
       winston:
         specifier: ^3.19.0
         version: 3.19.0
@@ -272,12 +266,6 @@ importers:
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
-      '@types/nodemailer':
-        specifier: ^8.0.2
-        version: 8.0.2
-      '@types/nodemailer-express-handlebars':
-        specifier: ^4.0.6
-        version: 4.0.6
       '@vitest/coverage-v8':
         specifier: ^5.0.2
         version: 5.0.2(vitest@5.0.2)
@@ -490,11 +478,11 @@ importers:
         specifier: ^9.10.2
         version: 9.10.2
       nodemailer:
-        specifier: ^9.0.5
-        version: 9.0.5
+        specifier: ^10.0.12
+        version: 10.0.12
       nodemailer-express-handlebars:
         specifier: ^7.0.0
-        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.5)
+        version: 7.0.0(express-handlebars@8.0.5)(nodemailer@10.0.12)
       p-limit:
         specifier: ^7.3.3
         version: 7.3.3
@@ -517,12 +505,6 @@ importers:
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
-      '@types/nodemailer':
-        specifier: ^8.0.2
-        version: 8.0.2
-      '@types/nodemailer-express-handlebars':
-        specifier: ^4.0.6
-        version: 4.0.6
       '@types/qs':
         specifier: ^6.15.1
         version: 6.15.1
@@ -1646,9 +1628,6 @@ packages:
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
 
-  '@types/express-handlebars@5.3.1':
-    resolution: {integrity: sha512-DSzaERLO4gHb8AqnrL58jzSDyT0yDdl6HqDc+bGz1Hf0nrG1FK30nHGzv8NBEGR8QV9eUGB/YaE0Qj3NjF7siw==}
-
   '@types/express-serve-static-core@5.1.3':
     resolution: {integrity: sha512-dPfW8NFiOF4wOHc7+N/QSxlY9cfSsenewGbAz8C8U/MULPd/YZ27LvJUIlzaXie7e6Ove9YunJGgC9tbHD2cKw==}
 
@@ -1707,12 +1686,6 @@ packages:
 
   '@types/node@26.6.3':
     resolution: {integrity: sha512-dsqMQQoeTLqu9wynDD00q573mNzso3IdQOAfHRJqLCcmCFPoGo9A1bDpUcv/9tnKpErQWv9uKeGfl37EIS02Yg==}
-
-  '@types/nodemailer-express-handlebars@4.0.6':
-    resolution: {integrity: sha512-g1qidLnsspxFxRqzum4DOWOuds45HQTzRxK+zae8du1B3VSl6fv0ElH+QW3sJ0JF5QPU/UuYG3HAdPS9xS9TXQ==}
-
-  '@types/nodemailer@8.0.2':
-    resolution: {integrity: sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA==}
 
   '@types/parse-json@4.0.2':
     resolution: {integrity: sha512-dISoDXWWQwUquiKsyZ4Ng+HX2KsPL7LyHKHQwgGFEA3IaKac4Obd+h2a/a6waisAoepJlBcx9paWqjA8/HVjCw==}
@@ -3729,9 +3702,9 @@ packages:
       express-handlebars: '>= 8.0.0'
       nodemailer: '>= 6.0.0'
 
-  nodemailer@9.0.5:
-    resolution: {integrity: sha512-wvjiKvjczmsN7U/8006JOdXubgBk2XFAbioDMbT+sM7cPs0QrhJTa6KBRX7P5REGGkDcLUz/EarWidb8G8C1jQ==}
-    engines: {node: '>=6.0.0'}
+  nodemailer@10.0.12:
+    resolution: {integrity: sha512-PQ46oNbNMuH/Sno7B5IWIU9etytwrO0xdTFvWXpIQFRXhBAXtzD48243AS+BCbQQTPD8y3fqUrgLn0tSo77gvg==}
+    engines: {node: '>=20.0.0'}
 
   nodemon@3.1.14:
     resolution: {integrity: sha512-jakjZi93UtB3jHMWsXL68FXSAosbLfY0In5gtKq3niLSkrWznrVBzXFNOEMJUfc9+Ke7SHWoAZsiMkNP3vq6Jw==}
@@ -6027,8 +6000,6 @@ snapshots:
 
   '@types/estree@1.0.9': {}
 
-  '@types/express-handlebars@5.3.1': {}
-
   '@types/express-serve-static-core@5.1.3':
     dependencies:
       '@types/node': 26.2.0
@@ -6102,15 +6073,6 @@ snapshots:
   '@types/node@26.6.3':
     dependencies:
       undici-types: 8.9.0
-
-  '@types/nodemailer-express-handlebars@4.0.6':
-    dependencies:
-      '@types/express-handlebars': 5.3.1
-      '@types/nodemailer': 8.0.2
-
-  '@types/nodemailer@8.0.2':
-    dependencies:
-      '@types/node': 26.2.0
 
   '@types/parse-json@4.0.2': {}
 
@@ -8529,12 +8491,12 @@ snapshots:
 
   node-releases@2.0.53: {}
 
-  nodemailer-express-handlebars@7.0.0(express-handlebars@8.0.5)(nodemailer@9.0.5):
+  nodemailer-express-handlebars@7.0.0(express-handlebars@8.0.5)(nodemailer@10.0.12):
     dependencies:
       express-handlebars: 8.0.5
-      nodemailer: 9.0.5
+      nodemailer: 10.0.12
 
-  nodemailer@9.0.5: {}
+  nodemailer@10.0.12: {}
 
   nodemon@3.1.14:
     dependencies:
