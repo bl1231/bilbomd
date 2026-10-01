@@ -19,6 +19,11 @@ vi.mock('features/analysis/MovieGallery', () => ({
   default: () => <div data-testid="movies" />
 }))
 const useJobMovies = vi.fn()
+vi.mock('../PaeTab', () => ({
+  default: (props: { source: unknown }) => (
+    <div data-testid="pae">{JSON.stringify(props.source)}</div>
+  )
+}))
 vi.mock('../useJobView', () => ({
   useJobMovies: (...args: unknown[]) => useJobMovies(...args)
 }))
@@ -26,7 +31,10 @@ vi.mock('../useJobView', () => ({
 describe('analysisTabs', () => {
   it('picks the tabs each job type has', () => {
     expect(analysisTabs('pdb')).toEqual(['foxs', 'movies', 'feedback'])
-    expect(analysisTabs('alphafold')).toEqual(['foxs', 'movies', 'feedback'])
+    expect(analysisTabs('crd')).toEqual(['foxs', 'movies', 'feedback'])
+    for (const type of ['auto', 'alphafold', 'openfold'] as const) {
+      expect(analysisTabs(type)).toEqual(['foxs', 'movies', 'feedback', 'pae'])
+    }
     expect(analysisTabs('sans')).toEqual(['movies'])
     expect(analysisTabs('scoper')).toEqual([])
     expect(analysisTabs('multi')).toEqual([])
@@ -81,6 +89,28 @@ describe('JobAnalysisTabs', () => {
     )
     fireEvent.click(screen.getByRole('tab', { name: 'Feedback' }))
     expect(screen.getByTestId('feedback')).toHaveTextContent('"publicId":"tok"')
+  })
+
+  it('shows the PAE tab only for job types that start from a prediction', () => {
+    const { unmount } = renderWithProviders(
+      <JobAnalysisTabs
+        source={{ kind: 'public', token: 'tok' }}
+        view={makeView({ jobType: 'alphafold' })}
+        eventsConnected={false}
+      />
+    )
+    fireEvent.click(screen.getByRole('tab', { name: 'PAE' }))
+    expect(screen.getByTestId('pae')).toHaveTextContent('"token":"tok"')
+    unmount()
+
+    renderWithProviders(
+      <JobAnalysisTabs
+        source={{ kind: 'owner', id: 'job-1' }}
+        view={makeView({ jobType: 'pdb' })}
+        eventsConnected={false}
+      />
+    )
+    expect(screen.queryByRole('tab', { name: 'PAE' })).not.toBeInTheDocument()
   })
 
   it('shows the movie gallery, passing the event state through', () => {
