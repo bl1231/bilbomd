@@ -2,8 +2,10 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import DirectionsRunRoundedIcon from '@mui/icons-material/DirectionsRunRounded'
 import ErrorIcon from '@mui/icons-material/Error'
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined'
 import { Chip, Typography } from '@mui/material'
 import type { SvgIconProps } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import Grid from '@mui/material/Grid'
 import Tooltip from '@mui/material/Tooltip'
 import { getStepDetails } from 'features/shared/stepDetails'
@@ -38,13 +40,17 @@ interface BilboMDStepProps {
   stepStatus: string
   stepMessage: string
   duration?: string
+  // Reserve the duration column even when this step has no time, so chips
+  // line up with steps that do
+  showDurationColumn?: boolean
 }
 
 const BilboMDNerscStep = ({
   stepName,
   stepStatus,
   stepMessage,
-  duration
+  duration,
+  showDurationColumn = !!duration
 }: BilboMDStepProps) => {
   const { friendlyName, tooltipMessage } = getStepDetails(stepName)
   return (
@@ -59,6 +65,30 @@ const BilboMDNerscStep = ({
         rowGap: 0.5
       }}
     >
+      {showDurationColumn && (
+        <Grid
+          data-testid={`step-duration-${stepName}`}
+          sx={{ flexShrink: 0, width: 120 }}
+        >
+          {duration && (
+            <Chip
+              size="small"
+              icon={<TimerOutlinedIcon />}
+              label={duration}
+              sx={(theme) => ({
+                width: '100%',
+                // Stopwatch on the left, time right-justified
+                justifyContent: 'space-between',
+                fontVariantNumeric: 'tabular-nums',
+                backgroundColor:
+                  theme.palette.mode === 'dark'
+                    ? alpha(theme.palette.info.main, 0.25)
+                    : '#e3f2fd'
+              })}
+            />
+          )}
+        </Grid>
+      )}
       <Grid sx={{ flexShrink: 0 }}>
         <Tooltip
           title={tooltipMessage}
@@ -86,16 +116,6 @@ const BilboMDNerscStep = ({
       <Grid sx={{ minWidth: 0, flex: '1 1 220px' }}>
         <Typography variant="body2">{stepMessage || 'Waiting'}</Typography>
       </Grid>
-      {duration && (
-        <Grid sx={{ flexShrink: 0 }}>
-          <Typography
-            variant="body2"
-            sx={{ color: 'text.secondary' }}
-          >
-            ⏱ {duration}
-          </Typography>
-        </Grid>
-      )}
     </Grid>
   )
 }

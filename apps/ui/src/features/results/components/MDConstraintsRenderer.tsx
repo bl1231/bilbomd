@@ -1,14 +1,179 @@
 import React from 'react'
-import { Box, Typography, Chip } from '@mui/material'
-import type {
-  IMDConstraints,
-  IFixedBody,
-  IRigidBody,
-  ISegment
-} from '@bilbomd/mongodb-schema'
+import { Box, Chip, Tooltip, Typography } from '@mui/material'
+import { alpha } from '@mui/material/styles'
+import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
+import {
+  BODY_COLORS,
+  BODY_LABELS,
+  FLEXIBLE_COLOR,
+  buildChainTracks,
+  type Body,
+  type BodyType,
+  type ChainTrack
+} from './constraintTracks'
+
+const rangeLabel = (chainId: string, start: number, stop: number) =>
+  `${chainId} ${start}–${stop}`
+
+const TrackBlock = ({
+  track,
+  start,
+  stop,
+  type,
+  color,
+  title
+}: {
+  track: ChainTrack
+  start: number
+  stop: number
+  type: string
+  color: string
+  title: string
+}) => (
+  <Tooltip
+    title={title}
+    arrow
+  >
+    <Box
+      data-testid="constraint-track-segment"
+      data-type={type}
+      sx={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: `${((start - 1) / track.length) * 100}%`,
+        width: `${((stop - start + 1) / track.length) * 100}%`,
+        // Keep tiny segments visible on long chains
+        minWidth: 3,
+        backgroundColor: color
+      }}
+    />
+  </Tooltip>
+)
+
+const ChainTrackRow = ({ track }: { track: ChainTrack }) => (
+  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+    <Typography
+      variant="body2"
+      sx={{ width: 64, flexShrink: 0, fontWeight: 500, lineHeight: '16px' }}
+    >
+      Chain {track.chainId}
+    </Typography>
+    <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box
+        data-testid={`constraint-track-${track.chainId}`}
+        sx={{
+          position: 'relative',
+          height: 16,
+          borderRadius: 1,
+          backgroundColor: 'action.hover',
+          overflow: 'hidden'
+        }}
+      >
+        {track.flexible.map(({ start, stop }) => (
+          <TrackBlock
+            key={`flexible-${start}`}
+            track={track}
+            start={start}
+            stop={stop}
+            type="flexible"
+            color={FLEXIBLE_COLOR}
+            title={`Flexible · ${rangeLabel(track.chainId, start, stop)}`}
+          />
+        ))}
+        {track.segments.map((seg) => (
+          <TrackBlock
+            key={`${seg.type}-${seg.bodyName}-${seg.start}`}
+            track={track}
+            start={seg.start}
+            stop={seg.stop}
+            type={seg.type}
+            color={BODY_COLORS[seg.type]}
+            title={`${BODY_LABELS[seg.type]} · ${seg.bodyName} · ${rangeLabel(track.chainId, seg.start, seg.stop)}`}
+          />
+        ))}
+      </Box>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          color: 'text.secondary'
+        }}
+      >
+        <Typography variant="caption">1</Typography>
+        <Typography variant="caption">{track.length}</Typography>
+      </Box>
+    </Box>
+  </Box>
+)
+
+type LineRange = { chainId: string; start: number; stop: number }
+
+const ConstraintLine = ({
+  tag,
+  color,
+  tagTextColor = '#fff',
+  name,
+  ranges
+}: {
+  tag: string
+  color: string
+  tagTextColor?: string
+  name?: string
+  ranges: LineRange[]
+}) => (
+  <Box
+    sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}
+  >
+    <Chip
+      size="small"
+      label={tag}
+      sx={{
+        width: 64,
+        color: tagTextColor,
+        fontWeight: 600,
+        backgroundColor: color
+      }}
+    />
+    {name && (
+      <Typography
+        variant="body2"
+        sx={{ fontWeight: 600 }}
+      >
+        {name}
+      </Typography>
+    )}
+    {ranges.map(({ chainId, start, stop }) => (
+      <Chip
+        key={`${chainId}-${start}`}
+        size="small"
+        variant="outlined"
+        label={rangeLabel(chainId, start, stop)}
+        sx={{
+          fontVariantNumeric: 'tabular-nums',
+          borderColor: color,
+          backgroundColor: alpha(color, 0.12)
+        }}
+      />
+    ))}
+  </Box>
+)
+
+const BodyLine = ({ body, type }: { body: Body; type: BodyType }) => (
+  <ConstraintLine
+    tag={BODY_LABELS[type]}
+    color={BODY_COLORS[type]}
+    name={body.name}
+    ranges={(body.segments ?? []).map(({ chain_id, residues }) => ({
+      chainId: chain_id,
+      start: residues.start,
+      stop: residues.stop
+    }))}
+  />
+)
 
 interface MDConstraintsRendererProps {
-  constraints: IMDConstraints
+  constraints: MDConstraintsDTO
 }
 
 export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
@@ -16,105 +181,67 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
 }) => {
   const { fixed_bodies = [], rigid_bodies = [] } = constraints
 
-  type BodyType = 'fixed' | 'rigid'
-  const renderBody = (body: IFixedBody | IRigidBody, type: BodyType) => (
-    <Box
-      key={body.name}
-      sx={{
-        mb: 2,
-        p: 1,
-        border: 1,
-        borderColor: 'grey.300',
-        borderRadius: 2,
-        backgroundColor: 'grey.100'
-      }}
-    >
+  if (fixed_bodies.length === 0 && rigid_bodies.length === 0) {
+    return (
       <Typography
-        variant="subtitle2"
-        sx={{
-          fontWeight: 600,
-          color: type === 'fixed' ? '#2f54eb' : '#fa8c16',
-          mb: 1
-        }}
+        variant="body2"
+        color="text.secondary"
       >
-        {body.name}
+        No constraints found.
       </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        {body.segments?.map((segment: ISegment) => (
-          <Box
-            key={segment.chain_id + segment.residues.start}
-            sx={{
-              p: 1,
-              border: 1,
-              borderColor: 'grey.300',
-              borderRadius: 1,
-              backgroundColor: 'background.paper',
-              minWidth: 180
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 500, mb: 0.5 }}
-            >
-              Chain: {segment.chain_id}
-            </Typography>
-            <Chip
-              label={`Residues: ${segment.residues?.start} - ${segment.residues?.stop}`}
-              variant="outlined"
-              sx={{
-                fontSize: '0.85rem',
-                mb: 0.5,
-                color: type === 'fixed' ? '#2f54eb' : '#fa8c16'
-              }}
-            />
-          </Box>
-        ))}
-      </Box>
-    </Box>
+    )
+  }
+
+  const tracks = buildChainTracks(constraints)
+  const flexible = tracks.flatMap((track) =>
+    track.flexible.map((range) => ({ chainId: track.chainId, ...range }))
   )
 
   return (
-    <Box sx={{ width: '75%' }}>
-      <Box
-        sx={{
-          backgroundColor: 'background.paper',
-          border: 1,
-          borderColor: 'grey.300',
-          borderRadius: 2,
-          p: 2,
-          mb: 1,
-          boxShadow: 0
-        }}
-      >
-        {fixed_bodies.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 500, mb: 1 }}
-            >
-              Fixed Bodies
-            </Typography>
-            {fixed_bodies.map((body) => renderBody(body, 'fixed'))}
-          </Box>
-        )}
-        {rigid_bodies.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 500, mb: 1 }}
-            >
-              Rigid Bodies
-            </Typography>
-            {rigid_bodies.map((body) => renderBody(body, 'rigid'))}
-          </Box>
-        )}
-        {fixed_bodies.length === 0 && rigid_bodies.length === 0 && (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            No constraints found.
-          </Typography>
+    <Box
+      sx={{
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1.5,
+        p: 1.5,
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 2
+      }}
+    >
+      {tracks.length > 0 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {tracks.map((track) => (
+            <ChainTrackRow
+              key={track.chainId}
+              track={track}
+            />
+          ))}
+        </Box>
+      )}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        {fixed_bodies.map((body) => (
+          <BodyLine
+            key={`fixed-${body.name}`}
+            body={body}
+            type="fixed"
+          />
+        ))}
+        {rigid_bodies.map((body) => (
+          <BodyLine
+            key={`rigid-${body.name}`}
+            body={body}
+            type="rigid"
+          />
+        ))}
+        {flexible.length > 0 && (
+          <ConstraintLine
+            tag="Flexible"
+            color={FLEXIBLE_COLOR}
+            tagTextColor="rgba(0, 0, 0, 0.87)"
+            ranges={flexible}
+          />
         )}
       </Box>
     </Box>

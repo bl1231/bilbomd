@@ -47,6 +47,34 @@ describe('StepStrip', () => {
     )
   })
 
+  it('keeps an aligned duration column, empty for untimed steps', () => {
+    renderStrip()
+    fireEvent.click(screen.getByRole('button', { name: /show details/i }))
+
+    expect(screen.getByTestId('step-duration-minimize')).toHaveTextContent(
+      '2m 0s'
+    )
+    expect(screen.getByTestId('step-duration-foxs')).toBeEmptyDOMElement()
+  })
+
+  it('drops the duration column when no step has timing', () => {
+    const untimed = {
+      minimize: { status: 'Success', message: 'Minimized' },
+      md: { status: 'Success', message: 'done' }
+    } as unknown as typeof runningSteps
+    renderWithProviders(
+      <StepStrip
+        steps={untimed}
+        jobType="pdb"
+        now={now}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /show details/i }))
+
+    expect(screen.getByText('Minimized')).toBeInTheDocument()
+    expect(screen.queryByTestId(/^step-duration-/)).not.toBeInTheDocument()
+  })
+
   it('expands to the full step list with messages and durations', () => {
     renderStrip()
     expect(screen.queryByText('MD run 2 of 4')).not.toBeInTheDocument()
@@ -54,10 +82,10 @@ describe('StepStrip', () => {
     fireEvent.click(screen.getByRole('button', { name: /show details/i }))
 
     expect(screen.getByText('MD run 2 of 4')).toBeInTheDocument()
-    expect(screen.getByText('⏱ 2m 0s')).toBeInTheDocument()
-    expect(screen.getByText('⏱ 1m 5s')).toBeInTheDocument()
+    expect(screen.getByText('2m 0s')).toBeInTheDocument()
+    expect(screen.getByText('1m 5s')).toBeInTheDocument()
     // Running step: elapsed time so far
-    expect(screen.getByText('⏱ 2m 30s')).toBeInTheDocument()
+    expect(screen.getByText('2m 30s')).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: /hide details/i })
     ).toHaveAttribute('aria-expanded', 'true')

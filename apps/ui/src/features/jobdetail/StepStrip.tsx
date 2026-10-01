@@ -128,7 +128,15 @@ const StepIcon = ({ step, now }: { step: StepEntry; now: Date }) => {
   )
 }
 
-const StepDetailRows = ({ steps, now }: { steps: StepEntry[]; now: Date }) => (
+const StepDetailRows = ({
+  steps,
+  now,
+  showDurationColumn
+}: {
+  steps: StepEntry[]
+  now: Date
+  showDurationColumn: boolean
+}) => (
   <>
     {steps.map((step) => (
       <BilboMDNerscStep
@@ -137,6 +145,7 @@ const StepDetailRows = ({ steps, now }: { steps: StepEntry[]; now: Date }) => (
         stepStatus={step.status}
         stepMessage={step.message}
         duration={stepDuration(step, now)}
+        showDurationColumn={showDurationColumn}
       />
     ))}
   </>
@@ -156,6 +165,10 @@ const StepStrip = ({ steps, jobType, now }: StepStripProps) => {
   if (pipeline.length === 0 && nersc.length === 0) return null
 
   const groups = [pipeline, nersc].filter((group) => group.length > 0)
+  // Jobs from before step timing have no durations — skip the empty column
+  const showDurationColumn = [...pipeline, ...nersc].some(
+    (step) => stepDurationMs(step, now) !== undefined
+  )
 
   return (
     <Box>
@@ -236,6 +249,7 @@ const StepStrip = ({ steps, jobType, now }: StepStripProps) => {
           <StepDetailRows
             steps={pipeline}
             now={now}
+            showDurationColumn={showDurationColumn}
           />
           {nersc.length > 0 && (
             <>
@@ -243,6 +257,7 @@ const StepStrip = ({ steps, jobType, now }: StepStripProps) => {
               <StepDetailRows
                 steps={nersc}
                 now={now}
+                showDurationColumn={showDurationColumn}
               />
             </>
           )}
