@@ -1,4 +1,3 @@
-import React from 'react'
 import {
   Box,
   Drawer,
@@ -13,38 +12,29 @@ import {
 import UserAvatar from './UserAvatar'
 import { useNavigate, Outlet, useLocation } from 'react-router'
 import useAuth from 'hooks/useAuth'
-import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
+import PersonIcon from '@mui/icons-material/Person'
+import NotificationsIcon from '@mui/icons-material/Notifications'
 import EmailIcon from '@mui/icons-material/Email'
-import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
 import ApiIcon from '@mui/icons-material/Api'
+import PersonOffIcon from '@mui/icons-material/PersonOff'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 
 const drawerWidth = 190
 
+// /settings/preferences is linked from job emails, so keep that path.
 const settingsMenu = [
+  { text: 'Profile', path: '/settings/profile', icon: <PersonIcon /> },
   {
-    text: 'Preferences',
+    text: 'Notifications',
     path: '/settings/preferences',
-    icon: <ManageAccountsIcon />,
-    visibility: false
+    icon: <NotificationsIcon />
   },
+  { text: 'Email', path: '/settings/email', icon: <EmailIcon /> },
+  { text: 'API Tokens', path: '/settings/api-tokens', icon: <ApiIcon /> },
   {
-    text: 'Email and Security',
-    path: '/settings/security',
-    icon: <EmailIcon />,
-    visibility: false
-  },
-  {
-    text: 'Safety Zone',
-    path: '/settings/safety',
-    icon: <HealthAndSafetyIcon />,
-    visibility: true
-  },
-  {
-    text: 'API Tokens',
-    path: '/settings/api-tokens',
-    icon: <ApiIcon />,
-    visibility: true
+    text: 'Delete account',
+    path: '/settings/delete-account',
+    icon: <PersonOffIcon />
   }
 ]
 
@@ -82,31 +72,27 @@ const SettingsLayout = () => {
           status={user.status}
         />
         <List>
-          {settingsMenu
-            .filter(({ visibility }) => visibility)
-            .map(({ text, path, icon }) => (
-              <React.Fragment key={text}>
-                <ListItem
-                  key={text}
-                  disablePadding
-                >
-                  <ListItemButton
-                    selected={
-                      location.pathname === path ||
-                      (path === '/settings/preferences' &&
-                        location.pathname === '/settings')
-                    }
-                    onClick={() => navigate(path)}
-                  >
-                    <ListItemIcon>{icon}</ListItemIcon>
-                    <ListItemText
-                      primary={text}
-                      sx={{ ml: 1 }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              </React.Fragment>
-            ))}
+          {settingsMenu.map(({ text, path, icon }) => (
+            <ListItem
+              key={text}
+              disablePadding
+            >
+              <ListItemButton
+                selected={
+                  location.pathname === path ||
+                  (path === '/settings/profile' &&
+                    location.pathname === '/settings')
+                }
+                onClick={() => navigate(path)}
+              >
+                <ListItemIcon>{icon}</ListItemIcon>
+                <ListItemText
+                  primary={text}
+                  sx={{ ml: 1 }}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
         </List>
       </Drawer>
 

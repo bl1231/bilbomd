@@ -99,6 +99,7 @@ describe('handleOrcidFinalize', () => {
     it('signs in existing user when ORCID link matches', async () => {
       const existing = {
         email: 'scott@example.com',
+        active: true,
         oauth: [{ provider: 'orcid', id: ORCID_ID }]
       }
       findOneMock.mockResolvedValue(existing)
@@ -108,6 +109,21 @@ describe('handleOrcidFinalize', () => {
 
       expect(issueTokensAndSetCookie).toHaveBeenCalledWith(existing, res)
       expect(res.status).toHaveBeenCalledWith(200)
+      expect(UserConstructor).not.toHaveBeenCalled()
+    })
+
+    it('refuses with 403 when the ORCID-linked user is deactivated', async () => {
+      findOneMock.mockResolvedValue({
+        email: 'scott@example.com',
+        active: false,
+        oauth: [{ provider: 'orcid', id: ORCID_ID }]
+      })
+
+      const res = makeRes()
+      await handleOrcidFinalize(makeReq(), res)
+
+      expect(res.status).toHaveBeenCalledWith(403)
+      expect(issueTokensAndSetCookie).not.toHaveBeenCalled()
       expect(UserConstructor).not.toHaveBeenCalled()
     })
   })

@@ -6,8 +6,14 @@ vi.mock('../../config/config.js', () => ({
 }))
 
 vi.mock('@bilbomd/mongodb-schema', () => ({
-  User: { findById: vi.fn(), findOne: vi.fn() },
-  Job: { findOne: vi.fn(), exists: vi.fn() }
+  User: {
+    find: vi.fn(),
+    findById: vi.fn(),
+    findOne: vi.fn(),
+    updateOne: vi.fn()
+  },
+  Job: { findOne: vi.fn(), exists: vi.fn(), updateMany: vi.fn() },
+  UsageEvent: { updateMany: vi.fn() }
 }))
 
 vi.mock('../../config/nodemailerConfig.js', () => ({
@@ -20,8 +26,13 @@ vi.mock('../../middleware/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn() }
 }))
 
-import { User } from '@bilbomd/mongodb-schema'
-import { updateUser } from '../usersController.js'
+import { User, Job, UsageEvent } from '@bilbomd/mongodb-schema'
+import { sendDeleteAccountSuccessEmail } from '../../config/nodemailerConfig.js'
+import {
+  updateUser,
+  deleteUserByUsername,
+  getAllUsers
+} from '../usersController.js'
 
 const makeReq = (body: unknown): Request => ({ body }) as Request
 const makeRes = (): Response => {
@@ -170,5 +181,148 @@ describe('updateUser', () => {
       success: true,
       message: 'scott updated'
     })
+  })
+})
+
+describe('deleteUserByUsername', () => {
+  const userId = { toString: () => 'abc123' }
+  const makeDeleteReq = (username: string): Request =>
+    ({ params: { username } }) as unknown as Request
+  const findUser = (user: unknown) =>
+    vi
+      .mocked(User.findOne)
+      .mockReturnValue({ exec: () => Promise.resolve(user) } as never)
+  const updateResult = (modifiedCount: number) =>
+    vi.mocked(User.updateOne).mockReturnValue({
+      exec: () => Promise.resolve({ modifiedCount })
+    } as never)
+  const updateManyResolves = () => {
+    for (const model of [Job, UsageEvent]) {
+      vi.mocked(model.updateMany).mockReturnValue({
+        exec: () => Promise.resolve({ modifiedCount: 1 })
+      } as never)
+    }
+  }
+
+  it('returns 404 for an unknown user', async () => {
+    findUser(null)
+    const res = makeRes()
+    await deleteUserByUsername(makeDeleteReq('scott'), res)
+    expect(res.status).toHaveBeenCalledWith(404)
+  })
+
+  it('returns 404 for an already deleted user', async () => {
+    findUser({ _id: userId, username: 'scott', deletedAt: new Date() })
+    const res = makeRes()
+    await deleteUserByUsername(makeDeleteReq('scott'), res)
+    expect(res.status).toHaveBeenCalledWith(404)
+    expect(User.updateOne).not.toHaveBeenCalled()
+  })
+
+  it('refuses while the user has unfinished jobs', async () => {
+    findUser({ _id: userId, username: 'scott', email: 's@example.com' })
+    vi.mocked(Job.exists).mockResolvedValue({ _id: 'job-1' } as never)
+
+    const res = makeRes()
+    await deleteUserByUsername(makeDeleteReq('scott'), res)
+
+    expect(Job.exists).toHaveBeenCalledWith({
+      'user._id': userId,
+      status: { $in: ['Submitted', 'Pending', 'Running'] }
+    })
+    expect(res.status).toHaveBeenCalledWith(409)
+    expect(User.updateOne).not.toHaveBeenCalled()
+  })
+
+  it('deactivates and scrubs the account instead of deleting it', async () => {
+    findUser({ _id: userId, username: 'scott', email: 's@example.com' })
+    vi.mocked(Job.exists).mockResolvedValue(null)
+    updateResult(1)
+    updateManyResolves()
+
+    const res = makeRes()
+    await deleteUserByUsername(makeDeleteReq('scott'), res)
+
+    expect(User.updateOne).toHaveBeenCalledWith(
+      { _id: userId },
+      {
+        $set: expect.objectContaining({
+          username: 'deleted-abc123',
+          email: 'deleted-abc123@deleted.invalid',
+          active: false,
+          deletedAt: expect.any(Date),
+          previousEmails: [],
+          oauth: [],
+          refreshToken: [],
+          apiTokens: []
+        }),
+        $unset: expect.objectContaining({ firstName: '', lastName: '' })
+      }
+    )
+    expect(Job.updateMany).toHaveBeenCalledWith(
+      { 'user._id': userId },
+      {
+        $set: {
+          'user.username': 'deleted-abc123',
+          'user.email': 'deleted-abc123@deleted.invalid'
+        }
+      }
+    )
+    expect(UsageEvent.updateMany).toHaveBeenCalledWith(
+      { 'context.user._id': userId },
+      {
+        $set: {
+          'context.user.username': 'deleted-abc123',
+          'context.user.email': 'deleted-abc123@deleted.invalid'
+        }
+      }
+    )
+    expect(sendDeleteAccountSuccessEmail).toHaveBeenCalledWith(
+      's@example.com',
+      'scott'
+    )
+    expect(res.status).toHaveBeenCalledWith(200)
+  })
+
+  it('still succeeds when scrubbing jobs fails', async () => {
+    findUser({ _id: userId, username: 'scott', email: 's@example.com' })
+    vi.mocked(Job.exists).mockResolvedValue(null)
+    updateResult(1)
+    updateManyResolves()
+    vi.mocked(Job.updateMany).mockReturnValue({
+      exec: () => Promise.reject(new Error('boom'))
+    } as never)
+
+    const res = makeRes()
+    await deleteUserByUsername(makeDeleteReq('scott'), res)
+
+    expect(res.status).toHaveBeenCalledWith(200)
+    expect(sendDeleteAccountSuccessEmail).toHaveBeenCalled()
+  })
+
+  it('returns 500 when nothing was updated', async () => {
+    findUser({ _id: userId, username: 'scott', email: 's@example.com' })
+    vi.mocked(Job.exists).mockResolvedValue(null)
+    updateResult(0)
+
+    const res = makeRes()
+    await deleteUserByUsername(makeDeleteReq('scott'), res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(sendDeleteAccountSuccessEmail).not.toHaveBeenCalled()
+  })
+})
+
+describe('getAllUsers', () => {
+  it('leaves out deleted accounts', async () => {
+    vi.mocked(User.find).mockReturnValue({
+      lean: () => Promise.resolve([])
+    } as never)
+
+    const res = makeRes()
+    await getAllUsers({} as Request, res)
+
+    expect(User.find).toHaveBeenCalledWith({ deletedAt: { $exists: false } })
+    expect(res.json).toHaveBeenCalledWith({ success: true, data: [] })
   })
 })

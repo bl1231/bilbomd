@@ -1,5 +1,4 @@
-import { User } from '@bilbomd/mongodb-schema'
-import { Job } from '@bilbomd/mongodb-schema'
+import { User, Job, UsageEvent } from '@bilbomd/mongodb-schema'
 import { logger } from '../middleware/loggers.js'
 import { Request, Response } from 'express'
 import {
@@ -11,6 +10,9 @@ import crypto from 'crypto'
 import { getEnvVar } from '../config/config.js'
 
 const bilboMdUrl = getEnvVar('BILBOMD_URL')
+
+// A user can't delete their account while any of these are in flight.
+const UNFINISHED_JOB_STATUSES = ['Submitted', 'Pending', 'Running'] as const
 
 // Helper function to validate email format
 const isValidEmail = (email: string): boolean => {
@@ -28,7 +30,7 @@ const isValidUsername = (username: string): boolean => {
 
 const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find().lean()
+    const users = await User.find({ deletedAt: { $exists: false } }).lean()
     res.json({ success: true, data: users })
   } catch (error) {
     logger.error(`Failed to get all users: ${error}`)
@@ -153,36 +155,97 @@ const deleteUserByUsername = async (
 
   try {
     const user = await User.findOne({ username }).exec()
-    if (!user) {
+    if (!user || user.deletedAt) {
       res.status(404).json({ success: false, message: 'User not found' })
       return
     }
 
-    const hasAssignedJobs = await Job.exists({ 'user._id': user._id })
-    if (hasAssignedJobs) {
-      res
-        .status(409)
-        .json({ success: false, message: 'User has assigned jobs' })
+    const hasUnfinishedJobs = await Job.exists({
+      'user._id': user._id,
+      status: { $in: UNFINISHED_JOB_STATUSES }
+    })
+    if (hasUnfinishedJobs) {
+      res.status(409).json({
+        success: false,
+        message:
+          'You have jobs that are still queued or running. Wait for them to finish or cancel them, then try again.'
+      })
       return
     }
 
-    const deleteResult = await User.deleteOne({ _id: user._id }).exec()
-    if (deleteResult.deletedCount === 0) {
+    // Deactivate rather than delete so usage stats keep a record of every
+    // account. Contact details and every way to sign in are removed. The
+    // username is replaced too, so the same person can sign up again (ORCID
+    // usernames are derived from the ORCID iD). Jobs still link to the
+    // account through user._id.
+    const contactEmail = user.email
+    const originalUsername = user.username
+    const anonymousId = `deleted-${user._id.toString()}`
+    const updateResult = await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          username: anonymousId,
+          email: `${anonymousId}@deleted.invalid`,
+          active: false,
+          deletedAt: new Date(),
+          emailNotifications: false,
+          previousEmails: [],
+          oauth: [],
+          refreshToken: [],
+          apiTokens: []
+        },
+        $unset: {
+          firstName: '',
+          lastName: '',
+          newEmail: '',
+          otp: '',
+          confirmationCode: ''
+        }
+      }
+    ).exec()
+    if (updateResult.modifiedCount === 0) {
       logger.error(`Failed to delete user ${username} with ID ${user._id}`)
       res.status(500).json({ success: false, message: 'Failed to delete user' })
       return
     }
 
+    // Jobs and usage events keep their own copy of the username and email.
     try {
-      sendDeleteAccountSuccessEmail(user.email, user.username)
-      logger.info(`Deletion success email sent to ${user.email}`)
-    } catch (emailError) {
+      const anonymousEmail = `${anonymousId}@deleted.invalid`
+      await Promise.all([
+        Job.updateMany(
+          { 'user._id': user._id },
+          {
+            $set: { 'user.username': anonymousId, 'user.email': anonymousEmail }
+          }
+        ).exec(),
+        UsageEvent.updateMany(
+          { 'context.user._id': user._id },
+          {
+            $set: {
+              'context.user.username': anonymousId,
+              'context.user.email': anonymousEmail
+            }
+          }
+        ).exec()
+      ])
+    } catch (scrubError) {
       logger.error(
-        `Failed to send deletion email to ${user.email}: ${emailError}`
+        `Deleted user ID ${user._id} but failed to scrub their jobs and usage events: ${scrubError}`
       )
     }
 
-    const reply = `User ${user.username} with ID ${user._id} deleted successfully`
+    try {
+      sendDeleteAccountSuccessEmail(contactEmail, originalUsername)
+      logger.info(`Deletion success email sent for user ID ${user._id}`)
+    } catch (emailError) {
+      logger.error(
+        `Failed to send deletion email for user ID ${user._id}: ${emailError}`
+      )
+    }
+
+    const reply = `User ${originalUsername} with ID ${user._id} deleted successfully`
     res.status(200).json({ success: true, message: reply })
   } catch (error) {
     logger.error(`Failed to delete user ${username}: ${error}`)

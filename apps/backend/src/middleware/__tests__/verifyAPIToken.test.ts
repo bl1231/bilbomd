@@ -12,8 +12,13 @@ vi.mock('@bilbomd/mongodb-schema', () => ({
 
 import { User } from '@bilbomd/mongodb-schema'
 
-const mockUser = (tokenHash: string, expiresAt?: Date | null) => ({
+const mockUser = (
+  tokenHash: string,
+  expiresAt?: Date | null,
+  active = true
+) => ({
   email: 'api@example.com',
+  active,
   apiTokens: [{ tokenHash, expiresAt: expiresAt ?? null }]
 })
 
@@ -86,6 +91,22 @@ describe('verifyAPIToken middleware', () => {
   it('returns 403 when no user found for token', async () => {
     mockRequest.headers = { authorization: 'Bearer unknowntoken' }
     vi.mocked(User.findOne).mockResolvedValue(null)
+    await run()
+    expect(statusSpy).toHaveBeenCalledWith(403)
+    expect(jsonSpy).toHaveBeenCalledWith({ message: 'Invalid API token' })
+    expect(mockNext).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 when the token belongs to a deactivated user', async () => {
+    mockRequest.headers = { authorization: 'Bearer validtoken123' }
+    const crypto = await import('crypto')
+    const hash = crypto
+      .createHash('sha256')
+      .update('validtoken123')
+      .digest('hex')
+    vi.mocked(User.findOne).mockResolvedValue(
+      mockUser(hash, null, false) as never
+    )
     await run()
     expect(statusSpy).toHaveBeenCalledWith(403)
     expect(jsonSpy).toHaveBeenCalledWith({ message: 'Invalid API token' })

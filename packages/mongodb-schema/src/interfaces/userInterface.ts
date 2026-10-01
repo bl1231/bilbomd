@@ -41,6 +41,7 @@ interface IUser extends Document {
   previousEmails: string[]
   status: string
   active: boolean
+  deletedAt?: Date
   // Undefined on users created before the setting existed; treat as true
   emailNotifications?: boolean
   confirmationCode: IConfirmationCode | null
