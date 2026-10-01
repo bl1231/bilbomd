@@ -5,6 +5,7 @@ import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 import {
   BODY_COLORS,
   BODY_LABELS,
+  FLEXIBLE_COLOR,
   buildChainTracks,
   type Body,
   type BodyType,
@@ -13,6 +14,42 @@ import {
 
 const rangeLabel = (chainId: string, start: number, stop: number) =>
   `${chainId} ${start}–${stop}`
+
+const TrackBlock = ({
+  track,
+  start,
+  stop,
+  type,
+  color,
+  title
+}: {
+  track: ChainTrack
+  start: number
+  stop: number
+  type: string
+  color: string
+  title: string
+}) => (
+  <Tooltip
+    title={title}
+    arrow
+  >
+    <Box
+      data-testid="constraint-track-segment"
+      data-type={type}
+      sx={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: `${((start - 1) / track.length) * 100}%`,
+        width: `${((stop - start + 1) / track.length) * 100}%`,
+        // Keep tiny segments visible on long chains
+        minWidth: 3,
+        backgroundColor: color
+      }}
+    />
+  </Tooltip>
+)
 
 const ChainTrackRow = ({ track }: { track: ChainTrack }) => (
   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -33,27 +70,27 @@ const ChainTrackRow = ({ track }: { track: ChainTrack }) => (
           overflow: 'hidden'
         }}
       >
+        {track.flexible.map(({ start, stop }) => (
+          <TrackBlock
+            key={`flexible-${start}`}
+            track={track}
+            start={start}
+            stop={stop}
+            type="flexible"
+            color={FLEXIBLE_COLOR}
+            title={`Flexible · ${rangeLabel(track.chainId, start, stop)}`}
+          />
+        ))}
         {track.segments.map((seg) => (
-          <Tooltip
+          <TrackBlock
             key={`${seg.type}-${seg.bodyName}-${seg.start}`}
+            track={track}
+            start={seg.start}
+            stop={seg.stop}
+            type={seg.type}
+            color={BODY_COLORS[seg.type]}
             title={`${BODY_LABELS[seg.type]} · ${seg.bodyName} · ${rangeLabel(track.chainId, seg.start, seg.stop)}`}
-            arrow
-          >
-            <Box
-              data-testid="constraint-track-segment"
-              data-type={seg.type}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: `${((seg.start - 1) / track.length) * 100}%`,
-                width: `${((seg.stop - seg.start + 1) / track.length) * 100}%`,
-                // Keep tiny segments visible on long chains
-                minWidth: 3,
-                backgroundColor: BODY_COLORS[seg.type]
-              }}
-            />
-          </Tooltip>
+          />
         ))}
       </Box>
       <Box
@@ -70,40 +107,69 @@ const ChainTrackRow = ({ track }: { track: ChainTrack }) => (
   </Box>
 )
 
-const BodyLine = ({ body, type }: { body: Body; type: BodyType }) => (
+type LineRange = { chainId: string; start: number; stop: number }
+
+const ConstraintLine = ({
+  tag,
+  color,
+  tagTextColor = '#fff',
+  name,
+  ranges
+}: {
+  tag: string
+  color: string
+  tagTextColor?: string
+  name?: string
+  ranges: LineRange[]
+}) => (
   <Box
     sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}
   >
     <Chip
       size="small"
-      label={BODY_LABELS[type]}
+      label={tag}
       sx={{
-        width: 56,
-        color: '#fff',
+        width: 64,
+        color: tagTextColor,
         fontWeight: 600,
-        backgroundColor: BODY_COLORS[type]
+        backgroundColor: color
       }}
     />
-    <Typography
-      variant="body2"
-      sx={{ fontWeight: 600 }}
-    >
-      {body.name}
-    </Typography>
-    {body.segments?.map(({ chain_id, residues }) => (
+    {name && (
+      <Typography
+        variant="body2"
+        sx={{ fontWeight: 600 }}
+      >
+        {name}
+      </Typography>
+    )}
+    {ranges.map(({ chainId, start, stop }) => (
       <Chip
-        key={`${chain_id}-${residues.start}`}
+        key={`${chainId}-${start}`}
         size="small"
         variant="outlined"
-        label={rangeLabel(chain_id, residues.start, residues.stop)}
+        label={rangeLabel(chainId, start, stop)}
         sx={{
           fontVariantNumeric: 'tabular-nums',
-          borderColor: BODY_COLORS[type],
-          backgroundColor: alpha(BODY_COLORS[type], 0.08)
+          borderColor: color,
+          backgroundColor: alpha(color, 0.12)
         }}
       />
     ))}
   </Box>
+)
+
+const BodyLine = ({ body, type }: { body: Body; type: BodyType }) => (
+  <ConstraintLine
+    tag={BODY_LABELS[type]}
+    color={BODY_COLORS[type]}
+    name={body.name}
+    ranges={(body.segments ?? []).map(({ chain_id, residues }) => ({
+      chainId: chain_id,
+      start: residues.start,
+      stop: residues.stop
+    }))}
+  />
 )
 
 interface MDConstraintsRendererProps {
@@ -127,6 +193,9 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
   }
 
   const tracks = buildChainTracks(constraints)
+  const flexible = tracks.flatMap((track) =>
+    track.flexible.map((range) => ({ chainId: track.chainId, ...range }))
+  )
 
   return (
     <Box
@@ -166,6 +235,14 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
             type="rigid"
           />
         ))}
+        {flexible.length > 0 && (
+          <ConstraintLine
+            tag="Flexible"
+            color={FLEXIBLE_COLOR}
+            tagTextColor="rgba(0, 0, 0, 0.87)"
+            ranges={flexible}
+          />
+        )}
       </Box>
     </Box>
   )

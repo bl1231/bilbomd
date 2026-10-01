@@ -4,6 +4,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import LaunchIcon from '@mui/icons-material/Launch'
 import { Box } from '@mui/system'
 import { green } from '@mui/material/colors'
+import { alpha } from '@mui/material/styles'
 import { useNavigate } from 'react-router'
 import { useSnackbar } from 'notistack'
 
@@ -82,14 +83,18 @@ const CopyableChip: React.FC<CopyableChipProps> = ({ label, value, url }) => {
           </Box>
         }
         variant="outlined"
-        sx={{
+        sx={(theme) => ({
           fontSize: '0.80rem',
           fontFamily: 'monospace',
           borderColor: 'primary.main',
-          backgroundColor: green[100],
+          // green[100] is too light behind dark mode's light text
+          backgroundColor:
+            theme.palette.mode === 'dark'
+              ? alpha(theme.palette.success.main, 0.2)
+              : green[100],
           maxWidth: '100%',
           minWidth: 0
-        }}
+        })}
       />
     </>
   )

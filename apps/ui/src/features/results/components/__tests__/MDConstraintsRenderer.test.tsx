@@ -54,6 +54,36 @@ describe('buildChainTracks', () => {
     ])
   })
 
+  it('finds the flexible gaps between constrained segments', () => {
+    const [track] = buildChainTracks(autoJobConstraints)
+    expect(track?.flexible).toEqual([
+      { start: 1, stop: 8 },
+      { start: 109, stop: 208 },
+      { start: 232, stop: 262 }
+    ])
+  })
+
+  it('treats overlapping or adjacent segments as one constrained run', () => {
+    const [track] = buildChainTracks({
+      fixed_bodies: [
+        {
+          name: 'F',
+          segments: [
+            { chain_id: 'A', residues: { start: 1, stop: 50 } },
+            { chain_id: 'A', residues: { start: 40, stop: 60 } }
+          ]
+        }
+      ],
+      rigid_bodies: [
+        {
+          name: 'R',
+          segments: [{ chain_id: 'A', residues: { start: 61, stop: 80 } }]
+        }
+      ]
+    })
+    expect(track?.flexible).toEqual([])
+  })
+
   it('tolerates bodies without segments', () => {
     const tracks = buildChainTracks({
       fixed_bodies: [
@@ -83,11 +113,9 @@ describe('MDConstraintsRenderer', () => {
     expect(screen.getByText('Chain A')).toBeInTheDocument()
     const track = screen.getByTestId('constraint-track-A')
     const segments = within(track).getAllByTestId('constraint-track-segment')
-    expect(segments.map((s) => s.dataset.type)).toEqual([
-      'fixed',
-      'fixed',
-      'rigid'
-    ])
+    expect(
+      segments.map((s) => s.dataset.type).filter((t) => t !== 'flexible')
+    ).toEqual(['fixed', 'fixed', 'rigid'])
     expect(screen.getByText('516')).toBeInTheDocument()
   })
 
@@ -107,9 +135,12 @@ describe('MDConstraintsRenderer', () => {
         }}
       />
     )
-    const [first, second] = screen.getAllByTestId('constraint-track-segment')
+    const blocks = screen.getAllByTestId('constraint-track-segment')
+    const [first, second] = blocks.filter((b) => b.dataset.type === 'rigid')
+    const [gap] = blocks.filter((b) => b.dataset.type === 'flexible')
     expect(first).toHaveStyle({ left: '0%', width: '50%' })
     expect(second).toHaveStyle({ left: '75%', width: '25%' })
+    expect(gap).toHaveStyle({ left: '50%', width: '25%' })
   })
 
   it('lists each body with its type and residue ranges', () => {
@@ -122,6 +153,19 @@ describe('MDConstraintsRenderer', () => {
     expect(screen.getByText('A 9–108')).toBeInTheDocument()
     expect(screen.getByText('A 263–516')).toBeInTheDocument()
     expect(screen.getByText('A 209–231')).toBeInTheDocument()
+  })
+
+  it('lists and draws the flexible regions', () => {
+    render(<MDConstraintsRenderer constraints={autoJobConstraints} />)
+
+    expect(screen.getByText('Flexible')).toBeInTheDocument()
+    expect(screen.getByText('A 1–8')).toBeInTheDocument()
+    expect(screen.getByText('A 109–208')).toBeInTheDocument()
+    expect(screen.getByText('A 232–262')).toBeInTheDocument()
+    const flexible = screen
+      .getAllByTestId('constraint-track-segment')
+      .filter((s) => s.dataset.type === 'flexible')
+    expect(flexible).toHaveLength(3)
   })
 
   it('handles multiple chains and bodies', () => {
