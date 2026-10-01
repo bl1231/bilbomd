@@ -37,6 +37,8 @@ import PipelineSchematic from './PipelineSchematic'
 import { BilboMDAutoJobFormValues } from '../../types/autoJobForm'
 import type { BilboMDAutoDTO } from '@bilbomd/bilbomd-types'
 import { logger } from 'utils/logger'
+import { getSubmitError, type SubmitError } from 'utils/submitError'
+import SubmitErrorAlert from 'components/SubmitErrorAlert'
 
 const ResubmitAutoJobForm = () => {
   useTitle('BilboMD: Resubmit Auto Job')
@@ -56,7 +58,7 @@ const ResubmitAutoJobForm = () => {
   const [mdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null)
 
   // RTK Query to fetch the configuration
   const {
@@ -169,10 +171,7 @@ const ResubmitAutoJobForm = () => {
       void navigate(`/dashboard/jobs/${newJob.jobid}`)
     } catch (error) {
       logger.error('rejected', error)
-      setSubmitError(
-        (error as { data?: { message?: string } }).data?.message ||
-          'An error occurred during submission.'
-      )
+      setSubmitError(getSubmitError(error))
     }
   }
 
@@ -409,14 +408,10 @@ const ResubmitAutoJobForm = () => {
                       ) : (
                         ''
                       )}
-                      {submitError && (
-                        <Alert
-                          severity="error"
-                          sx={{ my: 1 }}
-                        >
-                          {submitError}
-                        </Alert>
-                      )}
+                      <SubmitErrorAlert
+                        error={submitError}
+                        sx={{ my: 1 }}
+                      />
                     </Grid>
                   </Grid>
                   {process.env.NODE_ENV === 'development' ? <Debug /> : ''}

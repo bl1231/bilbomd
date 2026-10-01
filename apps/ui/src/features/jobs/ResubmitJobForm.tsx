@@ -1,5 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { logger } from 'utils/logger'
+import { getSubmitError, type SubmitError } from 'utils/submitError'
+import SubmitErrorAlert from 'components/SubmitErrorAlert'
 import {
   Box,
   Button,
@@ -62,7 +64,7 @@ const ResubmitJobForm = () => {
   const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null)
 
   // RTK Query to fetch the configuration
   const {
@@ -226,10 +228,7 @@ const ResubmitJobForm = () => {
       void navigate(`/dashboard/jobs/${newJob.jobid}`)
     } catch (error) {
       logger.error('rejected', error)
-      setSubmitError(
-        (error as { data?: { message?: string } }).data?.message ||
-          'An error occurred during submission.'
-      )
+      setSubmitError(getSubmitError(error))
     }
   }
 
@@ -798,14 +797,10 @@ const ResubmitJobForm = () => {
                         ) : (
                           ''
                         )}
-                        {submitError && (
-                          <Alert
-                            severity="error"
-                            sx={{ my: 1 }}
-                          >
-                            {submitError}
-                          </Alert>
-                        )}
+                        <SubmitErrorAlert
+                          error={submitError}
+                          sx={{ my: 1 }}
+                        />
                       </Grid>
                     </Grid>
                     {process.env.NODE_ENV === 'development' ? <Debug /> : ''}

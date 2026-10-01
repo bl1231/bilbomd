@@ -41,6 +41,8 @@ import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 import SANSPipelineSchematic from './SANSPipelineSchematic'
 import { logger } from 'utils/logger'
+import { getSubmitError, type SubmitError } from 'utils/submitError'
+import SubmitErrorAlert from 'components/SubmitErrorAlert'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -96,6 +98,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [isPerlmutterUnavailable, setIsPerlmutterUnavailable] = useState(false)
   const [chainIds, setChainIds] = useState<string[]>([])
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null)
   const [pdbInfo, setPdbInfo] = useState<string>('')
   const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
 
@@ -131,6 +134,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   }
 
   const onSubmit = async (values: NewSANSJobFormValues) => {
+    setSubmitError(null)
     const form = new FormData()
     form.append('title', values.title)
     form.append('pdb_file', values.pdb_file)
@@ -157,6 +161,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         : addNewSANSJob(form).unwrap())
     } catch (error) {
       logger.error('rejected', error)
+      setSubmitError(getSubmitError(error))
     }
   }
 
@@ -563,6 +568,11 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         <LinearProgress />
                       </Box>
                     )}
+
+                    <SubmitErrorAlert
+                      error={submitError}
+                      sx={{ my: 1, width: '100%', maxWidth: '520px' }}
+                    />
 
                     {/* Submit Button */}
                     <Grid sx={{ mt: 2 }}>
