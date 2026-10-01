@@ -209,10 +209,19 @@ const isSaxsData = (
         const numbers = line.match(sciNotation)
         if (numbers && numbers.length >= 3) {
           const qValue = parseFloat(numbers[0]!)
-          if (qValue < 0.005 || qValue > 0.04) {
+          // Only the first q value is checked: it tells us the units. Say
+          // so, or users trim the whole curve to this range.
+          if (qValue > 0.04) {
             resolve({
               valid: false,
-              message: `Q values should be in inverse Angstroms between 0.005 and 0.04. Found: ${qValue}`
+              message: `The first q value is ${qValue}. BilboMD needs q in Å⁻¹ (inverse ångströms), and a curve in Å⁻¹ normally starts below 0.04. If your data are in nm⁻¹, divide q by 10. Keep your full q-range; only the starting point is checked.`
+            })
+            return
+          }
+          if (qValue < 0.005) {
+            resolve({
+              valid: false,
+              message: `The first q value is ${qValue} Å⁻¹, below BilboMD's minimum of 0.005 Å⁻¹. Remove the data points below 0.005 Å⁻¹.`
             })
             return
           }
