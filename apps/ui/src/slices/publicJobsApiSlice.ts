@@ -6,6 +6,7 @@ import type {
 } from '@bilbomd/bilbomd-types'
 import type { IFeedbackData } from '@bilbomd/mongodb-schema/frontend'
 import type { FoxsData } from 'types/foxs'
+import { revokeObjectUrlOnRemove } from 'utils/objectUrl'
 
 type PublicResultFileParams = { publicId: string; filename: string }
 type EnsemblePdbFilesResponse = { ensemblePdbFiles: string[] }
@@ -57,6 +58,15 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
         responseHandler: (response) => response.text()
       })
     }),
+    // A result image as an object URL, for use as an <img> src
+    getPublicJobImage: builder.query<string, PublicResultFileParams>({
+      query: ({ publicId, filename }) => ({
+        url: `/public/jobs/${publicId}/results/${filename}`,
+        responseHandler: (response) => response.blob()
+      }),
+      transformResponse: (blob: Blob) => URL.createObjectURL(blob),
+      onCacheEntryAdded: revokeObjectUrlOnRemove
+    }),
     getPublicMDMovies: builder.query<JobAssetsDTO, string>({
       query: (publicId) => `/public/jobs/${publicId}/movies`,
       providesTags: (_, __, publicId) => [
@@ -75,5 +85,6 @@ export const {
   useGetPublicResultFileQuery,
   useGetPublicResultFileJsonQuery,
   useGetPublicResultFileTextQuery,
+  useGetPublicJobImageQuery,
   useGetPublicMDMoviesQuery
 } = publicJobsApiSlice

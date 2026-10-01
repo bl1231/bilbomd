@@ -2,7 +2,7 @@ import { alpha, type Theme } from '@mui/material/styles'
 import type { JobType } from '@bilbomd/bilbomd-types'
 import type { JobView } from './jobView'
 
-export type AnalysisTab = 'foxs' | 'movies' | 'feedback'
+export type AnalysisTab = 'foxs' | 'movies' | 'feedback' | 'pae'
 
 const FOXS_JOB_TYPES: JobType[] = [
   'pdb',
@@ -12,9 +12,16 @@ const FOXS_JOB_TYPES: JobType[] = [
   'openfold'
 ]
 
+// These start from a predicted structure, and pae2const.py writes pae.png and
+// viz.png into the job directory while building the constraints.
+const PAE_JOB_TYPES: JobType[] = ['auto', 'alphafold', 'openfold']
+
 // SANS runs MD but not FoXS; Scoper has its own analysis section and Multi
 // only combines other jobs' results.
 export const analysisTabs = (jobType: JobType): AnalysisTab[] => {
+  if (PAE_JOB_TYPES.includes(jobType)) {
+    return ['foxs', 'movies', 'feedback', 'pae']
+  }
   if (FOXS_JOB_TYPES.includes(jobType)) return ['foxs', 'movies', 'feedback']
   if (jobType === 'sans') return ['movies']
   return []

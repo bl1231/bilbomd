@@ -7,6 +7,7 @@ import {
 import { apiSlice } from '../app/api/apiSlice'
 import type { BilboMDJobDTO, JobAssetsDTO } from '@bilbomd/bilbomd-types'
 import { FileCheckResult } from '../types/jobCheckResults'
+import { revokeObjectUrlOnRemove } from '../utils/objectUrl'
 import { RootState } from '../app/store'
 
 interface FoxsData {
@@ -220,6 +221,16 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
         }
       }
     ),
+    // A job-directory image as an object URL, for use as an <img> src
+    getJobImage: builder.query<string, { id: string; filename: string }>({
+      query: ({ id, filename }) => ({
+        url: `/jobs/${id}/${filename}`,
+        method: 'GET',
+        responseHandler: (response) => response.blob()
+      }),
+      transformResponse: (blob: Blob) => URL.createObjectURL(blob),
+      onCacheEntryAdded: revokeObjectUrlOnRemove
+    }),
     getMDMovies: builder.query<JobAssetsDTO, string>({
       query: (id) => ({ url: `/jobs/${id}/movies`, method: 'GET' }),
       providesTags: (_, __, id) => [{ type: 'MovieAsset', id }]
@@ -247,6 +258,7 @@ export const {
   useGetAf2PaeStatusQuery,
   useGetFileByIdAndNameQuery,
   useLazyGetFileByIdAndNameQuery,
+  useGetJobImageQuery,
   useGetMDMoviesQuery
 } = jobsApiSlice
 
