@@ -41,6 +41,8 @@ import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 import OF3OpenMMPipelineSchematic from './OF3OpenMMPipelineSchematic'
 import { logger } from 'utils/logger'
+import { getSubmitError, type SubmitError } from 'utils/submitError'
+import SubmitErrorAlert from 'components/SubmitErrorAlert'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -460,7 +462,7 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       : undefined
 
   const [useExampleData, setUseExampleData] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null)
 
   const {
     data: config,
@@ -514,10 +516,7 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         : addNewOpenFoldJob(form).unwrap())
     } catch (error) {
       logger.error('rejected', error)
-      setSubmitError(
-        (error as { data?: { message?: string } }).data?.message ||
-          'An error occurred during submission.'
-      )
+      setSubmitError(getSubmitError(error))
     }
   }
 
@@ -704,14 +703,10 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Alert>
                       )}
 
-                      {submitError && (
-                        <Alert
-                          severity="error"
-                          sx={{ my: 1 }}
-                        >
-                          {submitError}
-                        </Alert>
-                      )}
+                      <SubmitErrorAlert
+                        error={submitError}
+                        sx={{ my: 1 }}
+                      />
 
                       {/* Entities */}
                       <Grid sx={{ my: 2 }}>

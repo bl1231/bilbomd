@@ -1,5 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { logger } from 'utils/logger'
+import { getSubmitError, type SubmitError } from 'utils/submitError'
+import SubmitErrorAlert from 'components/SubmitErrorAlert'
 import {
   Box,
   Button,
@@ -93,7 +95,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null)
   const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
   const [pdbInfo, setPdbInfo] = useState<string>('')
   const [saxsData, setSaxsData] = useState<
@@ -164,10 +166,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
         : addNewJob(form).unwrap())
     } catch (error) {
       logger.error('rejected', error)
-      setSubmitError(
-        (error as { data?: { message?: string } }).data?.message ||
-          'An error occurred during submission.'
-      )
+      setSubmitError(getSubmitError(error))
     }
   }
 
@@ -365,14 +364,10 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Alert>
                     )}
 
-                    {submitError && (
-                      <Alert
-                        severity="error"
-                        sx={{ my: 1 }}
-                      >
-                        {submitError}
-                      </Alert>
-                    )}
+                    <SubmitErrorAlert
+                      error={submitError}
+                      sx={{ my: 1 }}
+                    />
 
                     {/* MD Engine selection */}
                     <Grid sx={{ width: '100%', maxWidth: '520px' }}>

@@ -43,6 +43,8 @@ import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 import AFOpenMMPipelineSchematic from './AFOpenMMPipelineSchematic'
 import AFCharmmPipelineSchematic from './AFCharmmPipelineSchematic'
 import { logger } from 'utils/logger'
+import { getSubmitError, type SubmitError } from 'utils/submitError'
+import SubmitErrorAlert from 'components/SubmitErrorAlert'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -482,7 +484,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   }
   const [mdEngine] = useState<'charmm' | 'openmm'>('openmm')
   const [useExampleData, setUseExampleData] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null)
 
   // Fetch configuration object
   const {
@@ -540,10 +542,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
         : addNewAlphaFoldJob(form).unwrap())
     } catch (error) {
       logger.error('rejected', error)
-      setSubmitError(
-        (error as { data?: { message?: string } }).data?.message ||
-          'An error occurred during submission.'
-      )
+      setSubmitError(getSubmitError(error))
     }
   }
 
@@ -748,14 +747,10 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Alert>
                       )}
 
-                      {submitError && (
-                        <Alert
-                          severity="error"
-                          sx={{ my: 1 }}
-                        >
-                          {submitError}
-                        </Alert>
-                      )}
+                      <SubmitErrorAlert
+                        error={submitError}
+                        sx={{ my: 1 }}
+                      />
 
                       {/* Entities */}
                       <Grid sx={{ my: 2 }}>

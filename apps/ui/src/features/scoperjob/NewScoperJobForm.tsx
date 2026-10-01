@@ -29,6 +29,8 @@ import useTitle from 'hooks/useTitle'
 import PublicJobSuccessAlert from 'features/public/PublicJobSuccessAlert'
 import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 import { logger } from 'utils/logger'
+import { getSubmitError, type SubmitError } from 'utils/submitError'
+import SubmitErrorAlert from 'components/SubmitErrorAlert'
 
 type NewScoperJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -77,7 +79,7 @@ const NewScoperJobForm = ({
       : undefined
 
   const [useExampleData, setUseExampleData] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null)
 
   const initialValues = {
     title: '',
@@ -117,10 +119,7 @@ const NewScoperJobForm = ({
       setStatus(newJob)
     } catch (error) {
       logger.error('rejected', error)
-      setSubmitError(
-        (error as { data?: { message?: string } }).data?.message ||
-          'An error occurred during submission.'
-      )
+      setSubmitError(getSubmitError(error))
     }
   }
 
@@ -321,14 +320,10 @@ const NewScoperJobForm = ({
                         </Alert>
                       )}
 
-                      {submitError && (
-                        <Alert
-                          severity="error"
-                          sx={{ my: 1 }}
-                        >
-                          {submitError}
-                        </Alert>
-                      )}
+                      <SubmitErrorAlert
+                        error={submitError}
+                        sx={{ my: 1 }}
+                      />
 
                       <Grid>
                         <Field
