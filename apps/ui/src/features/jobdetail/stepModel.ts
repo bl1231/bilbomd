@@ -22,7 +22,6 @@ const STEP_ORDER = [
   'reduce',
   'rnaview',
   'kgs',
-  'ionnet',
   'pdb2crd',
   'pae',
   'minimize',
@@ -33,6 +32,8 @@ const STEP_ORDER = [
   'pdb_remediate',
   'movies',
   'foxs',
+  // Scoper predicts Mg sites on the top FoXS-scored KGS conformer
+  'ionnet',
   'pepsisans',
   'multifoxs',
   'gasans',

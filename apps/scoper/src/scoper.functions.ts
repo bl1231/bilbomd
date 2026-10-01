@@ -19,7 +19,7 @@ import {
   updateJobResults,
   updateJobStatus
 } from './mongo-utils.js'
-import { parseScoperLogLine } from './scoperLogParser.js'
+import { createScoperLogParser } from './scoperLogParser.js'
 import { getKGSrnaProgress } from './functions/getKGSrnaProgress.js'
 import {
   recordWorkerUsageEvent,
@@ -166,16 +166,13 @@ const spawnScoper = async (
   return new Promise<void>((resolve, reject) => {
     logger.info(`Running Scoper with args: ${['-u', ...args].join(' ')}`)
     const scoper = spawn('python', ['-u', ...args], { cwd: outputDir })
+    const logParser = createScoperLogParser(DBjob)
 
-    scoper.stdout?.on('data', async (data) => {
+    scoper.stdout?.on('data', (data) => {
       const text = data.toString()
       logStream.write(text)
       // parse output in order to update job progression.
-      try {
-        await parseScoperLogLine(text, DBjob)
-      } catch (error) {
-        logger.error(`Error parsing scoper log line: ${error}`)
-      }
+      void logParser.push(text)
     })
 
     scoper.stderr?.on('data', (data) => {
@@ -225,6 +222,8 @@ const spawnScoper = async (
       logStream.end()
       errorStream.end()
       try {
+        // Let queued step updates land before the job moves on
+        await logParser.flush()
         await processExitLogic(code, outputDir, logFile, MQjob)
         resolve()
       } catch (error: unknown) {
@@ -395,10 +394,6 @@ const runFoXS = async (
   DBjob: IBilboMDScoperJob,
   pdbNumber: number
 ): Promise<void> => {
-  let status: IStepStatus = {
-    status: 'Running',
-    message: 'FoXS Calculations have started.'
-  }
   try {
     const outputDir = path.join(DATA_VOL, DBjob.uuid)
     const foxsAnalysisDir = path.join(DATA_VOL, DBjob.uuid, 'foxs_analysis')
@@ -455,18 +450,10 @@ const runFoXS = async (
         if (code === 0) {
           logger.info('FoXS analysis exited successfully')
           MQjob.log('foxs analysis successful')
-          status = {
-            status: 'Success',
-            message: 'FoXS Calculations have completed successfully.'
-          }
-          updateStepStatus(DBjob, 'foxs', status)
-            .then(() => {
-              resolve()
-            })
-            .catch((err) => {
-              logger.error('Failed to update step status:', err)
-              resolve() // Still resolve, since FoXS succeeded
-            })
+          // Leave the foxs step alone: it already went Success when the
+          // pipeline's FoXS scoring finished, and re-stamping it here would
+          // stretch its duration over IonNet and MultiFoXS.
+          resolve()
         } else {
           reject(`runFoXS on close reject`)
         }
@@ -474,7 +461,7 @@ const runFoXS = async (
     })
   } catch (error) {
     // Handle errors and update status to Error
-    status = {
+    const status: IStepStatus = {
       status: 'Error',
       message: `Error in FoXS Calculations: ${getErrorMessage(error)}`
     }
