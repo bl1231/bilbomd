@@ -429,6 +429,46 @@ describe('BilboMDNerscStep duration', () => {
         duration="3m 2s"
       />
     )
-    expect(screen.getByText('⏱ 3m 2s')).toBeInTheDocument()
+    expect(screen.getByTestId('step-duration-md')).toHaveTextContent('3m 2s')
+  })
+
+  it('places the duration to the left of the step chip', () => {
+    renderWithProviders(
+      <BilboMDNerscStep
+        stepName="md"
+        stepStatus="Success"
+        stepMessage="done"
+        duration="3m 2s"
+      />
+    )
+    const duration = screen.getByTestId('step-duration-md')
+    const chipLabel = screen.getByText('Molecular Dynamics')
+    expect(
+      duration.compareDocumentPosition(chipLabel) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
+
+  it('keeps an empty duration slot when asked, so chips stay aligned', () => {
+    renderWithProviders(
+      <BilboMDNerscStep
+        stepName="md"
+        stepStatus="Waiting"
+        stepMessage=""
+        showDurationColumn
+      />
+    )
+    expect(screen.getByTestId('step-duration-md')).toBeEmptyDOMElement()
+  })
+
+  it('omits the duration slot when there is no duration', () => {
+    renderWithProviders(
+      <BilboMDNerscStep
+        stepName="md"
+        stepStatus="Waiting"
+        stepMessage=""
+      />
+    )
+    expect(screen.queryByTestId('step-duration-md')).not.toBeInTheDocument()
   })
 })
