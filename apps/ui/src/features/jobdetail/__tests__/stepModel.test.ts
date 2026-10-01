@@ -41,6 +41,30 @@ describe('orderedSteps', () => {
     ])
   })
 
+  it('orders Scoper steps as they run: FoXS scoring before IonNet', () => {
+    const steps = {
+      email: s('Waiting'),
+      results: s('Waiting'),
+      multifoxs: s('Waiting'),
+      ionnet: s('Waiting'),
+      foxs: s('Waiting'),
+      kgs: s('Waiting'),
+      rnaview: s('Waiting'),
+      reduce: s('Waiting')
+    } as JobStepsDTO
+
+    expect(orderedSteps(steps, 'scoper').pipeline.map((x) => x.name)).toEqual([
+      'reduce',
+      'rnaview',
+      'kgs',
+      'foxs',
+      'ionnet',
+      'multifoxs',
+      'results',
+      'email'
+    ])
+  })
+
   it('hides steps a job type skips, but only while they are Waiting', () => {
     const steps = {
       autorg: s('Success', 'Rg 25'),
