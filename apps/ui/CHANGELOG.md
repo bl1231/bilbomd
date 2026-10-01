@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.30.0
+
+### Minor Changes
+
+- 73bbdbc: Show the PAE matrix on Auto, AlphaFold and OpenFold job pages. A new PAE analysis tab displays the raw PAE heatmap next to the rigid-body clusters used to build the MD constraints, for owners and public results links.
+
 ## 2.29.0
 
 ### Minor Changes
