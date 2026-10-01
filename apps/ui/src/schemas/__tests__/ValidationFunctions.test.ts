@@ -39,6 +39,30 @@ describe('ValidationFunctions', () => {
     expect(result.valid).toBe(true)
   })
 
+  it('isSaxsData flags a first q above 0.04 as likely nm⁻¹ and says to keep the full range', async () => {
+    const content = `Sample description: chromixs\n4.468302e-02 1.948838e+01 5.293584e+00\n5.022427e-02 2.713563e+01 2.039665e+00\n`
+    const result = await isSaxsData(makeFile('apo.dat', content))
+    expect(result.valid).toBe(false)
+    expect(result.message).toContain('The first q value is 0.04468302.')
+    expect(result.message).toContain('divide q by 10')
+    expect(result.message).toContain('Keep your full q-range')
+  })
+
+  it('isSaxsData flags a first q below 0.005 and says to remove those points', async () => {
+    const content = `4.468302e-03 1.948838e+01 5.293584e+00\n5.022427e-03 2.713563e+01 2.039665e+00\n`
+    const result = await isSaxsData(makeFile('apo.dat', content))
+    expect(result.valid).toBe(false)
+    expect(result.message).toBe(
+      "The first q value is 0.004468302 Å⁻¹, below BilboMD's minimum of 0.005 Å⁻¹. Remove the data points below 0.005 Å⁻¹."
+    )
+  })
+
+  it('isSaxsData accepts a curve that runs past 0.04 when it starts in range', async () => {
+    const content = `5.022427e-03 2.713563e+01 2.039665e+00\n1.5e-01 5.0e+00 1.0e-01\n5.5e-01 1.0e+00 2.0e-01\n`
+    const result = await isSaxsData(makeFile('apo_A.dat', content))
+    expect(result.valid).toBe(true)
+  })
+
   it('isSaxsData returns invalid for non-numeric content', async () => {
     const content = `this is not valid saxs data`
     const result = await isSaxsData(makeFile('bad.dat', content))
