@@ -1,4 +1,4 @@
-import { Theme } from '@mui/material/styles'
+import { Theme, alpha } from '@mui/material/styles'
 
 export default function Button(theme: Theme) {
   const disabledStyle = {
@@ -18,9 +18,16 @@ export default function Button(theme: Theme) {
           fontWeight: 500,
           '&.job-details-button': {
             height: '24px',
-            backgroundColor: theme.palette.grey[200],
+            // Light greys wash out dark mode's light-blue button text
+            backgroundColor:
+              theme.palette.mode === 'dark'
+                ? alpha(theme.palette.primary.main, 0.12)
+                : theme.palette.grey[200],
             '&:hover': {
-              backgroundColor: 'white'
+              backgroundColor:
+                theme.palette.mode === 'dark'
+                  ? alpha(theme.palette.primary.main, 0.24)
+                  : 'white'
             }
           }
         },
