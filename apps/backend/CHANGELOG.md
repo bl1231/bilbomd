@@ -1,5 +1,12 @@
 # @bilbomd/backend
 
+## 2.15.2
+
+### Patch Changes
+
+- 2a77e90: Refresh transitive dependencies to patched releases: fast-uri 3.1.8, ip-address 10.7.2, js-yaml 4.3.2, moment 2.31.0, qs 6.16.0 (plus dev-only undici and brace-expansion).
+- 6e605be: Upgrade nodemailer to 10.0.12. Replace @types/nodemailer-express-handlebars with local types that match nodemailer 10's bundled types, and add tests that render every mailer template through the real nodemailer and handlebars plugin.
+
 ## 2.15.1
 
 ### Patch Changes
