@@ -221,7 +221,7 @@ describe('MDConstraintsRenderer', () => {
     expect(chips.map((c) => c.textContent)).toEqual(['PRO', 'PRO', 'PRO'])
   })
 
-  it('labels each run of ranges by molecule type on mixed-type bodies', () => {
+  it('labels each group of ranges by molecule type on mixed-type bodies', () => {
     render(
       <MDConstraintsRenderer
         constraints={{

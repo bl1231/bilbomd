@@ -177,11 +177,11 @@ const ConstraintLine = ({
     {ranges.map(({ chainId, start, stop }, i) => {
       const molType = molTypes[chainId]
       const prev = ranges[i - 1]
-      // One type chip per run of ranges that share a molecule type
-      const startsRun = !prev || molTypes[prev.chainId] !== molType
+      // One type chip per group of consecutive ranges with the same molecule type
+      const startsGroup = !prev || molTypes[prev.chainId] !== molType
       return (
         <React.Fragment key={`${chainId}-${start}`}>
-          {molType && startsRun && <MolTypeChip type={molType} />}
+          {molType && startsGroup && <MolTypeChip type={molType} />}
           <Chip
             size="small"
             variant="outlined"
