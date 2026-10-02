@@ -142,4 +142,28 @@ describe('getPublicJobById', () => {
     expect(body.inputs).not.toHaveProperty('access_mode')
     expect(JSON.stringify(body)).not.toContain('alice@example.com')
   })
+
+  it('returns the MD constraints so the results page can display them', async () => {
+    const md_constraints = {
+      fixed_bodies: [
+        {
+          name: 'FixedBody1',
+          segments: [{ chain_id: 'A', residues: { start: 1, stop: 297 } }]
+        }
+      ],
+      chain_mol_types: [{ chain_id: 'A', mol_type: 'PRO' }]
+    }
+    mockJobFindOne.mockReturnValue({
+      lean: () => ({
+        exec: async () => ({ ...makeJob(), md_constraints })
+      })
+    })
+    const req = { params: { publicId: 'token-abc' } } as unknown as Request
+    const res = makeRes()
+
+    await getPublicJobById(req, res)
+
+    const body = vi.mocked(res.json).mock.calls[0][0]
+    expect(body.md_constraints).toEqual(md_constraints)
+  })
 })

@@ -66,6 +66,7 @@ const getPublicJobById = async (req: Request, res: Response) => {
       status: job.status,
       progress: job.progress ?? 0,
       md_engine: job.md_engine,
+      md_constraints: job.md_constraints,
       submittedAt: job.time_submitted,
       startedAt: job.time_started,
       completedAt: job.time_completed,
