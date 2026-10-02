@@ -4,7 +4,9 @@ export {
   validateYamlConstraints,
   validateInpConstraints,
   extractConstraintsFromYaml,
-  buildChainSegidMap
+  buildChainSegidMap,
+  buildChainMolTypes,
+  buildChainMolTypesFromInp
 } from './constraintUtils.js'
 
 export { toPipeline, discriminatorToPipeline } from './pipelineUtils.js'
@@ -14,7 +16,9 @@ export type {
   IMDConstraints,
   ISegment,
   IFixedBody,
-  IRigidBody
+  IRigidBody,
+  IChainMolType,
+  ChainMolType
 } from '@bilbomd/mongodb-schema'
 
 // Export the Logger interface for type checking

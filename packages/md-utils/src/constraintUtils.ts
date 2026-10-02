@@ -4,7 +4,9 @@ import {
   IMDConstraints,
   ISegment,
   IFixedBody,
-  IRigidBody
+  IRigidBody,
+  IChainMolType,
+  ChainMolType
 } from '@bilbomd/mongodb-schema'
 import {
   PROTEIN_RESIDUES,
@@ -46,7 +48,7 @@ export function extractConstraintsFromYaml(
 // Carbohydrates use CAR (uppercase chain) or CAL (lowercase chain).
 const MOL_TYPE_PREFIXES = ['PRO', 'DNA', 'RNA', 'CAR', 'CAL'] as const
 
-function classifyResidue(name: string): 'PRO' | 'DNA' | 'RNA' | 'CAR' | null {
+function classifyResidue(name: string): ChainMolType | null {
   if (PROTEIN_RESIDUES.has(name)) return 'PRO'
   if (DNA_RESIDUES.has(name)) return 'DNA'
   if (RNA_RESIDUES.has(name)) return 'RNA'
@@ -55,16 +57,15 @@ function classifyResidue(name: string): 'PRO' | 'DNA' | 'RNA' | 'CAR' | null {
 }
 
 /**
- * Reads a PDB file and returns a map of chain_id → CHARMM segid, mirroring
- * pdb2crd.py's naming convention ({MOL_TYPE}{chain_id}).
- * Used when converting YAML constraints → CHARMM INP so that DNA/RNA chains
- * get the correct segid (e.g. "DNAD") rather than defaulting to "PROD".
+ * Reads a PDB file and returns each chain's molecule type, classifying a chain
+ * by its first recognized residue the same way pdb2crd.py does. Chains with no
+ * recognized residue are left out.
  */
-export async function buildChainSegidMap(
+export async function buildChainMolTypes(
   pdbFilePath: string
-): Promise<Record<string, string>> {
+): Promise<IChainMolType[]> {
   const content = await fs.readFile(pdbFilePath, 'utf8')
-  const chainFirstType: Record<string, 'PRO' | 'DNA' | 'RNA' | 'CAR'> = {}
+  const chainFirstType: Record<string, ChainMolType> = {}
 
   for (const line of content.split('\n')) {
     if (!line.startsWith('ATOM') && !line.startsWith('HETATM')) continue
@@ -79,11 +80,57 @@ export async function buildChainSegidMap(
     }
   }
 
+  return Object.entries(chainFirstType).map(([chain_id, mol_type]) => ({
+    chain_id,
+    mol_type
+  }))
+}
+
+/**
+ * Reads a PDB file and returns a map of chain_id → CHARMM segid, mirroring
+ * pdb2crd.py's naming convention ({MOL_TYPE}{chain_id}).
+ * Used when converting YAML constraints → CHARMM INP so that DNA/RNA chains
+ * get the correct segid (e.g. "DNAD") rather than defaulting to "PROD".
+ */
+export async function buildChainSegidMap(
+  pdbFilePath: string
+): Promise<Record<string, string>> {
   const result: Record<string, string> = {}
-  for (const [chainId, molType] of Object.entries(chainFirstType)) {
-    result[chainId] = `${molType}${chainId}`
+  for (const { chain_id, mol_type } of await buildChainMolTypes(pdbFilePath)) {
+    result[chain_id] = `${mol_type}${chain_id}`
   }
   return result
+}
+
+/**
+ * Reads each chain's molecule type from the pdb2crd-style segids in a CHARMM
+ * INP constraint file (e.g. "DNAD" → chain D is DNA). For jobs with no PDB to
+ * classify. Segids without a known prefix are left out.
+ */
+export async function buildChainMolTypesFromInp(
+  inpFilePath: string
+): Promise<IChainMolType[]> {
+  const inpContent = await fs.readFile(inpFilePath, 'utf8')
+  const content = inpContent
+    .split('\n')
+    .filter((line) => !/^\s*[!*]/.test(line))
+    .join('\n')
+  const chainTypes: Record<string, ChainMolType> = {}
+
+  for (const [, segid] of content.matchAll(/\bsegid\s+(\w+)/gi)) {
+    const prefix = MOL_TYPE_PREFIXES.find(
+      (pfx) => segid.startsWith(pfx) && segid.length > pfx.length
+    )
+    if (!prefix) continue
+    const chainId = segid.slice(prefix.length)
+    // CAL is pdb2crd's carbohydrate prefix for lowercase chain IDs
+    chainTypes[chainId] ??= prefix === 'CAL' ? 'CAR' : prefix
+  }
+
+  return Object.entries(chainTypes).map(([chain_id, mol_type]) => ({
+    chain_id,
+    mol_type
+  }))
 }
 
 /**

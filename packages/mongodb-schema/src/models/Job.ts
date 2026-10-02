@@ -21,7 +21,8 @@ import {
   ISegment,
   IFixedBody,
   IRigidBody,
-  IMDConstraints
+  IMDConstraints,
+  IChainMolType
 } from '../interfaces'
 import { openmmParametersSchema } from './OpenMM'
 import { charmmParametersSchema } from './CHARMM'
@@ -90,9 +91,22 @@ const rigidBodySchema = new Schema<IRigidBody>({
   segments: [{ type: segmentSchema, required: true }]
 })
 
+const chainMolTypeSchema = new Schema<IChainMolType>(
+  {
+    chain_id: { type: String, required: true },
+    mol_type: {
+      type: String,
+      enum: ['PRO', 'DNA', 'RNA', 'CAR'],
+      required: true
+    }
+  },
+  { _id: false }
+)
+
 const mdConstraintsSchema = new Schema<IMDConstraints>({
   fixed_bodies: [{ type: fixedBodySchema, required: false }],
-  rigid_bodies: [{ type: rigidBodySchema, required: false }]
+  rigid_bodies: [{ type: rigidBodySchema, required: false }],
+  chain_mol_types: { type: [chainMolTypeSchema], default: undefined }
 })
 
 const jobSchema = new Schema(

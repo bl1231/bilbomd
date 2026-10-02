@@ -21,7 +21,8 @@ import {
   validateYamlConstraints,
   validateInpConstraints,
   extractConstraintsFromYaml,
-  buildChainSegidMap
+  buildChainSegidMap,
+  buildChainMolTypes
 } from '@bilbomd/md-utils'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
@@ -244,7 +245,12 @@ const handleBilboMDClassicPDB = async (
         const mdConstraints = extractConstraintsFromYaml(yamlContent)
 
         // Update the job with MD constraints
-        newJob.md_constraints = mdConstraints
+        newJob.md_constraints = {
+          ...mdConstraints,
+          chain_mol_types: await buildChainMolTypes(
+            path.join(jobDir, pdbFileName)
+          )
+        }
         await newJob.save()
         logger.info(
           `MD constraints stored in MongoDB for job ${newJob._id.toString()}`
