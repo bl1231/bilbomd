@@ -1,5 +1,17 @@
 # @bilbomd/ui
 
+## 2.33.0
+
+### Minor Changes
+
+- 5831537: Show each chain's molecule type (PRO, DNA, RNA or CARB) in the MD Constraints display. New jobs record the types alongside their constraints; older jobs show no type chip. The public results page now receives the MD constraints too, so it shows the same display.
+
+### Patch Changes
+
+- Updated dependencies [5831537]
+  - @bilbomd/mongodb-schema@2.12.0
+  - @bilbomd/bilbomd-types@1.10.0
+
 ## 2.32.2
 
 ### Patch Changes
