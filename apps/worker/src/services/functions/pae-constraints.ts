@@ -2,13 +2,19 @@ import path from 'path'
 import fs from 'fs-extra'
 import YAML from 'yaml'
 import { Job as BullMQJob } from 'bullmq'
-import { convertInpToYaml, validateYamlConstraints } from '@bilbomd/md-utils'
+import {
+  convertInpToYaml,
+  validateYamlConstraints,
+  buildChainMolTypes,
+  buildChainMolTypesFromInp
+} from '@bilbomd/md-utils'
 import {
   IStepStatus,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDOpenFoldJob,
   IMDConstraints,
+  IChainMolType,
   Job
 } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
@@ -155,7 +161,8 @@ const spawnPaeToConst = async (params: PaeParams): Promise<string> => {
 const storeConstraintsInMongoDB = async (
   DBjob: IBilboMDAutoJob | IBilboMDAlphaFoldJob | IBilboMDOpenFoldJob,
   filePath: string,
-  fileName: string
+  fileName: string,
+  pdbFilePath?: string
 ): Promise<void> => {
   try {
     logger.debug(`Storing constraints in MongoDB from file: ${filePath}`)
@@ -195,9 +202,18 @@ const storeConstraintsInMongoDB = async (
     // Unwrap if needed
     const constraintsObj = 'constraints' in parsed ? parsed.constraints : parsed
 
+    // Prefer the PDB; a CRD-only job can still read types from const.inp segids
+    let chainMolTypes: IChainMolType[] | undefined
+    if (pdbFilePath) {
+      chainMolTypes = await buildChainMolTypes(pdbFilePath)
+    } else if (fileName === 'const.inp') {
+      chainMolTypes = await buildChainMolTypesFromInp(filePath)
+    }
+
     DBjob.set('md_constraints', {
       fixed_bodies: constraintsObj.fixed_bodies ?? [],
-      rigid_bodies: constraintsObj.rigid_bodies ?? []
+      rigid_bodies: constraintsObj.rigid_bodies ?? [],
+      chain_mol_types: chainMolTypes
     })
 
     await DBjob.save()
@@ -338,7 +354,8 @@ const runPaeToConstInp = async (
       await storeConstraintsInMongoDB(
         DBjob,
         expectedOutputPath,
-        expectedOutputFile
+        expectedOutputFile,
+        validatedPdbFile && path.join(outputDir, validatedPdbFile)
       )
       logger.debug('Constraints stored in MongoDB successfully')
     } catch (error) {

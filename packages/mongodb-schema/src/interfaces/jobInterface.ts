@@ -102,9 +102,17 @@ interface IRigidBody {
   segments: ISegment[]
 }
 
+type ChainMolType = 'PRO' | 'DNA' | 'RNA' | 'CAR'
+
+interface IChainMolType {
+  chain_id: string
+  mol_type: ChainMolType
+}
+
 interface IMDConstraints {
   fixed_bodies?: IFixedBody[]
   rigid_bodies?: IRigidBody[]
+  chain_mol_types?: IChainMolType[]
 }
 
 interface IJob extends Document {
@@ -242,6 +250,8 @@ export {
   IFixedBody,
   IRigidBody,
   IMDConstraints,
+  IChainMolType,
+  ChainMolType,
   IJob,
   IBilboMDPDBJob,
   IBilboMDCRDJob,

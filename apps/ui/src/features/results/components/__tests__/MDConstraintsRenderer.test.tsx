@@ -202,6 +202,55 @@ describe('MDConstraintsRenderer', () => {
     expect(screen.getByText('B 1–50')).toBeInTheDocument()
   })
 
+  it('shows no molecule-type chips for jobs without chain_mol_types', () => {
+    render(<MDConstraintsRenderer constraints={autoJobConstraints} />)
+    expect(screen.queryByTestId('mol-type-chip')).not.toBeInTheDocument()
+  })
+
+  it('shows one molecule-type chip per line when every chain is protein', () => {
+    render(
+      <MDConstraintsRenderer
+        constraints={{
+          ...autoJobConstraints,
+          chain_mol_types: [{ chain_id: 'A', mol_type: 'PRO' }]
+        }}
+      />
+    )
+    // Fixed, Rigid and Flexible lines
+    const chips = screen.getAllByTestId('mol-type-chip')
+    expect(chips.map((c) => c.textContent)).toEqual(['PRO', 'PRO', 'PRO'])
+  })
+
+  it('labels each group of ranges by molecule type on mixed-type bodies', () => {
+    render(
+      <MDConstraintsRenderer
+        constraints={{
+          fixed_bodies: [
+            {
+              name: 'Complex',
+              segments: [
+                { chain_id: 'A', residues: { start: 1, stop: 100 } },
+                { chain_id: 'B', residues: { start: 1, stop: 50 } },
+                { chain_id: 'D', residues: { start: 1, stop: 20 } },
+                { chain_id: 'G', residues: { start: 1, stop: 4 } },
+                { chain_id: 'X', residues: { start: 1, stop: 9 } }
+              ]
+            }
+          ],
+          chain_mol_types: [
+            { chain_id: 'A', mol_type: 'PRO' },
+            { chain_id: 'B', mol_type: 'PRO' },
+            { chain_id: 'D', mol_type: 'DNA' },
+            { chain_id: 'G', mol_type: 'CAR' }
+          ]
+        }}
+      />
+    )
+    // No flexible gaps here, and chain X has no recorded type
+    const chips = screen.getAllByTestId('mol-type-chip')
+    expect(chips.map((c) => c.textContent)).toEqual(['PRO', 'DNA', 'CARB'])
+  })
+
   it('does not crash on a body with no segments', () => {
     render(
       <MDConstraintsRenderer

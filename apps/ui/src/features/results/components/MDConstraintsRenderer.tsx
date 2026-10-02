@@ -1,7 +1,7 @@
 import React from 'react'
 import { Box, Chip, Tooltip, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
-import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
+import type { ChainMolType, MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 import {
   BODY_COLORS,
   BODY_LABELS,
@@ -108,19 +108,50 @@ const ChainTrackRow = ({ track }: { track: ChainTrack }) => (
 )
 
 type LineRange = { chainId: string; start: number; stop: number }
+type MolTypes = Partial<Record<string, ChainMolType>>
+
+const MOL_TYPE_LABELS: Record<ChainMolType, string> = {
+  PRO: 'PRO',
+  DNA: 'DNA',
+  RNA: 'RNA',
+  CAR: 'CARB'
+}
+const MOL_TYPE_NAMES: Record<ChainMolType, string> = {
+  PRO: 'Protein',
+  DNA: 'DNA',
+  RNA: 'RNA',
+  CAR: 'Carbohydrate'
+}
+
+const MolTypeChip = ({ type }: { type: ChainMolType }) => (
+  <Tooltip
+    title={MOL_TYPE_NAMES[type]}
+    arrow
+  >
+    <Chip
+      size="small"
+      variant="outlined"
+      label={MOL_TYPE_LABELS[type]}
+      data-testid="mol-type-chip"
+      sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary' }}
+    />
+  </Tooltip>
+)
 
 const ConstraintLine = ({
   tag,
   color,
   tagTextColor = '#fff',
   name,
-  ranges
+  ranges,
+  molTypes
 }: {
   tag: string
   color: string
   tagTextColor?: string
   name?: string
   ranges: LineRange[]
+  molTypes: MolTypes
 }) => (
   <Box
     sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}
@@ -143,24 +174,41 @@ const ConstraintLine = ({
         {name}
       </Typography>
     )}
-    {ranges.map(({ chainId, start, stop }) => (
-      <Chip
-        key={`${chainId}-${start}`}
-        size="small"
-        variant="outlined"
-        label={rangeLabel(chainId, start, stop)}
-        sx={{
-          fontVariantNumeric: 'tabular-nums',
-          borderColor: color,
-          backgroundColor: alpha(color, 0.12)
-        }}
-      />
-    ))}
+    {ranges.map(({ chainId, start, stop }, i) => {
+      const molType = molTypes[chainId]
+      const prev = ranges[i - 1]
+      // One type chip per group of consecutive ranges with the same molecule type
+      const startsGroup = !prev || molTypes[prev.chainId] !== molType
+      return (
+        <React.Fragment key={`${chainId}-${start}`}>
+          {molType && startsGroup && <MolTypeChip type={molType} />}
+          <Chip
+            size="small"
+            variant="outlined"
+            label={rangeLabel(chainId, start, stop)}
+            sx={{
+              fontVariantNumeric: 'tabular-nums',
+              borderColor: color,
+              backgroundColor: alpha(color, 0.12)
+            }}
+          />
+        </React.Fragment>
+      )
+    })}
   </Box>
 )
 
-const BodyLine = ({ body, type }: { body: Body; type: BodyType }) => (
+const BodyLine = ({
+  body,
+  type,
+  molTypes
+}: {
+  body: Body
+  type: BodyType
+  molTypes: MolTypes
+}) => (
   <ConstraintLine
+    molTypes={molTypes}
     tag={BODY_LABELS[type]}
     color={BODY_COLORS[type]}
     name={body.name}
@@ -179,7 +227,14 @@ interface MDConstraintsRendererProps {
 export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
   constraints
 }) => {
-  const { fixed_bodies = [], rigid_bodies = [] } = constraints
+  const {
+    fixed_bodies = [],
+    rigid_bodies = [],
+    chain_mol_types = []
+  } = constraints
+  const molTypes: MolTypes = Object.fromEntries(
+    chain_mol_types.map(({ chain_id, mol_type }) => [chain_id, mol_type])
+  )
 
   if (fixed_bodies.length === 0 && rigid_bodies.length === 0) {
     return (
@@ -226,6 +281,7 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
             key={`fixed-${body.name}`}
             body={body}
             type="fixed"
+            molTypes={molTypes}
           />
         ))}
         {rigid_bodies.map((body) => (
@@ -233,6 +289,7 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
             key={`rigid-${body.name}`}
             body={body}
             type="rigid"
+            molTypes={molTypes}
           />
         ))}
         {flexible.length > 0 && (
@@ -241,6 +298,7 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
             color={FLEXIBLE_COLOR}
             tagTextColor="rgba(0, 0, 0, 0.87)"
             ranges={flexible}
+            molTypes={molTypes}
           />
         )}
       </Box>

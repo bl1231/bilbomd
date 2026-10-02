@@ -5,7 +5,9 @@ import {
   validateYamlConstraints,
   validateInpConstraints,
   extractConstraintsFromYaml,
-  buildChainSegidMap
+  buildChainSegidMap,
+  buildChainMolTypes,
+  buildChainMolTypesFromInp
 } from './constraintUtils.js'
 import fs from 'fs-extra'
 import path from 'path'
@@ -333,6 +335,62 @@ return`
       ].join('\n')
       await fs.writeFile(pdbPath, content)
       expect(await buildChainSegidMap(pdbPath)).toEqual({ A: 'PROA' })
+    })
+  })
+
+  describe('buildChainMolTypes', () => {
+    const makePdbLine = (record: string, resName: string, chainId: string) =>
+      record.padEnd(6) + '    1  CA  ' + resName.padEnd(3) + ' ' + chainId
+
+    test('returns one entry per recognized chain', async () => {
+      const pdbPath = path.join(tempDir, 'complex.pdb')
+      const content = [
+        makePdbLine('ATOM', 'ALA', 'A'),
+        makePdbLine('ATOM', 'GLY', 'A'),
+        makePdbLine('ATOM', 'DA', 'D'),
+        makePdbLine('ATOM', 'A', 'R'),
+        makePdbLine('HETATM', 'NAG', 'G'),
+        makePdbLine('ATOM', 'XYZ', 'X')
+      ].join('\n')
+      await fs.writeFile(pdbPath, content)
+      expect(await buildChainMolTypes(pdbPath)).toEqual([
+        { chain_id: 'A', mol_type: 'PRO' },
+        { chain_id: 'D', mol_type: 'DNA' },
+        { chain_id: 'R', mol_type: 'RNA' },
+        { chain_id: 'G', mol_type: 'CAR' }
+      ])
+    })
+  })
+
+  describe('buildChainMolTypesFromInp', () => {
+    test('reads molecule types from pdb2crd-style segids', async () => {
+      const inpPath = path.join(tempDir, 'mol-types.inp')
+      await fs.writeFile(
+        inpPath,
+        [
+          '! define ignored sele ( resid 1:5 .and. segid RNAZ ) end',
+          'define fixed1 sele ( resid 1:639 .and. segid PROA ) end',
+          'define fixed2 sele ( resid 9:236 .and. segid PROA ) end',
+          'define fixed3 sele ( resid 1:20 .and. segid DNAD ) end',
+          'define fixed4 sele ( resid 1:4 .and. segid CALg ) end',
+          'cons fix sele fixed1 .or. fixed2 .or. fixed3 .or. fixed4 end',
+          'return'
+        ].join('\n')
+      )
+      expect(await buildChainMolTypesFromInp(inpPath)).toEqual([
+        { chain_id: 'A', mol_type: 'PRO' },
+        { chain_id: 'D', mol_type: 'DNA' },
+        { chain_id: 'g', mol_type: 'CAR' }
+      ])
+    })
+
+    test('leaves out segids without a known prefix', async () => {
+      const inpPath = path.join(tempDir, 'custom-segid.inp')
+      await fs.writeFile(
+        inpPath,
+        'define fixed1 sele ( resid 1:10 .and. segid HEAV ) end\ncons fix sele fixed1 end\nreturn\n'
+      )
+      expect(await buildChainMolTypesFromInp(inpPath)).toEqual([])
     })
   })
 

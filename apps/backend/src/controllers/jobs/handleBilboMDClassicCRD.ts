@@ -19,7 +19,8 @@ import { config } from '../../config/config.js'
 import {
   validateInpConstraints,
   convertInpToYaml,
-  extractConstraintsFromYaml
+  extractConstraintsFromYaml,
+  buildChainMolTypesFromInp
 } from '@bilbomd/md-utils'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { isResubmitRequest } from './utils/resubmission.js'
@@ -205,7 +206,10 @@ const handleBilboMDClassicCRD = async (
         await validateInpConstraints(constraintFilePath)
         const yamlContent = await convertInpToYaml(constraintFilePath, logger)
         const mdConstraints = extractConstraintsFromYaml(yamlContent)
-        newJob.md_constraints = mdConstraints
+        newJob.md_constraints = {
+          ...mdConstraints,
+          chain_mol_types: await buildChainMolTypesFromInp(constraintFilePath)
+        }
         await newJob.save()
         logger.info(
           `MD constraints stored in MongoDB for job ${newJob._id.toString()}`
