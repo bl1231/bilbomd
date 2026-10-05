@@ -436,14 +436,14 @@ update_status() {
   sed -i "s/^$step: .*/$step: $status/" "$STATUS_FILE"
 }
 
-# Check exit code and cancel the SLURM job if non-zero
+# Check exit code and fail the SLURM job if non-zero. Exiting non-zero makes
+# Slurm record FAILED; scancel would record CANCELLED, as if a user stopped it.
 check_exit_code() {
   local exit_code=$1
   local step=$2
   if [ $exit_code -ne 0 ]; then
-    echo "Process in $step failed with exit code $exit_code. Cancelling SLURM job."
+    echo "Process in $step failed with exit code $exit_code. Failing SLURM job."
     update_status $step Error
-    scancel $SLURM_JOB_ID
     exit $exit_code
   fi
   }
@@ -491,7 +491,6 @@ pdb_files=($(find $WORKDIR/alphafold -name "*_relaxed_rank_001_*.pdb" -type f))
 if [ ${#pdb_files[@]} -eq 0 ]; then
     echo "ERROR: No rank_001 relaxed PDB files found in alphafold output directory"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 elif [ ${#pdb_files[@]} -gt 1 ]; then
     echo "WARNING: Multiple rank_001 PDB files found, using first one:"
@@ -506,7 +505,6 @@ cp "${pdb_files[0]}" $WORKDIR/af-rank1.pdb
 if [ $? -ne 0 ]; then
     echo "ERROR: Failed to copy PDB file"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 
@@ -516,7 +514,6 @@ pae_files=($(find $WORKDIR/alphafold -name "*_scores_rank_001_*.json" -type f))
 if [ ${#pae_files[@]} -eq 0 ]; then
     echo "ERROR: No rank_001 PAE scores files found in alphafold output directory"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 elif [ ${#pae_files[@]} -gt 1 ]; then
     echo "WARNING: Multiple rank_001 PAE files found, using first one:"
@@ -531,7 +528,6 @@ cp "${pae_files[0]}" $WORKDIR/af-pae.json
 if [ $? -ne 0 ]; then
     echo "ERROR: Failed to copy PAE file"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 
@@ -539,14 +535,12 @@ fi
 if [ ! -s $WORKDIR/af-rank1.pdb ]; then
     echo "ERROR: af-rank1.pdb is missing or empty"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 
 if [ ! -s $WORKDIR/af-pae.json ]; then
     echo "ERROR: af-pae.json is missing or empty"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 
@@ -671,7 +665,6 @@ srun --job-name pdb2crd \\
 if [ ! -f "$WORKDIR/pdb2crd_output.txt" ]; then
     echo "ERROR: pdb2crd output file not found" >&2
     update_status pdb2crd Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 
@@ -681,7 +674,6 @@ num_inp_files=$(wc -l < $WORKDIR/pdb2crd_output.txt)
 if [ "$num_inp_files" -eq 0 ]; then
     echo "ERROR: No input files were parsed, check the output for errors" >&2
     update_status pdb2crd Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 

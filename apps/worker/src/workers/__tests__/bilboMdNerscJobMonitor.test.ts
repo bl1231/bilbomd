@@ -325,15 +325,18 @@ describe('monitorAndCleanupJobs usage events', () => {
     vi.restoreAllMocks()
   })
 
-  // Failed, cancelled and running jobs are fetched again on every pass
-  const runPass = async (status: IJob['status'], slurmState: string) => {
+  const runPass = async (
+    status: IJob['status'],
+    slurmState: string,
+    statusFile = ''
+  ) => {
     const job = makeRealJob()
     job.status = status
     vi.spyOn(Job, 'find').mockReturnValue({
       exec: vi.fn().mockResolvedValue([job])
     } as unknown as ReturnType<typeof Job.find>)
     mockApiResponse([{ state: slurmState, qos: 'gpu_debug' }])
-    vi.mocked(getSlurmStatusFile).mockResolvedValue('')
+    vi.mocked(getSlurmStatusFile).mockResolvedValue(statusFile)
     await monitorAndCleanupJobs()
     return job
   }
@@ -363,6 +366,44 @@ describe('monitorAndCleanupJobs usage events', () => {
     vi.mocked(recordWorkerUsageEvent).mockClear()
     await runPass('Cancelled', 'CANCELLED')
     expect(recordedEvents()).toEqual([])
+  })
+
+  // A Slurm script that scancels itself after a failed step shows up as
+  // CANCELLED, with the failed step marked Error in status.txt
+  it('reports a self-cancelled job with a failed step as Failed', async () => {
+    const job = await runPass(
+      'Running',
+      'CANCELLED by 62704',
+      'minimize: Error\nmd: Waiting\n'
+    )
+
+    expect(recordedEvents()).toEqual(['job_failed'])
+    expect(sendJobFailedEmail).toHaveBeenCalledExactlyOnceWith(job)
+    expect(job.status).toBe('Failed')
+  })
+
+  it('keeps a cancelled job with no failed step as Cancelled', async () => {
+    const job = await runPass(
+      'Running',
+      'CANCELLED by 62704',
+      'minimize: Success\nmd: Running\n'
+    )
+
+    expect(recordedEvents()).toEqual(['job_cancelled'])
+    expect(sendJobFailedEmail).not.toHaveBeenCalled()
+    expect(job.status).toBe('Cancelled')
+  })
+
+  it('stops polling jobs that are Completed, Failed or Cancelled', async () => {
+    await runPass('Running', 'RUNNING')
+
+    const monitorQuery = vi
+      .mocked(Job.find)
+      .mock.calls.map(([filter]) => filter as Record<string, unknown>)
+      .find((filter) => 'nersc.state' in filter)
+    expect(monitorQuery?.status).toEqual({
+      $nin: ['Completed', 'Failed', 'Cancelled']
+    })
   })
 
   it('records job_started only when the job starts running', async () => {

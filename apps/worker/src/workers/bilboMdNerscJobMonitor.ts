@@ -31,9 +31,18 @@ import pLimit from 'p-limit'
 import moment from 'moment-timezone'
 import { watchJobsForChanges } from '../helpers/jobEvents.js'
 
+// Slurm will not change these jobs again, so there is nothing left to poll.
+// Error is not here: a failed NERSC query or cleanup sets it, and the next
+// pass may well succeed.
+const FINISHED_JOB_STATUSES = [
+  JobStatus.Completed,
+  JobStatus.Failed,
+  JobStatus.Cancelled
+]
+
 const fetchIncompleteJobs = async (): Promise<IJob[]> => {
   return DBJob.find({
-    status: { $ne: JobStatus.Completed }, // Jobs with a non-Completed status
+    status: { $nin: FINISHED_JOB_STATUSES },
     cleanup_in_progress: false,
     'nersc.state': { $ne: null } // Exclude jobs where nersc.state is undefined or null
   }).exec()
@@ -198,6 +207,14 @@ const markJobAsCancelled = async (job: IJob): Promise<void> => {
   }
 }
 
+// Scripts generated before the self-scancel was removed cancel their own Slurm
+// job when a step fails, so Slurm reports CANCELLED for what is a failure.
+// status.txt tells the two apart: a user cancellation leaves no step in Error.
+const hasFailedSlurmStep = (job: IJob): boolean =>
+  Object.entries(plainSteps(job.steps)).some(
+    ([name, step]) => !name.startsWith('nersc_') && step?.status === 'Error'
+  )
+
 const markJobAsPending = async (job: IJob): Promise<void> => {
   try {
     job.status = 'Pending'
@@ -296,8 +313,8 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
             return
           }
 
-          // Failed, cancelled and running jobs are fetched again on every
-          // pass; only record their usage events when the status changes.
+          // Running jobs are fetched again on every pass; only record usage
+          // events when the status changes.
           const previousStatus = job.status
 
           // Step 2: Update the job state in MongoDB
@@ -318,6 +335,24 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
             started && completed
               ? completed.getTime() - started.getTime()
               : undefined
+
+          const reportFailedJob = async (reason: string) => {
+            if (previousStatus === 'Failed') return
+            await recordWorkerUsageEvent({
+              uuid: job.uuid,
+              pipeline,
+              eventType: 'job_failed',
+              jobId: job._id,
+              context,
+              nersc: {
+                jobid: job.nersc?.jobid,
+                qos: nerscState.qos ?? undefined
+              },
+              metadata: { stage: 'monitor', reason }
+            })
+            await markJobAsFailed(job)
+            await sendJobFailedEmail(job)
+          }
 
           switch (nerscState.state) {
             case 'COMPLETED':
@@ -351,25 +386,18 @@ const monitorAndCleanupJobs = async (): Promise<void> => {
               logger.warn(
                 `Job ${job.nersc?.jobid} failed with state: ${nerscState.state}`
               )
-              if (previousStatus === 'Failed') break
-              await recordWorkerUsageEvent({
-                uuid: job.uuid,
-                pipeline,
-                eventType: 'job_failed',
-                jobId: job._id,
-                context,
-                nersc: {
-                  jobid: job.nersc?.jobid,
-                  qos: nerscState.qos ?? undefined
-                },
-                metadata: { stage: 'monitor', reason: nerscState.state }
-              })
-              await markJobAsFailed(job)
-              await sendJobFailedEmail(job)
+              await reportFailedJob(nerscState.state)
               break
 
             case 'CANCELLED':
             case 'PREEMPTED':
+              if (nerscState.state === 'CANCELLED' && hasFailedSlurmStep(job)) {
+                logger.warn(
+                  `Job ${job.nersc?.jobid} was cancelled by its own Slurm script after a step failed.`
+                )
+                await reportFailedJob('STEP_ERROR')
+                break
+              }
               logger.info(`Job ${job.nersc?.jobid} was cancelled or preempted.`)
               if (previousStatus === 'Cancelled') break
               await recordWorkerUsageEvent({
