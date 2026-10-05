@@ -75,6 +75,21 @@ def test_carbohydrate_residues_match_the_typescript_list():
     assert gen.CARBOHYDRATE_RESIDUES == set(re.findall(r"'(\w+)'", block.group(1)))
 
 
+def test_known_ions_match_prep_pdb():
+    source = (HERE.parent / "prep_pdb.py").read_text()
+    block = re.search(r"KNOWN_IONS = frozenset\(\[(.*?)\]\)", source, re.DOTALL)
+    assert block, "KNOWN_IONS not found in prep_pdb.py"
+    assert gen.KNOWN_IONS == set(re.findall(r'"(\w+)"', block.group(1)))
+
+
+def test_waters_and_ions_are_removed_from_the_pdb(tmp_path):
+    water = "HETATM 4001  O   HOH A 601      31.104  26.134  -6.504  1.00  0.00           O"
+    zinc = "HETATM 4002 ZN    ZN A 602      32.104  27.134  -6.504  1.00  0.00          ZN"
+    _config(tmp_path, {"pdb_file": "in.pdb"}, [PROTEIN_ATOM, NAG_ATOM, water, zinc, "END"])
+
+    assert (tmp_path / "in.pdb").read_text().splitlines() == [PROTEIN_ATOM, NAG_ATOM, "END"]
+
+
 def test_plain_protein_uses_amber19(tmp_path):
     cfg = _config(tmp_path, {"pdb_file": "in.pdb"}, [PROTEIN_ATOM])
 

@@ -129,6 +129,49 @@ CARBOHYDRATE_RESIDUES = frozenset(
 CHARMM36_BACKBONE_RESIDUES = frozenset({"SEP", "TPO", "PTR", "CYM", "CYSP"})
 
 
+# Ions removed along with waters. Keep in sync with KNOWN_IONS in
+# apps/worker/scripts/prep_pdb.py (test_openmm_config.py checks this).
+KNOWN_IONS = frozenset(
+    {
+        "LI", "NA", "K", "RB", "CS",
+        "MG", "CA", "SR", "BA",
+        "SC", "TI", "V", "CR", "MN", "FE", "CO", "NI", "CU", "ZN", "MO", "CD", "HG",
+        "AL", "GA", "IN", "SN", "PB", "B", "SE", "AS",
+        "CL", "BR", "F",
+        "SO4", "PO4", "NO3", "CN",
+    }
+)  # fmt: skip
+
+
+def strip_waters_and_ions(pdb_path):
+    """Remove waters and ions from the PDB in the work dir, in place.
+
+    The local worker does this with scripts/prep_pdb.py before it writes
+    openmm_config.yaml: neither has a template in the implicit-solvent force
+    fields, so minimize fails on them.
+    """
+    try:
+        with open(pdb_path, "r") as f:
+            lines = f.readlines()
+    except OSError:
+        # AlphaFold jobs have no PDB until the Slurm job has run ColabFold
+        return
+    unwanted = KNOWN_IONS | {"HOH"}
+    kept = [
+        line
+        for line in lines
+        if not (
+            line.startswith(("ATOM", "HETATM")) and line[17:20].strip() in unwanted
+        )
+    ]
+    if len(kept) != len(lines):
+        with open(pdb_path, "w") as f:
+            f.writelines(kept)
+    print(
+        f"Removed {len(lines) - len(kept)} water/ion record(s) from {pdb_path}"
+    )
+
+
 def pdb_residue_names(pdb_path):
     names = set()
     try:
@@ -195,13 +238,15 @@ def prepare_openmm_config(config, params):
         )
 
     pdb_file = params.get("pdb_file", "input.pdb")
+    pdb_path = os.path.join(config["workdir"], pdb_file)
+    strip_waters_and_ions(pdb_path)
 
     # Build OpenMM config dictionary
     openmm_config = {
         "input": {
             "dir": "/bilbomd/work",
             "pdb_file": pdb_file,
-            **select_forcefield(os.path.join(config["workdir"], pdb_file)),
+            **select_forcefield(pdb_path),
         },
         "output": {
             "output_dir": "/bilbomd/work/openmm",
