@@ -167,3 +167,20 @@ def test_failed_steps_do_not_cancel_the_slurm_job(filename):
     source = (HERE / filename).read_text()
     commands = [line.strip() for line in source.splitlines() if not line.lstrip().startswith("#")]
     assert not [line for line in commands if line.startswith("scancel")]
+
+
+def test_rg_plot_failure_does_not_fail_the_job():
+    # The plot is not used by the results step, and plot_rgyrs.py runs from a
+    # separately built image that can lag the CSV format written by rgyr.py.
+    section = gen.generate_analysis_section({"num_cores": 4, "workdir": "/w"})
+    assert "check_exit_code $ANALYSIS_EXIT" not in section
+    assert "update_status analysis Error" in section
+    assert "update_status analysis Success" in section
+
+
+def test_rg_plot_reads_the_column_rgyr_writes():
+    rgyr = (HERE.parent / "openmm" / "utils" / "rgyr.py").read_text()
+    plot = (HERE.parent / "openmm" / "plot_rgyrs.py").read_text()
+    assert '"Step", "Rgyr_A", "Dmax_A"' in rgyr
+    assert 'df["Rgyr_A"]' in plot
+    assert "Radius_of_Gyration_nm" not in plot
