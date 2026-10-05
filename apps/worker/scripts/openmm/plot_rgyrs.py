@@ -26,9 +26,9 @@ for subdir in sorted(os.listdir(base_dir)):
         csv_path = os.path.join(full_path, csv_files[0])
         if os.path.exists(csv_path):
             df = pd.read_csv(csv_path)
-            df["Rg_Angstrom"] = df["Radius_of_Gyration_nm"]
+            # utils/rgyr.py writes Step,Rgyr_A,Dmax_A
             label = subdir.replace("rg_", "Rg = ")
-            plot_data.append((df["Step"], df["Rg_Angstrom"], label))
+            plot_data.append((df["Step"], df["Rgyr_A"], label))
             rg_value = float(subdir.split("_")[1])
             rg_targets.append((rg_value, label))
 

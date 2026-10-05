@@ -918,9 +918,15 @@ srun --ntasks=1 \\
             python /app/scripts/openmm/plot_rgyrs.py /bilbomd/work/openmm/md
         "
 ANALYSIS_EXIT=$?
-check_exit_code $ANALYSIS_EXIT analysis
-echo "Additional analysis complete."
-update_status analysis Success
+# The Rg plot is not used by the results step, so a failure here is logged and
+# the job carries on; the plot_rgyrs.py in $BILBOMD_WORKER may lag utils/rgyr.py.
+if [ $ANALYSIS_EXIT -ne 0 ]; then
+    echo "WARNING: plot_rgyrs.py failed with exit code $ANALYSIS_EXIT; continuing without the Rg plot."
+    update_status analysis Error
+else
+    echo "Additional analysis complete."
+    update_status analysis Success
+fi
 """
     return section
 
