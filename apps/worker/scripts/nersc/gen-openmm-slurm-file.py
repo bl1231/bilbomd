@@ -36,7 +36,7 @@ def setup_environment(uuid):
     workdir = f"{pscratch}/bilbomd/{env_dir}/{uuid}"
 
     # Docker images
-    openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.12"
+    openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.13"
     bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.30"
     af_worker = "bilbomd/bilbomd-colabfold:0.0.10"
 
@@ -111,21 +111,142 @@ def prepare_input(workdir, upload_dir):
 # -----------------------------------------------------------------------------
 
 
-def prepare_openmm_config(config, params):
-    # Locate const.inp (optional for Auto/AlphaFold pipelines)
-    const_inp_path = os.path.join(config["workdir"], "const.inp")
-    const_exists = os.path.exists(const_inp_path)
-    if not const_exists:
-        print(
-            f"Warning: {const_inp_path} not found. Proceeding with empty constraints."
+# Residue names that put model_prep.py into glycoprotein (GLYCAM) mode.
+# Keep in sync with CARBOHYDRATE_RESIDUES in
+# packages/bilbomd-types/src/pdbResidues.ts (test_openmm_config.py checks this).
+CARBOHYDRATE_RESIDUES = frozenset(
+    {
+        "AFL", "ALL", "ALT", "BMA", "BGC", "BOG", "FCA", "FCB", "FMF", "FUC",
+        "FUL", "G4S", "GAL", "GLA", "GLB", "GLC", "GLS", "GSA", "GUL", "IDO",
+        "LAK", "LAT", "MAF", "MAL", "MAN", "NAG", "NAN", "NGA", "RHM", "RIB",
+        "SIA", "SLB", "TAL", "XYL", "AMA", "BGL",
+    }
+)  # fmt: skip
+
+# Backbone-integrated residues in CHARMM36 but absent from AMBER19.
+# SEP=phosphoserine, TPO=phosphothreonine, PTR=phosphotyrosine,
+# CYM=deprotonated cysteine, CYSP=phosphocysteine
+CHARMM36_BACKBONE_RESIDUES = frozenset({"SEP", "TPO", "PTR", "CYM", "CYSP"})
+
+
+# Ions removed along with waters. Keep in sync with KNOWN_IONS in
+# apps/worker/scripts/prep_pdb.py (test_openmm_config.py checks this).
+KNOWN_IONS = frozenset(
+    {
+        "LI", "NA", "K", "RB", "CS",
+        "MG", "CA", "SR", "BA",
+        "SC", "TI", "V", "CR", "MN", "FE", "CO", "NI", "CU", "ZN", "MO", "CD", "HG",
+        "AL", "GA", "IN", "SN", "PB", "B", "SE", "AS",
+        "CL", "BR", "F",
+        "SO4", "PO4", "NO3", "CN",
+    }
+)  # fmt: skip
+
+
+def strip_waters_and_ions(pdb_path):
+    """Remove waters and ions from the PDB in the work dir, in place.
+
+    The local worker does this with scripts/prep_pdb.py before it writes
+    openmm_config.yaml: neither has a template in the implicit-solvent force
+    fields, so minimize fails on them.
+    """
+    try:
+        with open(pdb_path, "r") as f:
+            lines = f.readlines()
+    except OSError:
+        # AlphaFold jobs have no PDB until the Slurm job has run ColabFold
+        return
+    unwanted = KNOWN_IONS | {"HOH"}
+    kept = [
+        line
+        for line in lines
+        if not (
+            line.startswith(("ATOM", "HETATM")) and line[17:20].strip() in unwanted
         )
+    ]
+    if len(kept) != len(lines):
+        with open(pdb_path, "w") as f:
+            f.writelines(kept)
+    print(
+        f"Removed {len(lines) - len(kept)} water/ion record(s) from {pdb_path}"
+    )
+
+
+def pdb_residue_names(pdb_path):
+    names = set()
+    try:
+        with open(pdb_path, "r") as f:
+            for line in f:
+                if line.startswith(("ATOM", "HETATM")):
+                    names.add(line[17:20].strip().upper())
+    except OSError:
+        # AlphaFold jobs have no PDB until the Slurm job has run ColabFold
+        pass
+    return names
+
+
+def select_forcefield(pdb_path):
+    """Pick the force field for a PDB, the same way the local worker does.
+
+    Mirrors buildOpenMMConfigForJob in src/services/functions/openmm-functions.ts
+    so a job gets the same openmm_config.yaml on Perlmutter as on Hyperion.
+    """
+    residue_names = pdb_residue_names(pdb_path)
+    has_carbohydrates = bool(residue_names & CARBOHYDRATE_RESIDUES)
+    charmm36_residues = sorted(residue_names & CHARMM36_BACKBONE_RESIDUES)
+    has_charmm36_residues = bool(charmm36_residues)
+
+    if has_carbohydrates:
+        print(f"Glycoprotein detected in {pdb_path}. Using the GLYCAM force field.")
+        if has_charmm36_residues:
+            print(
+                f"Warning: {', '.join(charmm36_residues)} found alongside glycans. "
+                "GLYCAM takes priority; CHARMM36 will not be used."
+            )
+        forcefield = ["amber19-all.xml", "amber14/GLYCAM_06j-1.xml", "implicit/gbn2.xml"]
+    elif has_charmm36_residues:
+        print(
+            f"{', '.join(charmm36_residues)} detected in {pdb_path}. "
+            "Using the CHARMM36 force field."
+        )
+        forcefield = ["charmm36_2024.xml", "implicit/gbn2.xml"]
+    else:
+        forcefield = ["amber19-all.xml", "implicit/gbn2.xml"]
+
+    return {
+        "forcefield": forcefield,
+        "has_carbohydrates": has_carbohydrates,
+        "has_charmm36_residues": has_charmm36_residues,
+    }
+
+
+def prepare_openmm_config(config, params):
+    # The backend converts the uploaded constraints to openmm_const.yml for
+    # OpenMM jobs. Fall back to the CHARMM file, which keeps its uploaded name
+    # (const_inp_file). Auto/AlphaFold jobs have neither: their constraints
+    # come from the PAE matrix once the Slurm job is running.
+    const_yaml_path = os.path.join(config["workdir"], "openmm_const.yml")
+    const_yaml_exists = os.path.exists(const_yaml_path)
+    const_inp_path = os.path.join(
+        config["workdir"], params.get("const_inp_file") or "const.inp"
+    )
+    const_exists = not const_yaml_exists and os.path.exists(const_inp_path)
+    if not const_yaml_exists and not const_exists:
+        print(
+            f"Warning: neither {const_yaml_path} nor {const_inp_path} found. "
+            "Proceeding with empty constraints."
+        )
+
+    pdb_file = params.get("pdb_file", "input.pdb")
+    pdb_path = os.path.join(config["workdir"], pdb_file)
+    strip_waters_and_ions(pdb_path)
 
     # Build OpenMM config dictionary
     openmm_config = {
         "input": {
             "dir": "/bilbomd/work",
-            "pdb_file": params.get("pdb_file", "input.pdb"),
-            "forcefield": ["charmm36.xml", "implicit/hct.xml"],
+            "pdb_file": pdb_file,
+            **select_forcefield(pdb_path),
         },
         "output": {
             "output_dir": "/bilbomd/work/openmm",
@@ -247,6 +368,14 @@ def prepare_openmm_config(config, params):
 
     rigid_bodies = list(rigid_bodies_dict.values())
 
+    if const_yaml_exists:
+        with open(const_yaml_path, "r") as f:
+            const_cfg = yaml.safe_load(f) or {}
+        # Wrapped ({constraints: {...}}) or flat ({fixed_bodies: [...], ...})
+        const_cfg = const_cfg.get("constraints") or const_cfg
+        fixed_bodies = const_cfg.get("fixed_bodies") or []
+        rigid_bodies = const_cfg.get("rigid_bodies") or []
+
     # Merge into openmm_config
     openmm_config["constraints"]["fixed_bodies"] = fixed_bodies
     openmm_config["constraints"]["rigid_bodies"] = rigid_bodies
@@ -352,14 +481,14 @@ update_status() {
   sed -i "s/^$step: .*/$step: $status/" "$STATUS_FILE"
 }
 
-# Check exit code and cancel the SLURM job if non-zero
+# Check exit code and fail the SLURM job if non-zero. Exiting non-zero makes
+# Slurm record FAILED; scancel would record CANCELLED, as if a user stopped it.
 check_exit_code() {
   local exit_code=$1
   local step=$2
   if [ $exit_code -ne 0 ]; then
-    echo "Process in $step failed with exit code $exit_code. Cancelling SLURM job."
+    echo "Process in $step failed with exit code $exit_code. Failing SLURM job."
     update_status $step Error
-    scancel $SLURM_JOB_ID
     exit $exit_code
   fi
   }
@@ -403,7 +532,6 @@ pdb_files=($(find $WORKDIR/alphafold -name "*_relaxed_rank_001_*.pdb" -type f))
 if [ ${#pdb_files[@]} -eq 0 ]; then
     echo "ERROR: No rank_001 relaxed PDB files found in alphafold output directory"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 elif [ ${#pdb_files[@]} -gt 1 ]; then
     echo "WARNING: Multiple rank_001 PDB files found, using first one:"
@@ -418,7 +546,6 @@ cp "${pdb_files[0]}" $WORKDIR/af-rank1.pdb
 if [ $? -ne 0 ]; then
     echo "ERROR: Failed to copy PDB file"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 
@@ -428,7 +555,6 @@ pae_files=($(find $WORKDIR/alphafold -name "*_scores_rank_001_*.json" -type f))
 if [ ${#pae_files[@]} -eq 0 ]; then
     echo "ERROR: No rank_001 PAE scores files found in alphafold output directory"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 elif [ ${#pae_files[@]} -gt 1 ]; then
     echo "WARNING: Multiple rank_001 PAE files found, using first one:"
@@ -443,7 +569,6 @@ cp "${pae_files[0]}" $WORKDIR/af-pae.json
 if [ $? -ne 0 ]; then
     echo "ERROR: Failed to copy PAE file"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 
@@ -451,14 +576,12 @@ fi
 if [ ! -s $WORKDIR/af-rank1.pdb ]; then
     echo "ERROR: af-rank1.pdb is missing or empty"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 
 if [ ! -s $WORKDIR/af-pae.json ]; then
     echo "ERROR: af-pae.json is missing or empty"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 
@@ -476,13 +599,11 @@ if [ -f $WORKDIR/openmm_config.yaml ]; then
     else
         echo "ERROR: Failed to update openmm_config.yaml"
         update_status alphafold Error
-        scancel $SLURM_JOB_ID
         exit 1
     fi
 else
     echo "ERROR: openmm_config.yaml not found in $WORKDIR"
     update_status alphafold Error
-    scancel $SLURM_JOB_ID
     exit 1
 fi
 

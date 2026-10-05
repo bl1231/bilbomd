@@ -55,6 +55,22 @@ RUN git clone https://github.com/openmm/openmm.git && \
     make PythonInstall && \
     ldconfig
 
+# --- GAFF ligand stack (same packages as the Hyperion worker base image) ---
+# model_prep.py parameterizes organic cofactors (FAD, NAD, ...) with GAFF2 via
+# openmmforcefields. These packages depend on OpenMM, so conda brings its own
+# build along. Drop that copy and reinstall the source-built wrappers so the
+# OpenMM compiled above (the one that runs on Perlmutter GPU nodes) is the only
+# one in the env.
+RUN conda install -y -n openmm \
+    python=3.12 \
+    openmm=${OPENMM_TAG} \
+    openmmforcefields openff-toolkit rdkit ambertools lxml && \
+    conda remove -y -n openmm --force openmm && \
+    conda clean -afy && \
+    cd /tmp/openmm/build && \
+    make install && \
+    make PythonInstall
+
 # --- Build & install PDBFixer ---
 WORKDIR /tmp
 RUN git clone https://github.com/openmm/pdbfixer.git && \
@@ -84,7 +100,10 @@ RUN echo "${OPENMM_PREFIX}/lib" > /etc/ld.so.conf.d/openmm.conf && ldconfig
 # copy in the bilbomd worker code
 COPY apps/worker/scripts/openmm /app/scripts/openmm
 
-# (Optional) verify python import during build
-RUN python -c "import openmm, sys; print('OpenMM', openmm.__version__, 'Python', sys.version)"
+# Verify the imports, and that the source-built OpenMM is the one in use
+RUN python -c "import sys, openmm, openmm.version as v, pdbfixer, openmmforcefields, openff.toolkit, rdkit, lxml; \
+    print('OpenMM', openmm.__version__, v.openmm_library_path, 'Python', sys.version); \
+    assert v.openmm_library_path.startswith('${OPENMM_PREFIX}'), v.openmm_library_path" && \
+    which antechamber
 
 
