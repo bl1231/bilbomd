@@ -1,5 +1,23 @@
 # @bilbomd/ui
 
+## 2.34.0
+
+### Minor Changes
+
+- 4b10be0: Validate and normalize experimental SAXS data the same way in the UI and the backend, so interactive and API-submitted jobs are treated equally. A single shared analyzer (`analyzeSaxsData`) now:
+
+  - Detects data in nm⁻¹ (from the file header, the q range and the Guinier Rg) and converts q to Å⁻¹; files whose units cannot be determined are rejected with a request to state them.
+  - Trims points below q = 0.005 Å⁻¹ and above q = 0.45 Å⁻¹ with a warning.
+  - Warns, but no longer rejects, when fewer than 100 points remain.
+
+  Job forms gain a "q units" selector (auto / Å⁻¹ / nm⁻¹) and show what will change in the file before submission. The API accepts the same `q_units` field and returns `saxs_warnings` with the job. Converted or trimmed files are rewritten in the job directory with the original kept as `<name>.orig`. SANS jobs are unchanged.
+
+### Patch Changes
+
+- 09ccb6a: Remove the duplicate "Runtime" column from the Jobs table on NERSC. It sat next to the Slurm-based "Run Time" column and was always empty there, because NERSC jobs have no job-level start time.
+- Updated dependencies [4b10be0]
+  - @bilbomd/bilbomd-types@1.11.0
+
 ## 2.33.0
 
 ### Minor Changes

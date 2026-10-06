@@ -1,5 +1,20 @@
 # @bilbomd/worker
 
+## 2.21.0
+
+### Minor Changes
+
+- 91155ad: Show step timing for NERSC jobs. The generated Slurm script now records when each step starts and finishes in `status.txt`, and the job monitor copies those times into the job, so the job page shows how long each step took, as it does for beamline jobs. The copy-results, results and email steps are timed as well, and the NERSC job step shows how long the Slurm job ran.
+
+### Patch Changes
+
+- b70183e: Fix NERSC OpenMM jobs that failed on glycoproteins and were reported as "Cancelled". The Perlmutter Slurm generator now picks the force field the same way the local worker does (GLYCAM for glycans, CHARMM36 for phosphorylated residues, Amber19 otherwise) reads the uploaded constraints from `openmm_const.yml` instead of dropping them, and strips waters and ions from the input PDB as the local worker does. A failed step now fails the Slurm job rather than cancelling it, so the owner gets a failure email, and the monitor stops polling jobs that are Failed or Cancelled. Requires the `bilbomd-openmm-worker:0.0.13` image on Perlmutter.
+- ae2e5d6: Fix the NERSC OpenMM `analysis` step, which failed every job with `KeyError: 'Radius_of_Gyration_nm'` because `plot_rgyrs.py` still read the old column name while `rgyr.py` writes `Rgyr_A`. The Rg plot is not used by the results, so a failure there no longer fails the Slurm job.
+- 21c984d: Reject PDB uploads in which two residues share a chain and residue number, such as a glycan numbered inside the protein's range. These files failed later in OpenMM minimization with an unhelpful template error; the upload now explains which residues collide and how to renumber them. The GLYCAM renaming step also stops with a clear message if it meets such a file.
+- Updated dependencies [4b10be0]
+  - @bilbomd/bilbomd-types@1.11.0
+  - @bilbomd/md-utils@1.2.1
+
 ## 2.20.0
 
 ### Minor Changes
