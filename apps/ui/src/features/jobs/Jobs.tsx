@@ -618,24 +618,25 @@ const Jobs = () => {
         valueGetter: (_value, row) => parseDateSafe(row.time_completed),
         valueFormatter: (value: unknown) => formatDateSafe(value)
       },
+      // NERSC has its own Queue Time / Run Time columns, taken from Slurm
       ...(!useNersc
         ? [
             {
               field: 'queuedTime',
               headerName: 'Queued',
               width: 100
+            },
+            {
+              field: 'totalRuntime',
+              headerName: 'Runtime',
+              width: 100,
+              cellClassName: (params: GridCellParams) => {
+                const status = params.row.status
+                return clsx({ running: status === 'Running' })
+              }
             }
           ]
         : []),
-      {
-        field: 'totalRuntime',
-        headerName: 'Runtime',
-        width: 100,
-        cellClassName: (params: GridCellParams) => {
-          const status = params.row.status
-          return clsx({ running: status === 'Running' })
-        }
-      },
       ...(useNersc
         ? [
             {
