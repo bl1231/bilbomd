@@ -1,3 +1,5 @@
+import type { QUnits } from '@bilbomd/bilbomd-types'
+
 export interface OpenFoldEntity {
   id: string
   name: string
@@ -10,5 +12,6 @@ export interface OpenFoldEntity {
 export interface NewOpenFoldJobFormValues {
   title: string
   dat_file: string
+  q_units: QUnits
   entities: OpenFoldEntity[]
 }

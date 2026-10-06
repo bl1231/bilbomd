@@ -5,7 +5,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "test": "vitest --run",
     "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.2"
   },
   "license": "MIT"
 }

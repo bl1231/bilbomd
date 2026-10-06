@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Express } from 'express'
 import * as yup from 'yup'
+import type { SaxsDataAnalysis } from '@bilbomd/bilbomd-types'
 import {
   requiredFile,
   fileExtTest,
@@ -8,6 +9,7 @@ import {
   fileNameLengthTest,
   noSpacesTest,
   saxsCheck,
+  qUnitsField,
   psfCheck,
   crdCheck,
   chainIdCheck,
@@ -167,18 +169,45 @@ describe('noSpacesTest', () => {
 // ---------------------------------------------------------------------------
 // saxsCheck
 // ---------------------------------------------------------------------------
+const saxsAnalysis = (
+  overrides: Partial<SaxsDataAnalysis>
+): SaxsDataAnalysis => ({
+  valid: true,
+  warnings: [],
+  changed: false,
+  points: [],
+  stats: { totalPoints: 0, keptPoints: 0, trimmedLowQ: 0, trimmedHighQ: 0 },
+  ...overrides
+})
+
 describe('saxsCheck', () => {
   it('passes when isSaxsData returns valid', async () => {
-    vi.mocked(validationFunctions.isSaxsData).mockResolvedValue({ valid: true })
+    vi.mocked(validationFunctions.isSaxsData).mockResolvedValue(
+      saxsAnalysis({ valid: true })
+    )
     const schema = yup.object({ file: saxsCheck() })
     await expect(schema.validate({ file: multerFile() })).resolves.toBeDefined()
   })
 
+  it('passes the sibling q_units field to isSaxsData', async () => {
+    vi.mocked(validationFunctions.isSaxsData).mockResolvedValue(
+      saxsAnalysis({ valid: true })
+    )
+    const schema = yup.object({ q_units: qUnitsField(), file: saxsCheck() })
+    const file = multerFile()
+    await schema.validate({ q_units: 'nm', file })
+    expect(validationFunctions.isSaxsData).toHaveBeenLastCalledWith(file, 'nm')
+    await schema.validate({ file })
+    expect(validationFunctions.isSaxsData).toHaveBeenLastCalledWith(
+      file,
+      'auto'
+    )
+  })
+
   it('fails with message when isSaxsData returns invalid', async () => {
-    vi.mocked(validationFunctions.isSaxsData).mockResolvedValue({
-      valid: false,
-      message: 'Not enough SAXS lines'
-    })
+    vi.mocked(validationFunctions.isSaxsData).mockResolvedValue(
+      saxsAnalysis({ valid: false, message: 'Not enough SAXS lines' })
+    )
     const schema = yup.object({ file: saxsCheck() })
     await expect(schema.validate({ file: multerFile() })).rejects.toThrow(
       'Not enough SAXS lines'
@@ -339,5 +368,22 @@ describe('jsonFileCheck', () => {
     await expect(
       schema.validate({ file: multerFile({ path: undefined as never }) })
     ).resolves.toBeDefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// qUnitsField
+// ---------------------------------------------------------------------------
+describe('qUnitsField', () => {
+  const schema = yup.object({ q_units: qUnitsField() })
+
+  it.each(['auto', 'A', 'nm', undefined])('accepts %s', async (value) => {
+    await expect(schema.validate({ q_units: value })).resolves.toBeDefined()
+  })
+
+  it('rejects anything else', async () => {
+    await expect(schema.validate({ q_units: 'angstrom' })).rejects.toThrow(
+      'q_units must be one of: auto, A, nm'
+    )
   })
 })

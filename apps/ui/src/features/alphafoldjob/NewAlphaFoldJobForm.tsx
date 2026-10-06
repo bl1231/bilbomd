@@ -24,6 +24,7 @@ import {
   FormikTouched
 } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
+import SaxsDataOptions from 'features/jobs/SaxsDataOptions'
 import { useAddNewAlphaFoldJobMutation } from 'slices/jobsApiSlice'
 import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
@@ -505,6 +506,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const initialValues: NewAlphaFoldJobFormValues = {
     title: '',
     dat_file: '',
+    q_units: 'auto',
     entities: [
       {
         id: '1',
@@ -523,6 +525,7 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     const form = new FormData()
     form.append('title', values.title)
     form.append('dat_file', values.dat_file)
+    form.append('q_units', values.q_units)
     form.append('bilbomd_mode', 'alphafold')
     form.append('md_engine', values.md_engine)
     values.entities.forEach((entity, index) => {
@@ -812,6 +815,11 @@ const NewAlphaFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           existingFileName={
                             useExampleData ? 'example-saxs.dat' : undefined
                           }
+                        />
+                      </Grid>
+                      <Grid>
+                        <SaxsDataOptions
+                          disabled={isSubmitting || useExampleData}
                         />
                       </Grid>
 

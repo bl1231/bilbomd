@@ -4,7 +4,7 @@ import * as ValidationFunctions from '../ValidationFunctions'
 
 vi.mock('../ValidationFunctions', () => ({
   noSpaces: vi.fn().mockResolvedValue(true),
-  isSaxsData: vi.fn().mockResolvedValue({ valid: true }),
+  isSansData: vi.fn().mockResolvedValue({ valid: true }),
   isSingleModel: vi.fn().mockResolvedValue(true),
   cifIsSingleModel: vi.fn().mockResolvedValue(true),
   cifContainsChainId: vi.fn().mockResolvedValue(true),
@@ -152,8 +152,8 @@ describe('BilboMDSANSJobSchema - dat_file', () => {
     ).rejects.toThrow('no longer than 30 characters')
   })
 
-  it('rejects when isSaxsData returns invalid', async () => {
-    vi.mocked(ValidationFunctions.isSaxsData).mockResolvedValueOnce({
+  it('rejects when isSansData returns invalid', async () => {
+    vi.mocked(ValidationFunctions.isSansData).mockResolvedValueOnce({
       valid: false,
       message: 'Bad SAXS data'
     })

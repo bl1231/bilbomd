@@ -6,6 +6,7 @@ import {
   fileNameLengthTest,
   noSpacesTest,
   saxsCheck,
+  qUnitsField,
   psfCheck,
   crdCheck,
   pdbLineStartCheck,
@@ -66,6 +67,7 @@ const BilboMDClassicJobSchema = object().shape({
     .concat(fileExtTest('inp'))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),
+  q_units: qUnitsField(),
   dat_file: mixed()
     .concat(requiredFile('A SAXS data file is required'))
     .concat(fileSizeTest(2_000_000))

@@ -56,6 +56,11 @@ router.get('/', (req, res) => {
  *                     type: string
  *                     format: binary
  *                     description: Upload the experimental SAXS .dat file for fitting analysis.
+ *                   q_units:
+ *                     type: string
+ *                     enum: [auto, A, nm]
+ *                     default: auto
+ *                     description: Units of q in dat_file. "A" is inverse angstroms and "nm" is inverse nanometers (converted to inverse angstroms). "auto" detects the units and rejects the file if they cannot be determined.
  *               - title: CRD/PSF Job
  *                 required: [title, bilbomd_mode, crd_file, psf_file, const_inp_file, dat_file]
  *                 properties:
@@ -82,6 +87,11 @@ router.get('/', (req, res) => {
  *                     type: string
  *                     format: binary
  *                     description: Upload the experimental SAXS .dat file for fitting.
+ *                   q_units:
+ *                     type: string
+ *                     enum: [auto, A, nm]
+ *                     default: auto
+ *                     description: Units of q in dat_file. "A" is inverse angstroms and "nm" is inverse nanometers (converted to inverse angstroms). "auto" detects the units and rejects the file if they cannot be determined.
  *               - title: Auto Job
  *                 required: [title, bilbomd_mode, pdb_file, pae_file, dat_file]
  *                 properties:
@@ -104,6 +114,11 @@ router.get('/', (req, res) => {
  *                     type: string
  *                     format: binary
  *                     description: Upload the experimental SAXS .dat file for fitting.
+ *                   q_units:
+ *                     type: string
+ *                     enum: [auto, A, nm]
+ *                     default: auto
+ *                     description: Units of q in dat_file. "A" is inverse angstroms and "nm" is inverse nanometers (converted to inverse angstroms). "auto" detects the units and rejects the file if they cannot be determined.
  *               - title: AlphaFold Job
  *                 required: [title, bilbomd_mode, dat_file, entities_json]
  *                 properties:
@@ -118,6 +133,11 @@ router.get('/', (req, res) => {
  *                     type: string
  *                     format: binary
  *                     description: Upload the experimental SAXS .dat file for fitting.
+ *                   q_units:
+ *                     type: string
+ *                     enum: [auto, A, nm]
+ *                     default: auto
+ *                     description: Units of q in dat_file. "A" is inverse angstroms and "nm" is inverse nanometers (converted to inverse angstroms). "auto" detects the units and rejects the file if they cannot be determined.
  *                   entities_json:
  *                     $ref: '#/components/schemas/EntitiesJson'
  *                     description: JSON file containing entity information for the job.
@@ -138,6 +158,12 @@ router.get('/', (req, res) => {
  *                 uuid:
  *                   type: string
  *                   example: "f4ba7568-369a-465a-b0d1-a78969bb816b"
+ *                 saxs_warnings:
+ *                   type: array
+ *                   description: Changes made to the SAXS data (unit conversion, trimming to 0.005-0.45 inverse angstroms) and data-quality notes. Empty when the file was used as uploaded.
+ *                   items:
+ *                     type: string
+ *                   example: ["41 data points above q = 0.45 Å⁻¹ are removed."]
  *       400:
  *         $ref: '#/components/responses/ValidationError'
  *       401:

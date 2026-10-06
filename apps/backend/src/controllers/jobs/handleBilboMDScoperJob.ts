@@ -14,6 +14,7 @@ import { config } from '../../config/config.js'
 import { scoperJobSchema } from '../../validation/index.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { serverFile } from './utils/serverFiles.js'
+import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
 
 const uploadFolder = config.uploadDir
 
@@ -40,6 +41,12 @@ const handleBilboMDScoperJob = async (
     const datFile =
       files['dat_file']?.[0] ?? serverFile(req, jobDir, 'dat_file')
 
+    // Convert to Å⁻¹ and trim before AutoRg or validation read the file
+    const saxsData = await prepareSaxsDataFile(datFile, req.body.q_units)
+    if (!saxsData.ok) {
+      return res.status(400).json(saxsDataError(saxsData.message))
+    }
+
     logger.info(
       `PDB File: ${pdbFile ? pdbFile.originalname.toLowerCase() : 'Not Found'}`
     )
@@ -54,6 +61,7 @@ const handleBilboMDScoperJob = async (
       bilbomd_mode: bilbomdMode,
       email: req.body.email,
       dat_file: datFile,
+      q_units: req.body.q_units,
       pdb_file: pdbFile
     }
 
@@ -141,6 +149,7 @@ const handleBilboMDScoperJob = async (
 
       res.status(200).json({
         message: `New Scoper Job successfully created`,
+        saxs_warnings: saxsData.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         publicId: ctx.publicId,
@@ -150,6 +159,7 @@ const handleBilboMDScoperJob = async (
     } else {
       res.status(200).json({
         message: `New Scoper Job successfully created`,
+        saxs_warnings: saxsData.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid
       })

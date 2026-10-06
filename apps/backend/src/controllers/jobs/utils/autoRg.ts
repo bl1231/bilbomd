@@ -12,6 +12,8 @@ import { ChildProcess } from 'child_process'
 import { spawn } from 'child_process'
 import { AutoRgResults } from '../../../types/bilbomd.js'
 import { getEnvVar } from '../../../config/config.js'
+import { isQUnits, Q_UNITS } from '@bilbomd/bilbomd-types'
+import { prepareSaxsDataFile } from './saxsData.js'
 
 const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
@@ -39,6 +41,27 @@ const getAutoRg = async (req: Request, res: Response) => {
       }
 
       try {
+        // SAXS forms send q_units (even if just "auto"); the file then gets
+        // the same unit conversion and trimming a job submission applies, so
+        // the suggested Rg matches the data the job will run on. Requests
+        // without q_units (SANS) are analyzed as uploaded.
+        const qUnits: unknown = req.body?.q_units
+        let saxsWarnings: string[] = []
+        if (qUnits !== undefined && qUnits !== '') {
+          if (!isQUnits(qUnits)) {
+            await fs.remove(jobDir)
+            return res.status(400).json({
+              message: `q_units must be one of: ${Q_UNITS.join(', ')}`
+            })
+          }
+          const saxsData = await prepareSaxsDataFile(req.file, qUnits)
+          if (!saxsData.ok) {
+            await fs.remove(jobDir)
+            return res.status(400).json({ message: saxsData.message })
+          }
+          saxsWarnings = saxsData.warnings
+        }
+
         const autorgResults: AutoRgResults = await spawnAutoRgCalculator(
           jobDir,
           'expdata.dat'
@@ -55,7 +78,8 @@ const getAutoRg = async (req: Request, res: Response) => {
           qmax: autorgResults.qmax,
           rg_exact: autorgResults.rg_exact,
           i0: autorgResults.i0,
-          r2: autorgResults.r2
+          r2: autorgResults.r2,
+          saxs_warnings: saxsWarnings
         })
         // await new Promise((resolve) => setTimeout(resolve, 5000))
         // Not sure if this is a NetApp issue or a Docker issue, but sometimes this fails

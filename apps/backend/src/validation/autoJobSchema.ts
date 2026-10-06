@@ -6,6 +6,7 @@ import {
   fileNameLengthTest,
   noSpacesTest,
   saxsCheck,
+  qUnitsField,
   jsonFileCheck,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
@@ -32,6 +33,7 @@ export const autoJobSchema = yup.object({
     .concat(fileSizeTest(120_000_000))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),
+  q_units: qUnitsField(),
   dat_file: requiredFile('Experimental SAXS data is required')
     .concat(saxsCheck())
     .concat(fileExtTest('dat'))

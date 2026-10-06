@@ -3,7 +3,7 @@ import { bilbomdScoperJobSchema } from '../ScoperValidationSchema'
 
 vi.mock('../ValidationFunctions', () => ({
   noSpaces: async () => true,
-  isSaxsData: async () => ({ valid: true }),
+  analyzeSaxsFile: async () => ({ valid: true, warnings: [] }),
   isRNA: async () => ({ valid: true })
 }))
 

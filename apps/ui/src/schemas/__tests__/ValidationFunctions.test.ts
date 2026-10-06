@@ -3,7 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   noSpaces,
-  isSaxsData,
+  isSansData,
+  analyzeSaxsFile,
   hasSaxsQualityIssues,
   isValidConstInpFile,
   hasAllowedResiduesOnly,
@@ -33,40 +34,80 @@ describe('ValidationFunctions', () => {
     expect(await noSpaces(makeFile('has spaces.dat', 'x'))).toBe(false)
   })
 
-  it('isSaxsData returns valid for plausible 3-column numeric data', async () => {
+  it('isSansData returns valid for plausible 3-column numeric data', async () => {
     const content = `# Q I(Q) Error\n9.37500000E-03 6.52879323E+01 9.99156442E+00\n9.88200000E-03 6.40240326E+01 8.65418671E+00\n`
-    const result = await isSaxsData(makeFile('data.dat', content))
+    const result = await isSansData(makeFile('data.dat', content))
     expect(result.valid).toBe(true)
   })
 
-  it('isSaxsData flags a first q above 0.04 as likely nm⁻¹ and says to keep the full range', async () => {
+  it('isSansData flags a first q above 0.04 as likely nm⁻¹ and says to keep the full range', async () => {
     const content = `Sample description: chromixs\n4.468302e-02 1.948838e+01 5.293584e+00\n5.022427e-02 2.713563e+01 2.039665e+00\n`
-    const result = await isSaxsData(makeFile('apo.dat', content))
+    const result = await isSansData(makeFile('apo.dat', content))
     expect(result.valid).toBe(false)
     expect(result.message).toContain('The first q value is 0.04468302.')
     expect(result.message).toContain('divide q by 10')
     expect(result.message).toContain('Keep your full q-range')
   })
 
-  it('isSaxsData flags a first q below 0.005 and says to remove those points', async () => {
+  it('isSansData flags a first q below 0.005 and says to remove those points', async () => {
     const content = `4.468302e-03 1.948838e+01 5.293584e+00\n5.022427e-03 2.713563e+01 2.039665e+00\n`
-    const result = await isSaxsData(makeFile('apo.dat', content))
+    const result = await isSansData(makeFile('apo.dat', content))
     expect(result.valid).toBe(false)
     expect(result.message).toBe(
       "The first q value is 0.004468302 Å⁻¹, below BilboMD's minimum of 0.005 Å⁻¹. Remove the data points below 0.005 Å⁻¹."
     )
   })
 
-  it('isSaxsData accepts a curve that runs past 0.04 when it starts in range', async () => {
+  it('isSansData accepts a curve that runs past 0.04 when it starts in range', async () => {
     const content = `5.022427e-03 2.713563e+01 2.039665e+00\n1.5e-01 5.0e+00 1.0e-01\n5.5e-01 1.0e+00 2.0e-01\n`
-    const result = await isSaxsData(makeFile('apo_A.dat', content))
+    const result = await isSansData(makeFile('apo_A.dat', content))
     expect(result.valid).toBe(true)
   })
 
-  it('isSaxsData returns invalid for non-numeric content', async () => {
+  it('isSansData returns invalid for non-numeric content', async () => {
     const content = `this is not valid saxs data`
-    const result = await isSaxsData(makeFile('bad.dat', content))
+    const result = await isSansData(makeFile('bad.dat', content))
     expect(result.valid).toBe(false)
+  })
+
+  describe('analyzeSaxsFile', () => {
+    const curve = (qScale = 1) =>
+      Array.from({ length: 150 }, (_, k) => {
+        const q = 0.01 + k * 0.002
+        const intensity = 1000 * Math.exp(-(q * q * 900) / 3) + 1
+        return `${(q * qScale).toFixed(4)} ${intensity.toFixed(4)} ${(intensity * 0.02).toFixed(4)}`
+      }).join('\n')
+
+    it('runs the shared SAXS analysis on the file', async () => {
+      const result = await analyzeSaxsFile(makeFile('ok.dat', curve()))
+      expect(result.valid).toBe(true)
+      expect(result.units).toBe('A')
+      expect(result.points).toHaveLength(150)
+    })
+
+    it('passes q_units through', async () => {
+      const result = await analyzeSaxsFile(makeFile('nm.dat', curve(10)), 'nm')
+      expect(result.valid).toBe(true)
+      expect(result.unitsSource).toBe('user')
+      expect(result.stats.qMax).toBeLessThanOrEqual(0.45)
+    })
+
+    it('caches per file and q_units', async () => {
+      const file = makeFile('ok.dat', curve())
+      const first = analyzeSaxsFile(file, 'auto')
+      expect(analyzeSaxsFile(file, 'auto')).toBe(first)
+      expect(analyzeSaxsFile(file, 'A')).not.toBe(first)
+    })
+
+    it('reports a file that cannot be read', async () => {
+      const file = makeFile('broken.dat', 'x')
+      ;(file as unknown as { text: () => Promise<string> }).text = async () => {
+        throw new Error('read failed')
+      }
+      const result = await analyzeSaxsFile(file)
+      expect(result.valid).toBe(false)
+      expect(result.message).toBe('Error reading the file')
+    })
   })
 
   it('isValidConstInpFile returns true for valid const.inp (pdb mode)', async () => {
