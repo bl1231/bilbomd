@@ -3,7 +3,13 @@ import {
   SUPPORTED_PDB_RESIDUES,
   parseCifAtomSite,
   cifContainsChainId as cifContainsChainIdUtil,
-  cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil
+  cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
+  PROTEIN_RESIDUES,
+  DNA_RESIDUES,
+  RNA_RESIDUES,
+  CARBOHYDRATE_RESIDUES,
+  GAFF_COFACTORS,
+  METAL_COFACTORS
 } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
 
@@ -234,6 +240,47 @@ const isRNA = async (
   }
 }
 
+// Residues that stay in the model. Waters and ions are stripped before MD, so
+// how they are numbered does not matter.
+const MODELLED_RESIDUES = new Set<string>([
+  ...PROTEIN_RESIDUES,
+  ...DNA_RESIDUES,
+  ...RNA_RESIDUES,
+  ...CARBOHYDRATE_RESIDUES,
+  ...GAFF_COFACTORS,
+  ...METAL_COFACTORS
+])
+
+// A residue is identified by chain + number + insertion code, and constraints
+// select residues by chain and number. Two residues sharing all three (e.g. a
+// glycan numbered inside the protein's range) cannot be told apart: the GLYCAM
+// renaming merges them and minimization fails on the leftover sugar.
+const findSharedResidueNumbers = (lines: string[]): string[] => {
+  const namesByResidue = new Map<string, Set<string>>()
+  for (const line of lines) {
+    // Later models repeat the first one
+    if (line.startsWith('ENDMDL')) break
+    if (!line.startsWith('ATOM') && !line.startsWith('HETATM')) continue
+    // Alternate conformers may legitimately differ in residue name
+    const altLoc = line[16] ?? ' '
+    if (altLoc !== ' ' && altLoc !== 'A') continue
+    const residue = line.slice(17, 20).trim()
+    if (!MODELLED_RESIDUES.has(residue)) continue
+    const chain = line[21] ?? ' '
+    const number = line.slice(22, 27).trim()
+    // CHARMM-written files give every segment the same chain letter and tell
+    // residues apart by segment ID (columns 73-76)
+    const segid = line.slice(72, 76).trim()
+    const key = `chain ${chain} residue ${number}${segid ? ` (segment ${segid})` : ''}`
+    const names = namesByResidue.get(key) ?? new Set<string>()
+    names.add(residue)
+    namesByResidue.set(key, names)
+  }
+  return [...namesByResidue]
+    .filter(([, names]) => names.size > 1)
+    .map(([key, names]) => `${key} (${[...names].join(' and ')})`)
+}
+
 const checkPdbResidues = async (
   file: Express.Multer.File
 ): Promise<{ valid: boolean; message?: string }> => {
@@ -256,6 +303,16 @@ const checkPdbResidues = async (
       return {
         valid: false,
         message: `PDB contains unsupported residues: ${list}. These cannot be processed by BilboMD.`
+      }
+    }
+
+    const shared = findSharedResidueNumbers(lines)
+    if (shared.length > 0) {
+      const shown = shared.slice(0, 3).join(', ')
+      const more = shared.length > 3 ? ` and ${shared.length - 3} more` : ''
+      return {
+        valid: false,
+        message: `PDB has residues that share a chain and residue number: ${shown}${more}. Give each residue its own number within its chain (for example, number sugars and ligands after the last protein residue).`
       }
     }
 

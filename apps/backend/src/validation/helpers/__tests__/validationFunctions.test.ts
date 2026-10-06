@@ -269,8 +269,14 @@ describe('containsChainId', () => {
 // ---------------------------------------------------------------------------
 // checkPdbResidues
 // ---------------------------------------------------------------------------
-const atomLine = (residue: string, record = 'ATOM  ') =>
-  `${record}    1  CA  ${residue} A   1       1.000   2.000   3.000  1.00  0.00           C`
+// Each line gets its own residue number unless one is given
+let nextResidueNumber = 1
+const atomLine = (
+  residue: string,
+  record = 'ATOM  ',
+  { chain = 'A', number = nextResidueNumber++, altLoc = ' ' } = {}
+) =>
+  `${record}    1  CA ${altLoc}${residue.padEnd(3)} ${chain}${String(number).padStart(4)}       1.000   2.000   3.000  1.00  0.00           C`
 
 describe('checkPdbResidues', () => {
   it('returns valid:true for all-standard amino acids', async () => {
@@ -361,6 +367,79 @@ describe('checkPdbResidues', () => {
     mockReadFile('REMARK  some remark\nHEADER  some header\nEND\n')
     const result = await checkPdbResidues(mockFile())
     expect(result.valid).toBe(true)
+  })
+
+  it('rejects a sugar that shares a chain and number with a protein residue', async () => {
+    const content = [
+      atomLine('ASP', 'ATOM  ', { chain: 'E', number: 215 }),
+      atomLine('NAG', 'HETATM', { chain: 'E', number: 215 }),
+      atomLine('PRO', 'ATOM  ', { chain: 'E', number: 216 })
+    ].join('\n')
+    mockReadFile(content)
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(false)
+    expect(result.message).toMatch(/chain E residue 215 \(ASP and NAG\)/)
+    expect(result.message).not.toMatch(/216/)
+  })
+
+  it('lists at most three shared residue numbers', async () => {
+    const content = [215, 216, 217, 218, 219]
+      .flatMap((number) => [
+        atomLine('ALA', 'ATOM  ', { number }),
+        atomLine('NAG', 'HETATM', { number })
+      ])
+      .join('\n')
+    mockReadFile(content)
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(false)
+    expect(result.message).toMatch(/residue 217 .* and 2 more/)
+    expect(result.message).not.toMatch(/residue 218/)
+  })
+
+  it('accepts the same residue number in different chains', async () => {
+    const content = [
+      atomLine('ASP', 'ATOM  ', { chain: 'A', number: 215 }),
+      atomLine('NAG', 'HETATM', { chain: 'B', number: 215 })
+    ].join('\n')
+    mockReadFile(content)
+    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
+  })
+
+  it('accepts waters and ions numbered like a protein residue', async () => {
+    const content = [
+      atomLine('ASP', 'ATOM  ', { number: 5 }),
+      atomLine('HOH', 'HETATM', { number: 5 }),
+      atomLine('ZN ', 'HETATM', { number: 5 })
+    ].join('\n')
+    mockReadFile(content)
+    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
+  })
+
+  it('accepts alternate conformers with different residue names', async () => {
+    const content = [
+      atomLine('SER', 'ATOM  ', { number: 9, altLoc: 'A' }),
+      atomLine('THR', 'ATOM  ', { number: 9, altLoc: 'B' })
+    ].join('\n')
+    mockReadFile(content)
+    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
+  })
+
+  it('accepts CHARMM segments that share a chain letter and numbering', async () => {
+    const charmmLine = (residue: string, segid: string) =>
+      `ATOM      1  CA  ${residue} P   3       1.000   2.000   3.000  1.00  0.00      ${segid}`
+    mockReadFile(
+      [charmmLine('ILE', 'PROA'), charmmLine('ASN', 'PROB')].join('\n')
+    )
+    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
+  })
+
+  it('accepts an insertion code that separates two residues', async () => {
+    const content = [
+      'ATOM      1  CA  ASP A 100       1.000   2.000   3.000  1.00  0.00           C',
+      'ATOM      2  CA  GLY A 100A      1.000   2.000   3.000  1.00  0.00           C'
+    ].join('\n')
+    mockReadFile(content)
+    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
   })
 })
 

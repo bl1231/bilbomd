@@ -357,3 +357,26 @@ class TestLinkagePrefix:
 
     def test_unknown_pattern_falls_back_to_lowest_position(self):
         assert _linkage_prefix(frozenset({5})) == "5"
+
+
+# ---------------------------------------------------------------------------
+# Residue numbers shared between a sugar and another residue
+# ---------------------------------------------------------------------------
+
+def test_sugar_numbered_like_a_protein_residue_is_rejected():
+    # Residues are identified by chain + number throughout, so a NAG numbered
+    # like a protein residue would be merged into it and never renamed.
+    pdb = (
+        _atom_line(1, "CA", "ASP", "E", 215, 0.0, 0.0, 0.0)
+        + _atom_line(2, "C1", "NAG", "E", 215, 9.0, 9.0, 9.0, record="HETATM")
+    )
+    with pytest.raises(ValueError, match="Chain E residue 215 is both ASP and NAG"):
+        rename_glycam_residues(pdb)
+
+
+def test_same_number_in_another_chain_is_fine():
+    pdb = (
+        _atom_line(1, "CA", "ASP", "E", 215, 0.0, 0.0, 0.0)
+        + _atom_line(2, "C1", "NAG", "F", 215, 9.0, 9.0, 9.0, record="HETATM")
+    )
+    rename_glycam_residues(pdb)
