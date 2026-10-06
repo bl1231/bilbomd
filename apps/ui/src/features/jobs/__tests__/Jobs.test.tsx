@@ -273,6 +273,15 @@ describe('Jobs table', () => {
     expect(await screen.findByText('5min')).toBeInTheDocument()
     // NERSC Run Time (nersc.time_started→nersc.time_completed = 15min)
     expect(screen.getByText('15min')).toBeInTheDocument()
+
+    // The generic Queued / Runtime pair would duplicate the two above
+    expect(
+      screen.queryByRole('columnheader', { name: /^runtime$/i })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('columnheader', { name: /^queued$/i })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('7min')).not.toBeInTheDocument()
   })
 
   it('handles NERSC jobs with epoch placeholder for time_completed', async () => {
