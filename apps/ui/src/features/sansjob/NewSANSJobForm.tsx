@@ -22,7 +22,7 @@ import {
 import { useAddNewPublicSANSJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
 import { BilboMDSANSJobSchema } from 'schemas/BilboMDSANSJobSchema'
-import { expdataSchema } from 'schemas/ExpdataSchema'
+import { sansExpdataSchema } from 'schemas/ExpdataSchema'
 import { Debug } from 'components/Debug'
 import LinearProgress from '@mui/material/LinearProgress'
 import HeaderBox from 'components/HeaderBox'
@@ -377,7 +377,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         onFileChange={async (selectedFile: File) => {
                           setAutoRgError(null)
                           const isExpdataValid =
-                            await expdataSchema.isValid(selectedFile)
+                            await sansExpdataSchema.isValid(selectedFile)
                           if (isExpdataValid) {
                             const formData = new FormData()
                             formData.append('dat_file', selectedFile)

@@ -1,5 +1,5 @@
 import type { Express } from 'express'
-import { mixed } from 'yup'
+import { mixed, string } from 'yup'
 import fs from 'fs/promises'
 import {
   isSaxsData,
@@ -11,6 +11,7 @@ import {
   checkPdbResidues,
   checkCifResidues
 } from './validationFunctions.js'
+import { isQUnits, Q_UNITS } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
 
 export const requiredFile = (message: string) =>
@@ -91,7 +92,12 @@ export const saxsCheck = () =>
       }
 
       try {
-        const result = await isSaxsData(file)
+        // q_units is a sibling field of the file in every job schema
+        const qUnits: unknown = this.parent?.q_units
+        const result = await isSaxsData(
+          file,
+          isQUnits(qUnits) ? qUnits : 'auto'
+        )
 
         if (result.valid) return true
 
@@ -107,6 +113,12 @@ export const saxsCheck = () =>
       }
     }
   )
+
+// Units of q in the uploaded SAXS data. 'auto' (the default) detects them.
+export const qUnitsField = () =>
+  string()
+    .oneOf([...Q_UNITS], `q_units must be one of: ${Q_UNITS.join(', ')}`)
+    .optional()
 
 export const psfCheck = () =>
   mixed().test(

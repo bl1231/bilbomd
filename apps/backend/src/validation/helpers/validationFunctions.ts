@@ -9,8 +9,10 @@ import {
   RNA_RESIDUES,
   CARBOHYDRATE_RESIDUES,
   GAFF_COFACTORS,
-  METAL_COFACTORS
+  METAL_COFACTORS,
+  analyzeSaxsData
 } from '@bilbomd/bilbomd-types'
+import type { QUnits, SaxsDataAnalysis } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
 
 const fromCharmmGui = async (file: Express.Multer.File): Promise<boolean> => {
@@ -118,74 +120,24 @@ const noSpaces = (file: File): Promise<boolean> => {
   })
 }
 
+// Runs the shared SAXS analysis (the same code the UI runs in the browser) on
+// an uploaded file. See analyzeSaxsData in @bilbomd/bilbomd-types for the rules.
 const isSaxsData = async (
   file: Express.Multer.File,
-  minValidLines = 100
-): Promise<{ valid: boolean; message?: string }> => {
-  const sciNotation = /-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?/g
-
+  qUnits: QUnits = 'auto'
+): Promise<SaxsDataAnalysis> => {
   try {
     const text = await fs.readFile(file.path, 'utf8')
-    const lines = text.split(/[\r\n]+/g)
-
-    let validLineCount = 0
-    let totalDataLines = 0
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-      const lineNum = i + 1 // 1-based index for readability
-
-      if (line.startsWith('#') || line.trim() === '') continue
-
-      totalDataLines++
-
-      const numbers = line.match(sciNotation)
-      if (!numbers || numbers.length < 3) {
-        logger.info(
-          `Line ${lineNum}: Rejected due to insufficient numeric columns → ${line}`
-        )
-        continue
-      }
-
-      const q = parseFloat(numbers[0])
-      const iVal = parseFloat(numbers[1])
-      const err = parseFloat(numbers[2])
-
-      if ([q, iVal, err].some((n) => isNaN(n))) {
-        logger.info(
-          `Line ${lineNum}: Rejected due to NaN q/i/err → [${q}, ${iVal}, ${err}]`
-        )
-        continue
-      }
-
-      if (q < 0.005 || q > 1.0) {
-        logger.info(`Line ${lineNum}: Rejected due to q out of range → q=${q}`)
-        continue
-      }
-
-      if (iVal <= 0 || err <= 0) {
-        logger.info(
-          `Line ${lineNum}: Rejected due to I(q) or σ <= 0 → I=${iVal}, σ=${err}`
-        )
-        continue
-      }
-
-      validLineCount++
-
-      if (validLineCount >= minValidLines) {
-        return { valid: true }
-      }
-    }
-
-    return {
-      valid: false,
-      message: `SAXS data File contains ${validLineCount} valid lines out of ${totalDataLines}. We require at least ${minValidLines} valid SAXS data lines with q, I(q), and error.`
-    }
+    return analyzeSaxsData(text, { qUnits })
   } catch (err) {
     logger.error('Error reading SAXS file:', err)
     return {
       valid: false,
-      message: 'Error reading SAXS file content'
+      message: 'Error reading SAXS file content',
+      warnings: [],
+      changed: false,
+      points: [],
+      stats: { totalPoints: 0, keptPoints: 0, trimmedLowQ: 0, trimmedHighQ: 0 }
     }
   }
 }

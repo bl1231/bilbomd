@@ -4,6 +4,7 @@ import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
+import SaxsDataOptions from 'features/jobs/SaxsDataOptions'
 import { useAddNewAutoJobMutation } from '../../slices/jobsApiSlice'
 import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
@@ -104,6 +105,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     pdb_file: '',
     pae_file: '',
     dat_file: '',
+    q_units: 'auto',
     md_engine: 'openmm'
   }
 
@@ -113,6 +115,7 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('title', values.title)
     form.append('pdb_file', values.pdb_file)
     form.append('dat_file', values.dat_file)
+    form.append('q_units', values.q_units)
     form.append('pae_file', values.pae_file)
     form.append('bilbomd_mode', 'auto')
     form.append('md_engine', values.md_engine)
@@ -409,6 +412,11 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           existingFileName={
                             useExampleData ? 'example-saxs.dat' : undefined
                           }
+                        />
+                      </Grid>
+                      <Grid>
+                        <SaxsDataOptions
+                          disabled={isSubmitting || useExampleData}
                         />
                       </Grid>
 

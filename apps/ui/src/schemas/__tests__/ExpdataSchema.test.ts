@@ -6,6 +6,7 @@ vi.mock('../fieldTests/fieldTests', () => ({
   requiredFile: (msg: string) =>
     mixed().test('required', msg, (v: unknown) => v != null),
   saxsCheck: () => mixed().test('pass', '', () => true),
+  sansCheck: () => mixed().test('pass', '', () => true),
   fileExtTest: (ext: string) =>
     mixed().test('ext', `Only accepts a *.${ext} file.`, (file: unknown) => {
       if (file instanceof File)

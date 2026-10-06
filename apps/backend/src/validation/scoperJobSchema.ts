@@ -7,6 +7,7 @@ import {
   noSpacesTest,
   noShellMetacharsTest,
   saxsCheck,
+  qUnitsField,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
   pdbOrCifResidueCheck
@@ -19,6 +20,7 @@ export const scoperJobSchema = yup.object({
     .max(100, 'Title too long'),
   bilbomd_mode: yup.string().oneOf(['scoper'], 'Invalid mode').required(),
   email: yup.string().email('Invalid email address').optional(),
+  q_units: qUnitsField(),
   dat_file: requiredFile('Experimental SAXS data is required')
     .concat(fileSizeTest(2_000_000))
     .concat(fileExtTest('dat'))

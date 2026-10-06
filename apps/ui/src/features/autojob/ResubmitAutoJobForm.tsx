@@ -12,6 +12,7 @@ import Grid from '@mui/material/Grid'
 import { Link as RouterLink, useParams, useNavigate } from 'react-router'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
+import SaxsDataOptions from 'features/jobs/SaxsDataOptions'
 import {
   useAddNewAutoJobMutation,
   useGetJobByIdQuery,
@@ -132,6 +133,7 @@ const ResubmitAutoJobForm = () => {
     pdb_file: jobMongo.pdb_file ?? '',
     pae_file: jobMongo.pae_file ?? '',
     dat_file: jobMongo.data_file ?? '',
+    q_units: 'auto',
     md_engine: 'openmm'
   }
 
@@ -155,6 +157,7 @@ const ResubmitAutoJobForm = () => {
 
     if (values.dat_file instanceof File) {
       form.append('dat_file', values.dat_file)
+      form.append('q_units', values.q_units)
     } else if (fileCheckData?.dat_file) {
       form.append('reuse_dat_file', 'true')
     }
@@ -379,6 +382,9 @@ const ResubmitAutoJobForm = () => {
                         fileType="experimental SAXS data *.dat"
                         fileExt=".dat"
                       />
+                    </Grid>
+                    <Grid>
+                      <SaxsDataOptions disabled={isSubmitting} />
                     </Grid>
 
                     {isSubmitting && (

@@ -5,7 +5,8 @@ import {
   fileSizeTest,
   fileNameLengthTest,
   noSpacesTest,
-  saxsCheck
+  saxsCheck,
+  qUnitsField
 } from './fieldTests/fieldTests'
 import { titleSchema } from './titleSchema'
 
@@ -20,6 +21,7 @@ const BilboMDAlphaFoldJobSchema = object().shape({
     .required('Please select an MD engine'),
   title: titleSchema('BilboMD Job'),
 
+  q_units: qUnitsField(),
   dat_file: requiredFile('Experimental SAXS data is required')
     .concat(fileSizeTest(2_000_000))
     .concat(fileExtTest('dat'))

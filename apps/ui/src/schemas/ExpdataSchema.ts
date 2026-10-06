@@ -1,17 +1,23 @@
+import { SAXS_MAX_FILE_SIZE } from '@bilbomd/bilbomd-types'
 import {
   requiredFile,
   fileExtTest,
   fileSizeTest,
   fileNameLengthTest,
   noSpacesTest,
-  saxsCheck
+  saxsCheck,
+  sansCheck
 } from './fieldTests/fieldTests'
 
-const expdataSchema = requiredFile('Experimental SAXS data is required')
-  .concat(saxsCheck())
+// Checks on the file itself (name, extension, size), without reading it
+const expdataFileSchema = requiredFile('Experimental SAXS data is required')
   .concat(fileExtTest('dat'))
-  .concat(fileSizeTest(2_000_000))
+  .concat(fileSizeTest(SAXS_MAX_FILE_SIZE))
   .concat(noSpacesTest())
   .concat(fileNameLengthTest())
 
-export { expdataSchema }
+const expdataSchema = saxsCheck().concat(expdataFileSchema)
+
+const sansExpdataSchema = sansCheck().concat(expdataFileSchema)
+
+export { expdataFileSchema, expdataSchema, sansExpdataSchema }

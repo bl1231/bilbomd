@@ -8,6 +8,7 @@ vi.mock('../fieldTests/fieldTests', () => ({
   fileSizeTest: () => mixed(),
   fileExtTest: () => mixed(),
   saxsCheck: () => mixed(),
+  qUnitsField: () => mixed(),
   noSpacesTest: () => mixed(),
   fileNameLengthTest: () => mixed()
 }))

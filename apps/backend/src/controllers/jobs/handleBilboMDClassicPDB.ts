@@ -30,6 +30,7 @@ import { config } from '../../config/config.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { isResubmitRequest } from './utils/resubmission.js'
 import { serverFile } from './utils/serverFiles.js'
+import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
 
 const uploadFolder = config.uploadDir
 
@@ -84,6 +85,12 @@ const handleBilboMDClassicPDB = async (
     inpFileName = inpFile?.originalname.toLowerCase() ?? ''
     datFileName = datFile?.originalname.toLowerCase() ?? ''
 
+    // Convert to Å⁻¹ and trim before AutoRg or validation read the file
+    const saxsData = await prepareSaxsDataFile(datFile, req.body.q_units)
+    if (!saxsData.ok) {
+      return res.status(400).json(saxsDataError(saxsData.message))
+    }
+
     // Calculate rg values if not provided
     const resolvedRgValues = await maybeAutoCalculateRg(
       { rg, rg_min, rg_max },
@@ -102,6 +109,7 @@ const handleBilboMDClassicPDB = async (
       bilbomd_mode: bilbomdMode,
       email: req.body.email,
       dat_file: datFile,
+      q_units: req.body.q_units,
       const_inp_file: inpFile,
       pdb_file: pdbFile,
       rg,
@@ -298,6 +306,7 @@ const handleBilboMDClassicPDB = async (
 
       res.status(200).json({
         message: `New BilboMD Classic w/PDB Job successfully created`,
+        saxs_warnings: saxsData.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine,
@@ -308,6 +317,7 @@ const handleBilboMDClassicPDB = async (
     } else {
       res.status(200).json({
         message: `New BilboMD Classic w/PDB Job successfully created`,
+        saxs_warnings: saxsData.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine

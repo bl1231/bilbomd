@@ -9,6 +9,7 @@ vi.mock('../helpers/fileValidators.js', () => ({
   fileNameLengthTest: () => mixed(),
   noSpacesTest: () => mixed(),
   saxsCheck: () => mixed(),
+  qUnitsField: () => mixed(),
   constInpCheck: () => mixed(),
   chainIdCheck: () => mixed(),
   pdbResidueCheck: () => mixed(),

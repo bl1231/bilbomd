@@ -15,6 +15,8 @@ import {
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field, FormikHelpers } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
+import SaxsDataOptions from 'features/jobs/SaxsDataOptions'
+import type { QUnits } from '@bilbomd/bilbomd-types'
 import { useAddNewScoperJobMutation } from 'slices/jobsApiSlice'
 import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
@@ -81,18 +83,20 @@ const NewScoperJobForm = ({
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<SubmitError | null>(null)
 
-  const initialValues = {
-    title: '',
-    pdb_file: '',
-    dat_file: '',
-    fixc1c2: false
-  }
-
   interface ScoperJobFormValues {
     title: string
     pdb_file: string
     dat_file: string
+    q_units: QUnits
     fixc1c2: boolean
+  }
+
+  const initialValues: ScoperJobFormValues = {
+    title: '',
+    pdb_file: '',
+    dat_file: '',
+    q_units: 'auto',
+    fixc1c2: false
   }
 
   const onSubmit = async (
@@ -104,6 +108,7 @@ const NewScoperJobForm = ({
     form.append('title', values.title)
     form.append('pdb_file', values.pdb_file)
     form.append('dat_file', values.dat_file)
+    form.append('q_units', values.q_units)
     form.append('fixc1c2', values.fixc1c2.toString())
     form.append('bilbomd_mode', 'scoper')
     if (useExampleData) {
@@ -360,6 +365,11 @@ const NewScoperJobForm = ({
                           existingFileName={
                             useExampleData ? 'example-saxs.dat' : undefined
                           }
+                        />
+                      </Grid>
+                      <Grid>
+                        <SaxsDataOptions
+                          disabled={isSubmitting || useExampleData}
                         />
                       </Grid>
 

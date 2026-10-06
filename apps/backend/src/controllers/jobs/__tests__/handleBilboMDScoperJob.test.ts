@@ -7,6 +7,7 @@ import { announceNewJob } from '../../../services/announceNewJob.js'
 import { ValidationError } from 'yup'
 import { scoperJobSchema } from '../../../validation/index.js'
 import { setServerFile } from '../utils/serverFiles.js'
+import { prepareSaxsDataFile } from '../utils/saxsData.js'
 
 vi.mock('../../middleware/loggers.js', () => ({
   logger: {
@@ -29,6 +30,11 @@ vi.mock('../../config/config.js', () => ({
 
 vi.mock('../utils/jobUtils.js', () => ({
   getFileStats: vi.fn(() => ({ size: 1024 }))
+}))
+
+vi.mock('../utils/saxsData.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../utils/saxsData.js')>()),
+  prepareSaxsDataFile: vi.fn(async () => ({ ok: true, warnings: [] }))
 }))
 
 vi.mock('../../../validation/index.js', () => ({
@@ -173,6 +179,58 @@ describe('handleBilboMDScoperJob', () => {
       expect(payload.resultUrl).toContain('/results/pub-abc')
       expect(payload.resultPath).toBe('/results/pub-abc')
       expect(payload).not.toHaveProperty('md_engine')
+    })
+  })
+
+  describe('SAXS data preparation', () => {
+    it('rejects with a dat_file validation error before the schema runs', async () => {
+      vi.mocked(prepareSaxsDataFile).mockResolvedValueOnce({
+        ok: false,
+        message: 'Cannot tell whether q is in Å⁻¹ or nm⁻¹'
+      })
+      const { req, res } = makeReqRes()
+
+      await handleBilboMDScoperJob(req, res, user, UUID, {
+        accessMode: 'user'
+      })
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Validation failed',
+        errors: [
+          {
+            path: 'dat_file',
+            message: 'Cannot tell whether q is in Å⁻¹ or nm⁻¹'
+          }
+        ]
+      })
+      expect(scoperJobSchema.validate).not.toHaveBeenCalled()
+      expect(queueScoperJob).not.toHaveBeenCalled()
+    })
+
+    it('passes q_units through and returns the warnings', async () => {
+      vi.mocked(prepareSaxsDataFile).mockResolvedValueOnce({
+        ok: true,
+        warnings: ['q values are in nm⁻¹']
+      })
+      const { req, res } = makeReqRes({ q_units: 'nm' })
+
+      await handleBilboMDScoperJob(req, res, user, UUID, {
+        accessMode: 'user'
+      })
+
+      expect(prepareSaxsDataFile).toHaveBeenCalledWith(
+        expect.objectContaining({ originalname: 'saxs.dat' }),
+        'nm'
+      )
+      expect(scoperJobSchema.validate).toHaveBeenCalledWith(
+        expect.objectContaining({ q_units: 'nm' }),
+        expect.anything()
+      )
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ saxs_warnings: ['q values are in nm⁻¹'] })
+      )
     })
   })
 

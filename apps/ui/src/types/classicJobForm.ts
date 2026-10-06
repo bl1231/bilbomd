@@ -1,3 +1,5 @@
+import type { QUnits } from '@bilbomd/bilbomd-types'
+
 export type BilboMDClassicJobFormValues = {
   bilbomd_mode: 'pdb' | 'crd_psf'
   title: string
@@ -6,6 +8,7 @@ export type BilboMDClassicJobFormValues = {
   pdb_file: File | string
   inp_file: File | string
   dat_file: File | string
+  q_units: QUnits
   num_conf: string
   rg: string
   rg_min: string

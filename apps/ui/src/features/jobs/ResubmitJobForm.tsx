@@ -18,6 +18,7 @@ import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Link as RouterLink, useParams, useNavigate } from 'react-router'
 import { Form, Formik, Field } from 'formik'
+import type { FormikHelpers } from 'formik'
 import {
   useAddNewJobMutation,
   useCalculateAutoRgMutation,
@@ -25,9 +26,10 @@ import {
   useCheckJobFilesQuery
 } from 'slices/jobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
-import { expdataSchema } from 'schemas/ExpdataSchema'
+import { expdataFileSchema } from 'schemas/ExpdataSchema'
 import { BilboMDClassicJobSchema } from 'schemas/BilboMDClassicJobSchema'
 import {
+  analyzeSaxsFile,
   detectGaffCofactors,
   detectMetalCofactors
 } from 'schemas/ValidationFunctions'
@@ -35,6 +37,7 @@ import HeaderBox from 'components/HeaderBox'
 import useTitle from 'hooks/useTitle'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import FileSelect from './FileSelect'
+import SaxsDataOptions from './SaxsDataOptions'
 import { Debug } from 'components/Debug'
 import NewJobFormInstructions from './NewJobFormInstructions'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
@@ -151,6 +154,7 @@ const ResubmitJobForm = () => {
         pdb_file: '',
         inp_file: jobMongo.const_inp_file ?? '',
         dat_file: jobMongo.data_file ?? '',
+        q_units: 'auto',
         num_conf: jobMongo.conformational_sampling?.toString() ?? '',
         rg: jobMongo.rg?.toString() ?? '',
         rg_min: jobMongo.rg_min?.toString() ?? '',
@@ -167,6 +171,7 @@ const ResubmitJobForm = () => {
         pdb_file: jobMongo.pdb_file ?? '',
         inp_file: jobMongo.const_inp_file ?? '',
         dat_file: jobMongo.data_file ?? '',
+        q_units: 'auto',
         num_conf: jobMongo.conformational_sampling?.toString() ?? '',
         rg: jobMongo.rg?.toString() ?? '',
         rg_min: jobMongo.rg_min?.toString() ?? '',
@@ -176,6 +181,36 @@ const ResubmitJobForm = () => {
       break
     default:
       throw new Error(`Unsupported job type: ${job.mongo.jobType}`)
+  }
+
+  // Checks a newly selected SAXS file and asks the backend for suggested Rg
+  // values. Runs again when the user changes the q units.
+  const processSaxsFile = async (
+    selectedFile: File,
+    qUnits: BilboMDClassicJobFormValues['q_units'],
+    setFieldValue: FormikHelpers<BilboMDClassicJobFormValues>['setFieldValue']
+  ) => {
+    const analysis = await analyzeSaxsFile(selectedFile, qUnits)
+    const isExpdataValid =
+      analysis.valid && (await expdataFileSchema.isValid(selectedFile))
+    if (!isExpdataValid) {
+      void setFieldValue('rg_min', '')
+      void setFieldValue('rg_max', '')
+      return
+    }
+    const formData = new FormData()
+    formData.append('dat_file', selectedFile)
+    formData.append('q_units', qUnits)
+    try {
+      const { rg, rg_min, rg_max } = await calculateAutoRg(formData).unwrap()
+      void setFieldValue('rg', rg)
+      void setFieldValue('rg_min', rg_min)
+      void setFieldValue('rg_max', rg_max)
+    } catch (error) {
+      logger.error('Error:', error)
+      void setFieldValue('rg_min', '')
+      void setFieldValue('rg_max', '')
+    }
   }
 
   const onSubmit = async (values: BilboMDClassicJobFormValues) => {
@@ -212,6 +247,7 @@ const ResubmitJobForm = () => {
 
     if (values.dat_file instanceof File) {
       form.append('dat_file', values.dat_file)
+      form.append('q_units', values.q_units)
     } else if (fileCheckData?.dat_file) {
       form.append('reuse_dat_file', 'true')
     }
@@ -623,30 +659,29 @@ const ResubmitJobForm = () => {
                             }
                             fileType="experimental SAXS data"
                             fileExt=".dat"
-                            onFileChange={async (selectedFile: File) => {
-                              const isExpdataValid =
-                                await expdataSchema.isValid(selectedFile)
-                              if (isExpdataValid) {
-                                const formData = new FormData()
-                                formData.append('dat_file', selectedFile)
-                                try {
-                                  const { rg, rg_min, rg_max } =
-                                    await calculateAutoRg(formData).unwrap()
-                                  void setFieldValue('rg', rg)
-                                  void setFieldValue('rg_min', rg_min)
-                                  void setFieldValue('rg_max', rg_max)
-                                } catch (error) {
-                                  logger.error('Error:', error)
-                                  void setFieldValue('rg_min', '')
-                                  void setFieldValue('rg_max', '')
-                                }
-                              } else {
-                                void setFieldValue('rg_min', '')
-                                void setFieldValue('rg_max', '')
-                              }
-                            }}
+                            onFileChange={(selectedFile: File) =>
+                              processSaxsFile(
+                                selectedFile,
+                                values.q_units,
+                                setFieldValue
+                              )
+                            }
                           />
                         </Grid>
+                      </Grid>
+                      <Grid sx={{ width: '100%', maxWidth: '520px' }}>
+                        <SaxsDataOptions
+                          disabled={isSubmitting || isLoading}
+                          onUnitsChange={(qUnits) => {
+                            if (values.dat_file instanceof File) {
+                              void processSaxsFile(
+                                values.dat_file,
+                                qUnits,
+                                setFieldValue
+                              )
+                            }
+                          }}
+                        />
                       </Grid>
                       <Grid
                         sx={{

@@ -25,6 +25,7 @@ import {
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { isResubmitRequest } from './utils/resubmission.js'
 import { serverFile } from './utils/serverFiles.js'
+import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
 
 const uploadFolder = config.uploadDir
 
@@ -91,6 +92,12 @@ const handleBilboMDClassicCRD = async (
     inpFileName = inpFile?.originalname.toLowerCase() ?? ''
     datFileName = datFile?.originalname.toLowerCase() ?? ''
 
+    // Convert to Å⁻¹ and trim before AutoRg or validation read the file
+    const saxsData = await prepareSaxsDataFile(datFile, req.body.q_units)
+    if (!saxsData.ok) {
+      return res.status(400).json(saxsDataError(saxsData.message))
+    }
+
     // Calculate rg values if not provided
     const resolvedRgValues = await maybeAutoCalculateRg(
       { rg, rg_min, rg_max },
@@ -109,6 +116,7 @@ const handleBilboMDClassicCRD = async (
       bilbomd_mode: bilbomdMode,
       email: req.body.email,
       dat_file: datFile,
+      q_units: req.body.q_units,
       const_inp_file: inpFile,
       crd_file: crdFile,
       psf_file: psfFile,
@@ -255,6 +263,7 @@ const handleBilboMDClassicCRD = async (
 
       res.status(200).json({
         message: `New BilboMD Classic w/CRD Job successfully created`,
+        saxs_warnings: saxsData.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine,
@@ -265,6 +274,7 @@ const handleBilboMDClassicCRD = async (
     } else {
       res.status(200).json({
         message: `New BilboMD Classic w/CRD Job successfully created`,
+        saxs_warnings: saxsData.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine

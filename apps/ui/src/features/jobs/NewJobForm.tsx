@@ -15,15 +15,17 @@ import {
 import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
+import type { FormikHelpers } from 'formik'
 import {
   useAddNewJobMutation,
   useCalculateAutoRgMutation
 } from 'slices/jobsApiSlice'
 import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
-import { expdataSchema } from 'schemas/ExpdataSchema'
+import { expdataFileSchema } from 'schemas/ExpdataSchema'
 import { BilboMDClassicJobSchema } from 'schemas/BilboMDClassicJobSchema'
 import {
+  analyzeSaxsFile,
   detectGaffCofactors,
   detectMetalCofactors
 } from 'schemas/ValidationFunctions'
@@ -31,6 +33,7 @@ import SAXSGuinierPlot from './SAXSGuinierPlot'
 import HeaderBox from 'components/HeaderBox'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import FileSelect from './FileSelect'
+import SaxsDataOptions from './SaxsDataOptions'
 import useTitle from 'hooks/useTitle'
 import { Debug } from 'components/Debug'
 import NewJobFormInstructions from './NewJobFormInstructions'
@@ -134,11 +137,79 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     pdb_file: '',
     inp_file: '',
     dat_file: '',
+    q_units: 'auto',
     num_conf: '3',
     rg: '',
     rg_min: '',
     rg_max: '',
     md_engine: 'openmm'
+  }
+
+  // Checks a newly selected SAXS file, previews it, and asks the backend for
+  // suggested Rg values. Runs again when the user changes the q units, since
+  // both the preview and the Rg depend on them.
+  const processSaxsFile = async (
+    selectedFile: File,
+    values: BilboMDClassicJobFormValues,
+    {
+      setValues,
+      setFieldValue,
+      setFieldTouched
+    }: Pick<
+      FormikHelpers<BilboMDClassicJobFormValues>,
+      'setValues' | 'setFieldValue' | 'setFieldTouched'
+    >
+  ) => {
+    setAutoRgError(null)
+    setSaxsData([])
+    setGuinierRegion(null)
+    setSuggestedRgMax(null)
+
+    const analysis = await analyzeSaxsFile(selectedFile, values.q_units)
+    const isExpdataValid =
+      analysis.valid && (await expdataFileSchema.isValid(selectedFile))
+    if (!isExpdataValid) {
+      // The file selector shows why the file was rejected
+      void setFieldValue('rg_min', '')
+      void setFieldValue('rg_max', '')
+      return
+    }
+
+    // Preview the data as the job will see it: in Å⁻¹ and trimmed
+    setSaxsData(analysis.points.filter((pt) => pt.intensity > 0))
+
+    const formData = new FormData()
+    formData.append('dat_file', selectedFile)
+    formData.append('q_units', values.q_units)
+    try {
+      const { rg, rg_min, rg_max, qmin, qmax } =
+        await calculateAutoRg(formData).unwrap()
+      void setValues(
+        {
+          ...values,
+          dat_file: selectedFile,
+          rg: String(rg),
+          rg_min: String(rg_min),
+          rg_max: String(rg_max)
+        },
+        true
+      )
+      void setFieldTouched('rg', true, false)
+      void setFieldTouched('rg_min', true, false)
+      void setFieldTouched('rg_max', true, false)
+      setSuggestedRgMax(String(rg_max))
+      if (typeof qmin === 'number' && typeof qmax === 'number') {
+        setGuinierRegion({ qmin, qmax })
+      }
+    } catch (error) {
+      setSaxsData([])
+      setSuggestedRgMax(null)
+      setAutoRgError(
+        `Failed to calculate Rg from *.dat file. Please check the file format and try again. ${error}`
+      )
+      void setFieldValue('rg_min', '')
+      void setFieldValue('rg_max', '')
+    }
   }
 
   const onSubmit = async (values: BilboMDClassicJobFormValues) => {
@@ -154,6 +225,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('rg_min', values.rg_min)
     form.append('rg_max', values.rg_max)
     form.append('dat_file', values.dat_file)
+    form.append('q_units', values.q_units)
     form.append('inp_file', values.inp_file)
     form.append('md_engine', values.md_engine)
     if (useExampleData) {
@@ -638,96 +710,32 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           fileType="experimental SAXS data"
                           fileExt=".dat"
                           isLoading={isLoading}
-                          onFileChange={async (selectedFile: File) => {
-                            setAutoRgError(null)
-                            setSaxsData([])
-                            setGuinierRegion(null)
-                            setSuggestedRgMax(null)
-
-                            // Parse SAXS data in the browser for the preview plot
-                            try {
-                              const text = await selectedFile.text()
-                              const parsed = text
-                                .split('\n')
-                                .filter((line) => {
-                                  const trimmed = line.trim()
-                                  return (
-                                    trimmed.length > 0 &&
-                                    !trimmed.startsWith('#') &&
-                                    /^\d/.test(trimmed)
-                                  )
-                                })
-                                .map((line) => {
-                                  const cols = line.trim().split(/\s+/)
-                                  return {
-                                    q: parseFloat(cols[0] ?? '0'),
-                                    intensity: parseFloat(cols[1] ?? '0'),
-                                    error: parseFloat(cols[2] ?? '0')
-                                  }
-                                })
-                                .filter(
-                                  (pt) =>
-                                    isFinite(pt.q) &&
-                                    isFinite(pt.intensity) &&
-                                    pt.intensity > 0
-                                )
-                              setSaxsData(parsed)
-                            } catch {
-                              // Non-fatal — plot just won't show
-                            }
-
-                            const isExpdataValid =
-                              await expdataSchema.isValid(selectedFile)
-                            if (isExpdataValid) {
-                              const formData = new FormData()
-                              formData.append('dat_file', selectedFile)
-                              try {
-                                const { rg, rg_min, rg_max, qmin, qmax } =
-                                  await calculateAutoRg(formData).unwrap()
-                                void setValues(
-                                  {
-                                    ...values,
-                                    dat_file: selectedFile,
-                                    rg: String(rg),
-                                    rg_min: String(rg_min),
-                                    rg_max: String(rg_max)
-                                  },
-                                  true
-                                )
-                                void setFieldTouched('rg', true, false)
-                                void setFieldTouched('rg_min', true, false)
-                                void setFieldTouched('rg_max', true, false)
-                                setSuggestedRgMax(String(rg_max))
-                                if (
-                                  typeof qmin === 'number' &&
-                                  typeof qmax === 'number'
-                                ) {
-                                  setGuinierRegion({ qmin, qmax })
-                                }
-                              } catch (error) {
-                                setSaxsData([])
-                                setSuggestedRgMax(null)
-                                setAutoRgError(
-                                  `Failed to calculate Rg from *.dat file. Please check the file format and try again. ${error}`
-                                )
-                                void setFieldValue('rg_min', '')
-                                void setFieldValue('rg_max', '')
-                              }
-                            } else {
-                              setSaxsData([])
-                              setSuggestedRgMax(null)
-                              setAutoRgError(
-                                `Invalid *.dat file format. Please check the file format and try again.`
-                              )
-                              void setFieldValue('rg_min', '')
-                              void setFieldValue('rg_max', '')
-                            }
-                          }}
+                          onFileChange={(selectedFile: File) =>
+                            processSaxsFile(selectedFile, values, {
+                              setValues,
+                              setFieldValue,
+                              setFieldTouched
+                            })
+                          }
                           existingFileName={
                             useExampleData ? 'example-saxs.dat' : undefined
                           }
                         />
                       </Grid>
+                    </Grid>
+                    <Grid sx={{ width: '100%', maxWidth: '520px' }}>
+                      <SaxsDataOptions
+                        disabled={isSubmitting || isLoading || useExampleData}
+                        onUnitsChange={(qUnits) => {
+                          if (values.dat_file instanceof File) {
+                            void processSaxsFile(
+                              values.dat_file,
+                              { ...values, q_units: qUnits },
+                              { setValues, setFieldValue, setFieldTouched }
+                            )
+                          }
+                        }}
+                      />
                     </Grid>
                     {saxsData.length > 0 && guinierRegion && (
                       <Grid sx={{ width: '100%', maxWidth: '520px' }}>

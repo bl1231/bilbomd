@@ -4,7 +4,7 @@ import { BilboMDAutoJobSchema } from '../BilboMDAutoJobSchema'
 // Mock heavy validators to simplify unit tests
 vi.mock('../ValidationFunctions', () => ({
   noSpaces: () => true,
-  isSaxsData: async () => ({ valid: true }),
+  analyzeSaxsFile: async () => ({ valid: true, warnings: [] }),
   isValidConstInpFile: async () => true,
   hasAllowedResiduesOnly: async () => ({
     valid: true,

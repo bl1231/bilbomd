@@ -1,7 +1,9 @@
-import { mixed } from 'yup'
+import { mixed, string } from 'yup'
+import { isQUnits, Q_UNITS, SAXS_MAX_FILE_SIZE } from '@bilbomd/bilbomd-types'
 import {
   noSpaces,
-  isSaxsData,
+  isSansData,
+  analyzeSaxsFile,
   isValidConstInpFile,
   hasAllowedResiduesOnly,
   isPsfData,
@@ -64,8 +66,33 @@ export const saxsCheck = () =>
     'saxs-data-check',
     'File does not appear to be SAXS data',
     async function (file) {
+      // Oversized files are reported by fileSizeTest; don't read them
+      if (file instanceof File && file.size <= SAXS_MAX_FILE_SIZE) {
+        // q_units is a sibling field of the file in every job form
+        const qUnits: unknown = this.parent?.q_units
+        const result = await analyzeSaxsFile(
+          file,
+          isQUnits(qUnits) ? qUnits : 'auto'
+        )
+        if (result.valid) return true
+        return this.createError({ message: result.message })
+      }
+      return true // allow string fallback
+    }
+  )
+
+// Units of q in the uploaded SAXS data. 'auto' detects them.
+export const qUnitsField = () =>
+  string().oneOf([...Q_UNITS], 'Please select the q units')
+
+// SANS data still uses the legacy first-q check
+export const sansCheck = () =>
+  mixed().test(
+    'sans-data-check',
+    'File does not appear to be SANS data',
+    async function (file) {
       if (file instanceof File) {
-        const result = await isSaxsData(file)
+        const result = await isSansData(file)
         if (result.valid) return true
         return this.createError({ message: result.message })
       }

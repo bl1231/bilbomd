@@ -165,67 +165,57 @@ describe('noSpaces', () => {
 // ---------------------------------------------------------------------------
 // isSaxsData
 // ---------------------------------------------------------------------------
-const buildSaxsLines = (count: number): string => {
+// The analysis rules themselves are covered in @bilbomd/bilbomd-types; these
+// check that the backend applies them to the uploaded file.
+const buildSaxsLines = (count: number, qScale = 1): string => {
   const lines: string[] = []
   for (let i = 0; i < count; i++) {
-    const q = (0.01 + i * 0.005).toFixed(4)
-    lines.push(`${q}  100.0  5.0`)
+    const q = 0.01 + i * 0.002
+    const intensity = 1000 * Math.exp(-(q * q * 900) / 3) + 1
+    lines.push(
+      `${(q * qScale).toFixed(4)}  ${intensity.toFixed(4)}  ${(intensity * 0.02).toFixed(4)}`
+    )
   }
   return lines.join('\n')
 }
 
 describe('isSaxsData', () => {
-  it('returns valid:true when >= minValidLines (100) valid data lines', async () => {
-    mockReadFile(buildSaxsLines(100))
+  it('accepts well-formed data in Å⁻¹ unchanged', async () => {
+    mockReadFile(buildSaxsLines(150))
     const result = await isSaxsData(mockFile())
     expect(result.valid).toBe(true)
+    expect(result.units).toBe('A')
+    expect(result.changed).toBe(false)
+    expect(result.warnings).toEqual([])
   })
 
-  it('returns valid:false with message when fewer than minValidLines', async () => {
+  it('warns but accepts fewer than 100 points', async () => {
     mockReadFile(buildSaxsLines(50))
     const result = await isSaxsData(mockFile())
+    expect(result.valid).toBe(true)
+    expect(result.warnings.join(' ')).toMatch(/Only 50 data points/)
+  })
+
+  it('detects and converts nm⁻¹', async () => {
+    mockReadFile(buildSaxsLines(150, 10))
+    const result = await isSaxsData(mockFile())
+    expect(result.valid).toBe(true)
+    expect(result.units).toBe('nm')
+    expect(result.changed).toBe(true)
+  })
+
+  it('applies the q_units it is given', async () => {
+    mockReadFile(buildSaxsLines(150, 10))
+    const result = await isSaxsData(mockFile(), 'A')
+    expect(result.units).toBe('A')
+    expect(result.unitsSource).toBe('user')
+  })
+
+  it('rejects a file with no SAXS data', async () => {
+    mockReadFile('this is not\nSAXS data\n')
+    const result = await isSaxsData(mockFile())
     expect(result.valid).toBe(false)
-    expect(result.message).toMatch(/50 valid lines/)
-  })
-
-  it('skips comment lines starting with #', async () => {
-    const data = '# comment\n' + buildSaxsLines(100)
-    mockReadFile(data)
-    const result = await isSaxsData(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
-  it('skips blank lines', async () => {
-    const data = '\n\n' + buildSaxsLines(100)
-    mockReadFile(data)
-    const result = await isSaxsData(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
-  it('rejects lines where q < 0.005', async () => {
-    const bad = '0.001  100.0  5.0\n'
-    mockReadFile(bad + buildSaxsLines(100))
-    // The bad line is excluded; 100 valid lines still exist
-    const result = await isSaxsData(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
-  it('rejects lines where q > 1.0', async () => {
-    mockReadFile('1.5  100.0  5.0\n' + buildSaxsLines(100))
-    const result = await isSaxsData(mockFile())
-    expect(result.valid).toBe(true) // bad line excluded, 100 valid remain
-  })
-
-  it('rejects lines where I <= 0', async () => {
-    mockReadFile('0.01  -1.0  5.0\n' + buildSaxsLines(100))
-    const result = await isSaxsData(mockFile())
-    expect(result.valid).toBe(true) // bad line excluded
-  })
-
-  it('respects custom minValidLines', async () => {
-    mockReadFile(buildSaxsLines(10))
-    const result = await isSaxsData(mockFile(), 10)
-    expect(result.valid).toBe(true)
+    expect(result.message).toMatch(/No SAXS data found/)
   })
 
   it('returns valid:false and message on fs error', async () => {

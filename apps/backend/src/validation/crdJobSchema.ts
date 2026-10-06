@@ -6,6 +6,7 @@ import {
   fileNameLengthTest,
   noSpacesTest,
   saxsCheck,
+  qUnitsField,
   constInpCheck,
   crdCheck,
   psfCheck
@@ -18,6 +19,7 @@ export const crdJobSchema = yup.object({
     .max(100, 'Title too long'),
   bilbomd_mode: yup.string().oneOf(['crd_psf'], 'Invalid mode').required(),
   email: yup.string().email('Invalid email address').optional(),
+  q_units: qUnitsField(),
   dat_file: requiredFile('Experimental SAXS data is required')
     .concat(fileSizeTest(2_000_000))
     .concat(fileExtTest('dat'))

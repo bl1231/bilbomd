@@ -131,7 +131,11 @@ swaggerSpec.components.responses = {
         example: {
           message: 'Validation failed',
           errors: [
-            { path: 'dat_file', message: 'No valid SAXS data found' },
+            {
+              path: 'dat_file',
+              message:
+                'No SAXS data found. Expected three numeric columns: q, I(q), and error.'
+            },
             { path: 'pae_file', message: 'A PAE *.json file is required' },
             { path: 'pae_file', message: 'Only accepts a *.json file.' },
             { path: 'pae_file', message: 'Max file size is 120MB' },

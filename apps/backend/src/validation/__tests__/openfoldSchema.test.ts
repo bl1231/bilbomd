@@ -8,7 +8,8 @@ vi.mock('../helpers/fileValidators.js', () => ({
   fileSizeTest: () => mixed(),
   fileNameLengthTest: () => mixed(),
   noSpacesTest: () => mixed(),
-  saxsCheck: () => mixed()
+  saxsCheck: () => mixed(),
+  qUnitsField: () => mixed()
 }))
 
 import { openfoldJobSchema } from '../openfoldSchema.js'

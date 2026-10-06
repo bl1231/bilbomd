@@ -24,6 +24,7 @@ import {
   FormikTouched
 } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
+import SaxsDataOptions from 'features/jobs/SaxsDataOptions'
 import { useAddNewOpenFoldJobMutation } from 'slices/jobsApiSlice'
 import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import SendIcon from '@mui/icons-material/Send'
@@ -481,6 +482,7 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
   const initialValues: NewOpenFoldJobFormValues = {
     title: '',
     dat_file: '',
+    q_units: 'auto',
     entities: [
       {
         id: '1',
@@ -498,6 +500,7 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     const form = new FormData()
     form.append('title', values.title)
     form.append('dat_file', values.dat_file)
+    form.append('q_units', values.q_units)
     form.append('bilbomd_mode', 'openfold')
     values.entities.forEach((entity, index) => {
       form.append(`entities[${index}][id]`, entity.id)
@@ -769,6 +772,11 @@ const NewOpenFoldJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           existingFileName={
                             useExampleData ? 'example-saxs.dat' : undefined
                           }
+                        />
+                      </Grid>
+                      <Grid>
+                        <SaxsDataOptions
+                          disabled={isSubmitting || useExampleData}
                         />
                       </Grid>
 

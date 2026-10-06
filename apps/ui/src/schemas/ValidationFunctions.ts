@@ -5,8 +5,10 @@ import {
   parseCifAtomSite,
   cifContainsChainId as cifContainsChainIdUtil,
   cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
-  cifIsSingleModel as cifIsSingleModelUtil
+  cifIsSingleModel as cifIsSingleModelUtil,
+  analyzeSaxsData
 } from '@bilbomd/bilbomd-types'
+import type { QUnits, SaxsDataAnalysis } from '@bilbomd/bilbomd-types'
 import { parsePLDDTFromPDB, parsePLDDTFromCIF } from '../utils/pdbUtils'
 
 const hasAllowedResiduesOnly = (
@@ -189,7 +191,9 @@ const noSpaces = (file: File): Promise<boolean> => {
 //  including optional negative sign, decimal part, and exponent part.
 //  Examples of matches include `123`, `-123.45`, `1.23e4`, `-1.23e-4`, etc.
 
-const isSaxsData = (
+// Legacy first-q check, now used only for SANS data. SAXS data goes through
+// analyzeSaxsFile below.
+const isSansData = (
   file: File
 ): Promise<{ valid: boolean; message?: string }> => {
   const sciNotation = /-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?/g
@@ -245,6 +249,40 @@ const isSaxsData = (
       resolve({ valid: false, message: 'Error reading the file' })
     }
   })
+}
+
+// Analyses are cached per file and q_units: Formik re-validates the whole
+// form on every change, and the same file is also analyzed for its warnings.
+const saxsAnalysisCache = new WeakMap<
+  File,
+  Partial<Record<QUnits, Promise<SaxsDataAnalysis>>>
+>()
+
+// Validates a SAXS data file with the same analysis the backend applies on
+// upload (see analyzeSaxsData in @bilbomd/bilbomd-types).
+const analyzeSaxsFile = (
+  file: File,
+  qUnits: QUnits = 'auto'
+): Promise<SaxsDataAnalysis> => {
+  const cached = saxsAnalysisCache.get(file) ?? {}
+  saxsAnalysisCache.set(file, cached)
+  cached[qUnits] ??= file
+    .text()
+    .then((text) => analyzeSaxsData(text, { qUnits }))
+    .catch((): SaxsDataAnalysis => ({
+      valid: false,
+      message: 'Error reading the file',
+      warnings: [],
+      changed: false,
+      points: [],
+      stats: {
+        totalPoints: 0,
+        keptPoints: 0,
+        trimmedLowQ: 0,
+        trimmedHighQ: 0
+      }
+    }))
+  return cached[qUnits]
 }
 
 type SaxsQualityResult = {
@@ -641,7 +679,8 @@ export {
   isCRD,
   isPsfData,
   noSpaces,
-  isSaxsData,
+  isSansData,
+  analyzeSaxsFile,
   hasSaxsQualityIssues,
   isRNA,
   isSingleModel,

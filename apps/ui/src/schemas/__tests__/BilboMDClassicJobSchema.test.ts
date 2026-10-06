@@ -36,6 +36,7 @@ vi.mock('../fieldTests/fieldTests', () => ({
     ),
   noSpacesTest: () => mixed(),
   saxsCheck: () => mixed(),
+  qUnitsField: () => mixed(),
   psfCheck: () => mixed(),
   crdCheck: () => mixed(),
   pdbCheck: () => mixed(),

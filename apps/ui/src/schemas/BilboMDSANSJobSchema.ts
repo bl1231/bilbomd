@@ -8,7 +8,7 @@ import {
   fileSizeTest,
   fileNameLengthTest,
   noSpacesTest,
-  saxsCheck,
+  sansCheck,
   fileExtTest,
   constInpCheck
 } from './fieldTests/fieldTests'
@@ -28,7 +28,7 @@ const BilboMDSANSJobSchema = object().shape({
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),
   dat_file: requiredFile('Experimental SANS data is required')
-    .concat(saxsCheck())
+    .concat(sansCheck())
     .concat(fileExtTest('dat'))
     .concat(fileSizeTest(2_000_000))
     .concat(noSpacesTest())

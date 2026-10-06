@@ -20,6 +20,7 @@ import { config } from '../../config/config.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { serverFile } from './utils/serverFiles.js'
+import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
 
 const uploadFolder = config.uploadDir
 
@@ -56,6 +57,13 @@ const handleBilboMDAlphaFoldJob = async (
   // resubmission's reused file)
   const datFile = files['dat_file']?.[0] ?? serverFile(req, jobDir, 'dat_file')
 
+  // Convert to Å⁻¹ and trim before validation or AutoRg read the file
+  const saxsData = await prepareSaxsDataFile(datFile, req.body.q_units)
+  if (!saxsData.ok) {
+    res.status(400).json(saxsDataError(saxsData.message))
+    return
+  }
+
   let parsedEntities: IAlphaFoldEntity[] = []
 
   try {
@@ -79,6 +87,7 @@ const handleBilboMDAlphaFoldJob = async (
     bilbomd_mode: req.body.bilbomd_mode,
     email: req.body.email,
     dat_file: datFile,
+    q_units: req.body.q_units,
     entities: parsedEntities
   }
 
@@ -276,6 +285,7 @@ const handleBilboMDAlphaFoldJob = async (
 
       res.status(200).json({
         message: `New BilboMD AF Job successfully created`,
+        saxs_warnings: saxsData.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine,
@@ -286,6 +296,7 @@ const handleBilboMDAlphaFoldJob = async (
     } else {
       res.status(200).json({
         message: `New BilboMD AF Job successfully created`,
+        saxs_warnings: saxsData.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine

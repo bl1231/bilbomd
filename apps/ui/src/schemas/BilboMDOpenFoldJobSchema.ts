@@ -5,7 +5,8 @@ import {
   fileSizeTest,
   fileNameLengthTest,
   noSpacesTest,
-  saxsCheck
+  saxsCheck,
+  qUnitsField
 } from './fieldTests/fieldTests'
 import { titleSchema } from './titleSchema'
 
@@ -19,6 +20,7 @@ const isRnaSequence = (sequence: string) => /^[ACGU]+$/i.test(sequence)
 const BilboMDOpenFoldJobSchema = object().shape({
   title: titleSchema('BilboMD Job'),
 
+  q_units: qUnitsField(),
   dat_file: requiredFile('Experimental SAXS data is required')
     .concat(fileSizeTest(2_000_000))
     .concat(fileExtTest('dat'))
