@@ -296,6 +296,18 @@ def rename_glycam_residues(pdb_text: str) -> tuple[str, list[str]]:
                 resseq=atom.resseq,
                 icode=atom.icode,
             )
+        elif residues[key].resname != atom.resname and (
+            atom.resname in CARBOHYDRATE_RESNAMES
+            or residues[key].resname in CARBOHYDRATE_RESNAMES
+        ):
+            # Everything below identifies a residue by chain + number, so a
+            # sugar numbered like another residue would be merged into it and
+            # never renamed.
+            raise ValueError(
+                f"Chain {atom.chain_id} residue {atom.resseq} is both "
+                f"{residues[key].resname} and {atom.resname}. Give each residue "
+                "its own number within its chain."
+            )
         residues[key].atoms.append(atom)
 
     # --- Parse LINK records ---
