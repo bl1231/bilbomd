@@ -5,6 +5,7 @@ import {
   calculateProgress,
   monitorAndCleanupJobs,
   parseSlurmTime,
+  parseStatusLine,
   queryNERSCForJobState
 } from '../bilboMdNerscJobMonitor.js'
 import { configureJobEvents } from '../../helpers/jobEvents.js'
@@ -287,6 +288,84 @@ describe('monitorAndCleanupJobs progress', () => {
     expect(job.steps?.minimize?.status).toBe('Success')
     expect(job.steps?.md?.status).toBe('Running')
     expect(job.progress).toBe(50)
+  })
+
+  it('copies the step times the Slurm script recorded in status.txt', async () => {
+    const job = makeRealJob()
+    vi.spyOn(Job, 'find').mockReturnValue({
+      exec: vi.fn().mockResolvedValue([job])
+    } as unknown as ReturnType<typeof Job.find>)
+    mockApiResponse([{ state: 'RUNNING', qos: 'gpu_debug' }])
+    vi.mocked(getSlurmStatusFile).mockResolvedValue(
+      'pae: Success 1759712700 1759712745\nminimize: Running 1759712749\nmd: Waiting\n'
+    )
+
+    await monitorAndCleanupJobs()
+
+    expect(job.steps?.pae?.started_at).toEqual(new Date(1759712700_000))
+    expect(job.steps?.pae?.completed_at).toEqual(new Date(1759712745_000))
+    expect(job.steps?.pae?.duration_ms).toBe(45_000)
+    expect(job.steps?.minimize?.started_at).toEqual(new Date(1759712749_000))
+    expect(job.steps?.minimize?.completed_at).toBeUndefined()
+    expect(job.steps?.md?.started_at).toBeUndefined()
+  })
+
+  it('times the Slurm job step from accounting, not from the poll', async () => {
+    const job = makeRealJob()
+    vi.spyOn(Job, 'find').mockReturnValue({
+      exec: vi.fn().mockResolvedValue([job])
+    } as unknown as ReturnType<typeof Job.find>)
+    mockApiResponse([
+      {
+        state: 'RUNNING',
+        qos: 'gpu_debug',
+        start: '2026-10-06T01:05:49',
+        end: 'Unknown'
+      }
+    ])
+    vi.mocked(getSlurmStatusFile).mockResolvedValue('')
+
+    await monitorAndCleanupJobs()
+
+    const [, , , , timing] = vi
+      .mocked(updateSingleJobStep)
+      .mock.calls.find(([, step]) => step === 'nersc_job_status')!
+    expect(timing).toEqual({
+      started_at: parseSlurmTime('2026-10-06T01:05:49')
+    })
+  })
+})
+
+describe('parseStatusLine', () => {
+  it('reads a line written before the times were added', () => {
+    expect(parseStatusLine('minimize: Success')).toEqual({
+      step: 'minimize',
+      status: { status: 'Success', message: 'Success' }
+    })
+  })
+
+  it('reads the start of a running step', () => {
+    expect(parseStatusLine('md: Running 1759712749')?.status).toEqual({
+      status: 'Running',
+      message: 'Running',
+      started_at: new Date(1759712749_000)
+    })
+  })
+
+  it('reads both times and the duration of a finished step', () => {
+    expect(
+      parseStatusLine('heat: Error 1759712749 1759712832')?.status
+    ).toEqual({
+      status: 'Error',
+      message: 'Error',
+      started_at: new Date(1759712749_000),
+      completed_at: new Date(1759712832_000),
+      duration_ms: 83_000
+    })
+  })
+
+  it('returns null for a line with no step', () => {
+    expect(parseStatusLine('garbage')).toBeNull()
   })
 })
 

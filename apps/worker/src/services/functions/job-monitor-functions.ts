@@ -2,7 +2,8 @@ import {
   User,
   IJob,
   IBilboMDSteps,
-  StepStatusEnum
+  StepStatusEnum,
+  IStepStatus
 } from '@bilbomd/mongodb-schema'
 import { Types } from 'mongoose'
 import { logger } from '../../helpers/loggers.js'
@@ -162,17 +163,50 @@ const cleanupJob = async (
   }
 }
 
+type StepTiming = Pick<
+  IStepStatus,
+  'started_at' | 'completed_at' | 'duration_ms'
+>
+
+// Timing for a step the monitor runs itself, with the same rules as
+// buildStepStatusUpdate: Running keeps an existing start, Success and Error
+// close the step, anything else clears the timing.
+const stepTiming = (
+  previous: IStepStatus | undefined,
+  status: StepStatusEnum,
+  now = new Date()
+): StepTiming => {
+  const started_at = previous?.started_at
+    ? new Date(previous.started_at)
+    : undefined
+  if (status === 'Running') return { started_at: started_at ?? now }
+  if (status !== 'Success' && status !== 'Error') return {}
+  return {
+    ...(started_at && {
+      started_at,
+      duration_ms: now.getTime() - started_at.getTime()
+    }),
+    completed_at: now
+  }
+}
+
 const updateSingleJobStep = async (
   DBJob: IJob,
   stepName: keyof IBilboMDSteps,
   status: StepStatusEnum,
-  message: string
+  message: string,
+  // Pass the timing when it is known from elsewhere (e.g. Slurm accounting)
+  timing?: StepTiming
 ): Promise<void> => {
   try {
     if (!DBJob.steps) {
       DBJob.steps = {} as IBilboMDSteps
     }
-    DBJob.steps[stepName] = { status, message }
+    DBJob.steps[stepName] = {
+      status,
+      message,
+      ...(timing ?? stepTiming(DBJob.steps[stepName], status))
+    }
     await DBJob.save()
   } catch (error) {
     logger.error(
@@ -181,4 +215,5 @@ const updateSingleJobStep = async (
   }
 }
 
-export { copyBilboMDResults, sendBilboMDEmail, updateSingleJobStep }
+export { copyBilboMDResults, sendBilboMDEmail, updateSingleJobStep, stepTiming }
+export type { StepTiming }

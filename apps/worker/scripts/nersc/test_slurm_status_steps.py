@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -70,3 +72,46 @@ def test_pae_section_completes_the_pae_step(filename, pipeline_type, tmp_path):
     assert "update_status pae Success" in section
     assert "update_status pae Error" in section
     assert set(UPDATE_STATUS_RE.findall(section)) <= steps
+
+
+def _run_updates(module, tmp_path: Path, calls: list[str]) -> list[str]:
+    status_file = tmp_path / "status.txt"
+    status_file.write_text("pae: Waiting\npae2constraints: Waiting\nminimize: Waiting\n")
+    script = tmp_path / "helpers.sh"
+    script.write_text(
+        f'STATUS_FILE="{status_file}"\n' + module.add_helper_functions() + "\n".join(calls) + "\n"
+    )
+    subprocess.run(["bash", str(script)], check=True, capture_output=True)
+    return status_file.read_text().splitlines()
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+@pytest.mark.parametrize("filename", GENERATORS)
+def test_update_status_records_step_times(filename, tmp_path):
+    lines = _run_updates(
+        _load(filename),
+        tmp_path,
+        ["update_status pae Running", "sleep 1", "update_status pae Success", "update_status minimize Running"],
+    )
+
+    pae = re.fullmatch(r"pae: Success (\d+) (\d+)", lines[0])
+    assert pae, lines
+    assert 1 <= int(pae.group(2)) - int(pae.group(1)) <= 5
+    # "pae" must not touch the step whose name merely starts with it
+    assert lines[1] == "pae2constraints: Waiting"
+    assert re.fullmatch(r"minimize: Running \d+", lines[2])
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+@pytest.mark.parametrize("filename", GENERATORS)
+def test_update_status_keeps_the_start_time_on_error(filename, tmp_path):
+    lines = _run_updates(
+        _load(filename),
+        tmp_path,
+        ["update_status minimize Running", "update_status minimize Error", "update_status pae Error"],
+    )
+
+    started, completed = re.fullmatch(r"minimize: Error (\d+) (\d+)", lines[2]).groups()
+    assert int(started) <= int(completed)
+    # A step that fails without ever reporting Running still gets both times
+    assert re.fullmatch(r"pae: Error \d+ \d+", lines[0])

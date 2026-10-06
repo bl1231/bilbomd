@@ -427,13 +427,26 @@ def add_helper_functions():
 # --------------------------------------------------------------------------------------
 # Helper functions
 
-# Updates our status.txt file using sed to update values
+# Updates a step's line in status.txt and records when it started and finished,
+# so BilboMD can show how long each step took. A line reads
+#   <step>: <status> [<started> [<completed>]]
+# with both times in seconds since the epoch.
 update_status() {
   local step=$1
   local status=$2
+  local now
+  now=$(date +%s)
   echo "Update $step status: $status"
-  # Use sed to update the status file
-  sed -i "s/^$step: .*/$step: $status/" "$STATUS_FILE"
+  awk -v step="$step" -v status="$status" -v now="$now" '
+    index($0, step ": ") == 1 {
+      started = ($3 ~ /^[0-9]+$/) ? $3 : now
+      if (status == "Running") print step ": " status " " started
+      else if (status == "Success" || status == "Error") print step ": " status " " started " " now
+      else print step ": " status
+      next
+    }
+    { print }
+  ' "$STATUS_FILE" > "$STATUS_FILE.tmp" && mv "$STATUS_FILE.tmp" "$STATUS_FILE"
 }
 
 # Check exit code and fail the SLURM job if non-zero. Exiting non-zero makes
