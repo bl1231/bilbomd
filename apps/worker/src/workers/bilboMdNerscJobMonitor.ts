@@ -18,7 +18,8 @@ import { getSlurmStatusFile } from '../services/functions/nersc-api-functions.js
 import {
   copyBilboMDResults,
   sendBilboMDEmail,
-  updateSingleJobStep
+  updateSingleJobStep,
+  type StepTiming
 } from '../services/functions/job-monitor-functions.js'
 import { prepareBilboMDResults } from '../services/functions/prepare-results.js'
 import { sendJobFailedEmail } from '../services/functions/job-failure.js'
@@ -484,6 +485,25 @@ const createDefaultNerscInfo = (): INerscInfo => {
   }
 }
 
+// sacct reports the epoch placeholder for a time it does not have yet
+const slurmJobTiming = ({
+  time_started,
+  time_completed
+}: INerscInfo): StepTiming => {
+  const started_at =
+    time_started && time_started.getTime() > 0 ? time_started : undefined
+  const completed_at =
+    time_completed && time_completed.getTime() > 0 ? time_completed : undefined
+  return {
+    ...(started_at && { started_at }),
+    ...(completed_at && { completed_at }),
+    ...(started_at &&
+      completed_at && {
+        duration_ms: completed_at.getTime() - started_at.getTime()
+      })
+  }
+}
+
 const updateJobNerscState = async (
   job: IJob,
   nerscState: INerscInfo
@@ -499,12 +519,14 @@ const updateJobNerscState = async (
   await job.save()
   // logger.info(`Updated job ${job.nersc.jobid} with state: ${nerscState.state}`)
 
-  // Update NERSC job status step
+  // Update NERSC job status step. It is rewritten on every poll, so its
+  // timing comes from Slurm accounting: how long the job itself ran.
   await updateSingleJobStep(
     job,
     'nersc_job_status',
     'Success',
-    `NERSC job status: ${nerscState.state}`
+    `NERSC job status: ${nerscState.state}`,
+    slurmJobTiming(nerscState)
   )
 
   // Update the job steps from the Slurm status file.
@@ -678,6 +700,40 @@ const calculateProgress = async (steps?: IBilboMDSteps): Promise<number> => {
   return Math.round((completedSteps / totalSteps) * 100)
 }
 
+// A status.txt line is "<step>: <status> [<started> [<completed>]]", with the
+// times in seconds since the epoch as recorded by the Slurm script. Scripts
+// generated before the times were added write only "<step>: <status>".
+const parseStatusLine = (
+  line: string
+): { step: string; status: IStepStatus } | null => {
+  const separator = line.indexOf(':')
+  if (separator === -1) return null
+  const step = line.slice(0, separator).trim()
+  const [status, started, completed] = line
+    .slice(separator + 1)
+    .trim()
+    .split(/\s+/)
+  const toDate = (seconds?: string) =>
+    seconds && /^\d+$/.test(seconds)
+      ? new Date(Number(seconds) * 1000)
+      : undefined
+  const started_at = toDate(started)
+  const completed_at = toDate(completed)
+  return {
+    step,
+    status: {
+      status: status as StepStatusEnum,
+      message: status,
+      ...(started_at && { started_at }),
+      ...(completed_at && { completed_at }),
+      ...(started_at &&
+        completed_at && {
+          duration_ms: completed_at.getTime() - started_at.getTime()
+        })
+    }
+  }
+}
+
 const updateJobStepsFromSlurmStatusFile = async (
   DBJob: IJob
 ): Promise<void> => {
@@ -690,10 +746,9 @@ const updateJobStepsFromSlurmStatusFile = async (
     // Update steps from the status file
     const updatedSteps = lines.reduce(
       (acc, line) => {
-        const [step, status] = line.split(':').map((part) => part.trim())
-        if (step in currentSteps) {
-          const key = step as keyof IBilboMDSteps
-          acc[key] = { status: status as StepStatusEnum, message: status }
+        const parsed = parseStatusLine(line)
+        if (parsed && parsed.step in currentSteps) {
+          acc[parsed.step as keyof IBilboMDSteps] = parsed.status
         }
         return acc
       },
@@ -713,5 +768,6 @@ export {
   monitorAndCleanupJobs,
   queryNERSCForJobState,
   calculateProgress,
-  parseSlurmTime
+  parseSlurmTime,
+  parseStatusLine
 }
