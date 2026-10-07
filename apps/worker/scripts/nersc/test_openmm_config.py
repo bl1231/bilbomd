@@ -60,9 +60,12 @@ gen = _load()
 
 
 def _config(tmp_path: Path, params: dict, pdb_lines: list[str] | None = None) -> dict:
+    params = {"rg_min": 20, "rg_max": 40, **params}
     if pdb_lines is not None:
         (tmp_path / params["pdb_file"]).write_text("\n".join(pdb_lines) + "\n")
-    path = gen.prepare_openmm_config({"workdir": str(tmp_path), "num_rgs": 8}, params)
+    path = gen.prepare_openmm_config(
+        {"workdir": str(tmp_path), "gpus_per_node": 4}, params
+    )
     return yaml.safe_load(Path(path).read_text())
 
 
@@ -184,3 +187,70 @@ def test_rg_plot_reads_the_column_rgyr_writes():
     assert '"Step", "Rgyr_A", "Dmax_A"' in rgyr
     assert 'df["Rgyr_A"]' in plot
     assert "Radius_of_Gyration_nm" not in plot
+
+
+# --- MD parameters: same as the beamline (buildOpenMMConfigForJob) ---------------
+
+# A real prod Auto job: the backend's calculateRgyrRange(26, 42)
+JOB_RGYR = [26, 29, 32, 36, 39, 42]
+
+
+def _md(cfg: dict) -> dict:
+    return cfg["steps"]["md"]
+
+
+def test_md_runs_the_jobs_rg_values_four_gpus_per_wave(tmp_path):
+    params = {"openmm_parameters": {"md": {"rgyr": JOB_RGYR}}}
+
+    rgyr = _md(_config(tmp_path, params))["rgyr"]
+
+    assert rgyr["rg_sets"] == [[26, 29, 32, 36], [39, 42]]
+
+
+def test_nested_rgyr_list_uses_its_first_set_like_the_beamline(tmp_path):
+    params = {"openmm_parameters": {"md": {"rgyr": [JOB_RGYR, [50, 60]]}}}
+
+    assert _md(_config(tmp_path, params))["rgyr"]["rg_sets"][0] == JOB_RGYR[:4]
+
+
+def test_jobs_without_an_rgyr_list_rebuild_it_like_the_backend(tmp_path):
+    cfg = _config(tmp_path, {"rg_min": 26, "rg_max": 42})
+
+    assert sum(_md(cfg)["rgyr"]["rg_sets"], []) == JOB_RGYR
+
+
+def test_k_rg_and_report_intervals_come_from_the_job(tmp_path):
+    md = {"k_rg": 25, "rg_report_interval": 200, "pdb_report_interval": 1000}
+
+    cfg = _config(tmp_path, {"openmm_parameters": {"md": {"rgyr": JOB_RGYR, **md}}})
+
+    assert _md(cfg)["rgyr"]["k_rg"] == 25
+    assert _md(cfg)["rgyr"]["report_interval"] == 200
+    assert _md(cfg)["pdb_report_interval"] == 1000
+
+
+def test_md_defaults_match_the_beamline(tmp_path):
+    md = _md(_config(tmp_path, {"openmm_parameters": {"md": {"rgyr": JOB_RGYR}}}))
+
+    assert md["rgyr"]["k_rg"] == 10
+    assert md["rgyr"]["report_interval"] == 500
+    assert md["pdb_report_interval"] == 500
+
+
+def test_job_without_rg_values_fails_at_prep(tmp_path):
+    with pytest.raises(SystemExit):
+        gen.prepare_openmm_config(
+            {"workdir": str(tmp_path), "gpus_per_node": 4}, {"pdb_file": "in.pdb"}
+        )
+
+
+def test_each_md_wave_gets_one_gpu_task_per_rg_value(tmp_path):
+    _config(tmp_path, {"openmm_parameters": {"md": {"rgyr": JOB_RGYR}}})
+
+    section = gen.generate_md_section(
+        {"workdir": str(tmp_path), "num_cores": 128, "gpus_per_node": 4}
+    )
+
+    assert re.findall(r"srun --ntasks=(\d+)", section) == ["4", "2"]
+    assert section.count("--cpus-per-task=32") == 2
+    assert "--rg-set 0" in section and "--rg-set 1" in section
