@@ -1,0 +1,14 @@
+# Scripts the NERSC Slurm jobs run, relative to /app/scripts in the worker
+# image (apps/worker/scripts plus tools/python). sync-nersc-scripts-to-cfs.sh
+# copies them to CFS next to the generators, and each generator snapshots them
+# into the job's workdir, so they deploy with the worker instead of being baked
+# into the Perlmutter images. test_job_scripts.py checks this list.
+nersc/run-foxs-after-openmm.py
+nersc/run-foxs-after-charmm.py
+nersc/run-multifoxs.py
+nersc/merge_constraints.py
+openmm/
+pae2const.py
+pdb_utils.py
+helpers_viz.py
+pdb2crd.py

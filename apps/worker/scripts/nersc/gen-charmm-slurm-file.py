@@ -72,6 +72,20 @@ def setup_environment(uuid):
 # -----------------------------------------------------------------------------
 
 
+# Scripts the Slurm steps run (job-scripts.txt), synced next to this generator
+# by sync-nersc-scripts-to-cfs.sh. Each job runs its own copy from
+# /bilbomd/work/.scripts, so the scripts deploy with the worker rather than
+# with the container images, and a later deploy can't change a queued job.
+# copy-back-to-cfs.sh copies $WORKDIR/*, which skips the hidden directory.
+JOB_SCRIPTS_SRC = Path(__file__).resolve().parent / "job-scripts"
+
+
+def copy_job_scripts(workdir, src=JOB_SCRIPTS_SRC):
+    dest = os.path.join(workdir, ".scripts")
+    shutil.rmtree(dest, ignore_errors=True)
+    shutil.copytree(src, dest)
+
+
 def prepare_input(workdir, upload_dir):
     # Create working directory if it doesn't exist
     Path(workdir).mkdir(parents=True, exist_ok=True)
@@ -639,7 +653,7 @@ srun --ntasks=1 \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work
-            python /app/scripts/pae2const.py {pae_file} \\
+            python /bilbomd/work/.scripts/pae2const.py {pae_file} \\
                 --pdb_file {pdb_file} \\
                 --charmm-const-file const.inp
     "
@@ -666,7 +680,7 @@ srun --job-name af-pdb2crd \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
-            python /app/scripts/pdb2crd.py af-rank1.pdb . > pdb2crd_output.txt
+            python /bilbomd/work/.scripts/pdb2crd.py af-rank1.pdb . > pdb2crd_output.txt
     "
 
 # Parse the file "pdb2crd_output.txt" and run CHARMM for each chain-specific *.inp file
@@ -728,7 +742,7 @@ srun --job-name pdb2crd \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
-            python /app/scripts/pdb2crd.py {pdb_file} . > pdb2crd_output.txt
+            python /bilbomd/work/.scripts/pdb2crd.py {pdb_file} . > pdb2crd_output.txt
     "
 
 # Check if output file was created
@@ -1294,7 +1308,7 @@ srun --ntasks=1 \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/foxs &&
-            python /app/scripts/nersc/run-foxs-after-charmm.py
+            python /bilbomd/work/.scripts/nersc/run-foxs-after-charmm.py
         "
 FOXS_EXIT=$?
 check_exit_code $FOXS_EXIT foxs
@@ -1321,7 +1335,7 @@ srun --ntasks=1 \\
          $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/multifoxs &&
-            python /app/scripts/nersc/run-multifoxs.py \\
+            python /bilbomd/work/.scripts/nersc/run-multifoxs.py \\
                 --foxs-list ../foxs_dat_files.txt \\
                 --prefix .. \\
                 --saxs-data ../{params.get("data_file")} \\
@@ -1376,6 +1390,7 @@ def main():
 
     # Step 2: Prepare input and read the job params
     params = prepare_input(config["workdir"], config["upload_dir"])
+    copy_job_scripts(config["workdir"])
 
     # Step 3: Use template files to create CHARMM input files
     copy_template_files(config)
