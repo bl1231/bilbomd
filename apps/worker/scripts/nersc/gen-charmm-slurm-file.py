@@ -30,7 +30,8 @@ def setup_environment(uuid):
     cfs_base = f"{cfs}/{project}/bilbomd"
     upload_dir = f"{cfs_base}/{env_dir}/uploads/{uuid}"
     workdir = f"{pscratch}/bilbomd/{env_dir}/{uuid}"
-    template_dir = f"{cfs_base}/{env_dir}/templates"
+    # Templates are synced next to this script by sync-nersc-scripts-to-cfs.sh
+    template_dir = str(Path(__file__).resolve().parent / "bilbomd-templates")
 
     # Docker images
     bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.30"
@@ -112,6 +113,18 @@ def prepare_input(workdir, upload_dir):
 # Copy CHARMM template files
 # -----------------------------------------------------------------------------
 
+# minimize, heat and md run in charmm/<step>/, two levels below the workdir
+# where pdb2crd writes the psf/crd and pae2const writes const.inp.
+WORKDIR_FILE_PARAMS = {"in_psf_file", "in_crd_file", "constinp"}
+
+
+def step_dir_param(params, key):
+    """Return a template value as seen from a charmm/<step>/ directory."""
+    value = str(params[key])
+    if key in WORKDIR_FILE_PARAMS and not os.path.isabs(value):
+        return os.path.join("..", "..", value)
+    return value
+
 
 def copy_template_files(config):
     """Copy CHARMM input file templates from template directory to appropriate working subdirectories."""
@@ -186,7 +199,7 @@ def template_minimization_file(config, params):
                 file=sys.stderr,
             )
             sys.exit(1)
-        replacements[placeholder] = str(params[param_key])
+        replacements[placeholder] = step_dir_param(params, param_key)
 
     for placeholder, value in replacements.items():
         content = content.replace(placeholder, str(value))
@@ -241,7 +254,7 @@ def template_heat_file(config, params):
                 file=sys.stderr,
             )
             sys.exit(1)
-        replacements[placeholder] = str(params[param_key])
+        replacements[placeholder] = step_dir_param(params, param_key)
 
     for placeholder, value in replacements.items():
         content = content.replace(placeholder, str(value))
@@ -327,8 +340,8 @@ def template_md_files(config, params):
         # Prepare all replacements including dynamic values
         replacements = {
             "{{charmm_topo_dir}}": str(params["charmm_topo_dir"]),
-            "{{in_psf_file}}": str(params["in_psf_file"]),
-            "{{constinp}}": str(params["constinp"]),
+            "{{in_psf_file}}": step_dir_param(params, "in_psf_file"),
+            "{{constinp}}": step_dir_param(params, "constinp"),
             "{{rg}}": str(rg_value),
             "{{inp_basename}}": inp_basename,
             "{{conf_sample}}": str(conf_sample),
@@ -1019,7 +1032,8 @@ def template_dcd2pdb_input_files(config, params):
 
             # Generate dynamic values based on bash logic
             foxs_run_dir = f"rg{rg_value}_run{run}"
-            in_dcd = f"dynamics_rg{rg_value}_run{run}.dcd"
+            # dcd2pdb runs in the workdir; dynamics writes its dcd files in charmm/md/
+            in_dcd = f"charmm/md/dynamics_rg{rg_value}_run{run}.dcd"
 
             print(
                 f"Creating CHARMM DCD2PDB input file: {inp_filename} for Rg={rg_value}, run={run}"

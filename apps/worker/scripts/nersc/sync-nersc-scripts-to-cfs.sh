@@ -23,4 +23,7 @@ for file in "${FILES_TO_COPY[@]}"; do
   rsync -av "${SRC}/${file}" "${DEST}/"
 done
 
+# CHARMM input templates read by gen-charmm-slurm-file.py from its own directory
+rsync -av --delete "${SRC}/bilbomd-templates/" "${DEST}/bilbomd-templates/"
+
 echo "[sync] Done."
