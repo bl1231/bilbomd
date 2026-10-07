@@ -21,8 +21,15 @@ TEMPLATES = ["minimize.tmpl", "heat.tmpl", "dynamics.tmpl", "dcd2pdb.tmpl"]
 RG_VALUES = [22, 31]
 RUNS = 2
 
-# Files that the slurm script creates before each CHARMM step reads them
-WORKDIR_INPUTS = ["bilbomd_pdb2crd.psf", "bilbomd_pdb2crd.crd", "const.inp"]
+# CRD jobs upload their own psf/crd/constraint files (names as in real jobs).
+# Auto jobs get them from pdb2crd and pae2const during the Slurm job.
+CRD_UPLOADS = {
+    "psf_file": "example.psf",
+    "crd_file": "example.crd",
+    "const_inp_file": "example-const.inp",
+}
+GENERATED_INPUTS = ["bilbomd_pdb2crd.psf", "bilbomd_pdb2crd.crd", "const.inp"]
+# Files that earlier CHARMM steps write before the next step reads them
 STEP_OUTPUTS = [
     "charmm/minimize/minimization_output.crd",
     "charmm/heat/heat_output.crd",
@@ -44,32 +51,47 @@ def _load():
     return module
 
 
-@pytest.fixture
-def workdir(tmp_path):
+def _render(tmp_path: Path, params: dict, uploads: list[str]) -> Path:
     module = _load()
+    upload_dir = tmp_path / "uploads"
+    upload_dir.mkdir()
+    (upload_dir / "params.json").write_text(json.dumps(params))
+    for name in uploads:
+        (upload_dir / name).touch()
+
     workdir = tmp_path / "job"
-    workdir.mkdir()
-    (workdir / "params.json").write_text(
-        json.dumps(
-            {
-                "__t": "BilboMdPDB",
-                "charmm_parameters": {
-                    "md": {"rgyr": RG_VALUES, "nsteps": RUNS * 100000}
-                },
-            }
-        )
-    )
     config = module.setup_environment("uuid")
     config["workdir"] = str(workdir)
-    params = module.prepare_input(str(workdir), str(tmp_path / "no-uploads"))
+    params = module.prepare_input(str(workdir), str(upload_dir))
 
     module.copy_template_files(config)
     module.template_minimization_file(config, params)
     module.template_heat_file(config, params)
     module.template_md_files(config, params)
     module.template_dcd2pdb_input_files(config, params)
+    return workdir
 
-    for name in WORKDIR_INPUTS + STEP_OUTPUTS:
+
+def _md_params(job_type: str, **extra) -> dict:
+    return {
+        "__t": job_type,
+        "charmm_parameters": {"md": {"rgyr": RG_VALUES, "nsteps": RUNS * 100000}},
+        **extra,
+    }
+
+
+@pytest.fixture(params=["BilboMdCRD", "BilboMdAuto"])
+def workdir(request, tmp_path):
+    if request.param == "BilboMdCRD":
+        workdir = _render(
+            tmp_path, _md_params("BilboMdCRD", **CRD_UPLOADS), list(CRD_UPLOADS.values())
+        )
+    else:
+        workdir = _render(tmp_path, _md_params("BilboMdAuto"), [])
+        for name in GENERATED_INPUTS:
+            (workdir / name).touch()
+
+    for name in STEP_OUTPUTS:
         (workdir / name).touch()
     return workdir
 
@@ -129,6 +151,29 @@ def test_dcd2pdb_reads_the_dcd_files_that_md_writes(workdir):
 
     assert read == written
     assert len(read) == len(RG_VALUES) * RUNS
+
+
+def test_crd_jobs_stream_the_uploaded_constraint_file(tmp_path):
+    workdir = _render(
+        tmp_path, _md_params("BilboMdCRD", **CRD_UPLOADS), list(CRD_UPLOADS.values())
+    )
+
+    for inp in _step_inputs(workdir)[1:]:
+        assert "STREAM ../../example-const.inp" in inp.read_text().splitlines(), inp
+
+
+@pytest.mark.parametrize("const_inp_file", [None, "missing.inp"])
+def test_crd_job_without_its_constraint_file_fails_at_prep(tmp_path, const_inp_file):
+    # CHARMM only warns on a STREAM it cannot open, so a bad name would run
+    # heat and md without constraints and still report Success
+    uploads = {**CRD_UPLOADS, "const_inp_file": const_inp_file}
+
+    with pytest.raises(SystemExit):
+        _render(
+            tmp_path,
+            _md_params("BilboMdCRD", **uploads),
+            [CRD_UPLOADS["psf_file"], CRD_UPLOADS["crd_file"]],
+        )
 
 
 def test_dcd2pdb_tolerates_charmm_warnings():
