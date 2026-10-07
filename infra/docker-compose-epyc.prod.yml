@@ -142,8 +142,10 @@ services:
           memory: '32g'
         reservations:
           devices:
+            # Prod workers get GPU 1 to themselves. `count: 1` always hands out
+            # GPU 0, which the dev stack and the fold services also use.
             - driver: nvidia
-              count: 1
+              device_ids: ['1']
               capabilities: [gpu]
     restart: always
     read_only: true
