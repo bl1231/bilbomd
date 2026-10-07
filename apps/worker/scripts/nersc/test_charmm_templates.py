@@ -182,3 +182,41 @@ def test_dcd2pdb_tolerates_charmm_warnings():
     content = (HERE / "bilbomd-templates" / "dcd2pdb.tmpl").read_text()
 
     assert re.search(r"^bomlev -2$", content, re.MULTILINE)
+
+
+def _runs_rendered(workdir: Path) -> set[int]:
+    """Runs per Rg, as rendered into the MD loop and the dcd2pdb inputs."""
+    loops = {
+        int(float(m)) for m in re.findall(
+            r"^if ii lt ([\d.]+) goto loop$",
+            "\n".join(p.read_text() for p in (workdir / "charmm" / "md").glob("*.inp")),
+            re.MULTILINE,
+        )
+    }
+    dcd2pdb = {
+        len(list(workdir.glob(f"dcd2pdb_rg{rg}_run*.inp"))) for rg in RG_VALUES
+    }
+    return loops | dcd2pdb
+
+
+@pytest.mark.parametrize(
+    "extra, runs",
+    [
+        # nsteps sent explicitly and disagreeing: the beamline follows
+        # conformational_sampling
+        ({"conformational_sampling": 2, "nsteps": 300000}, 2),
+        ({"conformational_sampling": 4, "nsteps": 100000}, 4),
+        # older jobs without conformational_sampling fall back to nsteps
+        ({"nsteps": 300000}, 3),
+    ],
+)
+def test_runs_per_rg_follow_conformational_sampling(tmp_path, extra, runs):
+    nsteps = extra.pop("nsteps")
+    params = _md_params("BilboMdCRD", **CRD_UPLOADS, **extra)
+    params["charmm_parameters"]["md"]["nsteps"] = nsteps
+
+    workdir = _render(tmp_path, params, list(CRD_UPLOADS.values()))
+    section = _load().generate_dcd2pdb_section({"num_cores": 128}, params)
+
+    assert _runs_rendered(workdir) == {runs}
+    assert f"Processing {len(RG_VALUES) * runs} DCD2PDB jobs" in section
