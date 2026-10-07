@@ -1,5 +1,27 @@
 # @bilbomd/worker
 
+## 2.21.2
+
+### Patch Changes
+
+- 7ee1094: NERSC CHARMM jobs now fail instead of reporting Success when a step silently went wrong:
+
+  - every CHARMM step (meld, minimize, heat, md, dcd2pdb) fails if its output says a file "cannot be opened". CHARMM only warns about this under `bomlev -2` and exits 0, which is how CRD jobs ran without their constraint file.
+  - meld's exit code is now checked.
+  - PDB remediation fails when dcd2pdb produced no PDB files, instead of exiting 0 and ending the Slurm job as COMPLETED with no results.
+  - `run-foxs-after-charmm.py` exits 1 when no FoXS profile was produced. As on the beamline, a few failed conformers are only a warning.
+
+- a8e8251: NERSC CHARMM jobs now run `conformational_sampling` MD runs per Rg value, as the beamline does. The generator used `charmm_parameters.md.nsteps / 100000`, which matches only when the job doesn't send its own `charmm_md_nsteps`; a job with `num_conf=2` and `charmm_md_nsteps=300000` ran 2 runs per Rg on the beamline and 3 on NERSC. Jobs without `conformational_sampling` still fall back to `nsteps`.
+- 43fec50: NERSC jobs now run their helper and MD scripts (FoXS/MultiFoXS helpers, `merge_constraints.py`, `pae2const.py`, `pdb2crd.py`, and the OpenMM `minimize`/`heat`/`md`/`plot_rgyrs` scripts) from a copy that deploys with the worker, instead of the copies baked into the `bilbomd-perlmutter-worker` and `bilbomd-openmm-worker` images. `sync-nersc-scripts-to-cfs.sh` copies the scripts listed in `job-scripts.txt` to CFS next to the generators, and each generator snapshots them into the job's workdir (`.scripts`), so script fixes reach NERSC with a normal deploy and a queued job keeps the scripts it was prepared with. The images now only provide the runtime (Python envs, CHARMM, OpenMM, FoXS).
+- 9ca8711: NERSC OpenMM jobs now run their helper steps (PAE to constraints, initial FoXS, FoXS, MultiFoXS, Rg plot) in `bilbomd-perlmutter-worker:0.0.31`. The helper scripts baked into `0.0.30` dated from April: `pae2const.py` now includes the OpenFold3 support and the AlphaFold3 pLDDT recovery from the PAE JSON (#876) that the beamline already uses, and `plot_rgyrs.py` reads the current Rgyr CSV column name (#1126). The image also moves to Python 3.12 and IMP/FoXS 2.25.0.
+- db7d90e: NERSC OpenMM jobs now run the same Rg restraints as the beamline. The Slurm generator ignored the job's `openmm_parameters.md` and used 8 Rg targets spread over `rg_min`–`rg_max` with a hardcoded `k_rg` of 1, while the beamline runs the job's 6 targets with its `k_rg` (default 10). The generator now uses the job's Rg list, `k_rg`, `rg_report_interval` and `pdb_report_interval`, runs the 6 targets as GPU waves of 4 + 2, and fails at prep instead of skipping MD when a job has no Rg values.
+- 43fec50: NERSC OpenMM jobs handle two inputs the way the beamline does:
+
+  - An mmCIF upload (Classic PDB or Auto) is converted to PDB on the worker before the Slurm script is generated, with the same `cif_to_pdb.py` step the beamline runs. The generator reads the PDB on a login node to strip waters/ions and pick the force field, and couldn't read a CIF.
+  - The FoXS step no longer fails the whole job when a few conformers fail; MultiFoXS only uses the profiles that succeeded. It still fails when no profile was produced, and now also when there are no `rg_*` directories to run.
+
+- 6377cab: NERSC CRD (CHARMM) jobs now use `bilbomd-perlmutter-worker:0.0.31`, which has the same force field as the beamline. `0.0.30` predated #630 and still read the old repo-managed toppar (CHARMM36, CGenFF 3.1) instead of the CHARMM c49b2 bundled files (CHARMM36m, CGenFF 4.6). The new image also carries the current `run-foxs-after-charmm.py`. The Perlmutter worker Dockerfile no longer updates conda from Anaconda's `defaults` channel and installs its Python packages into a dedicated Python 3.12 env, since the old setup no longer solved with the latest Miniforge.
+
 ## 2.21.1
 
 ### Patch Changes
