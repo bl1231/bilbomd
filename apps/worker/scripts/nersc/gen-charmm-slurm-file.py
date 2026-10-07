@@ -493,6 +493,18 @@ check_exit_code() {
     exit $exit_code
   fi
   }
+
+# CHARMM only warns when it cannot open a file (bomlev -2) and still exits 0,
+# so a missing input (e.g. the constraint file) would run on without it.
+check_charmm_output() {
+  local step=$1
+  shift
+  if grep -l "cannot be opened" "$@" 2>/dev/null; then
+    echo "CHARMM could not open an input file in $step. Failing SLURM job."
+    update_status $step Error
+    exit 1
+  fi
+}
 """
     return section
 
@@ -781,7 +793,10 @@ srun --ntasks=1 \\
             cd /bilbomd/work/ &&
             charmm -o pdb2crd_charmm_meld.out -i pdb2crd_charmm_meld.inp
         "
-echo "All Individual CRD files melded into bilbomd_pdb2crd.crd" 
+MELD_EXIT=$?
+check_exit_code $MELD_EXIT meld
+check_charmm_output meld $WORKDIR/pdb2crd_charmm_meld.out
+echo "All Individual CRD files melded into bilbomd_pdb2crd.crd"
 update_status meld Success
 """
     return section
@@ -808,6 +823,7 @@ srun --ntasks=1 \\
         "
 MIN_EXIT=$?
 check_exit_code $MIN_EXIT minimize
+check_charmm_output minimize $WORKDIR/charmm/minimize/minimize.out
 echo "CHARMM Minimization complete"
 update_status minimize Success
 """
@@ -900,6 +916,7 @@ srun --ntasks=1 \\
         "
 HEAT_EXIT=$?
 check_exit_code $HEAT_EXIT heat
+check_charmm_output heat $WORKDIR/charmm/heat/heat.out
 echo "CHARMM Heating complete"
 update_status heat Success
 """
@@ -982,6 +999,7 @@ else
         check_exit_code $exit_code md
         echo "MD job $((i+1)) completed with exit code $exit_code"
     done
+    check_charmm_output md $WORKDIR/charmm/md/dynamics_rg*.out
 
     echo 'CHARMM MD complete'
     update_status md Success
@@ -1178,6 +1196,7 @@ for inp_file in "${{dcd2pdb_files[@]}}"; do
     check_exit_code $DCD2PDB_EXIT dcd2pdb
     echo "DCD2PDB job $job_count completed successfully"
 done
+check_charmm_output dcd2pdb $WORKDIR/dcd2pdb_rg*.out
 
 echo "Extract PDB from DCD Trajectories complete."
 update_status dcd2pdb Success
@@ -1200,9 +1219,9 @@ pdb_files=$(find . -name '*.pdb' -type f)
 pdb_count=$(echo "$pdb_files" | wc -l)
 
 if [ -z "$pdb_files" ]; then
-    echo 'No PDB files found in foxs directory'
-    update_status pdb_remediate Success
-    exit 0
+    echo 'No PDB files found in foxs directory. Failing SLURM job.'
+    update_status pdb_remediate Error
+    exit 1
 fi
 
 echo "Found $pdb_count PDB files to process"

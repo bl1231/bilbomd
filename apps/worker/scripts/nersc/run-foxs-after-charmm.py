@@ -39,12 +39,12 @@ def run_foxs_on_pdb(pdb_file, run_dir):
         return False
 
 def process_directory(run_dir):
-    """Process a single run directory."""
+    """Process a single run directory. Returns (successful, total) PDB counts."""
     print(f"Processing directory: {run_dir}")
     
     if not os.path.isdir(run_dir):
         print(f"Directory not found: {run_dir}")
-        return
+        return 0, 0
     
     # Change to the directory
     original_dir = os.getcwd()
@@ -55,7 +55,7 @@ def process_directory(run_dir):
         pdb_files = glob.glob('*.pdb')
         if not pdb_files:
             print(f"  No PDB files found in {run_dir}")
-            return
+            return 0, 0
         
         print(f"  Found {len(pdb_files)} PDB files")
         
@@ -76,7 +76,8 @@ def process_directory(run_dir):
                     print(f"  Task failed for {pdb_file}: {e}", file=sys.stderr)
         
         print(f"  Successfully processed {success_count}/{len(pdb_files)} PDB files")
-        
+        return success_count, len(pdb_files)
+
     finally:
         # Always change back to /bilbomd/work/foxs (or the original directory)
         foxs_work_dir = '/bilbomd/work/foxs'
@@ -119,7 +120,11 @@ def create_consolidated_foxs_list():
     os.chdir('foxs')  # Return to foxs directory
 
 def main():
-    """Main function to find and process all rg*_run* directories."""
+    """Main function to find and process all rg*_run* directories.
+
+    Like the beamline, a few failed conformers are only a warning, but the
+    step fails when no FoXS profile was produced at all.
+    """
     print("Run FoXS...")
     
     # Find all directories matching rg*_run* pattern
@@ -127,19 +132,28 @@ def main():
     run_dirs = [d for d in run_dirs if os.path.isdir(d)]
     
     if not run_dirs:
-        print("No rg*_run* directories found")
-        return
+        print("No rg*_run* directories found", file=sys.stderr)
+        return 1
     
     print(f"Found {len(run_dirs)} directories to process")
     
     # Process each directory
+    successful = total = 0
     for run_dir in sorted(run_dirs):
-        process_directory(run_dir)
+        dir_successful, dir_total = process_directory(run_dir)
+        successful += dir_successful
+        total += dir_total
     
     # Create consolidated foxs_dat_files.txt for MultiFoXS compatibility
     create_consolidated_foxs_list()
     
-    print("FoXS processing complete")
+    print(f"FoXS processing complete: {successful}/{total} PDB files")
+    if successful == 0:
+        print("No FoXS profiles were produced", file=sys.stderr)
+        return 1
+    if successful < total:
+        print(f"Warning: FoXS failed for {total - successful} PDB files", file=sys.stderr)
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
