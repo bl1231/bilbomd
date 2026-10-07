@@ -290,6 +290,21 @@ def template_heat_file(config, params):
     print("Done Preparing CHARMM Heat input file")
 
 
+def runs_per_rg(params):
+    """Return how many 100,000-step MD runs dynamics.tmpl does for each Rg.
+
+    The beamline uses conformational_sampling, so this does too. The backend
+    sets charmm_parameters.md.nsteps to conformational_sampling * 100000 only
+    when the job does not send its own nsteps, so the two can disagree.
+    """
+    conf_sample = params.get("conformational_sampling")
+    if conf_sample:
+        return int(conf_sample)
+    # Older jobs without conformational_sampling
+    nsteps = params.get("charmm_parameters", {}).get("md", {}).get("nsteps", 300000)
+    return int(nsteps / 100000)
+
+
 def template_md_files(config, params):
     """Create CHARMM MD input files for each Rg value from template."""
     print("Preparing CHARMM MD input files")
@@ -309,10 +324,7 @@ def template_md_files(config, params):
         print(f"Error: Template file {template_file} not found", file=sys.stderr)
         sys.exit(1)
 
-    # Get additional MD parameters
-    charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
-    nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
-    conf_sample = int(nsteps / 100000)
+    conf_sample = runs_per_rg(params)
     timestep = 0.001  # Fixed timestep as in bash version
 
     # Define required parameters and validate they exist
@@ -1019,10 +1031,7 @@ def template_dcd2pdb_input_files(config, params):
         print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
         sys.exit(1)
 
-    # Get additional MD parameters to calculate conf_sample
-    charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
-    nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
-    conf_sample = int(nsteps / 100000)
+    conf_sample = runs_per_rg(params)
 
     workdir = config["workdir"]
     template_file = os.path.join(workdir, "dcd2pdb.tmpl")
@@ -1138,10 +1147,7 @@ def generate_dcd2pdb_section(config, params):
         print("Error: No Rg values found in charmm_parameters.md.rgyr", file=sys.stderr)
         sys.exit(1)
 
-    # Get additional MD parameters to calculate conf_sample (number of runs per Rg)
-    charmm_md_params = params.get("charmm_parameters", {}).get("md", {})
-    nsteps = charmm_md_params.get("nsteps", 300000)  # Default fallback
-    conf_sample = int(nsteps / 100000)
+    conf_sample = runs_per_rg(params)
 
     # Total number of dcd2pdb input files = rg_values * conf_sample
     total_jobs = len(rg_values) * conf_sample
