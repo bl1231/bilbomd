@@ -1,5 +1,12 @@
 # @bilbomd/worker
 
+## 2.21.1
+
+### Patch Changes
+
+- 9cb3657: NERSC CHARMM templates now deploy with the generator. `sync-nersc-scripts-to-cfs.sh` copies `bilbomd-templates/` next to `gen-charmm-slurm-file.py` on CFS, and the generator reads them from there instead of the hand-maintained `$CFS/.../templates` directory. The generator now supplies the `../../` and `charmm/md/` paths that were hand-edited into the CFS copies, so the rendered CHARMM inputs are unchanged. `dcd2pdb` now uses `bomlev -2` like the beamline (#640), so ligand-containing systems no longer abort on the CGenFF NBFIX warning.
+- 96d065e: NERSC CRD jobs now apply their uploaded constraint file. The CHARMM generator hardcoded `const.inp`, so CHARMM could not open the user's file (for example `example-const.inp`), only warned under `bomlev -2`, and ran heat and MD without constraints while the job still reported Success. The generator now uses `const_inp_file` from `params.json` for CRD and PDB jobs and fails at prep time if that file is missing. Auto and AlphaFold jobs keep the `const.inp` written by `pae2const.py`.
+
 ## 2.21.0
 
 ### Minor Changes
