@@ -76,6 +76,20 @@ def setup_environment(uuid):
 # -----------------------------------------------------------------------------
 
 
+# Scripts the Slurm steps run (job-scripts.txt), synced next to this generator
+# by sync-nersc-scripts-to-cfs.sh. Each job runs its own copy from
+# /bilbomd/work/.scripts, so the scripts deploy with the worker rather than
+# with the container images, and a later deploy can't change a queued job.
+# copy-back-to-cfs.sh copies $WORKDIR/*, which skips the hidden directory.
+JOB_SCRIPTS_SRC = Path(__file__).resolve().parent / "job-scripts"
+
+
+def copy_job_scripts(workdir, src=JOB_SCRIPTS_SRC):
+    dest = os.path.join(workdir, ".scripts")
+    shutil.rmtree(dest, ignore_errors=True)
+    shutil.copytree(src, dest)
+
+
 def prepare_input(workdir, upload_dir):
     # Create working directory if it doesn't exist
     Path(workdir).mkdir(parents=True, exist_ok=True)
@@ -668,7 +682,7 @@ srun --ntasks=1 \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work
-            python /app/scripts/pae2const.py {pae_file} \\
+            python /bilbomd/work/.scripts/pae2const.py {pae_file} \\
                 --pdb_file {pdb_file} \\
                 --openmm-const-file constraints.yaml \\
                 --no-const
@@ -692,7 +706,7 @@ srun --ntasks=1 \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work
-            python /app/scripts/nersc/merge_constraints.py openmm_config.yaml constraints.yaml openmm_config.yaml
+            python /bilbomd/work/.scripts/nersc/merge_constraints.py openmm_config.yaml constraints.yaml openmm_config.yaml
     "
 CONS_EXIT=$?
 check_exit_code $CONS_EXIT consmerge
@@ -718,7 +732,7 @@ srun --ntasks=1 \\
         $OPENMM_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
-            python /app/scripts/openmm/minimize.py openmm_config.yaml
+            python /bilbomd/work/.scripts/openmm/minimize.py openmm_config.yaml
         "
 MIN_EXIT=$?
 check_exit_code $MIN_EXIT minimize
@@ -810,7 +824,7 @@ srun --ntasks=1 \\
         $OPENMM_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/ &&
-            python /app/scripts/openmm/heat.py openmm_config.yaml
+            python /bilbomd/work/.scripts/openmm/heat.py openmm_config.yaml
         "
 HEAT_EXIT=$?
 check_exit_code $HEAT_EXIT heat
@@ -860,7 +874,7 @@ update_status md Running
             set -e
             export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
             cd /bilbomd/work/ &&
-            python /app/scripts/openmm/md.py openmm_config.yaml --rg-set {i}
+            python /bilbomd/work/.scripts/openmm/md.py openmm_config.yaml --rg-set {i}
          "
 """
         section += "MD_EXIT=$?\ncheck_exit_code $MD_EXIT md\n"
@@ -887,7 +901,7 @@ srun --ntasks=1 \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/openmm/md &&
-            python /app/scripts/nersc/run-foxs-after-openmm.py --root .
+            python /bilbomd/work/.scripts/nersc/run-foxs-after-openmm.py --root .
         "
 FOXS_EXIT=$?
 check_exit_code $FOXS_EXIT foxs
@@ -915,7 +929,7 @@ srun --ntasks=1 \\
          $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/multifoxs &&
-            python /app/scripts/nersc/run-multifoxs.py \\
+            python /bilbomd/work/.scripts/nersc/run-multifoxs.py \\
                 --foxs-list ../openmm/md/foxs_dat_files.txt \\
                 --prefix ../openmm/md \\
                 --saxs-data ../{params.get("data_file")} \\
@@ -948,7 +962,7 @@ srun --ntasks=1 \\
         $BILBOMD_WORKER /bin/bash -c "
             set -e
             cd /bilbomd/work/analysis &&
-            python /app/scripts/openmm/plot_rgyrs.py /bilbomd/work/openmm/md
+            python /bilbomd/work/.scripts/openmm/plot_rgyrs.py /bilbomd/work/openmm/md
         "
 ANALYSIS_EXIT=$?
 # The Rg plot is not used by the results step, so a failure here is logged and
@@ -990,6 +1004,7 @@ def main():
 
     # Step 2: Prepare input and read the job params
     params = prepare_input(config["workdir"], config["upload_dir"])
+    copy_job_scripts(config["workdir"])
 
     # Step 3: Create status file
     create_status_file(config["workdir"], params)

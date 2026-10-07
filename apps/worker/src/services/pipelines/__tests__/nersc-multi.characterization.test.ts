@@ -45,6 +45,10 @@ vi.mock('../../functions/nersc-slurm.js', () => ({
   submitBilboMDSlurm: record('submitBilboMDSlurm', '12345678')
 }))
 
+vi.mock('../../functions/nersc-inputs.js', () => ({
+  prepareNerscInputs: record('prepareNerscInputs')
+}))
+
 vi.mock('../../functions/bilbomd-multi-functions.js', () => ({
   initializeJob: record('initializeJob'),
   prepareMultiMDdatFileList: record('prepareMultiMDdatFileList'),
@@ -130,22 +134,23 @@ describe('nersc pipeline', () => {
   it('submits the Slurm job and records a pending job_started event', async () => {
     expect(await run(processBilboMDJobNersc, nerscJob()))
       .toMatchInlineSnapshot(`
-      {
-        "error": undefined,
-        "trace": [
-          "mq.progress:1",
-          "populate:user",
-          "mq.progress:5",
-          "mq.progress:10",
-          "fn:updateNerscSpecificSteps",
-          "fn:makeBilboMDSlurm",
-          "mq.progress:15",
-          "fn:submitBilboMDSlurm",
-          "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"pipeline(pdb)","eventType":"job_started","status":"Pending","nersc":{"jobid":"12345678","qos":"regular"},"context":{"built":{"access_mode":"user","user":{"username":"u"}}},"metadata":{"stage":"submitSlurm"}}",
-          "mq.progress:100",
-        ],
-      }
-    `)
+        {
+          "error": undefined,
+          "trace": [
+            "mq.progress:1",
+            "populate:user",
+            "mq.progress:5",
+            "mq.progress:10",
+            "fn:updateNerscSpecificSteps",
+            "fn:prepareNerscInputs",
+            "fn:makeBilboMDSlurm",
+            "mq.progress:15",
+            "fn:submitBilboMDSlurm",
+            "usage:{"uuid":"uuid-1","jobId":"job-id","pipeline":"pipeline(pdb)","eventType":"job_started","status":"Pending","nersc":{"jobid":"12345678","qos":"regular"},"context":{"built":{"access_mode":"user","user":{"username":"u"}}},"metadata":{"stage":"submitSlurm"}}",
+            "mq.progress:100",
+          ],
+        }
+      `)
   })
 
   // job_failed is recorded by the worker's failure reporter, not here
@@ -153,38 +158,58 @@ describe('nersc pipeline', () => {
     state.failAt = 'submitBilboMDSlurm'
     expect(await run(processBilboMDJobNersc, nerscJob()))
       .toMatchInlineSnapshot(`
-      {
-        "error": "submitBilboMDSlurm failed",
-        "trace": [
-          "mq.progress:1",
-          "populate:user",
-          "mq.progress:5",
-          "mq.progress:10",
-          "fn:updateNerscSpecificSteps",
-          "fn:makeBilboMDSlurm",
-          "mq.progress:15",
-          "fn:submitBilboMDSlurm",
-        ],
-      }
-    `)
+        {
+          "error": "submitBilboMDSlurm failed",
+          "trace": [
+            "mq.progress:1",
+            "populate:user",
+            "mq.progress:5",
+            "mq.progress:10",
+            "fn:updateNerscSpecificSteps",
+            "fn:prepareNerscInputs",
+            "fn:makeBilboMDSlurm",
+            "mq.progress:15",
+            "fn:submitBilboMDSlurm",
+          ],
+        }
+      `)
+  })
+
+  it('stops before the slurm file when inputs cannot be prepared', async () => {
+    state.failAt = 'prepareNerscInputs'
+    expect(await run(processBilboMDJobNersc, nerscJob()))
+      .toMatchInlineSnapshot(`
+        {
+          "error": "prepareNerscInputs failed",
+          "trace": [
+            "mq.progress:1",
+            "populate:user",
+            "mq.progress:5",
+            "mq.progress:10",
+            "fn:updateNerscSpecificSteps",
+            "fn:prepareNerscInputs",
+          ],
+        }
+      `)
   })
 
   it('stops before submitting when the slurm file cannot be made', async () => {
     state.failAt = 'makeBilboMDSlurm'
     expect(await run(processBilboMDJobNersc, nerscJob()))
       .toMatchInlineSnapshot(`
-      {
-        "error": "makeBilboMDSlurm failed",
-        "trace": [
-          "mq.progress:1",
-          "populate:user",
-          "mq.progress:5",
-          "mq.progress:10",
-          "fn:updateNerscSpecificSteps",
-          "fn:makeBilboMDSlurm",
-        ],
-      }
-    `)
+        {
+          "error": "makeBilboMDSlurm failed",
+          "trace": [
+            "mq.progress:1",
+            "populate:user",
+            "mq.progress:5",
+            "mq.progress:10",
+            "fn:updateNerscSpecificSteps",
+            "fn:prepareNerscInputs",
+            "fn:makeBilboMDSlurm",
+          ],
+        }
+      `)
   })
 
   it('falls back to the auto pipeline name for a bare job type', async () => {
@@ -199,6 +224,7 @@ describe('nersc pipeline', () => {
           "mq.progress:5",
           "mq.progress:10",
           "fn:updateNerscSpecificSteps",
+          "fn:prepareNerscInputs",
           "fn:makeBilboMDSlurm",
           "mq.progress:15",
           "fn:submitBilboMDSlurm",
