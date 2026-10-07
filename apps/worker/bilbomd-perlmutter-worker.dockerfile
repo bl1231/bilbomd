@@ -16,12 +16,11 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
     bash Miniforge3-$(uname)-$(uname -m).sh -b -p "/miniforge3" && \
     rm Miniforge3-$(uname)-$(uname -m).sh
 
-# Add Conda to PATH
-ENV PATH="/miniforge3/bin/:${PATH}"
-
-# Update conda
-RUN conda update -y -n base -c defaults conda && \
-    conda install -y -c conda-forge \
+# Install into a dedicated env pinned to Python 3.12, the default `python` in the
+# beamline worker image, not into Miniforge's base env: base carries conda/mamba
+# from whatever "latest" installer we downloaded, and their pins can break the solve.
+RUN /miniforge3/bin/conda create -y -n bilbomd -c conda-forge \
+    python=3.12 \
     numpy==2.3.3 \
     scipy==1.16.2 \
     cython==3.1.4 \
@@ -32,7 +31,10 @@ RUN conda update -y -n base -c defaults conda && \
     pyyaml \
     pandas \
     biopython \
-    && conda clean -afy
+    && /miniforge3/bin/conda clean -afy
+
+# Add the env (then conda itself) to PATH
+ENV PATH="/miniforge3/envs/bilbomd/bin:/miniforge3/bin:${PATH}"
 
 # -----------------------------------------------------------------------------
 # Build stage 3 - CHARMM
@@ -84,7 +86,7 @@ COPY --from=bilbomd-perlmutter-worker-intermediate /usr/local/bin/charmm /usr/lo
 COPY --from=build-charmm /usr/local/src/charmm/toppar /app/charmm-toppar
 
 # Set environment variables
-ENV PATH="/miniforge3/bin:${PATH}"
+ENV PATH="/miniforge3/envs/bilbomd/bin:/miniforge3/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
 
 WORKDIR /app
