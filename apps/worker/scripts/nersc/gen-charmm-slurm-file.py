@@ -104,9 +104,29 @@ def prepare_input(workdir, upload_dir):
     params["charmm_topo_dir"] = "/app/scripts/bilbomd_top_par_files.str"
     params["in_psf_file"] = params.get("psf_file", "bilbomd_pdb2crd.psf")
     params["in_crd_file"] = params.get("crd_file", "bilbomd_pdb2crd.crd")
-    # will be calculated by pae2const.py
-    params["constinp"] = "const.inp"
+    params["constinp"] = constraint_file(workdir, params)
     return params
+
+
+# Job types whose constraint file is uploaded by the user. Auto and AlphaFold
+# jobs get const.inp from pae2const.py during the Slurm job.
+UPLOADED_CONSTRAINT_TYPES = ("BilboMdCRD", "BilboMdPDB")
+
+
+def constraint_file(workdir, params):
+    """Return the CHARMM constraint file name, relative to the workdir."""
+    if params.get("__t") not in UPLOADED_CONSTRAINT_TYPES:
+        return "const.inp"
+    # CHARMM only warns when it cannot open a STREAM file (bomlev -2), so a
+    # wrong name would run heat and md without constraints
+    name = params.get("const_inp_file")
+    if not name or not os.path.isfile(os.path.join(workdir, name)):
+        print(
+            f"Error: constraint file '{name}' from params.json not found in {workdir}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return name
 
 
 # -----------------------------------------------------------------------------
