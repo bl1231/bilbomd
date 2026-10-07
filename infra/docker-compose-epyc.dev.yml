@@ -164,7 +164,6 @@ services:
       - /bilbomd/dev/uploads:/bilbomd/uploads
       - /bilbomd/dev/logs:/bilbomd/logs
       - scratch:/bilbomd/scratch
-      - /run/nvidia-mps:/run/nvidia-mps
       - ./worker-passwd-epyc:/etc/passwd:ro
     environment:
       - ENABLE_BILBOMD_OPENFOLD=${ENABLE_BILBOMD_OPENFOLD:-false}
@@ -175,8 +174,6 @@ services:
       - MPLCONFIGDIR=/tmp/matplotlib
       - XDG_CACHE_HOME=/tmp/cache
       - OPENMM_MD_CONCURRENCY=${OPENMM_MD_CONCURRENCY:-1}
-      - CUDA_MPS_PIPE_DIRECTORY=/run/nvidia-mps
-      - CUDA_MPS_LOG_DIRECTORY=/run/nvidia-mps-log
     depends_on:
       mongodb:
         condition: service_healthy

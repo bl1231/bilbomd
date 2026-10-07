@@ -19,6 +19,14 @@ volumes:
   scratch:
     name: bilbomd-scratch
     external: true
+  # Pipe directory shared by the MPS daemon and the workers. tmpfs, so a stale
+  # pipe never survives a restart.
+  mps-pipe:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: 'size=16m,uid=${UID:-1001},gid=${GID:-1001},mode=0700'
 
 networks:
   app-network:
@@ -128,12 +136,55 @@ services:
       start_period: 10s
 
   # ------------------------------------------------------------------------------------
+  # NVIDIA MPS daemon for GPU 1. Lets the workers' parallel OpenMM MD runs share
+  # the GPU instead of time-slicing it (8.3k atoms, 6 Rg: 13 min serial → ~3 min).
+  # The workers join this container's IPC namespace and talk to it through the
+  # mps-pipe volume. nvidia-cuda-mps-control is mounted from the host driver by
+  # the NVIDIA container toolkit, so the image only provides a shell; its tag
+  # does not need to follow the worker's. If this container restarts, restart
+  # the workers too: they are attached to the old IPC namespace.
+  mps:
+    image: ghcr.io/bl1231/bilbomd-worker:2.21.2
+    pull_policy: missing
+    entrypoint: ['nvidia-cuda-mps-control', '-f']
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
+    ipc: shareable
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['1']
+              capabilities: [gpu]
+    restart: always
+    read_only: true
+    user: '${UID:-1001}:${GID:-1001}'
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    volumes:
+      - mps-pipe:/run/nvidia-mps
+    environment:
+      - CUDA_MPS_PIPE_DIRECTORY=/run/nvidia-mps
+      - CUDA_MPS_LOG_DIRECTORY=/tmp/mps-log
+    healthcheck:
+      test: ['CMD-SHELL', 'echo get_server_list | nvidia-cuda-mps-control']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # ------------------------------------------------------------------------------------
   worker:
     image: ghcr.io/bl1231/bilbomd-worker:2.21.2
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json
+    ipc: 'service:mps'
     deploy:
       replicas: 2
       resources:
@@ -162,7 +213,7 @@ services:
       - /bilbomd/prod/uploads:/bilbomd/uploads
       - /bilbomd/prod/logs:/bilbomd/logs
       - scratch:/bilbomd/scratch
-      - /run/nvidia-mps:/run/nvidia-mps
+      - mps-pipe:/run/nvidia-mps
       - ./worker-passwd-epyc:/etc/passwd:ro
     environment:
       - ENABLE_BILBOMD_OPENFOLD=${ENABLE_BILBOMD_OPENFOLD:-false}
@@ -172,10 +223,12 @@ services:
       - COLABFOLD_SERVICE_URL=http://colabfold-service:8000
       - MPLCONFIGDIR=/tmp/matplotlib
       - XDG_CACHE_HOME=/tmp/cache
-      - OPENMM_MD_CONCURRENCY=${OPENMM_MD_CONCURRENCY:-1}
+      # All 6 Rg runs at once; only faster than serial because of MPS.
+      - OPENMM_MD_CONCURRENCY=${OPENMM_MD_CONCURRENCY:-6}
       - CUDA_MPS_PIPE_DIRECTORY=/run/nvidia-mps
-      - CUDA_MPS_LOG_DIRECTORY=/run/nvidia-mps-log
     depends_on:
+      mps:
+        condition: service_healthy
       mongodb:
         condition: service_healthy
       redis:
