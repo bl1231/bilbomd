@@ -19,9 +19,9 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
 # Add Conda to PATH
 ENV PATH="/miniforge3/bin/:${PATH}"
 
-# Update conda
-RUN conda update -y -n base -c defaults conda && \
-    conda install -y -c conda-forge \
+# Miniforge already ships conda from conda-forge; updating it from Anaconda's
+# "defaults" channel mixes channels and breaks the conda-forge solve below.
+RUN conda install -y -c conda-forge \
     numpy==2.3.3 \
     scipy==1.16.2 \
     cython==3.1.4 \
