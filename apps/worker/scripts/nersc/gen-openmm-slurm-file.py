@@ -37,7 +37,7 @@ def setup_environment(uuid):
 
     # Docker images
     openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.13"
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.30"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.31"
     af_worker = "bilbomd/bilbomd-colabfold:0.0.10"
 
     # Number of cores
