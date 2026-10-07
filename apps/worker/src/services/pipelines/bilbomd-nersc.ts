@@ -6,6 +6,7 @@ import {
   makeBilboMDSlurm,
   submitBilboMDSlurm
 } from '../functions/nersc-slurm.js'
+import { prepareNerscInputs } from '../functions/nersc-inputs.js'
 import {
   recordWorkerUsageEvent,
   buildContext,
@@ -53,6 +54,14 @@ const processBilboMDJobNersc = async (MQjob: BullMQJob) => {
       await updateNerscSpecificSteps(foundJob)
     } catch (error) {
       logger.error(`Failed to add NERSC-specific job steps: ${MQjob.data.uuid}`)
+      throw error
+    }
+
+    // Convert inputs the Slurm generator can't read (e.g. an mmCIF upload)
+    try {
+      await prepareNerscInputs(foundJob)
+    } catch (error) {
+      logger.error(`Failed to prepare NERSC inputs: ${MQjob.data.uuid}`)
       throw error
     }
 

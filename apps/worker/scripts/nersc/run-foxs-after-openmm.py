@@ -152,8 +152,11 @@ def main() -> int:
     # Collect rg_* directories
     rg_dirs = sorted([d for d in root.glob(args.pattern) if d.is_dir()])
     if not rg_dirs:
-        print(f"[WARN] No directories matching {args.pattern} under {root}")
-        return 0
+        print(
+            f"[ERROR] No directories matching {args.pattern} under {root}",
+            file=sys.stderr,
+        )
+        return 1
 
     print("Run FoXS...")
     print(f"Found {len(rg_dirs)} directories.")
@@ -215,7 +218,18 @@ def main() -> int:
     #     f"- Global manifest: {global_manifest.relative_to(Path.cwd()) if global_manifest.exists() else '(not created)'}"
     # )
 
-    return 0 if failures == 0 else 1
+    # Like the beamline (runFoXS): a few failed conformers are only a warning,
+    # since MultiFoXS only gets the profiles that succeeded, but the step
+    # fails when no profile was produced at all.
+    if total_pdbs == 0 or failures == total_pdbs:
+        print("[ERROR] FoXS produced no profiles.", file=sys.stderr)
+        return 1
+    if failures:
+        print(
+            f"[WARN] FoXS failed for {failures} of {total_pdbs} PDBs.",
+            file=sys.stderr,
+        )
+    return 0
 
 
 if __name__ == "__main__":
