@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import json
+import math
 import os
 import re
 import shutil
 import sys
 from pathlib import Path
 
-import numpy as np
 import yaml
 
 # -----------------------------------------------------------------------------
@@ -67,7 +67,7 @@ def setup_environment(uuid):
         "bilbomd_worker": bilbomd_worker,
         "af_worker": af_worker,
         "num_cores": num_cores,
-        "num_rgs": 8,
+        "gpus_per_node": 4,
     }
 
 
@@ -220,6 +220,24 @@ def select_forcefield(pdb_path):
     }
 
 
+def job_rg_values(params):
+    """Return the job's Rg targets, the list the beamline runs.
+
+    The backend stores them in openmm_parameters.md.rgyr (calculateRgyrRange).
+    For a job without that list, rebuild it from rg_min/rg_max the same way.
+    """
+    rgyr = params.get("openmm_parameters", {}).get("md", {}).get("rgyr") or []
+    if rgyr and isinstance(rgyr[0], list):
+        rgyr = rgyr[0]
+    if rgyr:
+        return [int(rg) for rg in rgyr]
+    rg_min, rg_max = params.get("rg_min"), params.get("rg_max")
+    if rg_min is None or rg_max is None:
+        return []
+    # JavaScript Math.round rounds halves up, unlike Python's round()
+    return [math.floor(rg_min + i * (rg_max - rg_min) / 5 + 0.5) for i in range(6)]
+
+
 def prepare_openmm_config(config, params):
     # The backend converts the uploaded constraints to openmm_const.yml for
     # OpenMM jobs. Fall back to the CHARMM file, which keeps its uploaded name
@@ -279,7 +297,7 @@ def prepare_openmm_config(config, params):
                 },
                 "rgyr": {
                     "rg_sets": [],
-                    "k_rg": 1,
+                    "k_rg": 10,
                     "report_interval": 500,
                     "filename": "rgyr_dmax.csv",
                 },
@@ -320,6 +338,15 @@ def prepare_openmm_config(config, params):
     )
     openmm_config["steps"]["md"]["parameters"]["timestep"] = float(
         params.get("openmm_parameters", {}).get("md", {}).get("timestep", 0.001)
+    )
+    # Same keys and defaults as buildOpenMMConfigForJob (openmm-functions.ts)
+    md_params = params.get("openmm_parameters", {}).get("md", {})
+    openmm_config["steps"]["md"]["rgyr"]["k_rg"] = md_params.get("k_rg", 10)
+    openmm_config["steps"]["md"]["rgyr"]["report_interval"] = md_params.get(
+        "rg_report_interval", 500
+    )
+    openmm_config["steps"]["md"]["pdb_report_interval"] = md_params.get(
+        "pdb_report_interval", 500
     )
 
     fixed_bodies = []
@@ -380,20 +407,19 @@ def prepare_openmm_config(config, params):
     openmm_config["constraints"]["fixed_bodies"] = fixed_bodies
     openmm_config["constraints"]["rigid_bodies"] = rigid_bodies
 
-    # Compute Rg values for MD step and split into rg_sets
-    rg_min = int(params.get("rg_min", 0))
-    rg_max = int(params.get("rg_max", 0))
-    N = int(config["num_rgs"])
-    rg_sets = []
-    if rg_max > rg_min and N > 0:
-        rgs = np.linspace(rg_min, rg_max, N)
-        rgs = [int(round(rg)) for rg in rgs]
-        # Split rgs into chunks of up to 4
-        for i in range(0, len(rgs), 4):
-            rg_sets.append(rgs[i : i + 4])
-        openmm_config["steps"]["md"]["rgyr"]["rg_sets"] = rg_sets
-    else:
-        openmm_config["steps"]["md"]["rgyr"]["rg_sets"] = []
+    # Run the job's Rg targets, as the beamline does, one per GPU: a set of up
+    # to gpus_per_node values per srun wave (6 values run as 4 + 2).
+    rgs = job_rg_values(params)
+    if not rgs:
+        print(
+            "Error: no Rg values in openmm_parameters.md.rgyr or rg_min/rg_max",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    n = config["gpus_per_node"]
+    openmm_config["steps"]["md"]["rgyr"]["rg_sets"] = [
+        rgs[i : i + n] for i in range(0, len(rgs), n)
+    ]
 
     # Write to config.yaml
     config_yaml_path = os.path.join(config["workdir"], "openmm_config.yaml")
@@ -795,11 +821,6 @@ update_status heat Success
 
 
 def generate_md_section(config):
-    cores_per_task = int(config["num_cores"] / (config["num_rgs"] / 2))
-    tasks_per_wave = int(config["num_rgs"] / 2)
-    print(
-        f"MD section: {config['num_cores']} cores, {config['num_rgs']} Rg values, {cores_per_task} cores per task"
-    )
     # Read rg_sets from openmm_config.yaml
     config_yaml_path = os.path.join(config["workdir"], "openmm_config.yaml")
     with open(config_yaml_path, "r") as f:
@@ -807,12 +828,11 @@ def generate_md_section(config):
     rg_sets = openmm_config["steps"]["md"]["rgyr"].get("rg_sets", [])
     num_sets = len(rg_sets)
 
-    cores_per_task = (
-        int(config["num_cores"] / (config["num_rgs"] / 2))
-        if config["num_rgs"] > 1
-        else config["num_cores"]
+    # One GPU and an equal share of the node's cores per Rg value
+    cores_per_task = config["num_cores"] // config["gpus_per_node"]
+    print(
+        f"MD section: {num_sets} Rg sets {rg_sets}, {cores_per_task} cores per task"
     )
-    tasks_per_wave = int(config["num_rgs"] / 2) if config["num_rgs"] > 1 else 1
 
     section = """
 # --------------------------------------------------------------------------------------
@@ -823,7 +843,7 @@ update_status md Running
     for i in range(num_sets):
         rg_values = rg_sets[i]
         section += f"echo 'Running MD for rg_set {i}: Rg values {rg_values}'\n"
-        section += f"""srun --ntasks={tasks_per_wave} \\
+        section += f"""srun --ntasks={len(rg_values)} \\
      --cpus-per-task={cores_per_task} \\
      --gpus-per-node=4 \\
      --cpu-bind=cores \\
