@@ -15,7 +15,10 @@ import {
 } from '../../services/functions/job-monitor-functions.js'
 import { getSlurmStatusFile } from '../../services/functions/nersc-api-functions.js'
 import { prepareBilboMDResults } from '../../services/functions/prepare-results.js'
-import { storeNerscMdConstraints } from '../../services/functions/nersc-md-constraints.js'
+import {
+  storeNerscMdConstraints,
+  storeNerscMdConstraintsMidRun
+} from '../../services/functions/nersc-md-constraints.js'
 import { recordWorkerUsageEvent } from '../../services/functions/usage-events.js'
 import { sendJobFailedEmail } from '../../services/functions/job-failure.js'
 
@@ -54,7 +57,8 @@ vi.mock('../../services/functions/prepare-results.js', () => ({
 }))
 
 vi.mock('../../services/functions/nersc-md-constraints.js', () => ({
-  storeNerscMdConstraints: vi.fn()
+  storeNerscMdConstraints: vi.fn(),
+  storeNerscMdConstraintsMidRun: vi.fn()
 }))
 
 vi.mock('../../services/functions/usage-events.js', () => ({
@@ -480,6 +484,33 @@ describe('monitorAndCleanupJobs usage events', () => {
     expect(recordedEvents()).toEqual(['job_cancelled'])
     expect(sendJobFailedEmail).not.toHaveBeenCalled()
     expect(job.status).toBe('Cancelled')
+  })
+
+  it('offers a running job the raw status.txt steps so its constraints can be recorded mid-run', async () => {
+    const job = await runPass(
+      'Running',
+      'RUNNING',
+      'pae: Success 1 2\npae2constraints: Success 1 2\nconsmerge: Success 2 3\nminimize: Running 3\n'
+    )
+
+    // consmerge is a Slurm-only step: not on the job document, but passed on
+    expect(storeNerscMdConstraintsMidRun).toHaveBeenCalledExactlyOnceWith(job, {
+      pae: 'Success',
+      pae2constraints: 'Success',
+      consmerge: 'Success',
+      minimize: 'Running'
+    })
+    expect(job.steps).not.toHaveProperty('consmerge')
+  })
+
+  it('does not try the mid-run read when status.txt is unavailable or the job is not running', async () => {
+    // runPass resolves the status file; a queued rejection wins over it
+    vi.mocked(getSlurmStatusFile).mockRejectedValueOnce(new Error('no file'))
+    await runPass('Running', 'RUNNING')
+    expect(storeNerscMdConstraintsMidRun).not.toHaveBeenCalled()
+
+    await runPass('Running', 'COMPLETED', 'minimize: Success\n')
+    expect(storeNerscMdConstraintsMidRun).not.toHaveBeenCalled()
   })
 
   it('records the MD constraints from CFS after the copy back and before preparing results', async () => {

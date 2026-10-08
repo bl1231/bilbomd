@@ -5,7 +5,10 @@ import fs from 'fs-extra'
 import YAML from 'yaml'
 import type { IJob } from '@bilbomd/mongodb-schema'
 
-const { state } = vi.hoisted(() => ({ state: { uploadDir: '' } }))
+const { state, downloadNerscWorkFile } = vi.hoisted(() => ({
+  state: { uploadDir: '' },
+  downloadNerscWorkFile: vi.fn()
+}))
 
 vi.mock('../../../config/config.js', () => ({
   config: {
@@ -19,7 +22,12 @@ vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
 
-import { storeNerscMdConstraints } from '../nersc-md-constraints.js'
+vi.mock('../nersc-api-functions.js', () => ({ downloadNerscWorkFile }))
+
+import {
+  storeNerscMdConstraints,
+  storeNerscMdConstraintsMidRun
+} from '../nersc-md-constraints.js'
 
 const UUID = 'uuid-1'
 
@@ -91,9 +99,39 @@ shape desc dock1 rigid sele rigid1 end
 
 return`
 
+// What gen-openmm-slurm-file.py writes, as text, for the download mock
+const openMMConfigText = (constraints?: unknown) =>
+  YAML.stringify({
+    input: {
+      dir: '/bilbomd/work',
+      pdb_file: 'af-rank1.pdb',
+      forcefield: FORCEFIELD
+    },
+    ...(constraints !== undefined && { constraints }),
+    steps: {}
+  })
+
+const pdbText = (chains: [string, string][]) =>
+  chains.map(([res, chain]) => atom(res, chain)).join('\n') + '\nEND\n'
+
+// The Slurm work dir on PSCRATCH, as the NERSC download API sees it
+const mockWorkDir = (files: Record<string, string>) => {
+  downloadNerscWorkFile.mockImplementation(
+    async (_uuid: string, name: string) => {
+      if (name in files) return files[name]
+      throw new Error(`Failed to download ${name}`)
+    }
+  )
+}
+
+const downloaded = () =>
+  downloadNerscWorkFile.mock.calls.map(([, name]) => name as string)
+
 beforeEach(async () => {
   state.uploadDir = await fs.mkdtemp(path.join(os.tmpdir(), 'nersc-md-'))
   await fs.ensureDir(path.join(state.uploadDir, UUID))
+  downloadNerscWorkFile.mockReset()
+  mockWorkDir({})
 })
 
 afterEach(async () => {
@@ -264,5 +302,173 @@ describe('storeNerscMdConstraints (CHARMM)', () => {
     )
 
     await expect(storeNerscMdConstraints(job)).resolves.toBeUndefined()
+  })
+})
+
+describe('storeNerscMdConstraintsMidRun', () => {
+  const AF_WORKDIR = {
+    'openmm_config.yaml': openMMConfigText({
+      fixed_bodies: FIXED_BODIES,
+      rigid_bodies: RIGID_BODIES
+    }),
+    'af-rank1.pdb': pdbText([
+      ['MET', 'A'],
+      ['DA', 'B']
+    ])
+  }
+
+  it('records an OpenMM AlphaFold job once consmerge has merged the PAE constraints', async () => {
+    mockWorkDir(AF_WORKDIR)
+    const { job, mock } = makeJob({
+      __t: 'BilboMdAlphaFold',
+      md_engine: 'OpenMM'
+    })
+
+    await storeNerscMdConstraintsMidRun(job, {
+      alphafold: 'Success',
+      pae2constraints: 'Success',
+      consmerge: 'Success',
+      minimize: 'Running'
+    })
+
+    expect(downloaded()).toEqual(['openmm_config.yaml', 'af-rank1.pdb'])
+    expect(job.openmm_forcefield).toEqual(FORCEFIELD)
+    expect(job.md_constraints).toEqual({
+      fixed_bodies: FIXED_BODIES,
+      rigid_bodies: RIGID_BODIES,
+      chain_mol_types: [
+        { chain_id: 'A', mol_type: 'PRO' },
+        { chain_id: 'B', mol_type: 'DNA' }
+      ]
+    })
+    expect(mock.save).toHaveBeenCalledOnce()
+  })
+
+  it('waits for consmerge: the config before the merge has no constraints', async () => {
+    mockWorkDir(AF_WORKDIR)
+    const { job, mock } = makeJob({
+      __t: 'BilboMdAlphaFold',
+      md_engine: 'OpenMM'
+    })
+
+    await storeNerscMdConstraintsMidRun(job, {
+      pae2constraints: 'Success',
+      consmerge: 'Running'
+    })
+
+    expect(downloaded()).toEqual([])
+    expect(job.md_constraints).toBeUndefined()
+    expect(mock.save).not.toHaveBeenCalled()
+  })
+
+  it('records only the force field of a classic OpenMM job, without a PAE step, from the start', async () => {
+    mockWorkDir({ 'openmm_config.yaml': openMMConfigText() })
+    const stored = { fixed_bodies: FIXED_BODIES, rigid_bodies: [] }
+    const { job, doc, mock } = makeJob({
+      __t: 'BilboMdPDB',
+      md_engine: 'OpenMM',
+      md_constraints: stored
+    })
+    doc.pdb_file = 'model.pdb'
+
+    await storeNerscMdConstraintsMidRun(job, { minimize: 'Running' })
+
+    expect(downloaded()).toEqual(['openmm_config.yaml'])
+    expect(job.openmm_forcefield).toEqual(FORCEFIELD)
+    expect(job.md_constraints).toBe(stored)
+    expect(mock.save).toHaveBeenCalledOnce()
+  })
+
+  it('records a CHARMM Auto job once pae2constraints has written const.inp', async () => {
+    mockWorkDir({
+      'const.inp': CONST_INP,
+      'model.pdb': pdbText([['MET', 'A']])
+    })
+    const { job, doc, mock } = makeJob({ __t: 'BilboMdAuto' })
+    doc.pdb_file = 'model.pdb'
+
+    await storeNerscMdConstraintsMidRun(job, {
+      pae2constraints: 'Success',
+      minimize: 'Running'
+    })
+
+    expect(downloaded()).toEqual(['const.inp', 'model.pdb'])
+    expect(job.md_constraints).toEqual({
+      fixed_bodies: FIXED_BODIES,
+      rigid_bodies: RIGID_BODIES,
+      chain_mol_types: [{ chain_id: 'A', mol_type: 'PRO' }]
+    })
+    expect(doc.const_inp_file).toBe('const.inp')
+    expect(mock.save).toHaveBeenCalledOnce()
+  })
+
+  it('does not read an empty status.txt as a job with no PAE steps', async () => {
+    mockWorkDir({ 'openmm_config.yaml': openMMConfigText() })
+    const { job, mock } = makeJob({ __t: 'BilboMdAuto', md_engine: 'OpenMM' })
+
+    await storeNerscMdConstraintsMidRun(job, {})
+
+    expect(downloaded()).toEqual([])
+    expect(mock.save).not.toHaveBeenCalled()
+  })
+
+  it('downloads nothing once both fields are recorded', async () => {
+    mockWorkDir(AF_WORKDIR)
+    const { job, mock } = makeJob({
+      __t: 'BilboMdAlphaFold',
+      md_engine: 'OpenMM',
+      md_constraints: { fixed_bodies: [], rigid_bodies: [] },
+      openmm_forcefield: FORCEFIELD
+    })
+
+    await storeNerscMdConstraintsMidRun(job, { consmerge: 'Success' })
+
+    expect(downloaded()).toEqual([])
+    expect(mock.save).not.toHaveBeenCalled()
+  })
+
+  it('downloads nothing for a classic CHARMM job, whose constraints the backend stored', async () => {
+    const { job, mock } = makeJob({
+      __t: 'BilboMdCRD',
+      md_constraints: { fixed_bodies: [], rigid_bodies: [] }
+    })
+
+    await storeNerscMdConstraintsMidRun(job, { minimize: 'Running' })
+
+    expect(downloaded()).toEqual([])
+    expect(mock.save).not.toHaveBeenCalled()
+  })
+
+  it('stores nothing when the PDB cannot be downloaded, so chain types are not lost', async () => {
+    mockWorkDir({ 'openmm_config.yaml': AF_WORKDIR['openmm_config.yaml'] })
+    const { job, mock } = makeJob({
+      __t: 'BilboMdAlphaFold',
+      md_engine: 'OpenMM'
+    })
+
+    await storeNerscMdConstraintsMidRun(job, { consmerge: 'Success' })
+
+    expect(downloaded()).toEqual(['openmm_config.yaml', 'af-rank1.pdb'])
+    expect(job.md_constraints).toBeUndefined()
+    expect(job.openmm_forcefield).toBeUndefined()
+    expect(mock.save).not.toHaveBeenCalled()
+  })
+
+  it('tolerates a download failure and leaves no temp dir behind', async () => {
+    downloadNerscWorkFile.mockRejectedValue(new Error('SF API down'))
+    const { job, mock } = makeJob({ __t: 'BilboMdAuto' })
+    const before = (await fs.readdir(os.tmpdir())).filter((d) =>
+      d.startsWith(`nersc-${UUID}-`)
+    )
+
+    await expect(
+      storeNerscMdConstraintsMidRun(job, { pae2constraints: 'Success' })
+    ).resolves.toBeUndefined()
+
+    expect(mock.save).not.toHaveBeenCalled()
+    const after = (await fs.readdir(os.tmpdir())).filter((d) =>
+      d.startsWith(`nersc-${UUID}-`)
+    )
+    expect(after).toEqual(before)
   })
 })

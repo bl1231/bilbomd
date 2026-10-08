@@ -139,9 +139,14 @@ const monitorTaskAtNERSC = async (
   return statusResponse
 }
 
-const getSlurmStatusFile = async (UUID: string): Promise<string> => {
+// Reads a text file from the job's Slurm work dir on PSCRATCH while the job
+// runs, before copy-back-to-cfs.sh makes it visible in the upload dir
+const downloadNerscWorkFile = async (
+  UUID: string,
+  fileName: string
+): Promise<string> => {
   const token = await ensureValidToken()
-  const path = `${config.nerscWorkDir}/${UUID}/status.txt`
+  const path = `${config.nerscWorkDir}/${UUID}/${fileName}`
   const url = `${config.nerscBaseAPI}/utilities/download/perlmutter/${encodeURIComponent(
     path
   )}`
@@ -168,14 +173,18 @@ const getSlurmStatusFile = async (UUID: string): Promise<string> => {
     // logger.info(`File retrieved successfully.`)
     return response.data.file // Return the content of the file as a string
   } catch (error) {
-    logger.error(`Failed to download file: ${error}`)
-    throw new Error(`Failed to download file after 3 retries: ${error}`)
+    logger.error(`Failed to download ${fileName}: ${error}`)
+    throw new Error(`Failed to download ${fileName}: ${error}`)
   }
 }
+
+const getSlurmStatusFile = (UUID: string): Promise<string> =>
+  downloadNerscWorkFile(UUID, 'status.txt')
 
 export {
   executeNerscScript,
   submitJobToNersc,
   monitorTaskAtNERSC,
+  downloadNerscWorkFile,
   getSlurmStatusFile
 }
