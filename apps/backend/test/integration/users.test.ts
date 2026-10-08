@@ -147,29 +147,53 @@ describe('GET /api/v1/users', () => {
     expect(res.body.data).toBeDefined()
     expect(Array.isArray(res.body.data)).toBe(true)
   })
+  test('should not expose secret fields', async () => {
+    const token = generateValidToken(['Admin'])
+    const res = await request(app)
+      .get('/api/v1/users')
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.statusCode).toBe(200)
+    for (const user of res.body.data) {
+      expect(user).not.toHaveProperty('confirmationCode')
+      expect(user).not.toHaveProperty('refreshToken')
+      expect(user).not.toHaveProperty('apiTokens')
+      expect(user).not.toHaveProperty('otp')
+      expect(user).toHaveProperty('jobCount', 0)
+      expect(user).toHaveProperty('oauthProviders', [])
+    }
+  })
 })
 
 describe('PATCH /api/v1/users', () => {
-  // Test cases for the PATCH /api/v1/users endpoint
-  // jest.setTimeout(5000)
+  // The token is issued to `testuser1` (see generateValidToken), so editing
+  // testUser1 is a self-edit and editing testUser2 is editing someone else.
   let testUser1: IUser
+  let testUser2: IUser
   let token: string
   beforeEach(async () => {
     token = generateValidToken(['Admin'])
-    // Create the test user and store it in the variable
     testUser1 = await User.create({
       username: 'testuser1',
       email: 'testuser1@example.com',
-      roles: ['User'],
+      roles: ['Admin', 'User'],
       confirmationCode: {
         code: '12345',
         expiresAt: new Date(Date.now() + 3600000)
       }
     })
+    testUser2 = await User.create({
+      username: 'testuser2',
+      email: 'testuser2@example.com',
+      roles: ['User'],
+      confirmationCode: {
+        code: '54321',
+        expiresAt: new Date(Date.now() + 3600000)
+      }
+    })
   })
   afterEach(async () => {
-    // Delete the test user after each test case
     await User.deleteOne({ _id: testUser1._id })
+    await User.deleteOne({ _id: testUser2._id })
   })
   test('should return error if we are unauthorized', async () => {
     const res = await request(app).patch('/api/v1/users')
@@ -208,14 +232,14 @@ describe('PATCH /api/v1/users', () => {
   })
   test('should return success if user is updated', async () => {
     const user: MyUser = {
-      id: testUser1._id.toString(),
-      username: testUser1.username,
-      roles: testUser1.roles,
-      active: testUser1.active,
+      id: testUser2._id.toString(),
+      username: testUser2.username,
+      roles: testUser2.roles,
+      active: testUser2.active,
       email: 'updated@example.com'
     }
 
-    const res = await await request(app)
+    const res = await request(app)
       .patch('/api/v1/users')
       .send(user)
       .set('Authorization', `Bearer ${token}`)
@@ -223,6 +247,48 @@ describe('PATCH /api/v1/users', () => {
 
     expect(res.statusCode).toBe(200)
     expect(res.body.message).toBe(`${user.username} updated`)
+  })
+  test('should let you edit your own email while keeping Admin', async () => {
+    const res = await request(app)
+      .patch('/api/v1/users')
+      .send({
+        id: testUser1._id.toString(),
+        roles: ['Admin', 'User'],
+        active: true,
+        email: 'me-updated@example.com'
+      })
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.statusCode).toBe(200)
+  })
+  test('should refuse to remove your own Admin role', async () => {
+    const res = await request(app)
+      .patch('/api/v1/users')
+      .send({
+        id: testUser1._id.toString(),
+        roles: ['User'],
+        active: true,
+        email: testUser1.email
+      })
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.statusCode).toBe(403)
+    expect(res.body.message).toBe(
+      'You cannot remove your own Admin or Manager role'
+    )
+    const unchanged = await User.findById(testUser1._id).lean()
+    expect(unchanged?.roles).toEqual(['Admin', 'User'])
+  })
+  test('should refuse to deactivate yourself', async () => {
+    const res = await request(app)
+      .patch('/api/v1/users')
+      .send({
+        id: testUser1._id.toString(),
+        roles: ['Admin', 'User'],
+        active: false,
+        email: testUser1.email
+      })
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.statusCode).toBe(403)
+    expect(res.body.message).toBe('You cannot deactivate your own account')
   })
 })
 
