@@ -1,5 +1,13 @@
 # @bilbomd/ui
 
+## 2.34.1
+
+### Patch Changes
+
+- 08bbbce: Fix the account menu's Dashboard item, the breadcrumb Home link, and the anonymous header logo sending logged-in users to `/welcome`, which is claimed by the anonymous route tree and rendered them in the logged-out layout. Authenticated entry points now land on `/dashboard`.
+- c39c52d: Remove the unreachable `Home` component and its index route from `LoginRoutes`. The anonymous route tree already owns `/`, and session restore is handled by `PersistLogin` and `SoftPersistLogin`.
+- d846c6f: Restore a logged-in session on public pages. A returning user who hard-reloads or follows a link to `/`, `/welcome`, `/help`, `/about`, or an anonymous job form now gets the dashboard chrome instead of the anonymous header. A cold `/` or `/welcome` sends them to `/dashboard`, and the anonymous job form URLs redirect to their authenticated equivalents so a shared link never submits an anonymous job for a logged-in user. First-time visitors are unaffected.
+
 ## 2.34.0
 
 ### Minor Changes
