@@ -1,6 +1,6 @@
 import { lazy } from 'react'
 import Loadable from 'components/Loadable'
-import AnonLayout from 'layout/AnonLayout'
+import PublicLayout from 'layout/PublicLayout'
 import SoftPersistLogin from 'features/auth/SoftPersistLogin'
 
 const About = Loadable(lazy(() => import('features/about/About')))
@@ -39,16 +39,17 @@ const Copyright = Loadable(lazy(() => import('features/about/Copyright')))
 // ===========================|| PUBLIC ANON ROUTING ||============================ //
 
 // SoftPersistLogin quietly restores a logged-in session from the refresh
-// cookie before these pages render, so a returning user who arrives cold
-// (hard reload, new tab, emailed link) gets the logged-in header instead of
-// the anonymous one. First-time visitors have no persist flag and skip it.
+// cookie before these pages render, and PublicLayout then picks the dashboard
+// chrome for logged-in users and the anonymous chrome for everyone else. So a
+// returning user who arrives cold (hard reload, new tab, emailed link) gets
+// the logged-in header. First-time visitors have no persist flag and skip it.
 const AnonRoutes = {
   element: <SoftPersistLogin />,
   path: '/',
   children: [
     {
       // Pathless so relative navigation in the layout resolves from '/'
-      element: <AnonLayout />,
+      element: <PublicLayout />,
       children: [
         {
           path: 'welcome',

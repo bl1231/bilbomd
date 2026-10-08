@@ -10,8 +10,8 @@ vi.mock('features/auth/SoftPersistLogin', () => ({
   default: () => <div data-testid="soft-persist-login">SoftPersistLogin</div>
 }))
 
-vi.mock('layout/AnonLayout', () => ({
-  default: () => <div data-testid="anon-layout">AnonLayout</div>
+vi.mock('layout/PublicLayout', () => ({
+  default: () => <div data-testid="public-layout">PublicLayout</div>
 }))
 
 describe('AnonRoutes', () => {
@@ -21,12 +21,12 @@ describe('AnonRoutes', () => {
     expect(screen.getByTestId('soft-persist-login')).toBeInTheDocument()
   })
 
-  it('nests the anonymous layout pathlessly under the session wrapper', () => {
+  it('nests the auth-aware public layout pathlessly under the session wrapper', () => {
     expect(AnonRoutes.children).toHaveLength(1)
     const layoutRoute = AnonRoutes.children[0]!
     expect(layoutRoute).not.toHaveProperty('path')
     render(layoutRoute.element)
-    expect(screen.getByTestId('anon-layout')).toBeInTheDocument()
+    expect(screen.getByTestId('public-layout')).toBeInTheDocument()
   })
 
   it('keeps the public landing pages under the layout', () => {
