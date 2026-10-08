@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import Loadable from 'components/Loadable'
 import SoftPersistLogin from 'features/auth/SoftPersistLogin'
-import PublicResultsLayout from 'layout/PublicResultsLayout'
+import PublicLayout from 'layout/PublicLayout'
 
 const PublicResultsPage = Loadable(
   lazy(() => import('features/public/PublicResultsPage'))
@@ -17,7 +17,7 @@ const PublicResultsRoutes = {
   children: [
     {
       // Pathless so relative navigation in the layouts resolves from '/'
-      element: <PublicResultsLayout />,
+      element: <PublicLayout />,
       children: [
         {
           path: 'results/:publicId',

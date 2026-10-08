@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import useAuth from 'hooks/useAuth'
-import PublicResultsLayout from '../PublicResultsLayout'
+import PublicLayout from '../PublicLayout'
 
 vi.mock('hooks/useAuth', () => ({ default: vi.fn() }))
 vi.mock('layout/MainLayout', () => ({
@@ -13,13 +13,13 @@ vi.mock('layout/AnonLayout', () => ({
 
 const mockUseAuth = vi.mocked(useAuth)
 
-describe('PublicResultsLayout', () => {
+describe('PublicLayout', () => {
   it('uses the dashboard layout for logged-in users', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true
     } as ReturnType<typeof useAuth>)
 
-    render(<PublicResultsLayout />)
+    render(<PublicLayout />)
 
     expect(screen.getByTestId('main-layout')).toBeInTheDocument()
   })
@@ -29,7 +29,7 @@ describe('PublicResultsLayout', () => {
       isAuthenticated: false
     } as ReturnType<typeof useAuth>)
 
-    render(<PublicResultsLayout />)
+    render(<PublicLayout />)
 
     expect(screen.getByTestId('anon-layout')).toBeInTheDocument()
   })
