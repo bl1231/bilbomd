@@ -22,6 +22,10 @@ import {
   type StepTiming
 } from '../services/functions/job-monitor-functions.js'
 import { prepareBilboMDResults } from '../services/functions/prepare-results.js'
+import {
+  storeNerscMdConstraints,
+  storeNerscMdConstraintsMidRun
+} from '../services/functions/nersc-md-constraints.js'
 import { sendJobFailedEmail } from '../services/functions/job-failure.js'
 import {
   recordWorkerUsageEvent,
@@ -533,12 +537,18 @@ const updateJobNerscState = async (
   // status.txt is written by the Slurm job during execution and does not exist
   // while the job is PENDING in the queue — skip it in that state.
   if (nerscState.state !== NerscStatus.PENDING) {
+    let statusSteps: Record<string, StepStatusEnum> | undefined
     try {
-      await updateJobStepsFromSlurmStatusFile(job)
+      statusSteps = await updateJobStepsFromSlurmStatusFile(job)
     } catch (error) {
       logger.warn(
         `status.txt not yet available for job ${job.uuid} (state: ${nerscState.state}): ${error}`
       )
+    }
+    // Once the Slurm job has written its constraint files, record them so
+    // the UI shows the constraint track while MD runs, as on the beamline
+    if (statusSteps && nerscState.state === NerscStatus.RUNNING) {
+      await storeNerscMdConstraintsMidRun(job, statusSteps)
     }
   }
 }
@@ -645,6 +655,9 @@ const performJobCleanup = async (DBjob: IJob) => {
 
     // Perform cleanup tasks
     await copyBilboMDResults(DBjob)
+    // The Slurm job wrote the constraints the beamline pipelines store while
+    // running; read them from the copied-back files before preparing results
+    await storeNerscMdConstraints(DBjob)
     await prepareBilboMDResults(DBjob)
     await sendBilboMDEmail(DBjob, {
       message: 'Cleanup completed successfully.',
@@ -734,9 +747,11 @@ const parseStatusLine = (
   }
 }
 
+// Returns the status of every step in status.txt, including Slurm-only steps
+// (pae2constraints, consmerge, ...) that the job document does not track
 const updateJobStepsFromSlurmStatusFile = async (
   DBJob: IJob
-): Promise<void> => {
+): Promise<Record<string, StepStatusEnum>> => {
   try {
     const currentSteps = plainSteps(DBJob.steps)
     const UUID = DBJob.uuid
@@ -744,10 +759,13 @@ const updateJobStepsFromSlurmStatusFile = async (
     const lines = contents.split('\n').filter(Boolean) // Filter out empty lines
 
     // Update steps from the status file
+    const statusSteps: Record<string, StepStatusEnum> = {}
     const updatedSteps = lines.reduce(
       (acc, line) => {
         const parsed = parseStatusLine(line)
-        if (parsed && parsed.step in currentSteps) {
+        if (!parsed) return acc
+        statusSteps[parsed.step] = parsed.status.status
+        if (parsed.step in currentSteps) {
           acc[parsed.step as keyof IBilboMDSteps] = parsed.status
         }
         return acc
@@ -758,6 +776,7 @@ const updateJobStepsFromSlurmStatusFile = async (
     // Apply the updated steps to the job
     DBJob.steps = updatedSteps as IBilboMDSteps
     await DBJob.save()
+    return statusSteps
   } catch (error) {
     logger.error(`Unable to update job status for ${DBJob._id}: ${error}`)
     throw error

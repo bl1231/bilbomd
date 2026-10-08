@@ -9,8 +9,16 @@ import {
   queryNERSCForJobState
 } from '../bilboMdNerscJobMonitor.js'
 import { configureJobEvents } from '../../helpers/jobEvents.js'
-import { updateSingleJobStep } from '../../services/functions/job-monitor-functions.js'
+import {
+  copyBilboMDResults,
+  updateSingleJobStep
+} from '../../services/functions/job-monitor-functions.js'
 import { getSlurmStatusFile } from '../../services/functions/nersc-api-functions.js'
+import { prepareBilboMDResults } from '../../services/functions/prepare-results.js'
+import {
+  storeNerscMdConstraints,
+  storeNerscMdConstraintsMidRun
+} from '../../services/functions/nersc-md-constraints.js'
 import { recordWorkerUsageEvent } from '../../services/functions/usage-events.js'
 import { sendJobFailedEmail } from '../../services/functions/job-failure.js'
 
@@ -46,6 +54,11 @@ vi.mock('../../services/functions/job-monitor-functions.js', () => ({
 
 vi.mock('../../services/functions/prepare-results.js', () => ({
   prepareBilboMDResults: vi.fn()
+}))
+
+vi.mock('../../services/functions/nersc-md-constraints.js', () => ({
+  storeNerscMdConstraints: vi.fn(),
+  storeNerscMdConstraintsMidRun: vi.fn()
 }))
 
 vi.mock('../../services/functions/usage-events.js', () => ({
@@ -471,6 +484,52 @@ describe('monitorAndCleanupJobs usage events', () => {
     expect(recordedEvents()).toEqual(['job_cancelled'])
     expect(sendJobFailedEmail).not.toHaveBeenCalled()
     expect(job.status).toBe('Cancelled')
+  })
+
+  it('offers a running job the raw status.txt steps so its constraints can be recorded mid-run', async () => {
+    const job = await runPass(
+      'Running',
+      'RUNNING',
+      'pae: Success 1 2\npae2constraints: Success 1 2\nconsmerge: Success 2 3\nminimize: Running 3\n'
+    )
+
+    // consmerge is a Slurm-only step: not on the job document, but passed on
+    expect(storeNerscMdConstraintsMidRun).toHaveBeenCalledExactlyOnceWith(job, {
+      pae: 'Success',
+      pae2constraints: 'Success',
+      consmerge: 'Success',
+      minimize: 'Running'
+    })
+    expect(job.steps).not.toHaveProperty('consmerge')
+  })
+
+  it('does not try the mid-run read when status.txt is unavailable or the job is not running', async () => {
+    // runPass resolves the status file; a queued rejection wins over it
+    vi.mocked(getSlurmStatusFile).mockRejectedValueOnce(new Error('no file'))
+    await runPass('Running', 'RUNNING')
+    expect(storeNerscMdConstraintsMidRun).not.toHaveBeenCalled()
+
+    await runPass('Running', 'COMPLETED', 'minimize: Success\n')
+    expect(storeNerscMdConstraintsMidRun).not.toHaveBeenCalled()
+  })
+
+  it('records the MD constraints from CFS after the copy back and before preparing results', async () => {
+    const order: string[] = []
+    vi.mocked(copyBilboMDResults).mockImplementation(async () => {
+      order.push('copy')
+    })
+    vi.mocked(storeNerscMdConstraints).mockImplementation(async () => {
+      order.push('constraints')
+    })
+    vi.mocked(prepareBilboMDResults).mockImplementation(async () => {
+      order.push('results')
+    })
+
+    const job = await runPass('Running', 'COMPLETED')
+
+    expect(storeNerscMdConstraints).toHaveBeenCalledExactlyOnceWith(job)
+    expect(order).toEqual(['copy', 'constraints', 'results'])
+    expect(job.status).toBe('Completed')
   })
 
   it('stops polling jobs that are Completed, Failed or Cancelled', async () => {
