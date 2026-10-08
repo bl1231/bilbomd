@@ -13,7 +13,7 @@ import {
 import Grid from '@mui/material/Grid'
 import NerscSystemStatuses from 'features/nersc/SystemStatuses'
 import { Box } from '@mui/system'
-import { Link as RouterLink } from 'react-router'
+import { Link as RouterLink, Navigate } from 'react-router'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import HistoryIcon from '@mui/icons-material/History'
 import ReplayIcon from '@mui/icons-material/Replay'
@@ -27,7 +27,7 @@ type WelcomeProps = {
 }
 
 const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
-  const { username } = useAuth()
+  const { username, isAuthenticated } = useAuth()
   const isAnonymous = mode === 'anonymous'
   useTitle(
     isAnonymous ? 'BilboMD: Welcome' : `BilboMD: Welcome ${username ?? ''}`
@@ -237,6 +237,18 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
       </Grid>
     </>
   )
+
+  // The anonymous landing page lives in the public route tree, which wins the
+  // '/' and '/welcome' match. If SoftPersistLogin restored a session, send the
+  // user to their dashboard instead of showing the logged-out landing page.
+  if (isAnonymous && isAuthenticated) {
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    )
+  }
 
   return content
 }

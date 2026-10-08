@@ -1,5 +1,8 @@
 import { renderWithProviders } from 'test/test-utils'
-import { screen, act, waitFor } from '@testing-library/react'
+import { screen, act, waitFor, render } from '@testing-library/react'
+import { Provider } from 'react-redux'
+import { createMemoryRouter, RouterProvider } from 'react-router'
+import { setupStore } from 'app/store'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import Welcome from '../Welcome'
 import useAuth from 'hooks/useAuth'
@@ -220,5 +223,73 @@ describe('Welcome Component', () => {
     renderWithProviders(<Welcome mode="authenticated" />)
 
     expect(screen.getByText(/Support:/i)).toBeInTheDocument()
+  })
+  describe('anonymous mode', () => {
+    const anonAuth = {
+      username: '',
+      displayName: '',
+      roles: [] as string[],
+      status: '',
+      isManager: false,
+      isAdmin: false,
+      email: '',
+      isAuthenticated: false
+    }
+
+    const renderAtWelcome = () => {
+      const router = createMemoryRouter(
+        [
+          { path: '/welcome', element: <Welcome mode="anonymous" /> },
+          { path: '/dashboard', element: <div>Dashboard landed</div> }
+        ],
+        { initialEntries: ['/welcome'] }
+      )
+      render(
+        <Provider store={setupStore()}>
+          <RouterProvider router={router} />
+        </Provider>
+      )
+      return router
+    }
+
+    beforeEach(() => {
+      vi.mocked(useGetConfigsQuery).mockReturnValue({
+        data: { mode: 'production', useNersc: 'false' },
+        error: null,
+        isLoading: false,
+        refetch: vi.fn()
+      })
+    })
+
+    it('renders the anonymous landing page for logged-out visitors', () => {
+      vi.mocked(useAuth).mockReturnValue(anonAuth)
+
+      const router = renderAtWelcome()
+
+      expect(screen.getByText('Welcome to BilboMD')).toBeInTheDocument()
+      expect(
+        screen.getByRole('link', { name: /Run a BilboMD Job/i })
+      ).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/welcome')
+    })
+
+    it('redirects to /dashboard when a session has been restored', async () => {
+      vi.mocked(useAuth).mockReturnValue({
+        ...anonAuth,
+        username: 'testuser',
+        displayName: 'testuser',
+        roles: ['User'],
+        status: 'active',
+        isAuthenticated: true
+      })
+
+      const router = renderAtWelcome()
+
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe('/dashboard')
+      )
+      expect(screen.getByText('Dashboard landed')).toBeInTheDocument()
+      expect(screen.queryByText('Welcome to BilboMD')).not.toBeInTheDocument()
+    })
   })
 })
