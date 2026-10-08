@@ -2,7 +2,6 @@ import Loadable from 'components/Loadable'
 import MinimalLayout from 'layout/MinimalLayout'
 import { lazy } from 'react'
 
-const Home = Loadable(lazy(() => import('components/Home')))
 const MagickLink = Loadable(lazy(() => import('features/auth/MagickLink')))
 const Signup = Loadable(lazy(() => import('features/auth/Signup')))
 const VerifyEmail = Loadable(lazy(() => import('features/auth/VerifyEmail')))
@@ -21,10 +20,6 @@ const LoginRoutes = {
   element: <MinimalLayout />,
   path: '/',
   children: [
-    {
-      index: true,
-      element: <Home />
-    },
     {
       path: 'register',
       element: <Signup />
