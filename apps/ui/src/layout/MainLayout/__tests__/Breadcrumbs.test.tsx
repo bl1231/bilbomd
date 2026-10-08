@@ -43,6 +43,15 @@ describe('AppBreadcrumbs', () => {
     expect(jobsLinks).toHaveLength(0)
   })
 
+  it('points the Home link at the authenticated /dashboard route', () => {
+    renderWithProviders(<AppBreadcrumbs />, { route: '/dashboard/jobs' })
+
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute(
+      'href',
+      '/dashboard'
+    )
+  })
+
   it('filters out the welcome segment when it is the first path part', () => {
     renderWithProviders(<AppBreadcrumbs />, { route: '/welcome/dashboard' })
 

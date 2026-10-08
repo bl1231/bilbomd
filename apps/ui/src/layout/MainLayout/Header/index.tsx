@@ -145,7 +145,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
   const settings = [
     { text: 'My Jobs', onclick: () => navigate('dashboard/jobs') },
     { text: 'Settings', onclick: () => navigate('/settings') },
-    { text: 'Dashboard', onclick: () => navigate('welcome') }
+    { text: 'Dashboard', onclick: () => navigate('/dashboard') }
   ]
 
   const {
