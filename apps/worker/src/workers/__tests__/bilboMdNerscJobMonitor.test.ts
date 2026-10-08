@@ -9,8 +9,13 @@ import {
   queryNERSCForJobState
 } from '../bilboMdNerscJobMonitor.js'
 import { configureJobEvents } from '../../helpers/jobEvents.js'
-import { updateSingleJobStep } from '../../services/functions/job-monitor-functions.js'
+import {
+  copyBilboMDResults,
+  updateSingleJobStep
+} from '../../services/functions/job-monitor-functions.js'
 import { getSlurmStatusFile } from '../../services/functions/nersc-api-functions.js'
+import { prepareBilboMDResults } from '../../services/functions/prepare-results.js'
+import { storeNerscMdConstraints } from '../../services/functions/nersc-md-constraints.js'
 import { recordWorkerUsageEvent } from '../../services/functions/usage-events.js'
 import { sendJobFailedEmail } from '../../services/functions/job-failure.js'
 
@@ -46,6 +51,10 @@ vi.mock('../../services/functions/job-monitor-functions.js', () => ({
 
 vi.mock('../../services/functions/prepare-results.js', () => ({
   prepareBilboMDResults: vi.fn()
+}))
+
+vi.mock('../../services/functions/nersc-md-constraints.js', () => ({
+  storeNerscMdConstraints: vi.fn()
 }))
 
 vi.mock('../../services/functions/usage-events.js', () => ({
@@ -471,6 +480,25 @@ describe('monitorAndCleanupJobs usage events', () => {
     expect(recordedEvents()).toEqual(['job_cancelled'])
     expect(sendJobFailedEmail).not.toHaveBeenCalled()
     expect(job.status).toBe('Cancelled')
+  })
+
+  it('records the MD constraints from CFS after the copy back and before preparing results', async () => {
+    const order: string[] = []
+    vi.mocked(copyBilboMDResults).mockImplementation(async () => {
+      order.push('copy')
+    })
+    vi.mocked(storeNerscMdConstraints).mockImplementation(async () => {
+      order.push('constraints')
+    })
+    vi.mocked(prepareBilboMDResults).mockImplementation(async () => {
+      order.push('results')
+    })
+
+    const job = await runPass('Running', 'COMPLETED')
+
+    expect(storeNerscMdConstraints).toHaveBeenCalledExactlyOnceWith(job)
+    expect(order).toEqual(['copy', 'constraints', 'results'])
+    expect(job.status).toBe('Completed')
   })
 
   it('stops polling jobs that are Completed, Failed or Cancelled', async () => {

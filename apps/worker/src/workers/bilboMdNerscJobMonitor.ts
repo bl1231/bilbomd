@@ -22,6 +22,7 @@ import {
   type StepTiming
 } from '../services/functions/job-monitor-functions.js'
 import { prepareBilboMDResults } from '../services/functions/prepare-results.js'
+import { storeNerscMdConstraints } from '../services/functions/nersc-md-constraints.js'
 import { sendJobFailedEmail } from '../services/functions/job-failure.js'
 import {
   recordWorkerUsageEvent,
@@ -645,6 +646,9 @@ const performJobCleanup = async (DBjob: IJob) => {
 
     // Perform cleanup tasks
     await copyBilboMDResults(DBjob)
+    // The Slurm job wrote the constraints the beamline pipelines store while
+    // running; read them from the copied-back files before preparing results
+    await storeNerscMdConstraints(DBjob)
     await prepareBilboMDResults(DBjob)
     await sendBilboMDEmail(DBjob, {
       message: 'Cleanup completed successfully.',
