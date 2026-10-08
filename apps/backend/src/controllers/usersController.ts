@@ -15,6 +15,9 @@ const bilboMdUrl = getEnvVar('BILBOMD_URL')
 // A user can't delete their account while any of these are in flight.
 const UNFINISHED_JOB_STATUSES = ['Submitted', 'Pending', 'Running'] as const
 
+// Roles allowed through verifyRoles on the admin user endpoints (routes/users.ts).
+const ADMIN_ROLES = ['Admin', 'Manager']
+
 // Helper function to validate email format
 const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -29,14 +32,89 @@ const isValidUsername = (username: string): boolean => {
   return usernameRegex.test(username)
 }
 
+// Fields an Admin/Manager may see about another account. Everything else on
+// the user document (refresh tokens, API token hashes, OTP and confirmation
+// codes, OAuth ids) is secret material and must never leave the server.
+const ADMIN_USER_FIELDS = [
+  'username',
+  'email',
+  'roles',
+  'firstName',
+  'lastName',
+  'status',
+  'active',
+  'createdAt',
+  'updatedAt',
+  'UUID',
+  'last_access',
+  'emailNotifications',
+  'oauth.provider'
+].join(' ')
+
+type AdminUserDoc = {
+  _id: mongoose.Types.ObjectId
+  username: string
+  email: string
+  roles: string[]
+  firstName?: string | null
+  lastName?: string | null
+  status?: string
+  active?: boolean
+  createdAt?: Date
+  updatedAt?: Date
+  UUID?: string
+  last_access?: Date | null
+  emailNotifications?: boolean
+  oauth?: Array<{ provider?: string }>
+}
+
+// Shape a user document for the admin UI. This is an explicit allowlist so a
+// new secret field added to the schema later is not exposed by accident.
+const toAdminUserView = (user: AdminUserDoc, jobCount: number) => ({
+  _id: user._id,
+  username: user.username,
+  email: user.email,
+  roles: user.roles,
+  firstName: user.firstName ?? null,
+  lastName: user.lastName ?? null,
+  status: user.status,
+  active: user.active ?? false,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+  UUID: user.UUID,
+  lastAccess: user.last_access ?? null,
+  // Undefined on users created before the setting existed; treat as true.
+  emailNotifications: user.emailNotifications ?? true,
+  oauthProviders: (user.oauth ?? [])
+    .map((o) => o.provider)
+    .filter((p): p is string => typeof p === 'string'),
+  jobCount
+})
+
+// Current number of jobs per user id. Matches the `Job.findOne` guard in
+// deleteUserById, so a non-zero count means admin delete will be refused.
+const countJobsByUser = async (): Promise<Map<string, number>> => {
+  const rows = (await Job.aggregate([
+    { $match: { 'user._id': { $ne: null } } },
+    { $group: { _id: '$user._id', count: { $sum: 1 } } }
+  ])) as Array<{ _id: mongoose.Types.ObjectId; count: number }>
+  return new Map(rows.map((r) => [String(r._id), r.count]))
+}
+
 const getAllUsers = async (req: Request, res: Response) => {
   try {
     // `mongoose.trusted` is required: with `sanitizeFilter` on (app.ts) a bare
     // `{ $exists: false }` is wrapped in `$eq` and fails to cast to Date (#1146).
-    const users = await User.find({
-      deletedAt: mongoose.trusted({ $exists: false })
-    }).lean()
-    res.json({ success: true, data: users })
+    const [users, jobCounts] = await Promise.all([
+      User.find({ deletedAt: mongoose.trusted({ $exists: false }) })
+        .select(ADMIN_USER_FIELDS)
+        .lean<AdminUserDoc[]>(),
+      countJobsByUser()
+    ])
+    const data = users.map((user) =>
+      toAdminUserView(user, jobCounts.get(String(user._id)) ?? 0)
+    )
+    res.json({ success: true, data })
   } catch (error) {
     logger.error(`Failed to get all users: ${error}`)
     res.status(500).json({ success: false, message: 'Internal server error' })
@@ -75,6 +153,28 @@ const updateUser = async (req: Request, res: Response): Promise<void> => {
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' })
       return
+    }
+
+    // An admin editing their own account must stay active and keep a role
+    // that can reach this endpoint, otherwise they lock themselves out.
+    if (user.username === req.user) {
+      const keepsAdminAccess = roles.some((role: string) =>
+        ADMIN_ROLES.includes(role)
+      )
+      if (!active) {
+        res.status(403).json({
+          success: false,
+          message: 'You cannot deactivate your own account'
+        })
+        return
+      }
+      if (!keepsAdminAccess) {
+        res.status(403).json({
+          success: false,
+          message: 'You cannot remove your own Admin or Manager role'
+        })
+        return
+      }
     }
 
     // Guard against assigning an email already used by another account.
@@ -270,14 +370,18 @@ const getUser = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-    const user = await User.findOne({ _id: id }).lean().exec()
+    const user = await User.findOne({ _id: id })
+      .select(ADMIN_USER_FIELDS)
+      .lean<AdminUserDoc>()
+      .exec()
     if (!user) {
       res
         .status(404)
         .json({ success: false, message: `User ID ${id} not found` })
       return
     }
-    res.json({ success: true, data: user })
+    const jobCount = await Job.countDocuments({ 'user._id': user._id })
+    res.json({ success: true, data: toAdminUserView(user, jobCount) })
   } catch (error) {
     logger.error(`Failed to get user: ${error}`)
     res.status(500).json({ success: false, message: 'Internal server error' })

@@ -9,7 +9,17 @@ vi.mock('../../../config/config.js', () => ({
   isCookieSecure: vi.fn(() => false)
 }))
 
-import { issueTokensAndSetCookie } from '../authTokens.js'
+vi.mock('@bilbomd/mongodb-schema', () => ({
+  User: { updateOne: vi.fn() }
+}))
+
+vi.mock('../../../middleware/loggers.js', () => ({
+  logger: { info: vi.fn(), error: vi.fn() }
+}))
+
+import { User } from '@bilbomd/mongodb-schema'
+import { logger } from '../../../middleware/loggers.js'
+import { issueTokensAndSetCookie, recordLastAccess } from '../authTokens.js'
 
 const makeUser = (overrides: Partial<IUser> = {}): IUser =>
   ({
@@ -27,7 +37,59 @@ const makeRes = (): Response => {
   return res
 }
 
-beforeEach(() => vi.clearAllMocks())
+const updateOneChain = (result: Promise<unknown>) => ({ exec: () => result })
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(User.updateOne).mockReturnValue(
+    updateOneChain(Promise.resolve({})) as never
+  )
+})
+
+describe('recordLastAccess', () => {
+  const now = new Date('2024-06-01T12:00:00Z')
+
+  it('writes last_access the first time an account is seen', () => {
+    recordLastAccess(makeUser({ _id: 'u1' as never }), now)
+    expect(User.updateOne).toHaveBeenCalledWith(
+      { _id: 'u1' },
+      { last_access: now }
+    )
+  })
+
+  it('skips the write when the last one was inside the window', () => {
+    recordLastAccess(
+      makeUser({
+        _id: 'u1' as never,
+        last_access: new Date(now.getTime() - 60 * 1000)
+      }),
+      now
+    )
+    expect(User.updateOne).not.toHaveBeenCalled()
+  })
+
+  it('writes again once the window has passed', () => {
+    recordLastAccess(
+      makeUser({
+        _id: 'u1' as never,
+        last_access: new Date(now.getTime() - 10 * 60 * 1000)
+      }),
+      now
+    )
+    expect(User.updateOne).toHaveBeenCalledTimes(1)
+  })
+
+  it('logs instead of throwing when the write fails', async () => {
+    vi.mocked(User.updateOne).mockReturnValue(
+      updateOneChain(Promise.reject(new Error('db down'))) as never
+    )
+    expect(() =>
+      recordLastAccess(makeUser({ _id: 'u1' as never }), now)
+    ).not.toThrow()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(logger.error).toHaveBeenCalled()
+  })
+})
 
 describe('issueTokensAndSetCookie', () => {
   it('includes displayName claim derived from firstName + lastName', async () => {
@@ -55,6 +117,11 @@ describe('issueTokensAndSetCookie', () => {
     }
 
     expect(decoded.UserInfo.displayName).toBe('legacy_user')
+  })
+
+  it('records last access as a side effect', async () => {
+    await issueTokensAndSetCookie(makeUser({ _id: 'u1' as never }), makeRes())
+    expect(User.updateOne).toHaveBeenCalledTimes(1)
   })
 
   it('sets the refresh token cookie', async () => {
