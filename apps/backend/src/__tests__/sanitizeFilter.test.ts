@@ -68,6 +68,22 @@ describe('sanitizeFilter operator-query regressions', () => {
     })
   })
 
+  describe('getAllUsers soft-delete filter (User.deletedAt: Date) — #1146', () => {
+    it('casts cleanly with mongoose.trusted({ $exists: false })', () => {
+      expect(
+        filterCastError(User, {
+          deletedAt: mongoose.trusted({ $exists: false })
+        })
+      ).toBeNull()
+    })
+
+    it('REGRESSION: a bare { $exists: false } fails to cast under sanitizeFilter', () => {
+      expect(
+        filterCastError(User, { deletedAt: { $exists: false } })
+      ).toBeInstanceOf(mongoose.Error.CastError)
+    })
+  })
+
   describe('jobCleaner age filter (Job.createdAt: Date)', () => {
     const threshold = new Date('2026-01-01T00:00:00Z')
 

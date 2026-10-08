@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { User, Job, UsageEvent } from '@bilbomd/mongodb-schema'
 import { logger } from '../middleware/loggers.js'
 import { Request, Response } from 'express'
@@ -30,7 +31,11 @@ const isValidUsername = (username: string): boolean => {
 
 const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find({ deletedAt: { $exists: false } }).lean()
+    // `mongoose.trusted` is required: with `sanitizeFilter` on (app.ts) a bare
+    // `{ $exists: false }` is wrapped in `$eq` and fails to cast to Date (#1146).
+    const users = await User.find({
+      deletedAt: mongoose.trusted({ $exists: false })
+    }).lean()
     res.json({ success: true, data: users })
   } catch (error) {
     logger.error(`Failed to get all users: ${error}`)
@@ -162,7 +167,7 @@ const deleteUserByUsername = async (
 
     const hasUnfinishedJobs = await Job.exists({
       'user._id': user._id,
-      status: { $in: UNFINISHED_JOB_STATUSES }
+      status: mongoose.trusted({ $in: UNFINISHED_JOB_STATUSES })
     })
     if (hasUnfinishedJobs) {
       res.status(409).json({
