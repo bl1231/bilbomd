@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.10.8
+
+### Patch Changes
+
+- 22dad6d: Resolve open Dependabot security alerts: bump handlebars to 4.7.10 (three JavaScript-injection advisories), and update transitive proxy-addr (IP spoofing), compression (DoS memory leak), source-map-js (event-loop DoS), and shell-quote (command injection) to their patched releases.
+
 ## 1.10.7
 
 ### Patch Changes
