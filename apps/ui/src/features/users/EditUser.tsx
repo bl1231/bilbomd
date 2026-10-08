@@ -1,9 +1,10 @@
-import { useParams } from 'react-router'
+import { useParams, Link as RouterLink } from 'react-router'
+import { useSelector } from 'react-redux'
+import { Alert, Box, Button, CircularProgress } from '@mui/material'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditUserForm from './EditUserForm'
 import { useGetUsersQuery, selectUserById } from 'slices/usersApiSlice'
-import PulseLoader from 'react-spinners/PulseLoader'
 import useTitle from 'hooks/useTitle'
-import { useSelector } from 'react-redux'
 import type { RootState } from 'app/store'
 
 const EditUser = () => {
@@ -11,18 +12,42 @@ const EditUser = () => {
 
   const { id } = useParams()
 
-  useGetUsersQuery('usersList') // To populate the cache
+  // Populates the normalized users cache; the user itself comes from it.
+  const { isLoading, isError, isSuccess } = useGetUsersQuery('usersList')
   const user = useSelector((state: RootState) => selectUserById(state, id!))
 
-  if (!user)
-    return (
-      <div data-testid="spinner">
-        <PulseLoader color={'#222'} />
-      </div>
-    )
-  const content = <EditUserForm user={user} />
+  if (user) return <EditUserForm user={user} />
 
-  return content
+  if (isLoading || (!isSuccess && !isError)) {
+    return (
+      <Box
+        data-testid="spinner"
+        sx={{ display: 'flex', justifyContent: 'center', p: 4 }}
+      >
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  return (
+    <Box sx={{ maxWidth: 560 }}>
+      <Alert
+        severity={isError ? 'error' : 'warning'}
+        sx={{ mb: 2 }}
+      >
+        {isError
+          ? 'An error occurred while fetching users.'
+          : 'No user with that id exists. It may have been deleted.'}
+      </Alert>
+      <Button
+        component={RouterLink}
+        to="/dashboard/users"
+        startIcon={<ArrowBackIcon />}
+      >
+        Back to users
+      </Button>
+    </Box>
+  )
 }
 
 export default EditUser

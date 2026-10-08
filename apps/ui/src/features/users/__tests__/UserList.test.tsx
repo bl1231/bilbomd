@@ -1,115 +1,84 @@
 import { renderWithProviders } from 'test/test-utils'
 import { screen } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { useGetUsersQuery } from 'slices/usersApiSlice'
+import type { UserDTO } from '@bilbomd/bilbomd-types'
+import { useGetUsersQuery, selectAllUsers } from 'slices/usersApiSlice'
 import UsersList from '../UsersList'
-const mockUsers = [
+
+const mockUsers: UserDTO[] = [
   {
     id: '1',
-    username: 'John Doe',
+    username: 'jdoe',
+    firstName: 'John',
+    lastName: 'Doe',
     email: 'john@example.com',
     roles: ['User'],
-    active: true
+    active: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   },
   {
     id: '2',
-    username: 'Jane Smith',
+    username: 'jsmith',
     email: 'jane@example.com',
     roles: ['Admin'],
-    active: false
+    active: false,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z'
   }
 ]
-// const stableSelectAllUsers = () => mockUsers
-vi.mock('slices/usersApiSlice', () => {
-  return {
-    useGetUsersQuery: vi.fn(),
-    selectAllUsers: vi.fn().mockReturnValue(() => mockUsers)
-  }
-})
 
-describe('UsersList Component', () => {
+vi.mock('slices/usersApiSlice', () => ({
+  useGetUsersQuery: vi.fn(),
+  selectAllUsers: vi.fn()
+}))
+
+const mockQuery = (
+  flags: Partial<ReturnType<typeof useGetUsersQuery>>,
+  users: UserDTO[] = []
+) => {
+  vi.mocked(useGetUsersQuery).mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isSuccess: false,
+    isError: false,
+    refetch: vi.fn(),
+    ...flags
+  } as ReturnType<typeof useGetUsersQuery>)
+  vi.mocked(selectAllUsers).mockReturnValue(users)
+}
+
+describe('UsersList', () => {
   afterEach(() => {
     vi.clearAllMocks()
   })
 
-  it('displays loading indicator when data is loading', () => {
-    vi.mocked(useGetUsersQuery).mockReturnValue({
-      data: null,
-      isLoading: true,
-      isSuccess: false,
-      isError: false,
-      refetch: vi.fn()
-    })
-
+  it('shows a spinner while loading and keeps the header', () => {
+    mockQuery({ isLoading: true })
     renderWithProviders(<UsersList />)
-
-    // Check for CircularProgress component
     expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    expect(screen.getByText('Users')).toBeInTheDocument()
   })
 
-  it('displays an error message when there is an error', () => {
-    vi.mocked(useGetUsersQuery).mockReturnValue({
-      data: null,
-      isLoading: false,
-      isSuccess: false,
-      isError: true,
-      refetch: vi.fn()
-    })
-
+  it('shows an error alert when the fetch fails', () => {
+    mockQuery({ isError: true })
     renderWithProviders(<UsersList />)
-
-    // Check for Alert component with error message
     expect(
       screen.getByText(/an error occurred while fetching users/i)
     ).toBeInTheDocument()
   })
 
-  it('displays a warning when data is invalid or missing', () => {
-    vi.mocked(useGetUsersQuery).mockReturnValue({
-      data: null,
-      isLoading: false,
-      isSuccess: true,
-      isError: false,
-      refetch: vi.fn()
-    })
-
+  it('shows a neutral empty state', () => {
+    mockQuery({ isSuccess: true })
     renderWithProviders(<UsersList />)
-
-    // Check for warning message
-    expect(
-      screen.getByText(/no users available or data format is invalid/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/no users found/i)).toBeInTheDocument()
   })
 
-  // it('displays users data in a table when data is successfully fetched', () => {
-  //   vi.mocked(useGetUsersQuery).mockReturnValue({
-  //     data: mockUsers,
-  //     isLoading: false,
-  //     isSuccess: true,
-  //     isError: false,
-  //     error: null,
-  //     refetch: vi.fn()
-  //   })
-
-  //   renderWithProviders(<UsersList />)
-
-  //   // Check for each user's data in the DataGrid rows
-  //   const rows = screen.getAllByRole('row') // Target rows in the table/grid
-  //   expect(rows).toHaveLength(3) // Includes header row and 2 data rows
-
-  //   // Check the first user's data
-  //   expect(screen.getByText(/John Doe/i)).toBeInTheDocument()
-  //   expect(screen.getByText(/john@example.com/i)).toBeInTheDocument()
-
-  //   // Use query specific to grid cells for roles to avoid ambiguity
-  //   const roleCells = screen.getAllByRole('gridcell', { name: /User/i })
-  //   expect(roleCells).toHaveLength(1) // Ensure only one role cell contains 'User'
-
-  //   // Check the second user's data
-  //   expect(screen.getByText(/Jane Smith/i)).toBeInTheDocument()
-  //   expect(screen.getByText(/jane@example.com/i)).toBeInTheDocument()
-
-  //   const adminCells = screen.getAllByRole('gridcell', { name: /Admin/i })
-  //   expect(adminCells).toHaveLength(1) // Ensure only one role cell contains 'Admin'
-  // })
+  it('offers search and a count that hides inactive users by default', () => {
+    mockQuery({ isSuccess: true }, mockUsers)
+    renderWithProviders(<UsersList />)
+    expect(screen.getByRole('textbox', { name: /search users/i })).toBeEnabled()
+    expect(screen.getByText('1 of 2 users')).toBeInTheDocument()
+    expect(screen.getByLabelText(/show inactive \(1\)/i)).not.toBeChecked()
+  })
 })
