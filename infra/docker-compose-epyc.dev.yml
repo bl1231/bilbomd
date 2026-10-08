@@ -24,6 +24,14 @@ volumes:
   scratch:
     name: bilbomd-scratch-dev
     external: true
+  # Pipe directory shared by the MPS daemon and the worker. tmpfs, so a stale
+  # pipe never survives a restart.
+  mps-pipe:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: 'size=16m,uid=${UID:-1001},gid=${GID:-1001},mode=0700'
 
 networks:
   app-network-dev:
@@ -132,12 +140,51 @@ services:
       start_period: 10s
 
   # ------------------------------------------------------------------------------------
+  # NVIDIA MPS daemon for GPU 0, same setup as prod's (which runs on GPU 1); see
+  # docker-compose-epyc.prod.yml. The dev and prod fold services also use GPU 0
+  # but don't connect to MPS. If this container restarts, restart the worker too.
+  mps:
+    image: ghcr.io/bl1231/bilbomd-worker:2.21.2
+    pull_policy: missing
+    entrypoint: ['nvidia-cuda-mps-control', '-f']
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
+    ipc: shareable
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    restart: always
+    read_only: true
+    user: '${UID:-1001}:${GID:-1001}'
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    volumes:
+      - mps-pipe:/run/nvidia-mps
+    environment:
+      - CUDA_MPS_PIPE_DIRECTORY=/run/nvidia-mps
+      - CUDA_MPS_LOG_DIRECTORY=/tmp/mps-log
+    healthcheck:
+      test: ['CMD-SHELL', 'echo get_server_list | nvidia-cuda-mps-control']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # ------------------------------------------------------------------------------------
   worker:
     image: ghcr.io/bl1231/bilbomd-worker:2.21.2
     pull_policy: always
     security_opt:
       - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json
+    ipc: 'service:mps'
     deploy:
       replicas: 1
       resources:
@@ -146,8 +193,9 @@ services:
           memory: '32g'
         reservations:
           devices:
+            # Same GPU as the mps service. Prod's workers have GPU 1.
             - driver: nvidia
-              count: 1
+              device_ids: ['0']
               capabilities: [gpu]
     restart: always
     read_only: true
@@ -164,6 +212,7 @@ services:
       - /bilbomd/dev/uploads:/bilbomd/uploads
       - /bilbomd/dev/logs:/bilbomd/logs
       - scratch:/bilbomd/scratch
+      - mps-pipe:/run/nvidia-mps
       - ./worker-passwd-epyc:/etc/passwd:ro
     environment:
       - ENABLE_BILBOMD_OPENFOLD=${ENABLE_BILBOMD_OPENFOLD:-false}
@@ -173,8 +222,12 @@ services:
       - COLABFOLD_SERVICE_URL=http://colabfold-service:8000
       - MPLCONFIGDIR=/tmp/matplotlib
       - XDG_CACHE_HOME=/tmp/cache
-      - OPENMM_MD_CONCURRENCY=${OPENMM_MD_CONCURRENCY:-1}
+      # All 6 Rg runs at once; only faster than serial because of MPS.
+      - OPENMM_MD_CONCURRENCY=${OPENMM_MD_CONCURRENCY:-6}
+      - CUDA_MPS_PIPE_DIRECTORY=/run/nvidia-mps
     depends_on:
+      mps:
+        condition: service_healthy
       mongodb:
         condition: service_healthy
       redis:
