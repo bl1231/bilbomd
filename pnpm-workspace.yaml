@@ -11,3 +11,8 @@ allowBuilds:
   msgpackr-extract: true
   msw: true
   unrs-resolver: true
+
+# concurrently@10.0.5 pins shell-quote@1.9.0 (GHSA-pqg4-j6r4-53mv). Drop this
+# once concurrently >=10.0.6 is adopted.
+overrides:
+  'shell-quote@1.9.0': '1.12.0'
