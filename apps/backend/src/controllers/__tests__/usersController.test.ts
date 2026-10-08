@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import mongoose from 'mongoose'
 import type { Request, Response } from 'express'
 
 vi.mock('../../config/config.js', () => ({
@@ -228,7 +229,7 @@ describe('deleteUserByUsername', () => {
 
     expect(Job.exists).toHaveBeenCalledWith({
       'user._id': userId,
-      status: { $in: ['Submitted', 'Pending', 'Running'] }
+      status: mongoose.trusted({ $in: ['Submitted', 'Pending', 'Running'] })
     })
     expect(res.status).toHaveBeenCalledWith(409)
     expect(User.updateOne).not.toHaveBeenCalled()
@@ -322,7 +323,9 @@ describe('getAllUsers', () => {
     const res = makeRes()
     await getAllUsers({} as Request, res)
 
-    expect(User.find).toHaveBeenCalledWith({ deletedAt: { $exists: false } })
+    expect(User.find).toHaveBeenCalledWith({
+      deletedAt: mongoose.trusted({ $exists: false })
+    })
     expect(res.json).toHaveBeenCalledWith({ success: true, data: [] })
   })
 })
