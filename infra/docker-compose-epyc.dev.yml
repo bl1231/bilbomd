@@ -107,7 +107,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.19.0
+    image: ghcr.io/bl1231/bilbomd-backend:2.19.1
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
@@ -144,7 +144,7 @@ services:
   # docker-compose-epyc.prod.yml. The dev and prod fold services also use GPU 0
   # but don't connect to MPS. If this container restarts, restart the worker too.
   mps:
-    image: ghcr.io/bl1231/bilbomd-worker:2.21.3
+    image: ghcr.io/bl1231/bilbomd-worker:2.21.4
     pull_policy: missing
     entrypoint: ['nvidia-cuda-mps-control', '-f']
     security_opt:
@@ -179,7 +179,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.21.3
+    image: ghcr.io/bl1231/bilbomd-worker:2.21.4
     pull_policy: always
     security_opt:
       - no-new-privileges:true
@@ -322,7 +322,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.35.0
+    image: ghcr.io/bl1231/bilbomd-ui:2.35.1
     pull_policy: missing
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
