@@ -103,7 +103,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   backend:
-    image: ghcr.io/bl1231/bilbomd-backend:2.18.1
+    image: ghcr.io/bl1231/bilbomd-backend:2.19.0
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
@@ -144,7 +144,7 @@ services:
   # does not need to follow the worker's. If this container restarts, restart
   # the workers too: they are attached to the old IPC namespace.
   mps:
-    image: ghcr.io/bl1231/bilbomd-worker:2.21.2
+    image: ghcr.io/bl1231/bilbomd-worker:2.21.3
     pull_policy: missing
     entrypoint: ['nvidia-cuda-mps-control', '-f']
     security_opt:
@@ -179,7 +179,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.21.2
+    image: ghcr.io/bl1231/bilbomd-worker:2.21.3
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
@@ -323,7 +323,7 @@ services:
 
   # ------------------------------------------------------------------------------------
   ui:
-    image: ghcr.io/bl1231/bilbomd-ui:2.34.1
+    image: ghcr.io/bl1231/bilbomd-ui:2.35.0
     pull_policy: missing
     security_opt:
       - seccomp:./seccomp/bilbomd-seccomp.json
