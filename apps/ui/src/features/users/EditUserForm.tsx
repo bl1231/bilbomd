@@ -1,350 +1,510 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { useSelector } from 'react-redux'
+import { Link as RouterLink, useNavigate } from 'react-router'
+import { Form, Formik, type FormikHelpers } from 'formik'
+import { useSnackbar } from 'notistack'
 import {
+  Alert,
+  Box,
   Button,
   Checkbox,
-  TextField,
-  MenuItem,
-  Alert,
-  FormControlLabel,
-  FormLabel,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
   FormControl,
+  FormControlLabel,
   FormGroup,
   FormHelperText,
-  Select,
-  Typography,
-  InputLabel,
-  OutlinedInput,
-  ListItemText
+  FormLabel,
+  Link,
+  List,
+  ListItemButton,
+  ListItemText,
+  Paper,
+  Stack,
+  Switch,
+  TextField,
+  Tooltip,
+  Typography
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogContentText from '@mui/material/DialogContentText'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/Delete'
-import EditIcon from '@mui/icons-material/Edit'
-import { Field, Form, Formik } from 'formik'
-import { formatDateSafe } from 'utils/dates'
+import SaveIcon from '@mui/icons-material/Save'
+import type { UserDTO, UserRole } from '@bilbomd/bilbomd-types'
 import {
   useUpdateUserMutation,
   useDeleteUserMutation
 } from 'slices/usersApiSlice'
 import { useGetJobsQuery, selectAllJobs } from 'slices/jobsApiSlice'
-import { useSelector } from 'react-redux'
-import JobSummary from 'features/jobs/JobSummary'
+import useAuth from 'hooks/useAuth'
 import { ROLES } from 'config/roles'
-import { useNavigate } from 'react-router'
 import { editUserSchema } from 'schemas/ValidationSchemas'
-import { Box } from '@mui/system'
-import Paper from '@mui/material/Paper'
-import Chip from '@mui/material/Chip'
-import HeaderBox from 'components/HeaderBox'
-import type { UserDTO, UserRole } from '@bilbomd/bilbomd-types'
+import {
+  formatDateSafe,
+  formatRelativeDateSafe,
+  parseDateSafe
+} from 'utils/dates'
+import { userDisplayName } from 'utils/userDisplayName'
+import { getErrorMessage } from 'utils/apiError'
+import { getOrcidId } from './orcid'
+import { userStatusColor, userStatusLabel } from './usersListHelpers'
 
 interface EditUserFormProps {
   user: UserDTO
 }
 
-const ITEM_HEIGHT = 48
-const ITEM_PADDING_TOP = 8
-const MenuProps = {
-  slotProps: {
-    paper: {
-      style: {
-        maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-        width: 50
-      }
-    }
-  }
-}
-
 interface EditUserFormValues {
-  username: string
   email: string
   active: boolean
   roles: UserRole[]
 }
 
+const RECENT_JOBS_LIMIT = 10
+
+const Field = ({ label, children }: { label: string; children: ReactNode }) => (
+  <Box>
+    <Typography
+      variant="caption"
+      color="text.secondary"
+    >
+      {label}
+    </Typography>
+    <Box>{children}</Box>
+  </Box>
+)
+
+const Section = ({
+  title,
+  children,
+  danger = false
+}: {
+  title: string
+  children: ReactNode
+  danger?: boolean
+}) => (
+  <Paper
+    variant="outlined"
+    sx={{ p: 2, ...(danger && { borderColor: 'error.main' }) }}
+  >
+    <Typography
+      variant="h6"
+      component="h2"
+      color={danger ? 'error' : 'text.primary'}
+      gutterBottom
+    >
+      {title}
+    </Typography>
+    {children}
+  </Paper>
+)
+
 const EditUserForm = ({ user }: EditUserFormProps) => {
-  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+  const { enqueueSnackbar } = useSnackbar()
+  const { username: currentUsername } = useAuth()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [updateUser] = useUpdateUserMutation()
+  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation()
 
-  useGetJobsQuery('jobsList') // To trigger query lifecycle
+  // TODO: this pulls the whole jobs list (every job, for an Admin) and
+  // filters client-side. Replace with a per-user jobs endpoint.
+  useGetJobsQuery('jobsList')
   const allJobs = useSelector(selectAllJobs)
+  const userJobs = useMemo(
+    () =>
+      allJobs
+        .filter((job) => job.mongo?.user?.id === user.id)
+        .sort(
+          (a, b) =>
+            (parseDateSafe(b.mongo.time_submitted)?.getTime() ?? 0) -
+            (parseDateSafe(a.mongo.time_submitted)?.getTime() ?? 0)
+        ),
+    [allJobs, user.id]
+  )
 
-  const filteredJobs = allJobs.filter((job) => job.mongo?.user?.id === user.id)
+  const displayName = userDisplayName(user)
+  const orcidId = getOrcidId(user.username)
+  const statusLabel = userStatusLabel(user)
+  const isSelf = user.username === currentUsername
+  const jobCount = user.jobCount ?? userJobs.length
+  const lastAccess = parseDateSafe(user.lastAccess)
 
-  const handleClickOpen = () => {
-    setOpen(true)
-  }
+  let deleteBlockedReason: string | null = null
+  if (isSelf) deleteBlockedReason = 'You cannot delete your own account.'
+  else if (jobCount > 0)
+    deleteBlockedReason =
+      'Users with jobs cannot be deleted. Delete their jobs first.'
 
-  const handleClose = () => {
-    setOpen(false)
-  }
-
-  const handleDeleteUser = async () => {
-    setOpen(false)
-    await deleteUser({ id: user.id })
-  }
-
-  const initialValues = {
-    username: user.username,
+  const initialValues: EditUserFormValues = {
     email: user.email,
     active: user.active,
     roles: user.roles
   }
 
-  const [updateUser, updateResult] = useUpdateUserMutation()
-
-  const [deleteUser, deleteResult] = useDeleteUserMutation()
-
-  const navigate = useNavigate()
-
-  let errContent = ''
-  if (updateResult.error || deleteResult.error) {
-    const error = updateResult.error || deleteResult.error
-    if (
-      error &&
-      'data' in error &&
-      typeof error.data === 'object' &&
-      error.data &&
-      (error.data as { message: string }).message
-    ) {
-      errContent = error.data ? (error.data as { message: string }).message : ''
-    } else {
-      errContent = error?.toString() ?? ''
+  const handleSubmit = async (
+    values: EditUserFormValues,
+    helpers: FormikHelpers<EditUserFormValues>
+  ) => {
+    try {
+      await updateUser({
+        id: user.id,
+        roles: values.roles,
+        active: values.active,
+        email: values.email
+      }).unwrap()
+      enqueueSnackbar(`${displayName} updated`, { variant: 'success' })
+      helpers.resetForm({ values })
+    } catch (err) {
+      enqueueSnackbar(getErrorMessage(err, 'Failed to update user'), {
+        variant: 'error'
+      })
     }
   }
 
-  useEffect(() => {
-    if (updateResult.isSuccess || deleteResult.isSuccess) {
-      void navigate('../users')
+  const handleDelete = async () => {
+    setConfirmOpen(false)
+    try {
+      await deleteUser({ id: user.id }).unwrap()
+      enqueueSnackbar(`${displayName} deleted`, { variant: 'success' })
+      void navigate('/dashboard/users')
+    } catch (err) {
+      enqueueSnackbar(getErrorMessage(err, 'Failed to delete user'), {
+        variant: 'error'
+      })
     }
-  }, [updateResult.isSuccess, deleteResult.isSuccess, navigate])
-
-  const myOnSubmit = async (values: EditUserFormValues) => {
-    await updateUser({
-      id: user.id,
-      roles: values.roles,
-      active: values.active,
-      email: values.email
-    })
   }
 
-  const content = (
-    <>
-      <Box>
-        <HeaderBox>
-          <Typography>Edit User</Typography>
-        </HeaderBox>
+  const roleOptions = Object.values(ROLES) as UserRole[]
 
-        <Paper sx={{ p: 1 }}>
-          <Formik
-            initialValues={initialValues}
-            validationSchema={editUserSchema}
-            onSubmit={myOnSubmit}
-            enableReinitialize={true}
-          >
-            {({
-              values,
-              errors,
-              touched,
-              isSubmitting,
-              handleChange,
-              handleBlur,
-              setFieldValue
-            }) => (
-              <Form>
-                <Grid
-                  container
-                  sx={{ flexDirection: 'column' }}
-                >
-                  <Grid sx={{ my: 2, width: '300px' }}>
-                    <Field
-                      name="username"
-                      id="username"
-                      label="Username"
-                      type="text"
-                      autoComplete="off"
-                      fullWidth
-                      component={TextField}
-                      value={values.username || ''}
-                      helperText="Username cannot be changed"
-                      slotProps={{ input: { readOnly: true } }}
-                    />
-                  </Grid>
-                  <Grid sx={{ my: 2, width: '300px' }}>
-                    <Field
-                      name="email"
-                      id="email"
-                      label="Email"
-                      type="email"
-                      autoComplete="off"
-                      fullWidth
-                      disabled={isSubmitting}
-                      component={TextField}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      value={values.email || ''}
-                      error={touched.email && Boolean(errors.email)}
-                      helperText={touched.email && errors.email}
-                    />
-                  </Grid>
-
-                  <Grid sx={{ my: 2 }}>
-                    <FormLabel component="legend">
-                      Make User active or inactive
-                    </FormLabel>
-                    <FormGroup>
-                      <FormControlLabel
-                        control={<Checkbox checked={values.active} />}
-                        label="Active"
-                        name="active"
-                        onChange={handleChange}
-                      />
-                    </FormGroup>
-                  </Grid>
-                  <Grid sx={{ mb: 2 }}>
-                    {/* https://github.com/jaredpalmer/formik/issues/2123 */}
-
-                    <FormLabel component="legend">Assign Roles</FormLabel>
-                    <FormControl
-                      sx={{ my: 2, width: 300 }}
-                      error={touched.roles && Boolean(errors.roles)}
-                    >
-                      <InputLabel id="roles">Roles</InputLabel>
-                      <Select
-                        labelId="roles"
-                        id="roles"
-                        name="roles"
-                        multiple={true}
-                        value={values.roles}
-                        onChange={(e) => {
-                          const next = (e.target.value as string[]).map(
-                            (r) => r as UserRole
-                          )
-                          void setFieldValue('roles', next)
-                        }}
-                        onBlur={handleBlur}
-                        input={<OutlinedInput label="Roles" />}
-                        renderValue={(selected) =>
-                          (selected as string[]).join(', ')
-                        }
-                        MenuProps={MenuProps}
-                      >
-                        {(Object.values(ROLES) as string[]).map((role) => (
-                          <MenuItem
-                            key={role}
-                            value={role}
-                          >
-                            <Checkbox
-                              checked={values.roles.includes(role as UserRole)}
-                            />
-                            <ListItemText primary={role} />
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {touched.roles && errors.roles ? (
-                        <FormHelperText>
-                          {errors.roles as string}
-                        </FormHelperText>
-                      ) : null}
-                    </FormControl>
-                  </Grid>
-                  <Grid>
-                    <Button
-                      variant="contained"
-                      startIcon={<EditIcon />}
-                      sx={{ mr: 2 }}
-                      type="submit"
-                    >
-                      Update
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<DeleteIcon />}
-                      sx={{ mr: 2 }}
-                      color="error"
-                      type="button"
-                      disabled={isSubmitting}
-                      onClick={handleClickOpen}
-                    >
-                      {`Delete ${values.username}`}
-                    </Button>
-                    <Dialog
-                      open={open}
-                      onClose={handleClose}
-                    >
-                      <DialogContent>
-                        <DialogContentText>
-                          {`Delete ${values.username} ?`}
-                        </DialogContentText>
-                      </DialogContent>
-                      <DialogActions>
-                        <Button onClick={handleClose}>Cancel</Button>
-                        <Button
-                          onClick={handleDeleteUser}
-                          autoFocus
-                        >
-                          Delete
-                        </Button>
-                      </DialogActions>
-                    </Dialog>
-                  </Grid>
-                  <Grid sx={{ mt: 2 }}>
-                    {errContent ? (
-                      <Alert severity="warning">{errContent}</Alert>
-                    ) : (
-                      ''
-                    )}
-                  </Grid>
-                </Grid>
-              </Form>
-            )}
-          </Formik>
-        </Paper>
-      </Box>
-
-      <Box sx={{ my: 1 }}>
-        <HeaderBox>
-          <Typography>User Details</Typography>
-        </HeaderBox>
-        <Paper sx={{ p: 1 }}>
-          <Typography>
-            <b>Created:</b> {formatDateSafe(user.createdAt)}
-          </Typography>
-          <Typography>
-            <b>Last Modified:</b> {formatDateSafe(user.updatedAt)}
-          </Typography>
-          <Typography>
-            <b>UUID:</b> {user.UUID}
-          </Typography>
-        </Paper>
-      </Box>
-
-      <Box sx={{ my: 1 }}>
-        <HeaderBox>
+  return (
+    <Box>
+      <Button
+        component={RouterLink}
+        to="/dashboard/users"
+        startIcon={<ArrowBackIcon />}
+        size="small"
+        sx={{ mb: 1 }}
+      >
+        Users
+      </Button>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        sx={{ alignItems: 'center', mb: 2, flexWrap: 'wrap' }}
+      >
+        <Typography
+          variant="h5"
+          component="h1"
+        >
+          {displayName}
+        </Typography>
+        <Chip
+          label={statusLabel}
+          size="small"
+          color={userStatusColor(statusLabel)}
+        />
+        {isSelf && (
           <Chip
-            label={`Jobs ${filteredJobs?.length || 0}`}
-            color="success"
+            label="This is you"
+            size="small"
+            variant="outlined"
           />
-        </HeaderBox>
-        <Paper sx={{ p: 1 }}>
-          {filteredJobs.length >= 1 ? (
-            filteredJobs.map((job, index) => (
-              <JobSummary
-                key={index}
-                job={job}
-              />
-            ))
-          ) : (
-            <Typography>No jobs for this user</Typography>
-          )}
-        </Paper>
-      </Box>
-      {/* {process.env.NODE_ENV === 'development' ? <Debug /> : ''} */}
-    </>
+        )}
+      </Stack>
+
+      <Grid
+        container
+        spacing={2}
+      >
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Stack spacing={2}>
+            <Section title="Identity">
+              <Stack spacing={1.5}>
+                <Field label="Username">
+                  <Typography sx={{ fontFamily: 'monospace' }}>
+                    {user.username}
+                  </Typography>
+                </Field>
+                <Field label="Sign-in method">
+                  {orcidId ? (
+                    <Typography>
+                      ORCID iD{' '}
+                      <Link
+                        href={`https://orcid.org/${orcidId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {orcidId}
+                      </Link>
+                    </Typography>
+                  ) : (
+                    <Typography>
+                      {user.oauthProviders?.length
+                        ? user.oauthProviders.join(', ')
+                        : 'Emailed sign-in code'}
+                    </Typography>
+                  )}
+                </Field>
+                <Field label="Last seen">
+                  <Typography>
+                    {lastAccess
+                      ? `${formatRelativeDateSafe(lastAccess)} (${formatDateSafe(lastAccess)})`
+                      : 'Never'}
+                  </Typography>
+                </Field>
+                <Field label="Created">
+                  <Typography>{formatDateSafe(user.createdAt)}</Typography>
+                </Field>
+                <Field label="Last modified">
+                  <Typography>{formatDateSafe(user.updatedAt)}</Typography>
+                </Field>
+                <Field label="Email notifications">
+                  <Typography>
+                    {user.emailNotifications === false ? 'Off' : 'On'}
+                  </Typography>
+                </Field>
+                {user.UUID && (
+                  <Field label="UUID">
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}
+                    >
+                      {user.UUID}
+                    </Typography>
+                  </Field>
+                )}
+              </Stack>
+            </Section>
+
+            <Section title={`Jobs (${jobCount})`}>
+              {userJobs.length === 0 ? (
+                <Typography color="text.secondary">
+                  No jobs for this user.
+                </Typography>
+              ) : (
+                <List
+                  dense
+                  disablePadding
+                >
+                  {userJobs.slice(0, RECENT_JOBS_LIMIT).map((job) => (
+                    <ListItemButton
+                      key={job.mongo.id}
+                      component={RouterLink}
+                      to={`/dashboard/jobs/${job.mongo.id}`}
+                      sx={{ px: 1 }}
+                    >
+                      <ListItemText
+                        primary={job.mongo.title}
+                        secondary={`${job.mongo.status} · ${formatDateSafe(job.mongo.time_submitted, 'yyyy-MM-dd HH:mm')}`}
+                        slotProps={{ primary: { noWrap: true } }}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+              )}
+              {userJobs.length > 0 && (
+                <Link
+                  component={RouterLink}
+                  to={`/dashboard/jobs?user=${encodeURIComponent(user.username)}`}
+                  sx={{ display: 'inline-block', mt: 1 }}
+                >
+                  View all jobs by this user
+                </Link>
+              )}
+            </Section>
+          </Stack>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Stack spacing={2}>
+            <Section title="Account">
+              <Formik
+                initialValues={initialValues}
+                validationSchema={editUserSchema}
+                onSubmit={handleSubmit}
+                enableReinitialize
+              >
+                {({
+                  values,
+                  errors,
+                  touched,
+                  dirty,
+                  isSubmitting,
+                  handleChange,
+                  handleBlur,
+                  setFieldValue
+                }) => (
+                  <Form noValidate>
+                    <Stack spacing={3}>
+                      <TextField
+                        name="email"
+                        id="email"
+                        label="Email"
+                        type="email"
+                        autoComplete="off"
+                        fullWidth
+                        disabled={isSubmitting}
+                        value={values.email}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.email && Boolean(errors.email)}
+                        helperText={touched.email && errors.email}
+                      />
+
+                      <FormControl>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              name="active"
+                              checked={values.active}
+                              onChange={handleChange}
+                              disabled={isSubmitting || isSelf}
+                            />
+                          }
+                          label={values.active ? 'Active' : 'Inactive'}
+                        />
+                        <FormHelperText>
+                          {isSelf
+                            ? 'You cannot deactivate your own account.'
+                            : 'Inactive users cannot sign in or submit jobs.'}
+                        </FormHelperText>
+                      </FormControl>
+
+                      <FormControl
+                        component="fieldset"
+                        error={touched.roles && Boolean(errors.roles)}
+                      >
+                        <FormLabel component="legend">Roles</FormLabel>
+                        <FormGroup row>
+                          {roleOptions.map((role) => {
+                            const lockedForSelf = isSelf && role !== ROLES.User
+                            return (
+                              <FormControlLabel
+                                key={role}
+                                label={role}
+                                control={
+                                  <Checkbox
+                                    name="roles"
+                                    value={role}
+                                    checked={values.roles.includes(role)}
+                                    disabled={isSubmitting || lockedForSelf}
+                                    onChange={(e) => {
+                                      const next = e.target.checked
+                                        ? [...values.roles, role]
+                                        : values.roles.filter((r) => r !== role)
+                                      void setFieldValue('roles', next)
+                                    }}
+                                  />
+                                }
+                              />
+                            )
+                          })}
+                        </FormGroup>
+                        <FormHelperText>
+                          {touched.roles && errors.roles
+                            ? String(errors.roles)
+                            : isSelf
+                              ? 'You cannot change your own Admin or Manager role.'
+                              : 'Admins and Managers can see every job and manage users.'}
+                        </FormHelperText>
+                      </FormControl>
+
+                      <Divider />
+
+                      <Stack
+                        direction="row"
+                        spacing={2}
+                      >
+                        <Button
+                          variant="contained"
+                          startIcon={<SaveIcon />}
+                          type="submit"
+                          disabled={!dirty || isSubmitting}
+                        >
+                          Save changes
+                        </Button>
+                        <Button
+                          component={RouterLink}
+                          to="/dashboard/users"
+                          disabled={isSubmitting}
+                        >
+                          Cancel
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </Form>
+                )}
+              </Formik>
+            </Section>
+
+            <Section
+              title="Danger zone"
+              danger
+            >
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 2 }}
+              >
+                Permanently removes this account. Jobs are not deleted with it,
+                so an account with jobs cannot be removed.
+              </Typography>
+              {deleteBlockedReason && (
+                <Alert
+                  severity="info"
+                  sx={{ mb: 2 }}
+                >
+                  {deleteBlockedReason}
+                </Alert>
+              )}
+              <Tooltip title={deleteBlockedReason ?? ''}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    disabled={Boolean(deleteBlockedReason) || isDeleting}
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    Delete user
+                  </Button>
+                </span>
+              </Tooltip>
+            </Section>
+          </Stack>
+        </Grid>
+      </Grid>
+
+      <Dialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+      >
+        <DialogTitle>Delete {displayName}?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This permanently deletes the account{' '}
+            <strong>{user.username}</strong> ({user.email}). This cannot be
+            undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDelete}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   )
-  return content
 }
 
 export default EditUserForm

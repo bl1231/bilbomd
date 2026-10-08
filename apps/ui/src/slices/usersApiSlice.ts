@@ -61,6 +61,11 @@ export const usersApiSlice = apiSlice.injectEndpoints({
           createdAt: string | Date
           updatedAt: string | Date
           UUID?: string
+          status?: UserDTO['status']
+          lastAccess?: string | Date | null
+          jobCount?: number
+          oauthProviders?: string[]
+          emailNotifications?: boolean
           [key: string]: unknown
         }>
       }) => {
@@ -83,7 +88,15 @@ export const usersApiSlice = apiSlice.injectEndpoints({
             typeof user.updatedAt === 'string'
               ? user.updatedAt
               : user.updatedAt.toISOString(),
-          UUID: user.UUID
+          UUID: user.UUID,
+          status: user.status,
+          lastAccess:
+            user.lastAccess instanceof Date
+              ? user.lastAccess.toISOString()
+              : user.lastAccess,
+          jobCount: user.jobCount,
+          oauthProviders: user.oauthProviders,
+          emailNotifications: user.emailNotifications
         }))
         return usersAdapter.setAll(initialState, loadedUsers)
       },
