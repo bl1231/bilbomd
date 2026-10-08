@@ -2,6 +2,7 @@ import { lazy } from 'react'
 import Loadable from 'components/Loadable'
 import PublicLayout from 'layout/PublicLayout'
 import SoftPersistLogin from 'features/auth/SoftPersistLogin'
+import RedirectIfAuthenticated from 'features/auth/RedirectIfAuthenticated'
 
 const About = Loadable(lazy(() => import('features/about/About')))
 const Welcome = Loadable(lazy(() => import('features/auth/Welcome')))
@@ -61,27 +62,51 @@ const AnonRoutes = {
         },
         {
           path: 'jobs/classic/new',
-          element: <NewJobForm mode="anonymous" />
+          element: (
+            <RedirectIfAuthenticated to="/dashboard/jobs/classic">
+              <NewJobForm mode="anonymous" />
+            </RedirectIfAuthenticated>
+          )
         },
         {
           path: 'jobs/auto/new',
-          element: <NewAutoJob mode="anonymous" />
+          element: (
+            <RedirectIfAuthenticated to="/dashboard/jobs/auto">
+              <NewAutoJob mode="anonymous" />
+            </RedirectIfAuthenticated>
+          )
         },
         {
           path: 'jobs/alphafold/new',
-          element: <NewAlphaFoldJob mode="anonymous" />
+          element: (
+            <RedirectIfAuthenticated to="/dashboard/jobs/alphafold">
+              <NewAlphaFoldJob mode="anonymous" />
+            </RedirectIfAuthenticated>
+          )
         },
         {
           path: 'jobs/openfold/new',
-          element: <NewOpenFoldJob mode="anonymous" />
+          element: (
+            <RedirectIfAuthenticated to="/dashboard/jobs/openfold">
+              <NewOpenFoldJob mode="anonymous" />
+            </RedirectIfAuthenticated>
+          )
         },
         {
           path: 'jobs/sans/new',
-          element: <NewSANSJob mode="anonymous" />
+          element: (
+            <RedirectIfAuthenticated to="/dashboard/jobs/sans">
+              <NewSANSJob mode="anonymous" />
+            </RedirectIfAuthenticated>
+          )
         },
         {
           path: 'jobs/scoper/new',
-          element: <NewScoperJob mode="anonymous" />
+          element: (
+            <RedirectIfAuthenticated to="/dashboard/jobs/scoper">
+              <NewScoperJob mode="anonymous" />
+            </RedirectIfAuthenticated>
+          )
         },
         {
           path: 'jiffy/inp',
