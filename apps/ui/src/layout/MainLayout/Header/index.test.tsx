@@ -196,6 +196,33 @@ describe('Header Component', () => {
     expect(onMenuClick).toHaveBeenCalledTimes(1)
   })
 
+  it('sends the Dashboard menu item to /dashboard, not the anonymous welcome route', () => {
+    const successState: ConfigQueryResult = {
+      data: mockConfig,
+      error: undefined,
+      isLoading: false,
+      isFetching: false,
+      isSuccess: true,
+      isError: false,
+      isUninitialized: false,
+      status: 'fulfilled',
+      refetch: vi.fn().mockResolvedValue({
+        data: mockConfig,
+        error: undefined,
+        isLoading: false,
+        isSuccess: true,
+        isError: false,
+        status: 'fulfilled'
+      })
+    }
+
+    vi.mocked(useGetConfigsQuery).mockReturnValue(successState)
+    renderWithProvider(<Header />)
+    fireEvent.click(screen.getByRole('button', { name: /open settings/i }))
+    fireEvent.click(screen.getByText('Dashboard'))
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
+  })
+
   afterEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()

@@ -51,7 +51,7 @@ export default function AppBreadcrumbs() {
     >
       <Link
         component={RouterLink}
-        to="/welcome"
+        to="/dashboard"
       >
         Home
       </Link>

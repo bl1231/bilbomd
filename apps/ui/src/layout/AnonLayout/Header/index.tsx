@@ -193,7 +193,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 0 }}>
               <Typography
                 component={Link}
-                to="/welcome"
+                to={isAuthenticated ? '/dashboard' : '/welcome'}
                 sx={linkStyles}
               >
                 BilboMD
