@@ -13,7 +13,13 @@ vi.mock('@bilbomd/mongodb-schema', () => ({
     findOne: vi.fn(),
     updateOne: vi.fn()
   },
-  Job: { findOne: vi.fn(), exists: vi.fn(), updateMany: vi.fn() },
+  Job: {
+    findOne: vi.fn(),
+    exists: vi.fn(),
+    updateMany: vi.fn(),
+    aggregate: vi.fn(),
+    countDocuments: vi.fn()
+  },
   UsageEvent: { updateMany: vi.fn() }
 }))
 
@@ -32,10 +38,13 @@ import { sendDeleteAccountSuccessEmail } from '../../config/nodemailerConfig.js'
 import {
   updateUser,
   deleteUserByUsername,
-  getAllUsers
+  getAllUsers,
+  getUser
 } from '../usersController.js'
 
-const makeReq = (body: unknown): Request => ({ body }) as Request
+// `user` is the caller's username, as set on the request by verifyJWT.
+const makeReq = (body: unknown, user?: string): Request =>
+  ({ body, user }) as Request
 const makeRes = (): Response => {
   const res = {} as Response
   res.status = vi.fn().mockReturnValue(res)
@@ -183,6 +192,69 @@ describe('updateUser', () => {
       message: 'scott updated'
     })
   })
+
+  describe('editing your own account', () => {
+    const self = () => ({
+      username: 'scott',
+      roles: ['Admin', 'User'],
+      active: true,
+      email: 'scott@example.com',
+      save: vi.fn().mockResolvedValue({ username: 'scott' })
+    })
+
+    beforeEach(() => {
+      vi.mocked(User.findById).mockReturnValue({
+        exec: () => Promise.resolve(self())
+      } as never)
+      vi.mocked(User.findOne).mockReturnValue(
+        findOneChain({ _id: 'user-1' }) as never
+      )
+    })
+
+    it('refuses to deactivate yourself', async () => {
+      const res = makeRes()
+      await updateUser(
+        makeReq({ ...validBody, roles: ['Admin'], active: false }, 'scott'),
+        res
+      )
+      expect(res.status).toHaveBeenCalledWith(403)
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'You cannot deactivate your own account'
+      })
+    })
+
+    it('refuses to drop your own Admin/Manager role', async () => {
+      const res = makeRes()
+      await updateUser(makeReq({ ...validBody, roles: ['User'] }, 'scott'), res)
+      expect(res.status).toHaveBeenCalledWith(403)
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'You cannot remove your own Admin or Manager role'
+      })
+    })
+
+    it('allows a self-edit that keeps you active with Manager access', async () => {
+      const res = makeRes()
+      await updateUser(
+        makeReq({ ...validBody, roles: ['Manager', 'User'] }, 'scott'),
+        res
+      )
+      expect(res.status).toHaveBeenCalledWith(200)
+    })
+
+    it('still lets you demote or deactivate someone else', async () => {
+      const res = makeRes()
+      await updateUser(
+        makeReq(
+          { ...validBody, roles: ['User'], active: false },
+          'other-admin'
+        ),
+        res
+      )
+      expect(res.status).toHaveBeenCalledWith(200)
+    })
+  })
 })
 
 describe('deleteUserByUsername', () => {
@@ -314,11 +386,59 @@ describe('deleteUserByUsername', () => {
   })
 })
 
+// A user document as stored, including the secret material that must never
+// reach the admin UI.
+const storedUser = () => ({
+  _id: 'user-1',
+  username: 'scott',
+  email: 'scott@example.com',
+  roles: ['Admin'],
+  firstName: 'Scott',
+  lastName: null,
+  status: 'Active',
+  active: true,
+  createdAt: new Date('2024-01-01T00:00:00Z'),
+  updatedAt: new Date('2024-02-01T00:00:00Z'),
+  UUID: 'uuid-1',
+  last_access: new Date('2024-03-01T00:00:00Z'),
+  oauth: [{ provider: 'orcid', id: '0000-0002-1234-5678', name: 'Scott' }],
+  refreshToken: ['secret-refresh'],
+  apiTokens: [{ tokenHash: 'secret-hash', label: 'cli' }],
+  otp: { code: '123456' },
+  confirmationCode: { code: 'abc' }
+})
+
+// What the admin UI should see for storedUser(): no secrets, derived fields.
+const expectedView = (jobCount: number) => ({
+  _id: 'user-1',
+  username: 'scott',
+  email: 'scott@example.com',
+  roles: ['Admin'],
+  firstName: 'Scott',
+  lastName: null,
+  status: 'Active',
+  active: true,
+  createdAt: new Date('2024-01-01T00:00:00Z'),
+  updatedAt: new Date('2024-02-01T00:00:00Z'),
+  UUID: 'uuid-1',
+  lastAccess: new Date('2024-03-01T00:00:00Z'),
+  emailNotifications: true,
+  oauthProviders: ['orcid'],
+  jobCount
+})
+
+// Chain the controller uses: User.find(filter).select(fields).lean()
+const findChain = (result: unknown) => ({
+  select: vi.fn().mockReturnValue({ lean: () => Promise.resolve(result) })
+})
+
 describe('getAllUsers', () => {
+  beforeEach(() => {
+    vi.mocked(Job.aggregate).mockResolvedValue([] as never)
+  })
+
   it('leaves out deleted accounts', async () => {
-    vi.mocked(User.find).mockReturnValue({
-      lean: () => Promise.resolve([])
-    } as never)
+    vi.mocked(User.find).mockReturnValue(findChain([]) as never)
 
     const res = makeRes()
     await getAllUsers({} as Request, res)
@@ -327,5 +447,75 @@ describe('getAllUsers', () => {
       deletedAt: mongoose.trusted({ $exists: false })
     })
     expect(res.json).toHaveBeenCalledWith({ success: true, data: [] })
+  })
+
+  it('returns only the admin-safe fields, never tokens or codes', async () => {
+    const chain = findChain([storedUser()])
+    vi.mocked(User.find).mockReturnValue(chain as never)
+    vi.mocked(Job.aggregate).mockResolvedValue([
+      { _id: 'user-1', count: 3 }
+    ] as never)
+
+    const res = makeRes()
+    await getAllUsers({} as Request, res)
+
+    // The query itself projects to an allowlist...
+    const projection = chain.select.mock.calls[0][0] as string
+    for (const secret of [
+      'refreshToken',
+      'apiTokens',
+      'otp',
+      'confirmationCode'
+    ])
+      expect(projection).not.toContain(secret)
+    expect(projection).toContain('oauth.provider')
+
+    // ...and the response is re-shaped, so stray fields are dropped too.
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      data: [expectedView(3)]
+    })
+  })
+
+  it('reports zero jobs for users with no jobs', async () => {
+    vi.mocked(User.find).mockReturnValue(findChain([storedUser()]) as never)
+
+    const res = makeRes()
+    await getAllUsers({} as Request, res)
+
+    const body = vi.mocked(res.json).mock.calls[0][0] as {
+      data: Array<{ jobCount: number }>
+    }
+    expect(body.data[0].jobCount).toBe(0)
+  })
+})
+
+describe('getUser', () => {
+  it('returns the same admin-safe shape with a live job count', async () => {
+    const select = vi.fn().mockReturnValue({
+      lean: () => ({ exec: () => Promise.resolve(storedUser()) })
+    })
+    vi.mocked(User.findOne).mockReturnValue({ select } as never)
+    vi.mocked(Job.countDocuments).mockResolvedValue(2 as never)
+
+    const res = makeRes()
+    await getUser({ params: { id: 'user-1' } } as unknown as Request, res)
+
+    expect(Job.countDocuments).toHaveBeenCalledWith({ 'user._id': 'user-1' })
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      data: expectedView(2)
+    })
+  })
+
+  it('returns 404 for an unknown id', async () => {
+    vi.mocked(User.findOne).mockReturnValue({
+      select: () => ({ lean: () => ({ exec: () => Promise.resolve(null) }) })
+    } as never)
+
+    const res = makeRes()
+    await getUser({ params: { id: 'nope' } } as unknown as Request, res)
+
+    expect(res.status).toHaveBeenCalledWith(404)
   })
 })

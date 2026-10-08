@@ -6,6 +6,8 @@ export interface UserSummaryDTO {
 
 export type UserRole = 'Admin' | 'Manager' | 'User'
 
+export type UserStatus = 'Pending' | 'Active'
+
 export interface UserDTO {
   id: string
   username: string
@@ -17,6 +19,15 @@ export interface UserDTO {
   createdAt: string
   updatedAt: string
   UUID?: string
+  /** Email-confirmation state; `Pending` until the account is verified. */
+  status?: UserStatus
+  /** ISO timestamp of the last login or token refresh, if ever recorded. */
+  lastAccess?: string | null
+  /** Number of jobs currently stored for this user. */
+  jobCount?: number
+  /** Linked OAuth providers, e.g. `['orcid']`. */
+  oauthProviders?: string[]
+  emailNotifications?: boolean
 }
 
 export interface CreateUserDTO {
