@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.10.9
+
+### Patch Changes
+
+- e4d96c2: Pin Node.js to 26.12.1 (October 2026 security release) in all container images and `.nvmrc`
+
 ## 1.10.8
 
 ### Patch Changes
