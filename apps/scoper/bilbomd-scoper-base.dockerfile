@@ -4,7 +4,7 @@
 # Base image for Scoper: consolidates stages 1–4
 # - Ubuntu + build toolchain
 # - Compiled reduce + RNAView
-# - Node.js v22
+# - Node.js v26
 # - Micromamba-managed Python environment (from environment.yml)
 # - No app sources; long-lived, rarely changes
 
@@ -48,14 +48,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG TARGETOS
 ARG TARGETARCH
 
-# Minimal runtime deps and Node.js v22
+# Minimal runtime deps and Node.js v26
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm -f /var/lib/apt/lists/lock && \
     apt-get update && \
     apt-get install -y --no-install-recommends curl wget unzip git libgsl-dev ca-certificates && \
     update-ca-certificates && \
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
+    curl -fsSL https://deb.nodesource.com/setup_26.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs=26.12.1-1nodesource1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy compiled artifacts

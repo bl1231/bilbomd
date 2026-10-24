@@ -2,10 +2,14 @@ ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.8
 ########################################
 # Stage 1: deps (prefetch pnpm store)
 ########################################
-FROM node:24-alpine AS deps
+FROM node:26.12.1-alpine AS deps
 WORKDIR /repo
-# Enable pnpm via Corepack
-RUN corepack enable
+# Node 25+ images no longer ship corepack; install the pnpm version pinned in
+# package.json's packageManager instead.
+COPY package.json ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace(/^pnpm@/, '').split('+')[0]") && \
+    npm i -g "pnpm@${PNPM_VERSION}" && \
+    pnpm --version
 
 # Copy only files needed to resolve workspace dependencies (better cache)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
@@ -21,9 +25,14 @@ RUN pnpm fetch
 ########################################
 # Stage 2: build (install, build schema + worker, then prune)
 ########################################
-FROM node:24-alpine AS build
+FROM node:26.12.1-alpine AS build
 WORKDIR /repo
-RUN corepack enable
+# Node 25+ images no longer ship corepack; install the pnpm version pinned in
+# package.json's packageManager instead.
+COPY package.json ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace(/^pnpm@/, '').split('+')[0]") && \
+    npm i -g "pnpm@${PNPM_VERSION}" && \
+    pnpm --version
 
 # Reuse the fetched pnpm store from deps stage for fast, deterministic installs
 COPY --from=deps /root/.local/share/pnpm/store /root/.local/share/pnpm/store
@@ -51,9 +60,9 @@ WORKDIR /app
 
 # Install Node.js (if your base image doesn't already have it)
 # Keep your original approach here so the base remains unchanged
-RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
     && apt-get update \
-    && apt-get install -y nodejs rsync \
+    && apt-get install -y nodejs=26.12.1-1nodesource1 rsync \
     && npm install -g npm@latest \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
