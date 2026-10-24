@@ -29,9 +29,12 @@ RUN conda env update -f /tmp/environment.yml && \
 FROM bilbomd-backend-step1 AS deps
 WORKDIR /repo
 
-# Enable pnpm via Corepack and pin the same version you use locally
-RUN corepack enable \
-    && corepack prepare pnpm@latest --activate
+# Node 25+ images no longer ship corepack; install the pnpm version pinned in
+# package.json's packageManager instead.
+COPY package.json ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace(/^pnpm@/, '').split('+')[0]") && \
+    npm i -g "pnpm@${PNPM_VERSION}" && \
+    pnpm --version
 
 # Only copy what's needed to resolve workspaces (good cache behavior)
 COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
@@ -49,8 +52,12 @@ RUN pnpm fetch
 FROM bilbomd-backend-step1 AS build
 WORKDIR /repo
 
-RUN corepack enable \
-    && corepack prepare pnpm@latest --activate
+# Node 25+ images no longer ship corepack; install the pnpm version pinned in
+# package.json's packageManager instead.
+COPY package.json ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace(/^pnpm@/, '').split('+')[0]") && \
+    npm i -g "pnpm@${PNPM_VERSION}" && \
+    pnpm --version
 
 ENV HUSKY=0
 

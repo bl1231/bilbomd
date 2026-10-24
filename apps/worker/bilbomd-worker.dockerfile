@@ -4,8 +4,12 @@ ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.8
 ########################################
 FROM node:26.12.1-alpine AS deps
 WORKDIR /repo
-# Enable pnpm via Corepack
-RUN corepack enable
+# Node 25+ images no longer ship corepack; install the pnpm version pinned in
+# package.json's packageManager instead.
+COPY package.json ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace(/^pnpm@/, '').split('+')[0]") && \
+    npm i -g "pnpm@${PNPM_VERSION}" && \
+    pnpm --version
 
 # Copy only files needed to resolve workspace dependencies (better cache)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
@@ -23,7 +27,12 @@ RUN pnpm fetch
 ########################################
 FROM node:26.12.1-alpine AS build
 WORKDIR /repo
-RUN corepack enable
+# Node 25+ images no longer ship corepack; install the pnpm version pinned in
+# package.json's packageManager instead.
+COPY package.json ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace(/^pnpm@/, '').split('+')[0]") && \
+    npm i -g "pnpm@${PNPM_VERSION}" && \
+    pnpm --version
 
 # Reuse the fetched pnpm store from deps stage for fast, deterministic installs
 COPY --from=deps /root/.local/share/pnpm/store /root/.local/share/pnpm/store
