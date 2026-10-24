@@ -1,5 +1,12 @@
 # @bilbomd/backend
 
+## 2.19.2
+
+### Patch Changes
+
+- 79acdbc: Resolve open Dependabot security alerts: bump vite to 8.3.5 (three launch-editor advisories, including arbitrary command execution) and update transitive follow-redirects to 1.16.1 (two advisories where credential headers could leak on cross-origin redirects).
+- e4d96c2: Pin Node.js to 26.12.1 (October 2026 security release) in all container images and `.nvmrc`
+
 ## 2.19.1
 
 ### Patch Changes
