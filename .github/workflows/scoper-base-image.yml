@@ -7,6 +7,14 @@ on:
         description: 'Semver for image (e.g. 1.2.3 or 1.2.3-beta.1)'
         required: true
         type: string
+      dockerfile:
+        description: 'Dockerfile to build (node-refresh upgrades Node.js on top of an existing base without rebuilding the Python stack)'
+        required: true
+        type: choice
+        default: bilbomd-scoper-base.dockerfile
+        options:
+          - bilbomd-scoper-base.dockerfile
+          - bilbomd-scoper-base-node-refresh.dockerfile
 
 permissions:
   contents: read
@@ -80,7 +88,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: apps/scoper/bilbomd-scoper-base.dockerfile
+          file: apps/scoper/${{ inputs.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
