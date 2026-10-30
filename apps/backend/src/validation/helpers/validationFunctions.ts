@@ -4,6 +4,7 @@ import {
   parseCifAtomSite,
   cifContainsChainId as cifContainsChainIdUtil,
   cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
+  cifIsSingleModel as cifIsSingleModelUtil,
   PROTEIN_RESIDUES,
   DNA_RESIDUES,
   RNA_RESIDUES,
@@ -377,6 +378,27 @@ const checkCifResidues = async (
   }
 }
 
+// NMR entries ship every model of the ensemble in one file. The pipelines
+// expect one structure (KGSrna, for one, fails on the repeated atoms), so a
+// file with more than one MODEL record (or CIF model number) is rejected.
+const isSingleModel = async (file: Express.Multer.File): Promise<boolean> => {
+  try {
+    const text = await fs.readFile(file.path, 'utf8')
+    if (file.originalname?.toLowerCase().endsWith('.cif')) {
+      const parsed = parseCifAtomSite(text)
+      // No _atom_site block: the residue check reports that
+      return parsed === null || cifIsSingleModelUtil(parsed)
+    }
+    let models = 0
+    for (const line of text.split(/\r?\n/)) {
+      if (/^MODEL(\s|$)/.test(line) && ++models > 1) return false
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 export {
   fromCharmmGui,
   isCRD,
@@ -388,5 +410,6 @@ export {
   cifContainsChainId,
   checkPdbResidues,
   checkCifResidues,
+  isSingleModel,
   isValidConstInpFile
 }

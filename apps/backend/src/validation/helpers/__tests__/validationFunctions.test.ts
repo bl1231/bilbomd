@@ -9,6 +9,7 @@ import {
   containsChainId,
   checkPdbResidues,
   isRNA,
+  isSingleModel,
   isValidConstInpFile
 } from '../validationFunctions.js'
 
@@ -477,6 +478,65 @@ describe('isRNA', () => {
 // ---------------------------------------------------------------------------
 // isValidConstInpFile
 // ---------------------------------------------------------------------------
+describe('isSingleModel', () => {
+  const pdb = (name = 'rna.pdb') =>
+    ({ path: '/fake/file', originalname: name }) as Express.Multer.File
+  const atom =
+    'ATOM      1  P     G A   1      10.000  10.000  10.000  1.00  0.00           P'
+
+  it('accepts a PDB without MODEL records', async () => {
+    mockReadFile(`${atom}\nEND\n`)
+    expect(await isSingleModel(pdb())).toBe(true)
+  })
+
+  it('accepts a PDB with a single MODEL', async () => {
+    mockReadFile(`MODEL        1\n${atom}\nENDMDL\nEND\n`)
+    expect(await isSingleModel(pdb())).toBe(true)
+  })
+
+  it('rejects an NMR ensemble with several MODELs', async () => {
+    mockReadFile(
+      `MODEL        1\n${atom}\nENDMDL\nMODEL        2\n${atom}\nENDMDL\n`
+    )
+    expect(await isSingleModel(pdb())).toBe(false)
+  })
+
+  it('accepts a CIF with one model number', async () => {
+    mockReadFile(
+      [
+        'data_x',
+        'loop_',
+        '_atom_site.group_PDB',
+        '_atom_site.id',
+        '_atom_site.pdbx_PDB_model_num',
+        'ATOM 1 1',
+        'ATOM 2 1'
+      ].join('\n')
+    )
+    expect(await isSingleModel(pdb('rna.cif'))).toBe(true)
+  })
+
+  it('rejects a CIF with several model numbers', async () => {
+    mockReadFile(
+      [
+        'data_x',
+        'loop_',
+        '_atom_site.group_PDB',
+        '_atom_site.id',
+        '_atom_site.pdbx_PDB_model_num',
+        'ATOM 1 1',
+        'ATOM 2 2'
+      ].join('\n')
+    )
+    expect(await isSingleModel(pdb('rna.cif'))).toBe(false)
+  })
+
+  it('returns false when the file cannot be read', async () => {
+    vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'))
+    expect(await isSingleModel(pdb())).toBe(false)
+  })
+})
+
 describe('isValidConstInpFile', () => {
   const validPdbContent = [
     'define PROA sele segid PROA end',

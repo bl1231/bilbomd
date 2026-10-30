@@ -11,11 +11,9 @@ describe('config', () => {
   it('reads values from env vars', async () => {
     vi.stubEnv('BILBOMD_URL', 'http://bilbomd.example.com')
     vi.stubEnv('SEND_EMAIL_NOTIFICATIONS', 'false')
-    vi.stubEnv('BULLMQ_ATTEMPTS', '5')
     const { config } = await import('../config/config.js')
     expect(config.bilbomdUrl).toBe('http://bilbomd.example.com')
     expect(config.sendEmailNotifications).toBe(false)
-    expect(config.bullmqAttempts).toBe(5)
   })
 
   it('throws when BILBOMD_URL is missing', async () => {
@@ -44,12 +42,5 @@ describe('config', () => {
     vi.stubEnv('SEND_EMAIL_NOTIFICATIONS', 'yes')
     const { config } = await import('../config/config.js')
     expect(config.sendEmailNotifications).toBe(true)
-  })
-
-  it('defaults bullmqAttempts to 3 when BULLMQ_ATTEMPTS is not set', async () => {
-    vi.stubEnv('BILBOMD_URL', 'http://test.local')
-    vi.stubEnv('BULLMQ_ATTEMPTS', '')
-    const { config } = await import('../config/config.js')
-    expect(config.bullmqAttempts).toBe(3)
   })
 })

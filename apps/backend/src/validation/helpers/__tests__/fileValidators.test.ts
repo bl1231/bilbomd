@@ -15,7 +15,8 @@ import {
   chainIdCheck,
   pdbResidueCheck,
   constInpCheck,
-  jsonFileCheck
+  jsonFileCheck,
+  singleModelCheck
 } from '../fileValidators.js'
 
 vi.mock('../../../middleware/loggers.js', () => ({
@@ -28,7 +29,8 @@ vi.mock('../validationFunctions.js', () => ({
   isPsfData: vi.fn(),
   isValidConstInpFile: vi.fn(),
   containsChainId: vi.fn(),
-  checkPdbResidues: vi.fn()
+  checkPdbResidues: vi.fn(),
+  isSingleModel: vi.fn()
 }))
 
 vi.mock('fs/promises', () => ({
@@ -283,6 +285,25 @@ describe('chainIdCheck', () => {
     const schema = yup.object({ file: chainIdCheck() })
     await expect(schema.validate({ file: multerFile() })).rejects.toThrow(
       'Chain ID'
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// singleModelCheck
+// ---------------------------------------------------------------------------
+describe('singleModelCheck', () => {
+  it('passes a single-model file', async () => {
+    vi.mocked(validationFunctions.isSingleModel).mockResolvedValue(true)
+    const schema = yup.object({ file: singleModelCheck() })
+    await expect(schema.validate({ file: multerFile() })).resolves.toBeDefined()
+  })
+
+  it('rejects a multi-model file', async () => {
+    vi.mocked(validationFunctions.isSingleModel).mockResolvedValue(false)
+    const schema = yup.object({ file: singleModelCheck() })
+    await expect(schema.validate({ file: multerFile() })).rejects.toThrow(
+      'multiple models'
     )
   })
 })
