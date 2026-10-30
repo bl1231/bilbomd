@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { bilbomdScoperJobSchema } from '../ScoperValidationSchema'
+import { isSingleModel } from '../ValidationFunctions'
 
 vi.mock('../ValidationFunctions', () => ({
   noSpaces: async () => true,
   analyzeSaxsFile: async () => ({ valid: true, warnings: [] }),
-  isRNA: async () => ({ valid: true })
+  isRNA: async () => ({ valid: true }),
+  isSingleModel: vi.fn(async () => true),
+  cifIsSingleModel: vi.fn(async () => true)
 }))
 
 const makeFile = (name: string, size = 100, type = 'text/plain'): File => {
@@ -73,6 +76,14 @@ describe('bilbomdScoperJobSchema - pdb_file', () => {
     await expect(
       bilbomdScoperJobSchema.validateAt('pdb_file', { pdb_file: file })
     ).rejects.toBeTruthy()
+  })
+
+  it('rejects a multi-model (NMR ensemble) PDB', async () => {
+    vi.mocked(isSingleModel).mockResolvedValueOnce(false)
+    const file = makeFile('rna.pdb', 100)
+    await expect(
+      bilbomdScoperJobSchema.validateAt('pdb_file', { pdb_file: file })
+    ).rejects.toThrow('multiple models')
   })
 })
 

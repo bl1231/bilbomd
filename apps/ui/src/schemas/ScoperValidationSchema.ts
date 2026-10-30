@@ -8,7 +8,8 @@ import {
   fileNameLengthTest,
   noSpacesTest,
   saxsCheck,
-  qUnitsField
+  qUnitsField,
+  singleModelCheck
 } from './fieldTests/fieldTests'
 import { titleSchema } from './titleSchema'
 
@@ -66,7 +67,8 @@ export const bilbomdScoperJobSchema = object().shape({
           message: 'File is required but not provided.'
         })
       }
-    ),
+    )
+    .concat(singleModelCheck()),
   q_units: qUnitsField(),
   dat_file: requiredFile('Experimental SAXS data is required')
     .concat(fileSizeTest(SAXS_MAX_FILE_SIZE))

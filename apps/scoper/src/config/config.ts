@@ -14,8 +14,5 @@ const toBoolean = (value?: string): boolean =>
 
 export const config = {
   bilbomdUrl: getEnvVar('BILBOMD_URL'),
-  sendEmailNotifications: toBoolean(process.env.SEND_EMAIL_NOTIFICATIONS),
-  bullmqAttempts: process.env.BULLMQ_ATTEMPTS
-    ? parseInt(process.env.BULLMQ_ATTEMPTS)
-    : 3
+  sendEmailNotifications: toBoolean(process.env.SEND_EMAIL_NOTIFICATIONS)
 }

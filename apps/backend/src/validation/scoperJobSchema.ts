@@ -10,7 +10,8 @@ import {
   qUnitsField,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
-  pdbOrCifResidueCheck
+  pdbOrCifResidueCheck,
+  singleModelCheck
 } from './helpers/fileValidators.js'
 
 export const scoperJobSchema = yup.object({
@@ -31,6 +32,7 @@ export const scoperJobSchema = yup.object({
   pdb_file: requiredFile('A PDB or CIF file is required')
     .concat(pdbOrCifChainIdCheck())
     .concat(pdbOrCifResidueCheck())
+    .concat(singleModelCheck())
     .concat(pdbOrCifExtTest())
     .concat(fileSizeTest(10_000_000))
     .concat(noSpacesTest())

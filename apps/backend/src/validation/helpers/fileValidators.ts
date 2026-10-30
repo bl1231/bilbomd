@@ -9,7 +9,8 @@ import {
   containsChainId,
   cifContainsChainId,
   checkPdbResidues,
-  checkCifResidues
+  checkCifResidues,
+  isSingleModel
 } from './validationFunctions.js'
 import { isQUnits, Q_UNITS } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
@@ -214,6 +215,17 @@ export const pdbOrCifChainIdCheck = () =>
       if (!file?.path) return true
       const isCif = file.originalname?.toLowerCase().endsWith('.cif')
       return isCif ? cifContainsChainId(file) : containsChainId(file)
+    }
+  )
+
+export const singleModelCheck = () =>
+  mixed().test(
+    'single-model-check',
+    'File contains multiple models. Please provide a single-model file.',
+    async function (value) {
+      const file = value as Express.Multer.File | undefined
+      if (!file?.path) return true
+      return isSingleModel(file)
     }
   )
 

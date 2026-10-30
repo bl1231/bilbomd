@@ -7,6 +7,7 @@ import { processBilboMDScoperJob } from './process.bilbomdscoper.js'
 import { redis } from './helpers/redis.js'
 import { configureJobEvents } from './helpers/jobEvents.js'
 import { watchRedisErrors } from './helpers/redisWatchdog.js'
+import { reportFailedJob } from './functions/jobFailure.js'
 
 dotenv.config()
 
@@ -33,6 +34,11 @@ const workerOptions: WorkerOptions = {
 }
 
 const bilboMdScoperWorker = new Worker('scoper', workerHandler, workerOptions)
+
+// Mark the job Error (and tell its owner) once BullMQ stops retrying it
+bilboMdScoperWorker.on('failed', (job, error) => {
+  void reportFailedJob(job, error)
+})
 
 // Exit (and let Docker restart us) if Redis errors don't stop.
 watchRedisErrors(bilboMdScoperWorker)

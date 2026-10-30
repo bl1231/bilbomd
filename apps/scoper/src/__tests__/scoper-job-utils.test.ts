@@ -39,8 +39,7 @@ vi.mock('../helpers/emailPreferences.js', () => ({
 vi.mock('../config/config.js', () => ({
   config: {
     bilbomdUrl: 'http://localhost:3000',
-    sendEmailNotifications: true,
-    bullmqAttempts: 3
+    sendEmailNotifications: true
   }
 }))
 

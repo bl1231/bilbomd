@@ -1,17 +1,9 @@
 import { logger } from './helpers/loggers.js'
-import { config } from './config/config.js'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs-extra'
 import { Job as BullMQJob } from 'bullmq'
-import {
-  IJob,
-  IBilboMDScoperJob,
-  IUser,
-  IStepStatus
-} from '@bilbomd/mongodb-schema'
-import { sendJobCompleteEmail } from './helpers/mailer.js'
-import { wantsJobEmails } from './helpers/emailPreferences.js'
+import { IBilboMDScoperJob, IStepStatus } from '@bilbomd/mongodb-schema'
 import { promisify } from 'util'
 import { exec } from 'node:child_process'
 import {
@@ -21,84 +13,27 @@ import {
 } from './mongo-utils.js'
 import { createScoperLogParser } from './scoperLogParser.js'
 import { getKGSrnaProgress } from './functions/getKGSrnaProgress.js'
-import {
-  recordWorkerUsageEvent,
-  buildContext
-} from './functions/usageEvents.js'
 
 const execPromise = promisify(exec)
 
 const DATA_VOL = process.env.DATA_VOL ?? '/bilbomd/uploads'
 const IONNET_DIR = process.env.IONNET_DIR ?? '/home/scoper/IonNet'
 const SCOPER_KGS_CONFORMERS = process.env.SCOPER_KGS_CONFORMERS ?? '111'
-const BILBOMD_URL =
-  process.env.BILBOMD_URL ?? 'https://bilbomd.bl1231.als.lbl.gov'
 
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
+// Logs the failure and rethrows it, so BullMQ records the real reason. The
+// worker's 'failed' handler (reportFailedJob) marks the job Error once BullMQ
+// stops retrying it.
 const handleError = async (
-  error: Error | unknown,
-  MQjob: BullMQJob,
-  DBjob: IJob
-) => {
-  const errorMsg = error instanceof Error ? error.message : String(error)
-
-  // await updateJobStatus(DBjob, 'Error')
-
-  MQjob.log(`error ${errorMsg}`)
-
+  error: unknown,
+  MQjob: BullMQJob
+): Promise<never> => {
+  const errorMsg = getErrorMessage(error)
   logger.error(`handleError errorMsg: ${errorMsg}`)
-
-  MQjob.log(error instanceof Error ? error.message : String(error))
-
-  logger.info(`Failed Attempts --> ${MQjob.attemptsMade}`)
-
-  // Report the failure once, on the last attempt BullMQ will make
-  if (MQjob.attemptsMade >= config.bullmqAttempts - 1) {
-    await recordWorkerUsageEvent({
-      uuid: DBjob.uuid,
-      jobId: DBjob._id,
-      pipeline: 'scoper',
-      eventType: 'job_failed',
-      status: 'Error',
-      durationMs: DBjob.time_started
-        ? Date.now() - new Date(DBjob.time_started).getTime()
-        : undefined,
-      context: buildContext({
-        access_mode: DBjob.access_mode,
-        user: DBjob.user,
-        public_id: DBjob.public_id,
-        client_ip_hash: DBjob.client_ip_hash
-      }),
-      metadata: {
-        stage: 'worker',
-        step: 'scoper',
-        error: errorMsg,
-        attempts: MQjob.attemptsMade + 1
-      }
-    })
-
-    // Anonymous jobs have no one to email
-    const recipientEmail = (DBjob.user as IUser | undefined)?.email
-    if (
-      config.sendEmailNotifications &&
-      recipientEmail &&
-      (await wantsJobEmails(DBjob.user))
-    ) {
-      sendJobCompleteEmail(
-        recipientEmail,
-        BILBOMD_URL,
-        DBjob._id.toString(),
-        DBjob.title,
-        true,
-        DBjob.results_token
-      )
-      logger.warn(`email notification sent to ${recipientEmail}`)
-      await MQjob.log(`email notification sent to ${recipientEmail}`)
-    }
-  }
-  throw new Error('BilboMD failed')
+  await MQjob.log(`error ${errorMsg}`)
+  throw error instanceof Error ? error : new Error(errorMsg)
 }
 
 const runScoper = async (
@@ -111,7 +46,7 @@ const runScoper = async (
     })
     await spawnScoper(MQjob, DBjob)
   } catch (error) {
-    await handleError(error, MQjob, DBjob)
+    await handleError(error, MQjob)
   }
 }
 
