@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7-labs
+# syntax=docker/dockerfile:1.28-labs
 
 # -----------------------------------------------------------------------------
 # Node-only refresh of the Scoper base image.
@@ -11,7 +11,7 @@
 #
 # Build with the "Build and Push Scoper Base Image" workflow, choosing this file.
 
-ARG FROM_IMAGE=ghcr.io/bl1231/bilbomd-scoper-base:0.0.3
+ARG FROM_IMAGE=ghcr.io/bl1231/bilbomd-scoper-base:0.0.4
 
 FROM ${FROM_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive
