@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7-labs
+# syntax=docker/dockerfile:1.28-labs
 
 # -----------------------------------------------------------------------------
 # Node-only refresh of the Scoper base image.
