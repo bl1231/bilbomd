@@ -62,7 +62,7 @@ WORKDIR /app
 # Keep your original approach here so the base remains unchanged
 RUN curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
     && apt-get update \
-    && apt-get install -y nodejs=26.12.1-1nodesource1 rsync \
+    && apt-get install -y nodejs=26.13.0-1nodesource1 rsync \
     && npm install -g npm@latest \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
