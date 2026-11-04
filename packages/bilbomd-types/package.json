@@ -9,7 +9,7 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "vitest": "^5.0.2"
+    "vitest": "^5.1.0"
   },
   "license": "MIT"
 }
