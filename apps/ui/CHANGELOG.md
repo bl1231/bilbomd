@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.35.4
+
+### Patch Changes
+
+- 6538e77: Run Node.js 26.13.0 in all container images, including the worker's NodeSource runtime install and the Scoper base image (0.0.5)
+
 ## 2.35.3
 
 ### Patch Changes
