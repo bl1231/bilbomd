@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.19.5
+
+### Patch Changes
+
+- 7de4c08: Update `glob` to 14.0.3 to resolve an AbortSignal cancellation bypass advisory
+
 ## 2.19.4
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @bilbomd/scoper
 
+## 1.10.13
+
+### Patch Changes
+
+- 7de4c08: Update `glob` to 14.0.3 to resolve an AbortSignal cancellation bypass advisory
+
 ## 1.10.12
 
 ### Patch Changes
