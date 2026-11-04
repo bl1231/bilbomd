@@ -1,5 +1,12 @@
 # @bilbomd/worker
 
+## 2.21.6
+
+### Patch Changes
+
+- 6538e77: Run Node.js 26.13.0 in all container images, including the worker's NodeSource runtime install and the Scoper base image (0.0.5)
+- 099bac2: Update `body-parser`, `follow-redirects`, `qs`, `fast-uri`, and `ip-address` to patched versions to resolve security advisories
+
 ## 2.21.5
 
 ### Patch Changes
