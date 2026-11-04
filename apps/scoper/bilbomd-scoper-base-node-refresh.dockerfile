@@ -20,6 +20,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm -f /var/lib/apt/lists/lock && \
     curl -fsSL https://deb.nodesource.com/setup_26.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs=26.12.1-1nodesource1 && \
+    apt-get install -y --no-install-recommends nodejs=26.13.0-1nodesource1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-    node --version | grep -qx 'v26.12.1'
+    node --version | grep -qx 'v26.13.0'
