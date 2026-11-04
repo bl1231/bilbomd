@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.21.7
+
+### Patch Changes
+
+- 7de4c08: Update `glob` to 14.0.3 to resolve an AbortSignal cancellation bypass advisory
+
 ## 2.21.6
 
 ### Patch Changes
