@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # Stage 1: deps (prefetch pnpm store for monorepo)
-FROM node:26.12.1-alpine AS deps
+FROM node:26.13.0-alpine AS deps
 WORKDIR /repo
 # Node 25+ images no longer ship corepack; install the pnpm version pinned in
 # package.json's packageManager instead.
@@ -20,7 +20,7 @@ RUN pnpm fetch
 
 # -----------------------------------------------------------------------------
 # Stage 2: build (install, build UI, then prune)
-FROM node:26.12.1-alpine AS build
+FROM node:26.13.0-alpine AS build
 WORKDIR /repo
 # Node 25+ images no longer ship corepack; install the pnpm version pinned in
 # package.json's packageManager instead.
