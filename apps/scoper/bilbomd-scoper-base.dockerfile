@@ -55,7 +55,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get install -y --no-install-recommends curl wget unzip git libgsl-dev ca-certificates && \
     update-ca-certificates && \
     curl -fsSL https://deb.nodesource.com/setup_26.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs=26.12.1-1nodesource1 && \
+    apt-get install -y --no-install-recommends nodejs=26.13.0-1nodesource1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy compiled artifacts
