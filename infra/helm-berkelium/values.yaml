@@ -1,0 +1,110 @@
+# Values for BilboMD on Berkelium. See README.md and issue #1194.
+#
+# Berkelium admission rules that shape these values:
+#   - every container (init containers too) sets CPU + memory requests AND limits
+#   - PVCs use storageClassName ceph-rbd (RWO) or cephfs (RWX)
+#   - pods are IPv6-only, so servers must listen on ::
+
+namespace: bilbomd
+
+# Public name of the app. *.bk.lbl.gov resolves to the shared gateway; it is
+# internal to LBL until a Cloudflare CNAME is requested via iprequest.lbl.gov.
+hostname: bilbomd.bk.lbl.gov
+
+# Shared Envoy Gateway the HTTPRoute attaches to (TLS terminates here).
+gateway:
+  name: ingress
+  namespace: gateway
+  sectionName: https
+
+# Images are pulled through Harbor's public proxy-cache projects
+# (harbor.bk.lbl.gov/ghcr.io/..., harbor.bk.lbl.gov/docker.io/...), so no push
+# step or pull secret is needed for images published to ghcr.io / Docker Hub.
+images:
+  ui:
+    repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-ui
+    tag: 2.35.4
+  backend:
+    repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-backend
+    tag: 2.19.5
+  mongo:
+    repository: harbor.bk.lbl.gov/docker.io/library/mongo
+    tag: 8.3.13
+  redis:
+    repository: harbor.bk.lbl.gov/docker.io/library/redis
+    tag: 8.10.2
+  pullPolicy: IfNotPresent
+  # Only needed for images in the private harbor.bk.lbl.gov/bilbomd project.
+  pullSecrets: []
+
+# UID/GID baked into the bilbomd-backend/-worker images by CI (repo variables
+# USER_ID / GROUP_ID). Backend and (later) job pods share these so they can all
+# write the job directories on the shared cephfs volume.
+appUser:
+  uid: 62704
+  gid: 1001
+
+storage:
+  # Job directories, backend logs and mongodump archives (cephfs, RWX: mounted
+  # by the backend now and by the per-job pods later).
+  data:
+    storageClassName: cephfs
+    size: 500Gi
+  mongo:
+    storageClassName: ceph-rbd
+    size: 20Gi
+  redis:
+    storageClassName: ceph-rbd
+    size: 5Gi
+
+resources:
+  ui:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 256Mi }
+  backend:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits: { cpu: '2', memory: 2Gi }
+  mongo:
+    requests: { cpu: 500m, memory: 2Gi }
+    limits: { cpu: '2', memory: 4Gi }
+  redis:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 1Gi }
+  init:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { cpu: 100m, memory: 64Mi }
+  mongoBackup:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: '1', memory: 1Gi }
+
+mongoBackup:
+  enabled: true
+  schedule: '0 2 * * *'
+  retentionDays: 14
+
+env:
+  NODE_ENV: production
+  BILBOMD_ENV: production
+
+# Job types offered in the UI. Scoper is never deployed on Berkelium.
+features:
+  ENABLE_BILBOMD_SANS: 'true'
+  ENABLE_BILBOMD_MULTI: 'true'
+  ENABLE_BILBOMD_ALPHAFOLD: 'false'
+  ENABLE_BILBOMD_OPENFOLD: 'false'
+  ENABLE_BILBOMD_SCOPER: 'false'
+  ENABLE_CHARMM_ENGINE: 'false'
+  ENABLE_HOME_PAGE_ALERT: 'false'
+
+email:
+  SEND_EMAIL_NOTIFICATIONS: 'false' # enable once SMTP egress is confirmed
+  SEND_EMAIL_USER: bilbomd@lbl.gov
+  BILBOMD_MAILER_HOST: smtp-relay.gmail.com
+  BILBOMD_MAILER_PORT: '25'
+  BILBOMD_MAILER_SECURE: 'false'
+
+orcid:
+  enabled: 'false'
+  issuer: https://orcid.org
+  clientId: APP-XXXXXXXXXXX
+  publicApiUrl: https://pub.orcid.org/v3.0

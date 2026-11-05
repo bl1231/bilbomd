@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "bilbomd.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "bilbomd.selector" (dict "component" "redis") | nindent 4 }}
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "bilbomd.labels" . | nindent 4 }}
+    {{- include "bilbomd.selector" (dict "component" "redis") | nindent 4 }}
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "bilbomd.selector" (dict "component" "redis") | nindent 6 }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  template:
+    metadata:
+      labels:
+        {{- include "bilbomd.selector" (dict "component" "redis") | nindent 8 }}
+    spec:
+      {{- include "bilbomd.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: {{ include "bilbomd.image" .Values.images.redis | quote }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          # Redis's built-in default bind ("* -::*") already covers IPv6.
+          command: ["sh", "-c"]
+          args:
+            - exec redis-server --save 20 1 --loglevel warning --requirepass "$REDIS_PASSWORD"
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: bilbomd-secrets, key: REDIS_PASSWORD }
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.resources.redis | nindent 12 }}
+          securityContext:
+            {{- include "bilbomd.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - { name: redis-data, mountPath: /data }
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+        labels:
+          {{- include "bilbomd.labels" . | nindent 10 }}
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: {{ .Values.storage.redis.storageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.redis.size }}

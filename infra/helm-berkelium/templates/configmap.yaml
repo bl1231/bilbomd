@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bilbomd-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "bilbomd.labels" . | nindent 4 }}
+data:
+  BILBOMD_URL: 'https://{{ .Values.hostname }}'
+  BILBOMD_FQDN: {{ .Values.hostname | quote }}
+  BILBOMD_DEPLOY_SITE: berkelium
+  NODE_ENV: {{ .Values.env.NODE_ENV | quote }}
+  BILBOMD_ENV: {{ .Values.env.BILBOMD_ENV | quote }}
+  MONGO_AUTH_SRC: admin
+  MONGO_DB: bilbomd
+  MONGO_HOSTNAME: mongo
+  MONGO_PORT: '27017'
+  MONGO_USERNAME: bilbomd-backend-user
+  REDIS_HOST: redis
+  REDIS_PORT: '6379'
+  DATA_VOL: /bilbomd/uploads
+  EXAMPLE_DATA: /app/examples
+  CHARMM_TOPOLOGY: /app/scripts/bilbomd_top_par_files.str
+  CHARMM_TEMPLATES: /app/build/templates/bilbomd
+  CHARMM: /usr/local/bin/charmm
+  FOXS: /usr/bin/foxs
+  MULTIFOXS: /usr/bin/multi_foxs
+  # Jobs run on Berkelium itself, not NERSC. The backend still requires the
+  # NERSC path variables to be set, so they get inert placeholders.
+  USE_NERSC: 'false'
+  SFAPI_URL: https://example.invalid/api/v1
+  SCRIPT_DIR: /app/scripts
+  UPLOAD_DIR: /bilbomd/uploads
+  WORK_DIR: /bilbomd/uploads
+  PREPARE_CHARMM_SLURM_SCRIPT: unused
+  PREPARE_OMM_SLURM_SCRIPT: unused
+  CP2CFS_SCRIPT: unused
+  ORCID_AUTH_ENABLED: {{ .Values.orcid.enabled | quote }}
+  ORCID_ISSUER: {{ .Values.orcid.issuer | quote }}
+  ORCID_CLIENT_ID: {{ .Values.orcid.clientId | quote }}
+  ORCID_PUBLIC_API_URL: {{ .Values.orcid.publicApiUrl | quote }}
+  ORCID_REDIRECT_URI: 'https://{{ .Values.hostname }}/api/v1/auth/orcid/callback'
+  {{- range $k, $v := .Values.features }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}
+  {{- range $k, $v := .Values.email }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}

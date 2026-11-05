@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "bilbomd.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "bilbomd.selector" (dict "component" "mongo") | nindent 4 }}
+  ports:
+    - name: mongo
+      port: 27017
+      targetPort: mongo
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "bilbomd.labels" . | nindent 4 }}
+    {{- include "bilbomd.selector" (dict "component" "mongo") | nindent 4 }}
+spec:
+  serviceName: mongo
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "bilbomd.selector" (dict "component" "mongo") | nindent 6 }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  template:
+    metadata:
+      labels:
+        {{- include "bilbomd.selector" (dict "component" "mongo") | nindent 8 }}
+    spec:
+      {{- include "bilbomd.imagePullSecrets" . | nindent 6 }}
+      # Run directly as the image's mongodb user (999) instead of starting as
+      # root and dropping privileges, so no extra capabilities are needed.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mongo
+          image: {{ include "bilbomd.image" .Values.images.mongo | quote }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          # The entrypoint prepends mongod and adds --bind_ip_all; --ipv6 is
+          # required because Berkelium pods have no IPv4 address.
+          args: ["--ipv6"]
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                configMapKeyRef: { name: bilbomd-config, key: MONGO_USERNAME }
+            # Same secret key the backend connects with, so they can't diverge.
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: bilbomd-secrets, key: MONGO_PASSWORD }
+          ports:
+            - name: mongo
+              containerPort: 27017
+          readinessProbe:
+            exec:
+              command: ["mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.resources.mongo | nindent 12 }}
+          securityContext:
+            {{- include "bilbomd.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - { name: mongo-data, mountPath: /data/db }
+            - { name: mongo-config, mountPath: /data/configdb }
+      volumes:
+        - name: mongo-config
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: mongo-data
+        labels:
+          {{- include "bilbomd.labels" . | nindent 10 }}
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: {{ .Values.storage.mongo.storageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.mongo.size }}
