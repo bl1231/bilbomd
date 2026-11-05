@@ -1,0 +1,56 @@
+{{- if .Values.mongoBackup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mongo-backup
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "bilbomd.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.mongoBackup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          {{- include "bilbomd.imagePullSecrets" . | nindent 10 }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: {{ .Values.appUser.uid }}
+            runAsGroup: {{ .Values.appUser.gid }}
+            fsGroup: {{ .Values.appUser.gid }}
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: mongodump
+              image: {{ include "bilbomd.image" .Values.images.mongo | quote }}
+              imagePullPolicy: {{ .Values.images.pullPolicy }}
+              command: ["sh", "-c"]
+              args:
+                - >-
+                  set -e;
+                  mongodump --uri="mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOSTNAME}:${MONGO_PORT}/${MONGO_DB}?authSource=${MONGO_AUTH_SRC}"
+                  --archive=/backups/bilbomd-mongodb-$(date +%Y-%m-%d-%H%M%S).gz --gzip;
+                  find /backups -name 'bilbomd-mongodb-*.gz' -mtime +{{ .Values.mongoBackup.retentionDays }} -delete
+              env:
+                - name: MONGO_PASSWORD
+                  valueFrom:
+                    secretKeyRef: { name: bilbomd-secrets, key: MONGO_PASSWORD }
+              envFrom:
+                - configMapRef: { name: bilbomd-config }
+              resources:
+                {{- toYaml .Values.resources.mongoBackup | nindent 16 }}
+              securityContext:
+                {{- include "bilbomd.containerSecurity" . | nindent 16 }}
+              volumeMounts:
+                - { name: data, mountPath: /backups, subPath: backups }
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: bilbomd-data
+{{- end }}

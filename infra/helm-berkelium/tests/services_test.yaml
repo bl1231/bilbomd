@@ -1,0 +1,138 @@
+suite: berkelium services
+templates:
+  - backend.yaml
+  - ui.yaml
+  - mongo.yaml
+  - redis.yaml
+  - httproute.yaml
+  - configmap.yaml
+  - mongo-backup-cronjob.yaml
+tests:
+  - it: mongod listens on IPv6 (Berkelium pods have no IPv4 address)
+    template: mongo.yaml
+    documentSelector: { path: kind, value: StatefulSet }
+    asserts:
+      - contains:
+          { path: 'spec.template.spec.containers[0].args', content: --ipv6 }
+
+  - it: mongo root password comes from the same secret key the backend uses
+    template: mongo.yaml
+    documentSelector: { path: kind, value: StatefulSet }
+    asserts:
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content:
+            name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef: { name: bilbomd-secrets, key: MONGO_PASSWORD }
+
+  - it: redis requires a password
+    template: redis.yaml
+    documentSelector: { path: kind, value: StatefulSet }
+    asserts:
+      - matchRegex:
+          {
+            path: 'spec.template.spec.containers[0].args[0]',
+            pattern: '--requirepass "\$REDIS_PASSWORD"'
+          }
+
+  - it: the backend Service is named backend on 3500 (the UI nginx proxies to backend:3500)
+    template: backend.yaml
+    documentSelector: { path: kind, value: Service }
+    asserts:
+      - equal: { path: metadata.name, value: backend }
+      - equal: { path: 'spec.ports[0].port', value: 3500 }
+
+  - it: the backend runs as the image's app user and mounts the shared volume
+    template: backend.yaml
+    documentSelector: { path: kind, value: Deployment }
+    asserts:
+      - equal:
+          { path: spec.template.spec.securityContext.runAsUser, value: 62704 }
+      - equal: { path: spec.template.spec.securityContext.fsGroup, value: 1001 }
+      - contains:
+          path: 'spec.template.spec.containers[0].volumeMounts'
+          content: { name: data, mountPath: /bilbomd/uploads, subPath: uploads }
+      - contains:
+          path: 'spec.template.spec.containers[0].volumeMounts'
+          content:
+            { name: data, mountPath: /bilbomd/logs, subPath: logs/backend }
+      - equal:
+          {
+            path: 'spec.template.spec.volumes[0].persistentVolumeClaim.claimName',
+            value: bilbomd-data
+          }
+
+  - it: images come through Harbor by default
+    template: backend.yaml
+    documentSelector: { path: kind, value: Deployment }
+    asserts:
+      - matchRegex:
+          {
+            path: 'spec.template.spec.containers[0].image',
+            pattern: '^harbor\.bk\.lbl\.gov/ghcr\.io/bl1231/bilbomd-backend:'
+          }
+      - notExists: { path: spec.template.spec.imagePullSecrets }
+
+  - it: renders imagePullSecrets when configured
+    template: backend.yaml
+    documentSelector: { path: kind, value: Deployment }
+    set:
+      images.pullSecrets: [harbor-bilbomd]
+    asserts:
+      - equal:
+          {
+            path: 'spec.template.spec.imagePullSecrets[0].name',
+            value: harbor-bilbomd
+          }
+
+  - it: the HTTPRoute sends the hostname to the ui Service via the shared gateway
+    template: httproute.yaml
+    asserts:
+      - equal: { path: 'spec.hostnames[0]', value: bilbomd.bk.lbl.gov }
+      - equal: { path: 'spec.parentRefs[0].name', value: ingress }
+      - equal: { path: 'spec.parentRefs[0].namespace', value: gateway }
+      - equal: { path: 'spec.parentRefs[0].sectionName', value: https }
+      - equal: { path: 'spec.rules[0].backendRefs[0].name', value: ui }
+      - equal: { path: 'spec.rules[0].backendRefs[0].port', value: 80 }
+
+  - it: the hostname drives the route, URLs and ORCID callback
+    template: configmap.yaml
+    set:
+      hostname: bilbomd-dev.bk.lbl.gov
+    asserts:
+      - equal: { path: data.BILBOMD_URL, value: https://bilbomd-dev.bk.lbl.gov }
+      - equal: { path: data.BILBOMD_FQDN, value: bilbomd-dev.bk.lbl.gov }
+      - equal:
+          {
+            path: data.ORCID_REDIRECT_URI,
+            value: https://bilbomd-dev.bk.lbl.gov/api/v1/auth/orcid/callback
+          }
+
+  - it: config targets Berkelium, not NERSC, and never offers Scoper
+    template: configmap.yaml
+    asserts:
+      - equal: { path: data.BILBOMD_DEPLOY_SITE, value: berkelium }
+      - equal: { path: data.USE_NERSC, value: 'false' }
+      - equal: { path: data.ENABLE_BILBOMD_SCOPER, value: 'false' }
+      - equal: { path: data.DATA_VOL, value: /bilbomd/uploads }
+      - equal: { path: data.MONGO_HOSTNAME, value: mongo }
+      - equal: { path: data.REDIS_HOST, value: redis }
+
+  - it: the mongo backup can be turned off
+    template: mongo-backup-cronjob.yaml
+    set:
+      mongoBackup.enabled: false
+    asserts:
+      - hasDocuments: { count: 0 }
+
+  - it: the mongo backup prunes old archives
+    template: mongo-backup-cronjob.yaml
+    set:
+      mongoBackup.retentionDays: 7
+    asserts:
+      - matchRegex:
+          {
+            path: 'spec.jobTemplate.spec.template.spec.containers[0].args[0]',
+            pattern: '-mtime \+7 -delete'
+          }

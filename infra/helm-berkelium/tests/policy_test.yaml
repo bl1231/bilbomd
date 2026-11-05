@@ -1,0 +1,143 @@
+# Berkelium cluster policy (https://berkelium.scs.lbl.gov/docs/workloads/mcp):
+# every container, init containers included, sets CPU and memory requests AND
+# limits, and PVCs use ceph-rbd or cephfs. A server-side dry run does not
+# enforce these, so the chart tests do.
+#
+# Use `exists`, not `isNotNullOrEmpty`: helm-unittest passes isNotNullOrEmpty
+# when the path is missing entirely, so it cannot catch an absent limit.
+suite: berkelium policy
+templates:
+  - backend.yaml
+  - ui.yaml
+  - mongo.yaml
+  - redis.yaml
+  - mongo-backup-cronjob.yaml
+  - data-pvc.yaml
+  - configmap.yaml
+tests:
+  - it: backend containers set CPU and memory requests and limits
+    template: backend.yaml
+    documentSelector: { path: kind, value: Deployment }
+    asserts:
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.memory' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.memory' }
+      - exists:
+          {
+            path: 'spec.template.spec.initContainers[0].resources.requests.cpu'
+          }
+      - exists:
+          {
+            path: 'spec.template.spec.initContainers[0].resources.requests.memory'
+          }
+      - exists:
+          { path: 'spec.template.spec.initContainers[0].resources.limits.cpu' }
+      - exists:
+          {
+            path: 'spec.template.spec.initContainers[0].resources.limits.memory'
+          }
+      - lengthEqual: { path: spec.template.spec.containers, count: 1 }
+      - lengthEqual: { path: spec.template.spec.initContainers, count: 1 }
+
+  - it: ui container sets CPU and memory requests and limits
+    template: ui.yaml
+    documentSelector: { path: kind, value: Deployment }
+    asserts:
+      - lengthEqual: { path: spec.template.spec.containers, count: 1 }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.memory' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.memory' }
+      - notExists: { path: spec.template.spec.initContainers }
+
+  - it: mongo container sets CPU and memory requests and limits
+    template: mongo.yaml
+    documentSelector: { path: kind, value: StatefulSet }
+    asserts:
+      - lengthEqual: { path: spec.template.spec.containers, count: 1 }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.memory' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.memory' }
+      - notExists: { path: spec.template.spec.initContainers }
+
+  - it: redis container sets CPU and memory requests and limits
+    template: redis.yaml
+    documentSelector: { path: kind, value: StatefulSet }
+    asserts:
+      - lengthEqual: { path: spec.template.spec.containers, count: 1 }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.memory' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.memory' }
+      - notExists: { path: spec.template.spec.initContainers }
+
+  - it: mongo backup container sets CPU and memory requests and limits
+    template: mongo-backup-cronjob.yaml
+    asserts:
+      - lengthEqual:
+          { path: spec.jobTemplate.spec.template.spec.containers, count: 1 }
+      - exists:
+          {
+            path: 'spec.jobTemplate.spec.template.spec.containers[0].resources.requests.cpu'
+          }
+      - exists:
+          {
+            path: 'spec.jobTemplate.spec.template.spec.containers[0].resources.requests.memory'
+          }
+      - exists:
+          {
+            path: 'spec.jobTemplate.spec.template.spec.containers[0].resources.limits.cpu'
+          }
+      - exists:
+          {
+            path: 'spec.jobTemplate.spec.template.spec.containers[0].resources.limits.memory'
+          }
+
+  - it: the shared data volume is RWX cephfs and survives helm uninstall
+    template: data-pvc.yaml
+    asserts:
+      - equal: { path: spec.storageClassName, value: cephfs }
+      - contains: { path: spec.accessModes, content: ReadWriteMany }
+      - equal:
+          {
+            path: 'metadata.annotations["helm.sh/resource-policy"]',
+            value: keep
+          }
+
+  - it: mongo data uses ceph-rbd
+    template: mongo.yaml
+    documentSelector: { path: kind, value: StatefulSet }
+    asserts:
+      - equal:
+          {
+            path: 'spec.volumeClaimTemplates[0].spec.storageClassName',
+            value: ceph-rbd
+          }
+
+  - it: redis data uses ceph-rbd
+    template: redis.yaml
+    documentSelector: { path: kind, value: StatefulSet }
+    asserts:
+      - equal:
+          {
+            path: 'spec.volumeClaimTemplates[0].spec.storageClassName',
+            value: ceph-rbd
+          }

@@ -60,6 +60,8 @@ COPY --from=build /repo/apps/ui/build /usr/share/nginx/html
 # Copy nginx configurations
 COPY apps/ui/nginx/nginx.default.conf /etc/nginx/conf.d/default.conf
 COPY apps/ui/nginx/nginx.conf /etc/nginx/nginx.conf
+# Adds `listen [::]:80` at startup when the container has IPv6 (IPv6-only k8s)
+COPY --chmod=0755 apps/ui/nginx/15-listen-on-ipv6.sh /docker-entrypoint.d/15-listen-on-ipv6.sh
 
 RUN find / -xdev \( -perm /4000 -o -perm /2000 \) -exec chmod ug-s {} + 2>/dev/null || true
 
