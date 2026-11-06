@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 2.22.1
+
+### Patch Changes
+
+- 0649219: Fix worker 2.22.0 failing every job with "Operation `jobs.findOne()` buffering timed out". Its new Kubernetes client brought in `socks`, an optional peer of `mongodb`, so the worker and `@bilbomd/mongodb-schema` got two copies of mongoose and the models were registered on the one the worker never connected. `@bilbomd/mongodb-schema` now takes mongoose as a peer dependency, so its models always use the app's mongoose.
+- Updated dependencies [0649219]
+  - @bilbomd/mongodb-schema@2.12.1
+  - @bilbomd/md-utils@1.2.4
+
 ## 2.22.0
 
 ### Minor Changes
