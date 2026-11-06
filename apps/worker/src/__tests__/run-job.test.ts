@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   queueNames: [] as string[],
   bilboMdHandler: vi.fn(),
   multiMdHandler: vi.fn(),
-  connectDB: vi.fn(async () => {}),
+  connectDB: vi.fn<(signal?: AbortSignal) => Promise<void>>(async () => {}),
   disconnect: vi.fn(async () => {}),
   redisQuit: vi.fn(async () => 'OK'),
   writeFile: vi.fn(async () => {}),
@@ -236,9 +236,9 @@ describe('main', () => {
 
   it('exits as cancelled on SIGTERM while MongoDB is unreachable', async () => {
     mocks.connectDB.mockImplementationOnce(
-      (signal: AbortSignal) =>
+      (signal) =>
         new Promise<void>((_resolve, reject) => {
-          signal.addEventListener('abort', () => reject(signal.reason))
+          signal!.addEventListener('abort', () => reject(signal!.reason))
           process.emit('SIGTERM')
         })
     )

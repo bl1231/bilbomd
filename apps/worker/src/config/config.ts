@@ -28,13 +28,14 @@ const parsePositiveIntEnv = (name: string, defaultValue: number): number => {
   return Math.floor(parsed)
 }
 
-export const EXECUTION_BACKENDS = ['local', 'nersc'] as const
+export const EXECUTION_BACKENDS = ['local', 'nersc', 'k8s'] as const
 export type ExecutionBackend = (typeof EXECUTION_BACKENDS)[number]
 
 // Where the worker runs BilboMD pipelines: 'local' runs them in this process
 // (epyc, hyperion), 'nersc' submits them to Perlmutter through the
-// Superfacility API. EXECUTION_BACKEND wins; without it the older USE_NERSC
-// flag still selects NERSC.
+// Superfacility API, and 'k8s' runs each one as a Kubernetes Job in the
+// worker's own namespace (Berkelium). EXECUTION_BACKEND wins; without it the
+// older USE_NERSC flag still selects NERSC.
 const parseExecutionBackend = (): ExecutionBackend => {
   const raw = process.env.EXECUTION_BACKEND?.trim().toLowerCase()
   if (!raw) return toBoolean(process.env.USE_NERSC) ? 'nersc' : 'local'
@@ -60,6 +61,10 @@ const NERSC_ENV_VARS = [
   'CP2CFS_SCRIPT'
 ]
 
+// The k8s backend has to know which image and namespace its Jobs use; the
+// rest of its settings have defaults.
+const K8S_ENV_VARS = ['K8S_NAMESPACE', 'K8S_JOB_IMAGE']
+
 const validateRequiredEnvVars = (): void => {
   const required = [
     'BILBOMD_URL',
@@ -69,7 +74,8 @@ const validateRequiredEnvVars = (): void => {
     'CHARMM',
     'FOXS',
     'MULTIFOXS',
-    ...(executionBackend === 'nersc' ? NERSC_ENV_VARS : [])
+    ...(executionBackend === 'nersc' ? NERSC_ENV_VARS : []),
+    ...(executionBackend === 'k8s' ? K8S_ENV_VARS : [])
   ]
   const missing = required.filter((name) => !process.env[name])
   if (missing.length > 0) {
@@ -181,6 +187,71 @@ export const config = {
     prepareCHARMMSlurmScript: process.env.PREPARE_CHARMM_SLURM_SCRIPT ?? '',
     prepareOMMSlurmScript: process.env.PREPARE_OMM_SLURM_SCRIPT ?? '',
     copyFromScratchToCFSScript: process.env.CP2CFS_SCRIPT ?? ''
+  },
+  // Settings for the k8s backend: one Kubernetes Job per BilboMD job, running
+  // `node dist/run-job.js` in the worker image (see services/functions/k8s-job.ts)
+  k8s: {
+    namespace: process.env.K8S_NAMESPACE ?? '',
+    // Image for the job pods; the same worker image and tag as the dispatcher
+    jobImage: process.env.K8S_JOB_IMAGE ?? '',
+    imagePullPolicy: getEnvVarWithDefault(
+      'K8S_JOB_IMAGE_PULL_POLICY',
+      'IfNotPresent'
+    ),
+    // Comma-separated imagePullSecrets for the job pods (private images)
+    imagePullSecrets: (process.env.K8S_JOB_IMAGE_PULL_SECRETS ?? '')
+      .split(',')
+      .map((name) => name.trim())
+      .filter(Boolean),
+    // Job pods get the dispatcher's environment from these
+    configMapName: getEnvVarWithDefault('K8S_JOB_CONFIGMAP', 'bilbomd-config'),
+    secretName: getEnvVarWithDefault('K8S_JOB_SECRET', 'bilbomd-secrets'),
+    // Job directories: this PVC's subPath is mounted at DATA_VOL
+    dataPvc: getEnvVarWithDefault('K8S_JOB_DATA_PVC', 'bilbomd-data'),
+    dataSubPath: getEnvVarWithDefault('K8S_JOB_DATA_SUBPATH', 'uploads'),
+    // UID/GID baked into the worker image; shared with the backend so both can
+    // write the job directories
+    runAsUser: parsePositiveIntEnv('K8S_JOB_RUN_AS_USER', 1000),
+    runAsGroup: parsePositiveIntEnv('K8S_JOB_RUN_AS_GROUP', 1000),
+    // Berkelium rejects containers without CPU and memory requests and limits
+    resources: {
+      requests: {
+        cpu: getEnvVarWithDefault('K8S_JOB_CPU_REQUEST', '4'),
+        memory: getEnvVarWithDefault('K8S_JOB_MEMORY_REQUEST', '8Gi')
+      },
+      limits: {
+        cpu: getEnvVarWithDefault('K8S_JOB_CPU_LIMIT', '8'),
+        memory: getEnvVarWithDefault('K8S_JOB_MEMORY_LIMIT', '16Gi')
+      }
+    },
+    // ResourceClaimTemplate (DRA) for jobs that need a GPU
+    gpuClaimTemplate: getEnvVarWithDefault(
+      'K8S_GPU_CLAIM_TEMPLATE',
+      'bilbomd-gpu'
+    ),
+    // How many BilboMD jobs may run as Kubernetes Jobs at once: the worker's
+    // BullMQ concurrency, and a cluster-wide count checked before each new
+    // Job (so Jobs left running by a restarted worker count too). Berkelium
+    // asked for 2-4 GPUs to start with.
+    maxJobs: parsePositiveIntEnv('K8S_MAX_JOBS', 2),
+    // Kubernetes stops a Job that runs longer than this
+    activeDeadlineSeconds: parsePositiveIntEnv(
+      'K8S_JOB_DEADLINE_SECONDS',
+      12 * 60 * 60
+    ),
+    // Finished Jobs (and their pods and logs) are removed after this
+    ttlSecondsAfterFinished: parsePositiveIntEnv(
+      'K8S_JOB_TTL_SECONDS',
+      24 * 60 * 60
+    ),
+    pollIntervalMs: parsePositiveIntEnv('K8S_POLL_INTERVAL_MS', 15_000),
+    // Warn when a job pod can't be scheduled (e.g. no free GPU) for this long
+    pendingWarnMs: parsePositiveIntEnv('K8S_PENDING_WARN_MS', 10 * 60 * 1000),
+    // Give up on a pod whose image can't be pulled after this long
+    imagePullGraceMs: parsePositiveIntEnv(
+      'K8S_IMAGE_PULL_GRACE_MS',
+      5 * 60 * 1000
+    )
   },
   bilbomd: {
     SANSEnabled: toBoolean(process.env.ENABLE_BILBOMD_SANS),

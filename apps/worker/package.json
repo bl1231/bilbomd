@@ -33,6 +33,7 @@
     "@bilbomd/bilbomd-types": "workspace:*",
     "@bilbomd/md-utils": "workspace:*",
     "@bilbomd/mongodb-schema": "workspace:*",
+    "@kubernetes/client-node": "^2.0.2",
     "axios": "^1.20.0",
     "axios-retry": "^4.5.0",
     "bullmq": "^6.3.9",

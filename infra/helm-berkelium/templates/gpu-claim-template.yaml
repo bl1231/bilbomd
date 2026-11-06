@@ -1,0 +1,19 @@
+{{- if .Values.dispatcher.enabled }}
+# One GPU per job pod that needs it (OpenMM jobs). The dispatcher puts this
+# template's name in each GPU Job's pod spec, so Kubernetes makes a
+# ResourceClaim per pod and frees the GPU when the pod finishes.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: {{ .Values.dispatcher.gpu.claimTemplateName }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "bilbomd.labels" . | nindent 4 }}
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: {{ .Values.dispatcher.gpu.deviceClassName }}
+{{- end }}
