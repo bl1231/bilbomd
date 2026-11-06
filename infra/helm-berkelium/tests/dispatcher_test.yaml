@@ -88,7 +88,10 @@ tests:
           content: { name: K8S_JOB_MEMORY_LIMIT, value: 32Gi }
       - contains:
           path: 'spec.template.spec.containers[0].env'
-          content: { name: K8S_JOB_CPU_REQUEST, value: '4' }
+          content: { name: K8S_JOB_CPU_REQUEST, value: '8' }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_JOB_CPU_LIMIT, value: '32' }
       - contains:
           path: 'spec.template.spec.containers[0].env'
           content: { name: K8S_JOB_DEADLINE_SECONDS, value: '43200' }

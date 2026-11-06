@@ -83,10 +83,11 @@ resources:
   dispatcher:
     requests: { cpu: 100m, memory: 512Mi }
     limits: { cpu: '1', memory: 1Gi }
-  # Each BilboMD job's pod (CPU and GPU jobs alike, for the pilot)
+  # Each BilboMD job's pod (CPU and GPU jobs alike, for the pilot). FoXS sizes
+  # its worker pool from the CPU limit (cgroup quota); A40 nodes have 64 CPUs.
   job:
-    requests: { cpu: '4', memory: 8Gi }
-    limits: { cpu: '8', memory: 16Gi }
+    requests: { cpu: '8', memory: 8Gi }
+    limits: { cpu: '32', memory: 16Gi }
 
 # Runs each BilboMD job as a Kubernetes Job (see templates/dispatcher.yaml).
 dispatcher:
