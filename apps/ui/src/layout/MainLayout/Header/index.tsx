@@ -14,13 +14,13 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import useAuth from 'hooks/useAuth'
+import DeploySite from 'layout/DeploySite'
 import LogOut from 'features/auth/LogOut'
 import NightModeToggle from 'components/NightModeToggle'
 import PersonIcon from '@mui/icons-material/Person'
 import MenuIcon from '@mui/icons-material/Menu'
 import { useNavigate } from 'react-router'
 import { Link } from 'react-router'
-import nerscLogo from 'assets/nersc-logo.png'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 
 interface UserMenuProps {
@@ -79,40 +79,6 @@ const UserMenu = ({
       </MenuItem>
     </Menu>
   </>
-)
-
-interface DeploySiteProps {
-  deploySite: string
-}
-
-const DeploySite = ({ deploySite }: DeploySiteProps) => (
-  <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
-    {deploySite === 'nersc' && (
-      <img
-        src={nerscLogo}
-        alt="NERSC Logo"
-        style={{ height: '30px' }}
-      />
-    )}
-    {deploySite === 'local' && (
-      <Typography
-        variant="h5"
-        component="span"
-        sx={{ ml: 1 }}
-      >
-        LOCAL
-      </Typography>
-    )}
-    {deploySite === 'bl1231' && (
-      <Typography
-        variant="h5"
-        component="span"
-        sx={{ ml: 1, pb: 0 }}
-      >
-        BL12.3.1
-      </Typography>
-    )}
-  </Box>
 )
 
 interface DevModeProps {

@@ -14,8 +14,8 @@ import NightModeToggle from 'components/NightModeToggle'
 // import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
-import nerscLogo from 'assets/nersc-logo.png'
 import useAuth from 'hooks/useAuth'
+import DeploySite from 'layout/DeploySite'
 
 const linkStyles = {
   fontFamily: 'monospace',
@@ -96,40 +96,6 @@ const linkStyles = {
 //       )}
 //     </Box>
 //   )
-
-interface DeploySiteProps {
-  deploySite: string
-}
-
-const DeploySite = ({ deploySite }: DeploySiteProps) => (
-  <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
-    {deploySite === 'nersc' && (
-      <img
-        src={nerscLogo}
-        alt="NERSC Logo"
-        style={{ height: '30px' }}
-      />
-    )}
-    {deploySite === 'local' && (
-      <Typography
-        variant="h5"
-        component="span"
-        sx={{ ml: 1 }}
-      >
-        LOCAL
-      </Typography>
-    )}
-    {deploySite === 'bl1231' && (
-      <Typography
-        variant="h5"
-        component="span"
-        sx={{ ml: 1, pb: 0 }}
-      >
-        BL12.3.1
-      </Typography>
-    )}
-  </Box>
-)
 
 interface DevModeProps {
   mode: string
