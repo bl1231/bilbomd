@@ -36,7 +36,7 @@ def setup_environment(uuid):
     workdir = f"{pscratch}/bilbomd/{env_dir}/{uuid}"
 
     # Docker images
-    openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.13"
+    openmm_worker = "bilbomd/bilbomd-openmm-worker:0.0.14"
     bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.31"
     af_worker = "bilbomd/bilbomd-colabfold:0.0.10"
 
