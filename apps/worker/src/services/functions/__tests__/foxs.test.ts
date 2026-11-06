@@ -35,7 +35,7 @@ vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
 
-import { spawnFoXSOptimized } from '../foxs-functions.js'
+import { foxsConcurrency, spawnFoXSOptimized } from '../foxs-functions.js'
 import { runSingleFoXS } from '../foxs-analysis.js'
 import { config } from '../../../config/config.js'
 
@@ -61,6 +61,22 @@ const makeDirWithPdbs = async (name: string, count: number) => {
   await fs.writeFile(path.join(dir, 'notes.txt'), '')
   return dir
 }
+
+describe('foxsConcurrency', () => {
+  it('uses every effective CPU', () => {
+    expect(foxsConcurrency(18)).toBe(18)
+    expect(foxsConcurrency(32)).toBe(32)
+  })
+
+  it('never goes below one process', () => {
+    expect(foxsConcurrency(0)).toBe(1)
+  })
+
+  it('prefers an explicit positive override', () => {
+    expect(foxsConcurrency(18, 4)).toBe(4)
+    expect(foxsConcurrency(18, 0)).toBe(18)
+  })
+})
 
 describe('spawnFoXSOptimized', () => {
   it('runs FoXS once per PDB file, in its directory, with the FoXS timeout', async () => {

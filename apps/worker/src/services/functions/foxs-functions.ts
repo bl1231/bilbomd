@@ -87,6 +87,14 @@ const getEffectiveCpuCount = (): number => {
   return hostCpus
 }
 
+/**
+ * How many FoXS processes to run at once. FoXS is single-threaded and nothing
+ * else runs during the step, so use every CPU the worker has; a cap of 80% cost
+ * ~1.4x in the #1157 benchmark.
+ */
+const foxsConcurrency = (effectiveCpus: number, override?: number): number =>
+  override && override > 0 ? override : Math.max(1, effectiveCpus)
+
 const getErrorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e)
 
@@ -394,8 +402,7 @@ const runFoXS = async (
 
     // Determine optimal concurrency
     const effectiveCpus = getEffectiveCpuCount()
-    const actualConcurrency =
-      maxConcurrency || Math.max(1, Math.floor(effectiveCpus * 0.8))
+    const actualConcurrency = foxsConcurrency(effectiveCpus, maxConcurrency)
     logger.info(
       `Using ${actualConcurrency} concurrent FoXS workers (${effectiveCpus} effective CPUs available, ${os.cpus().length} host CPUs)`
     )
@@ -437,4 +444,4 @@ const runFoXS = async (
   }
 }
 
-export { runFoXS, spawnFoXSOptimized }
+export { foxsConcurrency, runFoXS, spawnFoXSOptimized }
