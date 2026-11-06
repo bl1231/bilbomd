@@ -1,5 +1,12 @@
 # @bilbomd/scoper
 
+## 1.10.15
+
+### Patch Changes
+
+- Updated dependencies [0649219]
+  - @bilbomd/mongodb-schema@2.12.1
+
 ## 1.10.14
 
 ### Patch Changes
