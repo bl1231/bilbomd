@@ -4,7 +4,7 @@ FROM nvidia/cuda:12.9.2-devel-ubuntu22.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Pick the OpenMM version and install prefix at build-time
-ARG OPENMM_TAG=8.5.1
+ARG OPENMM_TAG=8.6.1
 ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_TAG}
 
 # Basic build deps + SWIG for Python wrappers + Python headers
@@ -61,9 +61,13 @@ RUN git clone https://github.com/openmm/openmm.git && \
 # build along. Drop that copy and reinstall the source-built wrappers so the
 # OpenMM compiled above (the one that runs on Perlmutter GPU nodes) is the only
 # one in the env.
+# cuda-version is pinned to what Perlmutter's driver supports (CUDA 13.2), so
+# the CUDA libraries conda brings along with its OpenMM don't float (unpinned,
+# 0.0.13 got 13.4; worker base 0.0.9 got 13.5 and lost the GPU, see #1222).
 RUN conda install -y -n openmm \
     python=3.12 \
     openmm=${OPENMM_TAG} \
+    cuda-version=13.2 \
     openmmforcefields openff-toolkit rdkit ambertools lxml && \
     conda remove -y -n openmm --force openmm && \
     conda clean -afy && \
@@ -80,7 +84,7 @@ RUN git clone https://github.com/openmm/pdbfixer.git && \
 # --- Runtime stage: slim image with CUDA runtime + OpenMM + conda env ---
 FROM nvidia/cuda:12.9.2-runtime-ubuntu22.04
 
-ARG OPENMM_TAG=8.5.1
+ARG OPENMM_TAG=8.6.1
 ARG OPENMM_PREFIX=/opt/openmm-${OPENMM_TAG}
 
 # Copy the conda env and the compiled OpenMM install from the builder
