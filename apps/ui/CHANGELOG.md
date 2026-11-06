@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.36.0
+
+### Minor Changes
+
+- 9573610: The header shows the Berkelium logo and name on BilboMD deployed to Berkelium (`BILBOMD_DEPLOY_SITE=berkelium`), in the spot where NERSC deployments show the NERSC logo. The site badge (NERSC, Berkelium, BL12.3.1, LOCAL) is now one shared `DeploySite` component used by both the main and anonymous headers.
+
 ## 2.35.7
 
 ### Patch Changes
