@@ -198,6 +198,11 @@ export const config = {
       'K8S_JOB_IMAGE_PULL_POLICY',
       'IfNotPresent'
     ),
+    // Comma-separated imagePullSecrets for the job pods (private images)
+    imagePullSecrets: (process.env.K8S_JOB_IMAGE_PULL_SECRETS ?? '')
+      .split(',')
+      .map((name) => name.trim())
+      .filter(Boolean),
     // Job pods get the dispatcher's environment from these
     configMapName: getEnvVarWithDefault('K8S_JOB_CONFIGMAP', 'bilbomd-config'),
     secretName: getEnvVarWithDefault('K8S_JOB_SECRET', 'bilbomd-secrets'),
@@ -224,8 +229,10 @@ export const config = {
       'K8S_GPU_CLAIM_TEMPLATE',
       'bilbomd-gpu'
     ),
-    // How many BilboMD jobs may run as Kubernetes Jobs at once (the worker's
-    // BullMQ concurrency). Berkelium asked for 2-4 GPUs to start with.
+    // How many BilboMD jobs may run as Kubernetes Jobs at once: the worker's
+    // BullMQ concurrency, and a cluster-wide count checked before each new
+    // Job (so Jobs left running by a restarted worker count too). Berkelium
+    // asked for 2-4 GPUs to start with.
     maxJobs: parsePositiveIntEnv('K8S_MAX_JOBS', 2),
     // Kubernetes stops a Job that runs longer than this
     activeDeadlineSeconds: parsePositiveIntEnv(

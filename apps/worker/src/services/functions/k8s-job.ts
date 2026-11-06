@@ -92,6 +92,15 @@ export const buildJobManifest = (
             fsGroupChangePolicy: 'OnRootMismatch',
             seccompProfile: { type: 'RuntimeDefault' }
           },
+          // Private images (e.g. harbor.bk.lbl.gov/bilbomd) need the same pull
+          // secrets as the dispatcher; job pods don't use its ServiceAccount
+          ...(settings.imagePullSecrets.length > 0
+            ? {
+                imagePullSecrets: settings.imagePullSecrets.map((name) => ({
+                  name
+                }))
+              }
+            : {}),
           ...(needsGpu
             ? {
                 resourceClaims: [
@@ -260,7 +269,15 @@ export const classifyJob = (
     }
   }
   if (waiting?.reason && IMAGE_PULL_ERRORS.has(waiting.reason)) {
-    const waited = podCreated ? now.getTime() - podCreated.getTime() : 0
+    // Pulling starts once the pod is on a node, so time spent waiting for a
+    // GPU doesn't use up the grace period
+    const scheduled = pod.status?.conditions?.find(
+      (c) => c.type === 'PodScheduled' && c.status === 'True'
+    )
+    const pullStarted = scheduled?.lastTransitionTime
+      ? new Date(scheduled.lastTransitionTime)
+      : podCreated
+    const waited = pullStarted ? now.getTime() - pullStarted.getTime() : 0
     if (waited >= settings.imagePullGraceMs) {
       return {
         phase: 'failed',
@@ -292,12 +309,10 @@ export const classifyJob = (
   return { phase: 'running' }
 }
 
+// Whether the Job's pods have stopped. FailureTarget means the Job will fail
+// but its pods may still be terminating, so it doesn't count.
 export const isFinished = (job: V1Job): boolean =>
-  Boolean(
-    conditionIsTrue(job, 'Complete') ||
-    conditionIsTrue(job, 'Failed') ||
-    conditionIsTrue(job, 'FailureTarget')
-  )
+  Boolean(conditionIsTrue(job, 'Complete') || conditionIsTrue(job, 'Failed'))
 
 // The few Kubernetes calls the dispatcher makes, so they can be faked in
 // tests. The dispatcher's ServiceAccount may create, get, list, watch and
@@ -308,7 +323,12 @@ export interface K8sJobClient {
   // null if there is no such Job
   readJob: (name: string) => Promise<V1Job | null>
   listJobPods: (name: string) => Promise<V1Pod[]>
-  // Deletes the Job and (in the background) its pods; a missing Job is fine
+  // Names of the queue's Jobs that haven't finished (including ones being
+  // deleted, whose pods may still be running)
+  listActiveJobs: (queue: K8sQueue) => Promise<string[]>
+  // Starts deleting the Job. Deletion is in the foreground: the Job stays
+  // readable until its pods are gone, so waiting for readJob to return null
+  // waits for the pods to stop. A missing Job is fine.
   deleteJob: (name: string) => Promise<void>
 }
 
@@ -350,12 +370,22 @@ export const createK8sJobClient = (
       })
       return list.items
     },
+    listActiveJobs: async (queue) => {
+      const list = await batch.listNamespacedJob({
+        namespace,
+        labelSelector: `app.kubernetes.io/component=job,${LABELS.queue}=${queue}`
+      })
+      return list.items
+        .filter((job) => !isFinished(job))
+        .map((job) => job.metadata?.name ?? '')
+        .filter(Boolean)
+    },
     deleteJob: async (name) => {
       try {
         await batch.deleteNamespacedJob({
           name,
           namespace,
-          propagationPolicy: 'Background'
+          propagationPolicy: 'Foreground'
         })
       } catch (error) {
         if (isStatus(error, 404)) return

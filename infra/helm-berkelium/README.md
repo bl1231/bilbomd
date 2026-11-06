@@ -23,10 +23,12 @@ The `dispatcher` is the worker running with `EXECUTION_BACKEND=k8s`. It takes jo
   - OpenMM jobs (and AlphaFold/OpenFold) get one GPU through the `bilbomd-gpu` ResourceClaimTemplate. CHARMM and Multi jobs run on CPUs only.
   - Pod size is `resources.job`. Every job pod gets the same size during the pilot.
   - Movies are off (`ENABLE_MOVIES=false`).
-- **Concurrency:** at most `dispatcher.maxJobs` BilboMD jobs run at once (2 by default; Science IT asked for 2–4 GPUs to start). Multi jobs run one at a time on top of that.
-- **Failures** the pod can't report itself (out of memory, the `dispatcher.jobDeadlineSeconds` limit, an image that can't be pulled) fail the job with that reason.
-- **Cancel:** deleting a job in the UI deletes its Kubernetes Job.
-- **Restarts:** a running Job keeps going while the dispatcher restarts or upgrades. The new dispatcher adopts it.
+- **Concurrency:** at most `dispatcher.maxJobs` BilboMD jobs run at once (2 by default; Science IT asked for 2–4 GPUs to start). Multi jobs run one at a time on top of that. The dispatcher counts the unfinished Jobs in the namespace before creating one, so Jobs left running across a dispatcher restart count too.
+- **Private images:** `images.pullSecrets` is passed to the job pods as well as the dispatcher.
+- **Failures** the pod can't report itself (out of memory, the `dispatcher.jobDeadlineSeconds` limit, an image that can't be pulled) fail the job with that reason. A Job that fails before it finishes (a config or image error) is deleted first, and the dispatcher waits for its pod to stop.
+- **Kubernetes API outages** don't fail running jobs: the dispatcher keeps retrying until the Job's deadline has passed.
+- **Cancel:** deleting a job in the UI deletes its Kubernetes Job, retrying until the API accepts it. If the dispatcher was down when the job was deleted, it finds the Job by the job's UUID and deletes it when it starts.
+- **Restarts:** a running Job keeps going while the dispatcher restarts or upgrades. The new dispatcher adopts it, and doesn't run a job again if it completed while the dispatcher was down.
 - **Cleanup:** finished Jobs and their pods are kept for `dispatcher.jobTtlSeconds` (a day), then removed.
 
 The dispatcher uses the `bilbomd` ServiceAccount, which Science IT created with a Role that allows creating, watching and deleting Jobs and reading pods and their logs. This chart doesn't create it.

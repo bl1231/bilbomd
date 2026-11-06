@@ -54,6 +54,8 @@ spec:
             - name: K8S_JOB_IMAGE
               value: {{ include "bilbomd.image" .Values.images.worker | quote }}
             - { name: K8S_JOB_IMAGE_PULL_POLICY, value: {{ .Values.images.pullPolicy | quote }} }
+            # Job pods need the same pull secrets for a private worker image
+            - { name: K8S_JOB_IMAGE_PULL_SECRETS, value: {{ join "," .Values.images.pullSecrets | quote }} }
             - { name: K8S_JOB_CONFIGMAP, value: bilbomd-config }
             - { name: K8S_JOB_SECRET, value: bilbomd-secrets }
             - { name: K8S_JOB_DATA_PVC, value: bilbomd-data }

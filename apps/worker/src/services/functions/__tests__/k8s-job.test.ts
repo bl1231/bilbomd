@@ -21,6 +21,7 @@ const settings: K8sSettings = {
   namespace: 'bilbomd',
   jobImage: 'harbor.example/bilbomd-worker:2.22.0',
   imagePullPolicy: 'IfNotPresent',
+  imagePullSecrets: [],
   configMapName: 'bilbomd-config',
   secretName: 'bilbomd-secrets',
   dataPvc: 'bilbomd-data',
@@ -129,6 +130,27 @@ describe('buildJobManifest', () => {
       name: 'data',
       persistentVolumeClaim: { claimName: 'bilbomd-data' }
     })
+  })
+
+  it('adds image pull secrets only when there are some', () => {
+    expect(
+      manifest(false).spec!.template.spec!.imagePullSecrets
+    ).toBeUndefined()
+
+    const withSecrets = buildJobManifest(
+      {
+        queue: 'bilbomd',
+        bullmqJobId: '42',
+        uuid: UUID,
+        attempt: 1,
+        needsGpu: false
+      },
+      { ...settings, imagePullSecrets: ['harbor-bilbomd'] },
+      '/bilbomd/uploads'
+    )
+    expect(withSecrets.spec!.template.spec!.imagePullSecrets).toEqual([
+      { name: 'harbor-bilbomd' }
+    ])
   })
 
   it('claims a GPU only when the job needs one', () => {
@@ -426,6 +448,28 @@ describe('classifyJob', () => {
     })
   })
 
+  it('starts the image pull grace period when the pod is scheduled', () => {
+    // Created 30 min ago, waited 28 min for a GPU, pulling for 2 min
+    const pod = waitingPod('ErrImagePull', 30, 'connection reset')
+    pod.status!.conditions = [
+      {
+        type: 'PodScheduled',
+        status: 'True',
+        lastTransitionTime: minutesAgo(2)
+      }
+    ]
+    expect(classifyJob(jobWith(), [pod], NOW, settings)).toMatchObject({
+      phase: 'pending',
+      reason: 'ErrImagePull'
+    })
+
+    pod.status!.conditions[0].lastTransitionTime = minutesAgo(6)
+    expect(classifyJob(jobWith(), [pod], NOW, settings)).toEqual({
+      phase: 'failed',
+      reason: 'could not pull the job image: connection reset'
+    })
+  })
+
   it('reports a running pod as running', () => {
     const pod = podWith({ phase: 'Running' })
     expect(classifyJob(jobWith(), [pod], NOW, settings)).toEqual({
@@ -435,10 +479,11 @@ describe('classifyJob', () => {
 })
 
 describe('isFinished', () => {
-  it('is true for Complete, Failed and FailureTarget', () => {
+  it('is true once the pods have stopped (Complete or Failed)', () => {
     expect(isFinished(jobWith([{ type: 'Complete' }]))).toBe(true)
     expect(isFinished(jobWith([{ type: 'Failed' }]))).toBe(true)
-    expect(isFinished(jobWith([{ type: 'FailureTarget' }]))).toBe(true)
+    // Will fail, but its pods may still be terminating
+    expect(isFinished(jobWith([{ type: 'FailureTarget' }]))).toBe(false)
     expect(isFinished(jobWith([{ type: 'Suspended' }]))).toBe(false)
     expect(isFinished(jobWith())).toBe(false)
   })
@@ -449,6 +494,7 @@ describe('createK8sJobClient', () => {
     const batch = {
       createNamespacedJob: vi.fn(),
       readNamespacedJob: vi.fn(),
+      listNamespacedJob: vi.fn(),
       deleteNamespacedJob: vi.fn()
     }
     const core = { listNamespacedPod: vi.fn() }
@@ -501,14 +547,40 @@ describe('createK8sJobClient', () => {
     })
   })
 
-  it('deletes a Job with its pods, ignoring a missing one', async () => {
+  it("lists the queue's Jobs that haven't finished", async () => {
+    const { batch, client } = setup()
+    const named = (name: string, conditions: { type: string }[] = []) => ({
+      ...jobWith(conditions),
+      metadata: { name }
+    })
+    batch.listNamespacedJob.mockResolvedValueOnce({
+      items: [
+        named('running'),
+        named('done', [{ type: 'Complete' }]),
+        named('failed', [{ type: 'Failed' }]),
+        named('failing', [{ type: 'FailureTarget' }])
+      ]
+    })
+
+    await expect(client.listActiveJobs('bilbomd')).resolves.toEqual([
+      'running',
+      'failing'
+    ])
+    expect(batch.listNamespacedJob).toHaveBeenCalledWith({
+      namespace: 'bilbomd',
+      labelSelector:
+        'app.kubernetes.io/component=job,bilbomd.lbl.gov/queue=bilbomd'
+    })
+  })
+
+  it('deletes a Job in the foreground, ignoring a missing one', async () => {
     const { batch, client } = setup()
     batch.deleteNamespacedJob.mockResolvedValueOnce({})
     await client.deleteJob('bilbomd-x')
     expect(batch.deleteNamespacedJob).toHaveBeenCalledWith({
       name: 'bilbomd-x',
       namespace: 'bilbomd',
-      propagationPolicy: 'Background'
+      propagationPolicy: 'Foreground'
     })
 
     batch.deleteNamespacedJob.mockRejectedValueOnce(apiError(404))
