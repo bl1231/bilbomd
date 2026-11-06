@@ -19,13 +19,14 @@ const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
 const parsePositiveIntEnv = (name: string, defaultValue: number): number => {
   const raw = process.env[name]
   if (raw === undefined || raw === '') return defaultValue
-  const parsed = Number(raw)
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  // Floor first: a fraction like 0.5 would otherwise pass and become 0
+  const parsed = Math.floor(Number(raw))
+  if (!Number.isFinite(parsed) || parsed < 1) {
     throw new Error(
       `Environment variable ${name}="${raw}" is not a positive number`
     )
   }
-  return Math.floor(parsed)
+  return parsed
 }
 
 export const EXECUTION_BACKENDS = ['local', 'nersc', 'k8s'] as const
@@ -48,6 +49,20 @@ const parseExecutionBackend = (): ExecutionBackend => {
 }
 
 const executionBackend = parseExecutionBackend()
+
+export const FOXS_GPU_MODES = ['off', 'auto'] as const
+export type FoxsGpuMode = (typeof FOXS_GPU_MODES)[number]
+
+const parseFoxsGpuMode = (): FoxsGpuMode => {
+  const raw = process.env.FOXS_GPU?.trim().toLowerCase()
+  if (!raw) return 'off'
+  if ((FOXS_GPU_MODES as readonly string[]).includes(raw)) {
+    return raw as FoxsGpuMode
+  }
+  throw new Error(
+    `Environment variable FOXS_GPU="${process.env.FOXS_GPU}" must be one of: ${FOXS_GPU_MODES.join(', ')}`
+  )
+}
 
 // Only the NERSC backend talks to the Superfacility API and generates Slurm
 // scripts, so its settings aren't required anywhere else.
@@ -103,6 +118,16 @@ export const config = {
   charmmTemplateDir: getEnvVar('CHARMM_TEMPLATES'),
   charmmBin: getEnvVar('CHARMM'),
   foxBin: getEnvVar('FOXS'),
+  // GPU FoXS (#1157): 'auto' runs the FoXS step in batches on the GPU when
+  // one is visible and falls back to IMP's foxs (FOXS) otherwise.
+  foxsGpu: {
+    mode: parseFoxsGpuMode(),
+    bin: getEnvVarWithDefault('FOXS_GPU_BIN', '/usr/local/bin/foxs-gpu'),
+    // PDBs per foxs-gpu call: each call costs ~0.25 s of GPU setup
+    batchSize: parsePositiveIntEnv('FOXS_GPU_BATCH_SIZE', 50),
+    // foxs-gpu calls running at once (they share the GPU; MPS helps)
+    concurrency: parsePositiveIntEnv('FOXS_GPU_CONCURRENCY', 8)
+  },
   multifoxsBin: getEnvVar('MULTIFOXS'),
   openmmPythonBin: getEnvVarWithDefault(
     'OPENMM_PYTHON_BIN',

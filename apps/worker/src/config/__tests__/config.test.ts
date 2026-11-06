@@ -140,6 +140,13 @@ describe('config.ts env parsing', () => {
       process.env.OPENMM_MD_CONCURRENCY = '-1'
       await expect(reimport()).rejects.toThrow(/is not a positive number/)
     })
+
+    it('throws on a fraction that floors to zero', async () => {
+      process.env.FOXS_GPU_BATCH_SIZE = '0.5'
+      await expect(reimport()).rejects.toThrow(
+        /FOXS_GPU_BATCH_SIZE="0.5" is not a positive number/
+      )
+    })
   })
 
   describe('processTimeouts', () => {
@@ -202,6 +209,41 @@ describe('config.ts env parsing', () => {
       await expect(reimport()).rejects.toThrow(
         /EXECUTION_BACKEND="slurm" must be one of: local, nersc, k8s/
       )
+    })
+  })
+
+  describe('foxsGpu', () => {
+    it('is off by default, with batch and concurrency defaults', async () => {
+      delete process.env.FOXS_GPU
+      delete process.env.FOXS_GPU_BIN
+      delete process.env.FOXS_GPU_BATCH_SIZE
+      delete process.env.FOXS_GPU_CONCURRENCY
+      const { config } = await reimport()
+      expect(config.foxsGpu).toEqual({
+        mode: 'off',
+        bin: '/usr/local/bin/foxs-gpu',
+        batchSize: 50,
+        concurrency: 8
+      })
+    })
+
+    it('reads auto mode and overrides, ignoring case', async () => {
+      process.env.FOXS_GPU = ' Auto '
+      process.env.FOXS_GPU_BIN = '/opt/foxs-gpu'
+      process.env.FOXS_GPU_BATCH_SIZE = '25'
+      process.env.FOXS_GPU_CONCURRENCY = '4'
+      const { config } = await reimport()
+      expect(config.foxsGpu).toEqual({
+        mode: 'auto',
+        bin: '/opt/foxs-gpu',
+        batchSize: 25,
+        concurrency: 4
+      })
+    })
+
+    it('rejects an unknown mode', async () => {
+      process.env.FOXS_GPU = 'on'
+      await expect(reimport()).rejects.toThrow(/FOXS_GPU="on" must be one of/)
     })
   })
 
