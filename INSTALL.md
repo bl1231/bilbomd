@@ -179,10 +179,16 @@ ENABLE_HOME_PAGE_ALERT=false
 ENABLE_CHARMM_ENGINE=false
 ```
 
-### NERSC
+### Execution backend
+
+Where the worker runs BilboMD pipelines: `local` runs them in the worker
+container, `nersc` submits them to Perlmutter. Without `EXECUTION_BACKEND`, the
+older `USE_NERSC=true` still selects `nersc`. The NERSC settings (`SFAPI_URL`,
+`SCRIPT_DIR`, `UPLOAD_DIR`, `WORK_DIR`, the Slurm script paths) are only required
+for `nersc`.
 
 ```env
-USE_NERSC=false
+EXECUTION_BACKEND=local
 ```
 
 ---

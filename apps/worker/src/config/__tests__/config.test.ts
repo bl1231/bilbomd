@@ -165,6 +165,90 @@ describe('config.ts env parsing', () => {
     })
   })
 
+  describe('executionBackend', () => {
+    it('defaults to local', async () => {
+      delete process.env.EXECUTION_BACKEND
+      delete process.env.USE_NERSC
+      const { config } = await reimport()
+      expect(config.executionBackend).toBe('local')
+      expect(config.runOnNERSC).toBe(false)
+    })
+
+    it('falls back to USE_NERSC when EXECUTION_BACKEND is unset', async () => {
+      delete process.env.EXECUTION_BACKEND
+      process.env.USE_NERSC = 'true'
+      const { config } = await reimport()
+      expect(config.executionBackend).toBe('nersc')
+      expect(config.runOnNERSC).toBe(true)
+    })
+
+    it('prefers EXECUTION_BACKEND over USE_NERSC', async () => {
+      process.env.EXECUTION_BACKEND = 'local'
+      process.env.USE_NERSC = 'true'
+      const { config } = await reimport()
+      expect(config.executionBackend).toBe('local')
+      expect(config.runOnNERSC).toBe(false)
+    })
+
+    it('ignores case and surrounding whitespace', async () => {
+      process.env.EXECUTION_BACKEND = ' NERSC '
+      const { config } = await reimport()
+      expect(config.executionBackend).toBe('nersc')
+      expect(config.runOnNERSC).toBe(true)
+    })
+
+    it('rejects an unknown backend', async () => {
+      process.env.EXECUTION_BACKEND = 'slurm'
+      await expect(reimport()).rejects.toThrow(
+        /EXECUTION_BACKEND="slurm" must be one of: local, nersc/
+      )
+    })
+  })
+
+  describe('NERSC settings', () => {
+    const NERSC_VARS = [
+      'SFAPI_URL',
+      'SCRIPT_DIR',
+      'UPLOAD_DIR',
+      'WORK_DIR',
+      'PREPARE_CHARMM_SLURM_SCRIPT',
+      'PREPARE_OMM_SLURM_SCRIPT',
+      'CP2CFS_SCRIPT'
+    ]
+
+    it('are optional for the local backend', async () => {
+      process.env.EXECUTION_BACKEND = 'local'
+      for (const name of NERSC_VARS) delete process.env[name]
+      const { config } = await reimport()
+      expect(config.nerscBaseAPI).toBe('')
+      expect(config.nerscWorkDir).toBe('')
+      expect(config.scripts.copyFromScratchToCFSScript).toBe('')
+    })
+
+    it('are required for the NERSC backend', async () => {
+      process.env.EXECUTION_BACKEND = 'nersc'
+      delete process.env.SFAPI_URL
+      delete process.env.CP2CFS_SCRIPT
+      await expect(reimport()).rejects.toThrow(
+        /Missing required environment variables:.*SFAPI_URL.*CP2CFS_SCRIPT/
+      )
+    })
+  })
+
+  describe('moviesEnabled', () => {
+    it('defaults to true', async () => {
+      delete process.env.ENABLE_MOVIES
+      const { config } = await reimport()
+      expect(config.moviesEnabled).toBe(true)
+    })
+
+    it('can be turned off', async () => {
+      process.env.ENABLE_MOVIES = 'false'
+      const { config } = await reimport()
+      expect(config.moviesEnabled).toBe(false)
+    })
+  })
+
   describe('validateRequiredEnvVars', () => {
     it('throws listing the missing required variables', async () => {
       delete process.env.BILBOMD_URL

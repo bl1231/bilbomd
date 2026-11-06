@@ -99,4 +99,34 @@ describe('sendJobCompleteEmail', () => {
       expect.stringContaining('Using email template: jobcomplete')
     )
   })
+
+  it('resolves once the message is sent', async () => {
+    let accept: () => void = () => {}
+    globalThis.__sendMailMock.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (accept = resolve))
+    )
+    let sent = false
+    const sending = sendJobCompleteEmail(
+      'test@example.com',
+      'http://url',
+      'jobid123',
+      'Test Job',
+      false
+    ).then(() => (sent = true))
+    await Promise.resolve()
+    expect(sent).toBe(false)
+
+    accept()
+    await sending
+    expect(sent).toBe(true)
+  })
+
+  it('rejects when the SMTP server refuses the message', async () => {
+    globalThis.__sendMailMock.mockRejectedValueOnce(
+      new Error('Invalid credentials for relay')
+    )
+    await expect(
+      sendJobCompleteEmail('a@b.c', 'http://url', 'jobid', 'T', true)
+    ).rejects.toThrow('Invalid credentials for relay')
+  })
 })

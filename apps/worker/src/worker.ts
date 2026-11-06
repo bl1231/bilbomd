@@ -60,6 +60,7 @@ const multimdWorkerOptions: WorkerOptions = {
 const startWorkers = async () => {
   const systemName = config.runOnNERSC ? 'NERSC' : 'Hyperion/Epyc'
   logger.info(`Attempting to start workers on ${systemName}...`)
+  logger.info(`Execution backend: ${config.executionBackend}`)
 
   // Create workers only if they are not already initialized
   if (!bilboMdWorker || !movieWorker || !multimdWorker) {

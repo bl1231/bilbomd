@@ -258,6 +258,42 @@ describe('job-utils', () => {
       )
     })
 
+    it('marks the email step Error when the send is rejected', async () => {
+      const mockUser = {
+        _id: new Types.ObjectId(),
+        email: 'user@example.com',
+        username: 'testuser'
+      } as IUser
+      const mockMQJob = {
+        log: vi.fn().mockResolvedValue(undefined)
+      } as unknown as BullMQJob
+      const mockDBJob = {
+        _id: new Types.ObjectId(),
+        uuid: 'test-uuid',
+        title: 'Test Job',
+        user: mockUser,
+        status: 'Running',
+        save: vi.fn().mockResolvedValue(undefined)
+      } as unknown as IJob
+
+      vi.mocked(config).sendEmailNotifications = true
+      vi.mocked(sendJobCompleteEmail).mockRejectedValueOnce(
+        new Error('Invalid credentials for relay')
+      )
+
+      await cleanupJob(mockMQJob, mockDBJob)
+
+      expect(updateStepStatus).toHaveBeenCalledWith(mockDBJob, 'email', {
+        status: 'Error',
+        message: 'Failed to send email: Invalid credentials for relay'
+      })
+      expect(updateStepStatus).not.toHaveBeenCalledWith(
+        mockDBJob,
+        'email',
+        expect.objectContaining({ status: 'Success' })
+      )
+    })
+
     it('should skip email if notifications are disabled', async () => {
       const mockUser: IUser = {
         _id: new Types.ObjectId(),

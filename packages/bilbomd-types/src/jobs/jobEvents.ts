@@ -75,18 +75,18 @@ export const createJobEventNotifier = ({
     { timer: unknown; pending: JobEvent | null }
   >()
 
-  const send = (event: JobEvent) => {
-    publish(JOB_EVENTS_CHANNEL, JSON.stringify(event)).catch((error) =>
-      onError?.(error, event)
+  const send = (event: JobEvent): Promise<void> =>
+    publish(JOB_EVENTS_CHANNEL, JSON.stringify(event)).then(
+      () => undefined,
+      (error) => onError?.(error, event)
     )
-  }
 
   const openWindow = (jobId: string) => {
     const timer = setTimeout(() => {
       const pending = windows.get(jobId)?.pending
       windows.delete(jobId)
       if (pending) {
-        send(pending)
+        void send(pending)
         openWindow(jobId)
       }
     }, throttleMs)
@@ -110,8 +110,20 @@ export const createJobEventNotifier = ({
         window.pending = event
         return
       }
-      send(event)
+      void send(event)
       openWindow(event.jobId)
+    },
+    // Publishes the events still waiting for their window to end, then
+    // drops the timers. For a process about to exit, which would otherwise
+    // lose a job's last change (e.g. its final status).
+    flush: async (): Promise<void> => {
+      const pending: JobEvent[] = []
+      for (const window of windows.values()) {
+        clearTimeout(window.timer)
+        if (window.pending) pending.push(window.pending)
+      }
+      windows.clear()
+      await Promise.all(pending.map(send))
     },
     // Drops pending events and timers
     close: (): void => {

@@ -29,6 +29,7 @@ import { runFoXS } from '../functions/foxs-functions.js'
 import { runSingleFoXS } from '../functions/foxs-analysis.js'
 import { prepareBilboMDResults } from '../functions/prepare-results.js'
 import { enqueueMakeMovie } from '../functions/movie-enqueuer.js'
+import { config } from '../../config/config.js'
 import type { PipelineStep } from './runPipeline.js'
 
 // Reusable steps and step sequences shared by the BilboMD pipelines. Each is
@@ -194,6 +195,7 @@ export const movieStep = <J extends AnyBilboMDJob>(
 ): PipelineStep<J> => ({
   label: 'movies',
   detached: true,
+  when: () => config.moviesEnabled,
   run: ({ MQjob, job }) => {
     void enqueueMakeMovie(MQjob, job)
   },
