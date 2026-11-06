@@ -45,7 +45,7 @@ redis:
   name: redis
   image:
     repository: redis
-    tag: 8.10.2
+    tag: 8.10.3
     pullPolicy: Always
     secret: registry-nersc
 
