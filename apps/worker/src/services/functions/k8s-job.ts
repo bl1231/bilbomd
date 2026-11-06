@@ -18,8 +18,17 @@ import { config } from '../../config/config.js'
 export type K8sQueue = 'bilbomd' | 'multimd'
 export type K8sSettings = typeof config.k8s
 
-// Name of the only container in a job pod
+// Name of the container that runs the pipeline in a job pod
 export const JOB_CONTAINER = 'bilbomd'
+
+// AlphaFold/OpenFold jobs also get their structure-prediction service as a
+// native sidecar (an init container with restartPolicy: Always) sharing the
+// pod's GPU. It starts before the pipeline and stops when the pipeline exits.
+export const FOLD_SIDECAR = 'fold-service'
+export type FoldService = 'colabfold' | 'of3'
+const FOLD_PORT = 8000
+// Where the OpenFold3 sidecar finds its weights (OF3_DATA_DIR)
+const OF3_DATA_MOUNT = '/of3_data'
 
 export const LABELS = {
   uuid: 'bilbomd.lbl.gov/uuid',
@@ -47,13 +56,97 @@ export interface JobManifestInput {
   uuid: string
   attempt: number
   needsGpu: boolean
+  // Structure-prediction service the pipeline calls (AlphaFold/OpenFold jobs)
+  foldService?: FoldService
 }
 
+// The pipeline's environment variable for each service's URL
+const FOLD_SERVICE_URL_ENV: Record<FoldService, string> = {
+  colabfold: 'COLABFOLD_SERVICE_URL',
+  of3: 'OF3_SERVICE_URL'
+}
+
+const foldImage = (service: FoldService, settings: K8sSettings) =>
+  service === 'colabfold'
+    ? settings.foldSidecar.colabfoldImage
+    : settings.foldSidecar.of3Image
+
+const containerSecurityContext = {
+  allowPrivilegeEscalation: false,
+  capabilities: { drop: ['ALL'] }
+}
+
+const buildFoldSidecar = (
+  service: FoldService,
+  settings: K8sSettings,
+  dataVol: string
+) => ({
+  name: FOLD_SIDECAR,
+  image: foldImage(service, settings),
+  imagePullPolicy: settings.imagePullPolicy,
+  restartPolicy: 'Always',
+  // The images bind 0.0.0.0, but Berkelium pods are IPv6-only: bind '::' so
+  // the kubelet's probe (pod IPv6) and the pipeline's localhost (::1) reach
+  // it. 127.0.0.1 is refused there, so the pipeline must use localhost.
+  args: ['uvicorn', 'main:app', '--host', '::', '--port', String(FOLD_PORT)],
+  env: [
+    // The service reads job inputs from and writes outputs to <UPLOAD_DIR>/<uuid>
+    { name: 'UPLOAD_DIR', value: dataVol },
+    // Non-root: JAX/PyTorch caches go under $HOME
+    { name: 'HOME', value: '/tmp' },
+    ...(service === 'of3'
+      ? [{ name: 'OF3_DATA_DIR', value: OF3_DATA_MOUNT }]
+      : [])
+  ],
+  ports: [{ name: 'http', containerPort: FOLD_PORT }],
+  // The pipeline container starts once this passes
+  startupProbe: {
+    httpGet: { path: '/health', port: FOLD_PORT },
+    periodSeconds: 5,
+    failureThreshold: 120
+  },
+  resources: {
+    requests: { ...settings.foldSidecar.resources.requests },
+    limits: { ...settings.foldSidecar.resources.limits },
+    claims: [{ name: 'gpu' }]
+  },
+  securityContext: containerSecurityContext,
+  volumeMounts: [
+    { name: 'data', mountPath: dataVol, subPath: settings.dataSubPath },
+    { name: 'tmp', mountPath: '/tmp' },
+    { name: 'shm', mountPath: '/dev/shm' },
+    ...(service === 'of3'
+      ? [
+          {
+            name: 'data',
+            mountPath: OF3_DATA_MOUNT,
+            subPath: settings.foldSidecar.of3DataSubPath,
+            readOnly: true
+          }
+        ]
+      : [])
+  ]
+})
+
 export const buildJobManifest = (
-  { queue, bullmqJobId, uuid, attempt, needsGpu }: JobManifestInput,
+  {
+    queue,
+    bullmqJobId,
+    uuid,
+    attempt,
+    needsGpu,
+    foldService
+  }: JobManifestInput,
   settings: K8sSettings = config.k8s,
   dataVol: string = config.uploadDir
 ): V1Job => {
+  // The sidecar shares the pod's GPU claim, so it needs one; it's left out
+  // when no image is configured (the pipeline then reports the service as
+  // unreachable)
+  const sidecar =
+    foldService && needsGpu && foldImage(foldService, settings)
+      ? foldService
+      : undefined
   const labels = {
     'app.kubernetes.io/part-of': 'bilbomd',
     'app.kubernetes.io/component': 'job',
@@ -111,6 +204,9 @@ export const buildJobManifest = (
                 ]
               }
             : {}),
+          ...(sidecar
+            ? { initContainers: [buildFoldSidecar(sidecar, settings, dataVol)] }
+            : {}),
           containers: [
             {
               name: JOB_CONTAINER,
@@ -128,7 +224,15 @@ export const buildJobManifest = (
                 { name: 'ENABLE_MOVIES', value: 'false' },
                 // Many pods would fight over one rotating log file on the
                 // shared volume; the console log is in `kubectl logs`
-                { name: 'BILBOMD_LOGS', value: '/tmp/bilbomd-logs' }
+                { name: 'BILBOMD_LOGS', value: '/tmp/bilbomd-logs' },
+                ...(sidecar
+                  ? [
+                      {
+                        name: FOLD_SERVICE_URL_ENV[sidecar],
+                        value: `http://localhost:${FOLD_PORT}`
+                      }
+                    ]
+                  : [])
               ],
               resources: {
                 requests: { ...settings.resources.requests },
@@ -137,10 +241,7 @@ export const buildJobManifest = (
               },
               // run-job writes why it failed here; fall back to the log tail
               terminationMessagePolicy: 'FallbackToLogsOnError',
-              securityContext: {
-                allowPrivilegeEscalation: false,
-                capabilities: { drop: ['ALL'] }
-              },
+              securityContext: containerSecurityContext,
               volumeMounts: [
                 {
                   name: 'data',
@@ -157,7 +258,18 @@ export const buildJobManifest = (
               persistentVolumeClaim: { claimName: settings.dataPvc }
             },
             // Node-local scratch (Berkelium's rule for scratch space)
-            { name: 'tmp', emptyDir: {} }
+            { name: 'tmp', emptyDir: {} },
+            ...(sidecar
+              ? [
+                  {
+                    name: 'shm',
+                    emptyDir: {
+                      medium: 'Memory',
+                      sizeLimit: settings.foldSidecar.shmSize
+                    }
+                  }
+                ]
+              : [])
           ]
         }
       }
@@ -209,6 +321,19 @@ const failureReason = (job: V1Job, pod: V1Pod | undefined): string => {
     const limit = job.spec?.template.spec?.containers[0]?.resources?.limits
     return `ran out of memory (limit ${limit?.memory ?? 'unknown'})`
   }
+  // A sidecar killed for memory restarts; the pipeline then fails its
+  // prediction step with a less helpful error
+  const sidecar = pod?.status?.initContainerStatuses?.find(
+    (c) => c.name === FOLD_SIDECAR
+  )
+  const sidecarTerminated =
+    sidecar?.state?.terminated ?? sidecar?.lastState?.terminated
+  if (sidecarTerminated?.reason === 'OOMKilled') {
+    const limit = job.spec?.template.spec?.initContainers?.find(
+      (c) => c.name === FOLD_SIDECAR
+    )?.resources?.limits
+    return `the structure-prediction service ran out of memory (limit ${limit?.memory ?? 'unknown'})`
+  }
   if (failed?.reason === 'DeadlineExceeded') {
     const limit = job.spec?.activeDeadlineSeconds
     return limit
@@ -259,9 +384,24 @@ export const classifyJob = (
   const podCreated = pod.metadata?.creationTimestamp
     ? new Date(pod.metadata.creationTimestamp)
     : undefined
-  const waiting = pod.status?.containerStatuses?.find(
-    (c) => c.name === JOB_CONTAINER
-  )?.state?.waiting
+  // The sidecar's image (tens of GB) can fail to pull just like the job's
+  const waiting =
+    [
+      ...(pod.status?.initContainerStatuses ?? []).filter(
+        (c) => c.name === FOLD_SIDECAR
+      ),
+      ...(pod.status?.containerStatuses ?? []).filter(
+        (c) => c.name === JOB_CONTAINER
+      )
+    ]
+      .map((c) => c.state?.waiting)
+      .find(
+        (w) =>
+          w?.reason &&
+          (CONFIG_ERRORS.has(w.reason) || IMAGE_PULL_ERRORS.has(w.reason))
+      ) ??
+    pod.status?.containerStatuses?.find((c) => c.name === JOB_CONTAINER)?.state
+      ?.waiting
   if (waiting?.reason && CONFIG_ERRORS.has(waiting.reason)) {
     return {
       phase: 'failed',

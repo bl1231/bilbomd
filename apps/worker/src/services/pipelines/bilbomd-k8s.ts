@@ -15,6 +15,7 @@ import {
   isFinished,
   jobName,
   LABELS,
+  type FoldService,
   type K8sJobClient,
   type K8sQueue,
   type K8sSettings
@@ -87,6 +88,12 @@ export const needsGpu = (type: string | undefined, mdEngine?: string) =>
   type === 'alphafold' ||
   type === 'openfold' ||
   (type !== 'crd_psf' && mdEngine === 'OpenMM')
+
+// The structure-prediction service each job type calls, run as a sidecar
+export const foldServiceFor = (
+  type: string | undefined
+): FoldService | undefined =>
+  type === 'alphafold' ? 'colabfold' : type === 'openfold' ? 'of3' : undefined
 
 // Jobs of each queue that may run at once
 const jobCap = (queue: K8sQueue, settings: K8sSettings) =>
@@ -422,7 +429,8 @@ export const runJobOnK8s = async (
       bullmqJobId: MQjob.id,
       uuid: dbJob.uuid,
       attempt: MQjob.attemptsMade,
-      needsGpu: queue === 'bilbomd' && needsGpu(type, dbJob.md_engine)
+      needsGpu: queue === 'bilbomd' && needsGpu(type, dbJob.md_engine),
+      foldService: queue === 'bilbomd' ? foldServiceFor(type) : undefined
     },
     deps.settings
   )

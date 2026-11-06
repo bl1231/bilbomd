@@ -1,0 +1,64 @@
+{{- if and .Values.of3Weights.enabled (eq .Values.features.ENABLE_BILBOMD_OPENFOLD "true") }}
+# Downloads the OpenFold3 weights to <data volume>/{{ .Values.of3Weights.subPath }}/ once.
+# OpenFold job pods mount that directory read-only in their of3 sidecar.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: of3-weights
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "bilbomd.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- include "bilbomd.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.appUser.uid }}
+        runAsGroup: {{ .Values.appUser.gid }}
+        fsGroup: {{ .Values.appUser.gid }}
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: download
+          image: {{ include "bilbomd.image" .Values.images.of3Service | quote }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          command: ["bash", "-c"]
+          args:
+            - >-
+              set -euo pipefail;
+              dir=/data/{{ .Values.of3Weights.subPath }};
+              file="$dir/{{ .Values.of3Weights.file }}";
+              mkdir -p "$dir";
+              if [ -f "$file" ] && echo "{{ .Values.of3Weights.sha256 }}  $file" | sha256sum -c --status; then
+                echo "OpenFold3 weights already present"; exit 0;
+              fi;
+              aws s3 cp --no-sign-request --no-progress "{{ .Values.of3Weights.source }}" "$file.part";
+              echo "{{ .Values.of3Weights.sha256 }}  $file.part" | sha256sum -c;
+              mv "$file.part" "$file";
+              echo "Downloaded OpenFold3 weights to $file"
+          env:
+            # Non-root: the AWS CLI keeps its config/cache under $HOME
+            - { name: HOME, value: /tmp }
+          resources:
+            {{- toYaml .Values.resources.of3Weights | nindent 12 }}
+          securityContext:
+            {{- include "bilbomd.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: bilbomd-data
+        - name: tmp
+          emptyDir: {}
+{{- end }}

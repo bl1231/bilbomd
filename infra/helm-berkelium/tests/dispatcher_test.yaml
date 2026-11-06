@@ -3,6 +3,7 @@ templates:
   - dispatcher.yaml
   - gpu-claim-template.yaml
   - configmap.yaml
+  - of3-weights-job.yaml
 tests:
   - it: the dispatcher sets CPU and memory requests and limits (Berkelium policy)
     template: dispatcher.yaml
@@ -125,3 +126,62 @@ tests:
         template: dispatcher.yaml
       - hasDocuments: { count: 0 }
         template: gpu-claim-template.yaml
+  - it: passes the structure-prediction sidecar images and resources to the dispatcher
+    template: dispatcher.yaml
+    asserts:
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content:
+            name: K8S_COLABFOLD_IMAGE
+            value: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-colabfold-service:0.2.0
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content:
+            name: K8S_OF3_IMAGE
+            value: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-of3-service:0.1.0
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_OF3_DATA_SUBPATH, value: of3-data }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_FOLD_MEMORY_LIMIT, value: 64Gi }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_FOLD_SHM_SIZE, value: 16Gi }
+  - it: leaves out the sidecar images when AlphaFold and OpenFold are disabled
+    template: dispatcher.yaml
+    set:
+      features.ENABLE_BILBOMD_ALPHAFOLD: 'false'
+      features.ENABLE_BILBOMD_OPENFOLD: 'false'
+    asserts:
+      - notContains:
+          path: 'spec.template.spec.containers[0].env'
+          content:
+            name: K8S_COLABFOLD_IMAGE
+            value: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-colabfold-service:0.2.0
+      - notContains:
+          path: 'spec.template.spec.containers[0].env'
+          content:
+            name: K8S_OF3_IMAGE
+            value: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-of3-service:0.1.0
+  - it: downloads the OpenFold3 weights in a post-install/upgrade hook, verifying the checksum
+    template: of3-weights-job.yaml
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: post-install,post-upgrade
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-of3-service:0.1.0
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: sha256sum -c
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: { name: data, mountPath: /data }
+  - it: skips the weights Job when OpenFold is disabled
+    template: of3-weights-job.yaml
+    set:
+      features.ENABLE_BILBOMD_OPENFOLD: 'false'
+    asserts:
+      - hasDocuments: { count: 0 }

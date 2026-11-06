@@ -262,6 +262,36 @@ describe('config.ts env parsing', () => {
     })
   })
 
+  describe('foldSidecar', () => {
+    it('has no images by default, so jobs get no sidecar', async () => {
+      delete process.env.K8S_COLABFOLD_IMAGE
+      delete process.env.K8S_OF3_IMAGE
+      const { config } = await reimport()
+      expect(config.k8s.foldSidecar).toEqual({
+        colabfoldImage: '',
+        of3Image: '',
+        of3DataSubPath: 'of3-data',
+        shmSize: '16Gi',
+        resources: {
+          requests: { cpu: '2', memory: '16Gi' },
+          limits: { cpu: '8', memory: '64Gi' }
+        }
+      })
+    })
+
+    it('reads images and resources from the environment', async () => {
+      process.env.K8S_COLABFOLD_IMAGE = 'cf:1'
+      process.env.K8S_OF3_IMAGE = 'of3:1'
+      process.env.K8S_FOLD_MEMORY_LIMIT = '96Gi'
+      const { config } = await reimport()
+      expect(config.k8s.foldSidecar).toMatchObject({
+        colabfoldImage: 'cf:1',
+        of3Image: 'of3:1',
+        resources: { limits: { memory: '96Gi' } }
+      })
+    })
+  })
+
   describe('NERSC settings', () => {
     const NERSC_VARS = [
       'SFAPI_URL',

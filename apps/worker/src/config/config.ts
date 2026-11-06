@@ -251,7 +251,28 @@ export const config = {
     imagePullGraceMs: parsePositiveIntEnv(
       'K8S_IMAGE_PULL_GRACE_MS',
       5 * 60 * 1000
-    )
+    ),
+    // AlphaFold and OpenFold jobs call a structure-prediction service. On k8s
+    // it runs as a sidecar in the job's own pod, sharing its GPU, so no GPU
+    // sits idle between jobs. Without an image the sidecar is left out.
+    foldSidecar: {
+      colabfoldImage: process.env.K8S_COLABFOLD_IMAGE ?? '',
+      of3Image: process.env.K8S_OF3_IMAGE ?? '',
+      // OpenFold3 weights (of3-p2-155k.pt) on the data PVC, mounted read-only
+      of3DataSubPath: getEnvVarWithDefault('K8S_OF3_DATA_SUBPATH', 'of3-data'),
+      // /dev/shm for JAX/PyTorch (16 GB on epyc's compose services)
+      shmSize: getEnvVarWithDefault('K8S_FOLD_SHM_SIZE', '16Gi'),
+      resources: {
+        requests: {
+          cpu: getEnvVarWithDefault('K8S_FOLD_CPU_REQUEST', '2'),
+          memory: getEnvVarWithDefault('K8S_FOLD_MEMORY_REQUEST', '16Gi')
+        },
+        limits: {
+          cpu: getEnvVarWithDefault('K8S_FOLD_CPU_LIMIT', '8'),
+          memory: getEnvVarWithDefault('K8S_FOLD_MEMORY_LIMIT', '64Gi')
+        }
+      }
+    }
   },
   bilbomd: {
     SANSEnabled: toBoolean(process.env.ENABLE_BILBOMD_SANS),

@@ -37,6 +37,14 @@ images:
   redis:
     repository: harbor.bk.lbl.gov/docker.io/library/redis
     tag: 8.10.2
+  # Structure-prediction services, run as a sidecar in AlphaFold/OpenFold job
+  # pods. Versioned on their own (apps/*-service/version), not by changesets.
+  colabfoldService:
+    repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-colabfold-service
+    tag: 0.2.0
+  of3Service:
+    repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-of3-service
+    tag: 0.1.0
   pullPolicy: IfNotPresent
   # Only needed for images in the private harbor.bk.lbl.gov/bilbomd project.
   pullSecrets: []
@@ -80,6 +88,9 @@ resources:
   mongoBackup:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { cpu: '1', memory: 1Gi }
+  of3Weights:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits: { cpu: '2', memory: 4Gi }
   dispatcher:
     requests: { cpu: 100m, memory: 512Mi }
     limits: { cpu: '1', memory: 1Gi }
@@ -107,6 +118,27 @@ dispatcher:
     claimTemplateName: bilbomd-gpu
     deviceClassName: nvidia-a40
 
+# AlphaFold (ColabFold) and OpenFold3 jobs: the dispatcher adds the matching
+# service to the job's pod as a sidecar that shares its GPU, so no GPU is held
+# between jobs. The ColabFold weights are inside its image; the OpenFold3
+# weights live on the data volume (of3Weights below).
+foldSidecar:
+  # /dev/shm for JAX/PyTorch (epyc's compose services use 16 GB)
+  shmSize: 16Gi
+  resources:
+    requests: { cpu: '2', memory: 16Gi }
+    limits: { cpu: '8', memory: 64Gi }
+
+# One-time download of the OpenFold3 weights into of3-data/ on the data
+# volume. Runs after each install/upgrade and does nothing once the file is
+# there with the expected size and checksum.
+of3Weights:
+  enabled: true
+  subPath: of3-data
+  source: s3://openfold/staging/of3-p2-155k.pt
+  file: of3-p2-155k.pt
+  sha256: 3ae79a701f55dbc184002d010c92d347a35faabb981314c2fd1325211af40b77
+
 mongoBackup:
   enabled: true
   schedule: '0 2 * * *'
@@ -120,8 +152,8 @@ env:
 features:
   ENABLE_BILBOMD_SANS: 'true'
   ENABLE_BILBOMD_MULTI: 'true'
-  ENABLE_BILBOMD_ALPHAFOLD: 'false'
-  ENABLE_BILBOMD_OPENFOLD: 'false'
+  ENABLE_BILBOMD_ALPHAFOLD: 'true'
+  ENABLE_BILBOMD_OPENFOLD: 'true'
   ENABLE_BILBOMD_SCOPER: 'false'
   ENABLE_CHARMM_ENGINE: 'false'
   ENABLE_HOME_PAGE_ALERT: 'false'

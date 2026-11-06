@@ -21,6 +21,7 @@ The `dispatcher` is the worker running with `EXECUTION_BACKEND=k8s`. It takes jo
 
 - **Job pods** run `node dist/run-job.js` in the same worker image and tag as the dispatcher. They run the normal pipeline against MongoDB and `bilbomd-data` and record their own progress and results.
   - OpenMM jobs (and AlphaFold/OpenFold) get one GPU through the `bilbomd-gpu` ResourceClaimTemplate. CHARMM and Multi jobs run on CPUs only.
+  - AlphaFold and OpenFold jobs also run their structure-prediction service (`bilbomd-colabfold-service` / `bilbomd-of3-service`, see `images` and `foldSidecar`) as a native sidecar in the job pod, sharing its GPU. The ColabFold weights are in its image. The OpenFold3 weights are downloaded once to `of3-data/` on the data volume by the `of3-weights` post-install/upgrade hook Job, and checked against `of3Weights.sha256`.
   - Pod size is `resources.job`. Every job pod gets the same size during the pilot.
   - Movies are off (`ENABLE_MOVIES=false`).
 - **Concurrency:** at most `dispatcher.maxJobs` BilboMD jobs run at once (2 by default; Science IT asked for 2–4 GPUs to start). Multi jobs run one at a time on top of that. The dispatcher counts the unfinished Jobs in the namespace before creating one, so Jobs left running across a dispatcher restart count too.
