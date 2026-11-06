@@ -25,13 +25,14 @@
   },
   "homepage": "https://github.com/bl1231/bilbomd/tree/main/packages/mongodb-schema#readme",
   "sideEffects": false,
-  "dependencies": {
-    "mongoose": "^9.10.2"
-  },
   "devDependencies": {
     "@types/node": "^26.6.3",
+    "mongoose": "^9.10.2",
     "typescript": "^6.0.3",
     "vitest": "^5.1.0"
+  },
+  "peerDependencies": {
+    "mongoose": "^9.10.2"
   },
   "exports": {
     ".": {
