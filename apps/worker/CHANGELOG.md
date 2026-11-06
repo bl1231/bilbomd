@@ -1,5 +1,16 @@
 # @bilbomd/worker
 
+## 2.23.0
+
+### Minor Changes
+
+- ce5f2ca: Optional GPU FoXS (#1157). With `FOXS_GPU=auto`, the FoXS step runs dina-lab3D's standalone FoXS (`foxs-gpu`, now in worker base image 0.0.9) on the GPU, 50 PDBs per call and 8 calls at once (`FOXS_GPU_BATCH_SIZE`, `FOXS_GPU_CONCURRENCY`). The #1157 benchmark measured it 8–10× faster than IMP FoXS with the same profiles and ensembles. When no GPU is visible, all files run on IMP FoXS. A batch that fails, or that skips some profiles, is rerun on IMP FoXS for just those files. The default is `off`, so nothing changes until a deployment opts in.
+- 605b43d: AlphaFold and OpenFold jobs on the Kubernetes backend (Berkelium) now run their structure-prediction service as a sidecar in the job's own pod. ColabFold or OpenFold3 shares the pod's GPU, so no GPU sits idle between jobs. Configure the images with `K8S_COLABFOLD_IMAGE` and `K8S_OF3_IMAGE`; without them a job gets no sidecar. Sidecar resources, `/dev/shm` size and the subPath that holds the OpenFold3 weights are configurable too. If the sidecar's image fails to pull, or the sidecar runs out of memory, the job now reports that.
+
+### Patch Changes
+
+- 436a53a: FoXS now runs one process per available CPU instead of 80% of them. FoXS is single-threaded and nothing else runs during the step, so the step is about 1.4× faster (#1157 benchmark).
+
 ## 2.22.1
 
 ### Patch Changes
