@@ -10,7 +10,10 @@ const mocks = vi.hoisted(() => ({
   connectDB: vi.fn(async () => {}),
   disconnect: vi.fn(async () => {}),
   redisQuit: vi.fn(async () => 'OK'),
-  writeFile: vi.fn(async () => {})
+  writeFile: vi.fn(async () => {}),
+  configureJobEvents: vi.fn(),
+  flushJobEvents: vi.fn(async () => {}),
+  calls: [] as string[]
 }))
 
 vi.mock('../config/config.js', () => ({ config: mocks.config }))
@@ -18,6 +21,10 @@ vi.mock('../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
 vi.mock('../helpers/db.js', () => ({ connectDB: mocks.connectDB }))
+vi.mock('../helpers/jobEvents.js', () => ({
+  configureJobEvents: mocks.configureJobEvents,
+  flushJobEvents: mocks.flushJobEvents
+}))
 vi.mock('../queues/redisConn.js', () => ({
   redis: { quit: mocks.redisQuit }
 }))
@@ -202,13 +209,58 @@ describe('writeTerminationMessage', () => {
 })
 
 describe('main', () => {
+  it('publishes job events while the job runs and flushes them before exiting', async () => {
+    mocks.fromId.mockResolvedValueOnce(activeJob())
+    const order: string[] = []
+    mocks.configureJobEvents.mockImplementation((publisher: unknown) =>
+      order.push(publisher ? 'configure' : 'unconfigure')
+    )
+    mocks.bilboMdHandler.mockImplementationOnce(async () => {
+      order.push('run')
+    })
+    mocks.flushJobEvents.mockImplementationOnce(async () => {
+      order.push('flush')
+    })
+    mocks.redisQuit.mockImplementationOnce(async () => {
+      order.push('quit')
+      return 'OK'
+    })
+
+    await main(['bilbomd', '42'])
+
+    expect(mocks.configureJobEvents).toHaveBeenNthCalledWith(1, {
+      quit: mocks.redisQuit
+    })
+    expect(order).toEqual(['configure', 'run', 'flush', 'unconfigure', 'quit'])
+  })
+
+  it('exits as cancelled on SIGTERM while MongoDB is unreachable', async () => {
+    mocks.connectDB.mockImplementationOnce(
+      (signal: AbortSignal) =>
+        new Promise<void>((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(signal.reason))
+          process.emit('SIGTERM')
+        })
+    )
+
+    const code = await main(['bilbomd', '42'])
+
+    expect(code).toBe(EXIT_CODES.CANCELLED)
+    expect(mocks.fromId).not.toHaveBeenCalled()
+    expect(mocks.writeFile).toHaveBeenCalledWith(
+      expect.any(String),
+      'Job cancelled before it started: SIGTERM'
+    )
+    expect(mocks.redisQuit).toHaveBeenCalled()
+  })
+
   it('connects, runs the job and closes its connections', async () => {
     mocks.fromId.mockResolvedValueOnce(activeJob())
 
     const code = await main(['bilbomd', '42'])
 
     expect(code).toBe(EXIT_CODES.OK)
-    expect(mocks.connectDB).toHaveBeenCalled()
+    expect(mocks.connectDB).toHaveBeenCalledWith(expect.any(AbortSignal))
     expect(mocks.bilboMdHandler).toHaveBeenCalled()
     expect(mocks.disconnect).toHaveBeenCalled()
     expect(mocks.redisQuit).toHaveBeenCalled()

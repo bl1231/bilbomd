@@ -6,6 +6,7 @@ import { config } from './config/config.js'
 import { connectDB } from './helpers/db.js'
 import { getErrorMessage } from './helpers/errors.js'
 import { JobCancelledError } from './helpers/jobCancellation.js'
+import { configureJobEvents, flushJobEvents } from './helpers/jobEvents.js'
 import { logger } from './helpers/loggers.js'
 import { redis } from './queues/redisConn.js'
 import { WorkerJob } from './types/jobtypes.js'
@@ -143,6 +144,15 @@ export const runJob = async (
 }
 
 const closeConnections = async (): Promise<void> => {
+  // Publish the job's last changes before Redis goes away
+  try {
+    await flushJobEvents()
+  } catch (error) {
+    logger.warn(
+      `run-job: publishing job events failed: ${getErrorMessage(error)}`
+    )
+  }
+  configureJobEvents(null)
   try {
     await mongoose.disconnect()
   } catch (error) {
@@ -176,10 +186,20 @@ export const main = async (argv: string[]): Promise<ExitCode> => {
   process.once('SIGTERM', onSigterm)
   process.once('SIGINT', onSigint)
 
+  // Tell the backend (and the UI) when the job changes, as worker.ts does
+  configureJobEvents(redis)
+
   try {
-    await connectDB()
+    await connectDB(controller.signal)
     return await runJob(args, controller.signal)
   } catch (error) {
+    if (controller.signal.aborted) {
+      // Cancelled before the job started (e.g. while MongoDB was unreachable)
+      const message = `Job cancelled before it started: ${String(controller.signal.reason)}`
+      logger.warn(`run-job: ${message}`)
+      await writeTerminationMessage(message)
+      return EXIT_CODES.CANCELLED
+    }
     const message = `run-job: ${getErrorMessage(error)}`
     logger.error(message)
     await writeTerminationMessage(message)

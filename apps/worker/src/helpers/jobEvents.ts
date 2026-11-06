@@ -45,6 +45,13 @@ export const configureJobEvents = (
     : null
 }
 
+// Publishes events still held back by the throttle. A process that exits
+// right after a job finishes (run-job) calls this so the UI hears about the
+// job's final state.
+export const flushJobEvents = async (): Promise<void> => {
+  await notifier?.flush()
+}
+
 export const notifyJobChanged = (
   job: NotifiableJob,
   kind: JobEventKind = 'updated'
