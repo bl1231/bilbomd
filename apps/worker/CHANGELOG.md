@@ -1,5 +1,12 @@
 # @bilbomd/worker
 
+## 2.23.1
+
+### Patch Changes
+
+- 3e98614: NERSC OpenMM jobs now run on the `bilbomd-openmm-worker:0.0.14` image on Perlmutter: OpenMM 8.6.1 (was 8.5.1), still compiled from source against CUDA 12.9, with the image's conda CUDA libraries pinned to 13.2 to match Perlmutter's driver. The image is built and migrated on Perlmutter; the build steps are now in `apps/worker/README.md`.
+- bb17d69: Fix OpenMM running on the CPU instead of the GPU in worker 2.23.0. Base image 0.0.9 had picked up CUDA 13.5 libraries for OpenMM, newer than the GPU drivers on epyc (CUDA 13.3) and Berkelium (13.2) support, so OpenMM could not create a CUDA context: minimize and heat silently ran on the CPU, and MD logged `BILBOMD_CPU_FALLBACK`. The worker now builds on base image 0.0.10 (#1222), which pins OpenMM's CUDA libraries to 13.2 and updates OpenMM to 8.6.1.
+
 ## 2.23.0
 
 ### Minor Changes

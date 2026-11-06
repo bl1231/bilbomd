@@ -30,7 +30,7 @@ images:
   # The dispatcher and the per-job pods. Needs a release with dist/run-job.js.
   worker:
     repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-worker
-    tag: 2.23.0
+    tag: 2.23.1
   mongo:
     repository: harbor.bk.lbl.gov/docker.io/library/mongo
     tag: 8.3.13
