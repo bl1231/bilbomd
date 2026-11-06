@@ -1,7 +1,7 @@
 ingress:
   host: 'ingress.bilbomd.development.svc.spin.nersc.org'
   fqdn: 'bilbomd-nersc-dev.bl1231.als.lbl.gov'
-  # Let's Encrypt cert auto-renewed by the tls-acme CronJob (see infra/tls-acme/).
+  # Let's Encrypt cert auto-renewed by the tls-acme CronJob (see infra/helm-nersc/tls-acme/).
   # Only flip to 'tls-cert' AFTER the initial cert job has populated the secret,
   # otherwise the Ingress briefly serves the self-signed placeholder.
   secret: 'tls-cert'

@@ -135,7 +135,7 @@ The secrets needed include:
 - `ui-tls` - **Deprecated.** Manual InCommon SSL/TLS certificate for the web
   frontend ui. TLS is now handled automatically by the `tls-acme` CronJob, which
   renews a Let's Encrypt cert into the `tls-cert` secret every two months — see
-  [`infra/tls-acme/README.md`](./tls-acme/README.md). The `ui-tls`/`ui-tls-dev`
+  [`infra/helm-nersc/tls-acme/README.md`](./tls-acme/README.md). The `ui-tls`/`ui-tls-dev`
   secrets are retained only for rollback and can be removed once Let's Encrypt is
   confirmed stable in production.
 - `ghcr` - A GitHub Personal Access Token needed to pull docker images from `ghcr.io`.
@@ -148,20 +148,20 @@ If you have local copies of the secrets as yaml files they can be "applied" to t
 kubectl apply -f helm-secrets/bilbomd-secrets.yaml
 kubectl apply -f helm-secrets/sfapi-priv-key.yaml
 kubectl apply -f helm-secrets/mongo-secrets.yaml
-kubectl apply -f helm-secrets/ui-tls-secrets.yaml   # legacy — superseded by tls-acme (see infra/tls-acme/)
+kubectl apply -f helm-secrets/ui-tls-secrets.yaml   # legacy — superseded by tls-acme (see infra/helm-nersc/tls-acme/)
 kubectl apply -f helm-secrets/ghcr.yaml
 ```
 
 ### Development
 
 ```bash
-helm install bilbomd-nersc-dev ./helm -f ./helm/values-dev.yaml
+helm install bilbomd-nersc-dev ./helm-nersc -f ./helm-nersc/values-dev.yaml
 ```
 
 ### Production
 
 ```bash
-helm install bilbomd-nersc-prod ./helm -f ./helm/values-prod.yaml
+helm install bilbomd-nersc-prod ./helm-nersc -f ./helm-nersc/values-prod.yaml
 ```
 
 ## Upgrade BilboMD via Helm chart
@@ -190,13 +190,13 @@ CURRENT   NAME           CLUSTER       AUTHINFO      NAMESPACE
 ### Development
 
 ```bash
-helm upgrade bilbomd-nersc-dev ./helm -f ./helm/values-dev.yaml
+helm upgrade bilbomd-nersc-dev ./helm-nersc -f ./helm-nersc/values-dev.yaml
 ```
 
 ### Production
 
 ```bash
-helm upgrade bilbomd-nersc-prod ./helm -f ./helm/values-prod.yaml
+helm upgrade bilbomd-nersc-prod ./helm-nersc -f ./helm-nersc/values-prod.yaml
 ```
 
 ## Uninstall BilboMD via Helm chart

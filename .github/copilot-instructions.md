@@ -26,8 +26,10 @@ pnpm test
 **Docker deployment** uses different compose files:
 
 - `infra/docker-compose.local.yml` - local development
-- `infra/docker-compose-nersc.yml` - NERSC GPU deployment
-- `infra/docker-compose-hyperion.yml` - SIBYLS beamline deployment
+- `infra/docker-compose-epyc.{dev,prod}.yml` - SIBYLS beamline GPU host (epyc)
+- `infra/docker-compose-hyperion.{dev,prod}.yml` - SIBYLS beamline SCOPER host (hyperion)
+
+**Helm charts**: `infra/helm-nersc/` (NERSC Spin) and `infra/helm-berkelium/` (LBL Berkelium). See `infra/README.md`.
 
 ## Job Processing System
 

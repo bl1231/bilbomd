@@ -258,7 +258,7 @@ bilbomd/
 │   └── md-utils/        # Molecular dynamics utilities
 ├── tools/
 │   └── python/          # Python utility scripts used by `apps`
-└── infra/               # Docker compose files and some Helm charts
+└── infra/               # Compose files, Helm charts (NERSC, Berkelium), deploy scripts
 
 ```
 
@@ -268,7 +268,7 @@ bilbomd/
 - **Shared types** go in `packages/bilbomd-types`
 - **Database schemas** in `packages/mongodb-schema`
 - **Python helper/utility code** in `tools/python`
-- **Docker configs** in `infra/`
+- **Deployment configs** in `infra/` (see `infra/README.md`)
 
 ## Getting Help
 

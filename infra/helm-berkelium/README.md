@@ -83,13 +83,24 @@ Mongo only reads `MONGO_PASSWORD` when it initializes an empty data volume. Chan
 
 ## Install and upgrade
 
+Use `infra/berkelium.sh`. It runs from anywhere and never changes your current kubectl context:
+
 ```bash
-cd infra/helm-berkelium
-helm --kube-context oidc@berkelium -n bilbomd upgrade --install bilbomd . --timeout 20m
-kubectl --context oidc@berkelium -n bilbomd get pods,pvc,httproute
+infra/berkelium.sh status     # read-only: release, workloads, job pods, images, warnings
+infra/berkelium.sh diff       # read-only: what an upgrade would change
+infra/berkelium.sh            # deploy: shows versions, history and running jobs, asks, then upgrades
+infra/berkelium.sh rollback   # to the previous revision (or: rollback <revision>)
 ```
 
-Keep `--timeout 20m`. Helm waits for the `of3-weights` hook Job even without `--wait`, and the default 5-minute timeout is too short for its first run. On a fresh volume, that run is a cold of3-service image pull (~3 min) plus a 2.2 GB download (~5 min). Once the weights are there, the hook finishes in seconds. Until the download has finished, OpenFold job pods wait for the weights, for up to 30 min, in a `wait-for-weights` init container.
+Every helm and kubectl call it makes names `--kube-context oidc@berkelium -n bilbomd` (override the context with `BERKELIUM_KUBE_CONTEXT`). Before doing anything, it checks that the cluster has Berkelium's APIs (Gateway API HTTPRoute, DRA ResourceClaimTemplate). A plain `helm upgrade` without `--kube-context` uses whatever context is current (`nersc.sh` switches it to NERSC Spin). That once sent a Berkelium install to NERSC, where it failed on the missing HTTPRoute and DRA types.
+
+The equivalent by hand:
+
+```bash
+helm --kube-context oidc@berkelium -n bilbomd upgrade --install bilbomd infra/helm-berkelium --timeout 20m
+```
+
+Keep `--timeout 20m` (the script's default). Helm waits for the `of3-weights` hook Job even without `--wait`, and the default 5-minute timeout is too short for its first run. On a fresh volume, that run is a cold of3-service image pull (~3 min) plus a 2.2 GB download (~5 min). Once the weights are there, the hook finishes in seconds. Until the download has finished, OpenFold job pods wait for the weights, for up to 30 min, in a `wait-for-weights` init container.
 
 Before the first install, remove the hello-world placeholder that currently owns the hostname:
 
@@ -102,7 +113,7 @@ kubectl --context oidc@berkelium -n bilbomd delete deploy,svc,configmap -l app=h
 
 ## Tests
 
-The tests use [helm-unittest](https://github.com/helm-unittest/helm-unittest). CI runs them through `.github/workflows/helm-berkelium.yml`.
+The tests use [helm-unittest](https://github.com/helm-unittest/helm-unittest). CI runs them through `.github/workflows/helm-charts.yml`.
 
 ```bash
 helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.2.1 --verify=false

@@ -24,9 +24,9 @@ Internet ──HTTPS──► Spin nginx ingress ──► ui:80
 ### Ingress ownership (important)
 
 There is exactly **one** Ingress named `ingress`, and it is owned by the **bilbomd
-app Helm chart** (`infra/helm/templates/ingress.yaml`). It routes `/` to `ui:80`
+app Helm chart** (`infra/helm-nersc/templates/ingress.yaml`). It routes `/` to `ui:80`
 and references the `tls-cert` secret (via `ingress.secret` in
-`infra/helm/values-<env>.yaml`).
+`infra/helm-nersc/values-<env>.yaml`).
 
 The tls-acme chart is therefore installed with **`ingress.enabled=false`** — it
 must _not_ create its own Ingress, or Helm fails with
@@ -99,7 +99,7 @@ provided in `environment.yml` (do **not** reuse a full app env — it pulls in
 unrelated, repo-specific requirements):
 
 ```bash
-conda env create -f /path/to/bilbomd/infra/tls-acme/environment.yml
+conda env create -f /path/to/bilbomd/infra/helm-nersc/tls-acme/environment.yml
 conda activate bilbomd-tls-acme
 ```
 
@@ -109,7 +109,7 @@ Then render the values:
 cd /tmp/spin-helm/tls-acme
 
 # Use the checked-in bilbomd template as a starting point
-cp /path/to/bilbomd/infra/tls-acme/prepare-values-<ENV>.yaml prepare-values.yaml
+cp /path/to/bilbomd/infra/helm-nersc/tls-acme/prepare-values-<ENV>.yaml prepare-values.yaml
 
 # Confirm your NERSC uid/gid and email, then generate values.yaml
 python3 prepare-values.py
@@ -162,7 +162,7 @@ kubectl -n bilbomd get secret tls-cert -o jsonpath='{.data.tls\.crt}' \
 ### 6. Cut the app Ingress over to tls-cert (zero downtime)
 
 Only **after** `tls-cert` holds a real cert (step 5), point the bilbomd Ingress at
-it. In `infra/helm/values-<ENV>.yaml` set:
+it. In `infra/helm-nersc/values-<ENV>.yaml` set:
 
 ```yaml
 ingress:
@@ -203,7 +203,7 @@ kubectl -n bilbomd get secret tls-cert -o jsonpath='{.data.tls\.crt}' \
 ## Rollback
 
 If anything goes wrong, revert `ingress.secret` back to `ui-tls`/`ui-tls-dev` in
-`infra/helm/values-<ENV>.yaml` and redeploy. The manual InCommon secret is still
+`infra/helm-nersc/values-<ENV>.yaml` and redeploy. The manual InCommon secret is still
 present in the namespace (see `infra/helm-secrets/ui-tls-secrets*.yaml`) and will be
 served again immediately.
 
@@ -214,7 +214,7 @@ If the upstream chart or `prepare-values.yaml` template changes:
 ```bash
 cd /tmp/spin-helm && git pull
 cd tls-acme
-cp /path/to/bilbomd/infra/tls-acme/prepare-values-<ENV>.yaml prepare-values.yaml
+cp /path/to/bilbomd/infra/helm-nersc/tls-acme/prepare-values-<ENV>.yaml prepare-values.yaml
 python3 prepare-values.py
 helm upgrade -n bilbomd -f values.yaml \
   --set ingress.enabled=false --set cert.secretName=tls-cert acmecron .

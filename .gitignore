@@ -187,8 +187,8 @@ backend-dev-tmp
 .nfs*
 
 # tls-acme generated values (contain NERSC uid/gid and email)
-infra/tls-acme/values*.yaml
-infra/tls-acme/prepare-values.yaml
+infra/helm-nersc/tls-acme/values*.yaml
+infra/helm-nersc/tls-acme/prepare-values.yaml
 
 # pae testing outputs
 tools/python/pae_testing/out

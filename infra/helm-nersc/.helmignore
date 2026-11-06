@@ -21,3 +21,6 @@
 .idea/
 *.tmproj
 .vscode/
+# Not part of the chart: NERSC notes and the separate tls-acme setup
+NOTES.md
+tls-acme/
