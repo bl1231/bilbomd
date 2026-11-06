@@ -70,6 +70,21 @@ spec:
             - { name: K8S_MAX_JOBS, value: {{ .Values.dispatcher.maxJobs | quote }} }
             - { name: K8S_JOB_DEADLINE_SECONDS, value: {{ .Values.dispatcher.jobDeadlineSeconds | quote }} }
             - { name: K8S_JOB_TTL_SECONDS, value: {{ .Values.dispatcher.jobTtlSeconds | quote }} }
+            # Structure-prediction sidecars for AlphaFold/OpenFold job pods
+            {{- if eq .Values.features.ENABLE_BILBOMD_ALPHAFOLD "true" }}
+            - name: K8S_COLABFOLD_IMAGE
+              value: {{ include "bilbomd.image" .Values.images.colabfoldService | quote }}
+            {{- end }}
+            {{- if eq .Values.features.ENABLE_BILBOMD_OPENFOLD "true" }}
+            - name: K8S_OF3_IMAGE
+              value: {{ include "bilbomd.image" .Values.images.of3Service | quote }}
+            - { name: K8S_OF3_DATA_SUBPATH, value: {{ .Values.of3Weights.subPath | quote }} }
+            {{- end }}
+            - { name: K8S_FOLD_SHM_SIZE, value: {{ .Values.foldSidecar.shmSize | quote }} }
+            - { name: K8S_FOLD_CPU_REQUEST, value: {{ .Values.foldSidecar.resources.requests.cpu | quote }} }
+            - { name: K8S_FOLD_MEMORY_REQUEST, value: {{ .Values.foldSidecar.resources.requests.memory | quote }} }
+            - { name: K8S_FOLD_CPU_LIMIT, value: {{ .Values.foldSidecar.resources.limits.cpu | quote }} }
+            - { name: K8S_FOLD_MEMORY_LIMIT, value: {{ .Values.foldSidecar.resources.limits.memory | quote }} }
             # Nothing renders movies on Berkelium yet
             - { name: ENABLE_MOVIES, value: 'false' }
             - { name: BILBOMD_LOGS, value: /bilbomd/logs }

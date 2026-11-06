@@ -12,6 +12,7 @@ templates:
   - mongo.yaml
   - redis.yaml
   - mongo-backup-cronjob.yaml
+  - of3-weights-job.yaml
   - data-pvc.yaml
   - configmap.yaml
 tests:
@@ -141,3 +142,17 @@ tests:
             path: 'spec.volumeClaimTemplates[0].spec.storageClassName',
             value: ceph-rbd
           }
+  - it: the OpenFold3 weights Job sets CPU and memory requests and limits and runs as non-root
+    template: of3-weights-job.yaml
+    asserts:
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.memory' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.memory' }
+      - equal:
+          { path: spec.template.spec.securityContext.runAsNonRoot, value: true }
+      - equal: { path: spec.activeDeadlineSeconds, value: 3600 }

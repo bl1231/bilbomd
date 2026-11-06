@@ -25,7 +25,7 @@ import {
   type K8sJobClient,
   type K8sSettings
 } from '../../functions/k8s-job.js'
-import { needsGpu, runJobOnK8s } from '../bilbomd-k8s.js'
+import { foldServiceFor, needsGpu, runJobOnK8s } from '../bilbomd-k8s.js'
 
 const settings: K8sSettings = {
   namespace: 'bilbomd',
@@ -48,7 +48,17 @@ const settings: K8sSettings = {
   ttlSecondsAfterFinished: 3600,
   pollIntervalMs: 15_000,
   pendingWarnMs: 10 * 60_000,
-  imagePullGraceMs: 5 * 60_000
+  imagePullGraceMs: 5 * 60_000,
+  foldSidecar: {
+    colabfoldImage: 'colabfold:test',
+    of3Image: 'of3:test',
+    of3DataSubPath: 'of3-data',
+    shmSize: '16Gi',
+    resources: {
+      requests: { cpu: '1', memory: '1Gi' },
+      limits: { cpu: '2', memory: '2Gi' }
+    }
+  }
 }
 
 const UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
@@ -164,6 +174,15 @@ describe('needsGpu', () => {
     expect(needsGpu('pdb', 'CHARMM')).toBe(false)
     expect(needsGpu('pdb', undefined)).toBe(false)
     expect(needsGpu('crd_psf', 'OpenMM')).toBe(false)
+  })
+})
+
+describe('foldServiceFor', () => {
+  it('maps the structure-prediction job types to their service', () => {
+    expect(foldServiceFor('alphafold')).toBe('colabfold')
+    expect(foldServiceFor('openfold')).toBe('of3')
+    expect(foldServiceFor('auto')).toBeUndefined()
+    expect(foldServiceFor(undefined)).toBeUndefined()
   })
 })
 

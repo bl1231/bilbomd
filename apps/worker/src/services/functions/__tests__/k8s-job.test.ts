@@ -12,8 +12,11 @@ import {
   classifyJob,
   createK8sJobClient,
   isFinished,
+  FOLD_SIDECAR,
+  WAIT_FOR_WEIGHTS,
   jobName,
   LABELS,
+  type FoldService,
   type K8sSettings
 } from '../k8s-job.js'
 
@@ -38,18 +41,30 @@ const settings: K8sSettings = {
   ttlSecondsAfterFinished: 86400,
   pollIntervalMs: 15_000,
   pendingWarnMs: 600_000,
-  imagePullGraceMs: 300_000
+  imagePullGraceMs: 300_000,
+  foldSidecar: {
+    colabfoldImage: 'harbor.example/bilbomd-colabfold-service:0.2.0',
+    of3Image: 'harbor.example/bilbomd-of3-service:0.1.0',
+    of3DataSubPath: 'of3-data',
+    shmSize: '16Gi',
+    resources: {
+      requests: { cpu: '2', memory: '16Gi' },
+      limits: { cpu: '8', memory: '64Gi' }
+    }
+  }
 }
 
 const UUID = '0F8FAD5B-D9CB-469F-A165-70867728950E'
 
 const manifest = (
   needsGpu: boolean,
-  queue: 'bilbomd' | 'multimd' = 'bilbomd'
+  queue: 'bilbomd' | 'multimd' = 'bilbomd',
+  foldService?: FoldService,
+  s: K8sSettings = settings
 ) =>
   buildJobManifest(
-    { queue, bullmqJobId: '42', uuid: UUID, attempt: 1, needsGpu },
-    settings,
+    { queue, bullmqJobId: '42', uuid: UUID, attempt: 1, needsGpu, foldService },
+    s,
     '/bilbomd/uploads'
   )
 
@@ -163,6 +178,110 @@ describe('buildJobManifest', () => {
       { name: 'gpu', resourceClaimTemplateName: 'bilbomd-gpu' }
     ])
     expect(gpu.containers[0].resources!.claims).toEqual([{ name: 'gpu' }])
+  })
+
+  it('has no sidecar for jobs that do not predict structures', () => {
+    expect(manifest(true).spec!.template.spec!.initContainers).toBeUndefined()
+  })
+
+  it('runs the ColabFold service as a GPU-sharing sidecar for AlphaFold jobs', () => {
+    const pod = manifest(true, 'bilbomd', 'colabfold').spec!.template.spec!
+    const [sidecar] = pod.initContainers!
+    expect(sidecar).toMatchObject({
+      name: FOLD_SIDECAR,
+      image: 'harbor.example/bilbomd-colabfold-service:0.2.0',
+      restartPolicy: 'Always',
+      args: ['uvicorn', 'main:app', '--host', '::', '--port', '8000'],
+      startupProbe: { httpGet: { path: '/health', port: 8000 } },
+      resources: {
+        requests: { cpu: '2', memory: '16Gi' },
+        limits: { cpu: '8', memory: '64Gi' },
+        claims: [{ name: 'gpu' }]
+      },
+      securityContext: { allowPrivilegeEscalation: false }
+    })
+    expect(sidecar.env).toEqual([
+      { name: 'UPLOAD_DIR', value: '/bilbomd/uploads' },
+      { name: 'HOME', value: '/tmp' }
+    ])
+    expect(sidecar.volumeMounts).toEqual([
+      { name: 'data', mountPath: '/bilbomd/uploads', subPath: 'uploads' },
+      { name: 'tmp', mountPath: '/tmp' },
+      { name: 'shm', mountPath: '/dev/shm' }
+    ])
+    expect(pod.volumes).toContainEqual({
+      name: 'shm',
+      emptyDir: { medium: 'Memory', sizeLimit: '16Gi' }
+    })
+    expect(pod.containers[0].env).toContainEqual({
+      name: 'COLABFOLD_SERVICE_URL',
+      value: 'http://localhost:8000'
+    })
+  })
+
+  it('gives the OpenFold3 sidecar its weights, read-only', () => {
+    const pod = manifest(true, 'bilbomd', 'of3').spec!.template.spec!
+    const sidecar = pod.initContainers!.find((c) => c.name === FOLD_SIDECAR)!
+    expect(sidecar.image).toBe('harbor.example/bilbomd-of3-service:0.1.0')
+    expect(sidecar.env).toContainEqual({
+      name: 'OF3_DATA_DIR',
+      value: '/of3_data'
+    })
+    expect(sidecar.volumeMounts).toContainEqual({
+      name: 'data',
+      mountPath: '/of3_data',
+      subPath: 'of3-data',
+      readOnly: true
+    })
+    expect(pod.containers[0].env).toContainEqual({
+      name: 'OF3_SERVICE_URL',
+      value: 'http://localhost:8000'
+    })
+  })
+
+  it('makes OpenFold pods wait, for a bounded time, for the weights first', () => {
+    const pod = manifest(true, 'bilbomd', 'of3').spec!.template.spec!
+    expect(pod.initContainers!.map((c) => c.name)).toEqual([
+      WAIT_FOR_WEIGHTS,
+      FOLD_SIDECAR
+    ])
+    const [wait] = pod.initContainers!
+    expect(wait.image).toBe('harbor.example/bilbomd-of3-service:0.1.0')
+    expect(wait.restartPolicy).toBeUndefined()
+    expect(wait.command!.join(' ')).toContain('seq 1 180')
+    expect(wait.command!.join(' ')).toContain('/of3_data/of3-p2-155k.pt')
+    expect(wait.resources).toMatchObject({
+      requests: { cpu: expect.any(String), memory: expect.any(String) },
+      limits: { cpu: expect.any(String), memory: expect.any(String) }
+    })
+    expect(wait.volumeMounts).toEqual([
+      {
+        name: 'data',
+        mountPath: '/of3_data',
+        subPath: 'of3-data',
+        readOnly: true
+      }
+    ])
+  })
+
+  it('does not wait for weights in AlphaFold pods', () => {
+    const pod = manifest(true, 'bilbomd', 'colabfold').spec!.template.spec!
+    expect(pod.initContainers!.map((c) => c.name)).toEqual([FOLD_SIDECAR])
+  })
+
+  it('leaves the sidecar out without an image or a GPU', () => {
+    const noImage = manifest(true, 'bilbomd', 'of3', {
+      ...settings,
+      foldSidecar: { ...settings.foldSidecar, of3Image: '' }
+    }).spec!.template.spec!
+    expect(noImage.initContainers).toBeUndefined()
+    expect(noImage.containers[0].env).not.toContainEqual(
+      expect.objectContaining({ name: 'OF3_SERVICE_URL' })
+    )
+    expect(noImage.volumes!.map((v) => v.name)).toEqual(['data', 'tmp'])
+
+    const noGpu = manifest(false, 'bilbomd', 'colabfold').spec!.template.spec!
+    expect(noGpu.initContainers).toBeUndefined()
   })
 
   it('labels the Job and pod with the job, queue, GPU and attempt', () => {
@@ -289,6 +408,76 @@ describe('classifyJob', () => {
     expect(state).toEqual({
       phase: 'failed',
       reason: 'ran out of memory (limit 16Gi)'
+    })
+  })
+
+  it('explains an OOM kill of the structure-prediction sidecar', () => {
+    const job = manifest(true, 'bilbomd', 'colabfold')
+    job.status = { conditions: [{ type: 'Failed', status: 'True' }] }
+    const pod = terminatedPod({ exitCode: 1, message: 'ColabFold failed' })
+    pod.status!.initContainerStatuses = [
+      {
+        name: FOLD_SIDECAR,
+        state: { running: {} },
+        lastState: { terminated: { reason: 'OOMKilled', exitCode: 137 } },
+        image: '',
+        imageID: '',
+        ready: true,
+        restartCount: 1
+      }
+    ]
+    expect(classifyJob(job, [pod], NOW, settings)).toEqual({
+      phase: 'failed',
+      reason: 'the structure-prediction service ran out of memory (limit 64Gi)'
+    })
+  })
+
+  it('still finds a sidecar OOM kill after the sidecar was shut down normally', () => {
+    const job = manifest(true, 'bilbomd', 'colabfold')
+    job.status = { conditions: [{ type: 'Failed', status: 'True' }] }
+    const pod = terminatedPod({ exitCode: 1, message: 'ColabFold failed' })
+    pod.status!.initContainerStatuses = [
+      {
+        name: FOLD_SIDECAR,
+        state: { terminated: { reason: 'Completed', exitCode: 0 } },
+        lastState: { terminated: { reason: 'OOMKilled', exitCode: 137 } },
+        image: '',
+        imageID: '',
+        ready: false,
+        restartCount: 1
+      }
+    ]
+    expect(classifyJob(job, [pod], NOW, settings)).toEqual({
+      phase: 'failed',
+      reason: 'the structure-prediction service ran out of memory (limit 64Gi)'
+    })
+  })
+
+  it('explains an OpenFold pod that gave up waiting for the weights', () => {
+    const job = manifest(true, 'bilbomd', 'of3')
+    job.status = { conditions: [{ type: 'Failed', status: 'True' }] }
+    const pod = podWith({
+      phase: 'Failed',
+      initContainerStatuses: [
+        {
+          name: WAIT_FOR_WEIGHTS,
+          state: {
+            terminated: {
+              exitCode: 1,
+              message:
+                'the OpenFold3 weights are not on the data volume after 30 min'
+            }
+          },
+          image: '',
+          imageID: '',
+          ready: false,
+          restartCount: 0
+        }
+      ]
+    })
+    expect(classifyJob(job, [pod], NOW, settings)).toEqual({
+      phase: 'failed',
+      reason: 'the OpenFold3 weights are not on the data volume after 30 min'
     })
   })
 
@@ -445,6 +634,60 @@ describe('classifyJob', () => {
     expect(old).toEqual({
       phase: 'failed',
       reason: 'could not pull the job image: manifest unknown'
+    })
+  })
+
+  it("starts the job image's pull grace once the sidecar ahead of it has started", () => {
+    // Scheduled 10 min ago; the sidecar's 8-min pull finished 2 min ago
+    const pod = (sidecarStartedMinutesAgo: number) => {
+      const p = waitingPod('ErrImagePull', 10, 'registry hiccup')
+      p.status!.conditions = [
+        {
+          type: 'PodScheduled',
+          status: 'True',
+          lastTransitionTime: minutesAgo(10)
+        }
+      ]
+      p.status!.initContainerStatuses = [
+        {
+          name: FOLD_SIDECAR,
+          state: {
+            running: { startedAt: minutesAgo(sidecarStartedMinutesAgo) }
+          },
+          started: true,
+          image: '',
+          imageID: '',
+          ready: true,
+          restartCount: 0
+        }
+      ]
+      return p
+    }
+    expect(classifyJob(jobWith(), [pod(2)], NOW, settings)).toMatchObject({
+      phase: 'pending',
+      reason: 'ErrImagePull'
+    })
+    expect(classifyJob(jobWith(), [pod(6)], NOW, settings)).toEqual({
+      phase: 'failed',
+      reason: 'could not pull the job image: registry hiccup'
+    })
+  })
+
+  it('applies the image pull grace period to the sidecar image too', () => {
+    const pod = waitingPod('PodInitializing', 6)
+    pod.status!.initContainerStatuses = [
+      {
+        name: FOLD_SIDECAR,
+        state: { waiting: { reason: 'ErrImagePull', message: 'not found' } },
+        image: '',
+        imageID: '',
+        ready: false,
+        restartCount: 0
+      }
+    ]
+    expect(classifyJob(jobWith(), [pod], NOW, settings)).toEqual({
+      phase: 'failed',
+      reason: 'could not pull the job image: not found'
     })
   })
 
