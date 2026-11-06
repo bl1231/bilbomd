@@ -9,7 +9,7 @@ import {
   buildStepStatusUpdate
 } from '@bilbomd/mongodb-schema'
 import { Job as BullMQJob } from 'bullmq'
-import { runProcess } from '../../helpers/runProcess.js'
+import { ProcessError, runProcess } from '../../helpers/runProcess.js'
 import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
 import { updateStepStatus } from './mongo-utils.js'
@@ -104,20 +104,130 @@ interface FoxsTask {
   fullPath: string
 }
 
+// Settings for the batched GPU FoXS path (config.foxsGpu)
+interface FoxsGpuOptions {
+  bin: string
+  batchSize: number
+  concurrency: number
+}
+
+type FoxsDBJob =
+  | IBilboMDPDBJob
+  | IBilboMDCRDJob
+  | IBilboMDAutoJob
+  | IBilboMDAlphaFoldJob
+  | IBilboMDOpenFoldJob
+
+const PROGRESS_EVERY = 50
+
+// foxs-gpu exits 2 with this message when it can't use a GPU (no device, no
+// driver, or a build without CUDA)
+const GPU_UNAVAILABLE = 'Cannot use --gpu'
+
+const isGpuUnavailable = (error: unknown): boolean =>
+  error instanceof ProcessError &&
+  error.result.code === 2 &&
+  error.result.stderrTail.some((line) => line.includes(GPU_UNAVAILABLE))
+
+const isCancelled = (error: unknown): boolean =>
+  error instanceof ProcessError && error.result.aborted
+
+/**
+ * Splits tasks into batches of at most `size` files, never mixing
+ * directories: foxs-gpu writes each profile next to its input (cwd-relative).
+ */
+const batchByDir = (tasks: FoxsTask[], size: number): FoxsTask[][] => {
+  const byDir = new Map<string, FoxsTask[]>()
+  for (const task of tasks) {
+    const list = byDir.get(task.dir) ?? []
+    list.push(task)
+    byDir.set(task.dir, list)
+  }
+  const batches: FoxsTask[][] = []
+  for (const list of byDir.values()) {
+    for (let i = 0; i < list.length; i += size) {
+      batches.push(list.slice(i, i + size))
+    }
+  }
+  return batches
+}
+
+/**
+ * Runs FoXS on the GPU, `batchSize` PDBs per foxs-gpu call and `concurrency`
+ * calls at once (#1157: ~8-10x faster than one IMP foxs call per file).
+ * Returns the tasks it didn't finish, for the CPU path: everything once the
+ * GPU turns out to be unavailable, and the files of any batch that failed or
+ * didn't write its profiles. A cancelled job rethrows instead.
+ */
+const runFoXSOnGpu = async (
+  tasks: FoxsTask[],
+  gpu: FoxsGpuOptions,
+  onDone: (count: number) => void
+): Promise<FoxsTask[]> => {
+  const batches = batchByDir(tasks, gpu.batchSize)
+  logger.info(
+    `FoXS on GPU: ${tasks.length} files in ${batches.length} batches of up to ${gpu.batchSize}, ${gpu.concurrency} at once (${gpu.bin})`
+  )
+  const limit = pLimit(gpu.concurrency)
+  const leftovers: FoxsTask[] = []
+  let gpuUnavailable = false
+
+  const runBatch = async (batch: FoxsTask[]): Promise<void> => {
+    if (gpuUnavailable) {
+      leftovers.push(...batch)
+      return
+    }
+    try {
+      await runProcess({
+        label: `FoXS GPU batch (${batch.length} files in ${path.basename(batch[0].dir)})`,
+        cmd: gpu.bin,
+        args: ['--gpu', '-p', ...batch.map((t) => t.file)],
+        cwd: batch[0].dir,
+        timeoutMs: config.processTimeouts.foxsMs
+      })
+    } catch (error) {
+      if (isCancelled(error)) throw error
+      if (isGpuUnavailable(error)) {
+        if (!gpuUnavailable) {
+          logger.warn(
+            `GPU FoXS is unavailable, using CPU FoXS: ${getErrorMessage(error)}`
+          )
+        }
+        gpuUnavailable = true
+      } else {
+        logger.warn(
+          `GPU FoXS batch failed, retrying its ${batch.length} files on the CPU: ${getErrorMessage(error)}`
+        )
+      }
+      leftovers.push(...batch)
+      return
+    }
+    const missing = batch.filter((t) => !fs.existsSync(`${t.fullPath}.dat`))
+    if (missing.length > 0) {
+      logger.warn(
+        `GPU FoXS wrote no profile for ${missing.length} of ${batch.length} files in ${batch[0].dir}; retrying them on the CPU`
+      )
+      leftovers.push(...missing)
+    }
+    onDone(batch.length - missing.length)
+  }
+
+  await Promise.all(batches.map((batch) => limit(() => runBatch(batch))))
+  return leftovers
+}
+
 /**
  * Optimized FoXS processing using p-limit for concurrency control.
- * Processes all PDB files across all directories in parallel with controlled concurrency.
+ * Processes all PDB files across all directories in parallel with controlled
+ * concurrency. With `gpu` set, the GPU path runs first and IMP's CPU foxs
+ * handles whatever it leaves.
  */
 const spawnFoXSOptimized = async (
   foxsRunDirs: string[],
   MQjob?: BullMQJob,
   maxConcurrency = getEffectiveCpuCount(),
-  DBjob?:
-    | IBilboMDPDBJob
-    | IBilboMDCRDJob
-    | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob
-    | IBilboMDOpenFoldJob
+  DBjob?: FoxsDBJob,
+  gpu?: FoxsGpuOptions
 ): Promise<void> => {
   try {
     // Collect all PDB files from all directories
@@ -148,12 +258,55 @@ const spawnFoXSOptimized = async (
     }
 
     logger.info(
-      `Processing ${allTasks.length} PDB files across ${foxsRunDirs.length} directories with ${maxConcurrency} concurrent workers`
+      `Processing ${allTasks.length} PDB files across ${foxsRunDirs.length} directories${gpu ? ' (GPU first)' : ''} with ${maxConcurrency} concurrent CPU workers`
     )
 
-    // Create concurrency limiter
-    const limit = pLimit(maxConcurrency)
     let completed = 0
+
+    // Progress logging - report each time another 50 files are done
+    const reportDone = (count: number) => {
+      const before = completed
+      completed += count
+      if (
+        !MQjob ||
+        Math.floor(completed / PROGRESS_EVERY) ===
+          Math.floor(before / PROGRESS_EVERY)
+      ) {
+        return
+      }
+      const progress = Math.round((completed / allTasks.length) * 100)
+      const statusMsg = `FoXS: ${completed}/${allTasks.length} (${progress}%)`
+      MQjob.updateProgress({
+        status: statusMsg,
+        timestamp: Date.now()
+      })
+      MQjob.log(
+        `FoXS progress: ${completed}/${allTasks.length} files completed`
+      )
+      logger.info(
+        `FoXS progress: ${completed}/${allTasks.length} files completed (${progress}%)`
+      )
+      if (DBjob) {
+        void Job.findByIdAndUpdate(
+          DBjob._id,
+          buildStepStatusUpdate('foxs', {
+            status: 'Running',
+            message: statusMsg
+          }),
+          { updatePipeline: true }
+        ).catch((err) => logger.error(`FoXS step status update failed: ${err}`))
+      }
+    }
+
+    const cpuTasks = gpu
+      ? await runFoXSOnGpu(allTasks, gpu, reportDone)
+      : allTasks
+    const gpuDone = allTasks.length - cpuTasks.length
+    if (gpu) {
+      logger.info(
+        `FoXS on GPU finished ${gpuDone} of ${allTasks.length} files; ${cpuTasks.length} left for the CPU`
+      )
+    }
 
     // Process a single PDB file with FoXS
     const processSingleFile = async (task: FoxsTask): Promise<void> => {
@@ -169,62 +322,30 @@ const spawnFoXSOptimized = async (
         logger.error(`FoXS failed in ${task.dir}: ${getErrorMessage(error)}`)
         throw error
       }
-
-      completed++
-
-      // Progress logging - report every 50 completed files
-      if (MQjob && completed % 50 === 0) {
-        const progress = Math.round((completed / allTasks.length) * 100)
-        const statusMsg = `FoXS: ${completed}/${allTasks.length} (${progress}%)`
-        MQjob.updateProgress({
-          status: statusMsg,
-          timestamp: Date.now()
-        })
-        MQjob.log(
-          `FoXS progress: ${completed}/${allTasks.length} files completed`
-        )
-        logger.info(
-          `FoXS progress: ${completed}/${allTasks.length} files completed (${progress}%)`
-        )
-        if (DBjob) {
-          void Job.findByIdAndUpdate(
-            DBjob._id,
-            buildStepStatusUpdate('foxs', {
-              status: 'Running',
-              message: statusMsg
-            }),
-            { updatePipeline: true }
-          ).catch((err) =>
-            logger.error(`FoXS step status update failed: ${err}`)
-          )
-        }
-      }
+      reportDone(1)
     }
 
-    // Execute all tasks with concurrency limit
-    const limitedTasks = allTasks.map((task) =>
-      limit(() => processSingleFile(task))
+    // Execute all CPU tasks with concurrency limit
+    const limit = pLimit(maxConcurrency)
+    const results = await Promise.allSettled(
+      cpuTasks.map((task) => limit(() => processSingleFile(task)))
     )
 
-    // Wait for all tasks to complete
-    const results = await Promise.allSettled(limitedTasks)
+    // A cancelled job stops here rather than counting as failed files
+    const cancelled = results.find(
+      (r): r is PromiseRejectedResult =>
+        r.status === 'rejected' && isCancelled(r.reason)
+    )
+    if (cancelled) throw cancelled.reason
 
     // Count successes and failures
-    const successful = results.filter(
-      (result) => result.status === 'fulfilled'
-    ).length
-    const failedCount = results.filter(
-      (result) => result.status === 'rejected'
-    ).length
+    const failedCount = results.filter((r) => r.status === 'rejected').length
+    const successful = gpuDone + (cpuTasks.length - failedCount)
 
-    logger.info(
-      `FoXS processing completed: ${successful} successful, ${failedCount} failed out of ${allTasks.length} total files`
-    )
-
+    const summary = `FoXS processing completed: ${successful} successful (${gpuDone} on GPU), ${failedCount} failed out of ${allTasks.length} total files`
+    logger.info(summary)
     if (MQjob) {
-      MQjob.log(
-        `FoXS processing completed: ${successful} successful, ${failedCount} failed out of ${allTasks.length} total files`
-      )
+      MQjob.log(summary)
     }
 
     // If there are failures but some successes, log warnings but don't throw
@@ -369,6 +490,20 @@ const prepareFoXSInputs = async (
 }
 
 /**
+ * The GPU path's settings when FOXS_GPU=auto and foxs-gpu is installed;
+ * undefined means CPU FoXS only.
+ */
+const foxsGpuOptions = (): FoxsGpuOptions | undefined => {
+  const { mode, bin, batchSize, concurrency } = config.foxsGpu
+  if (mode === 'off') return undefined
+  if (!fs.existsSync(bin)) {
+    logger.warn(`FOXS_GPU=${mode} but ${bin} doesn't exist; using CPU FoXS`)
+    return undefined
+  }
+  return { bin, batchSize, concurrency }
+}
+
+/**
  * Main FoXS processing function with optimized concurrency.
  * Uses p-limit to process all PDB files across all directories in parallel.
  */
@@ -421,7 +556,13 @@ const runFoXS = async (
     }
 
     // Run optimized FoXS processing - ALL FILES IN PARALLEL
-    await spawnFoXSOptimized(foxsRunDirs, MQjob, actualConcurrency, DBjob)
+    await spawnFoXSOptimized(
+      foxsRunDirs,
+      MQjob,
+      actualConcurrency,
+      DBjob,
+      foxsGpuOptions()
+    )
 
     // Update status to Success once all jobs are complete
     status = {
@@ -444,4 +585,10 @@ const runFoXS = async (
   }
 }
 
-export { foxsConcurrency, runFoXS, spawnFoXSOptimized }
+export {
+  batchByDir,
+  foxsConcurrency,
+  foxsGpuOptions,
+  runFoXS,
+  spawnFoXSOptimized
+}

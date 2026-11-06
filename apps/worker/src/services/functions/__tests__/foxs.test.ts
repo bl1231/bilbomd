@@ -13,7 +13,11 @@ const { runProcessMock, updateStepStatusMock, findByIdAndUpdateMock } =
     findByIdAndUpdateMock: vi.fn()
   }))
 
-vi.mock('../../../helpers/runProcess.js', () => ({
+// Keep the real ProcessError: the GPU path tells failures apart with instanceof
+vi.mock('../../../helpers/runProcess.js', async () => ({
+  ...(await vi.importActual<typeof import('../../../helpers/runProcess.js')>(
+    '../../../helpers/runProcess.js'
+  )),
   runProcess: runProcessMock
 }))
 
@@ -35,7 +39,13 @@ vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
 
-import { foxsConcurrency, spawnFoXSOptimized } from '../foxs-functions.js'
+import {
+  batchByDir,
+  foxsConcurrency,
+  foxsGpuOptions,
+  spawnFoXSOptimized
+} from '../foxs-functions.js'
+import { ProcessError } from '../../../helpers/runProcess.js'
 import { runSingleFoXS } from '../foxs-analysis.js'
 import { config } from '../../../config/config.js'
 
@@ -145,6 +155,185 @@ describe('spawnFoXSOptimized', () => {
   it('returns quietly when there are no PDB files', async () => {
     await spawnFoXSOptimized([path.join(tmp, 'missing')], undefined, 1)
     expect(runProcessMock).not.toHaveBeenCalled()
+  })
+})
+
+const GPU = { bin: '/opt/foxs-gpu', batchSize: 3, concurrency: 1 }
+
+// What foxs-gpu --gpu -p a.pdb b.pdb does: write a.pdb.dat, b.pdb.dat in cwd
+const writeProfiles = async (opts: SpawnProcessOptions) => {
+  for (const f of (opts.args ?? []).filter((a) => a.endsWith('.pdb'))) {
+    await fs.writeFile(path.join(opts.cwd ?? '', `${f}.dat`), '')
+  }
+  return { code: 0 }
+}
+
+const processError = (
+  overrides: Partial<ProcessError['result']> = {}
+): ProcessError =>
+  new ProcessError('FoXS GPU batch', GPU.bin, {
+    code: 1,
+    signal: null,
+    timedOut: false,
+    aborted: false,
+    stderrTail: [],
+    ...overrides
+  })
+
+const gpuCalls = () =>
+  runProcessMock.mock.calls.filter(([o]) => o.cmd === GPU.bin)
+const cpuCalls = () =>
+  runProcessMock.mock.calls.filter(([o]) => o.cmd === config.foxBin)
+
+describe('batchByDir', () => {
+  it('splits each directory into batches without mixing directories', () => {
+    const task = (dir: string, i: number) => ({
+      dir,
+      file: `m${i}.pdb`,
+      fullPath: path.join(dir, `m${i}.pdb`)
+    })
+    const tasks = [
+      ...[0, 1, 2, 3, 4].map((i) => task('/a', i)),
+      ...[0, 1].map((i) => task('/b', i))
+    ]
+    const sizes = batchByDir(tasks, 2).map((b) => [b[0].dir, b.length])
+    expect(sizes).toEqual([
+      ['/a', 2],
+      ['/a', 2],
+      ['/a', 1],
+      ['/b', 2]
+    ])
+  })
+})
+
+describe('spawnFoXSOptimized on the GPU', () => {
+  it('runs batched foxs-gpu calls per directory and skips CPU FoXS', async () => {
+    runProcessMock.mockImplementation(writeProfiles)
+    const a = await makeDirWithPdbs('rg_20', 4)
+    const b = await makeDirWithPdbs('rg_30', 2)
+
+    await spawnFoXSOptimized([a, b], undefined, 4, undefined, GPU)
+
+    expect(cpuCalls()).toHaveLength(0)
+    expect(gpuCalls().map(([o]) => [o.cwd, o.args])).toEqual([
+      [a, ['--gpu', '-p', 'md_0.pdb', 'md_1.pdb', 'md_2.pdb']],
+      [a, ['--gpu', '-p', 'md_3.pdb']],
+      [b, ['--gpu', '-p', 'md_0.pdb', 'md_1.pdb']]
+    ])
+    expect(gpuCalls()[0][0].timeoutMs).toBe(config.processTimeouts.foxsMs)
+  })
+
+  it('falls back to CPU FoXS for everything when the GPU is unavailable', async () => {
+    runProcessMock.mockImplementation(async (opts: SpawnProcessOptions) => {
+      if (opts.cmd === GPU.bin) {
+        throw processError({
+          code: 2,
+          stderrTail: ['Cannot use --gpu: no CUDA device']
+        })
+      }
+      return { code: 0 }
+    })
+    const dir = await makeDirWithPdbs('rg_20', 7)
+
+    await spawnFoXSOptimized([dir], undefined, 4, undefined, GPU)
+
+    // The first batch finds out; the other two never call foxs-gpu
+    expect(gpuCalls()).toHaveLength(1)
+    expect(cpuCalls()).toHaveLength(7)
+  })
+
+  it('retries only a failed batch on the CPU', async () => {
+    let call = 0
+    runProcessMock.mockImplementation(async (opts: SpawnProcessOptions) => {
+      if (opts.cmd === GPU.bin && call++ === 0)
+        throw processError({ code: 139 })
+      return opts.cmd === GPU.bin ? writeProfiles(opts) : { code: 0 }
+    })
+    const dir = await makeDirWithPdbs('rg_20', 6)
+
+    await spawnFoXSOptimized([dir], undefined, 4, undefined, GPU)
+
+    expect(gpuCalls()).toHaveLength(2)
+    expect(cpuCalls().map(([o]) => o.args)).toEqual([
+      ['-p', 'md_0.pdb'],
+      ['-p', 'md_1.pdb'],
+      ['-p', 'md_2.pdb']
+    ])
+  })
+
+  it('reruns files whose profile foxs-gpu did not write', async () => {
+    runProcessMock.mockImplementation(async (opts: SpawnProcessOptions) => {
+      if (opts.cmd !== GPU.bin) return { code: 0 }
+      await writeProfiles({
+        ...opts,
+        args: opts.args?.filter((a) => a !== 'md_1.pdb')
+      })
+      return { code: 0 }
+    })
+    const dir = await makeDirWithPdbs('rg_20', 3)
+
+    await spawnFoXSOptimized([dir], undefined, 4, undefined, GPU)
+
+    expect(cpuCalls().map(([o]) => o.args)).toEqual([['-p', 'md_1.pdb']])
+  })
+
+  it('stops without CPU fallback when the job is cancelled', async () => {
+    runProcessMock.mockRejectedValue(processError({ aborted: true }))
+    const dir = await makeDirWithPdbs('rg_20', 3)
+
+    await expect(
+      spawnFoXSOptimized([dir], undefined, 4, undefined, GPU)
+    ).rejects.toBeInstanceOf(ProcessError)
+    expect(cpuCalls()).toHaveLength(0)
+  })
+
+  it('reports progress across GPU batches', async () => {
+    runProcessMock.mockImplementation(writeProfiles)
+    const dir = await makeDirWithPdbs('rg_20', 100)
+    const MQjob = {
+      updateProgress: vi.fn(),
+      log: vi.fn()
+    } as unknown as BullMQJob
+
+    await spawnFoXSOptimized([dir], MQjob, 4, undefined, {
+      ...GPU,
+      batchSize: 30
+    })
+
+    // 30, 60, 90 and 100 done: progress crosses 50 and 100
+    expect(MQjob.updateProgress).toHaveBeenCalledTimes(2)
+    expect(MQjob.updateProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'FoXS: 100/100 (100%)' })
+    )
+  })
+})
+
+describe('foxsGpuOptions', () => {
+  const saved = { ...config.foxsGpu }
+  afterEach(() => {
+    Object.assign(config.foxsGpu, saved)
+  })
+
+  it('is off by default', () => {
+    expect(config.foxsGpu.mode).toBe('off')
+    expect(foxsGpuOptions()).toBeUndefined()
+  })
+
+  it('uses CPU FoXS when foxs-gpu is missing', () => {
+    Object.assign(config.foxsGpu, { mode: 'auto', bin: path.join(tmp, 'nope') })
+    expect(foxsGpuOptions()).toBeUndefined()
+  })
+
+  it('returns the GPU settings in auto mode when foxs-gpu exists', async () => {
+    const bin = path.join(tmp, 'foxs-gpu')
+    await fs.writeFile(bin, '')
+    Object.assign(config.foxsGpu, {
+      mode: 'auto',
+      bin,
+      batchSize: 40,
+      concurrency: 6
+    })
+    expect(foxsGpuOptions()).toEqual({ bin, batchSize: 40, concurrency: 6 })
   })
 })
 
