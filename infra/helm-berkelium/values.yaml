@@ -27,6 +27,10 @@ images:
   backend:
     repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-backend
     tag: 2.19.5
+  # The dispatcher and the per-job pods. Needs a release with dist/run-job.js.
+  worker:
+    repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-worker
+    tag: 2.21.7
   mongo:
     repository: harbor.bk.lbl.gov/docker.io/library/mongo
     tag: 8.3.13
@@ -38,8 +42,8 @@ images:
   pullSecrets: []
 
 # UID/GID baked into the bilbomd-backend/-worker images by CI (repo variables
-# USER_ID / GROUP_ID). Backend and (later) job pods share these so they can all
-# write the job directories on the shared cephfs volume.
+# USER_ID / GROUP_ID). The backend, dispatcher and job pods share these so they
+# can all write the job directories on the shared cephfs volume.
 appUser:
   uid: 62704
   gid: 1001
@@ -76,6 +80,31 @@ resources:
   mongoBackup:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { cpu: '1', memory: 1Gi }
+  dispatcher:
+    requests: { cpu: 100m, memory: 512Mi }
+    limits: { cpu: '1', memory: 1Gi }
+  # Each BilboMD job's pod (CPU and GPU jobs alike, for the pilot)
+  job:
+    requests: { cpu: '4', memory: 8Gi }
+    limits: { cpu: '8', memory: 16Gi }
+
+# Runs each BilboMD job as a Kubernetes Job (see templates/dispatcher.yaml).
+dispatcher:
+  enabled: true
+  # Created by Science IT (not this chart) with a Role to create, watch and
+  # delete Jobs and read pods and their logs
+  serviceAccountName: bilbomd
+  # BilboMD jobs running at once. Berkelium asked for 2-4 GPUs to start with
+  # ("if you see a lot pending, you're using too many"). Multi jobs (CPU only)
+  # run one at a time on top of this.
+  maxJobs: 2
+  # Kubernetes stops a job pod that runs longer than this
+  jobDeadlineSeconds: 43200
+  # Finished Jobs, their pods and logs are kept this long
+  jobTtlSeconds: 86400
+  gpu:
+    claimTemplateName: bilbomd-gpu
+    deviceClassName: nvidia-a40
 
 mongoBackup:
   enabled: true

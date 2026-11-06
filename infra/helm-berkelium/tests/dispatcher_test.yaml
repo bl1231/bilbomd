@@ -1,0 +1,121 @@
+suite: berkelium dispatcher
+templates:
+  - dispatcher.yaml
+  - gpu-claim-template.yaml
+  - configmap.yaml
+tests:
+  - it: the dispatcher sets CPU and memory requests and limits (Berkelium policy)
+    template: dispatcher.yaml
+    asserts:
+      - lengthEqual: { path: spec.template.spec.containers, count: 1 }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.requests.memory' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.cpu' }
+      - exists:
+          { path: 'spec.template.spec.containers[0].resources.limits.memory' }
+      - notExists: { path: spec.template.spec.initContainers }
+
+  - it: runs the worker image in the k8s backend with the Science IT ServiceAccount
+    template: dispatcher.yaml
+    asserts:
+      - equal: { path: spec.template.spec.serviceAccountName, value: bilbomd }
+      - equal:
+          path: 'spec.template.spec.containers[0].image'
+          value: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-worker:2.21.7
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: EXECUTION_BACKEND, value: k8s }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content:
+            name: K8S_NAMESPACE
+            valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+
+  - it: starts job pods from the same image, as the app user
+    template: dispatcher.yaml
+    set:
+      images.worker.tag: 9.9.9
+    asserts:
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content:
+            name: K8S_JOB_IMAGE
+            value: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-worker:9.9.9
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_JOB_RUN_AS_USER, value: '62704' }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_JOB_RUN_AS_GROUP, value: '1001' }
+
+  - it: gives job pods the same image pull secrets as the dispatcher
+    template: dispatcher.yaml
+    set:
+      images.pullSecrets: [harbor-bilbomd, other]
+    asserts:
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content:
+            { name: K8S_JOB_IMAGE_PULL_SECRETS, value: 'harbor-bilbomd,other' }
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content: { name: harbor-bilbomd }
+
+  - it: passes no pull secrets for public images
+    template: dispatcher.yaml
+    asserts:
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_JOB_IMAGE_PULL_SECRETS, value: '' }
+
+  - it: passes the job pod size, cap, deadline and GPU template to the dispatcher
+    template: dispatcher.yaml
+    set:
+      dispatcher.maxJobs: 4
+      resources.job.limits.memory: 32Gi
+    asserts:
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_MAX_JOBS, value: '4' }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_JOB_MEMORY_LIMIT, value: 32Gi }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_JOB_CPU_REQUEST, value: '4' }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_JOB_DEADLINE_SECONDS, value: '43200' }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: K8S_GPU_CLAIM_TEMPLATE, value: bilbomd-gpu }
+      - contains:
+          path: 'spec.template.spec.containers[0].env'
+          content: { name: ENABLE_MOVIES, value: 'false' }
+
+  - it: runs one dispatcher at a time, so the cap holds across upgrades
+    template: dispatcher.yaml
+    asserts:
+      - equal: { path: spec.replicas, value: 1 }
+      - equal: { path: spec.strategy.type, value: Recreate }
+
+  - it: requests one A40 per GPU job pod
+    template: gpu-claim-template.yaml
+    asserts:
+      - equal: { path: apiVersion, value: resource.k8s.io/v1 }
+      - equal: { path: metadata.name, value: bilbomd-gpu }
+      - equal:
+          path: 'spec.spec.devices.requests[0].exactly.deviceClassName'
+          value: nvidia-a40
+
+  - it: can be turned off
+    set:
+      dispatcher.enabled: false
+    asserts:
+      - hasDocuments: { count: 0 }
+        template: dispatcher.yaml
+      - hasDocuments: { count: 0 }
+        template: gpu-claim-template.yaml
