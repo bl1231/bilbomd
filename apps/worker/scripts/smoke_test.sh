@@ -57,6 +57,9 @@ $PY_BASE_CMD -c "import lmfit; print(f'lmfit OK - {lmfit.__version__}')" || echo
 $PY_BASE_CMD -c "import pandas; print(f'pandas OK - {pandas.__version__}')" || echo "pandas missing"
 $PY_BASE_CMD -c "import dask; print(f'dask OK - {dask.__version__}')" || echo "dask missing"
 $PY_OPENMM_CMD -c "import openmm; print(f'openmm OK - {openmm.__version__}')" || echo "openmm missing"
+# OpenMM's NVRTC must not be newer than the GPU hosts' drivers support.
+openmm_cuda=$(ls /opt/envs/openmm/conda-meta 2>/dev/null | sed -n 's/^cuda-version-\([0-9.]*\)-.*/\1/p')
+echo "openmm env cuda-version - ${openmm_cuda:-not found}"
 $PY_OPENMM_CMD -c "import pymol; print(f'pymol OK - {pymol.get_version_message().strip()}')" || echo "pymol missing"
 
 echo "Smoke test complete."
