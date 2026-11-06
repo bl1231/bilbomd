@@ -27,8 +27,15 @@ export const JOB_CONTAINER = 'bilbomd'
 export const FOLD_SIDECAR = 'fold-service'
 export type FoldService = 'colabfold' | 'of3'
 const FOLD_PORT = 8000
-// Where the OpenFold3 sidecar finds its weights (OF3_DATA_DIR)
+// Where the OpenFold3 sidecar finds its weights (OF3_DATA_DIR); the service
+// loads OF3_WEIGHTS_FILE from there
 const OF3_DATA_MOUNT = '/of3_data'
+const OF3_WEIGHTS_FILE = 'of3-p2-155k.pt'
+// OpenFold job pods wait this long for the weights (the chart's of3-weights
+// hook downloads them after an install or upgrade) before giving up
+export const WAIT_FOR_WEIGHTS = 'wait-for-weights'
+const WEIGHTS_WAIT_SECONDS = 30 * 60
+const WEIGHTS_POLL_SECONDS = 10
 
 export const LABELS = {
   uuid: 'bilbomd.lbl.gov/uuid',
@@ -128,6 +135,44 @@ const buildFoldSidecar = (
   ]
 })
 
+// A regular init container that runs before the OpenFold3 sidecar and waits,
+// for a bounded time, until the weights are on the data volume. The sidecar's
+// /health doesn't check them, so without this an OpenFold job submitted right
+// after the chart enabled OpenFold could start before the download finished.
+// It uses the of3 image, so the sidecar after it needs no second pull.
+const buildWaitForWeights = (settings: K8sSettings) => {
+  const file = `${OF3_DATA_MOUNT}/${OF3_WEIGHTS_FILE}`
+  const tries = Math.ceil(WEIGHTS_WAIT_SECONDS / WEIGHTS_POLL_SECONDS)
+  return {
+    name: WAIT_FOR_WEIGHTS,
+    image: settings.foldSidecar.of3Image,
+    imagePullPolicy: settings.imagePullPolicy,
+    command: [
+      'bash',
+      '-c',
+      `for i in $(seq 1 ${tries}); do ` +
+        `[ -s "${file}" ] && exit 0; ` +
+        `[ "$i" = 1 ] && echo "Waiting for the OpenFold3 weights at ${file}"; ` +
+        `sleep ${WEIGHTS_POLL_SECONDS}; done; ` +
+        `echo "the OpenFold3 weights (${file}) are not on the data volume after ${WEIGHTS_WAIT_SECONDS / 60} min" >&2; exit 1`
+    ],
+    terminationMessagePolicy: 'FallbackToLogsOnError',
+    resources: {
+      requests: { cpu: '50m', memory: '64Mi' },
+      limits: { cpu: '200m', memory: '256Mi' }
+    },
+    securityContext: containerSecurityContext,
+    volumeMounts: [
+      {
+        name: 'data',
+        mountPath: OF3_DATA_MOUNT,
+        subPath: settings.foldSidecar.of3DataSubPath,
+        readOnly: true
+      }
+    ]
+  }
+}
+
 export const buildJobManifest = (
   {
     queue,
@@ -205,7 +250,12 @@ export const buildJobManifest = (
               }
             : {}),
           ...(sidecar
-            ? { initContainers: [buildFoldSidecar(sidecar, settings, dataVol)] }
+            ? {
+                initContainers: [
+                  ...(sidecar === 'of3' ? [buildWaitForWeights(settings)] : []),
+                  buildFoldSidecar(sidecar, settings, dataVol)
+                ]
+              }
             : {}),
           containers: [
             {
@@ -322,17 +372,30 @@ const failureReason = (job: V1Job, pod: V1Pod | undefined): string => {
     return `ran out of memory (limit ${limit?.memory ?? 'unknown'})`
   }
   // A sidecar killed for memory restarts; the pipeline then fails its
-  // prediction step with a less helpful error
+  // prediction step with a less helpful error. Check both states: once the
+  // pipeline exits, the restarted sidecar's normal shutdown lands in `state`
+  // and the OOM kill stays in `lastState`.
   const sidecar = pod?.status?.initContainerStatuses?.find(
     (c) => c.name === FOLD_SIDECAR
   )
-  const sidecarTerminated =
-    sidecar?.state?.terminated ?? sidecar?.lastState?.terminated
-  if (sidecarTerminated?.reason === 'OOMKilled') {
+  if (
+    [sidecar?.state?.terminated, sidecar?.lastState?.terminated].some(
+      (t) => t?.reason === 'OOMKilled'
+    )
+  ) {
     const limit = job.spec?.template.spec?.initContainers?.find(
       (c) => c.name === FOLD_SIDECAR
     )?.resources?.limits
     return `the structure-prediction service ran out of memory (limit ${limit?.memory ?? 'unknown'})`
+  }
+  const weights = pod?.status?.initContainerStatuses?.find(
+    (c) => c.name === WAIT_FOR_WEIGHTS
+  )?.state?.terminated
+  if (weights && weights.exitCode !== 0) {
+    return (
+      weights.message?.trim() ||
+      'the OpenFold3 weights are not on the data volume'
+    )
   }
   if (failed?.reason === 'DeadlineExceeded') {
     const limit = job.spec?.activeDeadlineSeconds
@@ -352,6 +415,33 @@ const failureReason = (job: V1Job, pod: V1Pod | undefined): string => {
   if (message) return message
   if (terminated) return `pod exited with code ${terminated.exitCode}`
   return failed?.message ?? 'Kubernetes Job failed'
+}
+
+// When the kubelet could start pulling a container's image. Pulling starts
+// once the pod is on a node, so time spent waiting for a GPU doesn't count.
+// Init containers run in order, and the pod's own containers only start
+// after every init container has finished, or (a native sidecar) started, so
+// a container's pull can't begin before the ones ahead of it are past their
+// own pulls. Without this, an 8-minute sidecar pull would use up the grace of
+// the job container behind it.
+const pullStartedAt = (
+  pod: V1Pod,
+  containerName: string,
+  fallback: Date | undefined
+): Date | undefined => {
+  const scheduled = pod.status?.conditions?.find(
+    (c) => c.type === 'PodScheduled' && c.status === 'True'
+  )
+  let start = scheduled?.lastTransitionTime
+    ? new Date(scheduled.lastTransitionTime)
+    : fallback
+  for (const init of pod.status?.initContainerStatuses ?? []) {
+    if (init.name === containerName) break
+    const ahead =
+      init.state?.terminated?.finishedAt ?? init.state?.running?.startedAt
+    if (ahead && (!start || new Date(ahead) > start)) start = new Date(ahead)
+  }
+  return start
 }
 
 // Maps a Job and its pods onto what the dispatcher needs to know. The pod
@@ -384,22 +474,22 @@ export const classifyJob = (
   const podCreated = pod.metadata?.creationTimestamp
     ? new Date(pod.metadata.creationTimestamp)
     : undefined
-  // The sidecar's image (tens of GB) can fail to pull just like the job's
+  // Init containers (the weights wait, the prediction sidecar's image of tens
+  // of GB) can fail to pull just like the job's own container
+  const statuses = [
+    ...(pod.status?.initContainerStatuses ?? []),
+    ...(pod.status?.containerStatuses ?? []).filter(
+      (c) => c.name === JOB_CONTAINER
+    )
+  ]
+  const blocked = statuses.find((c) => {
+    const reason = c.state?.waiting?.reason
+    return (
+      reason && (CONFIG_ERRORS.has(reason) || IMAGE_PULL_ERRORS.has(reason))
+    )
+  })
   const waiting =
-    [
-      ...(pod.status?.initContainerStatuses ?? []).filter(
-        (c) => c.name === FOLD_SIDECAR
-      ),
-      ...(pod.status?.containerStatuses ?? []).filter(
-        (c) => c.name === JOB_CONTAINER
-      )
-    ]
-      .map((c) => c.state?.waiting)
-      .find(
-        (w) =>
-          w?.reason &&
-          (CONFIG_ERRORS.has(w.reason) || IMAGE_PULL_ERRORS.has(w.reason))
-      ) ??
+    blocked?.state?.waiting ??
     pod.status?.containerStatuses?.find((c) => c.name === JOB_CONTAINER)?.state
       ?.waiting
   if (waiting?.reason && CONFIG_ERRORS.has(waiting.reason)) {
@@ -409,14 +499,11 @@ export const classifyJob = (
     }
   }
   if (waiting?.reason && IMAGE_PULL_ERRORS.has(waiting.reason)) {
-    // Pulling starts once the pod is on a node, so time spent waiting for a
-    // GPU doesn't use up the grace period
-    const scheduled = pod.status?.conditions?.find(
-      (c) => c.type === 'PodScheduled' && c.status === 'True'
+    const pullStarted = pullStartedAt(
+      pod,
+      blocked?.name ?? JOB_CONTAINER,
+      podCreated
     )
-    const pullStarted = scheduled?.lastTransitionTime
-      ? new Date(scheduled.lastTransitionTime)
-      : podCreated
     const waited = pullStarted ? now.getTime() - pullStarted.getTime() : 0
     if (waited >= settings.imagePullGraceMs) {
       return {

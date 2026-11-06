@@ -131,7 +131,8 @@ foldSidecar:
 
 # One-time download of the OpenFold3 weights into of3-data/ on the data
 # volume. Runs after each install/upgrade and does nothing once the file is
-# there with the expected size and checksum.
+# there with the expected checksum. Helm waits for this hook: deploy with
+# --timeout 20m (see README), since its first run takes ~8 min.
 of3Weights:
   enabled: true
   subPath: of3-data

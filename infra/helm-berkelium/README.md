@@ -85,9 +85,11 @@ Mongo only reads `MONGO_PASSWORD` when it initializes an empty data volume. Chan
 
 ```bash
 cd infra/helm-berkelium
-helm --kube-context oidc@berkelium -n bilbomd upgrade --install bilbomd .
+helm --kube-context oidc@berkelium -n bilbomd upgrade --install bilbomd . --timeout 20m
 kubectl --context oidc@berkelium -n bilbomd get pods,pvc,httproute
 ```
+
+Keep `--timeout 20m`. Helm waits for the `of3-weights` hook Job even without `--wait`, and the default 5-minute timeout is too short for its first run. On a fresh volume, that run is a cold of3-service image pull (~3 min) plus a 2.2 GB download (~5 min). Once the weights are there, the hook finishes in seconds. Until the download has finished, OpenFold job pods wait for the weights, for up to 30 min, in a `wait-for-weights` init container.
 
 Before the first install, remove the hello-world placeholder that currently owns the hostname:
 
