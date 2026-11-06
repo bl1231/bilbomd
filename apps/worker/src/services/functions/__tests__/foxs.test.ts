@@ -204,6 +204,15 @@ describe('batchByDir', () => {
       ['/b', 2]
     ])
   })
+
+  it('treats a batch size below 1 as 1 instead of looping forever', () => {
+    const tasks = [0, 1, 2].map((i) => ({
+      dir: '/a',
+      file: `m${i}.pdb`,
+      fullPath: `/a/m${i}.pdb`
+    }))
+    expect(batchByDir(tasks, 0)).toHaveLength(3)
+  })
 })
 
 describe('spawnFoXSOptimized on the GPU', () => {
@@ -275,6 +284,42 @@ describe('spawnFoXSOptimized on the GPU', () => {
     await spawnFoXSOptimized([dir], undefined, 4, undefined, GPU)
 
     expect(cpuCalls().map(([o]) => o.args)).toEqual([['-p', 'md_1.pdb']])
+  })
+
+  it('ignores profiles left by an earlier attempt', async () => {
+    // foxs-gpu "succeeds" but writes nothing; a stale profile must not count
+    runProcessMock.mockResolvedValue({ code: 0 })
+    const dir = await makeDirWithPdbs('rg_20', 2)
+    await fs.writeFile(path.join(dir, 'md_0.pdb.dat'), 'stale')
+
+    await spawnFoXSOptimized([dir], undefined, 4, undefined, GPU)
+
+    expect(cpuCalls().map(([o]) => o.args)).toEqual([
+      ['-p', 'md_0.pdb'],
+      ['-p', 'md_1.pdb']
+    ])
+  })
+
+  it('waits for running batches to stop before rethrowing a cancel', async () => {
+    let siblingDone = false
+    runProcessMock.mockImplementation(async (opts: SpawnProcessOptions) => {
+      if (opts.args?.includes('md_0.pdb')) {
+        throw processError({ aborted: true })
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      siblingDone = true
+      throw processError({ aborted: true })
+    })
+    const dir = await makeDirWithPdbs('rg_20', 2)
+
+    await expect(
+      spawnFoXSOptimized([dir], undefined, 4, undefined, {
+        ...GPU,
+        batchSize: 1,
+        concurrency: 2
+      })
+    ).rejects.toBeInstanceOf(ProcessError)
+    expect(siblingDone).toBe(true)
   })
 
   it('stops without CPU fallback when the job is cancelled', async () => {

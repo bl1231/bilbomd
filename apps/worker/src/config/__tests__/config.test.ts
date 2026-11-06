@@ -140,6 +140,13 @@ describe('config.ts env parsing', () => {
       process.env.OPENMM_MD_CONCURRENCY = '-1'
       await expect(reimport()).rejects.toThrow(/is not a positive number/)
     })
+
+    it('throws on a fraction that floors to zero', async () => {
+      process.env.FOXS_GPU_BATCH_SIZE = '0.5'
+      await expect(reimport()).rejects.toThrow(
+        /FOXS_GPU_BATCH_SIZE="0.5" is not a positive number/
+      )
+    })
   })
 
   describe('processTimeouts', () => {

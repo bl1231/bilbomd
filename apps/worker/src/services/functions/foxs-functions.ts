@@ -143,10 +143,12 @@ const batchByDir = (tasks: FoxsTask[], size: number): FoxsTask[][] => {
     list.push(task)
     byDir.set(task.dir, list)
   }
+  // A size below 1 would never advance
+  const step = Math.max(1, Math.floor(size))
   const batches: FoxsTask[][] = []
   for (const list of byDir.values()) {
-    for (let i = 0; i < list.length; i += size) {
-      batches.push(list.slice(i, i + size))
+    for (let i = 0; i < list.length; i += step) {
+      batches.push(list.slice(i, i + step))
     }
   }
   return batches
@@ -168,7 +170,7 @@ const runFoXSOnGpu = async (
   logger.info(
     `FoXS on GPU: ${tasks.length} files in ${batches.length} batches of up to ${gpu.batchSize}, ${gpu.concurrency} at once (${gpu.bin})`
   )
-  const limit = pLimit(gpu.concurrency)
+  const limit = pLimit(Math.max(1, Math.floor(gpu.concurrency)))
   const leftovers: FoxsTask[] = []
   let gpuUnavailable = false
 
@@ -177,6 +179,9 @@ const runFoXSOnGpu = async (
       leftovers.push(...batch)
       return
     }
+    // A retried job reuses its FoXS directories: remove profiles left by an
+    // earlier attempt so only ones this run writes count as done
+    await Promise.all(batch.map((t) => fs.remove(`${t.fullPath}.dat`)))
     try {
       await runProcess({
         label: `FoXS GPU batch (${batch.length} files in ${path.basename(batch[0].dir)})`,
@@ -212,7 +217,15 @@ const runFoXSOnGpu = async (
     onDone(batch.length - missing.length)
   }
 
-  await Promise.all(batches.map((batch) => limit(() => runBatch(batch))))
+  // Let every batch settle before rethrowing a cancel, so no foxs-gpu process
+  // is still running when the job handler (or a job pod) exits
+  const results = await Promise.allSettled(
+    batches.map((batch) => limit(() => runBatch(batch)))
+  )
+  const failed = results.find(
+    (r): r is PromiseRejectedResult => r.status === 'rejected'
+  )
+  if (failed) throw failed.reason
   return leftovers
 }
 

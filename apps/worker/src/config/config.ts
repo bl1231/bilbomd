@@ -19,13 +19,14 @@ const getEnvVarWithDefault = (name: string, defaultValue: string): string => {
 const parsePositiveIntEnv = (name: string, defaultValue: number): number => {
   const raw = process.env[name]
   if (raw === undefined || raw === '') return defaultValue
-  const parsed = Number(raw)
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  // Floor first: a fraction like 0.5 would otherwise pass and become 0
+  const parsed = Math.floor(Number(raw))
+  if (!Number.isFinite(parsed) || parsed < 1) {
     throw new Error(
       `Environment variable ${name}="${raw}" is not a positive number`
     )
   }
-  return Math.floor(parsed)
+  return parsed
 }
 
 export const EXECUTION_BACKENDS = ['local', 'nersc', 'k8s'] as const
