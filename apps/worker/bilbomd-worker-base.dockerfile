@@ -13,6 +13,31 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
+# Build the standalone GPU FoXS (dina-lab3D/foxs, #1157). The worker runs it in
+# batches when a GPU is available and falls back to IMP's CPU foxs otherwise.
+# It writes the same .pdb.dat partial profiles, so IMP's multi_foxs reads them.
+FROM install-dependencies AS build-foxs-gpu
+ARG FOXS_REPO=https://github.com/dina-lab3D/foxs.git
+# Upstream doesn't tag releases yet: pin the commit benchmarked in #1157.
+ARG FOXS_REF=a2e4270d6b44f2fef736bbff99a4effab861e584
+# A100 (epyc, Perlmutter) = sm_80, A40 (Berkelium) = sm_86, H100/H200 = sm_90.
+# The compute_90 PTX lets newer GPUs JIT-compile it.
+ARG FOXS_CUDA_GENCODE="-gencode arch=compute_80,code=sm_80 -gencode arch=compute_86,code=sm_86 -gencode arch=compute_90,code=sm_90 -gencode arch=compute_90,code=compute_90"
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    git libboost-program-options-dev python3 && \
+    rm -rf /var/lib/apt/lists/*
+RUN git clone "${FOXS_REPO}" /src/foxs && git -C /src/foxs checkout "${FOXS_REF}"
+WORKDIR /src/foxs
+# Upstream's regression test fits lysozyme on the CPU; its GPU parity check
+# skips itself here (no GPU during the build).
+RUN make -j"$(nproc)" GPU=1 TARGET=foxs-gpu NVCCFLAGS="-O3 -std=c++17 ${FOXS_CUDA_GENCODE}" && \
+    python3 tests/test_foxs.py ./foxs-gpu && \
+    strip foxs-gpu && \
+    git rev-parse HEAD > FOXS_REF
+WORKDIR /
+
+# -----------------------------------------------------------------------------
 # Build CHARMM
 FROM install-dependencies AS build_charmm
 RUN wget https://bl1231.als.lbl.gov/pickup/charmm/${CHARMM_VER}.tar.gz -O /usr/local/src/${CHARMM_VER}.tar.gz
@@ -145,6 +170,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ca-certificates curl software-properties-common gnupg \
     libgfortran5 libstdc++6 libxml2 libtiff5 liblzma5 libicu70 libharfbuzz0b \
+    libboost-program-options1.74.0 \
     parallel binutils \
     libglew-dev \
     libpng-dev \
@@ -186,6 +212,8 @@ RUN mkdir -p /bilbomd/uploads /bilbomd/logs /opt/envs/openmm /opt/envs/base
 COPY --from=build_charmm /usr/local/src/charmm/bin/charmm /usr/local/bin/charmm
 COPY --from=build_charmm /usr/local/src/charmm/toppar /app/charmm-toppar
 COPY --from=install-sans-tools /usr/local/bin/Pepsi-SANS /usr/local/bin/Pepsi-SANS
+COPY --from=build-foxs-gpu /src/foxs/foxs-gpu /usr/local/bin/foxs-gpu
+COPY --from=build-foxs-gpu /src/foxs/FOXS_REF /usr/local/share/foxs-gpu/FOXS_REF
 COPY --from=install-sans-tools /usr/local/sans /usr/local/sans
 COPY --from=install-pymol /opt/envs/openmm /opt/envs/openmm
 COPY --from=install-pymol /opt/envs/base   /opt/envs/base

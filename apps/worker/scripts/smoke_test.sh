@@ -20,6 +20,12 @@ else
     echo "FOXS not found"
 fi
 
+if foxs_gpu_version=$(foxs-gpu --version 2>&1); then
+    echo "FOXS-GPU OK - $foxs_gpu_version (commit $(cat /usr/local/share/foxs-gpu/FOXS_REF 2>/dev/null))"
+else
+    echo "FOXS-GPU not found"
+fi
+
 if multifoxs_version=$(multi_foxs --version 2>&1); then
     # Clean up the output - multi_foxs outputs the command followed by version
     clean_version=$(echo "$multifoxs_version" | grep "Version:" | head -1)
