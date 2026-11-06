@@ -4,6 +4,7 @@ import { Job } from 'bullmq'
 // Mock the dependencies
 vi.mock('../../config/config.js', () => ({
   config: {
+    executionBackend: 'local',
     runOnNERSC: false
   }
 }))

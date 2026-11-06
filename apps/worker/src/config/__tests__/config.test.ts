@@ -200,8 +200,65 @@ describe('config.ts env parsing', () => {
     it('rejects an unknown backend', async () => {
       process.env.EXECUTION_BACKEND = 'slurm'
       await expect(reimport()).rejects.toThrow(
-        /EXECUTION_BACKEND="slurm" must be one of: local, nersc/
+        /EXECUTION_BACKEND="slurm" must be one of: local, nersc, k8s/
       )
+    })
+  })
+
+  describe('k8s settings', () => {
+    it('require a namespace and job image on the k8s backend', async () => {
+      process.env.EXECUTION_BACKEND = 'k8s'
+      delete process.env.K8S_NAMESPACE
+      delete process.env.K8S_JOB_IMAGE
+      await expect(reimport()).rejects.toThrow(
+        /Missing required environment variables:.*K8S_NAMESPACE.*K8S_JOB_IMAGE/
+      )
+    })
+
+    it('are optional on other backends', async () => {
+      process.env.EXECUTION_BACKEND = 'local'
+      delete process.env.K8S_NAMESPACE
+      delete process.env.K8S_JOB_IMAGE
+      const { config } = await reimport()
+      expect(config.k8s.namespace).toBe('')
+      expect(config.k8s.jobImage).toBe('')
+    })
+
+    it('have defaults for everything else', async () => {
+      process.env.EXECUTION_BACKEND = 'k8s'
+      process.env.K8S_NAMESPACE = 'bilbomd'
+      process.env.K8S_JOB_IMAGE = 'worker:1'
+      const { config } = await reimport()
+      expect(config.executionBackend).toBe('k8s')
+      expect(config.runOnNERSC).toBe(false)
+      expect(config.k8s).toMatchObject({
+        namespace: 'bilbomd',
+        jobImage: 'worker:1',
+        configMapName: 'bilbomd-config',
+        secretName: 'bilbomd-secrets',
+        dataPvc: 'bilbomd-data',
+        dataSubPath: 'uploads',
+        gpuClaimTemplate: 'bilbomd-gpu',
+        maxJobs: 2,
+        activeDeadlineSeconds: 12 * 60 * 60,
+        resources: {
+          requests: { cpu: '4', memory: '8Gi' },
+          limits: { cpu: '8', memory: '16Gi' }
+        }
+      })
+    })
+
+    it('can be overridden', async () => {
+      process.env.EXECUTION_BACKEND = 'k8s'
+      process.env.K8S_NAMESPACE = 'bilbomd'
+      process.env.K8S_JOB_IMAGE = 'worker:1'
+      process.env.K8S_MAX_JOBS = '4'
+      process.env.K8S_JOB_MEMORY_LIMIT = '32Gi'
+      process.env.K8S_JOB_RUN_AS_USER = '62704'
+      const { config } = await reimport()
+      expect(config.k8s.maxJobs).toBe(4)
+      expect(config.k8s.resources.limits.memory).toBe('32Gi')
+      expect(config.k8s.runAsUser).toBe(62704)
     })
   })
 

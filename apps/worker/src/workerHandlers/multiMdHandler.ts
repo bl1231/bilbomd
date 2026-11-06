@@ -1,6 +1,8 @@
 import { Job as BullMQJob } from 'bullmq'
 import { logger } from '../helpers/loggers.js'
 import { processMultiMDJob } from '../services/pipelines/bilbomd-multi.js'
+import { processMultiMDJobK8s } from '../services/pipelines/bilbomd-k8s.js'
+import { config } from '../config/config.js'
 import { WorkerJob } from '../types/jobtypes.js'
 import { runCancellable } from '../helpers/jobCancellation.js'
 
@@ -14,7 +16,10 @@ export const multiMdHandler = async (
     logger.info(`Start BilboMD PDB job: ${job.name}`)
     await runCancellable(
       (job.data as { jobid?: string }).jobid,
-      () => processMultiMDJob(job),
+      () =>
+        config.executionBackend === 'k8s'
+          ? processMultiMDJobK8s(job)
+          : processMultiMDJob(job),
       signal
     )
     logger.info(`Finish job: ${job.name}`)

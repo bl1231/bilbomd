@@ -38,13 +38,24 @@ let bilboMdWorker: Worker | null = null
 let movieWorker: Worker | null = null
 let multimdWorker: Worker | null = null
 
+const onK8s = config.executionBackend === 'k8s'
+
+// On Kubernetes a job keeps running in its own pod while the dispatcher
+// restarts (e.g. on upgrade). Its BullMQ job stalls and is picked up again,
+// and the handler adopts the running Kubernetes Job, so allow several stalls
+// before BullMQ gives up on it.
+const K8S_MAX_STALLED_COUNT = 10
+
 const workerOptions: WorkerOptions = {
   connection: redis,
   concurrency: config.runOnNERSC
     ? WORKER_CONCURRENCY.NERSC
-    : WORKER_CONCURRENCY.LOCAL,
+    : onK8s
+      ? config.k8s.maxJobs
+      : WORKER_CONCURRENCY.LOCAL,
   lockDuration: LOCK_SETTINGS.DURATION,
-  lockRenewTime: LOCK_SETTINGS.RENEW_TIME
+  lockRenewTime: LOCK_SETTINGS.RENEW_TIME,
+  ...(onK8s ? { maxStalledCount: K8S_MAX_STALLED_COUNT } : {})
 }
 
 const movieWorkerOptions: WorkerOptions = {
@@ -54,13 +65,29 @@ const movieWorkerOptions: WorkerOptions = {
 
 const multimdWorkerOptions: WorkerOptions = {
   connection: redis,
-  concurrency: WORKER_CONCURRENCY.MULTI_MD
+  concurrency: WORKER_CONCURRENCY.MULTI_MD,
+  ...(onK8s
+    ? {
+        lockDuration: LOCK_SETTINGS.DURATION,
+        lockRenewTime: LOCK_SETTINGS.RENEW_TIME,
+        maxStalledCount: K8S_MAX_STALLED_COUNT
+      }
+    : {})
 }
 
 const startWorkers = async () => {
-  const systemName = config.runOnNERSC ? 'NERSC' : 'Hyperion/Epyc'
+  const systemName = config.runOnNERSC
+    ? 'NERSC'
+    : onK8s
+      ? 'Kubernetes'
+      : 'Hyperion/Epyc'
   logger.info(`Attempting to start workers on ${systemName}...`)
   logger.info(`Execution backend: ${config.executionBackend}`)
+  if (onK8s) {
+    logger.info(
+      `Kubernetes Jobs in namespace ${config.k8s.namespace}, image ${config.k8s.jobImage}, at most ${config.k8s.maxJobs} at once`
+    )
+  }
 
   // Create workers only if they are not already initialized
   if (!bilboMdWorker || !movieWorker || !multimdWorker) {
@@ -176,8 +203,11 @@ const gracefulShutdown = async (signal: string) => {
 
   // Close workers
   try {
+    // On Kubernetes the handlers only watch Jobs that keep running without
+    // them, so don't wait (possibly hours) for them to return; the next
+    // dispatcher adopts the Jobs.
     if (bilboMdWorker) {
-      await bilboMdWorker.close()
+      await bilboMdWorker.close(onK8s)
       logger.info('BilboMD Worker closed')
     }
     if (movieWorker) {
@@ -185,7 +215,7 @@ const gracefulShutdown = async (signal: string) => {
       logger.info('Movie Worker closed')
     }
     if (multimdWorker) {
-      await multimdWorker.close()
+      await multimdWorker.close(onK8s)
       logger.info('MultiMD Worker closed')
     }
   } catch (error) {
