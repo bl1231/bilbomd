@@ -73,7 +73,7 @@ spec:
     - metadata:
         name: redis-data
         labels:
-          {{- include "bilbomd.labels" . | nindent 10 }}
+          {{- include "bilbomd.claimLabels" . | nindent 10 }}
       spec:
         accessModes: [ReadWriteOnce]
         storageClassName: {{ .Values.storage.redis.storageClassName }}

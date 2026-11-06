@@ -136,3 +136,29 @@ tests:
             path: 'spec.jobTemplate.spec.template.spec.containers[0].args[0]',
             pattern: '-mtime \+7 -delete'
           }
+
+  # volumeClaimTemplates can't change once the StatefulSet exists, so a
+  # chart-version label there makes every chart upgrade fail
+  - it: mongo's volume claim labels don't change with the chart version
+    template: mongo.yaml
+    chart:
+      version: 9.9.9
+    documentSelector: { path: kind, value: StatefulSet }
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.labels
+          value:
+            app.kubernetes.io/part-of: bilbomd
+            app.kubernetes.io/managed-by: Helm
+
+  - it: redis's volume claim labels don't change with the chart version
+    template: redis.yaml
+    chart:
+      version: 9.9.9
+    documentSelector: { path: kind, value: StatefulSet }
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.labels
+          value:
+            app.kubernetes.io/part-of: bilbomd
+            app.kubernetes.io/managed-by: Helm
