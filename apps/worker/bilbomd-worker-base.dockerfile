@@ -4,8 +4,14 @@ FROM nvidia/cuda:12.9.2-devel-ubuntu22.04 AS install-dependencies
 
 # Pin versions for better caching
 ARG CHARMM_VER=c49b2
-ARG OPENMM_VERSION=8.5.1
+ARG OPENMM_VERSION=8.6.1
 ARG PYTHON_VERSION=3.12
+# CUDA version of the OpenMM conda env (cuda-version / cuda-nvrtc). OpenMM
+# compiles its kernels at run time with NVRTC, so this must not be newer than
+# the CUDA version the GPU hosts' drivers support (epyc: 13.3). Unpinned, conda
+# took 13.5 and OpenMM failed with CUDA_ERROR_UNSUPPORTED_PTX_VERSION, then
+# silently ran minimize/heat on the CPU. Raise it only after the drivers.
+ARG OPENMM_CUDA_VERSION=13.2
 
 RUN apt-get update && \
     apt-get install -y cmake gcc gfortran g++ wget libgl1-mesa-dev \
@@ -101,6 +107,7 @@ RUN conda update -y -p /opt/envs/base -c defaults conda && \
     conda create -y -p /opt/envs/openmm \
     python=${PYTHON_VERSION} \
     openmm=${OPENMM_VERSION} \
+    cuda-version=${OPENMM_CUDA_VERSION} \
     numpy doxygen pip cython pyyaml \
     openmmforcefields openff-toolkit rdkit ambertools lxml && \
     conda clean -afy
