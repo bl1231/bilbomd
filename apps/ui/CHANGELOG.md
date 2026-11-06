@@ -1,5 +1,12 @@
 # @bilbomd/ui
 
+## 2.35.6
+
+### Patch Changes
+
+- Updated dependencies [57d5366]
+  - @bilbomd/bilbomd-types@1.13.0
+
 ## 2.35.5
 
 ### Patch Changes

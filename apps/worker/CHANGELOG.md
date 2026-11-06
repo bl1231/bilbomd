@@ -1,5 +1,19 @@
 # @bilbomd/worker
 
+## 2.22.0
+
+### Minor Changes
+
+- 57d5366: Add `EXECUTION_BACKEND` (`local` or `nersc`) to choose where the worker runs pipelines; `USE_NERSC` still works when it is unset. The NERSC environment variables are now only required for the `nersc` backend. Add an `ENABLE_MOVIES` switch (default on) and a `run-job` entrypoint (`node dist/run-job.js <bilbomd|multimd> <bullmq-job-id>`) that runs one queued job in its own process and exits, the pod side of the upcoming Kubernetes backend.
+- 0871094: Add the `k8s` execution backend. With `EXECUTION_BACKEND=k8s` the worker runs each BilboMD or Multi job as a Kubernetes Job in its own namespace (`node dist/run-job.js` in the worker image) and waits for it. BullMQ concurrency (`K8S_MAX_JOBS`) caps how many run at once, OpenMM jobs get a GPU through a ResourceClaimTemplate, cancelling a job deletes its Kubernetes Job, and a restarted worker adopts Jobs that are still running. Out-of-memory kills, deadlines, image pull errors and evictions fail the job with that reason. The Berkelium Helm chart gets a dispatcher Deployment and the `bilbomd-gpu` ResourceClaimTemplate.
+
+### Patch Changes
+
+- 57d5366: Add `flush()` to the job event notifier, which publishes events still held back by the throttle. `run-job` now publishes job events (as the worker does) and flushes them before it exits, and SIGTERM stops its MongoDB connection retries, so a job cancelled before it starts exits as cancelled. Job emails are now awaited, so a failed send is caught and recorded on the email step instead of becoming an unhandled rejection, and `run-job` can't exit in the middle of one.
+- Updated dependencies [57d5366]
+  - @bilbomd/bilbomd-types@1.13.0
+  - @bilbomd/md-utils@1.2.3
+
 ## 2.21.7
 
 ### Patch Changes
