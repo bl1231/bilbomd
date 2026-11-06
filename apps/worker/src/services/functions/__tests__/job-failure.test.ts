@@ -9,6 +9,7 @@ import {
 } from '../job-failure.js'
 import { JobCancelledError } from '../../../helpers/jobCancellation.js'
 import { sendJobCompleteEmail } from '../../../helpers/mailer.js'
+import { logger } from '../../../helpers/loggers.js'
 import { notifyJobChanged } from '../../../helpers/jobEvents.js'
 import { recordWorkerUsageEvent } from '../usage-events.js'
 import { config } from '../../../config/config.js'
@@ -227,6 +228,28 @@ describe('reportFailedJob', () => {
       'Multi',
       true,
       undefined
+    )
+  })
+
+  it('still records the failure when the email cannot be sent', async () => {
+    const job = makePdbJob()
+    findByIdReturning(Job, job)
+    vi.mocked(sendJobCompleteEmail).mockRejectedValueOnce(
+      new Error('Invalid credentials for relay')
+    )
+
+    await expect(
+      reportFailedJob('bilbomd', mqJob(2), new Error('boom'))
+    ).resolves.toBeUndefined()
+
+    expect(recorded()).toMatchObject({ eventType: 'job_failed' })
+    expect(job.status).toBe('Error')
+    // The send failure is handled where it happens, not by the catch-all
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to send job failed email to alice@example.com: Invalid credentials for relay'
+    )
+    expect(logger.error).not.toHaveBeenCalledWith(
+      expect.stringContaining('Failed to report failed job')
     )
   })
 

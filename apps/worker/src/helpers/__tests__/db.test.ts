@@ -114,4 +114,30 @@ describe('connectDB', () => {
     await promise
     expect(settled).toBe(true)
   })
+
+  it('stops retrying when its signal is aborted', async () => {
+    mockConnect.mockRejectedValue(new Error('ECONNREFUSED'))
+    const controller = new AbortController()
+
+    const connecting = connectDB(controller.signal)
+    const outcome = connecting.then(
+      () => 'connected',
+      (reason) => reason
+    )
+    // First attempt fails; abort during the backoff wait
+    await vi.advanceTimersByTimeAsync(1000)
+    controller.abort('SIGTERM')
+
+    await expect(outcome).resolves.toBe('SIGTERM')
+    expect(mockConnect).toHaveBeenCalledTimes(1)
+    mockConnect.mockReset()
+  })
+
+  it('does not try at all once aborted', async () => {
+    const controller = new AbortController()
+    controller.abort('SIGTERM')
+
+    await expect(connectDB(controller.signal)).rejects.toBe('SIGTERM')
+    expect(mockConnect).not.toHaveBeenCalled()
+  })
 })

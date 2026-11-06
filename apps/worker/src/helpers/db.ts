@@ -20,20 +20,33 @@ const MAX_RETRY_DELAY_MS = 60_000
 // deploy or an NFS lock-recovery window can outlast a finite retry budget, and
 // connectDB() is called fire-and-forget, so a throw here becomes an unhandled
 // rejection that kills the worker. Mirrors the backend's dbConn.ts.
-const connectDB = async (): Promise<void> => {
+//
+// Aborting `signal` (run-job on SIGTERM) stops retrying: connectDB then
+// rejects with the signal's reason.
+const connectDB = async (signal?: AbortSignal): Promise<void> => {
   for (let attempt = 1; ; attempt++) {
+    signal?.throwIfAborted()
     try {
       await mongoose.connect(url)
       logger.info('Successfully connected to MongoDB')
       return
     } catch (err) {
+      signal?.throwIfAborted()
       const delay = Math.min(
         INITIAL_RETRY_DELAY_MS * 2 ** (attempt - 1),
         MAX_RETRY_DELAY_MS
       )
       logger.error(`MongoDB connection attempt ${attempt} failed: ${err}`)
       logger.info(`Retrying MongoDB connection in ${delay / 1000} seconds...`)
-      await new Promise((resolve) => setTimeout(resolve, delay))
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(done, delay)
+        function done() {
+          clearTimeout(timer)
+          signal?.removeEventListener('abort', done)
+          resolve()
+        }
+        signal?.addEventListener('abort', done, { once: true })
+      })
     }
   }
 }

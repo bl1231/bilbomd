@@ -233,6 +233,22 @@ describe('bilbomd-multi-functions - job start and finish', () => {
       )
     })
 
+    it('marks the email step Error when the send is rejected', async () => {
+      userLookup(owner)
+      vi.mocked(sendJobCompleteEmail).mockRejectedValueOnce(
+        new Error('Invalid credentials for relay')
+      )
+      const { job } = savingJob()
+      Object.assign(job, { _id: 'multi-id' })
+
+      await cleanupJob(job)
+
+      expect(updateStepStatusMock).toHaveBeenCalledWith(job, 'email', {
+        status: 'Error',
+        message: 'Failed to send email: Invalid credentials for relay'
+      })
+    })
+
     it('skips the email when the owner turned job emails off', async () => {
       userLookup(owner)
       vi.mocked(wantsJobEmails).mockResolvedValueOnce(false)

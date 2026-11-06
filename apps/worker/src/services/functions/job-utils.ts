@@ -116,7 +116,7 @@ const handleJobEmailNotification = async (
     await updateStepStatus(DBjob, 'email', status)
 
     try {
-      sendJobCompleteEmail(
+      await sendJobCompleteEmail(
         user.email,
         config.bilbomdUrl,
         DBjob._id.toString(),

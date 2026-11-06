@@ -7,6 +7,7 @@ import {
 } from '@bilbomd/mongodb-schema'
 import { Types } from 'mongoose'
 import { logger } from '../../helpers/loggers.js'
+import { getErrorMessage } from '../../helpers/errors.js'
 import { config } from '../../config/config.js'
 import {
   executeNerscScript,
@@ -146,16 +147,23 @@ const cleanupJob = async (
     }
 
     // Send job completion email unless the owner turned job emails off
+    // A failed send is logged, not thrown: the job's results are done
     if (config.sendEmailNotifications && (await wantsJobEmails(user))) {
-      sendJobCompleteEmail(
-        user.email,
-        config.bilbomdUrl,
-        DBjob._id.toString(),
-        DBjob.title,
-        message.error ?? false,
-        DBjob.results_token
-      )
-      logger.info(`email notification sent to ${user.email}`)
+      try {
+        await sendJobCompleteEmail(
+          user.email,
+          config.bilbomdUrl,
+          DBjob._id.toString(),
+          DBjob.title,
+          message.error ?? false,
+          DBjob.results_token
+        )
+        logger.info(`email notification sent to ${user.email}`)
+      } catch (emailError) {
+        logger.error(
+          `Failed to send email to ${user.email}: ${getErrorMessage(emailError)}`
+        )
+      }
     }
   } catch (error) {
     logger.error(`Error in cleanupJob: ${error}`)

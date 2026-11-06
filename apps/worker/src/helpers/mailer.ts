@@ -37,14 +37,17 @@ transporter.use(
   })
 )
 
-const sendJobCompleteEmail = (
+// Resolves once the SMTP server has accepted the message and rejects if it
+// doesn't, so callers can report a failed send and a process that exits
+// after a job (run-job) doesn't cut a send short.
+const sendJobCompleteEmail = async (
   email: string,
   url: string,
   jobid: string,
   title: string,
   isError: boolean,
   resultsToken?: string
-) => {
+): Promise<void> => {
   logger.info(`Sending job complete email, isError: ${isError}`)
 
   let emailLayout: string
@@ -75,7 +78,7 @@ const sendJobCompleteEmail = (
   }
 
   logger.info(`Using email template: ${emailLayout}`)
-  transporter.sendMail(mail)
+  await transporter.sendMail(mail)
 }
 
 export { sendJobCompleteEmail }

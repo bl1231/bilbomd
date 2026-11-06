@@ -40,22 +40,29 @@ const ownerEmail = async (
 }
 
 // Emails the job's owner that the job failed. Returns the address it was
-// sent to, or undefined when there is no one to email, emails are off, or
-// the owner turned job emails off.
+// sent to, or undefined when there is no one to email, emails are off, the
+// owner turned job emails off, or the send failed (logged, never thrown).
 export const sendJobFailedEmail = async (
   job: IJob | IMultiJob
 ): Promise<string | undefined> => {
   if (!config.sendEmailNotifications) return undefined
   const email = await ownerEmail(job.user)
   if (!email || !(await wantsJobEmails(job.user))) return undefined
-  sendJobCompleteEmail(
-    email,
-    config.bilbomdUrl,
-    job._id.toString(),
-    job.title,
-    true,
-    'results_token' in job ? job.results_token : undefined
-  )
+  try {
+    await sendJobCompleteEmail(
+      email,
+      config.bilbomdUrl,
+      job._id.toString(),
+      job.title,
+      true,
+      'results_token' in job ? job.results_token : undefined
+    )
+  } catch (error) {
+    logger.error(
+      `Failed to send job failed email to ${email}: ${getErrorMessage(error)}`
+    )
+    return undefined
+  }
   return email
 }
 
