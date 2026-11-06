@@ -20,11 +20,14 @@ tests:
 
   - it: runs the worker image in the k8s backend with the Science IT ServiceAccount
     template: dispatcher.yaml
+    # Set the tag here: the release rewrites images.worker.tag in values.yaml
+    set:
+      images.worker.tag: 9.9.9
     asserts:
       - equal: { path: spec.template.spec.serviceAccountName, value: bilbomd }
       - equal:
           path: 'spec.template.spec.containers[0].image'
-          value: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-worker:2.21.7
+          value: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-worker:9.9.9
       - contains:
           path: 'spec.template.spec.containers[0].env'
           content: { name: EXECUTION_BACKEND, value: k8s }
