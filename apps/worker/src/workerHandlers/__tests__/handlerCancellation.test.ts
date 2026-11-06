@@ -5,7 +5,9 @@ import {
   currentAbortSignal
 } from '../../helpers/jobCancellation.js'
 
-vi.mock('../../config/config.js', () => ({ config: { runOnNERSC: false } }))
+vi.mock('../../config/config.js', () => ({
+  config: { executionBackend: 'local', runOnNERSC: false }
+}))
 vi.mock('../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))

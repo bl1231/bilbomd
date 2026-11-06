@@ -58,3 +58,33 @@ describe('multiMdHandler', () => {
     expect(processMultiMDJob).toHaveBeenCalledWith(mockJob)
   })
 })
+
+describe('multiMdHandler on Kubernetes', () => {
+  it('runs the job as a Kubernetes Job', async () => {
+    vi.resetModules()
+    vi.doMock('../../config/config.js', () => ({
+      config: { executionBackend: 'k8s' }
+    }))
+    const processMultiMDJobK8s = vi.fn(async () => {})
+    vi.doMock('../../services/pipelines/bilbomd-k8s.js', () => ({
+      processMultiMDJobK8s
+    }))
+    const { processMultiMDJob } =
+      await import('../../services/pipelines/bilbomd-multi.js')
+    const { multiMdHandler } = await import('../multiMdHandler.js')
+
+    const mockJob = {
+      id: 'test-job-id',
+      name: 'test-job',
+      data: { type: 'multi', jobid: 'mongo-job-id' },
+      log: vi.fn()
+    } as unknown as Job
+
+    await expect(multiMdHandler(mockJob)).resolves.toBeUndefined()
+    expect(processMultiMDJobK8s).toHaveBeenCalledWith(mockJob)
+    expect(processMultiMDJob).not.toHaveBeenCalled()
+
+    vi.doUnmock('../../config/config.js')
+    vi.doUnmock('../../services/pipelines/bilbomd-k8s.js')
+  })
+})

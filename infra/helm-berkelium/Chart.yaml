@@ -1,6 +1,6 @@
 apiVersion: v2
 name: bilbomd-berkelium
-description: BilboMD on Berkelium (LBL Science IT Kubernetes) — CPU-only always-on services; per-job GPU Jobs are added separately (see issue #1194)
+description: BilboMD on Berkelium (LBL Science IT Kubernetes) — CPU-only always-on services plus a dispatcher that runs each job as a Kubernetes Job (see issue #1194)
 type: application
-version: 0.1.1
+version: 0.2.0
 appVersion: '2.35.5'
