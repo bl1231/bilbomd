@@ -2,13 +2,13 @@
 
 Deployment configuration for every place BilboMD runs, and the scripts that deploy it.
 
-| Where                               | What runs there                                              | Config                                                         | Deployed with                                     |
-| ----------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------------------- |
-| Your laptop                         | Whole stack for development                                  | `docker-compose.local.yml`, `.env.local` (from `.env.example`) | `./deploy-to-beamline.sh up local`                |
-| **epyc** (SIBYLS beamline, 2× A100) | Backend, UI, GPU worker, AlphaFold/OpenFold3 services        | `docker-compose-epyc.{dev,prod}.yml`                           | `./deploy-to-beamline.sh <cmd> dev\|prod`         |
-| **hyperion** (SIBYLS beamline)      | SCOPER (needs an Intel CPU)                                  | `docker-compose-hyperion.{dev,prod}.yml`                       | same script; it SSHes to each host                |
-| **NERSC** Spin + Perlmutter         | Backend, UI, worker on Spin; MD jobs on Perlmutter via Slurm | `helm-nersc/`                                                  | `./nersc.sh deploy dev\|prod`                     |
-| **Berkelium** (LBL Science IT k8s)  | Backend, UI, dispatcher; each job runs as a k8s Job          | `helm-berkelium/`                                              | `./berkelium.sh` (deploy, status, diff, rollback) |
+| Where                               | What runs there                                              | Config                                                         | Deployed with                                                        |
+| ----------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Your laptop                         | Whole stack for development                                  | `docker-compose.local.yml`, `.env.local` (from `.env.example`) | `./deploy-to-beamline.sh up local`                                   |
+| **epyc** (SIBYLS beamline, 2× A100) | Backend, UI, GPU worker, AlphaFold/OpenFold3 services        | `docker-compose-epyc.{dev,prod}.yml`                           | `./deploy-to-beamline.sh <cmd> dev\|prod`                            |
+| **hyperion** (SIBYLS beamline)      | SCOPER (needs an Intel CPU)                                  | `docker-compose-hyperion.{dev,prod}.yml`                       | same script; it SSHes to each host                                   |
+| **NERSC** Spin + Perlmutter         | Backend, UI, worker on Spin; MD jobs on Perlmutter via Slurm | `helm-nersc/`                                                  | `./nersc.sh <cmd> dev\|prod` (deploy, status, diff, rollback, sfapi) |
+| **Berkelium** (LBL Science IT k8s)  | Backend, UI, dispatcher; each job runs as a k8s Job          | `helm-berkelium/`                                              | `./berkelium.sh` (deploy, status, diff, rollback)                    |
 
 ## Layout
 
@@ -17,7 +17,7 @@ infra/
 ├── README.md                 this file
 ├── .env.example              template for the compose env files
 ├── deploy-to-beamline.sh     compose stacks: local, epyc, hyperion
-├── nersc.sh                  NERSC Spin Helm release: deploy, status, rollback, sfapi
+├── nersc.sh                  NERSC Spin Helm release: deploy, status, diff, rollback, sfapi
 ├── berkelium.sh              Berkelium Helm release: deploy, status, diff, rollback
 ├── assign-role.sh            grant or remove a user role in a compose stack's MongoDB
 ├── docker-compose*.yml       one file per compose target
