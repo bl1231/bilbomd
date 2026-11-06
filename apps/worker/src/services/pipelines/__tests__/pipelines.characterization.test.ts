@@ -903,3 +903,28 @@ describe('sans pipeline', () => {
       `)
   })
 })
+
+describe('movies', () => {
+  it('are queued for OpenMM jobs by default', async () => {
+    const trace = await run(processBilboMDPDBJob, { md_engine: 'OpenMM' })
+    expect(trace).toContain('fn:enqueueMakeMovie')
+  })
+
+  it('are skipped when ENABLE_MOVIES is off', async () => {
+    const { config } = await import('../../../config/config.js')
+    config.moviesEnabled = false
+    try {
+      const pdb = await run(processBilboMDPDBJob, { md_engine: 'OpenMM' })
+      expect(pdb).not.toContain('fn:enqueueMakeMovie')
+      // Everything after the skipped step still runs
+      expect(pdb).toContain('fn:prepareBilboMDResults')
+
+      trace.length = 0
+      const af = await run(processBilboMDAlphaFoldJob)
+      expect(af).not.toContain('fn:enqueueMakeMovie')
+      expect(af).toContain('fn:prepareBilboMDResults')
+    } finally {
+      config.moviesEnabled = true
+    }
+  })
+})

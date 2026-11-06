@@ -28,22 +28,48 @@ const parsePositiveIntEnv = (name: string, defaultValue: number): number => {
   return Math.floor(parsed)
 }
 
+export const EXECUTION_BACKENDS = ['local', 'nersc'] as const
+export type ExecutionBackend = (typeof EXECUTION_BACKENDS)[number]
+
+// Where the worker runs BilboMD pipelines: 'local' runs them in this process
+// (epyc, hyperion), 'nersc' submits them to Perlmutter through the
+// Superfacility API. EXECUTION_BACKEND wins; without it the older USE_NERSC
+// flag still selects NERSC.
+const parseExecutionBackend = (): ExecutionBackend => {
+  const raw = process.env.EXECUTION_BACKEND?.trim().toLowerCase()
+  if (!raw) return toBoolean(process.env.USE_NERSC) ? 'nersc' : 'local'
+  if ((EXECUTION_BACKENDS as readonly string[]).includes(raw)) {
+    return raw as ExecutionBackend
+  }
+  throw new Error(
+    `Environment variable EXECUTION_BACKEND="${process.env.EXECUTION_BACKEND}" must be one of: ${EXECUTION_BACKENDS.join(', ')}`
+  )
+}
+
+const executionBackend = parseExecutionBackend()
+
+// Only the NERSC backend talks to the Superfacility API and generates Slurm
+// scripts, so its settings aren't required anywhere else.
+const NERSC_ENV_VARS = [
+  'SFAPI_URL',
+  'SCRIPT_DIR',
+  'UPLOAD_DIR',
+  'WORK_DIR',
+  'PREPARE_CHARMM_SLURM_SCRIPT',
+  'PREPARE_OMM_SLURM_SCRIPT',
+  'CP2CFS_SCRIPT'
+]
+
 const validateRequiredEnvVars = (): void => {
   const required = [
     'BILBOMD_URL',
-    'SFAPI_URL',
-    'SCRIPT_DIR',
-    'UPLOAD_DIR',
-    'WORK_DIR',
     'DATA_VOL',
     'CHARMM_TOPOLOGY',
     'CHARMM_TEMPLATES',
     'CHARMM',
     'FOXS',
     'MULTIFOXS',
-    'PREPARE_CHARMM_SLURM_SCRIPT',
-    'PREPARE_OMM_SLURM_SCRIPT',
-    'CP2CFS_SCRIPT'
+    ...(executionBackend === 'nersc' ? NERSC_ENV_VARS : [])
   ]
   const missing = required.filter((name) => !process.env[name])
   if (missing.length > 0) {
@@ -59,11 +85,13 @@ validateRequiredEnvVars()
 export const config = {
   sendEmailNotifications: toBoolean(process.env.SEND_EMAIL_NOTIFICATIONS),
   bilbomdUrl: getEnvVar('BILBOMD_URL'),
-  runOnNERSC: toBoolean(process.env.USE_NERSC),
-  nerscBaseAPI: getEnvVar('SFAPI_URL'),
-  nerscScriptDir: getEnvVar('SCRIPT_DIR'),
-  nerscUploadDir: getEnvVar('UPLOAD_DIR'),
-  nerscWorkDir: getEnvVar('WORK_DIR'),
+  executionBackend,
+  runOnNERSC: executionBackend === 'nersc',
+  // Validated above for the NERSC backend; empty elsewhere
+  nerscBaseAPI: process.env.SFAPI_URL ?? '',
+  nerscScriptDir: process.env.SCRIPT_DIR ?? '',
+  nerscUploadDir: process.env.UPLOAD_DIR ?? '',
+  nerscWorkDir: process.env.WORK_DIR ?? '',
   uploadDir: getEnvVar('DATA_VOL'),
   charmmTopoDir: getEnvVar('CHARMM_TOPOLOGY'),
   charmmTemplateDir: getEnvVar('CHARMM_TEMPLATES'),
@@ -92,6 +120,11 @@ export const config = {
     'http://of3-service:8000'
   ),
   of3TimeoutMs: parsePositiveIntEnv('OF3_TIMEOUT_MS', 60 * 60 * 1000),
+  // OpenMM pipelines queue PyMOL movie renders on the movie queue. Turn this
+  // off where nothing should render them (e.g. a job pod on Kubernetes).
+  moviesEnabled: process.env.ENABLE_MOVIES
+    ? toBoolean(process.env.ENABLE_MOVIES)
+    : true,
   logLevel: getEnvVarWithDefault('LOG_LEVEL', 'info'),
   // Per-process timeouts for external tools. Defaults are ~3-4x the longest
   // runs seen on production (epyc, Dec 2025 - Sep 2026) so they only catch
@@ -145,9 +178,9 @@ export const config = {
     )
   },
   scripts: {
-    prepareCHARMMSlurmScript: getEnvVar('PREPARE_CHARMM_SLURM_SCRIPT'),
-    prepareOMMSlurmScript: getEnvVar('PREPARE_OMM_SLURM_SCRIPT'),
-    copyFromScratchToCFSScript: getEnvVar('CP2CFS_SCRIPT')
+    prepareCHARMMSlurmScript: process.env.PREPARE_CHARMM_SLURM_SCRIPT ?? '',
+    prepareOMMSlurmScript: process.env.PREPARE_OMM_SLURM_SCRIPT ?? '',
+    copyFromScratchToCFSScript: process.env.CP2CFS_SCRIPT ?? ''
   },
   bilbomd: {
     SANSEnabled: toBoolean(process.env.ENABLE_BILBOMD_SANS),
