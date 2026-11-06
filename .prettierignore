@@ -29,7 +29,7 @@ pnpm-lock.yaml
 *.handlebars
 
 # Helm charts are Go templates, not plain YAML
-infra/helm/templates/
+infra/helm-nersc/templates/
 infra/helm-berkelium/templates/
 
 # Scientific/example data; served or consumed byte-for-byte

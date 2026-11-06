@@ -46,8 +46,7 @@ A helper script is included that queries the GitHub API for the latest published
 semver tags:
 
 ```bash
-cd infra
-./list-latest-tags.sh
+infra/scripts/list-latest-tags.sh
 ```
 
 Example output:

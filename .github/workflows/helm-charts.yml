@@ -1,0 +1,77 @@
+name: Helm charts
+
+# ci.yml ignores infra/**, so the Helm charts (Berkelium, NERSC Spin) and the
+# infra scripts get their own checks.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/helm-berkelium/**'
+      - 'infra/helm-nersc/**'
+      - 'infra/scripts/**'
+      - '.github/workflows/helm-charts.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/helm-berkelium/**'
+      - 'infra/helm-nersc/**'
+      - 'infra/scripts/**'
+      - '.github/workflows/helm-charts.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  chart:
+    name: Lint and unit-test chart + infra scripts
+    runs-on: [ubuntu-26.04]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Image-tag sync script tests
+        run: node --test infra/scripts/__tests__/
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.3.1
+
+      - name: Install helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.2.1 --verify=false
+
+      - name: Lint
+        run: helm lint --strict infra/helm-berkelium
+
+      - name: Render
+        run: helm template bilbomd infra/helm-berkelium > /dev/null
+
+      - name: Unit tests
+        run: helm unittest infra/helm-berkelium
+
+  nersc-chart:
+    name: Lint and render the NERSC Spin chart
+    runs-on: [ubuntu-26.04]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.3.1
+
+      # Not --strict: mongo-backup-cronjob.yaml wraps its CronJob in a
+      # kind: List, which has no metadata.name, and strict lint flags that
+      - name: Lint (dev and prod values)
+        run: |
+          for env in dev prod; do
+            helm lint infra/helm-nersc -f infra/helm-nersc/values.yaml -f "infra/helm-nersc/values-$env.yaml"
+          done
+
+      - name: Render (dev and prod values)
+        run: |
+          for env in dev prod; do
+            helm template bilbomd infra/helm-nersc -f infra/helm-nersc/values.yaml -f "infra/helm-nersc/values-$env.yaml" > /dev/null
+          done

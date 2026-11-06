@@ -49,8 +49,8 @@ export const composeFiles = [
 // Helm charts: each Chart.yaml with the values files whose changes bump it.
 export const charts = [
   {
-    chart: 'infra/helm/Chart.yaml',
-    values: ['infra/helm/values-dev.yaml', 'infra/helm/values-prod.yaml']
+    chart: 'infra/helm-nersc/Chart.yaml',
+    values: ['infra/helm-nersc/values-dev.yaml', 'infra/helm-nersc/values-prod.yaml']
   },
   {
     chart: 'infra/helm-berkelium/Chart.yaml',

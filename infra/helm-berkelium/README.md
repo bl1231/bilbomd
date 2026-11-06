@@ -102,7 +102,7 @@ kubectl --context oidc@berkelium -n bilbomd delete deploy,svc,configmap -l app=h
 
 ## Tests
 
-The tests use [helm-unittest](https://github.com/helm-unittest/helm-unittest). CI runs them through `.github/workflows/helm-berkelium.yml`.
+The tests use [helm-unittest](https://github.com/helm-unittest/helm-unittest). CI runs them through `.github/workflows/helm-charts.yml`.
 
 ```bash
 helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.2.1 --verify=false

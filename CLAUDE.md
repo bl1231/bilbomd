@@ -166,6 +166,9 @@ The worker has a separate NERSC code path (`bilbomd-nersc.ts`, `bilboMdNerscJobM
 
 ### Deployments
 
-- **Hyperion** (SIBYLS beamline): `infra/docker-compose-hyperion.yml` — CPU workflows (Classic, Auto, Multi, SANS, Scoper)
-- **NERSC**: Docker Compose / Helm — GPU workflows (Classic, Auto, AF/AlphaFold)
+- **epyc** (SIBYLS beamline, 2× A100): `infra/docker-compose-epyc.{dev,prod}.yml` — GPU workflows plus the AF/OF3 services
+- **Hyperion** (SIBYLS beamline): `infra/docker-compose-hyperion.{dev,prod}.yml` — SCOPER only (needs an Intel CPU)
+- **NERSC Spin + Perlmutter**: Helm chart in `infra/helm-nersc/` (deployed with `infra/nersc.sh`) — Classic, Auto, AF
+- **Berkelium** (LBL k8s): Helm chart in `infra/helm-berkelium/`; the dispatcher runs each job as a k8s Job
+- See `infra/README.md` for a map of the folder
 - `infra/deploy-to-beamline.sh <cmd> dev|prod` drives both beamline hosts from anywhere: it SSHes into the shared-NFS checkout `~/projects/bilbomd` and runs epyc's stack plus SCOPER on hyperion (Intel-only). Env files stay on the servers.

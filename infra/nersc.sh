@@ -21,7 +21,11 @@ YELLOW='\033[1;33m'
 RED='\033[1;31m'
 NC='\033[0m'
 
-CHART_PATH="./helm"
+# Paths are relative to this script's directory (infra/), so it can be run
+# from anywhere. helm-secrets/ is local only (gitignored).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+CHART_PATH="./helm-nersc"
 RED_CLIENT_DIR="./helm-secrets/red-client"
 
 # --- helpers -------------------------------------------------------------------

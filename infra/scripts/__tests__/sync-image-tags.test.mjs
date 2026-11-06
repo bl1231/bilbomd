@@ -136,7 +136,7 @@ describe('syncImageTags on a copy of the repo files', () => {
       new RegExp(`^version: ${maj}\\.${min}\\.${Number(patch) + 1}$`, 'm')
     )
     // The SPIN chart is synced in the same run.
-    assert.match(read('infra/helm/Chart.yaml'), /^appVersion: '9\.9\.9'$/m)
+    assert.match(read('infra/helm-nersc/Chart.yaml'), /^appVersion: '9\.9\.9'$/m)
   })
 
   it('is idempotent', () => {
