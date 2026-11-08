@@ -151,6 +151,9 @@ export const config = {
     'http://of3-service:8000'
   ),
   of3TimeoutMs: parsePositiveIntEnv('OF3_TIMEOUT_MS', 60 * 60 * 1000),
+  // ColabFold-compatible MSA server for OF3 (e.g. http://msa-service:8080).
+  // Unset: OF3 uses its default, the public api.colabfold.com.
+  of3MsaServerUrl: process.env.OF3_MSA_SERVER_URL || undefined,
   // OpenMM pipelines queue PyMOL movie renders on the movie queue. Turn this
   // off where nothing should render them (e.g. a job pod on Kubernetes).
   moviesEnabled: process.env.ENABLE_MOVIES

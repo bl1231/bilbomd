@@ -15,9 +15,20 @@ const OF3_RANK1_PDB = 'of3-rank1.pdb'
 const OF3_PAE_JSON = 'of3-pae.json'
 const OF3_QUERY_NAME = 'openfold-query'
 
+// Unset msaServerUrl keeps OF3's default MSA server (api.colabfold.com).
+const buildRunnerYml = (msaServerUrl?: string): string => {
+  let content = `output_writer_settings:\n  structure_format: pdb\n`
+  if (msaServerUrl) {
+    content += `msa_computation_settings:\n  server_url: ${JSON.stringify(msaServerUrl)}\n`
+  }
+  return content
+}
+
 const writeRunnerYml = async (workDir: string): Promise<void> => {
-  const content = `output_writer_settings:\n  structure_format: pdb\n`
-  await fs.writeFile(path.join(workDir, OF3_RUNNER_YML), content)
+  await fs.writeFile(
+    path.join(workDir, OF3_RUNNER_YML),
+    buildRunnerYml(config.of3MsaServerUrl)
+  )
 }
 
 const callOf3Service = async (
@@ -204,6 +215,7 @@ const runOpenFold = async (
 export {
   runOpenFold,
   // Exported for unit tests:
+  buildRunnerYml,
   promoteRank1Outputs,
   collectSamples,
   OF3_QUERY_NAME
