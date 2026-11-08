@@ -36,7 +36,7 @@ images:
     tag: 8.3.13
   redis:
     repository: harbor.bk.lbl.gov/docker.io/library/redis
-    tag: 8.10.2
+    tag: 8.10.3
   # Structure-prediction services, run as a sidecar in AlphaFold/OpenFold job
   # pods. Versioned on their own (apps/*-service/version), not by changesets.
   colabfoldService:

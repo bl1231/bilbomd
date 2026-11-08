@@ -5,7 +5,10 @@
   "schedule": ["before 6am on Monday"],
   "ignorePaths": ["apps/scoper/bilbomd-scoper-base.dockerfile"],
   "helm-values": {
-    "managerFilePatterns": ["/infra/helm-nersc/values.*\\.yaml$/"]
+    "managerFilePatterns": [
+      "/infra/helm-nersc/values.*\\.yaml$/",
+      "/infra/helm-berkelium/values.*\\.yaml$/"
+    ]
   },
   "packageRules": [
     {
@@ -15,9 +18,25 @@
         "ghcr.io/bl1231/bilbomd-backend",
         "ghcr.io/bl1231/bilbomd-ui",
         "ghcr.io/bl1231/bilbomd-worker",
-        "ghcr.io/bl1231/bilbomd-scoper"
+        "ghcr.io/bl1231/bilbomd-scoper",
+        "harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-backend",
+        "harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-ui",
+        "harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-worker",
+        "harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-scoper"
       ],
       "enabled": false
+    },
+    {
+      "description": "Berkelium pulls Docker Hub images through Harbor's proxy cache; look tags up on Docker Hub, keep the Harbor path in the file",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["/^harbor\\.bk\\.lbl\\.gov\\/docker\\.io\\//"],
+      "overridePackageName": "{{{replace '^harbor\\.bk\\.lbl\\.gov/docker\\.io/' '' packageName}}}"
+    },
+    {
+      "description": "Berkelium pulls ghcr.io images through Harbor's proxy cache; look tags up on ghcr.io, keep the Harbor path in the file",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["/^harbor\\.bk\\.lbl\\.gov\\/ghcr\\.io\\//"],
+      "overridePackageName": "{{{replace '^harbor\\.bk\\.lbl\\.gov/' '' packageName}}}"
     },
     {
       "description": "Group container image updates across compose and helm into one PR",
