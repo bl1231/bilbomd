@@ -19,6 +19,7 @@ const STEP_ORDER = [
   'autorg',
   'alphafold',
   'openfold',
+  'bioemu',
   'reduce',
   'rnaview',
   'kgs',
@@ -36,6 +37,8 @@ const STEP_ORDER = [
   'ionnet',
   'pepsisans',
   'multifoxs',
+  // BioEmu2: polish the best ensembles' members
+  'polish',
   'gasans',
   'scoper',
   'copy_results_to_cfs',

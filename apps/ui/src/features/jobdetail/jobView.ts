@@ -42,6 +42,8 @@ const pickInputs = (src: PublicJobInputsDTO): PublicJobInputsDTO => ({
   pae_file: src.pae_file,
   fasta_file: src.fasta_file,
   query_json_file: src.query_json_file,
+  system_yaml_file: src.system_yaml_file,
+  bioemu_parameters: src.bioemu_parameters,
   const_inp_file: src.const_inp_file,
   openmm_parameters: src.openmm_parameters,
   charmm_parameters: src.charmm_parameters,

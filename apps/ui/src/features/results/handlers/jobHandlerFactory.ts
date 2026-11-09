@@ -7,7 +7,8 @@ import {
   createScoperJobHandler,
   createAlphaFoldJobHandler,
   createMultiJobHandler,
-  createOpenFoldJobHandler
+  createOpenFoldJobHandler,
+  createBioEmuJobHandler
 } from './jobHandlers'
 
 export const createJobHandler = (jobType: string): JobHandler => {
@@ -26,6 +27,8 @@ export const createJobHandler = (jobType: string): JobHandler => {
       return createAlphaFoldJobHandler()
     case 'openfold':
       return createOpenFoldJobHandler()
+    case 'bioemu':
+      return createBioEmuJobHandler()
     case 'multi':
       return createMultiJobHandler()
     default:

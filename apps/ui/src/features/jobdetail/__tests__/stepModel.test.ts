@@ -65,6 +65,28 @@ describe('orderedSteps', () => {
     ])
   })
 
+  it('orders BioEmu2 steps: sampling first, polishing after MultiFoXS', () => {
+    const steps = {
+      email: s('Waiting'),
+      results: s('Waiting'),
+      polish: s('Waiting'),
+      multifoxs: s('Waiting'),
+      foxs: s('Waiting'),
+      bioemu: s('Running'),
+      autorg: s('Success', 'Rg 33')
+    } as JobStepsDTO
+
+    expect(orderedSteps(steps, 'bioemu').pipeline.map((x) => x.name)).toEqual([
+      'autorg',
+      'bioemu',
+      'foxs',
+      'multifoxs',
+      'polish',
+      'results',
+      'email'
+    ])
+  })
+
   it('hides steps a job type skips, but only while they are Waiting', () => {
     const steps = {
       autorg: s('Success', 'Rg 25'),

@@ -1,5 +1,5 @@
 import { JobResultsDTO } from './results.js'
-import { JobType, JobStatusEnum } from './jobs.js'
+import { JobType, JobStatusEnum, BioEmuParametersDTO } from './jobs.js'
 import { JobStepsDTO } from './jobSteps.js'
 import { MDConstraintsDTO } from './mdConstraints.js'
 import { OpenMMParametersDTO } from './openmm.js'
@@ -15,6 +15,8 @@ export type PublicJobInputsDTO = {
   pae_file?: string
   fasta_file?: string
   query_json_file?: string
+  system_yaml_file?: string
+  bioemu_parameters?: BioEmuParametersDTO
   const_inp_file?: string
   openmm_parameters?: OpenMMParametersDTO
   charmm_parameters?: CHARMMParametersDTO
