@@ -52,7 +52,7 @@ ARG MMSEQS_SERVER_COMMIT
 # gawk: the server's MSA shell script uses awk. curl: healthcheck.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates curl gawk libgomp1 zlib1g libbz2-1.0 \
+        ca-certificates curl gawk libatomic1 libgomp1 zlib1g libbz2-1.0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=mmseqs-build /opt/mmseqs /usr/local/bin/mmseqs
