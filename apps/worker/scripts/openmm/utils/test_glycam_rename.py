@@ -9,6 +9,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 from glycam_rename import (
+    BOND_THRESHOLD,
+    GLYCOSIDIC_STRETCHED_CUTOFF,
+    GlycanGeometryError,
+    pick_glycosidic_acceptor,
     rename_glycam_residues,
     _is_alpha_anomer,
     _linkage_prefix,
@@ -43,7 +47,9 @@ def _link_line(
     atom2: str, chain2: str, resseq2: int,
 ) -> str:
     return (
-        f"LINK        {atom1:<4s}     {chain1}{resseq1:4d}              "
+        # PDB LINK columns: atom1 13-16, chain1 22, resSeq1 23-26,
+        # atom2 43-46, chain2 52, resSeq2 53-56
+        f"LINK        {atom1:<4s}     {chain1}{resseq1:4d}                "
         f"{atom2:<4s}     {chain2}{resseq2:4d}\n"
     )
 
@@ -378,5 +384,112 @@ def test_same_number_in_another_chain_is_fine():
     pdb = (
         _atom_line(1, "CA", "ASP", "E", 215, 0.0, 0.0, 0.0)
         + _atom_line(2, "C1", "NAG", "F", 215, 9.0, 9.0, 9.0, record="HETATM")
+        # O1 marks it as a free sugar, so its unlinked C1 isn't an error
+        + _atom_line(3, "O1", "NAG", "F", 215, 9.0, 9.0, 10.4, record="HETATM")
     )
     rename_glycam_residues(pdb)
+
+
+# ---------------------------------------------------------------------------
+# Stretched and missing glycosidic bonds
+# ---------------------------------------------------------------------------
+
+class TestPickGlycosidicAcceptor:
+    def test_nearest_within_bond_threshold_wins(self):
+        # a second acceptor in the stretched range doesn't make a real bond ambiguous
+        match = pick_glycosidic_acceptor(
+            (0.0, 0.0, 0.0),
+            [((2.2, 0.0, 0.0), "far"), ((1.45, 0.0, 0.0), "near")],
+        )
+        assert match is not None
+        assert match.acceptor == "near"
+        assert match.stretched is False
+
+    def test_single_stretched_acceptor_is_accepted(self):
+        match = pick_glycosidic_acceptor((0.0, 0.0, 0.0), [((2.05, 0.0, 0.0), "o6")])
+        assert match is not None
+        assert match.acceptor == "o6"
+        assert match.stretched is True
+
+    def test_two_stretched_acceptors_are_ambiguous(self):
+        assert pick_glycosidic_acceptor(
+            (0.0, 0.0, 0.0),
+            [((2.1, 0.0, 0.0), "a"), ((0.0, 2.2, 0.0), "b")],
+        ) is None
+
+    def test_nothing_in_range(self):
+        far = GLYCOSIDIC_STRETCHED_CUTOFF + 0.1
+        assert pick_glycosidic_acceptor((0.0, 0.0, 0.0), [((far, 0.0, 0.0), "x")]) is None
+
+    def test_cutoffs_are_ordered(self):
+        assert BOND_THRESHOLD < GLYCOSIDIC_STRETCHED_CUTOFF
+
+
+def _branched_mannose_with_o6_gap(gap: float) -> str:
+    """Core BMA A10 with MAN A11 on O3 (1.4 Å) and MAN A12 on O6 at ``gap`` Å.
+
+    Mirrors a real job whose 1-6 arm mannose sat 2.05 Å from BMA O6: the bond
+    went undetected, BMA became 3MB and the MAN an open-C1 0MA that OpenMM
+    couldn't template.
+    """
+    lines = [
+        _atom_line(1, "C1", "BMA", "A", 10, 0.0, 0.0, 0.0, "HETATM"),
+        _atom_line(2, "C2", "BMA", "A", 10, 1.5, 0.0, 0.0, "HETATM"),
+        _atom_line(3, "O5", "BMA", "A", 10, 0.0, 1.5, 0.0, "HETATM"),
+        _atom_line(4, "O1", "BMA", "A", 10, 0.0, 0.0, -1.5, "HETATM"),
+        _atom_line(5, "O3", "BMA", "A", 10, 10.0, 0.0, 0.0, "HETATM"),
+        _atom_line(6, "O6", "BMA", "A", 10, 0.0, 10.0, 0.0, "HETATM"),
+        _atom_line(7, "C1", "MAN", "A", 11, 11.4, 0.0, 0.0, "HETATM"),
+        _atom_line(8, "C1", "MAN", "A", 12, 0.0, 10.0 + gap, 0.0, "HETATM"),
+    ]
+    return "".join(lines)
+
+
+class TestStretchedGlycosidicBond:
+    def test_stretched_bond_still_names_the_branch(self):
+        result, log = rename_glycam_residues(_branched_mannose_with_o6_gap(2.05))
+        names = _resnames_by_resseq(result)
+        assert names[10] == "VMB"  # 3,6-branched, not 3MB
+        assert names[12] == "0MA"
+        warnings = [line for line in log if "WARNING" in line]
+        assert len(warnings) == 1
+        assert "MAN A  12" in warnings[0]
+        assert "2.05 Å" in warnings[0]
+        assert "BMA A 10 O6" in warnings[0]
+
+    def test_too_far_raises_a_readable_error(self):
+        with pytest.raises(GlycanGeometryError) as exc:
+            rename_glycam_residues(_branched_mannose_with_o6_gap(3.0))
+        msg = str(exc.value)
+        assert "MAN A 12 C1 is 3.00 Å from the nearest acceptor (BMA A 10 O6)" in msg
+        assert "Fix the glycan geometry" in msg
+
+    def test_ambiguous_stretched_linkage_raises(self):
+        pdb = (
+            _atom_line(1, "O3", "BMA", "A", 10, 0.0, 0.0, 0.0, "HETATM")
+            + _atom_line(2, "O6", "BMA", "A", 10, 0.0, 4.2, 0.0, "HETATM")
+            + _atom_line(3, "O1", "BMA", "A", 10, 0.0, 9.0, 0.0, "HETATM")
+            + _atom_line(4, "C1", "MAN", "A", 11, 0.0, 2.05, 0.0, "HETATM")
+        )
+        with pytest.raises(GlycanGeometryError, match="ambiguous"):
+            rename_glycam_residues(pdb)
+
+    def test_every_unlinked_sugar_is_reported(self):
+        pdb = (
+            _atom_line(1, "C1", "MAN", "A", 11, 0.0, 0.0, 0.0, "HETATM")
+            + _atom_line(2, "C1", "MAN", "B", 12, 50.0, 0.0, 0.0, "HETATM")
+        )
+        with pytest.raises(GlycanGeometryError) as exc:
+            rename_glycam_residues(pdb)
+        assert "MAN A 11" in str(exc.value)
+        assert "MAN B 12" in str(exc.value)
+
+    def test_link_record_counts_as_linked(self):
+        # A LINK-declared protein linkage isn't second-guessed by geometry.
+        pdb = (
+            _atom_line(1, "ND2", "ASN", "A", 1, 0.0, 0.0, 0.0)
+            + _atom_line(2, "C1", "NAG", "A", 2, 5.0, 0.0, 0.0, "HETATM")
+            + _link_line("ND2", "A", 1, "C1", "A", 2)
+        )
+        result, _ = rename_glycam_residues(pdb)
+        assert _resnames_by_resseq(result)[1] == "NLN"
