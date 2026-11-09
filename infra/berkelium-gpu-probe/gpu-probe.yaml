@@ -1,0 +1,135 @@
+# Berkelium GPU availability study (see README.md). Not part of the Helm
+# chart: it is a temporary measurement, deployed and removed with deploy.sh.
+# Every object carries app.kubernetes.io/part-of=bilbomd-gpu-probe.
+#
+# One single-GPU ResourceClaimTemplate per GPU type. probe.sh references them
+# as gpu-probe-<class>.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gpu-probe-a40
+  labels: { app.kubernetes.io/part-of: bilbomd-gpu-probe }
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly: { deviceClassName: nvidia-a40 }
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gpu-probe-a100
+  labels: { app.kubernetes.io/part-of: bilbomd-gpu-probe }
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly: { deviceClassName: nvidia-a100 }
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gpu-probe-h100
+  labels: { app.kubernetes.io/part-of: bilbomd-gpu-probe }
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly: { deviceClassName: nvidia-h100 }
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gpu-probe-h200
+  labels: { app.kubernetes.io/part-of: bilbomd-gpu-probe }
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly: { deviceClassName: nvidia-h200 }
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gpu-probe-b300
+  labels: { app.kubernetes.io/part-of: bilbomd-gpu-probe }
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly: { deviceClassName: nvidia-b300 }
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gpu-probe
+  labels: { app.kubernetes.io/part-of: bilbomd-gpu-probe }
+spec:
+  schedule: '*/15 * * * *'
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels: { app.kubernetes.io/part-of: bilbomd-gpu-probe }
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 720
+      template:
+        metadata:
+          labels: { app.kubernetes.io/part-of: bilbomd-gpu-probe }
+        spec:
+          # The dispatcher's account: it may create/watch/delete Jobs and read
+          # pods and pod logs in this namespace, which is all probe.sh needs.
+          serviceAccountName: bilbomd
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 62704
+            runAsGroup: 1001
+            fsGroup: 1001
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: probe
+              # kubectl, jq, curl and bash
+              image: harbor.bk.lbl.gov/docker.io/alpine/k8s:1.36.5
+              imagePullPolicy: IfNotPresent
+              command: ['bash', '/scripts/probe.sh']
+              env:
+                - { name: HOME, value: /tmp }
+                - { name: DATA_DIR, value: /uploads/gpu-probe }
+                - {
+                    name: PROBE_IMAGE,
+                    value: harbor.bk.lbl.gov/docker.io/nvidia/cuda:12.9.2-base-ubuntu24.04
+                  }
+                - { name: RUN_AS_USER, value: '62704' }
+                - { name: RUN_AS_GROUP, value: '1001' }
+              resources:
+                requests: { cpu: 100m, memory: 128Mi }
+                limits: { cpu: '1', memory: 512Mi }
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ['ALL']
+              volumeMounts:
+                - { name: scripts, mountPath: /scripts, readOnly: true }
+                # uploads/ so the backend pod can read the results (deploy.sh fetch)
+                - { name: data, mountPath: /uploads, subPath: uploads }
+                - { name: tmp, mountPath: /tmp }
+          volumes:
+            - name: scripts
+              configMap: { name: gpu-probe-script }
+            - name: data
+              persistentVolumeClaim:
+                claimName: bilbomd-data
+            - name: tmp
+              emptyDir: { sizeLimit: 64Mi }
