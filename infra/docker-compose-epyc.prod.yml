@@ -221,8 +221,9 @@ services:
       - OF3_SERVICE_URL=http://of3-service:8000
       - COLABFOLD_TIMEOUT_MS=${COLABFOLD_TIMEOUT_MS:-3600000}
       - COLABFOLD_SERVICE_URL=http://colabfold-service:8000
-      # OF3 MSA searches go to the self-hosted msa-service (#1199)
-      - OF3_MSA_SERVER_URL=http://msa-service:8080
+      # OF3 uses the public ColabFold MSA server until msa-service's GPU
+      # crash is fixed (#1199). Set to http://msa-service:8080 to switch.
+      # - OF3_MSA_SERVER_URL=http://msa-service:8080
       - MPLCONFIGDIR=/tmp/matplotlib
       - XDG_CACHE_HOME=/tmp/cache
       # All 6 Rg runs at once; only faster than serial because of MPS.
@@ -311,9 +312,9 @@ services:
       - UPLOAD_DIR=/bilbomd/uploads
       - COLABFOLD_DATA_DIR=/cache
       - COLABFOLD_TIMEOUT_S=${COLABFOLD_TIMEOUT_S:-3300}
-      # Self-hosted MSA server instead of api.colabfold.com (#1199). The
-      # pre-flight TCP probe fails the job fast if msa-service is down.
-      - COLABFOLD_HOST_URL=http://msa-service:8080
+      # Unset = public api.colabfold.com. msa-service is on hold: its GPU
+      # prefilter crashes when the GPU is shared (#1199).
+      # - COLABFOLD_HOST_URL=http://msa-service:8080
     volumes:
       - /bilbomd/prod/uploads:/bilbomd/uploads
       - /bilbomd/colabfold-cache:/cache:ro
@@ -321,49 +322,6 @@ services:
       - app-network
     healthcheck:
       test: ['CMD', 'curl', '--fail', 'http://localhost:8000/health']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  # ------------------------------------------------------------------------------------
-  # ColabFold-compatible MMseqs2 MSA server (apps/msa-service/README.md).
-  # Internal only: no published port. Needs the database on /af2_data built
-  # and indexed, and /bilbomd/prod/msa-jobs owned by ${UID}:${GID}.
-  # Deliberately not a depends_on of colabfold-service: the worker waits on
-  # colabfold-service, so a down msa-service would block the whole stack.
-  # GPU 1, not GPU 0: colabfold-service and of3-service (count: 1) land on
-  # GPU 0, and an AF inference starting mid-search crashed the mmseqs GPU
-  # prefilter (illegal memory access) during validation. GPU 1's MPS MD
-  # clients use only a few GB.
-  msa-service:
-    image: ghcr.io/bl1231/bilbomd-msa-service:0.1.1
-    pull_policy: missing
-    security_opt:
-      - no-new-privileges:true
-      - seccomp:./seccomp/bilbomd-seccomp.json
-    deploy:
-      resources:
-        limits:
-          cpus: '16'
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['1']
-              capabilities: [gpu]
-    restart: always
-    user: '${UID:-1001}:${GID:-1001}'
-    environment:
-      - MSA_GPU=${MSA_GPU:-1}
-      - MSA_GPU_SERVER=${MSA_GPU_SERVER:-0}
-      - MSA_WORKERS=${MSA_WORKERS:-1}
-    volumes:
-      - /af2_data/mmseqs-databases:/databases:ro
-      - /bilbomd/prod/msa-jobs:/jobs
-    networks:
-      - app-network
-    healthcheck:
-      test: ['CMD', 'curl', '--fail', 'http://localhost:8080/queue']
       interval: 30s
       timeout: 10s
       retries: 3
