@@ -48,6 +48,8 @@ export default function ClippedDrawer() {
   const enableBilboMdMulti = config.enableBilboMdMulti?.toLowerCase() === 'true'
   const enableBilboMdScoper =
     config.enableBilboMdScoper?.toLowerCase() === 'true'
+  const enableBilboMdBioEmu =
+    config.enableBilboMdBioEmu?.toLowerCase() === 'true'
 
   const navigationGroup: NavMenuItem[] = [
     {
@@ -89,6 +91,14 @@ export default function ClippedDrawer() {
       roles: ['user', 'manager']
     },
     {
+      // Admins only while BilboMD BioEmu2 is being validated (bilbomd#1200)
+      text: 'BilboMD BioEmu2',
+      icon: <AddCircleOutlineOutlined />,
+      path: '/dashboard/jobs/bioemu',
+      onclick: () => navigate('dashboard/jobs/bioemu'),
+      roles: ['admin']
+    },
+    {
       text: 'BilboMD Multi',
       icon: <AddCircleOutlineOutlined />,
       path: '/dashboard/jobs/multimd',
@@ -116,6 +126,11 @@ export default function ClippedDrawer() {
   }
   if (useNersc) {
     jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'BilboMD OF3')
+  }
+  if (useNersc || !enableBilboMdBioEmu) {
+    jobFormsGroup = jobFormsGroup.filter(
+      (item) => item.text !== 'BilboMD BioEmu2'
+    )
   }
   if (!enableBilboMdSANS) {
     jobFormsGroup = jobFormsGroup.filter((item) => item.text !== 'BilboMD SANS')

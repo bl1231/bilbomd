@@ -161,6 +161,14 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Job', id: 'LIST' }]
     }),
+    addNewBioEmuJob: builder.mutation<JobCreationResponse, FormData>({
+      query: (newJob) => ({
+        url: '/jobs/bilbomd-bioemu',
+        method: 'POST',
+        body: newJob
+      }),
+      invalidatesTags: [{ type: 'Job', id: 'LIST' }]
+    }),
     addNewSANSJob: builder.mutation<JobCreationResponse, FormData>({
       query: (newJob) => ({
         url: '/jobs/bilbomd-sans',
@@ -250,6 +258,7 @@ export const {
   useAddNewAutoJobMutation,
   useAddNewAlphaFoldJobMutation,
   useAddNewOpenFoldJobMutation,
+  useAddNewBioEmuJobMutation,
   useAddNewSANSJobMutation,
   useAddNewScoperJobMutation,
   useAddNewMultiJobMutation,
