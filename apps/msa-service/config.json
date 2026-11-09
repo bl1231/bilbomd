@@ -1,0 +1,46 @@
+{
+  "app": "colabfold",
+  "verbose": true,
+  "server": {
+    "address": "0.0.0.0:8080",
+    "pathprefix": "/",
+    "dbmanagment": false,
+    "cors": false,
+    "checkold": true
+  },
+  "worker": {
+    "gracefulexit": false,
+    "paralleldatabases": 1
+  },
+  "paths": {
+    "databases": "/tmp/mmseqs-server-databases",
+    "results": "/jobs",
+    "colabfold": {
+      "parallelstages": false,
+      "uniref": "/databases/uniref30_2302_db",
+      "pdb": "/databases/pdb100_230517",
+      "environmental": "/databases/colabfold_envdb_202108_db",
+      "pdb70": "/databases/pdb100",
+      "pdbdivided": "/databases/pdb/divided",
+      "pdbobsolete": "/databases/pdb/obsolete",
+      "gpu": {
+        "gpu": false,
+        "server": false
+      }
+    },
+    "mmseqs": "/usr/local/bin/mmseqs"
+  },
+  "local": {
+    "workers": 1,
+    "checkold": true
+  },
+  "mail": {
+    "type": "null",
+    "sender": "mail@example.org",
+    "templates": {
+      "success": { "subject": "Done -- %s", "body": "%s" },
+      "timeout": { "subject": "Timeout -- %s", "body": "%s" },
+      "error": { "subject": "Error -- %s", "body": "%s" }
+    }
+  }
+}
