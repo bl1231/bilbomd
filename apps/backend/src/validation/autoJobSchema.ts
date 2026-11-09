@@ -10,7 +10,8 @@ import {
   jsonFileCheck,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
-  pdbOrCifResidueCheck
+  pdbOrCifResidueCheck,
+  paeMatchesStructureCheck
 } from './helpers/fileValidators.js'
 
 export const autoJobSchema = yup.object({
@@ -32,7 +33,8 @@ export const autoJobSchema = yup.object({
     .concat(fileExtTest('json'))
     .concat(fileSizeTest(120_000_000))
     .concat(noSpacesTest())
-    .concat(fileNameLengthTest()),
+    .concat(fileNameLengthTest())
+    .concat(paeMatchesStructureCheck()),
   q_units: qUnitsField(),
   dat_file: requiredFile('Experimental SAXS data is required')
     .concat(saxsCheck())

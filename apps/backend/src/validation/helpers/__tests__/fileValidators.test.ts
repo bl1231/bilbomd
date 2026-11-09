@@ -16,7 +16,8 @@ import {
   pdbResidueCheck,
   constInpCheck,
   jsonFileCheck,
-  singleModelCheck
+  singleModelCheck,
+  paeMatchesStructureCheck
 } from '../fileValidators.js'
 
 vi.mock('../../../middleware/loggers.js', () => ({
@@ -30,7 +31,8 @@ vi.mock('../validationFunctions.js', () => ({
   isValidConstInpFile: vi.fn(),
   containsChainId: vi.fn(),
   checkPdbResidues: vi.fn(),
-  isSingleModel: vi.fn()
+  isSingleModel: vi.fn(),
+  checkPaeMatchesStructure: vi.fn()
 }))
 
 vi.mock('fs/promises', () => ({
@@ -406,5 +408,45 @@ describe('qUnitsField', () => {
     await expect(schema.validate({ q_units: 'angstrom' })).rejects.toThrow(
       'q_units must be one of: auto, A, nm'
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// paeMatchesStructureCheck
+// ---------------------------------------------------------------------------
+describe('paeMatchesStructureCheck', () => {
+  const schema = yup.object({
+    pdb_file: yup.mixed(),
+    pae_file: paeMatchesStructureCheck()
+  })
+  const pdb = multerFile({ originalname: 'model.pdb', path: '/tmp/model.pdb' })
+  const pae = multerFile({ originalname: 'pae.json', path: '/tmp/pae.json' })
+
+  it('passes when the files match', async () => {
+    vi.mocked(validationFunctions.checkPaeMatchesStructure).mockResolvedValue({
+      valid: true
+    })
+    await expect(
+      schema.validate({ pdb_file: pdb, pae_file: pae })
+    ).resolves.toBeDefined()
+    expect(validationFunctions.checkPaeMatchesStructure).toHaveBeenCalledWith(
+      pae,
+      pdb
+    )
+  })
+
+  it('reports the mismatch message on pae_file', async () => {
+    vi.mocked(validationFunctions.checkPaeMatchesStructure).mockResolvedValue({
+      valid: false,
+      message: 'The PAE matrix is 345 × 345 but the structure has 387 residues.'
+    })
+    await expect(
+      schema.validateAt('pae_file', { pdb_file: pdb, pae_file: pae })
+    ).rejects.toThrow('345 × 345')
+  })
+
+  it('skips the comparison when the structure is missing', async () => {
+    await expect(schema.validate({ pae_file: pae })).resolves.toBeDefined()
+    expect(validationFunctions.checkPaeMatchesStructure).not.toHaveBeenCalled()
   })
 })
