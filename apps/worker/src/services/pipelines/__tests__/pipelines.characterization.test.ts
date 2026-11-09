@@ -31,6 +31,7 @@ vi.mock('@bilbomd/mongodb-schema', () => ({
   BilboMdAutoJob: { findOne },
   BilboMdAlphaFoldJob: { findOne },
   BilboMdOpenFoldJob: { findOne },
+  BilboMdBioEmuJob: { findOne },
   BilboMdSANSJob: { findOne }
 }))
 
@@ -147,6 +148,14 @@ vi.mock('../../functions/openfold-functions.js', () => ({
   })
 }))
 
+vi.mock('../../functions/bioemu-functions.js', () => ({
+  runBioEmu: record('runBioEmu')
+}))
+
+vi.mock('../../functions/polish-functions.js', () => ({
+  runPolish: record('runPolish')
+}))
+
 vi.mock('../../functions/movie-enqueuer.js', () => ({
   enqueueMakeMovie: vi.fn(() => {
     trace.push('fn:enqueueMakeMovie')
@@ -188,6 +197,7 @@ import { processBilboMDAutoJob } from '../bilbomd-auto.js'
 import { processBilboMDAlphaFoldJob } from '../bilbomd-alphafold.js'
 import { processBilboMDOpenFoldJob } from '../bilbomd-openfold.js'
 import { processBilboMDSANSJob } from '../bilbomd-sans.js'
+import { processBilboMDBioEmuJob } from '../bilbomd-bioemu.js'
 
 const makeMQ = () =>
   ({
@@ -775,6 +785,68 @@ describe('openfold pipeline', () => {
       run(processBilboMDOpenFoldJob, { md_engine: 'CHARMM' })
     ).rejects.toThrow(/OpenMM/)
     expect(trace).not.toContain('init')
+  })
+})
+
+describe('bioemu pipeline', () => {
+  // No input model and no MD: BioEmu2 samples straight into foxs/, and the
+  // ensemble members are polished between MultiFoXS and the results
+  it('OpenMM', async () => {
+    expect(await run(processBilboMDBioEmuJob, { md_engine: 'OpenMM' }))
+      .toMatchInlineSnapshot(`
+        [
+          "mq.progress:1",
+          "progress:5",
+          "usage:job_started:bioemu:-",
+          "log:Using MD engine: OpenMM",
+          "init",
+          "progress:10",
+          "step:bioemu:bioemu",
+          "log:start bioemu",
+          "fn:runBioEmu",
+          "log:end bioemu",
+          "progress:60",
+          "step:foxs:foxs",
+          "log:start foxs",
+          "fn:runFoXS",
+          "log:end foxs",
+          "progress:75",
+          "step:multifoxs:multifoxs",
+          "log:start multifoxs",
+          "fn:runMultiFoxs",
+          "log:end multifoxs",
+          "progress:90",
+          "step:polish:polish",
+          "log:start polish",
+          "fn:runPolish",
+          "log:end polish",
+          "progress:95",
+          "step:results:results",
+          "log:start results",
+          "fn:prepareBilboMDResults",
+          "log:end results",
+          "progress:99",
+          "cleanup",
+          "progress:100",
+          "usage:job_completed:bioemu:60000",
+        ]
+      `)
+  })
+
+  it('polishes with OpenMM even when the job asks for CHARMM', async () => {
+    const trace = await run(processBilboMDBioEmuJob, { md_engine: 'CHARMM' })
+    expect(trace).toContain('log:Using MD engine: OpenMM')
+    expect(trace).toContain('fn:runPolish')
+  })
+
+  it('stops after a failed BioEmu2 step', async () => {
+    state.failAt = 'runBioEmu'
+    await expect(run(processBilboMDBioEmuJob, {})).rejects.toThrow(
+      'runBioEmu failed'
+    )
+    expect(trace).toContain('handleError:bioemu')
+    expect(trace).not.toContain('fn:runFoXS')
+    expect(trace).not.toContain('cleanup')
   })
 })
 

@@ -47,6 +47,11 @@ interface IOpenFoldResults {
   ensembles?: IEnsemble[]
 }
 
+interface IBioEmuResults {
+  total_num_ensembles?: number
+  ensembles?: IEnsemble[]
+}
+
 interface ISANSResults {
   total_num_ensembles?: number
   ensembles?: IEnsemble[]
@@ -70,6 +75,7 @@ interface IJobResults {
   auto?: IAutoResults
   alphafold?: IAlphaFoldResults
   openfold?: IOpenFoldResults
+  bioemu?: IBioEmuResults
   sans?: ISANSResults
   scoper?: IScoperResults
 }

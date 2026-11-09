@@ -218,6 +218,10 @@ services:
       - ENABLE_BILBOMD_OPENFOLD=${ENABLE_BILBOMD_OPENFOLD:-false}
       - OF3_TIMEOUT_MS=${OF3_TIMEOUT_MS:-3600000}
       - OF3_SERVICE_URL=http://of3-service:8000
+      # BilboMD BioEmu2 (bilbomd#1200); the backend's ENABLE_BILBOMD_BIOEMU
+      # (in .env.dev) gates submissions
+      - BIOEMU_SERVICE_URL=http://bioemu2-service:8000
+      - BIOEMU_TIMEOUT_MS=${BIOEMU_TIMEOUT_MS:-21600000}
       - COLABFOLD_TIMEOUT_MS=${COLABFOLD_TIMEOUT_MS:-3600000}
       - COLABFOLD_SERVICE_URL=http://colabfold-service:8000
       # OF3 uses the public ColabFold MSA server until msa-service's GPU
@@ -274,6 +278,47 @@ services:
     volumes:
       - /bilbomd/dev/uploads:/bilbomd/uploads
       - /af2_data/of3:/bilbomd/of3-data:ro
+    networks:
+      - app-network-dev
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ------------------------------------------------------------------------------------
+  # BioEmu2 sampling for the BilboMD BioEmu2 pipeline (bilbomd#1200,
+  # apps/bioemu2-service). One job at a time; keeps the model loaded and
+  # compiled between jobs (~16 GB of GPU memory for a 500-residue system).
+  # Not a depends_on of the worker, so a missing service can't block the stack.
+  # /bilbomd/dev/bioemu2-cache (owned by ${UID}:${GID}) keeps MSAs and the
+  # torch.compile kernels across restarts.
+  bioemu2-service:
+    image: ghcr.io/bl1231/bilbomd-bioemu2-service:0.1.0
+    pull_policy: missing
+    shm_size: '16gb'
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp/bilbomd-seccomp.json
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: no
+    user: '${UID:-1001}:${GID:-1001}'
+    environment:
+      - UPLOAD_DIR=/bilbomd/uploads
+      # Unset = public api.colabfold.com (msa-service is on hold, #1199)
+      # - MSA_SERVER_URL=http://msa-service:8080
+    volumes:
+      - /bilbomd/dev/uploads:/bilbomd/uploads
+      - /bilbomd/dev/bioemu2-cache:/cache
     networks:
       - app-network-dev
     healthcheck:

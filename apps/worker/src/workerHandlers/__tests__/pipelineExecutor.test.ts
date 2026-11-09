@@ -22,6 +22,9 @@ vi.mock('../../services/pipelines/bilbomd-alphafold.js', () => ({
 vi.mock('../../services/pipelines/bilbomd-openfold.js', () => ({
   processBilboMDOpenFoldJob: vi.fn()
 }))
+vi.mock('../../services/pipelines/bilbomd-bioemu.js', () => ({
+  processBilboMDBioEmuJob: vi.fn()
+}))
 vi.mock('../../services/pipelines/bilbomd-nersc.js', () => ({
   processBilboMDJobNersc: vi.fn()
 }))
@@ -32,6 +35,7 @@ vi.mock('../../services/pipelines/bilbomd-k8s.js', () => ({
 import { getPipelineExecutor } from '../bilboMdHandler.js'
 import { processBilboMDPDBJob } from '../../services/pipelines/bilbomd-pdb.js'
 import { processBilboMDOpenFoldJob } from '../../services/pipelines/bilbomd-openfold.js'
+import { processBilboMDBioEmuJob } from '../../services/pipelines/bilbomd-bioemu.js'
 import { processBilboMDJobNersc } from '../../services/pipelines/bilbomd-nersc.js'
 import { processBilboMDJobK8s } from '../../services/pipelines/bilbomd-k8s.js'
 
@@ -61,6 +65,14 @@ describe('getPipelineExecutor', () => {
     for (const type of TYPES) {
       expect(getPipelineExecutor(type, 'k8s')).toBe(processBilboMDJobK8s)
     }
+  })
+
+  // BioEmu2 calls bioemu2-service, which only runs next to the local worker
+  // (epyc) for now: no NERSC path, and no Kubernetes sidecar yet
+  it('runs BioEmu2 jobs with the local pipeline only', () => {
+    expect(getPipelineExecutor('bioemu', 'local')).toBe(processBilboMDBioEmuJob)
+    expect(getPipelineExecutor('bioemu', 'nersc')).toBe(processBilboMDBioEmuJob)
+    expect(getPipelineExecutor('bioemu', 'k8s')).toBeNull()
   })
 
   it('rejects unknown job types on every backend', () => {

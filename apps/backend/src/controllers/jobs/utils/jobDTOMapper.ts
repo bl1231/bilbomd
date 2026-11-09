@@ -6,6 +6,7 @@ import type {
   BilboMDCRDDTO,
   BilboMDAlphaFoldDTO,
   BilboMDOpenFoldDTO,
+  BilboMDBioEmuDTO,
   BilboMDSANSDTO,
   BilboMDScoperDTO,
   JobType,
@@ -22,6 +23,7 @@ import type {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDOpenFoldJob,
+  IBilboMDBioEmuJob,
   IBilboMDSANSJob,
   IBilboMDScoperJob
 } from '@bilbomd/mongodb-schema'
@@ -38,6 +40,8 @@ export const mapDiscriminatorToJobType = (__t?: string): JobType => {
       return 'alphafold'
     case 'BilboMdOpenFold':
       return 'openfold'
+    case 'BilboMdBioEmu':
+      return 'bioemu'
     case 'BilboMdSANS':
       return 'sans'
     case 'BilboMdScoper':
@@ -178,6 +182,20 @@ export const mapJobMongoToDTO = (job: IJob) => {
         rg_min: ofJob.rg_min,
         rg_max: ofJob.rg_max
       } as BilboMDOpenFoldDTO
+    }
+
+    case 'bioemu': {
+      const beJob = job as IBilboMDBioEmuJob
+      return {
+        ...base,
+        bioemu_entities: beJob.bioemu_entities,
+        system_yaml_file: beJob.system_yaml_file,
+        bioemu_parameters: beJob.bioemu_parameters,
+        conformational_sampling: beJob.conformational_sampling,
+        rg: beJob.rg,
+        rg_min: beJob.rg_min,
+        rg_max: beJob.rg_max
+      } as BilboMDBioEmuDTO
     }
 
     case 'sans': {

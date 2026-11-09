@@ -34,6 +34,8 @@ const assembleEnsemblePdbFiles = async ({
   const numEnsembles = ensembleSizes.length > 0 ? Math.max(...ensembleSizes) : 0
   logger.info(`Found ${numEnsembles} ensemble files in ${multiFoxsDir}`)
 
+  const polished = await readPolishedMap(jobDir)
+
   const ensembles: IEnsemble[] = []
 
   for (const ensembleSize of ensembleSizes) {
@@ -47,31 +49,12 @@ const assembleEnsemblePdbFiles = async ({
     const ensemble = parseEnsembleFile(ensembleFileContent, ensembleSize)
     ensembles.push(ensemble)
 
-    // Save PDB files for the top-ranked model
+    // Save PDB files for the top-ranked model, using polished copies where
+    // the polish step made them
     const topModelPdbFiles = ensemble.models[0]?.states.map(
       (state: IEnsembleMember) => {
-        // Handle both absolute Docker paths and relative paths
-        let resolvedPath: string
-
-        if (path.isAbsolute(state.pdb)) {
-          // For absolute paths like /bilbomd/work/openmm/md/...
-          // Map Docker container path to actual job directory
-          if (state.pdb.startsWith('/bilbomd/work/')) {
-            // Remove the Docker container prefix and resolve from job directory
-            const relativePath = state.pdb.replace('/bilbomd/work/', '')
-            resolvedPath = path.join(jobDir, relativePath)
-          } else {
-            // Other absolute paths - use as-is but log a warning
-            logger.warn(`Unexpected absolute path format: ${state.pdb}`)
-            resolvedPath = state.pdb
-          }
-        } else {
-          // For relative paths, resolve from multiFoxsDir (legacy behavior)
-          resolvedPath = path.resolve(multiFoxsDir, state.pdb)
-        }
-
-        logger.debug(`Resolving PDB path: ${state.pdb} -> ${resolvedPath}`)
-        return resolvedPath
+        const resolvedPath = resolveEnsemblePdbPath(state.pdb, jobDir)
+        return polished[resolvedPath] ?? resolvedPath
       }
     )
     if (topModelPdbFiles && topModelPdbFiles.length > 0) {
@@ -126,6 +109,9 @@ const assembleEnsemblePdbFiles = async ({
     case 'openfold':
       DBjob.results.openfold = ensembleResults
       break
+    case 'bioemu':
+      DBjob.results.bioemu = ensembleResults
+      break
     default:
       logger.error(`Unsupported job type '${DBjob.__t}' for ensemble results`)
       throw new Error(
@@ -135,6 +121,57 @@ const assembleEnsemblePdbFiles = async ({
 
   await DBjob.save()
   logger.info(`DBjob updated with ensemble results.`)
+}
+
+// Where the polish step (BioEmu2 pipeline) records its polished copies:
+// { "<member pdb path>": "<polished pdb path>" }
+const POLISHED_MAP = path.join('polish', 'polished.json')
+
+const readPolishedMap = async (
+  jobDir: string
+): Promise<Record<string, string>> => {
+  let map: Record<string, string>
+  try {
+    map = (await fs.readJson(path.join(jobDir, POLISHED_MAP))) as Record<
+      string,
+      string
+    >
+  } catch (error) {
+    // Only BioEmu2 jobs are polished; for every other job there is no map
+    if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+      logger.warn(`Ignoring unreadable ${POLISHED_MAP}: ${error}`)
+    }
+    return {}
+  }
+  const usable: Record<string, string> = {}
+  for (const [member, copy] of Object.entries(map ?? {})) {
+    if (await fs.pathExists(copy)) usable[member] = copy
+  }
+  logger.info(
+    `Using ${Object.keys(usable).length} polished ensemble members from ${POLISHED_MAP}`
+  )
+  return usable
+}
+
+// A MultiFoXS member path (state.pdb, the profile path without .dat) as a
+// path in the job directory. MultiFoXS writes them relative to multifoxs/, or
+// absolute with the /bilbomd/work/ prefix for jobs run in containers on NERSC.
+const resolveEnsemblePdbPath = (pdb: string, jobDir: string): string => {
+  let resolvedPath: string
+  if (path.isAbsolute(pdb)) {
+    if (pdb.startsWith('/bilbomd/work/')) {
+      resolvedPath = path.join(jobDir, pdb.replace('/bilbomd/work/', ''))
+    } else {
+      // Other absolute paths - use as-is but log a warning
+      logger.warn(`Unexpected absolute path format: ${pdb}`)
+      resolvedPath = pdb
+    }
+  } else {
+    // Relative paths resolve from multifoxs/ (legacy behavior)
+    resolvedPath = path.resolve(jobDir, 'multifoxs', pdb)
+  }
+  logger.debug(`Resolving PDB path: ${pdb} -> ${resolvedPath}`)
+  return resolvedPath
 }
 
 const getResultsKey = (discriminator: string): string => {
@@ -148,6 +185,8 @@ const getResultsKey = (discriminator: string): string => {
       return 'alphafold'
     case 'BilboMdOpenFold':
       return 'openfold'
+    case 'BilboMdBioEmu':
+      return 'bioemu'
     case 'BilboMdSANS':
       return 'sans'
     case 'BilboMdScoper':
@@ -279,6 +318,9 @@ const concatenateAndSaveAsEnsemble = async (
 
 export {
   assembleEnsemblePdbFiles,
+  resolveEnsemblePdbPath,
+  readPolishedMap,
+  POLISHED_MAP,
   parseStateLine,
   isStateLine,
   parseEnsembleFile,

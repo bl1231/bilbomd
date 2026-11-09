@@ -11,7 +11,7 @@
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = "-q --strict-markers"
-testpaths = ["apps/worker/scripts", "tools/python"]
+testpaths = ["apps/worker/scripts", "tools/python", "apps/bioemu2-service/tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*", "*Tests"]
 python_functions = ["test_*"]

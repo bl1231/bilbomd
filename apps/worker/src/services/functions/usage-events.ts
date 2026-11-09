@@ -13,6 +13,7 @@ type PipelineType =
   | 'auto'
   | 'alphafold'
   | 'openfold'
+  | 'bioemu'
   | 'sans'
   | 'scoper'
   | 'multi'

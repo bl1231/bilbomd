@@ -16,6 +16,7 @@ const stepStatusSchema = new Schema({
 const stepsSchema = new Schema<IBilboMDSteps>({
   alphafold: { type: stepStatusSchema, required: false },
   openfold: { type: stepStatusSchema, required: false },
+  bioemu: { type: stepStatusSchema, required: false },
   reduce: { type: stepStatusSchema, required: false },
   rnaview: { type: stepStatusSchema, required: false },
   pdb2crd: { type: stepStatusSchema, required: false },
@@ -33,6 +34,7 @@ const stepsSchema = new Schema<IBilboMDSteps>({
   pepsisans: { type: stepStatusSchema, required: false },
   ionnet: { type: stepStatusSchema, required: false },
   multifoxs: { type: stepStatusSchema, required: false },
+  polish: { type: stepStatusSchema, required: false },
   scoper: { type: stepStatusSchema, required: false },
   gasans: { type: stepStatusSchema, required: false },
   copy_results_to_cfs: { type: stepStatusSchema, required: false },

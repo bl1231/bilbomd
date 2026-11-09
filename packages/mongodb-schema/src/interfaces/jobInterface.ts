@@ -54,6 +54,22 @@ interface IOpenFoldEntity {
   copies: number
 }
 
+// BioEmu2 (sequence-in) entities: same shape as OpenFold3's
+type IBioEmuEntity = IOpenFoldEntity
+
+// Settings for Rg-steered BioEmu2 sampling (#1200). Defaults are the Phase 0
+// "steer" config: 50 denoising steps, 5 guidance steps, BioEmu2's default
+// physicality potentials plus a Cα-Rg potential per target.
+interface IBioEmuParameters {
+  rgs: number[]
+  num_samples_per_rg: number
+  batch_size: number
+  num_steps: number
+  num_gd_steps: number
+  rg_weight: number
+  default_potentials: boolean
+}
+
 interface IFeedbackData {
   mw_saxs: number
   mw_model: number
@@ -125,6 +141,7 @@ interface IJob extends Document {
     | 'BilboMdScoper'
     | 'BilboMdAlphaFold'
     | 'BilboMdOpenFold'
+    | 'BilboMdBioEmu'
     | 'BilboMdSANS'
   title: string
   uuid: string
@@ -226,6 +243,19 @@ interface IBilboMDOpenFoldJob extends IJob {
   rg_max?: number
 }
 
+interface IBilboMDBioEmuJob extends IJob {
+  __t: 'BilboMdBioEmu'
+  bioemu_entities: IBioEmuEntity[]
+  system_yaml_file: string
+  bioemu_parameters: IBioEmuParameters
+  // OpenMM restrained minimization polishes the final ensemble members
+  md_engine?: MDEngineEnum
+  conformational_sampling: number
+  rg?: number
+  rg_min?: number
+  rg_max?: number
+}
+
 interface IBilboMDScoperJob extends IJob {
   __t: 'BilboMdScoper'
   pdb_file: string
@@ -243,6 +273,8 @@ export {
   IBilboMDSteps,
   IAlphaFoldEntity,
   IOpenFoldEntity,
+  IBioEmuEntity,
+  IBioEmuParameters,
   IFeedbackData,
   INerscInfo,
   IResidueRange,
@@ -258,5 +290,6 @@ export {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDOpenFoldJob,
+  IBilboMDBioEmuJob,
   IBilboMDScoperJob
 }

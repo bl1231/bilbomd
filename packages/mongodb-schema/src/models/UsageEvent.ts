@@ -32,6 +32,7 @@ const usageEventSchema = new Schema<IUsageEvent>(
         'auto',
         'alphafold',
         'openfold',
+        'bioemu',
         'sans',
         'scoper',
         'multi'

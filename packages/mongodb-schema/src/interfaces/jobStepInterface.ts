@@ -18,6 +18,7 @@ interface IStepStatus {
 interface IBilboMDSteps {
   alphafold?: IStepStatus
   openfold?: IStepStatus
+  bioemu?: IStepStatus
   reduce?: IStepStatus
   rnaview?: IStepStatus
   pdb2crd?: IStepStatus
@@ -35,6 +36,7 @@ interface IBilboMDSteps {
   pepsisans?: IStepStatus
   ionnet?: IStepStatus
   multifoxs?: IStepStatus
+  polish?: IStepStatus
   scoper?: IStepStatus
   gasans?: IStepStatus
   copy_results_to_cfs?: IStepStatus

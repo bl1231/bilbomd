@@ -4,6 +4,7 @@ import {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDOpenFoldJob,
+  IBilboMDBioEmuJob,
   IStepStatus,
   Job,
   buildStepStatusUpdate
@@ -117,6 +118,7 @@ type FoxsDBJob =
   | IBilboMDAutoJob
   | IBilboMDAlphaFoldJob
   | IBilboMDOpenFoldJob
+  | IBilboMDBioEmuJob
 
 const PROGRESS_EVERY = 50
 
@@ -379,14 +381,7 @@ const spawnFoXSOptimized = async (
  * Prepare FoXS input directories by discovering existing foxs/ directories
  * or mirroring from OpenMM md/ directories via symlinks.
  */
-const prepareFoXSInputs = async (
-  DBjob:
-    | IBilboMDPDBJob
-    | IBilboMDCRDJob
-    | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob
-    | IBilboMDOpenFoldJob
-): Promise<string[]> => {
+const prepareFoXSInputs = async (DBjob: FoxsDBJob): Promise<string[]> => {
   const jobDir = path.join(config.uploadDir, DBjob.uuid)
   const foxsDir = path.join(jobDir, 'foxs')
   const mdDir = path.join(jobDir, 'openmm', 'md') // OpenMM structure
@@ -522,12 +517,7 @@ const foxsGpuOptions = (): FoxsGpuOptions | undefined => {
  */
 const runFoXS = async (
   MQjob: BullMQJob,
-  DBjob:
-    | IBilboMDPDBJob
-    | IBilboMDCRDJob
-    | IBilboMDAutoJob
-    | IBilboMDAlphaFoldJob
-    | IBilboMDOpenFoldJob,
+  DBjob: FoxsDBJob,
   maxConcurrency?: number
 ): Promise<void> => {
   let status: IStepStatus = {

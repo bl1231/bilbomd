@@ -16,6 +16,7 @@ export type JobType =
   | 'auto'
   | 'alphafold'
   | 'openfold'
+  | 'bioemu'
   | 'sans'
   | 'scoper'
   | 'multi'
@@ -124,6 +125,26 @@ export interface BilboMDOpenFoldDTO extends BaseJobDTO {
   rg_max?: number
 }
 
+export interface BioEmuParametersDTO {
+  rgs: number[]
+  num_samples_per_rg: number
+  batch_size: number
+  num_steps: number
+  num_gd_steps: number
+  rg_weight: number
+  default_potentials: boolean
+}
+
+export interface BilboMDBioEmuDTO extends BaseJobDTO {
+  bioemu_entities: OpenFoldEntityDTO[]
+  system_yaml_file: string
+  bioemu_parameters: BioEmuParametersDTO
+  conformational_sampling: number
+  rg?: number
+  rg_min?: number
+  rg_max?: number
+}
+
 export interface BilboMDSANSDTO extends BaseJobDTO {
   pdb_file: string
   psf_file?: string
@@ -155,6 +176,7 @@ export type BilboMDMongoJobDTO =
   | BilboMDAutoDTO
   | BilboMDAlphaFoldDTO
   | BilboMDOpenFoldDTO
+  | BilboMDBioEmuDTO
   | BilboMDSANSDTO
   | BilboMDScoperDTO
   | BilboMDMultiDTO

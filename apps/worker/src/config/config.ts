@@ -151,6 +151,15 @@ export const config = {
     'http://of3-service:8000'
   ),
   of3TimeoutMs: parsePositiveIntEnv('OF3_TIMEOUT_MS', 60 * 60 * 1000),
+  // BioEmu2 sampling service (bilbomd#1200). Its MSA server is set on the
+  // service itself (MSA_SERVER_URL).
+  bioemuServiceUrl: getEnvVarWithDefault(
+    'BIOEMU_SERVICE_URL',
+    'http://bioemu2-service:8000'
+  ),
+  // Sampling ~300 structures takes 5-20 min on an A100 for 250-820 residues;
+  // ~1,600 residues takes hours, so leave room
+  bioemuTimeoutMs: parsePositiveIntEnv('BIOEMU_TIMEOUT_MS', 6 * 60 * 60 * 1000),
   // ColabFold-compatible MSA server for OF3 (e.g. http://msa-service:8080).
   // Unset: OF3 uses its default, the public api.colabfold.com.
   of3MsaServerUrl: process.env.OF3_MSA_SERVER_URL || undefined,
@@ -306,6 +315,7 @@ export const config = {
     SANSEnabled: toBoolean(process.env.ENABLE_BILBOMD_SANS),
     AlphaFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_ALPHAFOLD),
     OpenFoldEnabled: toBoolean(process.env.ENABLE_BILBOMD_OPENFOLD),
+    BioEmuEnabled: toBoolean(process.env.ENABLE_BILBOMD_BIOEMU),
     MultiEnabled: toBoolean(process.env.ENABLE_BILBOMD_MULTI),
     ScoperEnabled: toBoolean(process.env.ENABLE_BILBOMD_SCOPER)
   }

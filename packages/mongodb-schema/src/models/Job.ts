@@ -11,8 +11,10 @@ import {
   IBilboMDScoperJob,
   IBilboMDAlphaFoldJob,
   IBilboMDOpenFoldJob,
+  IBilboMDBioEmuJob,
   IBilboMDSANSJob,
   IAlphaFoldEntity,
+  IBioEmuParameters,
   IOpenFoldEntity,
   IFeedbackData,
   INerscInfo,
@@ -337,6 +339,39 @@ const bilboMdOpenFoldJobSchema = new Schema<IBilboMDOpenFoldJob>({
   rg_max: { type: Number, required: false, min: 10, max: 100 }
 })
 
+const bioEmuParametersSchema = new Schema<IBioEmuParameters>(
+  {
+    rgs: [{ type: Number, required: true }],
+    num_samples_per_rg: { type: Number, required: true, min: 1, max: 500 },
+    batch_size: { type: Number, required: true, min: 1 },
+    num_steps: { type: Number, required: true, min: 1 },
+    num_gd_steps: { type: Number, required: true, min: 0 },
+    rg_weight: { type: Number, required: true },
+    default_potentials: { type: Boolean, required: true }
+  },
+  { _id: false }
+)
+
+const bilboMdBioEmuJobSchema = new Schema<IBilboMDBioEmuJob>({
+  bioemu_entities: [openFoldEntitySchema],
+  system_yaml_file: { type: String, required: true },
+  bioemu_parameters: { type: bioEmuParametersSchema, required: true },
+  md_engine: {
+    type: String,
+    enum: mdEngineEnum,
+    default: 'OpenMM',
+    required: false
+  },
+  conformational_sampling: {
+    type: Number,
+    enum: [1, 2, 3, 4],
+    default: 1
+  },
+  rg: { type: Number, required: false, min: 10, max: 100 },
+  rg_min: { type: Number, required: false, min: 10, max: 100 },
+  rg_max: { type: Number, required: false, min: 10, max: 100 }
+})
+
 const bilboMdSANSJobSchema = new Schema<IBilboMDSANSJob>({
   pdb_file: { type: String, required: true },
   psf_file: { type: String, required: false },
@@ -385,6 +420,10 @@ const BilboMdOpenFoldJob = Job.discriminator(
   'BilboMdOpenFold',
   bilboMdOpenFoldJobSchema
 )
+const BilboMdBioEmuJob = Job.discriminator(
+  'BilboMdBioEmu',
+  bilboMdBioEmuJobSchema
+)
 const BilboMdSANSJob = Job.discriminator('BilboMdSANS', bilboMdSANSJobSchema)
 const BilboMdScoperJob = Job.discriminator(
   'BilboMdScoper',
@@ -400,6 +439,7 @@ export {
   BilboMdScoperJob,
   BilboMdAlphaFoldJob,
   BilboMdOpenFoldJob,
+  BilboMdBioEmuJob,
   BilboMdSANSJob,
   nerscInfoSchema,
   mdConstraintsSchema,

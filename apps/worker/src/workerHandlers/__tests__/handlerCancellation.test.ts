@@ -29,6 +29,9 @@ vi.mock('../../services/pipelines/bilbomd-nersc.js', () => ({
 vi.mock('../../services/pipelines/bilbomd-alphafold.js', () => ({
   processBilboMDAlphaFoldJob: vi.fn()
 }))
+vi.mock('../../services/pipelines/bilbomd-bioemu.js', () => ({
+  processBilboMDBioEmuJob: vi.fn()
+}))
 vi.mock('../../services/pipelines/bilbomd-openfold.js', () => ({
   processBilboMDOpenFoldJob: vi.fn()
 }))
