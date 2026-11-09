@@ -23,7 +23,7 @@ gateway:
 images:
   ui:
     repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-ui
-    tag: 2.37.0
+    tag: 2.38.0
   backend:
     repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-backend
     tag: 2.20.0
