@@ -331,6 +331,10 @@ services:
   # and indexed, and /bilbomd/dev/msa-jobs owned by ${UID}:${GID}.
   # Deliberately not a depends_on of colabfold-service: the worker waits on
   # colabfold-service, so a down msa-service would block the whole stack.
+  # GPU 1, not GPU 0: colabfold-service and of3-service (count: 1) land on
+  # GPU 0, and an AF inference starting mid-search crashed the mmseqs GPU
+  # prefilter (illegal memory access) during validation. GPU 1's MPS MD
+  # clients use only a few GB.
   msa-service:
     image: ghcr.io/bl1231/bilbomd-msa-service:0.1.1
     pull_policy: missing
@@ -344,7 +348,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ['0']
+              device_ids: ['1']
               capabilities: [gpu]
     restart: always
     user: '${UID:-1001}:${GID:-1001}'
