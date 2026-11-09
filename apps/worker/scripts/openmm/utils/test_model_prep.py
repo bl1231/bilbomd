@@ -121,6 +121,20 @@ class TestGlycosidicBondRepair:
         positions = [Vec3(0.0, 0.0, 0.0), Vec3(5.0, 0.0, 0.0)] * angstroms
         assert _repair_glycam_glycosidic_bonds(top, positions) == 0
 
+    def test_bonds_a_stretched_linkage(self):
+        # 2.05 Å is past the 1.9 Å covalent cutoff, but the rename step names the
+        # parent as branched there, so the bond has to exist in the topology too.
+        top = Topology()
+        chain = top.addChain()
+        parent = top.addResidue("VMB", chain)
+        _add_atoms(top, parent, [("O6", (0.0, 0.0, 0.0))])
+        child = top.addResidue("0MA", chain)
+        _add_atoms(top, child, [("C1", (2.05, 0.0, 0.0))])
+        positions = [Vec3(0.0, 0.0, 0.0), Vec3(2.05, 0.0, 0.0)] * angstroms
+        assert _repair_glycam_glycosidic_bonds(top, positions) == 1
+        (bond,) = top.bonds()
+        assert {bond[0].name, bond[1].name} == {"O6", "C1"}
+
 
 # ---------------------------------------------------------------------------
 # _add_glycam_sugar_intra_bonds

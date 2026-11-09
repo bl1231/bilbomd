@@ -19,7 +19,12 @@ from openmm.app import ForceField, Modeller, PDBFile
 from openmm.unit import angstroms
 from pdbfixer import PDBFixer
 
-from utils.glycam_rename import rename_glycam_residues
+from utils.glycam_rename import (
+    GLYCOSIDIC_PROTEIN_ACCEPTORS,
+    GLYCOSIDIC_SUGAR_ACCEPTORS,
+    pick_glycosidic_acceptor,
+    rename_glycam_residues,
+)
 from utils.logger import get_logger
 
 logger = get_logger("model_prep")
@@ -169,29 +174,21 @@ def _add_glycam_sugar_intra_bonds(topology, forcefield: ForceField) -> int:
     return added
 
 
-# Sugar oxygens that accept a glycosidic bond from another sugar's anomeric C1,
-# and the protein side-chain atoms that accept the reducing-end sugar's C1.
-_GLYCOSIDIC_SUGAR_ACCEPTORS: frozenset[str] = frozenset({"O2", "O3", "O4", "O6"})
-_GLYCOSIDIC_PROTEIN_ACCEPTORS: frozenset[str] = frozenset({"ND2", "OG", "OG1"})
-_GLYCOSIDIC_BOND_CUTOFF = 1.9  # Å — generous upper bound for a covalent bond
-
-
 def _repair_glycam_glycosidic_bonds(topology, positions) -> int:
     """Add missing glycosidic linkage bonds for a glycan.
 
     Each sugar's anomeric carbon (C1) is bonded to its acceptor — a protein
     residue's linking atom (NLN.ND2 / OLS.OG / OLT.OG1) for the reducing end, or a
-    parent sugar's hydroxyl oxygen (O2/O3/O4/O6). The acceptor is chosen by
-    proximity (nearest candidate within the covalent cutoff), reconstructing both
-    protein→sugar and sugar→sugar linkages for arbitrary glycan trees. These bonds
-    are never created by OpenMM's PDB reader because the residues are unknown to it.
-    Returns the number of bonds added.
+    parent sugar's hydroxyl oxygen (O2/O3/O4/O6). The acceptor is chosen with
+    ``pick_glycosidic_acceptor``, the same rule the GLYCAM rename used to name
+    the residues, so every bond implied by a residue name gets built (including
+    stretched ones). These bonds are never created by OpenMM's PDB reader because
+    the residues are unknown to it. Returns the number of bonds added.
 
     Note: only C1-anomeric sugars are handled; sugars linked through a different
     anomeric carbon (e.g. sialic acid, C2) are not connected here.
     """
     coords = positions.value_in_unit(angstroms)
-    cutoff_sq = _GLYCOSIDIC_BOND_CUTOFF ** 2
 
     existing_bonds: set[tuple[int, int]] = set()
     for bond in topology.bonds():
@@ -205,34 +202,37 @@ def _repair_glycam_glycosidic_bonds(topology, positions) -> int:
         for atom in res.atoms():
             if is_sugar and atom.name == "C1":
                 anomeric_carbons.append(atom)
-            elif is_sugar and atom.name in _GLYCOSIDIC_SUGAR_ACCEPTORS:
+            elif is_sugar and atom.name in GLYCOSIDIC_SUGAR_ACCEPTORS:
                 acceptors.append(atom)
             elif (res.name in _GLYCAM_PROTEIN_NAMES
-                    and atom.name in _GLYCOSIDIC_PROTEIN_ACCEPTORS):
+                    and atom.name in GLYCOSIDIC_PROTEIN_ACCEPTORS.get(res.name, ())):
                 acceptors.append(atom)
+
+    def _xyz(atom) -> tuple[float, float, float]:
+        v = coords[atom.index]
+        return (v[0], v[1], v[2])
 
     added = 0
     for c1 in anomeric_carbons:
-        cx = coords[c1.index]
-        best = None
-        best_sq = cutoff_sq
-        for acc in acceptors:
-            if acc.residue.index == c1.residue.index:
-                continue
-            ax = coords[acc.index]
-            d_sq = (cx[0] - ax[0]) ** 2 + (cx[1] - ax[1]) ** 2 + (cx[2] - ax[2]) ** 2
-            if d_sq <= best_sq:
-                best_sq = d_sq
-                best = acc
-        if best is not None and (c1.index, best.index) not in existing_bonds:
-            topology.addBond(c1, best)
-            existing_bonds.add((c1.index, best.index))
-            existing_bonds.add((best.index, c1.index))
-            logger.info(
-                f"  Glycosidic bond: {c1.residue.name}[{c1.residue.id}].C1 -- "
-                f"{best.residue.name}[{best.residue.id}].{best.name}"
-            )
-            added += 1
+        match = pick_glycosidic_acceptor(
+            _xyz(c1),
+            ((_xyz(acc), acc) for acc in acceptors
+             if acc.residue.index != c1.residue.index),
+        )
+        if match is None:
+            continue
+        best = match.acceptor
+        if (c1.index, best.index) in existing_bonds:
+            continue
+        topology.addBond(c1, best)
+        existing_bonds.add((c1.index, best.index))
+        existing_bonds.add((best.index, c1.index))
+        stretched = f" (stretched, {match.distance:.2f} Å)" if match.stretched else ""
+        logger.info(
+            f"  Glycosidic bond: {c1.residue.name}[{c1.residue.id}].C1 -- "
+            f"{best.residue.name}[{best.residue.id}].{best.name}{stretched}"
+        )
+        added += 1
     return added
 
 
@@ -816,7 +816,13 @@ def prepare_modeller(
         fixed_pdb_text = fixed_pdb_io.getvalue()
 
         logger.info("Glycoprotein mode: applying GLYCAM residue renaming to fixed PDB...")
-        renamed_pdb, glycam_log = rename_glycam_residues(fixed_pdb_text)
+        try:
+            renamed_pdb, glycam_log = rename_glycam_residues(fixed_pdb_text)
+        except ValueError as e:
+            # Logged at ERROR so the "ERROR: " stderr line becomes the job's error
+            # message (see runOmmStep), instead of a bare "exit 1".
+            logger.error(str(e))
+            raise
         log_path = os.path.join(config["input"]["dir"], "glycam_rename.log")
         with open(log_path, "w", encoding="utf-8") as f:
             f.write("\n".join(glycam_log) + "\n")

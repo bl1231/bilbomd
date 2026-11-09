@@ -32,7 +32,7 @@ import math
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Generic, Iterable, Optional, TypeVar
 from utils.logger import get_logger
 
 logger = get_logger("glycam_rename")
@@ -231,34 +231,95 @@ def _is_alpha_anomer(res: Residue) -> bool:
 
 BOND_THRESHOLD = 1.9  # Å — generous upper bound for covalent bonds
 
+# A sugar C1 whose nearest acceptor sits between BOND_THRESHOLD and this distance
+# is still treated as bonded, as long as no other acceptor is that close. Input
+# models (especially edited or predicted glycans) sometimes carry a stretched
+# glycosidic bond; minimization pulls it back to ~1.4 Å. Beyond this distance the
+# linkage is too far off to guess, and the residue is reported as an error.
+GLYCOSIDIC_STRETCHED_CUTOFF = 2.4  # Å
 
-def _build_atom_index(
-    residues: dict[tuple, Residue]
-) -> list[tuple[tuple[float, float, float], str, int, Atom]]:
-    """Flat list of (coords, chain_id, resseq, Atom) for distance searches."""
-    index = []
+# Atoms that accept a sugar's anomeric C1: a parent sugar's hydroxyl oxygen, or
+# the linking side-chain atom of a glycosylated protein residue. The protein side
+# lists both the PDB and the GLYCAM residue names, so the rename step (PDB names)
+# and the topology repair in model_prep (GLYCAM names) see the same acceptors.
+GLYCOSIDIC_SUGAR_ACCEPTORS: frozenset[str] = frozenset({"O2", "O3", "O4", "O6"})
+GLYCOSIDIC_PROTEIN_ACCEPTORS: dict[str, frozenset[str]] = {
+    "ASN": frozenset({"ND2"}),
+    "NLN": frozenset({"ND2"}),
+    "SER": frozenset({"OG"}),
+    "OLS": frozenset({"OG"}),
+    "THR": frozenset({"OG1", "OG"}),
+    "OLT": frozenset({"OG1", "OG"}),
+}
+
+T = TypeVar("T")
+
+
+@dataclass(frozen=True)
+class GlycosidicMatch(Generic[T]):
+    """The acceptor a sugar C1 bonds to, and how far away it is."""
+
+    acceptor: T
+    distance: float
+
+    @property
+    def stretched(self) -> bool:
+        return self.distance > BOND_THRESHOLD
+
+
+def pick_glycosidic_acceptor(
+    c1: tuple[float, float, float],
+    candidates: Iterable[tuple[tuple[float, float, float], T]],
+) -> Optional[GlycosidicMatch[T]]:
+    """Choose the acceptor a sugar's anomeric C1 is bonded to.
+
+    ``candidates`` are (coords, acceptor) pairs; the caller excludes the sugar's
+    own atoms. The nearest acceptor within BOND_THRESHOLD wins. Failing that, a
+    single acceptor within GLYCOSIDIC_STRETCHED_CUTOFF is accepted as a stretched
+    bond. Two or more acceptors in the stretched range are ambiguous, so None is
+    returned, as it is when nothing is close enough.
+
+    Both the GLYCAM rename and the OpenMM topology repair use this, so the two
+    steps always agree on which sugars are linked.
+    """
+    nearby = sorted(
+        (
+            (_distance(c1, coords), i, acceptor)
+            for i, (coords, acceptor) in enumerate(candidates)
+        ),
+        key=lambda t: (t[0], t[1]),
+    )
+    nearby = [t for t in nearby if t[0] <= GLYCOSIDIC_STRETCHED_CUTOFF]
+    if not nearby:
+        return None
+    distance, _, acceptor = nearby[0]
+    if distance > BOND_THRESHOLD and len(nearby) > 1:
+        return None
+    return GlycosidicMatch(acceptor=acceptor, distance=distance)
+
+
+class GlycanGeometryError(ValueError):
+    """A sugar's anomeric C1 can't be linked to anything, so OpenMM can't type it."""
+
+
+def _acceptor_candidates(
+    residues: dict[tuple, "Residue"],
+) -> list[tuple[tuple[float, float, float], Atom]]:
+    """Every atom that could accept a sugar C1, as (coords, Atom) pairs."""
+    out = []
     for res in residues.values():
+        if res.resname in CARBOHYDRATE_RESNAMES:
+            names = GLYCOSIDIC_SUGAR_ACCEPTORS
+        else:
+            names = GLYCOSIDIC_PROTEIN_ACCEPTORS.get(res.resname, frozenset())
         for a in res.atoms:
-            index.append(((a.x, a.y, a.z), a.chain_id, a.resseq, a))
-    return index
+            if a.name in names:
+                out.append(((a.x, a.y, a.z), a))
+    return out
 
 
-def _find_bonded_atom(
-    src_atom: Atom,
-    target_resname: str,
-    target_atom_name: str,
-    atom_index: list,
-) -> Optional[tuple[str, int]]:
-    """Return (chain_id, resseq) of a bonded target atom, or None."""
-    src = (src_atom.x, src_atom.y, src_atom.z)
-    for coords, chain_id, resseq, atom in atom_index:
-        if atom.resname != target_resname:
-            continue
-        if atom.name != target_atom_name:
-            continue
-        if _distance(src, coords) <= BOND_THRESHOLD:
-            return chain_id, resseq
-    return None
+def _describe(atom: Atom) -> str:
+    return f"{atom.resname} {atom.chain_id} {atom.resseq} {atom.name}"
 
 
 # ---------------------------------------------------------------------------
@@ -318,9 +379,6 @@ def rename_glycam_residues(pdb_text: str) -> tuple[str, list[str]]:
         if parsed:
             explicit_bonds.append(parsed)
 
-    # Build atom index for distance-based fallback
-    atom_index = _build_atom_index(residues)
-
     # --- Determine glycosylation sites ---
     # Maps protein residue key → new name (NLN, OLT, OLS)
     protein_renames: dict[tuple, str] = {}
@@ -357,34 +415,58 @@ def rename_glycam_residues(pdb_text: str) -> tuple[str, list[str]]:
                 )
                 break
 
-    # Distance-based fallback for protein-linked sugars not covered by a LINK
-    # record (handles PDB files without LINK records, e.g. some deposited structures)
+    # Link every sugar's anomeric C1 to its acceptor by geometry: a parent sugar's
+    # hydroxyl oxygen, or a protein side chain for the reducing end. This covers
+    # PDB files without LINK records (e.g. predicted or edited models).
+    candidates = _acceptor_candidates(residues)
+    child_positions: dict[tuple, set[int]] = defaultdict(set)
+    unlinked: list[str] = []
     for key, res in residues.items():
         if res.resname not in CARBOHYDRATE_RESNAMES:
             continue
-        if key in protein_linked_sugars:
-            continue  # already handled via LINK
-
         c1 = res.get_atom("C1")
         if c1 is None:
             continue
-
         c1_coords = (c1.x, c1.y, c1.z)
-        for coords, chain_id, resseq, candidate_atom in atom_index:
-            if candidate_atom.resname not in PROTEIN_RESNAMES:
-                continue
-            if _distance(c1_coords, coords) > BOND_THRESHOLD:
-                continue
+        own = [(coords, a) for coords, a in candidates
+               if (a.chain_id, a.resseq, a.icode) != key]
+        match = pick_glycosidic_acceptor(c1_coords, own)
 
-            prot_res = get_res(chain_id, resseq)
-            if prot_res is None:
-                continue
+        if match is None:
+            # A sugar already tied to the protein by a LINK record is fine, and
+            # one that still carries its own O1 is a free (unlinked) sugar.
+            # Anything else has an open C1 that no GLYCAM template will match.
+            if key not in protein_linked_sugars and res.get_atom("O1") is None:
+                unlinked.append(_describe_unlinked(res, c1_coords, own))
+            continue
 
-            _handle_glycan_link(
-                prot_res, candidate_atom.name, res,
-                protein_renames, protein_linked_sugars, log_lines
+        acceptor = match.acceptor
+        if match.stretched:
+            log_lines.append(
+                f"  WARNING: {res.resname} {res.chain_id}{res.resseq:4d} C1 is "
+                f"{match.distance:.2f} Å from {_describe(acceptor)} (a covalent bond "
+                f"is ~1.4 Å). Treating it as bonded; minimization will relax it."
             )
-            break
+        if acceptor.resname in CARBOHYDRATE_RESNAMES:
+            parent_key = (acceptor.chain_id, acceptor.resseq, acceptor.icode)
+            child_positions[parent_key].add(int(acceptor.name[1]))
+        elif key not in protein_linked_sugars:  # LINK records take precedence
+            prot_res = get_res(acceptor.chain_id, acceptor.resseq)
+            if prot_res is not None:
+                _handle_glycan_link(
+                    prot_res, acceptor.name, res,
+                    protein_renames, protein_linked_sugars, log_lines
+                )
+
+    if unlinked:
+        raise GlycanGeometryError(
+            "Can't build glycan bonds: "
+            + "; ".join(unlinked)
+            + ". Each sugar's C1 must be within "
+            f"{GLYCOSIDIC_STRETCHED_CUTOFF} Å of exactly one acceptor (a parent "
+            "sugar's O2/O3/O4/O6, or Asn ND2 / Ser OG / Thr OG1). Fix the glycan "
+            "geometry and resubmit."
+        )
 
     # Assign the GLYCAM linkage-position prefix for every carbohydrate residue,
     # based on the full set of hydroxyls substituted by child sugars. This handles
@@ -403,7 +485,7 @@ def rename_glycam_residues(pdb_text: str) -> tuple[str, list[str]]:
             )
             continue
 
-        positions = _find_child_linkage_positions(res, atom_index)
+        positions = frozenset(child_positions.get(key, ()))
         prefix = _linkage_prefix(positions)
         is_alpha = _is_alpha_anomer(res)
         anomer = "A" if is_alpha else "B"
@@ -546,34 +628,27 @@ def _linkage_prefix(positions: frozenset[int]) -> str:
     return prefix
 
 
-def _find_child_linkage_positions(
+def _describe_unlinked(
     res: Residue,
-    atom_index: list,
-) -> frozenset[int]:
-    """Return the oxygen positions (2, 3, 4, 6) on this sugar bonded to another
-    sugar's anomeric C1 — i.e. the positions where child sugars attach.
-
-    An empty set denotes a non-reducing terminal sugar (prefix "0").
-    """
-    positions: set[int] = set()
-    for on_name in ("O2", "O3", "O4", "O6"):
-        on_atom = res.get_atom(on_name)
-        if on_atom is None:
-            continue
-        on_coords = (on_atom.x, on_atom.y, on_atom.z)
-        for coords, _chain_id, _resseq, candidate in atom_index:
-            if candidate.resname not in CARBOHYDRATE_RESNAMES:
-                continue
-            if candidate.name != "C1":
-                continue
-            if (candidate.chain_id, candidate.resseq, candidate.icode) == (
-                res.chain_id, res.resseq, res.icode
-            ):
-                continue
-            if _distance(on_coords, coords) <= BOND_THRESHOLD:
-                positions.add(int(on_name[1]))
-                break
-    return frozenset(positions)
+    c1: tuple[float, float, float],
+    candidates: list[tuple[tuple[float, float, float], Atom]],
+) -> str:
+    """Explain why a sugar's C1 couldn't be linked, naming the nearest acceptors."""
+    nearest = sorted(
+        ((_distance(c1, coords), a) for coords, a in candidates),
+        key=lambda t: t[0],
+    )[:2]
+    name = f"{res.resname} {res.chain_id} {res.resseq}"
+    if not nearest:
+        return f"{name} C1 has no acceptor atom anywhere in the structure"
+    d0, a0 = nearest[0]
+    if len(nearest) > 1 and nearest[1][0] <= GLYCOSIDIC_STRETCHED_CUTOFF:
+        d1, a1 = nearest[1]
+        return (
+            f"{name} C1 is {d0:.2f} Å from {_describe(a0)} and {d1:.2f} Å from "
+            f"{_describe(a1)}, so its linkage is ambiguous"
+        )
+    return f"{name} C1 is {d0:.2f} Å from the nearest acceptor ({_describe(a0)})"
 
 
 # ---------------------------------------------------------------------------
