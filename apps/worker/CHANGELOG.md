@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 2.24.1
+
+### Patch Changes
+
+- 3a549bd: Glycoprotein (OpenMM) jobs no longer fail with "Template match failed for residue: 0MA" when a glycosidic bond in the input is slightly stretched. A sugar C1 within 2.4 Å of exactly one acceptor is now treated as bonded, with a warning in `glycam_rename.log`. A sugar that still can't be linked fails with a message naming the residue, its nearest acceptor and the distance. The GLYCAM rename and the OpenMM topology repair now share one bond-picking rule, so they always agree on which sugars are linked.
+- Updated dependencies [c14e583]
+  - @bilbomd/bilbomd-types@1.13.1
+  - @bilbomd/md-utils@1.2.5
+
 ## 2.24.0
 
 ### Minor Changes
