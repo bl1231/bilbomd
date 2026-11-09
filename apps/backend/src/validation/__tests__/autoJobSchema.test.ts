@@ -15,7 +15,8 @@ vi.mock('../helpers/fileValidators.js', () => ({
   pdbResidueCheck: () => mixed(),
   pdbOrCifExtTest: () => mixed(),
   pdbOrCifChainIdCheck: () => mixed(),
-  pdbOrCifResidueCheck: () => mixed()
+  pdbOrCifResidueCheck: () => mixed(),
+  paeMatchesStructureCheck: () => mixed()
 }))
 
 import { autoJobSchema } from '../autoJobSchema.js'

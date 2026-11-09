@@ -10,7 +10,8 @@ import {
   cifContainsChainId,
   checkPdbResidues,
   checkCifResidues,
-  isSingleModel
+  isSingleModel,
+  checkPaeMatchesStructure
 } from './validationFunctions.js'
 import { isQUnits, Q_UNITS } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
@@ -240,6 +241,22 @@ export const pdbOrCifResidueCheck = () =>
       const result = isCif
         ? await checkCifResidues(file)
         : await checkPdbResidues(file)
+      if (result.valid) return true
+      return this.createError({ message: result.message })
+    }
+  )
+
+// Runs on pae_file and compares it with the pdb_file sibling field
+export const paeMatchesStructureCheck = () =>
+  mixed().test(
+    'pae-matches-structure',
+    'PAE file does not match the structure',
+    async function (value) {
+      const paeFile = value as Express.Multer.File | undefined
+      const structureFile = this.parent?.pdb_file as
+        Express.Multer.File | undefined
+      if (!paeFile?.path || !structureFile?.path) return true
+      const result = await checkPaeMatchesStructure(paeFile, structureFile)
       if (result.valid) return true
       return this.createError({ message: result.message })
     }

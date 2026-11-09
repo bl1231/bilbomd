@@ -10,7 +10,11 @@ import {
   checkPdbResidues,
   isRNA,
   isSingleModel,
-  isValidConstInpFile
+  isValidConstInpFile,
+  countPdbResidues,
+  countCifResidues,
+  getPaeMatrixSize,
+  checkPaeMatchesStructure
 } from '../validationFunctions.js'
 
 vi.mock('fs/promises', () => ({
@@ -662,5 +666,197 @@ describe('isValidConstInpFile', () => {
     ].join('\n')
     mockReadFile(content)
     expect(await isValidConstInpFile(mockFile(), 'pdb')).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PAE ↔ structure size (mirrors tools/python/pae2const.py)
+// ---------------------------------------------------------------------------
+// Fixed-column PDB record for residue `resSeq` on `chain`
+const pdbAtom = (
+  record: 'ATOM  ' | 'HETATM',
+  name: string,
+  resName: string,
+  chain: string,
+  resSeq: number,
+  iCode = ' '
+) =>
+  `${record}    1  ${name.padEnd(3)} ${resName} ${chain}${String(resSeq).padStart(4)}${iCode}   10.000  10.000  10.000  1.00 90.00           C`
+
+const squarePae = (n: number, key = 'predicted_aligned_error') =>
+  JSON.stringify({
+    [key]: Array.from({ length: n }, () => Array<number>(n).fill(1))
+  })
+
+describe('countPdbResidues', () => {
+  it('counts each residue once, not each atom', () => {
+    const text = [
+      pdbAtom('ATOM  ', 'N', 'ALA', 'A', 1),
+      pdbAtom('ATOM  ', 'CA', 'ALA', 'A', 1),
+      pdbAtom('ATOM  ', 'N', 'GLY', 'A', 2)
+    ].join('\n')
+    expect(countPdbResidues(text)).toBe(2)
+  })
+
+  it('counts HETATM residues such as glycans', () => {
+    const text = [
+      pdbAtom('ATOM  ', 'CA', 'ALA', 'A', 1),
+      pdbAtom('HETATM', 'C1', 'NAG', 'A', 401)
+    ].join('\n')
+    expect(countPdbResidues(text)).toBe(2)
+  })
+
+  it('separates chains and insertion codes', () => {
+    const text = [
+      pdbAtom('ATOM  ', 'CA', 'ALA', 'A', 1),
+      pdbAtom('ATOM  ', 'CA', 'ALA', 'B', 1),
+      pdbAtom('ATOM  ', 'CA', 'ALA', 'B', 1, 'A')
+    ].join('\n')
+    expect(countPdbResidues(text)).toBe(3)
+  })
+
+  it('ignores non-atom records', () => {
+    const text = [
+      'HEADER    TEST',
+      pdbAtom('ATOM  ', 'CA', 'ALA', 'A', 1),
+      'TER',
+      'END'
+    ].join('\n')
+    expect(countPdbResidues(text)).toBe(1)
+  })
+})
+
+describe('countCifResidues', () => {
+  const cif = (rows: string[], insCode = true) =>
+    [
+      'data_x',
+      'loop_',
+      '_atom_site.group_PDB',
+      '_atom_site.id',
+      '_atom_site.label_atom_id',
+      '_atom_site.auth_seq_id',
+      '_atom_site.auth_asym_id',
+      ...(insCode ? ['_atom_site.pdbx_PDB_ins_code'] : []),
+      ...rows
+    ].join('\n')
+
+  it('counts distinct chain/residue/insertion-code keys', () => {
+    expect(
+      countCifResidues(
+        cif([
+          'ATOM 1 N 1 A ?',
+          'ATOM 2 CA 1 A ?',
+          'ATOM 3 CA 2 A ?',
+          'ATOM 4 CA 2 A B',
+          'ATOM 5 CA 1 B ?'
+        ])
+      )
+    ).toBe(4)
+  })
+
+  it('counts every record when several share a line', () => {
+    expect(countCifResidues(cif(['ATOM 1 CA 1 A ? ATOM 2 CA 2 A ?']))).toBe(2)
+  })
+
+  it('works without an insertion code column', () => {
+    expect(
+      countCifResidues(cif(['ATOM 1 CA 1 A', 'ATOM 2 CA 2 A'], false))
+    ).toBe(2)
+  })
+
+  it('returns 0 without an _atom_site block', () => {
+    expect(countCifResidues('data_x\n_cell.length_a 10\n')).toBe(0)
+  })
+})
+
+describe('getPaeMatrixSize', () => {
+  it.each(['predicted_aligned_error', 'pae', 'pde'])(
+    'reads the %s key',
+    (key) => {
+      expect(getPaeMatrixSize(squarePae(3, key))).toEqual({ size: 3 })
+    }
+  )
+
+  it('unwraps an AlphaFold DB style one-element list', () => {
+    expect(getPaeMatrixSize(`[${squarePae(4)}]`)).toEqual({ size: 4 })
+  })
+
+  it.each(['[]', `[${squarePae(2)}, ${squarePae(2)}]`])(
+    'rejects a top-level list that is not one object: %s',
+    (text) => {
+      expect(getPaeMatrixSize(text)).toEqual({
+        error: expect.stringContaining('exactly one object')
+      })
+    }
+  )
+
+  it('rejects a file without a PAE matrix', () => {
+    expect(getPaeMatrixSize('{"plddt": [1, 2]}')).toEqual({
+      error: expect.stringContaining('predicted_aligned_error')
+    })
+  })
+
+  it('rejects a matrix that is not square', () => {
+    expect(getPaeMatrixSize('{"pae": [[1, 2], [3]]}')).toEqual({
+      error: expect.stringContaining('not square')
+    })
+  })
+
+  it('returns null for invalid JSON', () => {
+    expect(getPaeMatrixSize('{not json')).toBeNull()
+  })
+})
+
+describe('checkPaeMatchesStructure', () => {
+  const paeFile = {
+    path: '/fake/pae.json',
+    originalname: 'pae.json'
+  } as Express.Multer.File
+  const pdbFile = {
+    path: '/fake/model.pdb',
+    originalname: 'model.pdb'
+  } as Express.Multer.File
+  const twoResidues = [
+    pdbAtom('ATOM  ', 'CA', 'ALA', 'A', 1),
+    pdbAtom('ATOM  ', 'CA', 'GLY', 'A', 2)
+  ].join('\n')
+
+  const mockFiles = (pae: string, structure: string) => {
+    vi.mocked(fs.readFile).mockImplementation((async (p: string) =>
+      p === paeFile.path ? pae : structure) as never)
+  }
+
+  it('accepts a PAE matrix that matches the residue count', async () => {
+    mockFiles(squarePae(2), twoResidues)
+    expect(await checkPaeMatchesStructure(paeFile, pdbFile)).toEqual({
+      valid: true
+    })
+  })
+
+  it('rejects a mismatch and reports both sizes', async () => {
+    mockFiles(squarePae(3), twoResidues)
+    const result = await checkPaeMatchesStructure(paeFile, pdbFile)
+    expect(result.valid).toBe(false)
+    expect(result.message).toContain('3 × 3')
+    expect(result.message).toContain('2 residues')
+  })
+
+  it('reports a PAE file with no matrix', async () => {
+    mockFiles('{"plddt": []}', twoResidues)
+    expect((await checkPaeMatchesStructure(paeFile, pdbFile)).valid).toBe(false)
+  })
+
+  it('leaves invalid JSON to the JSON check', async () => {
+    mockFiles('{not json', twoResidues)
+    expect(await checkPaeMatchesStructure(paeFile, pdbFile)).toEqual({
+      valid: true
+    })
+  })
+
+  it('leaves unreadable files to the per-file checks', async () => {
+    vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'))
+    expect(await checkPaeMatchesStructure(paeFile, pdbFile)).toEqual({
+      valid: true
+    })
   })
 })
