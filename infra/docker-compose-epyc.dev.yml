@@ -332,7 +332,7 @@ services:
   # Deliberately not a depends_on of colabfold-service: the worker waits on
   # colabfold-service, so a down msa-service would block the whole stack.
   msa-service:
-    image: ghcr.io/bl1231/bilbomd-msa-service:0.1.0
+    image: ghcr.io/bl1231/bilbomd-msa-service:0.1.1
     pull_policy: missing
     security_opt:
       - no-new-privileges:true
