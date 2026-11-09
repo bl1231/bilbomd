@@ -15,7 +15,13 @@ GPU_SERVER="${MSA_GPU_SERVER:-0}"
 WORKERS="${MSA_WORKERS:-1}"
 TTL_DAYS="${MSA_JOBS_TTL_DAYS:-2}"
 
-echo "mmseqs ${MMSEQS_COMMIT:-?} ($(mmseqs version)), mmseqs-server ${MMSEQS_SERVER_COMMIT:-?}"
+# Run mmseqs once so a broken binary (e.g. a missing shared library) stops the
+# container here. Otherwise the server stays healthy while every ticket fails.
+if ! mmseqs_version="$(mmseqs version)"; then
+  echo "ERROR: the mmseqs binary does not run" >&2
+  exit 1
+fi
+echo "mmseqs ${mmseqs_version} (pinned ${MMSEQS_COMMIT:-?}), mmseqs-server ${MMSEQS_SERVER_COMMIT:-?}"
 
 # Fail fast and loudly on a missing or half-built database, rather than
 # accepting tickets that will all error out.
