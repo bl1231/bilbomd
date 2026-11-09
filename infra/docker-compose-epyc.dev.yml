@@ -220,8 +220,9 @@ services:
       - OF3_SERVICE_URL=http://of3-service:8000
       - COLABFOLD_TIMEOUT_MS=${COLABFOLD_TIMEOUT_MS:-3600000}
       - COLABFOLD_SERVICE_URL=http://colabfold-service:8000
-      # OF3 MSA searches go to the self-hosted msa-service (#1199)
-      - OF3_MSA_SERVER_URL=http://msa-service:8080
+      # OF3 uses the public ColabFold MSA server until msa-service's GPU
+      # crash is fixed (#1199). Set to http://msa-service:8080 to switch.
+      # - OF3_MSA_SERVER_URL=http://msa-service:8080
       - MPLCONFIGDIR=/tmp/matplotlib
       - XDG_CACHE_HOME=/tmp/cache
       # All 6 Rg runs at once; only faster than serial because of MPS.
@@ -310,9 +311,9 @@ services:
       - UPLOAD_DIR=/bilbomd/uploads
       - COLABFOLD_DATA_DIR=/cache
       - COLABFOLD_TIMEOUT_S=${COLABFOLD_TIMEOUT_S:-3300}
-      # Self-hosted MSA server instead of api.colabfold.com (#1199). The
-      # pre-flight TCP probe fails the job fast if msa-service is down.
-      - COLABFOLD_HOST_URL=http://msa-service:8080
+      # Unset = public api.colabfold.com. msa-service is on hold: its GPU
+      # prefilter crashes when the GPU is shared (#1199).
+      # - COLABFOLD_HOST_URL=http://msa-service:8080
     volumes:
       - /bilbomd/dev/uploads:/bilbomd/uploads
       - /bilbomd/colabfold-cache:/cache:ro
