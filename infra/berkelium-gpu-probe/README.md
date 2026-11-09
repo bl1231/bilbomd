@@ -15,14 +15,16 @@ dispatcher's `bilbomd` service account):
    to finish. It records the node, the time to schedule and the GPU that
    `nvidia-smi` reported, or the scheduler's reason if it stayed Pending.
    Then it deletes the Job. A scheduled probe holds its GPU for a few seconds.
-3. Saves a copy of the public status page,
-   <https://berkelium.scs.lbl.gov/cluster/>, as a cross-check. That page is a
-   cached snapshot ("Refreshed …") and, as of 2026-11-09, lists only some of
-   the nodes, so it is not the measurement itself.
+3. Records the live per-node GPU counts that
+   <https://berkelium.scs.lbl.gov/cluster/> shows, as a cross-check. The page's
+   HTML is a stale build-time snapshot (it lists only some nodes), but in the
+   browser it polls `berkelium.v1.PortalService/GetClusterInfo`, which answers
+   without a login. The analysis counts only schedulable nodes: the API's pool
+   totals include cordoned nodes, such as k8s-0012's 8 H200s.
 
 Results go to `uploads/gpu-probe/` on the `bilbomd-data` volume:
 `probes/<class>.jsonl` (one JSON line per probe) and
-`status/<round>.html.gz`.
+`status/<round>.json.gz`.
 
 ## Running it
 
@@ -47,8 +49,8 @@ python3 analyze.py results/ --csv results/probes.csv
 For each GPU type it prints the share of probes scheduled within the window,
 the share scheduled immediately (≤ 15 s), the time to schedule, the longest run
 of failed probes, availability by hour and weekday (Pacific time), the nodes
-used, the most common Pending reasons, and how often the status page agreed
-with the probe in the same round. `own_gpu_pods` in each record counts our own
+used, the most common Pending reasons, the mean number of free GPUs the API
+reported, and how often the API agreed with the probe in the same round. `own_gpu_pods` in each record counts our own
 BilboMD job pods holding a GPU at the time, so you can tell whether we were
 competing with ourselves.
 

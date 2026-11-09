@@ -2,13 +2,13 @@
 """Summarize the Berkelium GPU availability study.
 
 Reads the results fetched by ``deploy.sh fetch`` (probes/<class>.jsonl and
-status/<round>.html.gz) and prints, for each GPU type:
+status/<round>.json.gz) and prints, for each GPU type:
 
 * how often a single-GPU probe was scheduled within the wait window,
 * how long scheduling took when it was,
 * the longest run of consecutive failed probes,
 * availability by hour of day and by weekday (local time),
-* what the public status page claimed in the same rounds.
+* free GPU counts from the cluster info API in the same rounds.
 
 Standard library only (Python 3.9+).
 
@@ -20,7 +20,6 @@ from __future__ import annotations
 import argparse
 import csv
 import gzip
-import html
 import json
 import re
 import statistics
@@ -53,7 +52,7 @@ def round_ts(name: str) -> datetime | None:
 
 
 def gpu_class(model: str) -> str | None:
-    """Map a status-page model name (e.g. NVIDIA-H100-80GB-HBM3) to a class."""
+    """Map a GPU model name (e.g. "NVIDIA H100 80GB HBM3") to a class."""
     lower = model.lower()
     for cls in CLASSES:
         if cls in lower:
@@ -172,48 +171,47 @@ def class_order(cls: str) -> int:
     return CLASSES.index(cls) if cls in CLASSES else len(CLASSES)
 
 
-# --- status page --------------------------------------------------------------
-
-POOL_RE = re.compile(
-    r"([A-Za-z0-9][\w-]*(?:A40|A100|H100|H200|B300)[\w-]*)\s+\d+\s*GiB VRAM per GPU"
-    r".{0,80}?(\d+)\s*Total GPUs\s*Allocated:\s*(\d+)\s*/\s*(\d+)",
-    re.S,
-)
-REFRESHED_RE = re.compile(r"Refreshed\s+([0-9: ]+[AP]M)")
+# --- cluster info (the API behind the status page) ----------------------------
 
 
-def page_text(raw: str) -> str:
-    text = re.sub(r"<(script|style)\b.*?</\1>", " ", raw, flags=re.S | re.I)
-    text = re.sub(r"<[^>]+>", " ", text)
-    return re.sub(r"\s+", " ", html.unescape(text))
+def parse_cluster_info(data: dict) -> dict:
+    """Per-class GPU counts on schedulable nodes from a GetClusterInfo reply.
 
-
-def parse_status_html(raw: str) -> dict:
-    """GPU pool counts and the snapshot time from the cluster status page."""
-    text = page_text(raw)
-    pools = {}
-    for model, _total, allocated, total in POOL_RE.findall(text):
-        cls = gpu_class(model)
-        if cls and cls not in pools:
-            pools[cls] = {
-                "model": model,
-                "allocated": int(allocated),
-                "total": int(total),
-                "free": int(total) - int(allocated),
-            }
-    refreshed = REFRESHED_RE.search(text)
-    return {"refreshed": refreshed.group(1).strip() if refreshed else None, "pools": pools}
+    The API's own gpuPools totals include cordoned nodes (e.g. k8s-0012's
+    H200s), which can never run a probe, so the counts come from the nodes.
+    Proto3 JSON leaves out zero values, hence the defaults.
+    """
+    pools: dict[str, dict] = {}
+    for node in data.get("nodes") or []:
+        cls = gpu_class(node.get("gpuModel") or "")
+        if not cls:
+            continue
+        pool = pools.setdefault(
+            cls, {"total": 0, "allocated": 0, "free": 0, "cordoned": 0}
+        )
+        total = int(node.get("gpuAllocatable") or 0)
+        if node.get("unschedulable") or node.get("status") != "Ready":
+            pool["cordoned"] += total
+            continue
+        allocated = int(node.get("gpuAllocated") or 0)
+        pool["total"] += total
+        pool["allocated"] += allocated
+        pool["free"] += max(0, total - allocated)
+    return {"updated_at": data.get("updatedAt"), "pools": pools}
 
 
 def load_status(results: Path) -> dict[datetime, dict]:
     snapshots = {}
-    for path in sorted((results / "status").glob("*.html*")):
+    for path in sorted((results / "status").glob("*.json*")):
         ts = round_ts(path.name)
         if ts is None:
             continue
         opener = gzip.open if path.suffix == ".gz" else open
-        with opener(path, "rt", encoding="utf-8", errors="replace") as fh:
-            snapshots[ts] = parse_status_html(fh.read())
+        try:
+            with opener(path, "rt", encoding="utf-8") as fh:
+                snapshots[ts] = parse_cluster_info(json.load(fh))
+        except (OSError, json.JSONDecodeError) as err:
+            print(f"skipping {path.name}: {err}", file=sys.stderr)
     return snapshots
 
 
@@ -318,45 +316,50 @@ def report(
 
 
 def status_section(records: list[dict], snapshots: dict[datetime, dict]) -> list[str]:
-    out = ["", "Status page (https://berkelium.scs.lbl.gov/cluster/):"]
+    out = ["", "Cluster info API (what https://berkelium.scs.lbl.gov/cluster/ shows):"]
     if not snapshots:
         return out + ["  no snapshots"]
-    refreshed = {s["refreshed"] for s in snapshots.values()}
     out.append(
-        f"  {len(snapshots)} snapshots, {len(refreshed)} distinct 'Refreshed' times "
-        "(fewer distinct times than snapshots = the page was stale)"
+        f"  {len(snapshots)} snapshots; counts exclude cordoned/NotReady nodes"
     )
     slack = timedelta(minutes=5)
     out.append(
-        f"  {'GPU':5} {'listed':>6} {'free>0':>7}   probe vs page in the same round"
+        f"  {'GPU':5} {'GPUs':>4} {'mean free':>9} {'free>0':>7}   "
+        "probe vs API in the same round"
     )
     for cls in CLASSES:
         listed = [s["pools"][cls] for s in snapshots.values() if cls in s["pools"]]
-        agree = disagree_page_free = disagree_page_full = 0
+        agree = api_free_probe_waited = api_full_probe_ran = 0
         for r in records:
             if r["class"] != cls or not r.get("created", True):
                 continue
             snap = match_snapshot(snapshots, r["_ts"], slack)
             if not snap or cls not in snap["pools"]:
                 continue
-            page_free = snap["pools"][cls]["free"] > 0
-            if page_free == bool(r.get("scheduled")):
+            api_free = snap["pools"][cls]["free"] > 0
+            if api_free == bool(r.get("scheduled")):
                 agree += 1
-            elif page_free:
-                disagree_page_free += 1
+            elif api_free:
+                api_free_probe_waited += 1
             else:
-                disagree_page_full += 1
-        compared = agree + disagree_page_free + disagree_page_full
+                api_full_probe_ran += 1
+        if not listed:
+            out.append(f"  {cls:5} not reported")
+            continue
+        compared = agree + api_free_probe_waited + api_full_probe_ran
         free = sum(1 for p in listed if p["free"] > 0)
+        mean_free = statistics.mean(p["free"] for p in listed)
+        total = max(p["total"] for p in listed)
         comparison = (
-            f"agree {pct(agree, compared).strip()}; page said free but probe "
-            f"waited ×{disagree_page_free}; page said full but probe ran "
-            f"×{disagree_page_full}"
+            f"agree {pct(agree, compared).strip()}; API said free but probe "
+            f"waited ×{api_free_probe_waited}; API said full but probe ran "
+            f"×{api_full_probe_ran}"
             if compared
-            else "not on the page"
+            else "-"
         )
         out.append(
-            f"  {cls:5} {len(listed):6d} {pct(free, len(listed)):>7}   {comparison}"
+            f"  {cls:5} {total:4d} {mean_free:9.1f} {pct(free, len(listed)):>7}   "
+            f"{comparison}"
         )
     return out
 
@@ -378,8 +381,8 @@ def write_csv(
                 "node",
                 "phase",
                 "own_gpu_pods",
-                "page_free",
-                "page_total",
+                "api_free",
+                "api_total",
                 "reason",
                 "message",
             ]

@@ -5,8 +5,9 @@
 # For each GPU type it creates a one-GPU Job and waits up to PROBE_WAIT_SECONDS
 # for the scheduler to place it. The answer to "could BilboMD have had a GPU of
 # this type right now?" is whether the pod was scheduled in that window. Each
-# attempt is appended as one JSON line to $DATA_DIR/probes/<class>.jsonl, and a
-# copy of the public cluster status page goes to $DATA_DIR/status/.
+# attempt is appended as one JSON line to $DATA_DIR/probes/<class>.jsonl. The
+# live per-node GPU counts behind https://berkelium.scs.lbl.gov/cluster/ go to
+# $DATA_DIR/status/<round>.json.gz.
 set -uo pipefail
 
 GPU_CLASSES=${GPU_CLASSES:-"a40 a100 h100 h200 b300"}
@@ -16,7 +17,9 @@ RUN_WAIT_SECONDS=${RUN_WAIT_SECONDS:-180}
 POLL_SECONDS=${POLL_SECONDS:-5}
 PROBE_IMAGE=${PROBE_IMAGE:?PROBE_IMAGE is required}
 DATA_DIR=${DATA_DIR:-/data}
-STATUS_URL=${STATUS_URL:-https://berkelium.scs.lbl.gov/cluster/}
+# The API the status page polls (Connect RPC, no login needed). The page's own
+# HTML is a stale build-time snapshot, so we record this instead.
+STATUS_API=${STATUS_API:-https://berkelium.scs.lbl.gov/berkelium.v1.PortalService/GetClusterInfo}
 NAMESPACE=${NAMESPACE:-$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)}
 RUN_AS_USER=${RUN_AS_USER:-62704}
 RUN_AS_GROUP=${RUN_AS_GROUP:-1001}
@@ -171,13 +174,15 @@ probe() {
 }
 
 scrape_status() {
-  local out="$DATA_DIR/status/$ROUND.html"
-  if curl -fsS --max-time 60 -o "$out" "$STATUS_URL"; then
+  local out="$DATA_DIR/status/$ROUND.json"
+  if curl -fsS --max-time 60 -X POST \
+    -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' \
+    -d '{}' -o "$out" "$STATUS_API" && jq -e '.nodes | length > 0' "$out" >/dev/null; then
     gzip -f "$out"
-    log "status page saved"
+    log "cluster info saved"
   else
     rm -f "$out"
-    log "status page fetch failed"
+    log "cluster info fetch failed"
   fi
 }
 
