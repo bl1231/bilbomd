@@ -1,5 +1,20 @@
 # @bilbomd/backend
 
+## 2.20.0
+
+### Minor Changes
+
+- f3ff0ec: Add the BilboMD BioEmu2 pipeline (bilbomd#1200, step 1: API only, no UI form yet). Submitting sequence entities and SAXS data to `POST /jobs/bilbomd-bioemu` runs AutoRg, then Rg-steered BioEmu2 sampling in the new `bioemu2-service` in place of MD, then FoXS and MultiFoXS. The members of the best ensembles are then polished with a restrained OpenMM minimization. The pipeline is behind `ENABLE_BILBOMD_BIOEMU` and open to Admins only, with a system-size limit (`BIOEMU_MAX_TOKENS`, default 1,000).
+
+### Patch Changes
+
+- f3ff0ec: Add the BilboMD BioEmu2 job form at /dashboard/jobs/bioemu (bilbomd#1200), for Admins while the pipeline is being validated: sequence entities (Protein, DNA) with copies, SAXS data, instructions and a pipeline schematic. The size limit comes from the backend's new `bioemuMaxTokens` config value, so the form and the server agree. The OpenFold3 form's entity editor moved to a shared component; it looks and works the same.
+- Updated dependencies [f3ff0ec]
+- Updated dependencies [f3ff0ec]
+  - @bilbomd/mongodb-schema@2.13.0
+  - @bilbomd/bilbomd-types@1.14.0
+  - @bilbomd/md-utils@1.3.0
+
 ## 2.19.8
 
 ### Patch Changes

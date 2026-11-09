@@ -1,5 +1,19 @@
 # @bilbomd/ui
 
+## 2.37.0
+
+### Minor Changes
+
+- f3ff0ec: Show BilboMD BioEmu2 jobs on the job page (bilbomd#1200): the BioEmu2 job type, its Rg targets and structure counts, the `bioemu` and `polish` steps in pipeline order, and FoXS and feedback tabs (no movies, since BioEmu2 samples aren't a trajectory). There is no submission form yet.
+- f3ff0ec: Add the BilboMD BioEmu2 job form at /dashboard/jobs/bioemu (bilbomd#1200), for Admins while the pipeline is being validated: sequence entities (Protein, DNA) with copies, SAXS data, instructions and a pipeline schematic. The size limit comes from the backend's new `bioemuMaxTokens` config value, so the form and the server agree. The OpenFold3 form's entity editor moved to a shared component; it looks and works the same.
+
+### Patch Changes
+
+- Updated dependencies [f3ff0ec]
+- Updated dependencies [f3ff0ec]
+  - @bilbomd/mongodb-schema@2.13.0
+  - @bilbomd/bilbomd-types@1.14.0
+
 ## 2.36.1
 
 ### Patch Changes

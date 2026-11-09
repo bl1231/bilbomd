@@ -1,5 +1,12 @@
 # @bilbomd/bilbomd-types
 
+## 1.14.0
+
+### Minor Changes
+
+- f3ff0ec: Add the BilboMD BioEmu2 pipeline (bilbomd#1200, step 1: API only, no UI form yet). Submitting sequence entities and SAXS data to `POST /jobs/bilbomd-bioemu` runs AutoRg, then Rg-steered BioEmu2 sampling in the new `bioemu2-service` in place of MD, then FoXS and MultiFoXS. The members of the best ensembles are then polished with a restrained OpenMM minimization. The pipeline is behind `ENABLE_BILBOMD_BIOEMU` and open to Admins only, with a system-size limit (`BIOEMU_MAX_TOKENS`, default 1,000).
+- f3ff0ec: Show BilboMD BioEmu2 jobs on the job page (bilbomd#1200): the BioEmu2 job type, its Rg targets and structure counts, the `bioemu` and `polish` steps in pipeline order, and FoXS and feedback tabs (no movies, since BioEmu2 samples aren't a trajectory). There is no submission form yet.
+
 ## 1.13.1
 
 ### Patch Changes
