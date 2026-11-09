@@ -69,6 +69,6 @@ worker:
   name: worker
   image:
     repository: ghcr.io/bl1231/bilbomd-worker
-    tag: 2.23.1
+    tag: 2.24.0
     pullPolicy: Always
     secret: ghcr

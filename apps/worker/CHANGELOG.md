@@ -1,5 +1,11 @@
 # @bilbomd/worker
 
+## 2.24.0
+
+### Minor Changes
+
+- 23b4bb8: OpenFold3: new optional `OF3_MSA_SERVER_URL` setting that points OF3's MSA searches at a ColabFold-compatible server (e.g. the self-hosted `msa-service`) instead of the public api.colabfold.com. Unset keeps the current behaviour.
+
 ## 2.23.1
 
 ### Patch Changes
