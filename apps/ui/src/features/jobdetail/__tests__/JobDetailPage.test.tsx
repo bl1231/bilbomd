@@ -141,6 +141,18 @@ describe('JobDetailPage', () => {
     expect(screen.queryByTestId('results')).not.toBeInTheDocument()
   })
 
+  it('offers the 3D viewer for a BioEmu2 job', () => {
+    renderPage(owner, {
+      view: makeView({
+        jobType: 'bioemu',
+        results: { bioemu: { total_num_ensembles: 3 } } as never
+      })
+    })
+    expect(
+      screen.getByRole('button', { name: /load 3d viewer/i })
+    ).toBeInTheDocument()
+  })
+
   it('shows the Scoper summary, and Scoper FoXS only to owners', () => {
     const scoper = makeView({
       jobType: 'scoper',

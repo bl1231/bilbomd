@@ -34,6 +34,7 @@ const MOLSTAR_JOB_TYPES: JobType[] = [
   'auto',
   'alphafold',
   'openfold',
+  'bioemu',
   'scoper',
   'sans'
 ]

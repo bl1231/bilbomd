@@ -10,11 +10,9 @@ import { selectCurrentToken } from '../../slices/authSlice'
 import type {
   JobType,
   JobResultsDTO,
-  IEnsembleModel,
-  IEnsembleMember,
-  IEnsemble,
   MDConstraintsDTO
 } from '@bilbomd/bilbomd-types'
+import { getEnsemblesForJob, mayHaveStartingModel } from './ensembleResults'
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui'
 import {
   DefaultPluginUISpec,
@@ -64,38 +62,11 @@ type LoadParams = {
 
 type PDBsToLoad = LoadParams[]
 
-interface HasEnsembles {
-  ensembles: IEnsemble[]
-}
-
 // How structures are colored in the viewer:
 // - 'default': per-structure palette coloring (Molstar structure-index)
 // - 'domain': fixed/rigid/flexible domains from the MD constraints
 // - 'conformation': each ensemble member a distinct color (see ensembleColors)
 type ColorMode = 'default' | 'domain' | 'conformation'
-
-// Job types whose results carry MultiFoXS ensembles, mapped to the key under
-// which those ensembles live in JobResultsDTO.
-const ensembleResultsKeys: Partial<Record<JobType, keyof JobResultsDTO>> = {
-  pdb: 'classic',
-  crd: 'classic',
-  auto: 'auto',
-  alphafold: 'alphafold',
-  openfold: 'openfold',
-  sans: 'sans'
-}
-
-// Extract the ensembles array for a job so the weights panel can render the
-// per-conformation weights that the viewer already loads.
-const getEnsemblesForJob = (
-  jobType: JobType,
-  results: JobResultsDTO
-): IEnsemble[] => {
-  const key = ensembleResultsKeys[jobType]
-  if (!key) return []
-  const jobResults = results?.[key] as HasEnsembles | null | undefined
-  return Array.isArray(jobResults?.ensembles) ? jobResults.ensembles : []
-}
 
 const DefaultViewerOptions = {
   extensions: ObjectKeys({}),
@@ -211,71 +182,16 @@ const MolstarViewer = ({
       }
     }
 
-    const getResultsKey = (jobType: JobType): string => {
-      switch (jobType) {
-        case 'pdb':
-        case 'crd':
-          return 'classic'
-        case 'auto':
-          return 'auto'
-        case 'alphafold':
-          return 'alphafold'
-        case 'openfold':
-          return 'openfold'
-        case 'sans':
-          return 'sans'
-        case 'scoper':
-          return 'scoper'
-        case 'multi':
-          return ''
-        default:
-          logger.warn(`Unknown job type '${jobType}', defaulting to 'classic'`)
-          return 'classic'
-      }
-    }
-
-    const processEnsembleResults = (results: JobResultsDTO) => {
-      if (
-        !('ensembles' in results) ||
-        !Array.isArray((results as HasEnsembles).ensembles)
+    // One multi-model PDB per ensemble size (see ensembleResults.ts)
+    for (const ensemble of getEnsemblesForJob(jobType, results)) {
+      addFilesToLoadParams(
+        `ensemble_size_${ensemble.size}_model.pdb`,
+        ensemble.size,
+        ensemble.size
       )
-        return
-
-      for (const ensemble of (results as HasEnsembles).ensembles) {
-        const fileName = `ensemble_size_${ensemble.size}_model.pdb`
-
-        const uniquePdbs = new Set<string>()
-        ensemble.models.forEach((model: IEnsembleModel) => {
-          model.states.forEach((state: IEnsembleMember) => {
-            if (state.pdb) {
-              uniquePdbs.add(state.pdb)
-            }
-          })
-        })
-
-        addFilesToLoadParams(fileName, ensemble.size, ensemble.size)
-      }
     }
 
-    const ensembleJobTypes: JobType[] = [
-      'pdb',
-      'crd',
-      'auto',
-      'alphafold',
-      'openfold',
-      'sans'
-    ]
-
-    if (ensembleJobTypes.includes(jobType)) {
-      const resultsKey = getResultsKey(jobType)
-      const jobResults = results?.[
-        resultsKey as keyof typeof results
-      ] as JobResultsDTO
-
-      if (jobResults) {
-        processEnsembleResults(jobResults)
-      }
-    } else if (jobType === 'scoper') {
+    if (jobType === 'scoper') {
       if (results && results.scoper && results.scoper.foxs_top_file) {
         const pdbFilename = `scoper_combined_${results.scoper.foxs_top_file}`
         addFilesToLoadParams(pdbFilename, 1)
@@ -520,7 +436,7 @@ const MolstarViewer = ({
       // on for comparison with the ensemble models. Hidden by default, colored a
       // neutral gray, and deliberately kept out of the ref maps that drive
       // coloring/visibility so it stays independent of them.
-      if (ensembleResultsKeys[jobType] && window.molstar) {
+      if (mayHaveStartingModel(jobType) && window.molstar) {
         const startingUrl = isPublic
           ? `/public/jobs/${publicId}/results/minimization_output.pdb`
           : `/jobs/${id}/results/minimization_output.pdb`
