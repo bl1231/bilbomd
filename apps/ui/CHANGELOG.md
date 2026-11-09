@@ -1,5 +1,15 @@
 # @bilbomd/ui
 
+## 2.38.0
+
+### Minor Changes
+
+- 7a2042e: Show the Molstar 3D viewer on BilboMD BioEmu2 job pages. The viewer loads the job's ensemble models (the polished members) with the ensemble toggles and the per-conformation weights panel, like the other pipelines. There is no "starting model" toggle, because BioEmu2 samples from sequence and has no input model.
+
+### Patch Changes
+
+- 937fa59: Fix "Download Results" failing on a job page that has been open for a few minutes. The download is made outside RTK Query, so an expired access token was never refreshed and the request returned 403. The download now refreshes the token and retries once.
+
 ## 2.37.0
 
 ### Minor Changes
