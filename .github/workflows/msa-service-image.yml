@@ -5,6 +5,12 @@ on:
     branches: [main]
     paths:
       - 'apps/msa-service/**'
+  # PRs build the image (nothing is pushed) so a broken Dockerfile shows up
+  # before merge; the CUDA compile of mmseqs is the slow, fragile step.
+  pull_request:
+    paths:
+      - 'apps/msa-service/**'
+      - '.github/workflows/msa-service-image.yml'
   workflow_dispatch:
     inputs:
       version:
@@ -104,4 +110,5 @@ jobs:
           # would evict the pnpm-store cache CI relies on. The registry
           # buildcache keeps the slow MMseqs2 CUDA compile cached.
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          # PR builds aren't logged in to GHCR, so they can only read the cache.
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}:buildcache,mode=max', env.IMAGE_NAME) || '' }}
