@@ -6,6 +6,7 @@ import {
   isBilboMDAutoJob,
   isBilboMDAlphaFoldJob,
   isBilboMDOpenFoldJob,
+  isBilboMDBioEmuJob,
   isBilboMDSANSJob
 } from '../job-type-guards.js'
 
@@ -18,9 +19,22 @@ describe('job type guards', () => {
     [isBilboMDAutoJob, 'pae_file'],
     [isBilboMDAlphaFoldJob, 'alphafold_entities'],
     [isBilboMDOpenFoldJob, 'openfold_entities'],
+    [isBilboMDBioEmuJob, 'bioemu_entities'],
     [isBilboMDSANSJob, 'd2o_fraction']
   ])('%o matches jobs that have %s', (guard, field) => {
     expect(guard(job({ [field]: 0 }))).toBe(true)
     expect(guard(job({ uuid: 'u' }))).toBe(false)
+  })
+
+  it('a BioEmu2 job matches none of the input-model guards', () => {
+    const bioemu = job({ bioemu_entities: [], uuid: 'u' })
+    for (const guard of [
+      isBilboMDCRDJob,
+      isBilboMDPDBJob,
+      isBilboMDAutoJob,
+      isBilboMDOpenFoldJob
+    ]) {
+      expect(guard(bioemu)).toBe(false)
+    }
   })
 })

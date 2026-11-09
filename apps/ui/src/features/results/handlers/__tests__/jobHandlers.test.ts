@@ -7,7 +7,8 @@ import {
   createScoperJobHandler,
   createAlphaFoldJobHandler,
   createMultiJobHandler,
-  createOpenFoldJobHandler
+  createOpenFoldJobHandler,
+  createBioEmuJobHandler
 } from '../jobHandlers'
 import type { JobView } from 'features/jobdetail/jobView'
 import type { MongoDBProperty } from '../../types'
@@ -195,6 +196,44 @@ describe('jobHandlers', () => {
         })
       )
       expect(byLabel(props, 'Query JSON file')?.value).toBe('query.json')
+    })
+  })
+
+  describe('createBioEmuJobHandler', () => {
+    it('shows the Rg targets and how many structures were sampled', () => {
+      const handler = createBioEmuJobHandler()
+      expect(handler.getJobTypeDisplayName()).toBe('BilboMD BioEmu2')
+      const props = handler.getJobSpecificProperties(
+        makeView({
+          jobType: 'bioemu',
+          inputs: {
+            system_yaml_file: 'bioemu/system.yaml',
+            bioemu_parameters: {
+              rgs: [30, 34, 38],
+              num_samples_per_rg: 50,
+              batch_size: 40,
+              num_steps: 50,
+              num_gd_steps: 5,
+              rg_weight: 0.02,
+              default_potentials: true
+            }
+          }
+        })
+      )
+      expect(byLabel(props, 'BioEmu2 system file')?.value).toBe(
+        'bioemu/system.yaml'
+      )
+      expect(byLabel(props, 'Rg targets')?.value).toBe('30 Å, 34 Å, 38 Å')
+      expect(byLabel(props, 'Structures per Rg target')?.value).toBe(50)
+      expect(byLabel(props, 'Structures sampled')?.value).toBe(150)
+    })
+
+    it('copes with a job that has no parameters', () => {
+      const props = createBioEmuJobHandler().getJobSpecificProperties(
+        makeView({ jobType: 'bioemu' })
+      )
+      expect(byLabel(props, 'Rg targets')?.value).toBeUndefined()
+      expect(byLabel(props, 'Structures sampled')?.value).toBeUndefined()
     })
   })
 

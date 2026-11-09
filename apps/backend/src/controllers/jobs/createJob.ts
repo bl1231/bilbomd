@@ -15,6 +15,7 @@ import { handleBilboMDAutoJob } from './handleBilboMDAutoJob.js'
 import { handleBilboMDScoperJob } from './handleBilboMDScoperJob.js'
 import { handleBilboMDAlphaFoldJob } from './handleBilboMDAlphaFoldJob.js'
 import { handleBilboMDOpenFoldJob } from './handleBilboMDOpenFoldJob.js'
+import { handleBilboMDBioEmuJob } from './handleBilboMDBioEmuJob.js'
 import applyExampleDataIfRequested from './utils/exampleData.js'
 import { prepareResubmission } from './utils/resubmission.js'
 import { hashClientIp } from '../public/utils/hashClientIp.js'
@@ -345,6 +346,12 @@ const dispatchBilboMDJob = async (ctx: BilboMDDispatchContext) => {
     })
   } else if (bilbomd_mode === 'openfold') {
     await handleBilboMDOpenFoldJob(req, res, user, UUID, {
+      accessMode,
+      publicId,
+      client_ip_hash
+    })
+  } else if (bilbomd_mode === 'bioemu') {
+    await handleBilboMDBioEmuJob(req, res, user, UUID, {
       accessMode,
       publicId,
       client_ip_hash

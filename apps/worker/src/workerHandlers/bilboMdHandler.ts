@@ -3,6 +3,7 @@ import { logger } from '../helpers/loggers.js'
 import { config, type ExecutionBackend } from '../config/config.js'
 import { processBilboMDAlphaFoldJob } from '../services/pipelines/bilbomd-alphafold.js'
 import { processBilboMDOpenFoldJob } from '../services/pipelines/bilbomd-openfold.js'
+import { processBilboMDBioEmuJob } from '../services/pipelines/bilbomd-bioemu.js'
 import { processBilboMDAutoJob } from '../services/pipelines/bilbomd-auto.js'
 import { processBilboMDCRDJob } from '../services/pipelines/bilbomd-crd.js'
 import { processBilboMDJobNersc } from '../services/pipelines/bilbomd-nersc.js'
@@ -38,6 +39,8 @@ export const getPipelineExecutor = (
     auto: runOnNERSC ? processBilboMDJobNersc : processBilboMDAutoJob,
     alphafold: runOnNERSC ? processBilboMDJobNersc : processBilboMDAlphaFoldJob,
     openfold: processBilboMDOpenFoldJob,
+    // Local only for now: no NERSC or k8s path (bilbomd#1200 phase 2)
+    bioemu: processBilboMDBioEmuJob,
     sans: runOnNERSC ? processBilboMDJobNersc : processBilboMDSANSJob
   }
   return pipelines[type] ?? null

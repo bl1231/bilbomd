@@ -4,8 +4,6 @@ import json
 import os
 import re
 
-import pandas as pd
-
 os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 
 def parse_pdb_file(pdb_file):
@@ -14,11 +12,16 @@ def parse_pdb_file(pdb_file):
         for line in file:
             if line.startswith("REMARK DCD2PDB_RG"):
                 parts = line.split()
-                if len(parts) >= 4:
-                    rgyr = float(parts[2])
-                    dmax = float(parts[3])
-                    pdb_prefix = parts[1]
-                    return pdb_prefix, rgyr, dmax
+                # CHARMM dcd2pdb:    REMARK DCD2PDB_RG26_RUN1_99500 <Rg> <Dmax>
+                # bioemu2-service:   REMARK DCD2PDB_RG <file stem> <Rg> <Dmax>
+                # The prefix is upper-cased to match the ensemble lookup keys.
+                try:
+                    if len(parts) >= 5 and parts[1] == "DCD2PDB_RG":
+                        return parts[2].upper(), float(parts[3]), float(parts[4])
+                    if len(parts) >= 4:
+                        return parts[1].upper(), float(parts[2]), float(parts[3])
+                except ValueError:
+                    print(f"Skipping unreadable REMARK in {pdb_file}: {line.strip()}")
     return None, None, None
 
 

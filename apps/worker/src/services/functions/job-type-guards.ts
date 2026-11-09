@@ -5,6 +5,7 @@ import {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDOpenFoldJob,
+  IBilboMDBioEmuJob,
   IBilboMDSANSJob
 } from '@bilbomd/mongodb-schema'
 
@@ -26,6 +27,9 @@ const isBilboMDAlphaFoldJob = (job: IJob): job is IBilboMDAlphaFoldJob =>
 const isBilboMDOpenFoldJob = (job: IJob): job is IBilboMDOpenFoldJob =>
   (job as IBilboMDOpenFoldJob).openfold_entities !== undefined
 
+const isBilboMDBioEmuJob = (job: IJob): job is IBilboMDBioEmuJob =>
+  (job as IBilboMDBioEmuJob).bioemu_entities !== undefined
+
 const isBilboMDSANSJob = (job: IJob): job is IBilboMDSANSJob =>
   (job as IBilboMDSANSJob).d2o_fraction !== undefined
 
@@ -35,5 +39,6 @@ export {
   isBilboMDAutoJob,
   isBilboMDAlphaFoldJob,
   isBilboMDOpenFoldJob,
+  isBilboMDBioEmuJob,
   isBilboMDSANSJob
 }

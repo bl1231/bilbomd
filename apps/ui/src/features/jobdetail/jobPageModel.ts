@@ -23,6 +23,8 @@ export const analysisTabs = (jobType: JobType): AnalysisTab[] => {
     return ['foxs', 'movies', 'feedback', 'pae']
   }
   if (FOXS_JOB_TYPES.includes(jobType)) return ['foxs', 'movies', 'feedback']
+  // BioEmu2 samples are independent structures, not a trajectory: no movies
+  if (jobType === 'bioemu') return ['foxs', 'feedback']
   if (jobType === 'sans') return ['movies']
   return []
 }

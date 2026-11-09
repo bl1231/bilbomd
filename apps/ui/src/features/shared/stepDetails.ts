@@ -62,6 +62,18 @@ const getStepDetails = (stepName: string): StepDetails => {
         tooltipMessage:
           'In this step we use OpenFold3 to predict the structure of your molecule.'
       }
+    case 'bioemu':
+      return {
+        friendlyName: 'BioEmu2',
+        tooltipMessage:
+          'In this step BioEmu2 samples structures of your system from its sequence, steered towards each Rg target derived from your SAXS data. Structures that fail the physicality check (broken bonds, clashes) are left out.'
+      }
+    case 'polish':
+      return {
+        friendlyName: 'Polish',
+        tooltipMessage:
+          'In this step the members of the best ensembles get hydrogens and missing atoms added, then a short OpenMM energy minimization with weak restraints on the heavy atoms, which removes clashes without changing their shape.'
+      }
     case 'pae':
       return {
         friendlyName: 'Define MD Domains from PAE/PDE Matrix',

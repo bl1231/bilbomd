@@ -4,6 +4,8 @@ export interface ConfigResponse {
   useNersc?: string
   enableBilboMdAlphaFold?: string
   enableBilboMdOpenfold?: string
+  enableBilboMdBioEmu?: string
+  bioemuMaxTokens?: string
   enableCharmmEngine?: string
   orcidAuthEnabled?: string
   [key: string]: string | undefined

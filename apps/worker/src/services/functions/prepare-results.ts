@@ -8,7 +8,8 @@ import {
   IBilboMDCRDJob,
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
-  IBilboMDOpenFoldJob
+  IBilboMDOpenFoldJob,
+  IBilboMDBioEmuJob
 } from '@bilbomd/mongodb-schema'
 import path from 'path'
 import fs from 'fs-extra'
@@ -25,7 +26,8 @@ import {
   isBilboMDPDBJob,
   isBilboMDAutoJob,
   isBilboMDAlphaFoldJob,
-  isBilboMDOpenFoldJob
+  isBilboMDOpenFoldJob,
+  isBilboMDBioEmuJob
 } from './job-type-guards.js'
 
 const execFilePromise = promisify(execFile)
@@ -37,6 +39,7 @@ const prepareResults = async (
     | IBilboMDAutoJob
     | IBilboMDAlphaFoldJob
     | IBilboMDOpenFoldJob
+    | IBilboMDBioEmuJob
 ): Promise<void> => {
   try {
     const jobDir = path.join(config.uploadDir, DBjob.uuid)
@@ -197,8 +200,27 @@ const prepareResults = async (
       })
     }
 
+    // BioEmu2: the system it sampled, the sampling summary and the polishing
+    // report. Its OpenMM engine only polished, so the MD files below don't exist.
+    if (DBjob.__t === 'BilboMdBioEmu') {
+      for (const [file, label] of [
+        ['bioemu/system.yaml', 'bioemu_system.yaml'],
+        ['bioemu/params.json', 'bioemu_params.json'],
+        ['bioemu/summary.json', 'bioemu_summary.json'],
+        ['polish/results.json', 'polish_results.json']
+      ]) {
+        await copyFiles({
+          source: path.join(jobDir, file),
+          destination: resultsDir,
+          filename: label,
+          destFilename: label,
+          isCritical: false
+        })
+      }
+    }
+
     // OpenMM-specific files to copy
-    if (DBjob.md_engine === 'OpenMM') {
+    if (DBjob.md_engine === 'OpenMM' && DBjob.__t !== 'BilboMdBioEmu') {
       const openmmFiles = [
         'openmm_const.yml',
         'openmm_config.yaml',
@@ -389,7 +411,8 @@ const prepareBilboMDResults = async (DBjob: IJob): Promise<void> => {
       isBilboMDPDBJob(DBjob) ||
       isBilboMDAutoJob(DBjob) ||
       isBilboMDAlphaFoldJob(DBjob) ||
-      isBilboMDOpenFoldJob(DBjob)
+      isBilboMDOpenFoldJob(DBjob) ||
+      isBilboMDBioEmuJob(DBjob)
     ) {
       await prepareResults(DBjob)
       await updateStepStatus(DBjob, 'results', {

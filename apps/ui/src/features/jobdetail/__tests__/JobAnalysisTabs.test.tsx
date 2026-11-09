@@ -35,6 +35,7 @@ describe('analysisTabs', () => {
     for (const type of ['auto', 'alphafold', 'openfold'] as const) {
       expect(analysisTabs(type)).toEqual(['foxs', 'movies', 'feedback', 'pae'])
     }
+    expect(analysisTabs('bioemu')).toEqual(['foxs', 'feedback'])
     expect(analysisTabs('sans')).toEqual(['movies'])
     expect(analysisTabs('scoper')).toEqual([])
     expect(analysisTabs('multi')).toEqual([])

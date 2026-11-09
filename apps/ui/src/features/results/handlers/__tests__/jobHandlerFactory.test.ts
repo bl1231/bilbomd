@@ -10,6 +10,7 @@ describe('jobHandlerFactory', () => {
       'scoper',
       'alphafold',
       'openfold',
+      'bioemu',
       'multi'
     ]
 

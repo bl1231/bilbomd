@@ -5,6 +5,7 @@ import {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDOpenFoldJob,
+  IBilboMDBioEmuJob,
   IBilboMDSANSJob,
   IMultiJob
 } from '@bilbomd/mongodb-schema'
@@ -17,6 +18,7 @@ type AnyBilboMDJob =
   | IBilboMDAutoJob
   | IBilboMDAlphaFoldJob
   | IBilboMDOpenFoldJob
+  | IBilboMDBioEmuJob
   | IBilboMDSANSJob
   | IMultiJob
 
@@ -168,6 +170,28 @@ const createReadmeFile = async (
 - Generated const.inp file: const.inp
 - Generated minimized PDB file: minimization_output.pdb
 - Generated minimized PDB DAT file: minimization_output_${job.data_file.split('.')[0]}.dat
+`
+      )
+      break
+    }
+    case 'BilboMdBioEmu': {
+      const job = DBjob as IBilboMDBioEmuJob
+      readmeContent = buildStandardReadme(
+        DBjob,
+        numEnsembles,
+        `
+- Original experimental SAXS data file: ${job.data_file}
+- BioEmu2 system (sequences and copies): bioemu_system.yaml
+- BioEmu2 sampling settings (Rg targets, structures per target): bioemu_params.json
+- BioEmu2 sampling summary (structures per Rg target, physicality check): bioemu_summary.json
+- Polishing report for the ensemble members: polish_results.json
+
+The structures were sampled with BioEmu2 (Microsoft Research), steered to the
+Rg targets derived from your SAXS data, instead of molecular dynamics. The
+members of the ensembles below were then polished: hydrogens and missing atoms
+added, then a short OpenMM energy minimization with weak restraints on the heavy
+atoms (amber19 or CHARMM36, GBn2 implicit solvent). The reported chi² values
+are from the structures before polishing, which changes them very little.
 `
       )
       break

@@ -125,6 +125,27 @@ export const createOpenFoldJobHandler = (): JobHandler => ({
   ]
 })
 
+// BioEmu2 samples structures steered to each Rg target instead of running MD
+export const createBioEmuJobHandler = (): JobHandler => ({
+  getJobTypeDisplayName: () => 'BilboMD BioEmu2',
+  getJobSpecificProperties: (view) => {
+    const p = view.inputs.bioemu_parameters
+    const rgs = p?.rgs ?? []
+    return [
+      { label: 'BioEmu2 system file', value: view.inputs.system_yaml_file },
+      {
+        label: 'Rg targets',
+        value: rgs.length ? rgs.map((rg) => `${rg} Å`).join(', ') : undefined
+      },
+      { label: 'Structures per Rg target', value: p?.num_samples_per_rg },
+      {
+        label: 'Structures sampled',
+        value: p ? rgs.length * p.num_samples_per_rg : undefined
+      }
+    ]
+  }
+})
+
 // The combined job UUIDs are rendered by the inputs section itself
 export const createMultiJobHandler = (): JobHandler => ({
   getJobTypeDisplayName: () => 'BilboMD MultiMD',

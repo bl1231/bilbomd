@@ -47,6 +47,11 @@ export interface OpenFoldJobResults {
   ensembles?: IEnsemble[] // Array of ensembles for each N
 }
 
+export interface BioEmuJobResults {
+  total_num_ensembles?: number // Total number of ensembles (N)
+  ensembles?: IEnsemble[] // Array of ensembles for each N
+}
+
 export interface SANSJobResults {
   total_num_ensembles?: number // Total number of ensembles (N)
   ensembles?: IEnsemble[] // Array of ensembles for each N
@@ -71,6 +76,7 @@ export type JobResultsDTO = {
   auto: AutoJobResults | null
   alphafold: AlphafoldJobResults | null
   openfold: OpenFoldJobResults | null
+  bioemu: BioEmuJobResults | null
   sans: SANSJobResults | null
   scoper: ScoperJobResults | null
 }

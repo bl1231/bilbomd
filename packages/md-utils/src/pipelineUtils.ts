@@ -35,6 +35,7 @@ export const toPipeline = (mode: string): PipelineType => {
     'auto',
     'alphafold',
     'openfold',
+    'bioemu',
     'sans',
     'scoper',
     'multi'

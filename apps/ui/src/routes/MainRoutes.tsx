@@ -42,6 +42,9 @@ const NewAlphaFoldJob = Loadable(
 const NewOpenFoldJob = Loadable(
   lazy(() => import('features/openfoldjob/NewOpenFoldJobForm'))
 )
+const NewBioEmuJob = Loadable(
+  lazy(() => import('features/bioemujob/NewBioEmuJobForm'))
+)
 const NewSANSJob = Loadable(
   lazy(() => import('features/sansjob/NewSANSJobForm'))
 )
@@ -185,6 +188,10 @@ const ProtectedMainRoutes = {
                     {
                       path: 'jobs/openfold',
                       element: <NewOpenFoldJob />
+                    },
+                    {
+                      path: 'jobs/bioemu',
+                      element: <NewBioEmuJob />
                     },
                     {
                       path: 'jobs/sans',

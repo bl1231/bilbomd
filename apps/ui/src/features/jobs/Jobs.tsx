@@ -271,6 +271,7 @@ const jobTypeToPipelineName: Record<string, string> = {
   auto: 'Auto',
   alphafold: 'AlphaFold2',
   openfold: 'OpenFold3',
+  bioemu: 'BioEmu2',
   sans: 'SANS',
   scoper: 'Scoper',
   multi: 'Multi'

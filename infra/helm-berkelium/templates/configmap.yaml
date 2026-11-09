@@ -28,6 +28,9 @@ data:
   # Jobs run on Berkelium itself, not NERSC. The backend still requires the
   # NERSC path variables to be set, so they get inert placeholders.
   USE_NERSC: 'false'
+  # Tells the backend that jobs run as Kubernetes Jobs, so it refuses job types
+  # that have no k8s executor. The dispatcher sets the same value itself.
+  EXECUTION_BACKEND: k8s
   SFAPI_URL: https://example.invalid/api/v1
   SCRIPT_DIR: /app/scripts
   UPLOAD_DIR: /bilbomd/uploads

@@ -19,7 +19,7 @@ set -euo pipefail
 # packages, so an unscoped token will fail with 403/401.
 
 OWNER="${GH_OWNER:-bl1231}"
-IMAGES="${IMAGES:-bilbomd-backend bilbomd-ui bilbomd-worker-base bilbomd-worker bilbomd-scoper-base bilbomd-scoper bilbomd-of3-service bilbomd-colabfold bilbomd-colabfold-service}"
+IMAGES="${IMAGES:-bilbomd-backend bilbomd-ui bilbomd-worker-base bilbomd-worker bilbomd-scoper-base bilbomd-scoper bilbomd-of3-service bilbomd-bioemu2-service bilbomd-colabfold bilbomd-colabfold-service}"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }

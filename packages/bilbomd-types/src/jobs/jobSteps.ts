@@ -14,6 +14,7 @@ export interface StepStatus {
 export interface JobStepsDTO {
   alphafold?: StepStatus
   openfold?: StepStatus
+  bioemu?: StepStatus
   reduce?: StepStatus
   rnaview?: StepStatus
   pdb2crd?: StepStatus
@@ -31,6 +32,7 @@ export interface JobStepsDTO {
   pepsisans?: StepStatus
   ionnet?: StepStatus
   multifoxs?: StepStatus
+  polish?: StepStatus
   scoper?: StepStatus
   gasans?: StepStatus
   copy_results_to_cfs?: StepStatus
