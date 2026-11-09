@@ -14,17 +14,24 @@ Rg-vs-Dmax analysis reads. Raw samples stay in bioemu/rg<target>/.
 
 Progress goes to bioemu/progress.json after each target, and a summary to
 bioemu/summary.json at the end.
+
+A run starts by removing the structures and progress of any earlier run of the job, and it
+stops between Rg targets when ``should_stop`` says the job was cancelled (see cancel.py).
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import re
+import shutil
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import mdtraj
 import numpy as np
+from cancel import SamplingCancelled
 from params import MIN_PHYSICAL_TOTAL, Params, SamplingError, rg_label
 
 logger = logging.getLogger("bioemu2-service.sampler")
@@ -33,6 +40,22 @@ SYSTEM_FILE = "bioemu/system.yaml"
 PARAMS_FILE = "bioemu/params.json"  # see params.py
 PROGRESS_FILE = "bioemu/progress.json"
 SUMMARY_FILE = "bioemu/summary.json"
+
+
+def clear_previous_outputs(work_dir: Path) -> None:
+    """Remove an earlier run's structures, so they cannot mix with this run's in foxs/.
+
+    Runs are serialised, so doing this at the start of a run also covers a cancelled run
+    that was still writing when the worker cleaned the job directory for a resubmission.
+    """
+    for name in (PROGRESS_FILE, SUMMARY_FILE):
+        (work_dir / name).unlink(missing_ok=True)
+    foxs = work_dir / "foxs"
+    if foxs.is_dir():
+        for d in foxs.iterdir():
+            if d.is_dir() and re.fullmatch(r"rg[\d.]+", d.name):
+                shutil.rmtree(d)
+
 
 def ca_rg_dmax(traj: mdtraj.Trajectory) -> tuple[np.ndarray, np.ndarray]:
     ca = traj.topology.select("name CA and protein")
@@ -77,7 +100,7 @@ class Sampler:
             logger.info("BioEmu2 model loaded in %.0f s", time.time() - t0)
         return self._model
 
-    def run(self, work_dir: Path) -> dict:
+    def run(self, work_dir: Path, should_stop: Callable[[], bool] | None = None) -> dict:
         import torch
         from bioemu2 import EmuSession, GuidedFKSampler, System, save_frames
         from bioemu2.denoising.steering.potentials import get_default_potentials
@@ -95,6 +118,11 @@ class Sampler:
         except Exception as e:  # pydantic validation of the entities
             raise SamplingError(f"invalid {SYSTEM_FILE}: {e}") from e
 
+        def check_cancelled() -> None:
+            if should_stop is not None and should_stop():
+                raise SamplingCancelled(f"{work_dir.name} was cancelled")
+
+        clear_previous_outputs(work_dir)
         t_start = time.time()
         # The MSA is fetched (or read from BIOEMU2_MSA_CACHE) on the first sample call
         emu = EmuSession(system, model=self.model(), mode="equilibrium")
@@ -102,6 +130,7 @@ class Sampler:
         progress_path = work_dir / PROGRESS_FILE
         for i, rg in enumerate(params.rgs):
             label = rg_label(rg)
+            check_cancelled()
             pots = [CaRgPotential(rg, weight=params.guidance_weight())]
             if params.default_potentials:
                 pots += list(get_default_potentials())
@@ -123,6 +152,7 @@ class Sampler:
                 partial_dir=raw_dir / "partial",
             )
             seconds = time.time() - t0
+            check_cancelled()  # a cancelled job writes nothing more into foxs/
             save_frames(traj, raw_dir)  # samples.xtc + topology.cif, kept for debugging
             passed, _, reasons = check_allatom_physicality(traj, mode=PhysicalityFilterMode.HIGH_QUALITY)
             passed = np.asarray(passed, dtype=bool)

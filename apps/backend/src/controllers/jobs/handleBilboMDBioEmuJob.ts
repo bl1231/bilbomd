@@ -21,11 +21,13 @@ import { config } from '../../config/config.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { serverFile } from './utils/serverFiles.js'
 import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
+import { bioemuUnsupportedBackend } from './utils/bioemuAvailability.js'
 
 // BilboMD BioEmu2 (bilbomd#1200): sequence entities + SAXS data. BioEmu2
 // samples structures steered to the AutoRg-derived Rg targets in place of MD,
 // then FoXS/MultiFoXS fit them. While the pipeline is being validated it is
-// behind ENABLE_BILBOMD_BIOEMU and limited to Admins; there is no UI form yet.
+// behind ENABLE_BILBOMD_BIOEMU and limited to Admins, on deployments whose
+// worker can reach bioemu2-service (see bioemuAvailability.ts).
 
 const uploadFolder = config.uploadDir
 
@@ -56,6 +58,13 @@ const bioemuAccessError = (
     return {
       status: 403,
       message: 'The BilboMD BioEmu2 pipeline is not enabled on this server'
+    }
+  }
+  const unsupportedBackend = bioemuUnsupportedBackend()
+  if (unsupportedBackend) {
+    return {
+      status: 403,
+      message: `The BilboMD BioEmu2 pipeline is not available on this deployment (it cannot run on the ${unsupportedBackend} execution backend)`
     }
   }
   if (accessMode !== 'user' || !user?.roles?.includes('Admin')) {

@@ -11,7 +11,11 @@ export const bioemuFormData = (values: NewOpenFoldJobFormValues): FormData => {
   values.entities.forEach((entity, index) => {
     form.append(`entities[${index}][id]`, entity.id)
     form.append(`entities[${index}][name]`, entity.name)
-    form.append(`entities[${index}][sequence]`, entity.sequence)
+    // The form accepts either case; the backend accepts upper case only
+    form.append(
+      `entities[${index}][sequence]`,
+      entity.sequence.trim().toUpperCase()
+    )
     form.append(`entities[${index}][type]`, entity.type)
     form.append(`entities[${index}][copies]`, entity.copies.toString())
   })

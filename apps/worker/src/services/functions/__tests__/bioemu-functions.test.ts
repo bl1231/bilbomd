@@ -5,7 +5,8 @@ import fs from 'fs-extra'
 import type { Job as BullMQJob } from 'bullmq'
 import type { IBilboMDBioEmuJob } from '@bilbomd/mongodb-schema'
 
-const { cfg, post, updateStepStatus, handleError } = vi.hoisted(() => ({
+const { cfg, post, updateStepStatus, handleError, abort } = vi.hoisted(() => ({
+  abort: { signal: undefined as AbortSignal | undefined },
   cfg: {
     uploadDir: '',
     bioemuServiceUrl: 'http://bioemu2-service:8000',
@@ -22,6 +23,9 @@ vi.mock('../../../helpers/loggers.js', () => ({
 vi.mock('../mongo-utils.js', () => ({ updateStepStatus }))
 vi.mock('../job-utils.js', () => ({ handleError }))
 vi.mock('../../../config/config.js', () => ({ config: cfg }))
+vi.mock('../../../helpers/jobCancellation.js', () => ({
+  currentAbortSignal: () => abort.signal
+}))
 vi.mock('axios', () => ({
   default: {
     post,
@@ -77,6 +81,7 @@ beforeEach(async () => {
   workDir = path.join(uploadDir, 'uuid-1')
   await fs.ensureDir(path.join(workDir, 'bioemu'))
   vi.clearAllMocks()
+  abort.signal = undefined
 })
 
 afterEach(async () => {
@@ -171,6 +176,55 @@ describe('runBioEmu', () => {
         message: expect.stringContaining('147 of 150')
       })
     )
+  })
+
+  it('ties the request to the job and stops the service on cancel', async () => {
+    await fs.outputFile(
+      path.join(workDir, BIOEMU_SYSTEM_YAML),
+      'entities: []\n'
+    )
+    const controller = new AbortController()
+    abort.signal = controller.signal
+    post.mockImplementation((url: string) => {
+      if (url.endsWith('/cancel')) return Promise.resolve({ data: {} })
+      // /infer stays pending until the job is cancelled, as axios would
+      return new Promise((_resolve, reject) => {
+        controller.signal.addEventListener('abort', () =>
+          reject(new Error('canceled'))
+        )
+      })
+    })
+
+    const run = runBioEmu(mq, makeJob())
+    await vi.waitFor(() => expect(post).toHaveBeenCalledTimes(1))
+    expect(post).toHaveBeenCalledWith(
+      'http://bioemu2-service:8000/infer',
+      { uuid: 'uuid-1' },
+      expect.objectContaining({ signal: controller.signal })
+    )
+
+    controller.abort('cancelled by user')
+    await expect(run).rejects.toThrow('canceled')
+    expect(post).toHaveBeenCalledWith(
+      'http://bioemu2-service:8000/cancel',
+      { uuid: 'uuid-1' },
+      expect.objectContaining({ timeout: 10_000 })
+    )
+  })
+
+  it('does not ask the service to cancel a run that finished', async () => {
+    await fs.outputFile(
+      path.join(workDir, BIOEMU_SYSTEM_YAML),
+      'entities: []\n'
+    )
+    const controller = new AbortController()
+    abort.signal = controller.signal
+    post.mockResolvedValue({ data: { status: 'ok', summary } })
+
+    await runBioEmu(mq, makeJob())
+    controller.abort('late')
+
+    expect(post).toHaveBeenCalledTimes(1)
   })
 
   it("surfaces the service's error detail", async () => {

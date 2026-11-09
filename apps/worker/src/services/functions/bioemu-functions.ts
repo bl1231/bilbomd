@@ -7,6 +7,7 @@ import { config } from '../../config/config.js'
 import { logger } from '../../helpers/loggers.js'
 import { updateStepStatus } from './mongo-utils.js'
 import { handleError } from './job-utils.js'
+import { currentAbortSignal } from '../../helpers/jobCancellation.js'
 
 // Files shared with bioemu2-service (apps/bioemu2-service/src/sampler.py)
 const BIOEMU_DIR = 'bioemu'
@@ -16,6 +17,7 @@ const BIOEMU_PROGRESS_JSON = path.join(BIOEMU_DIR, 'progress.json')
 const BIOEMU_SUMMARY_JSON = path.join(BIOEMU_DIR, 'summary.json')
 
 const HEARTBEAT_MS = 20_000
+const CANCEL_TIMEOUT_MS = 10_000
 
 interface BioEmuTargetSummary {
   rg_target: number
@@ -89,6 +91,24 @@ const clearPreviousOutputs = async (workDir: string): Promise<void> => {
   }
 }
 
+// Aborting the HTTP request alone would leave the service sampling on the GPU,
+// so a cancelled job also tells the service to stop (at its next Rg target).
+const requestServiceCancel = async (uuid: string): Promise<void> => {
+  try {
+    await axios.post(
+      `${config.bioemuServiceUrl}/cancel`,
+      { uuid },
+      {
+        headers: { 'content-type': 'application/json' },
+        timeout: CANCEL_TIMEOUT_MS
+      }
+    )
+    logger.info(`Asked the BioEmu2 service to cancel ${uuid}`)
+  } catch (error) {
+    logger.warn(`Could not cancel BioEmu2 sampling for ${uuid}: ${error}`)
+  }
+}
+
 const callBioEmuService = async (
   MQjob: BullMQJob,
   DBjob: IBilboMDBioEmuJob,
@@ -113,6 +133,10 @@ const callBioEmuService = async (
     })().catch((error) => logger.warn(`BioEmu2 heartbeat failed: ${error}`))
   }, HEARTBEAT_MS)
 
+  const signal = currentAbortSignal()
+  const onAbort = () => void requestServiceCancel(DBjob.uuid)
+  signal?.addEventListener('abort', onAbort, { once: true })
+
   try {
     const response = await axios.post(
       url,
@@ -120,7 +144,8 @@ const callBioEmuService = async (
       {
         headers: { 'content-type': 'application/json' },
         // axios rather than fetch: undici's default 300 s headersTimeout is too short
-        timeout: config.bioemuTimeoutMs
+        timeout: config.bioemuTimeoutMs,
+        signal
       }
     )
     return response.data.summary as BioEmuSummary
@@ -138,6 +163,7 @@ const callBioEmuService = async (
     throw error
   } finally {
     clearInterval(heartbeat)
+    signal?.removeEventListener('abort', onAbort)
   }
 }
 

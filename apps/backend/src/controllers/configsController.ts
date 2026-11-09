@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { logger } from '../middleware/loggers.js'
 import axios from 'axios'
 import { bioemuMaxTokens } from '../validation/bioemuSchema.js'
+import { bioemuEnabled } from './jobs/utils/bioemuAvailability.js'
 
 export const getConfigsStuff = async (
   req: Request,
@@ -88,7 +89,8 @@ export const getConfigsStuff = async (
       enableBilboMdMulti: process.env.ENABLE_BILBOMD_MULTI || 'false',
       enableBilboMdAlphaFold: process.env.ENABLE_BILBOMD_ALPHAFOLD || 'false',
       enableBilboMdOpenfold: process.env.ENABLE_BILBOMD_OPENFOLD || 'false',
-      enableBilboMdBioEmu: process.env.ENABLE_BILBOMD_BIOEMU || 'false',
+      // Off where the worker cannot run it, so the UI hides the form there
+      enableBilboMdBioEmu: bioemuEnabled() ? 'true' : 'false',
       // Same limit the backend enforces at submission
       bioemuMaxTokens: String(bioemuMaxTokens()),
       enableBilboMdScoper: process.env.ENABLE_BILBOMD_SCOPER || 'false',

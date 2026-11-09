@@ -4,6 +4,9 @@ POST /infer {"uuid": "<uuid>"} samples the job at UPLOAD_DIR/<uuid> (see sampler
 the files it reads and writes). The worker and this service share the UPLOAD_DIR volume,
 so no files are transferred. Requests are serialised by a lock: one job saturates the GPU.
 
+POST /cancel {"uuid": "<uuid>"} cancels a queued or running job. Sampling stops at the next
+Rg target boundary (see cancel.py), and that job's /infer request returns HTTP 409.
+
 The model is loaded on the first request and kept, so torch.compile's warm-up is paid
 once per container, not once per job. Mount TORCHINDUCTOR_CACHE_DIR and TRITON_CACHE_DIR
 on a volume to keep compiled kernels across restarts too.
@@ -16,6 +19,7 @@ Environment:
 """
 
 import asyncio
+import functools
 import logging
 import os
 import sys
@@ -24,6 +28,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from cancel import CancelRegistry, SamplingCancelled
 from sampler import Sampler, SamplingError
 
 logging.basicConfig(
@@ -45,6 +50,7 @@ if msa_server:
 
 app = FastAPI(title="bilbomd-bioemu2-service")
 _lock = asyncio.Lock()
+_cancels = CancelRegistry()
 _sampler = Sampler(compile_denoiser=os.environ.get("BIOEMU2_COMPILE", "1") != "0")
 
 
@@ -57,6 +63,13 @@ async def health() -> dict:
     return {"status": "ok", "busy": _lock.locked()}
 
 
+@app.post("/cancel")
+async def cancel(req: InferRequest) -> dict:
+    accepted = _cancels.request(req.uuid)
+    logger.info("Cancel requested for %s: %s", req.uuid, "accepted" if accepted else "not running here")
+    return {"status": "cancelling" if accepted else "not_running", "uuid": req.uuid}
+
+
 @app.post("/infer")
 async def infer(req: InferRequest) -> dict:
     # uuid comes from the worker, but keep it from escaping UPLOAD_DIR
@@ -66,16 +79,26 @@ async def infer(req: InferRequest) -> dict:
     if not work_dir.is_dir():
         raise HTTPException(status_code=404, detail=f"Job directory not found: {req.uuid}")
 
-    async with _lock:
-        logger.info("Starting BioEmu2 sampling for %s", req.uuid)
-        try:
-            summary = await asyncio.get_running_loop().run_in_executor(None, _sampler.run, work_dir)
-        except SamplingError as e:
-            logger.error("BioEmu2 sampling failed for %s: %s", req.uuid, e)
-            raise HTTPException(status_code=422, detail=str(e)) from e
-        except Exception as e:
-            logger.error("BioEmu2 sampling crashed for %s:\n%s", req.uuid, traceback.format_exc())
-            raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}") from e
+    should_stop = functools.partial(_cancels.is_cancelled, req.uuid)
+    _cancels.begin(req.uuid)
+    try:
+        async with _lock:
+            logger.info("Starting BioEmu2 sampling for %s", req.uuid)
+            try:
+                summary = await asyncio.get_running_loop().run_in_executor(
+                    None, _sampler.run, work_dir, should_stop
+                )
+            except SamplingCancelled as e:
+                logger.info("BioEmu2 sampling cancelled for %s", req.uuid)
+                raise HTTPException(status_code=409, detail=str(e)) from e
+            except SamplingError as e:
+                logger.error("BioEmu2 sampling failed for %s: %s", req.uuid, e)
+                raise HTTPException(status_code=422, detail=str(e)) from e
+            except Exception as e:
+                logger.error("BioEmu2 sampling crashed for %s:\n%s", req.uuid, traceback.format_exc())
+                raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}") from e
+    finally:
+        _cancels.end(req.uuid)
 
     logger.info(
         "BioEmu2 sampling done for %s: %d/%d physical in %.0f s",

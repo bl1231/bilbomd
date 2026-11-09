@@ -89,6 +89,8 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.ENABLE_BILBOMD_BIOEMU
+  delete process.env.EXECUTION_BACKEND
+  delete process.env.USE_NERSC
 })
 
 describe('bioemuAccessError', () => {
@@ -99,6 +101,17 @@ describe('bioemuAccessError', () => {
   it('refuses everyone while the pipeline is disabled', () => {
     delete process.env.ENABLE_BILBOMD_BIOEMU
     expect(bioemuAccessError(admin, 'user')?.message).toMatch(/not enabled/)
+  })
+
+  it('refuses deployments whose worker has no BioEmu2 executor', () => {
+    process.env.EXECUTION_BACKEND = 'k8s'
+    expect(bioemuAccessError(admin, 'user')).toEqual({
+      status: 403,
+      message: expect.stringMatching(/not available on this deployment.*k8s/)
+    })
+    delete process.env.EXECUTION_BACKEND
+    process.env.USE_NERSC = 'true'
+    expect(bioemuAccessError(admin, 'user')?.message).toMatch(/nersc/)
   })
 
   it('refuses non-admins and anonymous submissions', () => {
@@ -124,6 +137,17 @@ describe('defaultBioEmuParameters', () => {
 })
 
 describe('handleBilboMDBioEmuJob', () => {
+  it('rejects an unsupported deployment before touching the job', async () => {
+    process.env.EXECUTION_BACKEND = 'k8s'
+    const { req, res } = makeReqRes()
+    await handleBilboMDBioEmuJob(req, res, admin, 'uuid-123', {
+      accessMode: 'user'
+    })
+    expect(res.status).toHaveBeenCalledWith(403)
+    expect(saved).toHaveLength(0)
+    expect(queueJob).not.toHaveBeenCalled()
+  })
+
   it('rejects a non-admin before touching the job', async () => {
     const { req, res } = makeReqRes()
     await handleBilboMDBioEmuJob(req, res, plainUser, 'uuid-123', {
