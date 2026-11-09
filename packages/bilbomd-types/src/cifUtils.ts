@@ -3,11 +3,84 @@ import { SUPPORTED_PDB_RESIDUES } from './pdbResidues.js'
 /**
  * Parsed representation of the _atom_site loop block from an mmCIF file.
  * columnNames are the field suffixes (e.g. 'label_comp_id', 'auth_asym_id').
- * dataRows are the whitespace-split token arrays for each data line.
+ * dataRows hold one value per column for each atom record, with quotes removed.
  */
 export type CifAtomSiteParsed = {
   columnNames: string[]
   dataRows: string[][]
+}
+
+type CifToken = { value: string; quoted: boolean }
+
+const isCifSpace = (c: string | undefined) =>
+  c === ' ' || c === '\t' || c === '\r' || c === '\n'
+
+// Split one line into tokens. Follows Biopython's MMCIF2Dict._splitline,
+// which the worker's MMCIFParser uses: a quote opens a value only at the start
+// of a token and closes only when followed by whitespace, and '#' outside a
+// token starts a comment.
+const splitCifLine = (line: string): CifToken[] => {
+  const tokens: CifToken[] = []
+  let i = 0
+  while (i < line.length) {
+    const c = line[i]
+    if (isCifSpace(c)) {
+      i++
+    } else if (c === '#') {
+      break
+    } else if (c === "'" || c === '"') {
+      let j = i + 1
+      while (
+        j < line.length &&
+        !(line[j] === c && (j + 1 === line.length || isCifSpace(line[j + 1])))
+      )
+        j++
+      tokens.push({ value: line.slice(i + 1, j), quoted: true })
+      i = j + 1
+    } else {
+      let j = i
+      while (j < line.length && !isCifSpace(line[j])) j++
+      tokens.push({ value: line.slice(i, j), quoted: false })
+      i = j
+    }
+  }
+  return tokens
+}
+
+// Tokenize a whole CIF file. Values are separated by whitespace, not lines,
+// so one record can wrap across lines and one line can hold several records.
+// A line starting with ';' opens a text field that runs to the next such line.
+const tokenizeCif = (text: string): CifToken[] => {
+  const lines = text.split(/\r?\n/)
+  const tokens: CifToken[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (line.startsWith(';')) {
+      const buffer = [line.slice(1).trimEnd()]
+      while (++i < lines.length && !lines[i].startsWith(';')) {
+        buffer.push(lines[i].trimEnd())
+      }
+      tokens.push({ value: buffer.join('\n'), quoted: true })
+      if (i < lines.length) tokens.push(...splitCifLine(lines[i].slice(1)))
+      continue
+    }
+    tokens.push(...splitCifLine(line))
+  }
+  return tokens
+}
+
+// An unquoted tag or reserved word ends a loop's values
+const endsLoop = ({ value, quoted }: CifToken) => {
+  if (quoted) return false
+  const v = value.toLowerCase()
+  return (
+    v.startsWith('_') ||
+    v === 'loop_' ||
+    v === 'stop_' ||
+    v === 'global_' ||
+    v.startsWith('data_') ||
+    v.startsWith('save_')
+  )
 }
 
 /**
@@ -15,59 +88,49 @@ export type CifAtomSiteParsed = {
  * Returns null if no _atom_site loop is found.
  */
 export const parseCifAtomSite = (text: string): CifAtomSiteParsed | null => {
-  const lines = text.split(/\r?\n/)
-  const columnNames: string[] = []
-  let inAtomSiteLoop = false
-  let headerDone = false
-  const dataRows: string[][] = []
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
-
-    if (!inAtomSiteLoop) {
-      // Look for a loop_ immediately followed by _atom_site. column declarations
-      if (line === 'loop_') {
-        const next = lines[i + 1]?.trim() ?? ''
-        if (next.startsWith('_atom_site.')) {
-          inAtomSiteLoop = true
-          columnNames.length = 0
-          headerDone = false
-        }
-      }
-      continue
-    }
-
-    if (!headerDone) {
-      if (line.startsWith('_atom_site.')) {
-        // Strip the '_atom_site.' prefix and store the column name
-        columnNames.push(line.slice('_atom_site.'.length))
-      } else if (line === '' || line.startsWith('#')) {
-        // blank / comment inside header — skip
-      } else {
-        // First non-header line: start of data
-        headerDone = true
-        if (line && !line.startsWith('_') && !line.startsWith('loop_')) {
-          dataRows.push(line.split(/\s+/).filter(Boolean))
-        }
-      }
-      continue
-    }
-
-    // In data section — stop at next category, loop, or end of block
+  const tokens = tokenizeCif(text)
+  for (let i = 0; i < tokens.length; i++) {
+    const tag = tokens[i + 1]
     if (
-      line.startsWith('_') ||
-      line === 'loop_' ||
-      line.startsWith('data_') ||
-      line.startsWith('save_')
+      tokens[i].quoted ||
+      tokens[i].value.toLowerCase() !== 'loop_' ||
+      !tag ||
+      tag.quoted ||
+      !tag.value.startsWith('_atom_site.')
     ) {
-      break
+      continue
     }
-    if (line === '' || line.startsWith('#')) continue
-    dataRows.push(line.split(/\s+/).filter(Boolean))
-  }
 
-  if (columnNames.length === 0) return null
-  return { columnNames, dataRows }
+    const columnNames: string[] = []
+    let j = i + 1
+    while (
+      j < tokens.length &&
+      !tokens[j].quoted &&
+      tokens[j].value.startsWith('_atom_site.')
+    ) {
+      columnNames.push(tokens[j].value.slice('_atom_site.'.length))
+      j++
+    }
+
+    const values: string[] = []
+    while (j < tokens.length && !endsLoop(tokens[j])) {
+      values.push(tokens[j].value)
+      j++
+    }
+
+    // Group values into records of one value per column. A trailing partial
+    // record is malformed and dropped.
+    const dataRows: string[][] = []
+    for (
+      let k = 0;
+      k + columnNames.length <= values.length;
+      k += columnNames.length
+    ) {
+      dataRows.push(values.slice(k, k + columnNames.length))
+    }
+    return { columnNames, dataRows }
+  }
+  return null
 }
 
 /**

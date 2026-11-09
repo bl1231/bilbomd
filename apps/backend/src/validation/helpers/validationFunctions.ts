@@ -448,14 +448,23 @@ const countCifResidues = (text: string): number => {
 const getPaeMatrixSize = (
   text: string
 ): { size: number } | { error: string } | null => {
-  // load_pae_data unwraps a top-level list by stripping its brackets
-  const body =
-    text.startsWith('[') && text.endsWith(']') ? text.slice(1, -1) : text
   let data: unknown
   try {
-    data = JSON.parse(body)
+    data = JSON.parse(text)
   } catch {
     return null
+  }
+  // load_pae_data unwraps a top-level list by stripping its brackets, which
+  // only yields valid JSON when the list holds exactly one object
+  if (text.startsWith('[') && text.endsWith(']')) {
+    try {
+      data = JSON.parse(text.slice(1, -1))
+    } catch {
+      return {
+        error:
+          'PAE file must be a JSON object, or a list holding exactly one object.'
+      }
+    }
   }
   const obj =
     typeof data === 'object' && data !== null && !Array.isArray(data)

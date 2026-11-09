@@ -754,6 +754,10 @@ describe('countCifResidues', () => {
     ).toBe(4)
   })
 
+  it('counts every record when several share a line', () => {
+    expect(countCifResidues(cif(['ATOM 1 CA 1 A ? ATOM 2 CA 2 A ?']))).toBe(2)
+  })
+
   it('works without an insertion code column', () => {
     expect(
       countCifResidues(cif(['ATOM 1 CA 1 A', 'ATOM 2 CA 2 A'], false))
@@ -776,6 +780,15 @@ describe('getPaeMatrixSize', () => {
   it('unwraps an AlphaFold DB style one-element list', () => {
     expect(getPaeMatrixSize(`[${squarePae(4)}]`)).toEqual({ size: 4 })
   })
+
+  it.each(['[]', `[${squarePae(2)}, ${squarePae(2)}]`])(
+    'rejects a top-level list that is not one object: %s',
+    (text) => {
+      expect(getPaeMatrixSize(text)).toEqual({
+        error: expect.stringContaining('exactly one object')
+      })
+    }
+  )
 
   it('rejects a file without a PAE matrix', () => {
     expect(getPaeMatrixSize('{"plddt": [1, 2]}')).toEqual({
