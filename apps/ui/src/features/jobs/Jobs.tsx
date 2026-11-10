@@ -61,6 +61,7 @@ import { useNavigate } from 'react-router'
 import { JobActionsMenu } from './JobActionsMenu'
 import { resubmitPathFor } from 'features/jobdetail/jobPageModel'
 import { useSnackbar } from 'notistack'
+import { engineLabel } from 'features/shared/engineLabel'
 
 const getRunTimeInHours = (
   nersc: INerscInfo | undefined,
@@ -673,8 +674,7 @@ const Jobs = () => {
         field: 'md_engine',
         headerName: 'Engine',
         width: 110,
-        valueGetter: (_value, row) =>
-          row.jobType === 'scoper' ? 'KGSRNA' : row.md_engine
+        valueGetter: (_value, row) => engineLabel(row.jobType, row.md_engine)
       },
       {
         field: 'status',
