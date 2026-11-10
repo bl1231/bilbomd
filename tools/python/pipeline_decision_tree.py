@@ -48,9 +48,10 @@ CHI2_ACCEPTABLE = 2.0
 # the extra state.
 MODEL_IMPROVEMENT_MIN = 0.20
 
-# The SAXS MW estimate is good to roughly 10-20 %; only a larger difference
-# from the model is worth pointing out.
-MW_DIFF_WARN = 0.25
+# The SAXS MW estimate is good to roughly 10-20 %, and on real BilboMD jobs
+# with a good fit it reads up to ~25 % low for flexible multi-domain proteins.
+# Only a larger difference from the model is worth pointing out.
+MW_DIFF_WARN = 0.30
 
 # Between these nucleic-acid mass fractions the sample is a protein-nucleic
 # acid mixture, for which neither set of Vc constants applies.
@@ -318,8 +319,10 @@ def mw_finding(mw: Dict) -> Dict[str, str]:
             "mw_consistent",
             "good",
             title,
-            f"The SAXS estimate is {abs(diff):.0%} {direction} than the model. The "
-            "method is typically accurate to 10–20%, so the two agree.",
+            f"The SAXS estimate is {abs(diff):.0%} {direction} than the model. SAXS "
+            "mass estimates are typically good to 10–20%, and can be further off "
+            "for flexible or elongated particles, so this is not a significant "
+            "difference.",
         )
     return _finding(
         "mw_differs",

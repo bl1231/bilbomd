@@ -37,6 +37,13 @@ VC_QMAX = 0.3
 # Data that stop well short of VC_QMAX truncate the integral and inflate MW.
 VC_QMAX_SHORT = 0.25
 
+# Guinier fit settings, the same as autorg.py uses, so the Rg behind the MW is
+# the Rg shown elsewhere in BilboMD.
+GUINIER_MIN_POINTS = 10
+GUINIER_QRG_MIN = 0.30
+GUINIER_QRG_MAX = 1.30
+GUINIER_R2_FLOOR = 0.90
+
 
 @dataclass(frozen=True)
 class MwEstimate:
@@ -111,7 +118,15 @@ def estimate_mw_vc(
     # The Guinier fit works on log(I), so it only sees positive intensities.
     positive = intensity > 0
     try:
-        fit = guinier_scan(q[positive], intensity[positive], sigma[positive])
+        fit = guinier_scan(
+            q[positive],
+            intensity[positive],
+            sigma[positive],
+            min_points=GUINIER_MIN_POINTS,
+            qrg_min=GUINIER_QRG_MIN,
+            qrg_max=GUINIER_QRG_MAX,
+            r2_floor=GUINIER_R2_FLOOR,
+        )
     except ValueError as error:
         return MwEstimate(particle=particle, reason=str(error))
 

@@ -196,7 +196,8 @@ def mw_block(**overrides):
     "block, code, severity",
     [
         (mw_block(), "mw_consistent", "good"),
-        (mw_block(diff_fraction=-0.25), "mw_consistent", "good"),
+        (mw_block(diff_fraction=-0.30), "mw_consistent", "good"),
+        (mw_block(diff_fraction=0.31), "mw_differs", "warning"),
         (mw_block(saxs_kda=80.0, diff_fraction=0.60), "mw_differs", "warning"),
         (mw_block(saxs_kda=25.0, diff_fraction=-0.50), "mw_differs", "warning"),
         (
