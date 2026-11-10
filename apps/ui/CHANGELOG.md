@@ -1,5 +1,18 @@
 # @bilbomd/ui
 
+## 2.40.0
+
+### Minor Changes
+
+- f65e6bc: "Color by Domain" in the Molstar viewer now works for BilboMD BioEmu2 jobs: it colors each ensemble member by the rigid domains found in the sampled structures, in the same colors as the Rigid Domains tab. The button is hidden when no rigid domain was found. The Molstar viewer header no longer carries the "experimental" tag.
+- 4dc5ad6: Show the submitted sequences in the "Inputs & parameters" section of the job page for AlphaFold, OpenFold3 and BioEmu2 jobs: name, type, copies and length per molecule, the sequence in numbered blocks of ten, copy buttons (one sequence, or everything as FASTA) and the total size counting copies. Shared results pages show them too.
+
+### Patch Changes
+
+- 3536795: Show "BioEmu2" as the engine of BilboMD BioEmu2 jobs in the jobs list and on the job page. They showed "OpenMM", which only polishes the final ensemble members. The submission confirmation no longer says the job will use OpenMM for a Molecular Dynamics step.
+- Updated dependencies [4dc5ad6]
+  - @bilbomd/bilbomd-types@1.14.1
+
 ## 2.39.0
 
 ### Minor Changes
