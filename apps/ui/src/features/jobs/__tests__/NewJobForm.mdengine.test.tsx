@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import NewJobForm from '../NewJobForm'
 
+// The pre-submission mass check has its own tests
+vi.mock('features/mwcheck/MwCheck', () => ({ default: () => null }))
 vi.mock('../../../slices/jobsApiSlice', () => ({
   useAddNewJobMutation: () => [
     vi

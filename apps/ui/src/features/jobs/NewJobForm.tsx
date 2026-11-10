@@ -46,6 +46,7 @@ import JobSuccessAlert from './JobSuccessAlert'
 import MdEngineField from 'components/MdEngineField'
 import TitleField from 'components/TitleField'
 import { getRgMaxWarning } from './rgMaxWarning'
+import MwCheck from 'features/mwcheck/MwCheck'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -891,6 +892,20 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </MenuItem>
                       </Field>
                     </Grid>
+                    <MwCheck
+                      datFile={values.dat_file}
+                      qUnits={values.q_units}
+                      pdbFile={
+                        values.bilbomd_mode === 'pdb'
+                          ? values.pdb_file
+                          : undefined
+                      }
+                      psfFile={
+                        values.bilbomd_mode === 'pdb'
+                          ? undefined
+                          : values.psf_file
+                      }
+                    />
                     {isSubmitting && (
                       <Box sx={{ width: '100%', maxWidth: '520px' }}>
                         <LinearProgress />

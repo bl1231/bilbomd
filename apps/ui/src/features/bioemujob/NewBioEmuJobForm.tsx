@@ -26,6 +26,7 @@ import { getSubmitError, type SubmitError } from 'utils/submitError'
 import NewBioEmuJobFormInstructions from './NewBioEmuJobFormInstructions'
 import BioEmuPipelineSchematic from './BioEmuPipelineSchematic'
 import { bioemuFormData } from './bioemuFormData'
+import MwCheck from 'features/mwcheck/MwCheck'
 
 // BilboMD BioEmu2 (bilbomd#1200): sequence entities + SAXS data. Same entity
 // editor as the OpenFold3 form, limited to Protein and DNA. Admins only while
@@ -278,6 +279,11 @@ const NewBioEmuJob = () => {
                       <SaxsDataOptions disabled={isSubmitting} />
                     </Grid>
 
+                    <MwCheck
+                      datFile={values.dat_file}
+                      qUnits={values.q_units}
+                      entities={values.entities}
+                    />
                     {isSubmitting && (
                       <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>
                         <LinearProgress />

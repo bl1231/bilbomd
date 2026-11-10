@@ -7,6 +7,8 @@ import { useAddNewBioEmuJobMutation } from 'slices/jobsApiSlice'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 import useAuth from 'hooks/useAuth'
 
+// The pre-submission mass check has its own tests
+vi.mock('features/mwcheck/MwCheck', () => ({ default: () => null }))
 vi.mock('slices/jobsApiSlice', () => ({
   useAddNewBioEmuJobMutation: vi.fn()
 }))

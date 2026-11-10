@@ -9,7 +9,8 @@ interface UploadUtilityLimiterOptions {
   windowMs?: number
 }
 
-// Rate limiter for the unauthenticated upload utilities (/autorg, /af2pae).
+// Rate limiter for the unauthenticated upload utilities (/autorg, /af2pae,
+// /mw-check).
 // Each call gets its own in-memory store, so the endpoints are limited
 // independently. Keyed per client (see clientIp).
 export const createUploadUtilityLimiter = ({
@@ -42,3 +43,9 @@ export const createUploadUtilityLimiter = ({
 export const autoRgLimiter = createUploadUtilityLimiter({ name: 'AutoRg' })
 
 export const af2paeLimiter = createUploadUtilityLimiter({ name: 'PAE Jiffy' })
+
+// The sequence forms re-check as sequences are edited, so this one allows more
+export const mwCheckLimiter = createUploadUtilityLimiter({
+  name: 'mass check',
+  max: 60
+})

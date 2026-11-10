@@ -27,6 +27,7 @@ import jobsRoutes from './routes/jobs.js'
 import usersRoutes from './routes/users.js'
 import af2paeRoutes from './routes/af2pae.js'
 import autorgRoutes from './routes/autorg.js'
+import mwCheckRoutes from './routes/mwCheck.js'
 import bullmqRoutes from './routes/bullmq.js'
 import configsRoutes from './routes/configs.js'
 import adminAnalyticsRoutes from './routes/admin-analytics.js'
@@ -138,6 +139,7 @@ v1Router.use('/jobs', jobsRoutes)
 v1Router.use('/users', usersRoutes)
 v1Router.use('/af2pae', af2paeRoutes)
 v1Router.use('/autorg', autorgRoutes)
+v1Router.use('/mw-check', mwCheckRoutes)
 v1Router.use('/bullmq', bullmqRoutes)
 v1Router.use('/configs', configsRoutes)
 v1Router.use(
