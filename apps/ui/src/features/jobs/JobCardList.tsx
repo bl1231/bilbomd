@@ -17,7 +17,7 @@ import BlockIcon from '@mui/icons-material/Block'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlined'
 import { Link, useLocation } from 'react-router'
 import { formatRelativeDateSafe } from 'utils/dates'
-import { mdEngineFor } from 'features/shared/engineLabel'
+import { engineLabel } from 'features/shared/engineLabel'
 
 const PAGE_SIZE = 20
 
@@ -99,7 +99,7 @@ const JobCardList = ({ rows, showUsername }: JobCardListProps) => {
         const displayProgress = Number.isNaN(progressValue) ? 0 : progressValue
         const metadata = [
           row.pipelineName ?? row.jobType,
-          mdEngineFor(row.jobType, row.md_engine),
+          engineLabel(row.jobType, row.md_engine),
           isRunning
             ? row.totalRuntime
             : formatRelativeDateSafe(row.time_submitted),

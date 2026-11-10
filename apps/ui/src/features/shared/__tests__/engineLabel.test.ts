@@ -1,20 +1,23 @@
 import { describe, it, expect } from 'vitest'
-import { hasNoMdEngine, mdEngineFor } from '../engineLabel'
+import { engineLabel, samplingEngineOverride } from '../engineLabel'
 
-describe('mdEngineFor', () => {
-  it('is the stored engine for the MD pipelines', () => {
-    expect(mdEngineFor('pdb', 'CHARMM')).toBe('CHARMM')
-    expect(mdEngineFor('auto', 'OpenMM')).toBe('OpenMM')
-    expect(mdEngineFor('alphafold', undefined)).toBeUndefined()
+describe('engineLabel', () => {
+  it('is the MD engine for the MD pipelines', () => {
+    expect(engineLabel('pdb', 'CHARMM')).toBe('CHARMM')
+    expect(engineLabel('auto', 'OpenMM')).toBe('OpenMM')
+    expect(engineLabel('alphafold', undefined)).toBeUndefined()
   })
 
-  it('shows KGSRNA in the engine place for Scoper', () => {
-    expect(mdEngineFor('scoper', undefined)).toBe('KGSRNA')
+  it('names the sampler for pipelines that do not sample with MD', () => {
+    expect(engineLabel('scoper', undefined)).toBe('KGSRNA')
+    // BioEmu2 jobs store OpenMM, which only polishes the ensemble members
+    expect(engineLabel('bioemu', 'OpenMM')).toBe('BioEmu2')
   })
+})
 
-  it('is nothing for BioEmu2, whose OpenMM only polishes the ensembles', () => {
-    expect(mdEngineFor('bioemu', 'OpenMM')).toBeUndefined()
-    expect(hasNoMdEngine('bioemu')).toBe(true)
-    expect(hasNoMdEngine('pdb')).toBe(false)
+describe('samplingEngineOverride', () => {
+  it('is undefined for MD pipelines and unknown types', () => {
+    expect(samplingEngineOverride('pdb')).toBeUndefined()
+    expect(samplingEngineOverride(undefined)).toBeUndefined()
   })
 })

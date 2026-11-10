@@ -143,7 +143,7 @@ describe('Jobs table', () => {
     expect(pipelineCell).toBeInTheDocument()
   })
 
-  it('renders the MD Engine column header', async () => {
+  it('renders the Engine column header', async () => {
     server.use(
       http.get('http://localhost:3003/api/v1/jobs', () => {
         return HttpResponse.json([createMockJobDTO()])
@@ -176,7 +176,7 @@ describe('Jobs table', () => {
     expect(engineCell).toBeInTheDocument()
   })
 
-  it('shows KGSRNA in the MD Engine column for scoper jobs', async () => {
+  it('shows KGSRNA in Engine column for scoper jobs', async () => {
     server.use(
       http.get('http://localhost:3003/api/v1/jobs', () => {
         return HttpResponse.json([
@@ -193,7 +193,7 @@ describe('Jobs table', () => {
     expect(engineCell).toBeInTheDocument()
   })
 
-  it('shows N/A, not the polishing engine, for BioEmu2 jobs', async () => {
+  it('shows BioEmu2, not the polishing engine, for BioEmu2 jobs', async () => {
     server.use(
       http.get('http://localhost:3003/api/v1/jobs', () => {
         return HttpResponse.json([
@@ -209,11 +209,12 @@ describe('Jobs table', () => {
 
     renderWithProviders(<Jobs />)
 
-    expect(await screen.findByText('N/A')).toBeInTheDocument()
+    // once in the Type column (the pipeline) and once in the Engine column
+    expect(await screen.findAllByText('BioEmu2')).toHaveLength(2)
     expect(screen.queryByText('OpenMM')).not.toBeInTheDocument()
   })
 
-  it('shows User → MD Engine → Status order for admins', async () => {
+  it('shows User → Engine → Status order for admins', async () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'admin',
       displayName: 'admin',
@@ -236,7 +237,7 @@ describe('Jobs table', () => {
     const headers = await screen.findAllByRole('columnheader')
     const headerTexts = headers.map((h) => h.textContent?.trim() || '')
     const userIdx = headerTexts.findIndex((t) => t === 'User')
-    const engineIdx = headerTexts.findIndex((t) => t === 'MD Engine')
+    const engineIdx = headerTexts.findIndex((t) => t === 'Engine')
     const statusIdx = headerTexts.findIndex((t) => t === 'Status')
     expect(userIdx).toBeGreaterThan(-1)
     expect(engineIdx).toBeGreaterThan(-1)
