@@ -223,3 +223,189 @@ def test_a_file_without_atoms_is_an_error(tmp_path, content):
     path.write_text(content)
     with pytest.raises(ValueError, match="No atoms"):
         molecular_composition(path)
+
+
+# ------------------------------------------------- mass counted by residue
+
+from Bio.SeqUtils import molecular_weight  # noqa: E402
+
+from pdb_utils import (  # noqa: E402
+    psf_composition,
+    residue_composition,
+    sequence_composition,
+)
+
+THREE = {
+    "A": "ALA", "R": "ARG", "N": "ASN", "D": "ASP", "C": "CYS", "Q": "GLN",
+    "E": "GLU", "G": "GLY", "H": "HIS", "I": "ILE", "L": "LEU", "K": "LYS",
+    "M": "MET", "F": "PHE", "P": "PRO", "S": "SER", "T": "THR", "W": "TRP",
+    "Y": "TYR", "V": "VAL",
+}  # fmt: skip
+
+
+def backbone_only(sequence, chain="A", segid="PROA", start=1):
+    """One CA atom per residue: a model with no hydrogens or side chains."""
+    return [
+        atom_line(i + 1, "CA", THREE[letter], chain, start + i, segid=segid)
+        for i, letter in enumerate(sequence)
+    ]
+
+
+def test_residue_mass_does_not_depend_on_which_atoms_are_listed(tmp_path):
+    # Deposited and predicted structures have no hydrogens; summing their
+    # atoms reads about 7 % light. Every standard residue counts in full.
+    sequence = "ACDEFGHIKLMNPQRSTVWY"
+    path = write_pdb(tmp_path, backbone_only(sequence))
+
+    composition = residue_composition(path)
+
+    assert composition["n_residues"] == 20
+    assert composition["total_da"] == pytest.approx(
+        molecular_weight(sequence, seq_type="protein"), rel=1e-6
+    )
+    assert composition["protein_da"] == composition["total_da"]
+    # The atom sum sees twenty carbons
+    assert calculate_molecular_weight(path) == pytest.approx(20 * C)
+
+
+def test_residue_mass_counts_each_chain_and_segment(tmp_path):
+    lines = backbone_only("GAG", chain="A", segid="PROA") + backbone_only(
+        "GAG", chain="B", segid="PROB"
+    )
+    composition = residue_composition(write_pdb(tmp_path, lines))
+    assert composition["total_da"] == pytest.approx(
+        2 * molecular_weight("GAG", seq_type="protein"), rel=1e-6
+    )
+
+
+def test_residue_mass_handles_charmm_names_and_shared_chain_letters(tmp_path):
+    # HSD is histidine; PROA and DNAA share chain A and residue numbers
+    lines = [
+        atom_line(1, "CA", "HSD", "A", 22, segid="PROA"),
+        atom_line(2, "P", "ADE", "A", 22, segid="DNAA"),
+        atom_line(3, "P", "THY", "A", 23, segid="DNAA"),
+    ]
+    composition = residue_composition(write_pdb(tmp_path, lines))
+    assert composition["n_residues"] == 3
+    assert composition["protein_da"] == pytest.approx(
+        molecular_weight("H", seq_type="protein"), rel=1e-6
+    )
+    assert composition["nucleic_da"] == pytest.approx(
+        molecular_weight("AT", seq_type="DNA"), rel=1e-6
+    )
+
+
+def test_residue_mass_tells_rna_from_dna_by_the_sugar(tmp_path):
+    # CHARMM calls both ribo- and deoxyribo-adenosine ADE
+    rna = [
+        atom_line(1, "P", "ADE", "A", 1, segid="RNAA"),
+        atom_line(2, "O2'", "ADE", "A", 1, segid="RNAA"),
+    ]
+    dna = [atom_line(1, "P", "ADE", "A", 1, segid="DNAA")]
+    rna_mass = residue_composition(write_pdb(tmp_path, rna, "rna.pdb"))["total_da"]
+    dna_mass = residue_composition(write_pdb(tmp_path, dna, "dna.pdb"))["total_da"]
+    assert rna_mass == pytest.approx(molecular_weight("A", seq_type="RNA"), rel=1e-6)
+    assert dna_mass == pytest.approx(molecular_weight("A", seq_type="DNA"), rel=1e-6)
+    assert rna_mass - dna_mass == pytest.approx(15.999, abs=0.01)
+
+
+def test_residue_mass_falls_back_to_atoms_for_other_residues(tmp_path):
+    lines = backbone_only("GG") + [
+        atom_line(3, "ZN", "ZN", "X", 1, record="HETATM", left_justified=True),
+        atom_line(4, "C1", "NAG", "X", 2, record="HETATM"),
+        atom_line(5, "O", "HOH", "W", 3, record="HETATM"),
+    ]
+    composition = residue_composition(write_pdb(tmp_path, lines))
+    assert composition["other_da"] == pytest.approx(ATOMIC_WEIGHTS["ZN"] + C)
+    assert composition["protein_da"] == pytest.approx(
+        molecular_weight("GG", seq_type="protein"), rel=1e-6
+    )
+
+
+def test_residue_mass_counts_a_residue_with_conformers_once(tmp_path):
+    lines = [
+        atom_line(1, "CA", "SER", "A", 5),
+        atom_line(2, "CB", "SER", "A", 5, altloc="A"),
+        atom_line(3, "CB", "SER", "A", 5, altloc="B"),
+    ]
+    composition = residue_composition(write_pdb(tmp_path, lines))
+    assert composition["n_residues"] == 1
+    assert composition["n_atoms"] == 2
+
+
+def test_residue_mass_of_a_file_without_atoms_is_an_error(tmp_path):
+    path = tmp_path / "empty.pdb"
+    path.write_text("REMARK nothing here\nEND\n")
+    with pytest.raises(ValueError, match="No atoms"):
+        residue_composition(path)
+
+
+PSF = """PSF EXT CMAP
+
+         2 !NTITLE
+* A TEST
+* PSF
+
+         5 !NATOM
+         1 PROA     1        GLY      N        NH3     -0.300000       14.0070           0
+         2 PROA     1        GLY      CA       CT2      0.130000       12.0110           0
+         3 DNAA     1        ADE      P        P        1.500000       30.9740           0
+         4 SOLV     1        TIP3     OH2      OT      -0.834000       15.9994           0
+         5 MG       1        MG       MG       MG       2.000000       24.3050           0
+
+         4 !NBOND: bonds
+         1         2         2         3
+"""
+
+
+def test_psf_masses_are_summed_by_molecule_type(tmp_path):
+    path = tmp_path / "model.psf"
+    path.write_text(PSF)
+
+    composition = psf_composition(path)
+
+    assert composition["n_atoms"] == 4  # water is not counted
+    assert composition["protein_da"] == pytest.approx(14.007 + 12.011)
+    assert composition["nucleic_da"] == pytest.approx(30.974)
+    assert composition["other_da"] == pytest.approx(24.305)
+
+
+@pytest.mark.parametrize("content", ["", "PSF\n\n       0 !NATOM\n", "not a psf\n"])
+def test_a_psf_without_atoms_is_an_error(tmp_path, content):
+    path = tmp_path / "bad.psf"
+    path.write_text(content)
+    with pytest.raises(ValueError, match="No atoms"):
+        psf_composition(path)
+
+
+def test_sequence_masses_count_copies_and_types():
+    composition = sequence_composition(
+        [
+            {"type": "Protein", "sequence": "mkt ay\nIAK", "copies": 2},
+            {"type": "DNA", "sequence": "ACGT"},
+            {"type": "RNA", "sequence": "ACGU", "copies": 1},
+        ]
+    )
+    protein = 2 * molecular_weight("MKTAYIAK", seq_type="protein")
+    nucleic = molecular_weight("ACGT", seq_type="DNA") + molecular_weight(
+        "ACGU", seq_type="RNA"
+    )
+    assert composition["protein_da"] == pytest.approx(protein)
+    assert composition["nucleic_da"] == pytest.approx(nucleic)
+    assert composition["total_da"] == pytest.approx(protein + nucleic)
+
+
+@pytest.mark.parametrize(
+    "entities",
+    [
+        [],
+        [{"type": "Protein", "sequence": ""}],
+        [{"type": "Lipid", "sequence": "AAA"}],
+        [{"type": "Protein", "sequence": "MK1"}],
+        [{"type": "Protein", "sequence": "MKT", "copies": 0}],
+    ],
+    ids=["none", "empty", "unknown type", "bad letter", "no copies"],
+)
+def test_unusable_sequences_are_an_error(entities):
+    with pytest.raises(ValueError):
+        sequence_composition(entities)

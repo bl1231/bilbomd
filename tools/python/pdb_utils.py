@@ -3,7 +3,13 @@ Description: This script calculates the molecular weight of a PDB file.
 Also contains shared utilities for PDB processing in BilboMD.
 """
 
+from Bio.Data.IUPACData import (
+    protein_weights,
+    unambiguous_dna_weights,
+    unambiguous_rna_weights,
+)
 from Bio.PDB import MMCIFParser
+from Bio.SeqUtils import molecular_weight as sequence_weight
 
 # Standard atomic weights (Da). Covers biomolecules plus the ions and
 # heteroatoms that turn up in structures submitted to BilboMD.
@@ -152,6 +158,203 @@ def molecular_composition(pdb_file):
         "other_da": masses["other"],
         "n_atoms": n_atoms,
         "unknown_atoms": unknown_atoms,
+    }
+
+
+WATER_DA = 18.0153
+
+# Residue names that map onto a standard amino acid for mass bookkeeping
+_PROTEIN_LETTERS = {
+    "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C", "GLN": "Q",
+    "GLU": "E", "GLY": "G", "HIS": "H", "ILE": "I", "LEU": "L", "LYS": "K",
+    "MET": "M", "PHE": "F", "PRO": "P", "SER": "S", "THR": "T", "TRP": "W",
+    "TYR": "Y", "VAL": "V",
+    # CHARMM / AMBER protonation variants
+    "HSD": "H", "HSE": "H", "HSP": "H", "HID": "H", "HIE": "H", "HIP": "H",
+    "CYX": "C", "CYM": "C", "ASH": "D", "GLH": "E", "LYN": "K",
+}  # fmt: skip
+
+# (letter, kind) for nucleotide residue names. kind None means the name is
+# used for both DNA and RNA (CHARMM) and the sugar decides.
+_NUCLEIC_LETTERS = {
+    "DA": ("A", "dna"), "DC": ("C", "dna"), "DG": ("G", "dna"), "DT": ("T", "dna"),
+    "A": ("A", "rna"), "C": ("C", "rna"), "G": ("G", "rna"), "U": ("U", "rna"),
+    "ADE": ("A", None), "CYT": ("C", None), "GUA": ("G", None),
+    "THY": ("T", "dna"), "URA": ("U", "rna"),
+}  # fmt: skip
+
+
+def _standard_residue_mass(resname, has_o2_prime):
+    """
+    Mass (Da) of a standard residue inside a chain, hydrogens included, or
+    None when the residue name is not a standard amino acid or nucleotide.
+    """
+    letter = _PROTEIN_LETTERS.get(resname)
+    if letter is not None:
+        return protein_weights[letter] - WATER_DA
+    nucleotide = _NUCLEIC_LETTERS.get(resname)
+    if nucleotide is None:
+        return None
+    letter, kind = nucleotide
+    if kind is None:
+        kind = "rna" if has_o2_prime else "dna"
+    table = unambiguous_rna_weights if kind == "rna" else unambiguous_dna_weights
+    return table[letter] - WATER_DA
+
+
+def residue_composition(pdb_file):
+    """
+    Mass of a PDB file's first model, split by molecule type, counting each
+    standard residue at its full mass whatever atoms the file lists.
+
+    Deposited and predicted structures usually have no hydrogens, and some
+    lack side-chain atoms; summing the atoms present would read about 7 % light
+    for a protein. Residues that are not standard amino acids or nucleotides
+    (ions, ligands, sugars, modified residues) fall back to the sum of their
+    atoms. Water is not counted and alternate conformers count once.
+
+    Returns the same keys as molecular_composition, plus n_residues.
+    """
+    residues = {}
+    chains = set()
+
+    with open(pdb_file, "r", encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            if line.startswith("ENDMDL"):
+                break
+            if not line.startswith(("ATOM", "HETATM")):
+                continue
+            resname = line[17:21].strip().upper()
+            residue_class = _residue_class(resname)
+            if residue_class == "water":
+                continue
+            key = (line[72:76], line[21], line[22:27])
+            residue = residues.setdefault(
+                key,
+                {
+                    "resname": resname,
+                    "class": residue_class,
+                    "altloc": None,
+                    "atoms_da": 0.0,
+                    "n_atoms": 0,
+                    "unknown_atoms": 0,
+                    "has_o2_prime": False,
+                },
+            )
+            altloc = line[16]
+            if altloc != " ":
+                if residue["altloc"] is None:
+                    residue["altloc"] = altloc
+                elif residue["altloc"] != altloc:
+                    continue
+            residue["n_atoms"] += 1
+            if line[12:16].strip().upper() in ("O2'", "O2*"):
+                residue["has_o2_prime"] = True
+            element = _atom_element(line, residue_class)
+            if element is None:
+                residue["unknown_atoms"] += 1
+            else:
+                residue["atoms_da"] += ATOMIC_WEIGHTS[element]
+
+    if not residues:
+        raise ValueError(f"No atoms found in PDB file: {pdb_file}")
+
+    masses = {"protein": 0.0, "nucleic": 0.0, "other": 0.0}
+    for (segid, chain, _), residue in residues.items():
+        standard = _standard_residue_mass(residue["resname"], residue["has_o2_prime"])
+        if standard is None:
+            masses[residue["class"]] += residue["atoms_da"]
+            continue
+        masses[residue["class"]] += standard
+        chains.add((segid, chain, residue["class"]))
+    # Each polymer chain carries one water more than the sum of its residues
+    for _, _, residue_class in chains:
+        masses[residue_class] += WATER_DA
+
+    return {
+        "total_da": sum(masses.values()),
+        "protein_da": masses["protein"],
+        "nucleic_da": masses["nucleic"],
+        "other_da": masses["other"],
+        "n_atoms": sum(r["n_atoms"] for r in residues.values()),
+        "unknown_atoms": sum(r["unknown_atoms"] for r in residues.values()),
+        "n_residues": len(residues),
+    }
+
+
+def psf_composition(psf_file):
+    """
+    Mass of a CHARMM/X-PLOR PSF file's atoms, split by molecule type. A PSF
+    lists every atom with its mass, so nothing has to be inferred. Water is
+    not counted.
+    """
+    masses = {"protein": 0.0, "nucleic": 0.0, "other": 0.0}
+    n_atoms = 0
+    remaining = None
+
+    with open(psf_file, "r", encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            if remaining is None:
+                if "!NATOM" in line:
+                    remaining = int(line.split()[0])
+                continue
+            if remaining == 0:
+                break
+            fields = line.split()
+            if len(fields) < 8:
+                continue
+            remaining -= 1
+            residue_class = _residue_class(fields[3].upper())
+            if residue_class == "water":
+                continue
+            masses[residue_class] += float(fields[7])
+            n_atoms += 1
+
+    if n_atoms == 0:
+        raise ValueError(f"No atoms found in PSF file: {psf_file}")
+
+    return {
+        "total_da": sum(masses.values()),
+        "protein_da": masses["protein"],
+        "nucleic_da": masses["nucleic"],
+        "other_da": masses["other"],
+        "n_atoms": n_atoms,
+        "unknown_atoms": 0,
+    }
+
+
+_SEQUENCE_TYPES = {"protein": "protein", "dna": "DNA", "rna": "RNA"}
+
+
+def sequence_composition(entities):
+    """
+    Mass of molecules given as sequences: a list of dicts with `type`
+    (Protein, DNA or RNA), `sequence` and optional `copies`.
+    """
+    masses = {"protein": 0.0, "nucleic": 0.0, "other": 0.0}
+    for entity in entities:
+        kind = str(entity.get("type", "")).lower()
+        if kind not in _SEQUENCE_TYPES:
+            raise ValueError(f"Unknown molecule type: {entity.get('type')}")
+        sequence = "".join(str(entity.get("sequence", "")).split()).upper()
+        if not sequence:
+            raise ValueError("A sequence is empty.")
+        copies = int(entity.get("copies", 1))
+        if copies < 1:
+            raise ValueError("Copies must be at least 1.")
+        mass = sequence_weight(sequence, seq_type=_SEQUENCE_TYPES[kind])
+        masses["protein" if kind == "protein" else "nucleic"] += mass * copies
+
+    if sum(masses.values()) <= 0:
+        raise ValueError("No sequences were given.")
+
+    return {
+        "total_da": sum(masses.values()),
+        "protein_da": masses["protein"],
+        "nucleic_da": masses["nucleic"],
+        "other_da": 0.0,
+        "n_atoms": 0,
+        "unknown_atoms": 0,
     }
 
 

@@ -30,6 +30,7 @@ import JobSuccessAlert from 'features/jobs/JobSuccessAlert'
 import { logger } from 'utils/logger'
 import { getSubmitError, type SubmitError } from 'utils/submitError'
 import SubmitErrorAlert from 'components/SubmitErrorAlert'
+import MwCheck from 'features/mwcheck/MwCheck'
 
 type NewJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -420,6 +421,11 @@ const NewAutoJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         />
                       </Grid>
 
+                      <MwCheck
+                        datFile={values.dat_file}
+                        qUnits={values.q_units}
+                        pdbFile={values.pdb_file}
+                      />
                       {/* Progress Bar */}
                       {isSubmitting && (
                         <Box sx={{ my: 1, width: '100%', maxWidth: '520px' }}>

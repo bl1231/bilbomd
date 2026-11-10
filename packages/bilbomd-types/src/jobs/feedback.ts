@@ -83,3 +83,17 @@ export interface JobFeedbackDTO {
   models?: FeedbackModel[]
   mw?: FeedbackMw
 }
+
+// A molecule given by sequence to the pre-submission mass check
+export interface MwCheckEntity {
+  type: 'Protein' | 'DNA' | 'RNA'
+  sequence: string
+  copies: number
+}
+
+// POST /mw-check: the model's mass against the SAXS estimate, before a job
+// is submitted. The same comparison as `mw` in a finished job's report.
+export interface MwCheckResponse {
+  mw: FeedbackMw
+  finding: FeedbackFinding
+}

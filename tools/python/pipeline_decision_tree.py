@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Sequence
 
-from pdb_utils import molecular_composition
+from pdb_utils import residue_composition
 from saxs_fit import FitProfile, RegionStats, chi_square, load_fit_file, region_stats
 from saxs_mw import METHOD as MW_METHOD
 from saxs_mw import estimate_mw_vc
@@ -222,11 +222,13 @@ def region_findings(overall: float, regions: Sequence[RegionStats]) -> List[Dict
     ]
 
 
-def assess_mw(profile: FitProfile, model_pdb: Optional[Path]) -> Dict:
+def compare_mw(q, intensity, err, composition: Optional[Dict]) -> Dict:
     """
-    Compare the model's mass with a SAXS estimate. Returns the `mw` block of
-    the report. Values that could not be determined are None and `reason`
-    says why.
+    Compare a model's mass with the SAXS estimate from an experimental
+    profile. `composition` is the model's mass by molecule type (see
+    pdb_utils), or None when there is no model. Returns the `mw` block of the
+    report; values that could not be determined are None and `reason` says
+    why.
     """
     mw: Dict = {
         "model_kda": None,
@@ -236,17 +238,16 @@ def assess_mw(profile: FitProfile, model_pdb: Optional[Path]) -> Dict:
         "particle": None,
         "confidence": None,
         "nucleic_fraction": None,
-        "model_pdb_file": model_pdb.name if model_pdb else None,
+        "model_pdb_file": None,
         "qmax_used": None,
         "guinier": None,
         "reason": None,
     }
 
-    if model_pdb is None:
-        mw["reason"] = "No model PDB file was found in the results."
+    if composition is None:
+        mw["reason"] = "No model was available to compare with."
         return mw
 
-    composition = molecular_composition(model_pdb)
     polymer_da = composition["protein_da"] + composition["nucleic_da"]
     nucleic_fraction = composition["nucleic_da"] / polymer_da if polymer_da > 0 else 0.0
     mixture = (
@@ -257,7 +258,7 @@ def assess_mw(profile: FitProfile, model_pdb: Optional[Path]) -> Dict:
     mw["nucleic_fraction"] = round(nucleic_fraction, 3)
     mw["particle"] = particle
 
-    estimate = estimate_mw_vc(profile.q, profile.i_exp, profile.err, particle=particle)
+    estimate = estimate_mw_vc(q, intensity, err, particle=particle)
     if estimate.rg is not None:
         mw["guinier"] = {
             "rg": round(estimate.rg, 2),
@@ -292,6 +293,19 @@ def assess_mw(profile: FitProfile, model_pdb: Optional[Path]) -> Dict:
             f"The data end at q = {estimate.qmax_used:.2f} Å⁻¹, short of the "
             "0.3 Å⁻¹ the method expects, so the estimate is only indicative."
         )
+    return mw
+
+
+def assess_mw(profile: FitProfile, model_pdb: Optional[Path]) -> Dict:
+    """The `mw` block for a finished job: its fit data against its model PDB."""
+    if model_pdb is None:
+        mw = compare_mw(profile.q, profile.i_exp, profile.err, None)
+        mw["reason"] = "No model PDB file was found in the results."
+        return mw
+    mw = compare_mw(
+        profile.q, profile.i_exp, profile.err, residue_composition(model_pdb)
+    )
+    mw["model_pdb_file"] = model_pdb.name
     return mw
 
 

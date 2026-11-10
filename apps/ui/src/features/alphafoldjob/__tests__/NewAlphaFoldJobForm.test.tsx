@@ -8,6 +8,8 @@ import { useAddNewPublicJobMutation } from 'slices/publicJobsApiSlice'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
 
 // Mock all the dependencies
+// The pre-submission mass check has its own tests
+vi.mock('features/mwcheck/MwCheck', () => ({ default: () => null }))
 vi.mock('slices/jobsApiSlice', () => ({
   useAddNewAlphaFoldJobMutation: vi.fn()
 }))

@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import NewAlphaFoldJob from '../NewAlphaFoldJobForm'
 
+// The pre-submission mass check has its own tests
+vi.mock('features/mwcheck/MwCheck', () => ({ default: () => null }))
 vi.mock('../../../slices/jobsApiSlice', () => ({
   useAddNewAlphaFoldJobMutation: () => [
     vi

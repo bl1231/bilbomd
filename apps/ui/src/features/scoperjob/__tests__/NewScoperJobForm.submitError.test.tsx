@@ -16,6 +16,8 @@ const addNewScoperJob = vi.fn(() => ({
     })
 }))
 
+// The pre-submission mass check has its own tests
+vi.mock('features/mwcheck/MwCheck', () => ({ default: () => null }))
 vi.mock('slices/jobsApiSlice', () => ({
   useAddNewScoperJobMutation: () => [addNewScoperJob, { isSuccess: false }]
 }))

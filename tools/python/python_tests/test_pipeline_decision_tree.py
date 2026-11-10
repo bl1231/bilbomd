@@ -51,15 +51,18 @@ def write_fit_file(folder, states, *, q_max=0.4, low_q_shift=0.0, noise=1.0, see
     return path
 
 
-def write_pdb(folder, name="ensemble_size_1_model.pdb", carbons=2400, dna=0):
-    """A PDB of `carbons` protein carbon atoms (2400 -> 28.8 kDa) plus DNA carbons."""
+def write_pdb(folder, name="ensemble_size_1_model.pdb", residues=406, dna=0):
+    """
+    A PDB of `residues` alanines (406 -> 28.9 kDa) plus `dna` adenosines, one
+    atom per residue: the model mass is counted from residues, not atoms.
+    """
     lines = [
-        f"ATOM  {i + 1:5d}  CA  ALA A{(i % 9999) + 1:4d}       0.000   0.000   0.000"
+        f"ATOM  {i + 1:5d}  CA  ALA A{i + 1:4d}       0.000   0.000   0.000"
         f"  1.00  0.00      PROA"
-        for i in range(carbons)
+        for i in range(residues)
     ] + [
-        f"ATOM  {i + 1:5d}  C4' ADE A{(i % 9999) + 1:4d}       0.000   0.000   0.000"
-        f"  1.00  0.00      DNAA"
+        f"ATOM  {i + 1:5d}  C4' ADE B{i + 1:4d}       0.000   0.000   0.000"
+        f"  1.00  0.00      DNAB"
         for i in range(dna)
     ]
     path = folder / name
@@ -253,7 +256,7 @@ def test_report_for_a_good_job(tmp_path):
     assert len(report["chi_squares_of_regions"]) == 3
 
     assert codes(report["findings"]) == ["fit_excellent", "regions_ok", "mw_consistent"]
-    assert report["mw"]["model_kda"] == pytest.approx(28.83, abs=0.01)
+    assert report["mw"]["model_kda"] == pytest.approx(28.88, abs=0.01)
     assert report["mw"]["saxs_kda"] == pytest.approx(28.9, rel=0.05)
     assert report["mw"]["confidence"] == "normal"
     assert report["mw_model"] == report["mw"]["model_kda"]
@@ -265,7 +268,7 @@ def test_mw_mismatch_does_not_replace_the_fit_findings(tmp_path):
     # The old report swapped every fit message for "check your sequence or
     # oligomerization state" when MW differed by more than 30 %.
     write_fit_file(tmp_path, 1, noise=0.9)
-    write_pdb(tmp_path, carbons=6000)  # 72 kDa model, ~29 kDa data
+    write_pdb(tmp_path, residues=1000)  # 71 kDa model, ~29 kDa data
 
     report = pdt.build_report(tmp_path)
 
@@ -277,11 +280,11 @@ def test_mw_mismatch_does_not_replace_the_fit_findings(tmp_path):
 
 def test_protein_dna_complex_gets_a_low_confidence_mw(tmp_path):
     write_fit_file(tmp_path, 1)
-    write_pdb(tmp_path, carbons=1600, dna=800)
+    write_pdb(tmp_path, residues=270, dna=31)
 
     report = pdt.build_report(tmp_path)
 
-    assert report["mw"]["nucleic_fraction"] == pytest.approx(1 / 3, abs=0.001)
+    assert report["mw"]["nucleic_fraction"] == pytest.approx(0.336, abs=0.002)
     assert report["mw"]["confidence"] == "low"
     assert codes(report["findings"])[-1] == "mw_low_confidence"
 
@@ -292,7 +295,7 @@ def test_noisy_guinier_region_gets_a_low_confidence_mw(tmp_path, monkeypatch):
 
     monkeypatch.setattr(saxs_mw, "GUINIER_R2_GOOD", 1.01)
     write_fit_file(tmp_path, 1, noise=0.9)
-    write_pdb(tmp_path, carbons=6000)
+    write_pdb(tmp_path, residues=1000)
 
     report = pdt.build_report(tmp_path)
 
@@ -343,7 +346,7 @@ def test_report_falls_back_to_the_minimized_pdb(tmp_path):
     report = pdt.build_report(tmp_path)
 
     assert report["best_ensemble_pdb_file"] == "minimization_output.pdb"
-    assert report["mw"]["model_kda"] == pytest.approx(28.83, abs=0.01)
+    assert report["mw"]["model_kda"] == pytest.approx(28.88, abs=0.01)
 
 
 @pytest.mark.parametrize("q_max, names", [(0.15, ["low", "mid"]), (0.08, ["low"])])
