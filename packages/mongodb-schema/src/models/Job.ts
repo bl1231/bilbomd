@@ -17,6 +17,10 @@ import {
   IBioEmuParameters,
   IOpenFoldEntity,
   IFeedbackData,
+  IFeedbackFinding,
+  IFeedbackRegion,
+  IFeedbackModel,
+  IFeedbackMw,
   INerscInfo,
   IBilboMDSteps,
   IResidueRange,
@@ -46,22 +50,96 @@ const openFoldEntitySchema = new Schema<IOpenFoldEntity>({
   copies: { type: Number, required: true }
 })
 
+const feedbackFindingSchema = new Schema<IFeedbackFinding>(
+  {
+    code: { type: String, required: true },
+    severity: {
+      type: String,
+      enum: ['good', 'info', 'warning', 'problem'],
+      required: true
+    },
+    title: { type: String, required: true },
+    detail: { type: String, required: true },
+    region: { type: String, enum: ['low', 'mid', 'high'], required: false }
+  },
+  { _id: false }
+)
+
+const feedbackRegionSchema = new Schema<IFeedbackRegion>(
+  {
+    name: { type: String, enum: ['low', 'mid', 'high'], required: true },
+    q_min: { type: Number, required: true },
+    q_max: { type: Number, required: true },
+    n_points: { type: Number, required: true },
+    chi_square: { type: Number, required: true },
+    mean_residual: { type: Number, required: true }
+  },
+  { _id: false }
+)
+
+const feedbackModelSchema = new Schema<IFeedbackModel>(
+  {
+    states: { type: Number, required: true },
+    file: { type: String, required: true },
+    chi_square: { type: Number, required: true },
+    selected: { type: Boolean, required: true }
+  },
+  { _id: false }
+)
+
+const feedbackMwSchema = new Schema<IFeedbackMw>(
+  {
+    model_kda: { type: Number, default: null },
+    saxs_kda: { type: Number, default: null },
+    diff_fraction: { type: Number, default: null },
+    method: { type: String, required: true },
+    particle: { type: String, enum: ['protein', 'rna'], default: null },
+    confidence: { type: String, enum: ['normal', 'low'], default: null },
+    nucleic_fraction: { type: Number, default: null },
+    model_pdb_file: { type: String, default: null },
+    qmax_used: { type: Number, default: null },
+    guinier: {
+      type: new Schema(
+        {
+          rg: { type: Number, required: true },
+          i0: { type: Number, default: null },
+          r2: { type: Number, default: null },
+          qmin: { type: Number, default: null },
+          qmax: { type: Number, default: null }
+        },
+        { _id: false }
+      ),
+      default: null
+    },
+    reason: { type: String, default: null }
+  },
+  { _id: false }
+)
+
+// The molecular-weight fields and the per-region sentences are optional: the
+// MW comparison is advisory and can be unavailable, and data covering a
+// single q-region have no "second highest" region.
 const feedbackSchema = new Schema<IFeedbackData>({
-  mw_saxs: { type: Number, required: true },
-  mw_model: { type: Number, required: true },
-  mw_err: { type: Number, required: true },
+  mw_saxs: { type: Number, default: null },
+  mw_model: { type: Number, default: null },
+  mw_err: { type: Number, default: null },
   best_model_dat_file: { type: String, required: true },
-  best_ensemble_pdb_file: { type: String, required: true },
+  best_ensemble_pdb_file: { type: String, default: null },
   overall_chi_square: { type: Number, required: true },
   q_ranges: [{ type: Number, required: true }],
   chi_squares_of_regions: [{ type: Number, required: true }],
   residuals_of_regions: [{ type: Number, required: true }],
   mw_feedback: { type: String, required: true },
   overall_chi_square_feedback: { type: String, required: true },
-  highest_chi_square_feedback: { type: String, required: true },
-  second_highest_chi_square_feedback: { type: String, required: true },
-  regional_chi_square_feedback: { type: String, required: true },
-  timestamp: { type: Date, default: () => new Date(Date.now()) }
+  highest_chi_square_feedback: { type: String, default: null },
+  second_highest_chi_square_feedback: { type: String, default: null },
+  regional_chi_square_feedback: { type: String, default: null },
+  timestamp: { type: Date, default: () => new Date(Date.now()) },
+  version: { type: Number, required: false },
+  findings: { type: [feedbackFindingSchema], default: undefined },
+  regions: { type: [feedbackRegionSchema], default: undefined },
+  models: { type: [feedbackModelSchema], default: undefined },
+  mw: { type: feedbackMwSchema, required: false }
 })
 
 const nerscInfoSchema = new Schema<INerscInfo>({

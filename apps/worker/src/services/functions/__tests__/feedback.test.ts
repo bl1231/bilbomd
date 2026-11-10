@@ -64,6 +64,32 @@ describe('feedback - spawnFeedbackScript', () => {
     expect(job.save).toHaveBeenCalledTimes(1)
   })
 
+  it('stores a report whose molecular-weight comparison is unavailable', async () => {
+    // The script reports null rather than failing when it cannot estimate MW
+    const report = {
+      version: 2,
+      overall_chi_square: 0.98,
+      mw_saxs: null,
+      mw_model: null,
+      mw_err: null,
+      findings: [
+        {
+          code: 'mw_not_assessed',
+          severity: 'info',
+          title: 'Molecular weight not assessed',
+          detail: 'No model PDB file was found in the results.'
+        }
+      ]
+    }
+    readFileMock.mockResolvedValue(JSON.stringify(report))
+    const job = makeJob()
+
+    await spawnFeedbackScript(job)
+
+    expect(job.feedback).toEqual(report)
+    expect(job.save).toHaveBeenCalledTimes(1)
+  })
+
   it('rejects when feedback.json cannot be read or parsed', async () => {
     readFileMock.mockRejectedValue(new Error('ENOENT feedback.json'))
 

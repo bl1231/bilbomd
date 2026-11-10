@@ -70,23 +70,90 @@ interface IBioEmuParameters {
   default_potentials: boolean
 }
 
+type IFeedbackSeverity = 'good' | 'info' | 'warning' | 'problem'
+type IFeedbackRegionName = 'low' | 'mid' | 'high'
+
+// One conclusion of the fit assessment. The wording is written by the
+// assessment script; clients style it by severity.
+interface IFeedbackFinding {
+  code: string
+  severity: IFeedbackSeverity
+  title: string
+  detail: string
+  region?: IFeedbackRegionName
+}
+
+interface IFeedbackRegion {
+  name: IFeedbackRegionName
+  q_min: number
+  q_max: number
+  n_points: number
+  chi_square: number
+  mean_residual: number
+}
+
+// Chi-square of each MultiFoXS ensemble size, and which one was assessed
+interface IFeedbackModel {
+  states: number
+  file: string
+  chi_square: number
+  selected: boolean
+}
+
+interface IFeedbackGuinier {
+  rg: number
+  i0: number | null
+  r2: number | null
+  qmin: number | null
+  qmax: number | null
+}
+
+// Advisory comparison of the model's mass with a SAXS estimate
+interface IFeedbackMw {
+  model_kda: number | null
+  saxs_kda: number | null
+  // (saxs - model) / model
+  diff_fraction: number | null
+  method: string
+  particle: 'protein' | 'rna' | null
+  // 'low' when the method's assumptions do not hold for this sample
+  confidence: 'normal' | 'low' | null
+  nucleic_fraction: number | null
+  model_pdb_file: string | null
+  qmax_used: number | null
+  guinier: IFeedbackGuinier | null
+  // Why the estimate is missing or low-confidence
+  reason: string | null
+}
+
 interface IFeedbackData {
-  mw_saxs: number
-  mw_model: number
-  mw_err: number
+  // Model and SAXS-estimated molecular weights (kDa) and their relative
+  // difference. null when the comparison could not be made.
+  mw_saxs: number | null
+  mw_model: number | null
+  mw_err: number | null
   best_model?: string // Make the old property optional
   best_model_dat_file: string
-  best_ensemble_pdb_file: string
+  // The model PDB the mass was taken from
+  best_ensemble_pdb_file: string | null
   overall_chi_square: number
+  // Edges of the q-regions assessed; one more entry than the two arrays below
   q_ranges: number[]
   chi_squares_of_regions: number[]
   residuals_of_regions: number[]
   mw_feedback: string
   overall_chi_square_feedback: string
-  highest_chi_square_feedback: string
-  second_highest_chi_square_feedback: string
-  regional_chi_square_feedback: string
+  highest_chi_square_feedback: string | null
+  second_highest_chi_square_feedback: string | null
+  regional_chi_square_feedback: string | null
   timestamp: Date
+  // Version 2 of the report adds the structured fields below. Reports stored
+  // before that have none of them.
+  version?: number
+  findings?: IFeedbackFinding[]
+  regions?: IFeedbackRegion[]
+  models?: IFeedbackModel[]
+  mw?: IFeedbackMw
 }
 
 interface INerscInfo {
@@ -276,6 +343,13 @@ export {
   IBioEmuEntity,
   IBioEmuParameters,
   IFeedbackData,
+  IFeedbackFinding,
+  IFeedbackRegion,
+  IFeedbackModel,
+  IFeedbackGuinier,
+  IFeedbackMw,
+  IFeedbackSeverity,
+  IFeedbackRegionName,
   INerscInfo,
   IResidueRange,
   ISegment,
