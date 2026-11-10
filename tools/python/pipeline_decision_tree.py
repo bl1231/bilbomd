@@ -275,11 +275,17 @@ def assess_mw(profile: FitProfile, model_pdb: Optional[Path]) -> Dict:
         (estimate.mw_kda - mw["model_kda"]) / mw["model_kda"], 4
     )
     mw["qmax_used"] = estimate.qmax_used
-    mw["confidence"] = "low" if mixture or estimate.short_q_range else "normal"
+    low_confidence = mixture or estimate.weak_guinier or estimate.short_q_range
+    mw["confidence"] = "low" if low_confidence else "normal"
     if mixture:
         mw["reason"] = (
             f"The model is {nucleic_fraction:.0%} nucleic acid by mass. The SAXS "
             "estimate assumes a pure protein, so it is only indicative here."
+        )
+    elif estimate.weak_guinier:
+        mw["reason"] = (
+            f"The Guinier region of the data is noisy (R² {estimate.guinier_r2:.2f}), "
+            "so I(0) and Rg, and the estimate built on them, are only indicative."
         )
     elif estimate.short_q_range:
         mw["reason"] = (

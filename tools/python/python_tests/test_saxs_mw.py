@@ -93,6 +93,21 @@ def test_too_few_points_is_reported_not_raised():
     assert estimate.reason
 
 
+def test_a_noisy_guinier_region_is_flagged_but_still_estimated():
+    rng = np.random.default_rng(0)
+    q, intensity, _ = gaussian_profile()
+    sigma = 0.05 * intensity  # 5 % noise puts R² near 0.93
+    estimate = estimate_mw_vc(q, intensity + sigma * rng.standard_normal(q.size), sigma)
+
+    assert estimate.assessed
+    assert 0.90 <= estimate.guinier_r2 < 0.95
+    assert estimate.weak_guinier
+
+
+def test_a_clean_guinier_region_is_not_flagged():
+    assert not estimate_mw_vc(*gaussian_profile()).weak_guinier
+
+
 def test_a_short_q_range_is_flagged():
     estimate = estimate_mw_vc(*gaussian_profile(q_max=0.2))
     assert estimate.assessed

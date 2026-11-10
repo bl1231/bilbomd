@@ -44,6 +44,11 @@ GUINIER_QRG_MIN = 0.30
 GUINIER_QRG_MAX = 1.30
 GUINIER_R2_FLOOR = 0.90
 
+# Below this the Guinier region is noisy and I(0) and Rg, and so the MW, are
+# only indicative. On real jobs, estimates from fits between the floor and
+# this value disagreed with well-fitting models far more often than the rest.
+GUINIER_R2_GOOD = 0.95
+
 
 @dataclass(frozen=True)
 class MwEstimate:
@@ -59,6 +64,7 @@ class MwEstimate:
     vc: Optional[float] = None
     qmax_used: Optional[float] = None
     short_q_range: bool = False
+    weak_guinier: bool = False
     reason: Optional[str] = None
 
     @property
@@ -156,4 +162,5 @@ def estimate_mw_vc(
         vc=vc,
         qmax_used=qmax_used,
         short_q_range=qmax_used < VC_QMAX_SHORT,
+        weak_guinier=r2 < GUINIER_R2_GOOD,
     )

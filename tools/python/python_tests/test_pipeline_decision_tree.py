@@ -286,6 +286,22 @@ def test_protein_dna_complex_gets_a_low_confidence_mw(tmp_path):
     assert codes(report["findings"])[-1] == "mw_low_confidence"
 
 
+def test_noisy_guinier_region_gets_a_low_confidence_mw(tmp_path, monkeypatch):
+    # A mismatch built on a weak Guinier fit is shown but never a warning
+    import saxs_mw
+
+    monkeypatch.setattr(saxs_mw, "GUINIER_R2_GOOD", 1.01)
+    write_fit_file(tmp_path, 1, noise=0.9)
+    write_pdb(tmp_path, carbons=6000)
+
+    report = pdt.build_report(tmp_path)
+
+    assert report["mw"]["confidence"] == "low"
+    assert "Guinier" in report["mw"]["reason"]
+    assert codes(report["findings"])[-1] == "mw_low_confidence"
+    assert report["findings"][-1]["severity"] == "info"
+
+
 def test_low_q_misfit_is_reported(tmp_path):
     write_fit_file(tmp_path, 1, low_q_shift=4.0)
     write_pdb(tmp_path)
