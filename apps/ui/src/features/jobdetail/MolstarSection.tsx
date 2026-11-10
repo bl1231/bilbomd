@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
+import { skipToken } from '@reduxjs/toolkit/query'
 import {
   Box,
   Button,
@@ -13,8 +14,33 @@ import HeaderBox from 'components/HeaderBox'
 import { sourceProps, type JobSource } from './jobSource'
 import type { JobView } from './jobView'
 import { readAutoLoad, writeAutoLoad } from './molstarAutoLoad'
+import { useGetJobAlignmentQuery } from 'slices/jobsApiSlice'
+import { useGetPublicJobAlignmentQuery } from 'slices/publicJobsApiSlice'
+import {
+  alignmentDomainColoring,
+  type DomainColoring
+} from 'features/molstar/domainColoring'
 
 const MolstarViewer = lazy(() => import('features/molstar/Viewer'))
+
+// What "Color by Domain" paints: the job's MD constraints or, for a BioEmu2
+// job (which has none), the rigid domains found in its sampled structures.
+// Undefined hides the button.
+const useDomainColoring = (
+  source: JobSource,
+  view: JobView
+): DomainColoring | undefined => {
+  const bioemu = view.jobType === 'bioemu'
+  const owner = useGetJobAlignmentQuery(
+    bioemu && source.kind === 'owner' ? source.id : skipToken
+  )
+  const anon = useGetPublicJobAlignmentQuery(
+    bioemu && source.kind === 'public' ? source.token : skipToken
+  )
+  const report = source.kind === 'owner' ? owner.data : anon.data
+  const rigidDomains = useMemo(() => alignmentDomainColoring(report), [report])
+  return bioemu ? rigidDomains : view.md_constraints
+}
 
 // Molstar fetches and parses every model PDB (~10 MB for a 5-ensemble job)
 // on the main thread, so it only mounts when asked for. Once loaded it stays
@@ -29,6 +55,7 @@ const MolstarSection = ({
   const [autoLoad, setAutoLoad] = useState(readAutoLoad)
   const [loaded, setLoaded] = useState(autoLoad)
   const { results } = view
+  const domainColoring = useDomainColoring(source, view)
 
   const onAutoLoadChange = (value: boolean) => {
     setAutoLoad(value)
@@ -55,15 +82,7 @@ const MolstarSection = ({
   return (
     <Grid size={{ xs: 12 }}>
       <HeaderBox sx={{ py: '6px' }}>
-        <Typography>
-          Molstar Viewer
-          <Box
-            component="span"
-            sx={{ ml: 1, color: 'yellow', fontSize: '0.75em' }}
-          >
-            experimental
-          </Box>
-        </Typography>
+        <Typography>Molstar Viewer</Typography>
       </HeaderBox>
       {loaded && results ? (
         <>
@@ -72,7 +91,7 @@ const MolstarSection = ({
               id={view.id}
               jobType={view.jobType}
               results={results}
-              constraints={view.md_constraints}
+              constraints={domainColoring}
               {...sourceProps(source)}
             />
           </Suspense>

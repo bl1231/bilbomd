@@ -7,12 +7,9 @@ import MobileControlsShield from './MobileControlsShield'
 import { axiosInstance } from 'app/api/axios'
 import { useSelector } from 'react-redux'
 import { selectCurrentToken } from '../../slices/authSlice'
-import type {
-  JobType,
-  JobResultsDTO,
-  MDConstraintsDTO
-} from '@bilbomd/bilbomd-types'
+import type { JobType, JobResultsDTO } from '@bilbomd/bilbomd-types'
 import { getEnsemblesForJob, mayHaveStartingModel } from './ensembleResults'
+import type { DomainColoring } from './domainColoring'
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui'
 import {
   DefaultPluginUISpec,
@@ -64,7 +61,8 @@ type PDBsToLoad = LoadParams[]
 
 // How structures are colored in the viewer:
 // - 'default': per-structure palette coloring (Molstar structure-index)
-// - 'domain': fixed/rigid/flexible domains from the MD constraints
+// - 'domain': fixed/rigid/flexible domains from the MD constraints, or for
+//   BioEmu2 jobs the rigid domains found in the sampled structures
 // - 'conformation': each ensemble member a distinct color (see ensembleColors)
 type ColorMode = 'default' | 'domain' | 'conformation'
 
@@ -97,7 +95,7 @@ interface MolstarViewerProps {
   results: JobResultsDTO
   isPublic?: boolean
   publicId?: string
-  constraints?: MDConstraintsDTO
+  constraints?: DomainColoring
 }
 
 const MolstarViewer = ({
