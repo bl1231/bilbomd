@@ -17,11 +17,12 @@ def atom_line(
     element="",
     record="ATOM",
     left_justified=False,
+    altloc=" ",
 ):
     """A fixed-column PDB line. Short atom names start in column 14, as CHARMM writes them."""
     name_field = name if len(name) == 4 or left_justified else f" {name}"
     return (
-        f"{record:<6s}{serial:5d} {name_field:<4s} {resname:<4s}{chain}{resseq:4d}    "
+        f"{record:<6s}{serial:5d} {name_field:<4s}{altloc}{resname:<4s}{chain}{resseq:4d}    "
         f"{0.0:8.3f}{0.0:8.3f}{0.0:8.3f}{1.0:6.2f}{0.0:6.2f}      "
         f"{segid:<4s}{element:>2s}"
     )
@@ -36,6 +37,7 @@ def write_pdb(tmp_path, lines, name="model.pdb"):
 def test_line_layout_matches_the_pdb_format():
     line = atom_line(1, "CA", "GLY", "A", 22, segid="PROA", element="C")
     assert line[12:16] == " CA "
+    assert line[16] == " "
     assert line[17:21].strip() == "GLY"
     assert line[21] == "A"
     assert line[72:76] == "PROA"
@@ -146,6 +148,52 @@ def test_only_the_first_model_is_counted(tmp_path):
     composition = molecular_composition(write_pdb(tmp_path, lines))
     assert composition["n_atoms"] == 2
     assert composition["total_da"] == pytest.approx(C + N)
+
+
+def test_alternate_conformers_are_counted_once(tmp_path):
+    # A and B conformers of a side chain at half occupancy are one set of atoms
+    lines = [
+        atom_line(1, "N", "SER", "A", 5),
+        atom_line(2, "CA", "SER", "A", 5),
+        atom_line(3, "CB", "SER", "A", 5, altloc="A"),
+        atom_line(4, "OG", "SER", "A", 5, altloc="A"),
+        atom_line(5, "CB", "SER", "A", 5, altloc="B"),
+        atom_line(6, "OG", "SER", "A", 5, altloc="B"),
+        atom_line(7, "C", "SER", "A", 5),
+    ]
+    composition = molecular_composition(write_pdb(tmp_path, lines))
+    assert composition["n_atoms"] == 5
+    assert composition["total_da"] == pytest.approx(N + 3 * C + OX)
+
+
+def test_alternate_conformers_are_chosen_per_residue(tmp_path):
+    # The first conformer listed for a residue is the one counted, even when
+    # that is B, and a point mutation modelled as two residue types counts one.
+    lines = [
+        atom_line(1, "CB", "SER", "A", 5, altloc="B"),
+        atom_line(2, "CB", "SER", "A", 5, altloc="A"),
+        atom_line(3, "CB", "VAL", "A", 6, altloc="A"),
+        atom_line(4, "CG1", "VAL", "A", 6, altloc="A"),
+        atom_line(5, "CB", "THR", "A", 6, altloc="B"),
+        atom_line(6, "OG1", "THR", "A", 6, altloc="B"),
+    ]
+    composition = molecular_composition(write_pdb(tmp_path, lines))
+    assert composition["n_atoms"] == 3
+    assert composition["total_da"] == pytest.approx(3 * C)
+
+
+def test_alternate_conformers_do_not_merge_segments(tmp_path):
+    # Same chain letter and residue number in two segments, each with
+    # conformers: one conformer is counted for each segment.
+    lines = [
+        atom_line(1, "CA", "GLY", "A", 22, segid="PROA", altloc="A"),
+        atom_line(2, "CA", "GLY", "A", 22, segid="PROA", altloc="B"),
+        atom_line(3, "P", "ADE", "A", 22, segid="DNAA", altloc="B"),
+        atom_line(4, "P", "ADE", "A", 22, segid="DNAA", altloc="C"),
+    ]
+    composition = molecular_composition(write_pdb(tmp_path, lines))
+    assert composition["n_atoms"] == 2
+    assert composition["total_da"] == pytest.approx(C + P)
 
 
 def test_water_is_not_counted(tmp_path):

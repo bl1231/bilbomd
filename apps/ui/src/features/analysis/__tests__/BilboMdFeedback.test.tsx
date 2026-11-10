@@ -88,6 +88,29 @@ describe('BilboMdFeedback', () => {
     expect(rows[1]).not.toHaveTextContent('Yes')
   })
 
+  it('gives each q-region its own bounds when one was skipped', () => {
+    // Mid q had too few points. The shared edges in q_ranges would start
+    // high q where low q ends.
+    const [low, , high] = reportV2.regions!
+    renderWithProviders(
+      <BilboMdFeedback
+        feedback={{
+          ...reportV2,
+          regions: [
+            { ...low!, q_max: 0.09 },
+            { ...high!, q_min: 0.21 }
+          ],
+          q_ranges: [0.0091, 0.09, 0.35]
+        }}
+      />
+    )
+
+    const regions = screen.getByRole('table', { name: 'Fit by q-region' })
+    expect(within(regions).getAllByRole('row')).toHaveLength(3)
+    expect(within(regions).getByText('0.21 – 0.35')).toBeVisible()
+    expect(within(regions).queryByText('0.09 – 0.35')).not.toBeInTheDocument()
+  })
+
   it('adds the residuals plot and χ²free / Vr once the fits load', () => {
     useOwnerFoxs.mockReturnValue({ ...idle, data: foxsData })
     renderWithProviders(

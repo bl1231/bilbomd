@@ -105,7 +105,9 @@ def molecular_composition(pdb_file):
     Reads ATOM/HETATM lines directly rather than building a Biopython
     structure: CHARMM-style files reuse a chain letter and residue numbers for
     different segments (PROA and DNAA are both chain A), and Biopython drops
-    the second segment's residues as duplicates. Water is not counted.
+    the second segment's residues as duplicates. Water is not counted, and a
+    residue modelled in alternate conformations is counted once: the first
+    conformer in the file.
 
     Returns a dict with total_da, protein_da, nucleic_da, other_da, n_atoms and
     unknown_atoms (atoms whose element could not be determined; they add no
@@ -114,6 +116,10 @@ def molecular_composition(pdb_file):
     masses = {"protein": 0.0, "nucleic": 0.0, "other": 0.0}
     n_atoms = 0
     unknown_atoms = 0
+    # The alternate-location id counted for each residue, keyed by segment,
+    # chain and residue number so same-numbered residues in different segments
+    # stay separate.
+    conformer = {}
 
     with open(pdb_file, "r", encoding="utf-8", errors="replace") as handle:
         for line in handle:
@@ -124,6 +130,11 @@ def molecular_composition(pdb_file):
             residue_class = _residue_class(line[17:21].strip().upper())
             if residue_class == "water":
                 continue
+            altloc = line[16]
+            if altloc != " ":
+                residue = (line[72:76], line[21], line[22:27])
+                if conformer.setdefault(residue, altloc) != altloc:
+                    continue
             n_atoms += 1
             element = _atom_element(line, residue_class)
             if element is None:
