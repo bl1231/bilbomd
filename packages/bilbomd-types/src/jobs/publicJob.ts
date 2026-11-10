@@ -91,13 +91,21 @@ export type FitMetricsInfo = {
   vrQmax: number // Å⁻¹; Vr only uses q up to this
 }
 
+// What a FoXS fit is of. 'original' is the starting model (after
+// minimization) and is absent for job types that have none, such as BioEmu2;
+// 'ensemble' is a MultiFoXS best ensemble of one size; 'scoper' is the
+// Scoper-refined model.
+export type FoxsFitKind = 'original' | 'ensemble' | 'scoper'
+
 export type FoxsData = {
   filename: string
+  kind: FoxsFitKind
   chisq: number
   c1: string
   c2: string
   data: FoxsDataPoint[]
-  // Present only on the first (experimental/base) dataset when AutoRg succeeds
+  // Present only on the first dataset (whatever its kind) when AutoRg
+  // succeeds; it describes the experimental profile, not this fit
   guinier?: GuinierFit
   // Fit-quality metrics; present when a Dmax could be estimated
   chi2free?: number

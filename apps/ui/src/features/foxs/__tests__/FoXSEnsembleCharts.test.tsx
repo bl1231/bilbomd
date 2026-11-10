@@ -14,6 +14,7 @@ const makeDataPoint = () => ({
 
 const baseFoxsData: FoxsData = {
   filename: 'sample.dat',
+  kind: 'original',
   chisq: 2.0,
   c1: '1.0',
   c2: '0.0',
@@ -22,6 +23,7 @@ const baseFoxsData: FoxsData = {
 
 const make1State = (): FoxsData => ({
   filename: 'multi_state_model_1_1_1.dat',
+  kind: 'ensemble',
   chisq: 1.5,
   c1: '1.0',
   c2: '0.0',
@@ -30,6 +32,7 @@ const make1State = (): FoxsData => ({
 
 const make2State = (): FoxsData => ({
   filename: 'multi_state_model_2_1_1.dat',
+  kind: 'ensemble',
   chisq: 1.2,
   c1: '0.95',
   c2: '0.05',
@@ -111,9 +114,9 @@ describe('FoXSEnsembleCharts', () => {
   })
 
   // Part of #971: chi² is surfaced in a header line above the residuals plot,
-  // colour-keyed to each ensemble trace. The base dataset (index 0) has its
-  // own Original Model charts, so it gets no chip here.
-  it('does not render a chip for the base dataset', () => {
+  // colour-keyed to each ensemble trace. The original model has its own
+  // Original Model charts, so it gets no chip here.
+  it('does not render a chip for the original model', () => {
     const foxsData: FoxsData[] = [baseFoxsData, make1State(), make2State()]
     render(
       <FoXSEnsembleCharts
@@ -122,6 +125,19 @@ describe('FoXSEnsembleCharts', () => {
       />
     )
     expect(screen.queryByText(/sample\.dat: /)).not.toBeInTheDocument()
+  })
+
+  // BioEmu2 jobs have no original model, so the 1-state ensemble is the
+  // first dataset and must still be drawn
+  it('renders an ensemble that is the first dataset', () => {
+    render(
+      <FoXSEnsembleCharts
+        {...defaultProps}
+        foxsData={[make1State(), make2State()]}
+      />
+    )
+    expect(screen.getByText('Ens. Size 1: 1.50')).toBeInTheDocument()
+    expect(screen.getByText('Ens. Size 2: 1.20')).toBeInTheDocument()
   })
 
   it('toggles ensemble visibility when its chip is clicked', async () => {

@@ -173,6 +173,7 @@ const fitPoints = (residuals: number[]) =>
 export const foxsData: FoxsData[] = [
   {
     filename: 'minimization_output_saxs.dat',
+    kind: 'original',
     chisq: 3.2,
     c1: '1.02',
     c2: '0.5',
@@ -181,6 +182,7 @@ export const foxsData: FoxsData[] = [
   },
   {
     filename: 'multi_state_model_1_1_1.dat',
+    kind: 'ensemble',
     chisq: 1.46,
     c1: '1.02',
     c2: '0.5',
@@ -190,6 +192,7 @@ export const foxsData: FoxsData[] = [
   },
   {
     filename: 'multi_state_model_2_1_1.dat',
+    kind: 'ensemble',
     chisq: 0.98,
     c1: '1.02',
     c2: '0.5',

@@ -143,7 +143,7 @@ const DimensionlessKratkyChart = ({ foxsData, guinier }: Props) => {
                 type="monotone"
                 dataKey={`kratky_model_${index}`}
                 name={
-                  index === 0
+                  item.kind === 'original'
                     ? 'Original Model'
                     : getEnsembleSizeLabel(item.filename)
                 }

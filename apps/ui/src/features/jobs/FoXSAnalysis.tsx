@@ -87,8 +87,14 @@ const prepData = (
   return { data: good, excludedCount: excluded.length, excludedRanges }
 }
 
+// Series keys use each fit's index in foxsData (model_intensity_<n>), so an
+// ensemble keeps the same colour here and in the Kratky chart. Only
+// ensembles get series; the original model has its own charts.
 const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
-  if (!Array.isArray(foxsDataArray) || foxsDataArray.length < 2) {
+  if (
+    !Array.isArray(foxsDataArray) ||
+    !foxsDataArray.some((fit) => fit.kind === 'ensemble')
+  ) {
     logger.warn('FoXSAnalysis: Not enough data to process ensemble comparison.')
     return []
   }
@@ -115,9 +121,10 @@ const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
       error
     } as CombinedFoxsDataDynamic
 
-    foxsDataArray.slice(1).forEach((foxsData, dataIndex) => {
-      const modelIntensityKey = `model_intensity_${dataIndex + 1}` as const
-      const residualKey = `residual_${dataIndex + 1}` as const
+    foxsDataArray.forEach((foxsData, dataIndex) => {
+      if (foxsData.kind !== 'ensemble') return
+      const modelIntensityKey = `model_intensity_${dataIndex}` as const
+      const residualKey = `residual_${dataIndex}` as const
       const currentPoint = foxsData?.data?.[index]
 
       if (currentPoint) {
@@ -198,7 +205,16 @@ const FoXSAnalysis = ({
     [foxsData]
   )
 
-  const hasEnsemble = useMemo(() => foxsData.length > 1, [foxsData])
+  // Job types with no starting model (BioEmu2) have no original fit, only
+  // ensembles
+  const original = useMemo(
+    () => foxsData.find((fit) => fit.kind === 'original'),
+    [foxsData]
+  )
+  const hasEnsemble = useMemo(
+    () => foxsData.some((fit) => fit.kind === 'ensemble'),
+    [foxsData]
+  )
 
   const {
     data: origData,
@@ -206,10 +222,10 @@ const FoXSAnalysis = ({
     excludedRanges: origExcludedRanges
   } = useMemo(
     () =>
-      hasBase
-        ? prepData(foxsData[0]!.data as FoxsDataPoint[])
+      original?.data?.length
+        ? prepData(original.data as FoxsDataPoint[])
         : { data: [], excludedCount: 0, excludedRanges: [] },
-    [hasBase, foxsData]
+    [original]
   )
   const ensembleData = useMemo(
     () => (hasEnsemble ? combineFoxsData(foxsData) : []),
@@ -221,12 +237,21 @@ const FoXSAnalysis = ({
     [origData]
   )
 
+  // Residual axes are scaled to the original model's residuals; without one,
+  // to the largest ensemble residual
   const { minYAxis, maxYAxis } = useMemo(() => {
-    if (!origResiduals.length) return { minYAxis: -1, maxYAxis: 1 }
-    const maxY = Math.max(...origResiduals.map((r) => Math.abs(r.res)))
+    const residuals = origResiduals.length
+      ? origResiduals.map((r) => r.res)
+      : ensembleData.flatMap((point) =>
+          Object.entries(point)
+            .filter(([key]) => key.startsWith('residual_'))
+            .map(([, value]) => value)
+        )
+    if (!residuals.length) return { minYAxis: -1, maxYAxis: 1 }
+    const maxY = Math.max(...residuals.map((res) => Math.abs(res)))
     const safe = Number.isFinite(maxY) && maxY > 0 ? maxY : 1
     return { minYAxis: -safe, maxYAxis: safe }
-  }, [origResiduals])
+  }, [origResiduals, ensembleData])
 
   if (isLoading)
     return (
@@ -266,11 +291,8 @@ const FoXSAnalysis = ({
     )
   }
 
-  // Pull out the other info needed for the FoXS plots
-  // const origPDBFile = foxsData[0].filename
-  const origChiSq = foxsData[0]!.chisq
-  const origC1 = foxsData[0]!.c1
-  const origC2 = foxsData[0]!.c2
+  // The Guinier fit and metrics settings ride on the first dataset whatever
+  // its kind, since they describe the experimental profile
   const guinier = foxsData[0]!.guinier
   const fitMetrics = foxsData[0]!.fitMetrics
 
@@ -280,21 +302,23 @@ const FoXSAnalysis = ({
         container
         spacing={2}
       >
-        <Grid size={{ xs: 12, md: 6 }}>
-          <FoXSChart
-            title={`Original Model`}
-            data={origData}
-            residualsData={origResiduals}
-            chisq={origChiSq}
-            c1={origC1}
-            c2={origC2}
-            minYAxis={minYAxis}
-            maxYAxis={maxYAxis}
-            excludedCount={origExcludedCount}
-            excludedRanges={origExcludedRanges}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        {original ? (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <FoXSChart
+              title={`Original Model`}
+              data={origData}
+              residualsData={origResiduals}
+              chisq={original.chisq}
+              c1={original.c1}
+              c2={original.c2}
+              minYAxis={minYAxis}
+              maxYAxis={maxYAxis}
+              excludedCount={origExcludedCount}
+              excludedRanges={origExcludedRanges}
+            />
+          </Grid>
+        ) : null}
+        <Grid size={{ xs: 12, md: original ? 6 : 12 }}>
           {hasEnsemble && ensembleData.length ? (
             <FoXSEnsembleCharts
               combinedData={ensembleData}

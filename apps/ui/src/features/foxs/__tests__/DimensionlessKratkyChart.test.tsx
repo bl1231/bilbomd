@@ -19,6 +19,7 @@ const guinier: GuinierFit = {
 
 const makeFoxsData = (points: FoxsData['data']): FoxsData => ({
   filename: 'minimization_output_experiment.dat',
+  kind: 'original',
   chisq: 1.5,
   c1: '1.0',
   c2: '0.0',
@@ -55,7 +56,8 @@ describe('buildKratkyData', () => {
       ...makeFoxsData([
         { q: 0.05, exp_intensity: 500, model_intensity: 510, error: 5 }
       ]),
-      filename: 'multi_state_model_2_1_1.dat'
+      filename: 'multi_state_model_2_1_1.dat',
+      kind: 'ensemble' as const
     }
     const [pt] = buildKratkyData([base, ensemble], guinier)
 

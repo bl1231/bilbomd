@@ -22,10 +22,10 @@ interface FitMetricsTableProps {
 const format = (value: number | undefined, digits: number): string =>
   value === undefined || !Number.isFinite(value) ? '—' : value.toFixed(digits)
 
-const rowLabel = (filename: string): string =>
-  /multi_state_model_\d+_/.test(filename)
-    ? getEnsembleSizeLabel(filename)
-    : 'Original model'
+const rowLabel = (fit: FoxsData): string =>
+  fit.kind === 'original'
+    ? 'Original model'
+    : getEnsembleSizeLabel(fit.filename)
 
 const COLUMNS = [
   {
@@ -83,7 +83,7 @@ const FitMetricsTable = ({ foxsData, fitMetrics }: FitMetricsTableProps) => (
         <TableBody>
           {foxsData.map((fit) => (
             <TableRow key={fit.filename}>
-              <TableCell>{rowLabel(fit.filename)}</TableCell>
+              <TableCell>{rowLabel(fit)}</TableCell>
               <TableCell align="right">{format(fit.chisq, 2)}</TableCell>
               <TableCell align="right">{format(fit.chi2free, 2)}</TableCell>
               <TableCell align="right">{format(fit.vr, 3)}</TableCell>
