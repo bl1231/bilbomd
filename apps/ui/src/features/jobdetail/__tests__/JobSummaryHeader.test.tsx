@@ -65,7 +65,7 @@ describe('mdEngineLabel', () => {
     expect(mdEngineLabel(makeView({ jobType: 'scoper' }))).toBe('KGSRNA')
     expect(
       mdEngineLabel(makeView({ jobType: 'bioemu', md_engine: 'OpenMM' }))
-    ).toBe('BioEmu2')
+    ).toBeUndefined()
     expect(mdEngineLabel(makeView({ jobType: 'multi' }))).toBeUndefined()
     expect(mdEngineLabel(makeView({ md_engine: undefined }))).toBe('CHARMM')
     expect(mdEngineLabel(makeView({ md_engine: 'OpenMM' }))).toBe('OpenMM')

@@ -52,12 +52,11 @@ describe('JobCardList', () => {
     expect(link).toHaveAttribute('href', '/dashboard/jobs/abc123')
   })
 
-  it('names the sampler for BioEmu2 and Scoper jobs', () => {
+  it('shows no MD engine for BioEmu2 jobs and KGSRNA for Scoper', () => {
     renderList([
-      makeRow({ id: 'be', jobType: 'bioemu', pipelineName: 'BioEmu2 job' }),
+      makeRow({ id: 'be', jobType: 'bioemu', pipelineName: 'BioEmu2' }),
       makeRow({ id: 'sc', jobType: 'scoper', md_engine: undefined })
     ])
-    expect(screen.getByText(/BioEmu2 job · BioEmu2/)).toBeInTheDocument()
     expect(screen.getByText(/KGSRNA/)).toBeInTheDocument()
     expect(screen.queryByText(/OpenMM/)).not.toBeInTheDocument()
   })
