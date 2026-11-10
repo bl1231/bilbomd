@@ -425,6 +425,10 @@ const runOmmHeat = (
   }
 ) => runOmmStep(MQjob, DBjob, 'heat', 'scripts/openmm/heat.py', opts)
 
+// Printed on stderr by scripts/openmm/md.py (utils/md_errors.py) when a run
+// dies with NaN coordinates. Keep the two in sync.
+const MD_UNSTABLE_MARKER = 'BILBOMD_MD_UNSTABLE:'
+
 const runOmmMD = async (
   MQjob: BullMQJob,
   DBjob: OmmCapableJob,
@@ -484,6 +488,8 @@ const runOmmMD = async (
   // Prepare job tracking
   let cpuFallbackDetected = false
   const failureThreshold = opts?.failureThreshold ?? 0 // Default: no failures allowed
+  // Rg targets whose run blew up with NaN coordinates (md.py prints the marker)
+  const unstableRgs = new Set<number>()
   const results: Array<{
     rg: number
     status: 'success' | 'error'
@@ -520,11 +526,19 @@ const runOmmMD = async (
         if (line.includes('BILBOMD_CPU_FALLBACK:')) {
           cpuFallbackDetected = true
         }
+        if (line.includes(MD_UNSTABLE_MARKER)) {
+          unstableRgs.add(rg)
+        }
         logger.error(`[md rg=${rg} GPU=${assignedGpu}][stderr] ${line}`)
       }
     })
 
     if (result.code !== 0) {
+      if (unstableRgs.has(rg)) {
+        throw new Error(
+          `md.py (rg=${rg}, GPU=${assignedGpu}) became numerically unstable (NaN coordinates)`
+        )
+      }
       throw new Error(
         `md.py (rg=${rg}, GPU=${assignedGpu}) failed (exit ${result.code}${
           result.signal ? `, signal ${result.signal}` : ''
@@ -609,6 +623,24 @@ const runOmmMD = async (
   const failureRate = failures.length / results.length
 
   if (failureRate > failureThreshold) {
+    const unstable = failures
+      .filter((f) => unstableRgs.has(f.rg))
+      .map((f) => f.rg)
+      .sort((a, b) => a - b)
+    if (unstable.length > 0) {
+      const others = failures
+        .filter((f) => !unstableRgs.has(f.rg))
+        .map((f) => `rg=${f.rg}: ${f.error?.message}`)
+        .join('; ')
+      throw new Error(
+        `${stepName} failed: the simulation became unstable (NaN coordinates) at Rg ` +
+          `${unstable.join(', ')} Å (${unstable.length} of ${results.length} runs). ` +
+          `This usually means the requested Rg range (${Math.min(...rgs)}–${Math.max(...rgs)} Å) ` +
+          `is too far from the size of the starting model. ` +
+          `Try an Rg range closer to the experimental Rg.` +
+          (others ? ` Other errors: ${others}` : '')
+      )
+    }
     const errorSummary = failures
       .map((f) => `rg=${f.rg}: ${f.error?.message}`)
       .join('; ')
