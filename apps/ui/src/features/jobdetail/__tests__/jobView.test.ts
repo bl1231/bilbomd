@@ -68,6 +68,34 @@ describe('toJobView', () => {
     expect(JSON.stringify(view.inputs)).not.toContain('alice')
   })
 
+  it.each(['alphafold_entities', 'openfold_entities', 'bioemu_entities'])(
+    'exposes the submitted sequences from %s',
+    (field) => {
+      const dto = {
+        ...ownerDto,
+        mongo: {
+          ...ownerDto.mongo,
+          [field]: [
+            {
+              _id: 'subdoc',
+              name: 'pro-1',
+              sequence: 'MERK',
+              type: 'Protein',
+              copies: 2
+            }
+          ]
+        }
+      } as unknown as BilboMDJobDTO
+      expect(toJobView(dto).inputs.sequence_entities).toEqual([
+        { name: 'pro-1', sequence: 'MERK', type: 'Protein', copies: 2 }
+      ])
+    }
+  )
+
+  it('has no sequences for jobs submitted with a model', () => {
+    expect(toJobView(ownerDto).inputs.sequence_entities).toBeUndefined()
+  })
+
   it('treats a missing or non-numeric progress as 0', () => {
     const dto = {
       ...ownerDto,
@@ -89,6 +117,17 @@ describe('fromPublicJob', () => {
       inputs: { data_file: 'saxs.dat', pdb_file: 'model.pdb' }
     })
     expect(view.resultsReady).toBeUndefined()
+  })
+
+  it('keeps the sequences the public endpoint sends', () => {
+    const entities = [
+      { name: 'dna-1', sequence: 'ACGT', type: 'DNA', copies: 1 }
+    ]
+    const view = fromPublicJob({
+      ...publicJob,
+      inputs: { ...publicJob.inputs, sequence_entities: entities }
+    })
+    expect(view.inputs.sequence_entities).toEqual(entities)
   })
 
   it('tolerates backends that do not send inputs yet', () => {
