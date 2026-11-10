@@ -9,6 +9,7 @@ import type { BilboMDJobDTO, JobAssetsDTO } from '@bilbomd/bilbomd-types'
 import { FileCheckResult } from '../types/jobCheckResults'
 import { revokeObjectUrlOnRemove } from '../utils/objectUrl'
 import { RootState } from '../app/store'
+import type { AlignmentReport } from '../features/jobdetail/rigidDomains'
 
 interface FoxsData {
   [key: string]: unknown
@@ -239,6 +240,13 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
       transformResponse: (blob: Blob) => URL.createObjectURL(blob),
       onCacheEntryAdded: revokeObjectUrlOnRemove
     }),
+    // The rigid-domain alignment report of a BioEmu2 job
+    getJobAlignment: builder.query<AlignmentReport, string>({
+      query: (id) => ({
+        url: `/jobs/${id}/results/alignment.json`,
+        method: 'GET'
+      })
+    }),
     getMDMovies: builder.query<JobAssetsDTO, string>({
       query: (id) => ({ url: `/jobs/${id}/movies`, method: 'GET' }),
       providesTags: (_, __, id) => [{ type: 'MovieAsset', id }]
@@ -268,6 +276,7 @@ export const {
   useGetFileByIdAndNameQuery,
   useLazyGetFileByIdAndNameQuery,
   useGetJobImageQuery,
+  useGetJobAlignmentQuery,
   useGetMDMoviesQuery
 } = jobsApiSlice
 

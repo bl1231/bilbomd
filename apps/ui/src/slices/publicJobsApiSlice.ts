@@ -7,6 +7,7 @@ import type {
 import type { IFeedbackData } from '@bilbomd/mongodb-schema/frontend'
 import type { FoxsData } from 'types/foxs'
 import { revokeObjectUrlOnRemove } from 'utils/objectUrl'
+import type { AlignmentReport } from 'features/jobdetail/rigidDomains'
 
 type PublicResultFileParams = { publicId: string; filename: string }
 type EnsemblePdbFilesResponse = { ensemblePdbFiles: string[] }
@@ -67,6 +68,10 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
       transformResponse: (blob: Blob) => URL.createObjectURL(blob),
       onCacheEntryAdded: revokeObjectUrlOnRemove
     }),
+    // The rigid-domain alignment report of a BioEmu2 job
+    getPublicJobAlignment: builder.query<AlignmentReport, string>({
+      query: (publicId) => `/public/jobs/${publicId}/results/alignment.json`
+    }),
     getPublicMDMovies: builder.query<JobAssetsDTO, string>({
       query: (publicId) => `/public/jobs/${publicId}/movies`,
       providesTags: (_, __, publicId) => [
@@ -86,5 +91,6 @@ export const {
   useGetPublicResultFileJsonQuery,
   useGetPublicResultFileTextQuery,
   useGetPublicJobImageQuery,
+  useGetPublicJobAlignmentQuery,
   useGetPublicMDMoviesQuery
 } = publicJobsApiSlice

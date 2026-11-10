@@ -35,6 +35,7 @@ const assembleEnsemblePdbFiles = async ({
   logger.info(`Found ${numEnsembles} ensemble files in ${multiFoxsDir}`)
 
   const polished = await readPolishedMap(jobDir)
+  const aligned = await readMemberMap(jobDir, ALIGNED_MAP, 'superposed')
 
   const ensembles: IEnsemble[] = []
 
@@ -49,12 +50,13 @@ const assembleEnsemblePdbFiles = async ({
     const ensemble = parseEnsembleFile(ensembleFileContent, ensembleSize)
     ensembles.push(ensemble)
 
-    // Save PDB files for the top-ranked model, using polished copies where
-    // the polish step made them
+    // Save PDB files for the top-ranked model, using the superposed copies
+    // (made from the polished ones) or the polished copies where the polish
+    // step made them
     const topModelPdbFiles = ensemble.models[0]?.states.map(
       (state: IEnsembleMember) => {
         const resolvedPath = resolveEnsemblePdbPath(state.pdb, jobDir)
-        return polished[resolvedPath] ?? resolvedPath
+        return aligned[resolvedPath] ?? polished[resolvedPath] ?? resolvedPath
       }
     )
     if (topModelPdbFiles && topModelPdbFiles.length > 0) {
@@ -127,19 +129,27 @@ const assembleEnsemblePdbFiles = async ({
 // { "<member pdb path>": "<polished pdb path>" }
 const POLISHED_MAP = path.join('polish', 'polished.json')
 
-const readPolishedMap = async (
-  jobDir: string
+// Where the polish step records the copies superposed on a shared rigid
+// domain (align-functions.ts): { "<member pdb path>": "<superposed pdb path>" }
+const ALIGNED_MAP = path.join('align', 'aligned.json')
+
+// A { member: replacement copy } map written by the polish step, keeping only
+// the copies that exist
+const readMemberMap = async (
+  jobDir: string,
+  mapFile: string,
+  what: string
 ): Promise<Record<string, string>> => {
   let map: Record<string, string>
   try {
-    map = (await fs.readJson(path.join(jobDir, POLISHED_MAP))) as Record<
+    map = (await fs.readJson(path.join(jobDir, mapFile))) as Record<
       string,
       string
     >
   } catch (error) {
-    // Only BioEmu2 jobs are polished; for every other job there is no map
+    // Only BioEmu2 jobs have these maps; for every other job there is none
     if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
-      logger.warn(`Ignoring unreadable ${POLISHED_MAP}: ${error}`)
+      logger.warn(`Ignoring unreadable ${mapFile}: ${error}`)
     }
     return {}
   }
@@ -148,10 +158,13 @@ const readPolishedMap = async (
     if (await fs.pathExists(copy)) usable[member] = copy
   }
   logger.info(
-    `Using ${Object.keys(usable).length} polished ensemble members from ${POLISHED_MAP}`
+    `Using ${Object.keys(usable).length} ${what} ensemble members from ${mapFile}`
   )
   return usable
 }
+
+const readPolishedMap = (jobDir: string): Promise<Record<string, string>> =>
+  readMemberMap(jobDir, POLISHED_MAP, 'polished')
 
 // A MultiFoXS member path (state.pdb, the profile path without .dat) as a
 // path in the job directory. MultiFoXS writes them relative to multifoxs/, or
@@ -320,7 +333,9 @@ export {
   assembleEnsemblePdbFiles,
   resolveEnsemblePdbPath,
   readPolishedMap,
+  readMemberMap,
   POLISHED_MAP,
+  ALIGNED_MAP,
   parseStateLine,
   isStateLine,
   parseEnsembleFile,

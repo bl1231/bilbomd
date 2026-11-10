@@ -24,6 +24,11 @@ vi.mock('../PaeTab', () => ({
     <div data-testid="pae">{JSON.stringify(props.source)}</div>
   )
 }))
+vi.mock('../RigidDomainsTab', () => ({
+  default: (props: { source: unknown }) => (
+    <div data-testid="domains">{JSON.stringify(props.source)}</div>
+  )
+}))
 vi.mock('../useJobView', () => ({
   useJobMovies: (...args: unknown[]) => useJobMovies(...args)
 }))
@@ -35,7 +40,7 @@ describe('analysisTabs', () => {
     for (const type of ['auto', 'alphafold', 'openfold'] as const) {
       expect(analysisTabs(type)).toEqual(['foxs', 'movies', 'feedback', 'pae'])
     }
-    expect(analysisTabs('bioemu')).toEqual(['foxs', 'feedback'])
+    expect(analysisTabs('bioemu')).toEqual(['foxs', 'feedback', 'domains'])
     expect(analysisTabs('sans')).toEqual(['movies'])
     expect(analysisTabs('scoper')).toEqual([])
     expect(analysisTabs('multi')).toEqual([])
@@ -150,5 +155,18 @@ describe('JobAnalysisTabs', () => {
       />
     )
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+  })
+
+  it('shows the Rigid Domains tab for a BioEmu2 job', () => {
+    renderWithProviders(
+      <JobAnalysisTabs
+        source={{ kind: 'owner', id: 'job-1' }}
+        view={makeView({ jobType: 'bioemu' })}
+        eventsConnected
+      />
+    )
+    expect(screen.queryByRole('tab', { name: 'MD Movies' })).toBeNull()
+    fireEvent.click(screen.getByRole('tab', { name: 'Rigid Domains' }))
+    expect(screen.getByTestId('domains')).toHaveTextContent('job-1')
   })
 })

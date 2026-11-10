@@ -200,14 +200,16 @@ const prepareResults = async (
       })
     }
 
-    // BioEmu2: the system it sampled, the sampling summary and the polishing
-    // report. Its OpenMM engine only polished, so the MD files below don't exist.
+    // BioEmu2: the system it sampled, the sampling summary, the polishing
+    // report and the rigid-domain alignment report. Its OpenMM engine only
+    // polished, so the MD files below don't exist.
     if (DBjob.__t === 'BilboMdBioEmu') {
       for (const [file, label] of [
         ['bioemu/system.yaml', 'bioemu_system.yaml'],
         ['bioemu/params.json', 'bioemu_params.json'],
         ['bioemu/summary.json', 'bioemu_summary.json'],
-        ['polish/results.json', 'polish_results.json']
+        ['polish/results.json', 'polish_results.json'],
+        ['align/alignment.json', 'alignment.json']
       ]) {
         await copyFiles({
           source: path.join(jobDir, file),

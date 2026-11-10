@@ -107,6 +107,33 @@ describe('assembleEnsemblePdbFiles with polished members', () => {
     expect(job.results?.bioemu?.total_num_ensembles).toBe(2)
   })
 
+  it('prefers the superposed copy over the polished one', async () => {
+    const raw30 = path.join(jobDir, 'foxs', 'rg30', 'bioemu_rg30_0001.pdb')
+    const raw38 = path.join(jobDir, 'foxs', 'rg38', 'bioemu_rg38_0012.pdb')
+    const polished = path.join(jobDir, 'polish', 'rg30_bioemu_rg30_0001.pdb')
+    const aligned30 = path.join(jobDir, 'align', 'rg30_bioemu_rg30_0001.pdb')
+    await fs.outputFile(polished, 'POLISHED30\nEND\n')
+    await fs.outputFile(aligned30, 'ALIGNED30\nEND\n')
+    await fs.outputJson(path.join(jobDir, 'polish', 'polished.json'), {
+      [raw30]: polished
+    })
+    // rg38's superposed copy is listed but missing: fall back to the original
+    await fs.outputJson(path.join(jobDir, 'align', 'aligned.json'), {
+      [raw30]: aligned30,
+      [raw38]: path.join(jobDir, 'align', 'missing.pdb')
+    })
+
+    await assembleEnsemblePdbFiles({ DBjob: makeJob() })
+
+    const out = await fs.readFile(
+      path.join(jobDir, 'results', 'ensemble_size_2_model.pdb'),
+      'utf8'
+    )
+    expect(out).toContain('ALIGNED30')
+    expect(out).not.toContain('POLISHED30')
+    expect(out).toContain('RAW38')
+  })
+
   it('uses the originals when nothing was polished', async () => {
     await assembleEnsemblePdbFiles({ DBjob: makeJob() })
     const out = await fs.readFile(

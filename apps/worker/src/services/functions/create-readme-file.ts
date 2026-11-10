@@ -185,6 +185,7 @@ const createReadmeFile = async (
 - BioEmu2 sampling settings (Rg targets, structures per target): bioemu_params.json
 - BioEmu2 sampling summary (structures per Rg target, physicality check): bioemu_summary.json
 - Polishing report for the ensemble members: polish_results.json
+- Rigid domains found in the sampled structures, and how the ensemble members were superposed: alignment.json
 
 The structures were sampled with BioEmu2 (Microsoft Research), steered to the
 Rg targets derived from your SAXS data, instead of molecular dynamics. The
@@ -192,6 +193,12 @@ members of the ensembles below were then polished: hydrogens and missing atoms
 added, then a short OpenMM energy minimization with weak restraints on the heavy
 atoms (amber19 or CHARMM36, GBn2 implicit solvent). The reported chi² values
 are from the structures before polishing, which changes them very little.
+
+BioEmu2 writes each structure in an arbitrary orientation. To make the ensembles
+readable, the members were superposed on the largest rigid domain found in the
+sampled structures: the set of residues whose distances to each other vary by
+less than 1.5 Å across all samples. Where no rigid domain is found, all residues
+are used. This rigid-body move does not change the fit to your SAXS data.
 `
       )
       break

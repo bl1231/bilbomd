@@ -4,21 +4,28 @@ import path from 'node:path'
 import fs from 'fs-extra'
 import type { IJob } from '@bilbomd/mongodb-schema'
 
-const { cfg, runProcess, updateStepStatus } = vi.hoisted(() => ({
-  cfg: {
-    uploadDir: '',
-    openmmPythonBin: '/opt/envs/openmm/bin/python',
-    processTimeouts: { openmmSetupMs: 1000 }
-  },
-  runProcess: vi.fn(),
-  updateStepStatus: vi.fn()
-}))
+const { cfg, runProcess, updateStepStatus, alignEnsembleMembers } = vi.hoisted(
+  () => ({
+    alignEnsembleMembers: vi.fn(async () => 'Members superposed.'),
+    cfg: {
+      uploadDir: '',
+      openmmPythonBin: '/opt/envs/openmm/bin/python',
+      processTimeouts: { openmmSetupMs: 1000 }
+    },
+    runProcess: vi.fn(),
+    updateStepStatus: vi.fn()
+  })
+)
 
 vi.mock('../../../helpers/loggers.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 }))
 vi.mock('../mongo-utils.js', () => ({ updateStepStatus }))
 vi.mock('../../../config/config.js', () => ({ config: cfg }))
+vi.mock('../align-functions.js', () => ({
+  alignEnsembleMembers,
+  ALIGN_DIR: 'align'
+}))
 vi.mock('../../../helpers/runProcess.js', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../../../helpers/runProcess.js')>()
@@ -152,9 +159,30 @@ describe('runPolish', () => {
       'polish',
       expect.objectContaining({
         status: 'Success',
-        message: expect.stringContaining('Polished 1 of 2')
+        message: expect.stringMatching(
+          /Polished 1 of 2.* Members superposed\.$/
+        )
       })
     )
+    // the members are superposed from their polished copies where they exist
+    expect(alignEnsembleMembers).toHaveBeenCalledWith(
+      jobDir,
+      [member('rg30', '0001'), member('rg38', '0012')],
+      {
+        [member('rg30', '0001')]: path.join(
+          jobDir,
+          'polish',
+          'rg30_bioemu_rg30_0001.pdb'
+        )
+      }
+    )
+  })
+
+  it('removes superposed copies left by an earlier run', async () => {
+    await fs.outputFile(path.join(jobDir, 'align', 'aligned.json'), '{}')
+    runProcess.mockRejectedValue(new Error('boom'))
+    await runPolish(job)
+    expect(await fs.pathExists(path.join(jobDir, 'align'))).toBe(false)
   })
 
   it('does not fail the job when polishing fails', async () => {
@@ -169,6 +197,12 @@ describe('runPolish', () => {
         status: 'Error',
         message: expect.stringContaining('ensembles are unpolished')
       })
+    )
+    // unpolished members are still superposed
+    expect(alignEnsembleMembers).toHaveBeenCalledWith(
+      jobDir,
+      [member('rg30', '0001'), member('rg38', '0012')],
+      {}
     )
   })
 
@@ -192,6 +226,7 @@ describe('runPolish', () => {
     await runPolish(job)
 
     expect(runProcess).not.toHaveBeenCalled()
+    expect(alignEnsembleMembers).not.toHaveBeenCalled()
     expect(updateStepStatus).toHaveBeenLastCalledWith(
       job,
       'polish',
