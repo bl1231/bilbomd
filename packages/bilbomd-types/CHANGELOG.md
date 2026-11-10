@@ -1,5 +1,22 @@
 # @bilbomd/bilbomd-types
 
+## 1.15.0
+
+### Minor Changes
+
+- 02e4873: Fix and restructure the SAXS fit assessment behind the Feedback & Validation tab.
+
+  - Model molecular weight no longer drops segments that share a chain letter and residue numbers (protein–DNA complexes were under-counted).
+  - The SAXS molecular weight now uses the published Rambo–Tainer volume-of-correlation method, and the comparison is advisory: a mismatch no longer replaces the fit assessment.
+  - The assessment no longer fails when a model PDB is empty or missing, when the data end below q = 0.2 Å⁻¹, or with ten or more ensemble sizes.
+  - `feedback.json` and `Job.feedback` gain `version`, `findings`, `regions`, `models` and `mw`; the existing fields remain, and the molecular-weight fields can now be null.
+
+- 9c8ab24: Compare the model's mass with the SAXS data before a job is submitted.
+
+  - New `POST /mw-check` endpoint: takes the SAXS file and a PDB, a PSF or sequences, and returns the same molecular-weight comparison as a finished job's report.
+  - The Classic (PDB and CRD/PSF), Auto, AlphaFold, OpenFold3, BioEmu2 and Scoper forms show the result above the submit button as soon as both the data and the model are present. It is advisory and never blocks submission.
+  - Model mass is now counted from residues rather than listed atoms, so a structure without hydrogens is not read about 7% light. The finished-job report uses the same count.
+
 ## 1.14.1
 
 ### Patch Changes

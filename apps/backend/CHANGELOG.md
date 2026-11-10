@@ -1,5 +1,23 @@
 # @bilbomd/backend
 
+## 2.21.0
+
+### Minor Changes
+
+- 9c8ab24: Compare the model's mass with the SAXS data before a job is submitted.
+
+  - New `POST /mw-check` endpoint: takes the SAXS file and a PDB, a PSF or sequences, and returns the same molecular-weight comparison as a finished job's report.
+  - The Classic (PDB and CRD/PSF), Auto, AlphaFold, OpenFold3, BioEmu2 and Scoper forms show the result above the submit button as soon as both the data and the model are present. It is advisory and never blocks submission.
+  - Model mass is now counted from residues rather than listed atoms, so a structure without hydrogens is not read about 7% light. The finished-job report uses the same count.
+
+### Patch Changes
+
+- Updated dependencies [02e4873]
+- Updated dependencies [9c8ab24]
+  - @bilbomd/mongodb-schema@2.14.0
+  - @bilbomd/bilbomd-types@1.15.0
+  - @bilbomd/md-utils@1.3.2
+
 ## 2.20.1
 
 ### Patch Changes

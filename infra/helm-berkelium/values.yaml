@@ -23,14 +23,14 @@ gateway:
 images:
   ui:
     repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-ui
-    tag: 2.40.0
+    tag: 2.41.0
   backend:
     repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-backend
-    tag: 2.20.1
+    tag: 2.21.0
   # The dispatcher and the per-job pods. Needs a release with dist/run-job.js.
   worker:
     repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-worker
-    tag: 2.26.2
+    tag: 2.26.3
   mongo:
     repository: harbor.bk.lbl.gov/docker.io/library/mongo
     tag: 8.3.13

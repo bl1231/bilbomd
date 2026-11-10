@@ -1,5 +1,37 @@
 # @bilbomd/ui
 
+## 2.41.0
+
+### Minor Changes
+
+- a3e1542: Redesign the Feedback & Validation tab and surface model/data mismatches on the job page.
+
+  - The tab leads with a verdict, three headline tiles (fit quality, molecular weight, data), a residuals plot of the assessed model, the findings, and tables by q-region and ensemble size.
+  - A banner above the analysis tabs appears when the model's mass and the SAXS estimate differ, with a button that opens the tab.
+  - The tab label carries a warning icon when the assessment found a warning or a problem.
+  - Jobs assessed before the molecular-weight fix are shown without their molecular-weight comparison.
+
+- 9c8ab24: Compare the model's mass with the SAXS data before a job is submitted.
+
+  - New `POST /mw-check` endpoint: takes the SAXS file and a PDB, a PSF or sequences, and returns the same molecular-weight comparison as a finished job's report.
+  - The Classic (PDB and CRD/PSF), Auto, AlphaFold, OpenFold3, BioEmu2 and Scoper forms show the result above the submit button as soon as both the data and the model are present. It is advisory and never blocks submission.
+  - Model mass is now counted from residues rather than listed atoms, so a structure without hydrogens is not read about 7% light. The finished-job report uses the same count.
+
+### Patch Changes
+
+- 02e4873: Fix and restructure the SAXS fit assessment behind the Feedback & Validation tab.
+
+  - Model molecular weight no longer drops segments that share a chain letter and residue numbers (protein–DNA complexes were under-counted).
+  - The SAXS molecular weight now uses the published Rambo–Tainer volume-of-correlation method, and the comparison is advisory: a mismatch no longer replaces the fit assessment.
+  - The assessment no longer fails when a model PDB is empty or missing, when the data end below q = 0.2 Å⁻¹, or with ten or more ensemble sizes.
+  - `feedback.json` and `Job.feedback` gain `version`, `findings`, `regions`, `models` and `mw`; the existing fields remain, and the molecular-weight fields can now be null.
+
+- 8424028: Rename the job page's "Feedback" analysis tab to "Feedback & Validation".
+- Updated dependencies [02e4873]
+- Updated dependencies [9c8ab24]
+  - @bilbomd/mongodb-schema@2.14.0
+  - @bilbomd/bilbomd-types@1.15.0
+
 ## 2.40.0
 
 ### Minor Changes
