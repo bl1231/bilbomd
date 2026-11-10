@@ -10,11 +10,14 @@ import {
   resolveEnsemblePdbPath,
   POLISHED_MAP
 } from './assemble-ensemble-pdb-file.js'
+import { alignEnsembleMembers, ALIGN_DIR } from './align-functions.js'
 
 // Restrained OpenMM minimization of the final ensemble members (bilbomd#1200):
 // BioEmu2 samples have the right shape but small clashes and stretched bonds.
 // scripts/openmm/polish.py does the work; ensemble PDBs in the results then
 // use the polished copies (see readPolishedMap in assemble-ensemble-pdb-file).
+// The members are then superposed on the rigid domain they share
+// (align-functions.ts), polished or not.
 
 const POLISH_DIR = 'polish'
 const POLISH_SCRIPT = 'scripts/openmm/polish.py'
@@ -90,8 +93,15 @@ const runPolish = async (DBjob: IJob): Promise<void> => {
     message: 'Polishing the ensemble members has started.'
   })
 
+  // A rerun must not pick up the previous run's superposed copies
+  await fs.remove(path.join(jobDir, ALIGN_DIR))
+
+  let members: string[] = []
+  let polished: Record<string, string> = {}
+  let status: 'Success' | 'Error'
+  let message: string
   try {
-    const members = await findEnsembleMembers(jobDir)
+    members = await findEnsembleMembers(jobDir)
     if (members.length === 0) {
       throw new Error('no ensemble members found in multifoxs/')
     }
@@ -120,20 +130,22 @@ const runPolish = async (DBjob: IJob): Promise<void> => {
     const map: Record<string, string> = {}
     for (const r of results) if (r.ok) map[r.in] = r.out
     await fs.writeJson(path.join(jobDir, POLISHED_MAP), map, { spaces: 2 })
-
-    await updateStepStatus(DBjob, 'polish', {
-      status: Object.keys(map).length ? 'Success' : 'Error',
-      message: describeResults(results)
-    })
+    polished = map
+    status = Object.keys(map).length ? 'Success' : 'Error'
+    message = describeResults(results)
   } catch (error) {
     if (error instanceof ProcessError && error.result.aborted) throw error
-    const message = error instanceof Error ? error.message : String(error)
-    logger.error(`Polishing failed for job ${DBjob.uuid}: ${message}`)
-    await updateStepStatus(DBjob, 'polish', {
-      status: 'Error',
-      message: `Polishing failed, so the ensembles are unpolished: ${message}`
-    })
+    const reason = error instanceof Error ? error.message : String(error)
+    logger.error(`Polishing failed for job ${DBjob.uuid}: ${reason}`)
+    status = 'Error'
+    message = `Polishing failed, so the ensembles are unpolished: ${reason}`
   }
+
+  // Superpose the members whether or not they could be polished
+  if (members.length > 0) {
+    message += ` ${await alignEnsembleMembers(jobDir, members, polished)}`
+  }
+  await updateStepStatus(DBjob, 'polish', { status, message })
 }
 
 export {

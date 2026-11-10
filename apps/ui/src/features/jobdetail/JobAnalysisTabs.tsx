@@ -15,6 +15,7 @@ import type { JobView } from './jobView'
 import { analysisTabs, type AnalysisTab } from './jobPageModel'
 import { useJobMovies } from './useJobView'
 import PaeTab from './PaeTab'
+import RigidDomainsTab from './RigidDomainsTab'
 
 const FoXSAnalysis = lazy(() => import('features/jobs/FoXSAnalysis'))
 
@@ -22,7 +23,8 @@ const TAB_LABELS: Record<AnalysisTab, string> = {
   foxs: 'FoXS Analysis',
   movies: 'MD Movies',
   feedback: 'Feedback',
-  pae: 'PAE'
+  pae: 'PAE',
+  domains: 'Rigid Domains'
 }
 
 const MoviesTab = ({
@@ -111,6 +113,7 @@ const JobAnalysisTabs = ({
             <BilboMdFeedback publicId={source.token} />
           ))}
         {tab === 'pae' && <PaeTab source={source} />}
+        {tab === 'domains' && <RigidDomainsTab source={source} />}
       </Box>
     </>
   )

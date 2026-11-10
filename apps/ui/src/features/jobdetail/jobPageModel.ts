@@ -2,7 +2,7 @@ import { alpha, type Theme } from '@mui/material/styles'
 import type { JobType } from '@bilbomd/bilbomd-types'
 import type { JobView } from './jobView'
 
-export type AnalysisTab = 'foxs' | 'movies' | 'feedback' | 'pae'
+export type AnalysisTab = 'foxs' | 'movies' | 'feedback' | 'pae' | 'domains'
 
 const FOXS_JOB_TYPES: JobType[] = [
   'pdb',
@@ -23,8 +23,9 @@ export const analysisTabs = (jobType: JobType): AnalysisTab[] => {
     return ['foxs', 'movies', 'feedback', 'pae']
   }
   if (FOXS_JOB_TYPES.includes(jobType)) return ['foxs', 'movies', 'feedback']
-  // BioEmu2 samples are independent structures, not a trajectory: no movies
-  if (jobType === 'bioemu') return ['foxs', 'feedback']
+  // BioEmu2 samples are independent structures, not a trajectory: no movies.
+  // Its members are superposed on a rigid domain found from the samples.
+  if (jobType === 'bioemu') return ['foxs', 'feedback', 'domains']
   if (jobType === 'sans') return ['movies']
   return []
 }
