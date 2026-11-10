@@ -21,7 +21,7 @@ import { MolScriptBuilder as MS } from 'molstar/lib/mol-script/language/builder'
 import { StateObjectRef } from 'molstar/lib/mol-state'
 import { Color } from 'molstar/lib/mol-util/color'
 import { Material } from 'molstar/lib/mol-util/material'
-import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
+import type { DomainColoring } from './domainColoring'
 
 function shinyStyle(plugin: PluginContext) {
   return PluginCommands.Canvas3D.SetSettings(plugin, {
@@ -670,9 +670,12 @@ export const createUniformColorPreset = (colorValue: number, alpha = 1) =>
 
 export const ShowButtons = PluginConfig.item('showButtons', true)
 
-// Colors matching MDConstraintsRenderer
+// Colors matching MDConstraintsRenderer; a body may bring its own instead
+// (see domainColoring.ts)
 const FIXED_COLOR = Color(0x2f54eb)
 const RIGID_COLOR = Color(0xfa8c16)
+const bodyColor = (color: number | undefined, fallback: Color): Color =>
+  color === undefined ? fallback : Color(color)
 
 const buildSegmentExpression = (chainId: string, start: number, stop: number) =>
   MS.struct.generator.atomGroups({
@@ -683,7 +686,7 @@ const buildSegmentExpression = (chainId: string, start: number, stop: number) =>
     ])
   })
 
-export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
+export const createDomainColorPreset = (constraints: DomainColoring) =>
   StructureRepresentationPresetProvider({
     id: 'preset-domain-color',
     display: { name: 'Domain Color' },
@@ -807,7 +810,7 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
               type: 'cartoon',
               typeParams: { ...typeParams, material: CustomMaterial },
               color: 'uniform',
-              colorParams: { value: FIXED_COLOR }
+              colorParams: { value: bodyColor(body.color, FIXED_COLOR) }
             },
             { tag }
           )
@@ -825,7 +828,7 @@ export const createDomainColorPreset = (constraints: MDConstraintsDTO) =>
               type: 'cartoon',
               typeParams: { ...typeParams, material: CustomMaterial },
               color: 'uniform',
-              colorParams: { value: RIGID_COLOR }
+              colorParams: { value: bodyColor(body.color, RIGID_COLOR) }
             },
             { tag }
           )

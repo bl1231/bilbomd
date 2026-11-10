@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { server } from 'test/server'
 import { renderWithProviders } from 'test/rendersWithProviders'
 import MolstarSection from '../MolstarSection'
 import { AUTO_LOAD_KEY } from '../molstarAutoLoad'
@@ -16,6 +18,7 @@ vi.mock('features/molstar/Viewer', () => ({
   }
 }))
 
+const API = 'http://localhost:3003/api/v1'
 const owner: JobSource = { kind: 'owner', id: 'job-1' }
 const anon: JobSource = { kind: 'public', token: 'tok' }
 const view = makeView({
@@ -45,6 +48,122 @@ describe('MolstarSection', () => {
     expect(
       screen.queryByRole('button', { name: /load 3d viewer/i })
     ).not.toBeInTheDocument()
+  })
+
+  it('is no longer labelled experimental', () => {
+    renderWithProviders(
+      <MolstarSection
+        source={owner}
+        view={view}
+      />
+    )
+    expect(screen.getByText('Molstar Viewer')).toBeInTheDocument()
+    expect(screen.queryByText(/experimental/i)).not.toBeInTheDocument()
+  })
+
+  it('colors an MD job by its constraints, without asking for an alignment', async () => {
+    const requested: string[] = []
+    server.use(
+      http.get(`${API}/jobs/:id/results/alignment.json`, ({ request }) => {
+        requested.push(request.url)
+        return HttpResponse.json({})
+      })
+    )
+    const constraints = {
+      fixed_bodies: [
+        {
+          name: 'FB1',
+          segments: [{ chain_id: 'A', residues: { start: 1, stop: 50 } }]
+        }
+      ]
+    }
+    renderWithProviders(
+      <MolstarSection
+        source={owner}
+        view={makeView({ ...view, md_constraints: constraints })}
+      />
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: /load 3d viewer/i })
+    )
+    await screen.findByTestId('molstar')
+    expect(viewerProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ constraints })
+    )
+    expect(requested).toEqual([])
+  })
+
+  it('colors a BioEmu2 job by the rigid domains of its alignment', async () => {
+    server.use(
+      http.get(`${API}/jobs/:id/results/alignment.json`, () =>
+        HttpResponse.json({
+          method: 'rigid-domain',
+          domains: [
+            { id: 1, size: 12, residues: ['A:2-13'] },
+            { id: 2, size: 9, residues: ['B:69-77'] }
+          ]
+        })
+      )
+    )
+    renderWithProviders(
+      <MolstarSection
+        source={owner}
+        view={makeView({
+          jobType: 'bioemu',
+          results: { bioemu: { total_num_ensembles: 3 } } as never
+        })}
+      />
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: /load 3d viewer/i })
+    )
+    await screen.findByTestId('molstar')
+    await vi.waitFor(() =>
+      expect(viewerProps).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          constraints: {
+            fixed_bodies: [
+              {
+                name: 'domain-1',
+                color: 0x2a78d6,
+                segments: [{ chain_id: 'A', residues: { start: 2, stop: 13 } }]
+              }
+            ],
+            rigid_bodies: [
+              {
+                name: 'domain-2',
+                color: 0xeb6834,
+                segments: [{ chain_id: 'B', residues: { start: 69, stop: 77 } }]
+              }
+            ]
+          }
+        })
+      )
+    )
+  })
+
+  it('offers no domain coloring when a BioEmu2 job has no rigid domain', async () => {
+    server.use(
+      http.get(`${API}/jobs/:id/results/alignment.json`, () =>
+        HttpResponse.json({ method: 'all-residues', domains: [] })
+      )
+    )
+    renderWithProviders(
+      <MolstarSection
+        source={owner}
+        view={makeView({
+          jobType: 'bioemu',
+          results: { bioemu: { total_num_ensembles: 3 } } as never
+        })}
+      />
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: /load 3d viewer/i })
+    )
+    await screen.findByTestId('molstar')
+    expect(viewerProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ constraints: undefined })
+    )
   })
 
   it('passes the public token through to the viewer', async () => {
