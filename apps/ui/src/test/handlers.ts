@@ -251,10 +251,48 @@ export const handlers = [
     'http://localhost:3003/api/v1/public/jobs/:id/results/feedback',
     () => {
       return HttpResponse.json({
-        publicId: 'pub-123',
-        rating: 5,
-        comments: 'Great results!',
-        timestamp: '2023-12-01T12:00:00Z'
+        version: 2,
+        findings: [
+          {
+            code: 'fit_excellent',
+            severity: 'good',
+            title: 'Excellent fit (χ² 0.98)',
+            detail: 'The model fits the data to within the experimental errors.'
+          }
+        ],
+        models: [
+          {
+            states: 1,
+            file: 'multi_state_model_1_1_1.dat',
+            chi_square: 0.98,
+            selected: true
+          }
+        ],
+        regions: [
+          {
+            name: 'low',
+            q_min: 0.01,
+            q_max: 0.1,
+            n_points: 90,
+            chi_square: 0.98,
+            mean_residual: 0.01
+          }
+        ],
+        mw_saxs: null,
+        mw_model: null,
+        mw_err: null,
+        best_model_dat_file: 'multi_state_model_1_1_1.dat',
+        best_ensemble_pdb_file: null,
+        overall_chi_square: 0.98,
+        q_ranges: [0.01, 0.1],
+        chi_squares_of_regions: [0.98],
+        residuals_of_regions: [0.01],
+        mw_feedback: 'Molecular weight not assessed.',
+        overall_chi_square_feedback: 'Excellent fit (χ² 0.98).',
+        highest_chi_square_feedback: null,
+        second_highest_chi_square_feedback: null,
+        regional_chi_square_feedback: null,
+        timestamp: '2026-11-10T12:00:00Z'
       })
     }
   ),

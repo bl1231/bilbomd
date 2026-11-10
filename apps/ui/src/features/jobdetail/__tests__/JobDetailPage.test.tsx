@@ -6,6 +6,7 @@ import JobDetailPage from '../JobDetailPage'
 import type { JobSource } from '../jobSource'
 import type { JobView } from '../jobView'
 import { makeView } from './fixtures'
+import { reportMismatch, reportV2 } from 'features/analysis/__tests__/fixtures'
 
 const useJobView = vi.fn()
 vi.mock('../useJobView', () => ({
@@ -26,7 +27,15 @@ const { stub } = vi.hoisted(() => ({
     default: () => <div data-testid={name} />
   })
 }))
-vi.mock('../JobAnalysisTabs', () => stub('analysis'))
+vi.mock('../JobAnalysisTabs', () => ({
+  default: ({ activeTab }: { activeTab?: string }) => (
+    <div data-testid="analysis">{activeTab ?? 'default tab'}</div>
+  )
+}))
+const useJobFeedback = vi.fn()
+vi.mock('../useJobFeedback', () => ({
+  useJobFeedback: (...args: unknown[]) => useJobFeedback(...args)
+}))
 vi.mock('../JobResultsSection', () => stub('results'))
 vi.mock('../JobInputsSection', () => stub('inputs'))
 vi.mock('features/molstar/Viewer', () => stub('molstar'))
@@ -53,10 +62,43 @@ const renderPage = (
 
 beforeEach(() => {
   useJobView.mockReset()
+  useJobFeedback.mockReset()
   localStorage.clear()
 })
 
 describe('JobDetailPage', () => {
+  it('warns above the tabs when the model and the data differ in mass', async () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    useJobFeedback.mockReturnValue(reportMismatch)
+    renderPage(owner, { view: makeView({ feedback: reportMismatch }) })
+
+    expect(
+      screen.getByText('Your model and your SAXS data may not match')
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('analysis')).toHaveTextContent('default tab')
+
+    await userEvent.click(screen.getByRole('button', { name: 'See details' }))
+    expect(screen.getByTestId('analysis')).toHaveTextContent('feedback')
+  })
+
+  it('shows no mass warning for a consistent or missing assessment', () => {
+    useJobFeedback.mockReturnValue(reportV2)
+    const { unmount } = renderPage(owner, {
+      view: makeView({ feedback: reportV2 })
+    })
+    expect(
+      screen.queryByText('Your model and your SAXS data may not match')
+    ).not.toBeInTheDocument()
+    unmount()
+
+    useJobFeedback.mockReturnValue(undefined)
+    renderPage(anon, { view: makeView() })
+    expect(
+      screen.queryByText('Your model and your SAXS data may not match')
+    ).not.toBeInTheDocument()
+  })
+
   it('shows a spinner while loading', () => {
     renderPage(owner, { isLoading: true })
     expect(screen.getByRole('progressbar')).toBeInTheDocument()

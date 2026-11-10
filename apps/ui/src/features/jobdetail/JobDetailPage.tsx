@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import {
   Alert,
@@ -23,7 +24,14 @@ import JobSummaryHeader from './JobSummaryHeader'
 import JobProgressCard from './JobProgressCard'
 import JobAlerts from './JobAlerts'
 import JobAnalysisTabs from './JobAnalysisTabs'
-import { analysisTabs } from './jobPageModel'
+import {
+  ANALYSIS_HEADING_ID,
+  analysisTabs,
+  type AnalysisTab
+} from './jobPageModel'
+import { mwMismatch } from 'features/analysis/feedbackModel'
+import { useJobFeedback } from './useJobFeedback'
+import MwMismatchBanner from './MwMismatchBanner'
 import JobResultsSection from './JobResultsSection'
 import JobInputsSection from './JobInputsSection'
 import MolstarSection from './MolstarSection'
@@ -92,6 +100,15 @@ const JobDetailPage = ({ source }: { source: JobSource }) => {
   const { view, isLoading, isError, eventsConnected } = useJobView(source)
   const { download, error, clearError, isDownloading } = useJobDownload(source)
   const now = useNow(view?.status === 'Running')
+  const mismatch = mwMismatch(useJobFeedback(source, view))
+  const [analysisTab, setAnalysisTab] = useState<AnalysisTab | undefined>()
+
+  const showFeedbackTab = () => {
+    setAnalysisTab('feedback')
+    document
+      .getElementById(ANALYSIS_HEADING_ID)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   if (isLoading) return <CircularProgress />
   if (isError) {
@@ -149,12 +166,23 @@ const JobDetailPage = ({ source }: { source: JobSource }) => {
         </Section>
       )}
 
+      {mismatch && (
+        <Grid size={{ xs: 12 }}>
+          <MwMismatchBanner
+            mismatch={mismatch}
+            onShowDetails={showFeedbackTab}
+          />
+        </Grid>
+      )}
+
       {completed && analysisTabs(view.jobType).length > 0 && (
         <Grid size={{ xs: 12 }}>
           <JobAnalysisTabs
             source={source}
             view={view}
             eventsConnected={eventsConnected}
+            activeTab={analysisTab}
+            onTabChange={setAnalysisTab}
           />
         </Grid>
       )}

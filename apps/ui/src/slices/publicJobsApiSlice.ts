@@ -2,9 +2,9 @@ import { apiSlice } from 'app/api/apiSlice'
 import type {
   PublicJobStatus,
   AnonJobResponse,
-  JobAssetsDTO
+  JobAssetsDTO,
+  JobFeedbackDTO
 } from '@bilbomd/bilbomd-types'
-import type { IFeedbackData } from '@bilbomd/mongodb-schema/frontend'
 import type { FoxsData } from 'types/foxs'
 import { revokeObjectUrlOnRemove } from 'utils/objectUrl'
 import type { AlignmentReport } from 'features/jobdetail/rigidDomains'
@@ -35,7 +35,7 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
     getPublicFoxsData: builder.query<FoxsData[], string>({
       query: (publicId) => `/public/jobs/${publicId}/results/foxs`
     }),
-    getPublicFeedbackData: builder.query<IFeedbackData, string>({
+    getPublicFeedbackData: builder.query<JobFeedbackDTO, string>({
       query: (publicId) => `/public/jobs/${publicId}/results/feedback`
     }),
     getPublicResultFile: builder.query<Blob, PublicResultFileParams>({

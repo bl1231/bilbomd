@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
 import { renderWithProviders } from 'test/rendersWithProviders'
 import JobAnalysisTabs from '../JobAnalysisTabs'
 import { analysisTabs } from '../jobPageModel'
 import { makeView } from './fixtures'
+import { reportMismatch, reportV2 } from 'features/analysis/__tests__/fixtures'
 
 vi.mock('features/jobs/FoXSAnalysis', () => ({
   default: (props: { id?: string; isPublic: boolean; publicId?: string }) => (
@@ -32,6 +33,10 @@ vi.mock('../RigidDomainsTab', () => ({
 vi.mock('../useJobView', () => ({
   useJobMovies: (...args: unknown[]) => useJobMovies(...args)
 }))
+const useJobFeedback = vi.fn()
+vi.mock('../useJobFeedback', () => ({
+  useJobFeedback: (...args: unknown[]) => useJobFeedback(...args)
+}))
 
 describe('analysisTabs', () => {
   it('picks the tabs each job type has', () => {
@@ -48,6 +53,77 @@ describe('analysisTabs', () => {
 })
 
 describe('JobAnalysisTabs', () => {
+  beforeEach(() => {
+    useJobFeedback.mockReset()
+  })
+
+  it('marks the feedback tab when the assessment needs attention', () => {
+    useJobFeedback.mockReturnValue(reportMismatch)
+    renderWithProviders(
+      <JobAnalysisTabs
+        source={{ kind: 'owner', id: 'job-1' }}
+        view={makeView({ feedback: reportMismatch })}
+        eventsConnected={false}
+      />
+    )
+    expect(
+      screen.getByRole('tab', {
+        name: 'Feedback & Validation (needs attention)'
+      })
+    ).toBeInTheDocument()
+  })
+
+  it('leaves the feedback tab unmarked for a clean assessment', () => {
+    useJobFeedback.mockReturnValue(reportV2)
+    renderWithProviders(
+      <JobAnalysisTabs
+        source={{ kind: 'owner', id: 'job-1' }}
+        view={makeView({ feedback: reportV2 })}
+        eventsConnected={false}
+      />
+    )
+    expect(
+      screen.getByRole('tab', { name: 'Feedback & Validation' })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /needs attention/ })).toBeNull()
+  })
+
+  it("opens the tab the page asks for and reports the user's choice", () => {
+    const onTabChange = vi.fn()
+    useJobMovies.mockReturnValue({ data: { movies: [] }, isLoading: false })
+    renderWithProviders(
+      <JobAnalysisTabs
+        source={{ kind: 'owner', id: 'job-1' }}
+        view={makeView()}
+        eventsConnected={false}
+        activeTab="feedback"
+        onTabChange={onTabChange}
+      />
+    )
+    expect(
+      screen.getByRole('tab', { name: 'Feedback & Validation' })
+    ).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByTestId('feedback')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'MD Movies' }))
+    expect(onTabChange).toHaveBeenCalledWith('movies')
+  })
+
+  it('falls back to the first tab when asked for one the job lacks', () => {
+    renderWithProviders(
+      <JobAnalysisTabs
+        source={{ kind: 'owner', id: 'job-1' }}
+        view={makeView({ jobType: 'pdb' })}
+        eventsConnected={false}
+        activeTab="pae"
+      />
+    )
+    expect(screen.getByRole('tab', { name: 'FoXS Analysis' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+  })
+
   it('loads FoXS from the owner endpoint for owners', async () => {
     renderWithProviders(
       <JobAnalysisTabs
@@ -83,7 +159,9 @@ describe('JobAnalysisTabs', () => {
       />
     )
     fireEvent.click(screen.getByRole('tab', { name: 'Feedback & Validation' }))
-    expect(screen.getByTestId('feedback')).toHaveTextContent('"mw_saxs":1')
+    expect(screen.getByTestId('feedback')).toHaveTextContent(
+      '{"feedback":{"mw_saxs":1},"id":"job-1"}'
+    )
     unmount()
 
     renderWithProviders(
