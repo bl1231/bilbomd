@@ -14,11 +14,23 @@ import {
 const COLLAPSE_ABOVE = 120
 const PREVIEW_LENGTH = 60
 
+// Announce the copy only once the clipboard has accepted it: the write is
+// rejected when the browser denies access, and `navigator.clipboard` is
+// missing altogether outside a secure context.
 const useCopy = () => {
   const { enqueueSnackbar } = useSnackbar()
   return (text: string, what: string) => {
-    void navigator.clipboard.writeText(text)
-    enqueueSnackbar(`${what} copied to clipboard!`, { variant: 'default' })
+    const write = async () => {
+      await navigator.clipboard.writeText(text)
+    }
+    write().then(
+      () =>
+        enqueueSnackbar(`${what} copied to clipboard!`, { variant: 'default' }),
+      () =>
+        enqueueSnackbar(`Could not copy the ${what} to the clipboard`, {
+          variant: 'error'
+        })
+    )
   }
 }
 

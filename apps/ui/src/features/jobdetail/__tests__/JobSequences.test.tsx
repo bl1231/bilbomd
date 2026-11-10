@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent, within } from '@testing-library/react'
+import type { ReactElement } from 'react'
+import { SnackbarProvider } from 'notistack'
 import { renderWithProviders } from 'test/rendersWithProviders'
 import JobSequences from '../JobSequences'
 import { toFasta } from '../sequenceFormat'
@@ -22,11 +24,15 @@ const writeText = vi.fn()
 
 beforeEach(() => {
   writeText.mockReset()
+  writeText.mockResolvedValue(undefined)
   Object.defineProperty(navigator, 'clipboard', {
     value: { writeText },
     configurable: true
   })
 })
+
+const renderWithSnackbar = (ui: ReactElement) =>
+  renderWithProviders(<SnackbarProvider>{ui}</SnackbarProvider>)
 
 // The sequence text of one entity card, without the position labels
 const shownSequence = (card: HTMLElement): string =>
@@ -88,6 +94,38 @@ describe('JobSequences', () => {
     renderWithProviders(<JobSequences entities={[short, long, dna]} />)
     fireEvent.click(screen.getByRole('button', { name: /copy as fasta/i }))
     expect(writeText).toHaveBeenCalledWith(toFasta([short, long, dna]))
+  })
+
+  it('confirms a copy once the clipboard accepts it', async () => {
+    renderWithSnackbar(<JobSequences entities={[short]} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Copy the pro-1 sequence' })
+    )
+    expect(
+      await screen.findByText('pro-1 sequence copied to clipboard!')
+    ).toBeInTheDocument()
+  })
+
+  it('reports a failed copy instead of announcing success', async () => {
+    writeText.mockRejectedValue(new DOMException('denied', 'NotAllowedError'))
+    renderWithSnackbar(<JobSequences entities={[short]} />)
+    fireEvent.click(screen.getByRole('button', { name: /copy as fasta/i }))
+    expect(
+      await screen.findByText('Could not copy the FASTA to the clipboard')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/copied to clipboard/)).not.toBeInTheDocument()
+  })
+
+  it('reports a failed copy when the clipboard API is unavailable', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true
+    })
+    renderWithSnackbar(<JobSequences entities={[short]} />)
+    fireEvent.click(screen.getByRole('button', { name: /copy as fasta/i }))
+    expect(
+      await screen.findByText('Could not copy the FASTA to the clipboard')
+    ).toBeInTheDocument()
   })
 
   it('renders nothing without entities', () => {
