@@ -60,15 +60,21 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
     }
   }
 
-  const getMWChipBackgroundColor = (mwError: number): string => {
-    if (mwError < 0.06) {
-      return 'green'
-    } else if (mwError >= 0.06 && mwError < 0.1) {
-      return '#bdbf20'
-    } else {
-      return '#f44336' // Red for values 3.0 and above
-    }
-  }
+  // The q-regions that were assessed, labelled from the data. A report can
+  // cover fewer than three when the data stop at low q.
+  const regions = actualFeedback.chi_squares_of_regions.map(
+    (chiSquare, index) => ({
+      label: `${(actualFeedback.q_ranges[index] ?? 0).toFixed(2)} < q < ${(
+        actualFeedback.q_ranges[index + 1] ?? 0
+      ).toFixed(2)}`,
+      chiSquare,
+      residual: actualFeedback.residuals_of_regions[index]
+    })
+  )
+
+  // The molecular-weight comparison is advisory and can be unavailable
+  const formatMw = (value: number | null | undefined): string =>
+    typeof value === 'number' ? value.toFixed(1) : 'n/a'
 
   return (
     <Item>
@@ -105,12 +111,8 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
           <Grid sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography sx={{ fontSize: '1.3em' }}>Experimental MW:</Typography>
             <Chip
-              label={actualFeedback.mw_saxs.toFixed(1)}
-              sx={{
-                mx: 1,
-                fontSize: '1.2em',
-                backgroundColor: getMWChipBackgroundColor(actualFeedback.mw_err)
-              }}
+              label={formatMw(actualFeedback.mw_saxs)}
+              sx={{ mx: 1, fontSize: '1.2em' }}
             />
 
             <Typography sx={{ fontSize: '1.3em' }}>kDa</Typography>
@@ -118,12 +120,8 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
           <Grid sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography sx={{ fontSize: '1.3em' }}>Model MW:</Typography>
             <Chip
-              label={actualFeedback.mw_model.toFixed(1)}
-              sx={{
-                mx: 1,
-                fontSize: '1.2em',
-                backgroundColor: getMWChipBackgroundColor(actualFeedback.mw_err)
-              }}
+              label={formatMw(actualFeedback.mw_model)}
+              sx={{ mx: 1, fontSize: '1.2em' }}
             />
 
             <Typography sx={{ fontSize: '1.3em' }}>kDa</Typography>
@@ -132,95 +130,52 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
         <Grid size={{ xs: 12 }}>
           <Divider sx={{ my: 1 }} />
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FeedbackChart
-            data={{
-              q_ranges: actualFeedback.q_ranges,
-              chi_squares_of_regions: actualFeedback.chi_squares_of_regions,
-              residuals_of_regions: actualFeedback.residuals_of_regions
-            }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <Divider sx={{ my: 1 }} />
-        </Grid>
+        {regions.length === 3 && (
+          <>
+            <Grid size={{ xs: 12 }}>
+              <FeedbackChart
+                data={{
+                  q_ranges: actualFeedback.q_ranges,
+                  chi_squares_of_regions: actualFeedback.chi_squares_of_regions,
+                  residuals_of_regions: actualFeedback.residuals_of_regions
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Divider sx={{ my: 1 }} />
+            </Grid>
+          </>
+        )}
         {/* Chi-Squares for Regions */}
         <Grid size={{ xs: 6 }}>
           <Typography sx={{ mb: 2, fontSize: '1.7em' }}>
             Chi<sup>2</sup> Values for Regions
           </Typography>
 
-          {/* Chi-Square for 0.01 < q < 0.1 */}
-          <Grid
-            container
-            sx={{
-              my: 0.5,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '55%'
-            }}
-          >
-            <Typography>
-              Chi<sup>2</sup> for 0.01 &lt; q &lt; 0.1:
-            </Typography>
-            <Chip
+          {regions.map(({ label, chiSquare }) => (
+            <Grid
+              key={label}
+              container
               sx={{
-                fontSize: '1.2em',
-                width: '100px',
-                ...(getChipProps(actualFeedback.chi_squares_of_regions[0]!)
-                  .sx || {})
+                my: 0.5,
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '55%'
               }}
-              label={actualFeedback.chi_squares_of_regions[0]!.toFixed(2)}
-            />
-          </Grid>
-
-          {/* Chi-Square for 0.1 < q < 0.2 */}
-          <Grid
-            container
-            sx={{
-              my: 0.5,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '55%'
-            }}
-          >
-            <Typography>
-              Chi<sup>2</sup> for 0.1 &lt; q &lt; 0.2:
-            </Typography>
-            <Chip
-              sx={{
-                fontSize: '1.2em',
-                width: '100px',
-                ...(getChipProps(actualFeedback.chi_squares_of_regions[1]!)
-                  .sx || {})
-              }}
-              label={actualFeedback.chi_squares_of_regions[1]!.toFixed(2)}
-            />
-          </Grid>
-
-          {/* Chi-Square for 0.2 < q < 0.5 */}
-          <Grid
-            container
-            sx={{
-              my: 0.5,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '55%'
-            }}
-          >
-            <Typography>
-              Chi<sup>2</sup> for 0.2 &lt; q &lt; 0.5:
-            </Typography>
-            <Chip
-              sx={{
-                fontSize: '1.2em',
-                width: '100px',
-                ...(getChipProps(actualFeedback.chi_squares_of_regions[2]!)
-                  .sx || {})
-              }}
-              label={actualFeedback.chi_squares_of_regions[2]!.toFixed(2)}
-            />
-          </Grid>
+            >
+              <Typography>
+                Chi<sup>2</sup> for {label}:
+              </Typography>
+              <Chip
+                sx={{
+                  fontSize: '1.2em',
+                  width: '100px',
+                  ...(getChipProps(chiSquare).sx || {})
+                }}
+                label={chiSquare.toFixed(2)}
+              />
+            </Grid>
+          ))}
         </Grid>
         {/* Residuals of Regions */}
         <Grid size={{ xs: 6 }}>
@@ -228,65 +183,24 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
             Mean Residuals of Regions
           </Typography>
 
-          {/* Chi-Square for 0.01 < q < 0.1 */}
-          <Grid
-            container
-            sx={{
-              my: 0.5,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '68%'
-            }}
-          >
-            <Typography>Mean residuals of 0.01 &lt; q &lt; 0.1:</Typography>
-            <Chip
+          {regions.map(({ label, residual }) => (
+            <Grid
+              key={label}
+              container
               sx={{
-                fontSize: '1.2em',
-                width: '100px'
+                my: 0.5,
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '68%'
               }}
-              label={actualFeedback.residuals_of_regions[0]!.toFixed(2)}
-            />
-          </Grid>
-
-          {/* Chi-Square for 0.1 < q < 0.2 */}
-          <Grid
-            container
-            sx={{
-              my: 0.5,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '68%'
-            }}
-          >
-            <Typography>Mean residuals of 0.1 &lt; q &lt; 0.2:</Typography>
-            <Chip
-              sx={{
-                fontSize: '1.2em',
-                width: '100px'
-              }}
-              label={actualFeedback.residuals_of_regions[1]!.toFixed(2)}
-            />
-          </Grid>
-
-          {/* Chi-Square for 0.2 < q < 0.5 */}
-          <Grid
-            container
-            sx={{
-              my: 0.5,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '68%'
-            }}
-          >
-            <Typography>Mean residuals of 0.2 &lt; q &lt; 0.5:</Typography>
-            <Chip
-              sx={{
-                fontSize: '1.2em',
-                width: '100px'
-              }}
-              label={actualFeedback.residuals_of_regions[2]!.toFixed(2)}
-            />
-          </Grid>
+            >
+              <Typography>Mean residuals of {label}:</Typography>
+              <Chip
+                sx={{ fontSize: '1.2em', width: '100px' }}
+                label={residual?.toFixed(2) ?? 'n/a'}
+              />
+            </Grid>
+          ))}
         </Grid>
         <Grid size={{ xs: 12 }}>
           <Divider sx={{ my: 1 }} />

@@ -3,9 +3,10 @@ Description: This script calculates the molecular weight of a PDB file.
 Also contains shared utilities for PDB processing in BilboMD.
 """
 
-from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB import MMCIFParser
 
+# Standard atomic weights (Da). Covers biomolecules plus the ions and
+# heteroatoms that turn up in structures submitted to BilboMD.
 ATOMIC_WEIGHTS = {
     "H": 1.008,
     "C": 12.011,
@@ -13,37 +14,139 @@ ATOMIC_WEIGHTS = {
     "O": 15.999,
     "P": 30.974,
     "S": 32.06,
+    "F": 18.998,
+    "NA": 22.990,
+    "MG": 24.305,
+    "CL": 35.45,
+    "K": 39.098,
+    "CA": 40.078,
+    "MN": 54.938,
+    "FE": 55.845,
+    "CO": 58.933,
+    "NI": 58.693,
+    "CU": 63.546,
+    "ZN": 65.38,
+    "SE": 78.971,
+    "BR": 79.904,
+    "I": 126.904,
 }
+
+# Elements that make up proteins, nucleic acids and sugars. When an atom name
+# is ambiguous ("CA" is a carbon in a residue but calcium as an ion), these
+# win inside a recognised residue.
+_BIOPOLYMER_ELEMENTS = frozenset("HCNOPS")
+
+# Residue names classify_residue() does not know: CHARMM/AMBER protonation
+# variants and CHARMM uracil. Used only for mass bookkeeping.
+_EXTRA_PROTEIN_RESIDUES = frozenset(
+    ["HSD", "HSE", "HSP", "HID", "HIE", "HIP", "MSE", "CYX", "CYM", "ASH", "GLH", "LYN"]
+)
+_EXTRA_NUCLEIC_RESIDUES = frozenset(["URA", "DU"])
+_WATER_RESIDUES = frozenset(["HOH", "WAT", "TIP3", "TIP", "SOL", "H2O", "DOD"])
+
+
+def _residue_class(resname):
+    """'protein', 'nucleic', 'water' or 'other' for a residue name."""
+    if resname in _WATER_RESIDUES:
+        return "water"
+    if resname in _EXTRA_PROTEIN_RESIDUES:
+        return "protein"
+    if resname in _EXTRA_NUCLEIC_RESIDUES:
+        return "nucleic"
+    mol_type = classify_residue(resname)
+    if mol_type == "PRO":
+        return "protein"
+    if mol_type in ("DNA", "RNA"):
+        return "nucleic"
+    return "other"
+
+
+def _atom_element(line, residue_class):
+    """
+    Element symbol for an ATOM/HETATM line, or None if it cannot be determined.
+
+    Uses the element column (77-78) when present. CHARMM-written PDBs leave it
+    blank, so otherwise the element is taken from the atom name.
+    """
+    element = line[76:78].strip().upper()
+    if element in ATOMIC_WEIGHTS:
+        return element
+
+    name_field = line[12:16]
+    letters = "".join(ch for ch in name_field.strip().upper() if ch.isalpha())
+    if not letters:
+        return None
+    one, two = letters[0], letters[:2]
+
+    # Inside a protein or nucleic acid residue every atom is H, C, N, O, P or S,
+    # whatever its name looks like (CA, HG, NE, CD ...).
+    if residue_class in ("protein", "nucleic"):
+        return one if one in ATOMIC_WEIGHTS else None
+
+    # Ions and ligands: a two-letter element is written left-justified in the
+    # name field, or the residue is named after it (residue MG, atom MG).
+    resname = line[17:21].strip().upper()
+    if len(two) == 2 and two in ATOMIC_WEIGHTS:
+        if name_field[0].isalpha() and len(name_field.strip()) <= 2:
+            return two
+        if resname.startswith(two):
+            return two
+    if one in _BIOPOLYMER_ELEMENTS:
+        return one
+    if len(two) == 2 and two in ATOMIC_WEIGHTS:
+        return two
+    return one if one in ATOMIC_WEIGHTS else None
+
+
+def molecular_composition(pdb_file):
+    """
+    Mass of a PDB file's first model, split by molecule type.
+
+    Reads ATOM/HETATM lines directly rather than building a Biopython
+    structure: CHARMM-style files reuse a chain letter and residue numbers for
+    different segments (PROA and DNAA are both chain A), and Biopython drops
+    the second segment's residues as duplicates. Water is not counted.
+
+    Returns a dict with total_da, protein_da, nucleic_da, other_da, n_atoms and
+    unknown_atoms (atoms whose element could not be determined; they add no
+    mass).
+    """
+    masses = {"protein": 0.0, "nucleic": 0.0, "other": 0.0}
+    n_atoms = 0
+    unknown_atoms = 0
+
+    with open(pdb_file, "r", encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            if line.startswith("ENDMDL"):
+                break
+            if not line.startswith(("ATOM", "HETATM")):
+                continue
+            residue_class = _residue_class(line[17:21].strip().upper())
+            if residue_class == "water":
+                continue
+            n_atoms += 1
+            element = _atom_element(line, residue_class)
+            if element is None:
+                unknown_atoms += 1
+                continue
+            masses[residue_class] += ATOMIC_WEIGHTS[element]
+
+    if n_atoms == 0:
+        raise ValueError(f"No atoms found in PDB file: {pdb_file}")
+
+    return {
+        "total_da": sum(masses.values()),
+        "protein_da": masses["protein"],
+        "nucleic_da": masses["nucleic"],
+        "other_da": masses["other"],
+        "n_atoms": n_atoms,
+        "unknown_atoms": unknown_atoms,
+    }
 
 
 def calculate_molecular_weight(pdb_file):
-    """
-    Uses BioPython to calculate the molecular weight of a PDB file
-    and prints the number of atoms encountered.
-    """
-    parser = PDBParser(QUIET=True)
-    structure = parser.get_structure("molecule", pdb_file)
-
-    if structure is None:
-        raise ValueError(f"Unable to parse the PDB file: {pdb_file}")
-
-    molecular_weight = 0.0
-    atom_count = 0  # Atom counter
-
-    for model in structure:
-        for chain in model:
-            for residue in chain:
-                for atom in residue:
-                    atom_count += 1  # Increment the counter for each atom
-                    element = atom.element.strip()
-                    if element in ATOMIC_WEIGHTS:
-                        molecular_weight += ATOMIC_WEIGHTS[element]
-                    else:
-                        pass
-                        # print(f"Unknown element {element}, skipping...")
-
-    # print(f"Total number of atoms: {atom_count}")
-    return molecular_weight
+    """Molecular weight (Da) of the first model in a PDB file, without water."""
+    return molecular_composition(pdb_file)["total_da"]
 
 
 def classify_residue(residue):
