@@ -110,6 +110,37 @@ export const describeCell = (
   return `${cellResidues(report, row)} and ${cellResidues(report, col)}: distance varies by ${spread}`
 }
 
+export type MatrixCell = { row: number; col: number }
+
+// Where a key press moves the selected matrix cell, or null if the key isn't
+// a navigation key. Arrows move one cell (ten with Shift); Home and End go to
+// the ends of the row.
+export const moveCell = (
+  cell: MatrixCell,
+  key: string,
+  shift: boolean,
+  size: number
+): MatrixCell | null => {
+  const step = shift ? 10 : 1
+  const clamp = (v: number) => Math.max(0, Math.min(size - 1, v))
+  switch (key) {
+    case 'ArrowLeft':
+      return { row: cell.row, col: clamp(cell.col - step) }
+    case 'ArrowRight':
+      return { row: cell.row, col: clamp(cell.col + step) }
+    case 'ArrowUp':
+      return { row: clamp(cell.row - step), col: cell.col }
+    case 'ArrowDown':
+      return { row: clamp(cell.row + step), col: cell.col }
+    case 'Home':
+      return { row: cell.row, col: 0 }
+    case 'End':
+      return { row: cell.row, col: size - 1 }
+    default:
+      return null
+  }
+}
+
 // Matrix cells where a new chain starts (for the divider lines)
 export const chainBoundaries = (report: AlignmentReport): number[] => {
   const bin = report.matrix?.bin ?? 1

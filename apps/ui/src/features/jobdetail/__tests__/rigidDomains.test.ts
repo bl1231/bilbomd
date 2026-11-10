@@ -8,6 +8,7 @@ import {
   formatRange,
   hexToRgb,
   matrixPixels,
+  moveCell,
   type AlignmentReport
 } from '../rigidDomains'
 
@@ -93,6 +94,31 @@ describe('chainBoundaries', () => {
   it('finds where each new chain starts, in cells', () => {
     expect(chainBoundaries(report)).toEqual([2])
     expect(chainBoundaries(single)).toEqual([4])
+  })
+})
+
+describe('moveCell', () => {
+  const at = { row: 5, col: 5 }
+
+  it('moves one cell with the arrows and ten with Shift', () => {
+    expect(moveCell(at, 'ArrowRight', false, 100)).toEqual({ row: 5, col: 6 })
+    expect(moveCell(at, 'ArrowUp', false, 100)).toEqual({ row: 4, col: 5 })
+    expect(moveCell(at, 'ArrowDown', true, 100)).toEqual({ row: 15, col: 5 })
+  })
+
+  it('stays inside the matrix', () => {
+    expect(moveCell(at, 'ArrowLeft', true, 100)).toEqual({ row: 5, col: 0 })
+    expect(moveCell(at, 'ArrowDown', true, 8)).toEqual({ row: 7, col: 5 })
+  })
+
+  it('jumps to the ends of the row', () => {
+    expect(moveCell(at, 'Home', false, 100)).toEqual({ row: 5, col: 0 })
+    expect(moveCell(at, 'End', false, 100)).toEqual({ row: 5, col: 99 })
+  })
+
+  it('ignores other keys', () => {
+    expect(moveCell(at, 'Tab', false, 100)).toBeNull()
+    expect(moveCell(at, 'a', false, 100)).toBeNull()
   })
 })
 

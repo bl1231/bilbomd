@@ -93,6 +93,19 @@ def test_finds_the_two_rigid_bodies_and_leaves_the_linker_out():
     assert domains[1].tolist() == list(range(N_A + N_LINK, N_A + N_LINK + N_B))
 
 
+@pytest.mark.parametrize("sigma", [0.3, 0.7, 0.9])
+def test_finds_domains_that_are_not_perfectly_rigid(sigma):
+    # Per-atom noise of sigma gives pair-distance spreads of about 1.4 * sigma inside a
+    # body: up to ~1.3 Å here, still under the 1.5 Å cutoff. Real domains breathe like this.
+    rng = np.random.default_rng(1)
+    n = N_A + N_LINK + N_B
+    sd = distance_sd(np.stack([make_structure(rng) + rng.normal(scale=sigma, size=(n, 3)) for _ in range(60)]))
+    assert np.median(sd[:N_A, :N_A]) > sigma  # the bodies really do vary
+    domains = find_domains(sd)
+    assert [len(d) for d in domains] == [N_A, N_B]
+    assert domains[0].tolist() == list(range(N_A))
+
+
 def test_one_rigid_body_when_nothing_moves():
     rng = np.random.default_rng(5)
     sd = distance_sd(np.stack([make_structure(rng, flexible=False)[: N_A] for _ in range(20)]))

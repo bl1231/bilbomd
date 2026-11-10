@@ -46,6 +46,8 @@ MIN_SEQ_SEP = 4  # neighbours in sequence are always close; they say nothing abo
 MIN_CLUSTER = 5  # Leiden clusters smaller than this are not merged, only attached
 MIN_DOMAIN = 20  # residues: smaller bodies are not reported as domains
 MIN_SAMPLES = 10  # fewer structures than this cannot tell rigid from flexible
+# Leiden (CPM) keeps a community together while more than this fraction of its residue
+# pairs are rigid. Edges are unweighted, so the cutoff alone decides what is rigid.
 LEIDEN_RESOLUTION = 0.5
 MATRIX_MAX_SIZE = 512  # cells per side of the matrix in the report
 MATRIX_MAX_SD = 20.0  # Å: spreads at or above this share the top byte value
@@ -89,11 +91,10 @@ def find_domains(sd: np.ndarray, cutoff: float = SD_CUTOFF) -> list[np.ndarray]:
     if not upper.any():
         return []
     graph = igraph.Graph(n=n, edges=list(zip(i[upper].tolist(), j[upper].tolist())))
-    graph.es["weight"] = (1.0 - sd[i[upper], j[upper]] / cutoff).tolist()
     random.seed(0)  # Leiden is stochastic; igraph draws from Python's random
     membership = np.array(
         graph.community_leiden(
-            weights="weight", resolution=LEIDEN_RESOLUTION, n_iterations=10, objective_function="CPM"
+            resolution=LEIDEN_RESOLUTION, n_iterations=10, objective_function="CPM"
         ).membership
     )
     groups = [np.where(membership == k)[0] for k in np.unique(membership)]

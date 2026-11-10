@@ -4,7 +4,11 @@ import path from 'node:path'
 import fs from 'fs-extra'
 
 const { cfg, runProcess } = vi.hoisted(() => ({
-  cfg: { uploadDir: '', processTimeouts: { helperScriptMs: 1000 } },
+  cfg: {
+    uploadDir: '',
+    basePythonBin: '/custom/envs/base/bin/python',
+    processTimeouts: { helperScriptMs: 1000 }
+  },
   runProcess: vi.fn()
 }))
 
@@ -125,7 +129,7 @@ describe('alignEnsembleMembers', () => {
     const message = await alignEnsembleMembers(jobDir, members, polished)
 
     const [opts] = runProcess.mock.calls[0]
-    expect(opts.cmd).toBe('/opt/envs/base/bin/python')
+    expect(opts.cmd).toBe('/custom/envs/base/bin/python')
     expect(opts.args[0]).toMatch(/scripts\/align_ensemble\.py$/)
     expect(await fs.readJson(opts.args[1])).toEqual({
       samples_dir: path.join(jobDir, 'foxs'),

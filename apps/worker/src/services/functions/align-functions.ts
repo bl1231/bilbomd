@@ -17,9 +17,8 @@ import {
 
 const ALIGN_DIR = 'align'
 const ALIGN_REPORT = path.join(ALIGN_DIR, 'alignment.json')
+// Needs numpy + python-igraph: the worker's base Python environment
 const ALIGN_SCRIPT = 'scripts/align_ensemble.py'
-// numpy + python-igraph live in the worker's base environment
-const ALIGN_PYTHON = '/opt/envs/base/bin/python'
 
 interface AlignReport {
   method: 'rigid-domain' | 'all-residues'
@@ -104,7 +103,7 @@ const alignEnsembleMembers = async (
 
     await runProcess({
       label: 'Align ensemble',
-      cmd: ALIGN_PYTHON,
+      cmd: config.basePythonBin,
       args: [
         path.resolve(process.cwd(), ALIGN_SCRIPT),
         requestFile,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from 'test/server'
 import { renderWithProviders } from 'test/rendersWithProviders'
@@ -72,6 +72,31 @@ describe('RigidDomainsTab', () => {
     ).toBeInTheDocument()
     expect(screen.getByText(/299 sampled structures/)).toBeInTheDocument()
     expect(requested).toEqual(['/api/v1/jobs/job-1/results/alignment.json'])
+  })
+
+  it('reads residue pairs with the keyboard', async () => {
+    serve(report)
+    renderWithProviders(
+      <RigidDomainsTab source={{ kind: 'owner', id: 'job-1' }} />
+    )
+    const matrix = await screen.findByRole('application', {
+      name: /arrow keys/
+    })
+    const readout = screen.getByRole('status')
+    expect(readout).toHaveTextContent(/arrow keys/)
+    expect(matrix).toHaveAttribute('aria-describedby', readout.id)
+
+    // 2 x 2 cells of 3 residues: A1-3 and A4-B2
+    fireEvent.focus(matrix)
+    expect(readout).toHaveTextContent('A1–3 and A1–3: distance varies by 0.0 Å')
+    fireEvent.keyDown(matrix, { key: 'ArrowRight' })
+    expect(readout).toHaveTextContent(
+      'A1–3 and A4–B2: distance varies by 1.3 Å'
+    )
+    fireEvent.keyDown(matrix, { key: 'ArrowDown' })
+    expect(readout).toHaveTextContent('A4–B2 and A4–B2: distance varies by 0.0')
+    fireEvent.keyDown(matrix, { key: 'ArrowDown' }) // already at the edge
+    expect(readout).toHaveTextContent('A4–B2 and A4–B2')
   })
 
   it('loads the report by token on public pages', async () => {

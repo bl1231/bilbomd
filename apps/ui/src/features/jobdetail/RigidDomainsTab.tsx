@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import {
   Alert,
@@ -24,8 +24,10 @@ import {
   formatRange,
   hexToRgb,
   matrixPixels,
+  moveCell,
   rigidColor,
-  type AlignmentReport
+  type AlignmentReport,
+  type MatrixCell
 } from './rigidDomains'
 
 const useAlignment = (source: JobSource) => {
@@ -38,16 +40,21 @@ const useAlignment = (source: JobSource) => {
   return source.kind === 'owner' ? owner : anon
 }
 
-const HOVER_HINT = 'Hover over the matrix to read a residue pair.'
+const HOVER_HINT =
+  'Hover over the matrix, or focus it and use the arrow keys, to read a residue pair.'
 
 // The distance-spread matrix with the domain of each residue along the top.
-// Drawn on canvases so it follows the theme and can be read cell by cell.
+// Drawn on canvases so it follows the theme and can be read cell by cell, with
+// the pointer or with the arrow keys.
 const SpreadMatrix = ({ report }: { report: AlignmentReport }) => {
   const theme = useTheme()
   const dark = theme.palette.mode === 'dark'
   const matrixRef = useRef<HTMLCanvasElement>(null)
   const trackRef = useRef<HTMLCanvasElement>(null)
   const [readout, setReadout] = useState(HOVER_HINT)
+  // The cell selected with the keyboard
+  const [cell, setCell] = useState<MatrixCell | null>(null)
+  const readoutId = useId()
   const matrix = report.matrix
   const bytes = useMemo(
     () => (matrix ? decodeMatrix(matrix.data) : new Uint8Array()),
@@ -103,6 +110,25 @@ const SpreadMatrix = ({ report }: { report: AlignmentReport }) => {
     setReadout(describeCell(report, bytes, row, col))
   }
 
+  const select = (next: MatrixCell) => {
+    setCell(next)
+    setReadout(describeCell(report, bytes, next.row, next.col))
+  }
+
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    const next = moveCell(
+      cell ?? { row: 0, col: 0 },
+      event.key,
+      event.shiftKey,
+      matrix.size
+    )
+    if (!next) return
+    event.preventDefault()
+    select(next)
+  }
+
+  const cellPercent = 100 / matrix.size
+
   return (
     <Box sx={{ maxWidth: 560 }}>
       <Box
@@ -112,23 +138,63 @@ const SpreadMatrix = ({ report }: { report: AlignmentReport }) => {
         sx={{ display: 'block', width: '100%', height: 8, mb: '4px' }}
       />
       <Box
-        component="canvas"
-        ref={matrixRef}
-        role="img"
-        aria-label="Spread of every residue-pair distance across the sampled structures"
-        onPointerMove={onMove}
-        onPointerLeave={() => setReadout(HOVER_HINT)}
+        role="application"
+        tabIndex={0}
+        aria-label="Distance-spread matrix. Use the arrow keys to read a residue pair; hold Shift to move ten cells."
+        aria-describedby={readoutId}
+        onKeyDown={onKeyDown}
+        onFocus={() => select(cell ?? { row: 0, col: 0 })}
         sx={{
-          display: 'block',
-          width: '100%',
-          aspectRatio: '1',
-          imageRendering: 'pixelated',
-          cursor: 'crosshair',
+          position: 'relative',
           border: 1,
-          borderColor: 'divider'
+          borderColor: 'divider',
+          '&:focus-visible': {
+            outline: 2,
+            outlineColor: 'primary.main',
+            outlineOffset: 2
+          },
+          '& .cell-marker': { display: 'none' },
+          '&:focus-visible .cell-marker': { display: 'block' }
         }}
-      />
+      >
+        <Box
+          component="canvas"
+          ref={matrixRef}
+          role="img"
+          aria-label="Spread of every residue-pair distance across the sampled structures"
+          onPointerMove={onMove}
+          onPointerLeave={() => setReadout(HOVER_HINT)}
+          sx={{
+            display: 'block',
+            width: '100%',
+            aspectRatio: '1',
+            imageRendering: 'pixelated',
+            cursor: 'crosshair'
+          }}
+        />
+        {cell && (
+          <Box
+            className="cell-marker"
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              left: `${cell.col * cellPercent}%`,
+              top: `${cell.row * cellPercent}%`,
+              width: `max(${cellPercent}%, 8px)`,
+              height: `max(${cellPercent}%, 8px)`,
+              transform: 'translate(-2px, -2px)',
+              border: 2,
+              borderColor: 'warning.main',
+              boxSizing: 'content-box',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
+      </Box>
       <Typography
+        id={readoutId}
+        role="status"
+        aria-live="polite"
         variant="body2"
         color="text.secondary"
         sx={{ mt: 1, minHeight: '1.5em', fontVariantNumeric: 'tabular-nums' }}
