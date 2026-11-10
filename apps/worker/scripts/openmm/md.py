@@ -17,6 +17,7 @@ from openmm.app import (
 from openmm.unit import angstroms
 from utils.fixed_bodies import apply_fixed_body_constraints
 from utils.logger import get_logger
+from utils.md_errors import is_nan_error, unstable_message
 from utils.model_prep import register_ligand_templates_for_topology
 from utils.pdb_writer import PositionCapture
 from utils.rgyr import RadiusOfGyrationCVForce, RgyrDmaxCapture
@@ -266,16 +267,27 @@ if __name__ == "__main__":
     # Check for standalone mode (worker app): if OMM_RG is set, run a single Rg
     omm_rg = os.environ.get("OMM_RG")
     if omm_rg is not None:
+        # Only the parse is guarded here: a ValueError raised later by the
+        # simulation (e.g. "Particle position is NaN") is not a bad OMM_RG.
         try:
             rg = float(omm_rg)
-            gpu_id = select_gpu_for_standalone()
-            logger.info(f"Standalone mode: running single Rg={rg} on GPU {gpu_id}")
-            run_md_for_rg(rg, args.config_path, gpu_id=gpu_id)
-            logger.info(f"Standalone mode: completed Rg={rg}")
-            sys.exit(0)
         except (ValueError, TypeError) as e:
             logger.error(f"Invalid OMM_RG value '{omm_rg}': {e}")
             sys.exit(1)
+
+        gpu_id = select_gpu_for_standalone()
+        logger.info(f"Standalone mode: running single Rg={rg} on GPU {gpu_id}")
+        try:
+            run_md_for_rg(rg, args.config_path, gpu_id=gpu_id)
+        except Exception as e:
+            if is_nan_error(e):
+                # The worker turns this marker into a user-facing message.
+                logger.error(unstable_message(rg, e))
+            else:
+                logger.exception(f"MD failed for Rg={rg}: {e}")
+            sys.exit(1)
+        logger.info(f"Standalone mode: completed Rg={rg}")
+        sys.exit(0)
 
     # Fallback to Slurm mode
     rg_sets = config["steps"]["md"]["rgyr"].get("rg_sets", [])
@@ -327,7 +339,10 @@ if __name__ == "__main__":
             logger.info(f"Task {task_id}: done Rg={rg}")
         except Exception as e:
             failures += 1
-            logger.error(f"Task {task_id}: FAILED Rg={rg} -> {e}")
+            if is_nan_error(e):
+                logger.error(f"Task {task_id}: {unstable_message(rg, e)}")
+            else:
+                logger.error(f"Task {task_id}: FAILED Rg={rg} -> {e}")
 
     if failures:
         logger.error(f"Task {task_id}: {failures} failures.")

@@ -209,3 +209,96 @@ describe('runOmmMD concurrency', () => {
     vi.mocked(configMod).config.openmmMdConcurrency = 1
   })
 })
+
+describe('runOmmMD failure reporting', () => {
+  let runPythonStep: ReturnType<typeof vi.fn>
+
+  type StepOpts = {
+    env: { OMM_RG: string }
+    onStderrLine: (line: string) => void
+  }
+
+  const setupRgs = async (rgs: number[]) => {
+    const fsMod = await import('fs-extra')
+    vi.mocked(fsMod.default.readFile).mockResolvedValue('yaml-content' as never)
+    const yamlMod = await import('yaml')
+    vi.mocked(yamlMod.default.parse).mockReturnValue({
+      steps: { md: { rgyr: { rgs } } }
+    })
+  }
+
+  // Fail the given Rg targets; `unstable` ones print md.py's NaN marker first.
+  const failRgs = (unstable: number[], plain: number[] = []) => {
+    runPythonStep.mockImplementation(
+      async (_script: string, _cfg: string, opts: StepOpts) => {
+        const rg = Number(opts.env.OMM_RG)
+        if (unstable.includes(rg)) {
+          opts.onStderrLine(
+            `ERROR: BILBOMD_MD_UNSTABLE: rg=${rg} simulation became numerically unstable (NaN coordinates): Particle coordinate is NaN.`
+          )
+          return { code: 1, signal: null }
+        }
+        if (plain.includes(rg)) {
+          opts.onStderrLine('Traceback (most recent call last):')
+          return { code: 1, signal: null }
+        }
+        return { code: 0, signal: null }
+      }
+    )
+  }
+
+  const runAndCatch = async (): Promise<string> => {
+    try {
+      await runOmmMD(makeMQJob(), makeDBJob(), { concurrency: 6 })
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error)
+    }
+    throw new Error('expected runOmmMD to reject')
+  }
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    delete process.env.CUDA_VISIBLE_DEVICES
+    const runPythonMod = await import('../../../helpers/runPythonStep.js')
+    runPythonStep = vi.mocked(runPythonMod.runPythonStep)
+  })
+
+  it('explains NaN blow-ups and names the unstable Rg targets and range', async () => {
+    await setupRgs([10, 28, 46, 64, 82, 100])
+    failRgs([100, 82])
+
+    const message = await runAndCatch()
+
+    expect(message).toBe(
+      'OpenMM md failed: the simulation became unstable (NaN coordinates) at Rg 82, 100 Å (2 of 6 runs). ' +
+        'This usually means the requested Rg range (10–100 Å) is too far from the size of the starting model. ' +
+        'Try an Rg range closer to the experimental Rg.'
+    )
+    expect(message).not.toContain('exit 1')
+  })
+
+  it('still lists other failures alongside unstable ones', async () => {
+    await setupRgs([20, 40, 60])
+    failRgs([60], [20])
+
+    const message = await runAndCatch()
+
+    expect(message).toContain(
+      'became unstable (NaN coordinates) at Rg 60 Å (1 of 3 runs)'
+    )
+    expect(message).toContain(
+      'Other errors: rg=20: md.py (rg=20, GPU=0) failed (exit 1)'
+    )
+  })
+
+  it('keeps the generic message when no run reported NaN', async () => {
+    await setupRgs([20, 40])
+    failRgs([], [40])
+
+    const message = await runAndCatch()
+
+    expect(message).toBe(
+      'OpenMM md failed: 1/2 failures (50% > 0% threshold). Errors: rg=40: md.py (rg=40, GPU=0) failed (exit 1)'
+    )
+  })
+})
