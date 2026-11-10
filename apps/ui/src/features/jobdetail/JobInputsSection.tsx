@@ -14,6 +14,7 @@ import CopyableChip from 'components/CopyableChip'
 import { useLazyGetFileByIdAndNameQuery } from 'slices/jobsApiSlice'
 import { useJobProperties } from 'features/results/hooks/useJobProperties'
 import { FileModal } from 'features/results/components/FileModal'
+import JobSequences from './JobSequences'
 import type { JobSource } from './jobSource'
 import type { JobView } from './jobView'
 
@@ -142,6 +143,9 @@ const JobInputsSection = ({
                 </Row>
               )
             })}
+            {view.inputs.sequence_entities && (
+              <JobSequences entities={view.inputs.sequence_entities} />
+            )}
             {combined.length > 0 && (
               <Row label="Combined">
                 <Box>

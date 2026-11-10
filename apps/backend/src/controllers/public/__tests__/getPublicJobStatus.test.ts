@@ -143,6 +143,51 @@ describe('getPublicJobById', () => {
     expect(JSON.stringify(body)).not.toContain('alice@example.com')
   })
 
+  it.each(['alphafold_entities', 'openfold_entities', 'bioemu_entities'])(
+    'returns the submitted sequences from %s without Mongo ids',
+    async (field) => {
+      mockJobFindOne.mockReturnValue({
+        lean: () => ({ exec: async () => makeJob() })
+      })
+      mockMapJobMongoToDTO.mockReturnValue({
+        [field]: [
+          {
+            _id: 'mongo-subdoc-id',
+            id: '1',
+            name: 'pro-1',
+            sequence: 'MERKISRIHL',
+            type: 'Protein',
+            copies: 2,
+            seq_length: 10
+          }
+        ]
+      })
+      const req = { params: { publicId: 'token-abc' } } as unknown as Request
+      const res = makeRes()
+
+      await getPublicJobById(req, res)
+
+      const body = vi.mocked(res.json).mock.calls[0][0]
+      expect(body.inputs.sequence_entities).toEqual([
+        { name: 'pro-1', sequence: 'MERKISRIHL', type: 'Protein', copies: 2 }
+      ])
+    }
+  )
+
+  it('sends no sequences for jobs submitted with a model', async () => {
+    mockJobFindOne.mockReturnValue({
+      lean: () => ({ exec: async () => makeJob() })
+    })
+    mockMapJobMongoToDTO.mockReturnValue({ pdb_file: 'model.pdb' })
+    const req = { params: { publicId: 'token-abc' } } as unknown as Request
+    const res = makeRes()
+
+    await getPublicJobById(req, res)
+
+    const body = vi.mocked(res.json).mock.calls[0][0]
+    expect(body.inputs.sequence_entities).toBeUndefined()
+  })
+
   it('returns the MD constraints so the results page can display them', async () => {
     const md_constraints = {
       fixed_bodies: [

@@ -5,6 +5,14 @@ import { MDConstraintsDTO } from './mdConstraints.js'
 import { OpenMMParametersDTO } from './openmm.js'
 import { CHARMMParametersDTO } from './charmm.js'
 
+// A molecule submitted by sequence (AlphaFold, OpenFold3 and BioEmu2 jobs)
+export type SequenceEntityDTO = {
+  name: string
+  sequence: string
+  type: string
+  copies: number
+}
+
 // Non-sensitive job inputs shown in the "Inputs & parameters" section of the
 // job page. Explicitly whitelisted: no user or account details.
 export type PublicJobInputsDTO = {
@@ -16,6 +24,7 @@ export type PublicJobInputsDTO = {
   fasta_file?: string
   query_json_file?: string
   system_yaml_file?: string
+  sequence_entities?: SequenceEntityDTO[]
   bioemu_parameters?: BioEmuParametersDTO
   const_inp_file?: string
   openmm_parameters?: OpenMMParametersDTO

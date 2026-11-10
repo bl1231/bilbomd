@@ -55,6 +55,30 @@ describe('JobInputsSection', () => {
     expect(screen.queryByText('job-1')).not.toBeInTheDocument()
   })
 
+  it('shows the submitted sequences on owner and public pages', () => {
+    const view = makeView({
+      jobType: 'alphafold',
+      inputs: {
+        data_file: 'saxs.dat',
+        fasta_file: 'af-entities.fasta',
+        sequence_entities: [
+          { name: 'pro-1', sequence: 'MERKISRIHL', type: 'Protein', copies: 2 }
+        ]
+      }
+    })
+    renderSection({ kind: 'public', token: 'tok' }, view)
+    expect(screen.getByText('Sequences:')).toBeInTheDocument()
+    expect(screen.getByText('MERKISRIHL')).toBeInTheDocument()
+    expect(
+      screen.getByText('Protein · 2 copies · 10 residues')
+    ).toBeInTheDocument()
+  })
+
+  it('has no sequence block for jobs submitted with a model', () => {
+    renderSection({ kind: 'owner', id: 'job-1' }, makeView())
+    expect(screen.queryByText('Sequences:')).not.toBeInTheDocument()
+  })
+
   it('shows the constraint file name as plain text on public pages', () => {
     renderSection({ kind: 'public', token: 'tok' }, charmmView)
     expect(screen.getByText('const.inp')).toBeInTheDocument()

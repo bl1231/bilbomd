@@ -7,6 +7,7 @@ import type {
   JobType,
   MDConstraintsDTO,
   PublicJobInputsDTO,
+  SequenceEntityDTO,
   PublicJobStatus
 } from '@bilbomd/bilbomd-types'
 
@@ -43,6 +44,7 @@ const pickInputs = (src: PublicJobInputsDTO): PublicJobInputsDTO => ({
   fasta_file: src.fasta_file,
   query_json_file: src.query_json_file,
   system_yaml_file: src.system_yaml_file,
+  sequence_entities: src.sequence_entities,
   bioemu_parameters: src.bioemu_parameters,
   const_inp_file: src.const_inp_file,
   openmm_parameters: src.openmm_parameters,
@@ -54,6 +56,26 @@ const pickInputs = (src: PublicJobInputsDTO): PublicJobInputsDTO => ({
   d2o_fraction: src.d2o_fraction,
   bilbomd_uuids: src.bilbomd_uuids
 })
+
+// The owner DTO names the submitted sequences after the job type; the public
+// one already sends them as `sequence_entities`.
+const ownerSequenceEntities = (
+  mongo: object
+): SequenceEntityDTO[] | undefined => {
+  const { alphafold_entities, openfold_entities, bioemu_entities } = mongo as {
+    alphafold_entities?: SequenceEntityDTO[]
+    openfold_entities?: SequenceEntityDTO[]
+    bioemu_entities?: SequenceEntityDTO[]
+  }
+  const entities = alphafold_entities ?? openfold_entities ?? bioemu_entities
+  if (!Array.isArray(entities) || entities.length === 0) return undefined
+  return entities.map(({ name, sequence, type, copies }) => ({
+    name,
+    sequence,
+    type,
+    copies
+  }))
+}
 
 export const toJobView = (dto: BilboMDJobDTO): JobView => {
   const m = dto.mongo
@@ -74,7 +96,10 @@ export const toJobView = (dto: BilboMDJobDTO): JobView => {
     results: m.results,
     // Job-type-specific fields live on the union members; the whitelist
     // copies only the ones that exist on this job.
-    inputs: pickInputs(m as PublicJobInputsDTO),
+    inputs: {
+      ...pickInputs(m as PublicJobInputsDTO),
+      sequence_entities: ownerSequenceEntities(m)
+    },
     feedback: m.feedback,
     resultsReady: m.results_ready,
     accessMode: m.access_mode,

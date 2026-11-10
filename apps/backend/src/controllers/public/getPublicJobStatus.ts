@@ -4,6 +4,7 @@ import { Job, IJob } from '@bilbomd/mongodb-schema'
 import type {
   PublicJobStatus,
   PublicJobInputsDTO,
+  SequenceEntityDTO,
   JobResultsDTO,
   JobStepsDTO
 } from '@bilbomd/bilbomd-types'
@@ -11,6 +12,24 @@ import {
   mapDiscriminatorToJobType,
   mapJobMongoToDTO
 } from '../jobs/utils/jobDTOMapper.js'
+
+// The sequences an AlphaFold, OpenFold3 or BioEmu2 job was submitted with.
+// Copied field by field: the stored subdocuments also carry Mongo ids.
+const pickSequenceEntities = (dto: object): SequenceEntityDTO[] | undefined => {
+  const { alphafold_entities, openfold_entities, bioemu_entities } = dto as {
+    alphafold_entities?: SequenceEntityDTO[]
+    openfold_entities?: SequenceEntityDTO[]
+    bioemu_entities?: SequenceEntityDTO[]
+  }
+  const entities = alphafold_entities ?? openfold_entities ?? bioemu_entities
+  if (!Array.isArray(entities) || entities.length === 0) return undefined
+  return entities.map(({ name, sequence, type, copies }) => ({
+    name,
+    sequence,
+    type,
+    copies
+  }))
+}
 
 // Whitelist the input fields a public viewer may see; the full DTO also
 // carries user details, which must never leave through this endpoint.
@@ -24,6 +43,7 @@ const pickPublicInputs = (job: IJob): PublicJobInputsDTO => {
     pae_file: dto.pae_file,
     fasta_file: dto.fasta_file,
     query_json_file: dto.query_json_file,
+    sequence_entities: pickSequenceEntities(dto),
     const_inp_file: dto.const_inp_file,
     openmm_parameters: dto.openmm_parameters,
     charmm_parameters: dto.charmm_parameters,
