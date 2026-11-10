@@ -39,7 +39,23 @@ vi.mock('features/scoperjob/FoXSChart', () => ({
 }))
 
 vi.mock('features/foxs/FoXSEnsembleCharts', () => ({
-  default: () => <div data-testid="foxs-ensemble-charts">Ensemble Charts</div>
+  default: ({
+    combinedData,
+    maxYAxis
+  }: {
+    combinedData: Array<Record<string, number>>
+    maxYAxis: number
+  }) => (
+    <div
+      data-testid="foxs-ensemble-charts"
+      data-series={Object.keys(combinedData[0] ?? {})
+        .filter((key) => key.startsWith('model_intensity_'))
+        .join(',')}
+      data-max-y={maxYAxis}
+    >
+      Ensemble Charts
+    </div>
+  )
 }))
 
 vi.mock('features/foxs/DimensionlessKratkyChart', () => ({
@@ -50,6 +66,7 @@ describe('FoXSAnalysis', () => {
   const mockFoxsDataSingle: FoxsData[] = [
     {
       filename: 'model1.pdb',
+      kind: 'original',
       chisq: 1.5,
       c1: '1.0',
       c2: '0.0',
@@ -64,6 +81,7 @@ describe('FoXSAnalysis', () => {
   const mockFoxsDataEnsemble: FoxsData[] = [
     {
       filename: 'model1.pdb',
+      kind: 'original',
       chisq: 1.5,
       c1: '1.0',
       c2: '0.0',
@@ -74,6 +92,7 @@ describe('FoXSAnalysis', () => {
     },
     {
       filename: 'model2.pdb',
+      kind: 'ensemble',
       chisq: 1.2,
       c1: '0.95',
       c2: '0.05',
@@ -87,6 +106,7 @@ describe('FoXSAnalysis', () => {
   const mockFoxsDataWithNegative: FoxsData[] = [
     {
       filename: 'model1.pdb',
+      kind: 'original',
       chisq: 1.5,
       c1: '1.0',
       c2: '0.0',
@@ -100,6 +120,7 @@ describe('FoXSAnalysis', () => {
   const mockFoxsDataWithZeroError: FoxsData[] = [
     {
       filename: 'model1.pdb',
+      kind: 'original',
       chisq: 1.5,
       c1: '1.0',
       c2: '0.0',
@@ -223,6 +244,7 @@ describe('FoXSAnalysis', () => {
       const emptyData: FoxsData[] = [
         {
           filename: 'model1.pdb',
+          kind: 'original',
           chisq: 1.5,
           c1: '1.0',
           c2: '0.0',
@@ -459,6 +481,23 @@ describe('FoXSAnalysis', () => {
       expect(screen.queryByText('No ensemble data')).not.toBeInTheDocument()
     })
 
+    it('keys the ensemble series by their position in the FoXS data', async () => {
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data: mockFoxsDataEnsemble,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      expect(await screen.findByTestId('foxs-ensemble-charts')).toHaveAttribute(
+        'data-series',
+        'model_intensity_1'
+      )
+    })
+
     it('should not show "No ensemble data" alert with ensemble', async () => {
       vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
         data: mockFoxsDataEnsemble,
@@ -475,6 +514,72 @@ describe('FoXSAnalysis', () => {
       })
 
       expect(screen.queryByText('No ensemble data')).not.toBeInTheDocument()
+    })
+  })
+
+  // BioEmu2 jobs have no starting model, so the backend sends only the
+  // MultiFoXS ensembles; the 1-state ensemble must not pass as the original
+  describe('job with no original model', () => {
+    const ensemblesOnly: FoxsData[] = [
+      {
+        filename: 'multi_state_model_1_1_1.dat',
+        kind: 'ensemble',
+        chisq: 3.1,
+        c1: 'unk',
+        c2: 'unk',
+        data: [
+          { q: 0.01, exp_intensity: 100, model_intensity: 90, error: 2 },
+          { q: 0.02, exp_intensity: 80, model_intensity: 81, error: 2 }
+        ]
+      },
+      {
+        filename: 'multi_state_model_2_1_1.dat',
+        kind: 'ensemble',
+        chisq: 1.4,
+        c1: 'unk',
+        c2: 'unk',
+        data: [
+          { q: 0.01, exp_intensity: 100, model_intensity: 98, error: 2 },
+          { q: 0.02, exp_intensity: 80, model_intensity: 79, error: 2 }
+        ]
+      }
+    ]
+
+    beforeEach(() => {
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data: ensemblesOnly,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+    })
+
+    it('shows no Original Model chart', async () => {
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      await screen.findByTestId('foxs-ensemble-charts')
+      expect(screen.queryByTestId('foxs-chart')).not.toBeInTheDocument()
+      expect(screen.queryByText('Original Model')).not.toBeInTheDocument()
+    })
+
+    it('plots every ensemble size, including the first', async () => {
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      expect(await screen.findByTestId('foxs-ensemble-charts')).toHaveAttribute(
+        'data-series',
+        'model_intensity_0,model_intensity_1'
+      )
+    })
+
+    it('scales the residual axes to the largest ensemble residual', async () => {
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+
+      // (100 - 90) / 2 from the 1-state ensemble
+      expect(await screen.findByTestId('foxs-ensemble-charts')).toHaveAttribute(
+        'data-max-y',
+        '5'
+      )
     })
   })
 
@@ -502,6 +607,7 @@ describe('FoXSAnalysis', () => {
       const mockDataWithZeroModel: FoxsData[] = [
         {
           filename: 'model1.pdb',
+          kind: 'original',
           chisq: 1.5,
           c1: '1.0',
           c2: '0.0',
@@ -554,6 +660,7 @@ describe('FoXSAnalysis', () => {
       const mockDataWithGaps: FoxsData[] = [
         {
           filename: 'model1.pdb',
+          kind: 'original',
           chisq: 1.5,
           c1: '1.0',
           c2: '0.0',
@@ -563,6 +670,7 @@ describe('FoXSAnalysis', () => {
         },
         {
           filename: 'model2.pdb',
+          kind: 'ensemble',
           chisq: 1.2,
           c1: '0.95',
           c2: '0.05',
@@ -644,6 +752,7 @@ describe('FoXSAnalysis', () => {
       const mockDataHighPrecision: FoxsData[] = [
         {
           filename: 'model1.pdb',
+          kind: 'original',
           chisq: 1.56789,
           c1: '1.01234',
           c2: '0.00567',
@@ -731,6 +840,7 @@ describe('FoXSAnalysis', () => {
       const mockData: FoxsData[] = [
         {
           filename: 'model1.pdb',
+          kind: 'original',
           chisq: 1.5,
           c1: '1.0',
           c2: '0.0',
@@ -779,6 +889,7 @@ describe('FoXSAnalysis', () => {
       const mockData: FoxsData[] = [
         {
           filename: 'model1.pdb',
+          kind: 'original',
           chisq: 1.5,
           c1: '1.0',
           c2: '0.0',
@@ -830,6 +941,7 @@ describe('FoXSAnalysis', () => {
       const mockData: FoxsData[] = [
         {
           filename: 'model1.pdb',
+          kind: 'original',
           chisq: 1.5,
           c1: '1.0',
           c2: '0.0',
@@ -883,6 +995,7 @@ describe('FoXSAnalysis', () => {
       const mockData: FoxsData[] = [
         {
           filename: 'model1.pdb',
+          kind: 'original',
           chisq: 1.5,
           c1: '1.0',
           c2: '0.0',

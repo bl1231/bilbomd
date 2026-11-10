@@ -14,6 +14,7 @@ const fitMetrics: FitMetricsInfo = {
 
 const fit = (filename: string, extra: Partial<FoxsData> = {}): FoxsData => ({
   filename,
+  kind: filename.startsWith('multi_state_model_') ? 'ensemble' : 'original',
   chisq: 2.345,
   c1: '1.0',
   c2: '0.0',
@@ -88,5 +89,21 @@ describe('FitMetricsTable', () => {
       screen.getByText(/12 channels, χ²free over 1000 random subsets/)
     ).toBeInTheDocument()
     expect(screen.getByText(/Vr only uses q ≤ 0.3 Å⁻¹/)).toBeInTheDocument()
+  })
+  it('labels every row by ensemble size when the job has no original model', () => {
+    render(
+      <FitMetricsTable
+        fitMetrics={fitMetrics}
+        foxsData={[
+          fit('multi_state_model_1_1_1.dat'),
+          fit('multi_state_model_2_1_1.dat')
+        ]}
+      />
+    )
+
+    expect(rows().map((row) => within(row).getAllByRole('cell')[0])).toEqual([
+      expect.objectContaining({ textContent: 'Ens. Size 1' }),
+      expect.objectContaining({ textContent: 'Ens. Size 2' })
+    ])
   })
 })

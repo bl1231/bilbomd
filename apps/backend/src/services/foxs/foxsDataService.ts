@@ -2,7 +2,7 @@ import { logger } from '../../middleware/loggers.js'
 import fs from 'fs-extra'
 import path from 'path'
 import { IJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
-import { FoxsData, FoxsDataPoint } from '@bilbomd/bilbomd-types'
+import { FoxsData, FoxsDataPoint, FoxsFitKind } from '@bilbomd/bilbomd-types'
 import { getEnvVar } from '../../config/config.js'
 import {
   parseFileContent,
@@ -26,7 +26,8 @@ const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
 const createDataObject = async (
   file: string,
-  jobDir: string
+  jobDir: string,
+  kind: FoxsFitKind
 ): Promise<FoxsData> => {
   try {
     await fs.access(file)
@@ -49,7 +50,7 @@ const createDataObject = async (
       logger.warn(`Log file not accessible or extraction failed: ${logError}`)
     }
 
-    return { filename, chisq, c1, c2, data }
+    return { filename, kind, chisq, c1, c2, data }
   } catch (error) {
     logger.error(`Failed to create data object: ${error}`)
     throw new Error(`Failed to process the data object: ${error}`)
@@ -97,8 +98,10 @@ const buildBilboFoxsData = async (job: IJob): Promise<FoxsData[]> => {
   }
 
   if (foundDatFile) {
-    data.push(await createDataObject(foundDatFile, jobDir))
+    data.push(await createDataObject(foundDatFile, jobDir, 'original'))
   } else {
+    // Expected for job types with no starting model (BioEmu2); the response
+    // then holds only ensembles and the UI shows no "Original Model" fit
     logger.warn(
       `No original .dat file found for base ${datFileBase} (proceeding with ensemble data if present)`
     )
@@ -126,7 +129,7 @@ const buildBilboFoxsData = async (job: IJob): Promise<FoxsData[]> => {
   for (const file of matchingFiles) {
     const filename = path.join(resultsDir, file)
     try {
-      data.push(await createDataObject(filename, jobDir))
+      data.push(await createDataObject(filename, jobDir, 'ensemble'))
       ensembleCount += 1
     } catch (e) {
       logger.warn(
@@ -222,6 +225,7 @@ const buildScoperFoxsData = async (
   return [
     {
       filename: job.pdb_file,
+      kind: 'original',
       chisq: chisqFromOrig,
       c1: c1FromOrig !== null ? String(c1FromOrig) : 'unk',
       c2: c2FromOrig !== null ? String(c2FromOrig) : 'unk',
@@ -229,6 +233,7 @@ const buildScoperFoxsData = async (
     },
     {
       filename: `scoper_combined_newpdb_${pdbNumber}.pdb`,
+      kind: 'scoper',
       chisq: chisqFromScop,
       c1: c1FromScop !== null ? String(c1FromScop) : 'unk',
       c2: c2FromScop !== null ? String(c2FromScop) : 'unk',

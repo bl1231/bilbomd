@@ -42,8 +42,8 @@ const FoXSEnsembleCharts = ({
 
   // Series hidden via legend/chip click, keyed by ensemble index (shared
   // between the I(q) and residual charts so both stay in sync). The
-  // experimental curve maps to index -1. The base dataset (index 0) has its
-  // own "Original Model" charts, so it is not rendered here at all.
+  // experimental curve maps to index -1. Only ensembles are drawn here; the
+  // original model, when the job has one, has its own charts.
   const [hidden, setHidden] = useState<Record<number, boolean>>({})
   const toggleIndex = (index: number) => {
     setHidden((prev) => ({ ...prev, [index]: !prev[index] }))
@@ -110,7 +110,7 @@ const FoXSEnsembleCharts = ({
             hide={!!hidden[-1]}
           />
           {foxsData.map((item, index) =>
-            index === 0 ? null : (
+            item.kind !== 'ensemble' ? null : (
               <Line
                 key={index}
                 yAxisId="left"
@@ -138,7 +138,7 @@ const FoXSEnsembleCharts = ({
         sx={{ pl: 2, mb: 1, flexWrap: 'wrap' }}
       >
         {foxsData.map((item, index) =>
-          index !== 0 ? (
+          item.kind === 'ensemble' ? (
             <Chip
               key={index}
               size="small"
@@ -175,7 +175,7 @@ const FoXSEnsembleCharts = ({
             content={legendContent}
           />
           {foxsData.map((item, index) =>
-            index === 0 ? null : (
+            item.kind !== 'ensemble' ? null : (
               <Line
                 key={index}
                 type="monotone"

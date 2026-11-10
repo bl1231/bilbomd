@@ -65,7 +65,43 @@ describe('buildBilboFoxsData', () => {
 
     const result = await buildBilboFoxsData(makeJob())
     expect(result[0].filename).toMatch(/minimization_output_experiment/)
-    expect(result.length).toBeGreaterThanOrEqual(1)
+    expect(result.map((fit) => fit.kind)).toEqual([
+      'original',
+      'ensemble',
+      'ensemble'
+    ])
+  })
+
+  it('returns only ensembles when the job has no starting model (BioEmu2)', async () => {
+    const { default: fs } = await import('fs-extra')
+    const parser = await import('../foxsParser.js')
+
+    vi.mocked(fs.existsSync).mockReturnValue(true)
+    // No minimized .dat and no initial_foxs_analysis.log anywhere; only the
+    // MultiFoXS outputs in results/ exist
+    vi.mocked(fs.access).mockImplementation((async (file: string) => {
+      if (!String(file).includes('multi_state_model_'))
+        throw new Error('ENOENT')
+    }) as never)
+    vi.mocked(fs.readFile).mockResolvedValue(makeDatContent() as never)
+    vi.mocked(fs.readdir).mockResolvedValue([
+      'multi_state_model_2_1_1.dat',
+      'multi_state_model_1_1_1.dat',
+      'ensembles_size_1.txt'
+    ] as never)
+    vi.mocked(parser.parseFileContent).mockReturnValue([
+      { q: 0.001, exp_intensity: 100, model_intensity: 99, error: 2 }
+    ])
+    vi.mocked(parser.extractChiSquared).mockReturnValue(1.23)
+
+    const result = await buildBilboFoxsData(makeJob({ bilbomd_mode: 'bioemu' }))
+
+    expect(
+      result.map(({ filename, kind, c1 }) => ({ filename, kind, c1 }))
+    ).toEqual([
+      { filename: 'multi_state_model_1_1_1.dat', kind: 'ensemble', c1: 'unk' },
+      { filename: 'multi_state_model_2_1_1.dat', kind: 'ensemble', c1: 'unk' }
+    ])
   })
 
   it('attaches the Guinier fit to the base dataset when available', async () => {
@@ -237,6 +273,7 @@ describe('buildScoperFoxsData', () => {
     expect(result).toHaveLength(2)
     expect(result[0].filename).toBe('original.pdb')
     expect(result[1].filename).toBe('scoper_combined_newpdb_3.pdb')
+    expect(result.map((fit) => fit.kind)).toEqual(['original', 'scoper'])
     expect(result[0].c1).toBe('1.05')
     expect(result[1].c1).toBe('1.02')
   })
