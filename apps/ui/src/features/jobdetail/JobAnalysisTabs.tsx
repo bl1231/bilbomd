@@ -7,13 +7,20 @@ import {
   Tabs,
   Typography
 } from '@mui/material'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import HeaderBox from 'components/HeaderBox'
 import BilboMdFeedback from 'features/analysis/BilboMdFeedback'
 import MovieGallery from 'features/analysis/MovieGallery'
+import { feedbackAttention } from 'features/analysis/feedbackModel'
 import { sourceProps, type JobSource } from './jobSource'
 import type { JobView } from './jobView'
-import { analysisTabs, type AnalysisTab } from './jobPageModel'
+import {
+  ANALYSIS_HEADING_ID,
+  analysisTabs,
+  type AnalysisTab
+} from './jobPageModel'
 import { useJobMovies } from './useJobView'
+import { useJobFeedback } from './useJobFeedback'
 import PaeTab from './PaeTab'
 import RigidDomainsTab from './RigidDomainsTab'
 
@@ -22,7 +29,7 @@ const FoXSAnalysis = lazy(() => import('features/jobs/FoXSAnalysis'))
 const TAB_LABELS: Record<AnalysisTab, string> = {
   foxs: 'FoXS Analysis',
   movies: 'MD Movies',
-  feedback: 'Feedback',
+  feedback: 'Feedback & Validation',
   pae: 'PAE',
   domains: 'Rigid Domains'
 }
@@ -45,28 +52,45 @@ type JobAnalysisTabsProps = {
   source: JobSource
   view: JobView
   eventsConnected: boolean
+  // Set by the page to open a particular tab (the mismatch banner's button).
+  // Left undefined, the tabs keep their own selection.
+  activeTab?: AnalysisTab
+  onTabChange?: (tab: AnalysisTab) => void
 }
 
 const JobAnalysisTabs = ({
   source,
   view,
-  eventsConnected
+  eventsConnected,
+  activeTab,
+  onTabChange
 }: JobAnalysisTabsProps) => {
   const tabs = analysisTabs(view.jobType)
-  const [tabIndex, setTabIndex] = useState(0)
-  const tab = tabs[tabIndex]
+  const [ownTab, setOwnTab] = useState<AnalysisTab | undefined>(tabs[0])
+  const requested = activeTab ?? ownTab
+  const tab = requested && tabs.includes(requested) ? requested : tabs[0]
+  // Mark the tab when the assessment found something worth a look
+  const attention = feedbackAttention(useJobFeedback(source, view))
 
   if (!tab) return null
+
+  const selectTab = (next: AnalysisTab) => {
+    setOwnTab(next)
+    onTabChange?.(next)
+  }
 
   return (
     <>
       <HeaderBox sx={{ py: '6px' }}>
-        <Typography>Analysis</Typography>
+        <Typography id={ANALYSIS_HEADING_ID}>Analysis</Typography>
       </HeaderBox>
       <Box sx={{ borderBottom: 0, borderColor: 'divider' }}>
         <Tabs
-          value={tabIndex}
-          onChange={(_, value: number) => setTabIndex(value)}
+          value={tabs.indexOf(tab)}
+          onChange={(_, value: number) => {
+            const next = tabs[value]
+            if (next) selectTab(next)
+          }}
           aria-label="analysis tabs"
           variant="scrollable"
           scrollButtons="auto"
@@ -82,12 +106,28 @@ const JobAnalysisTabs = ({
             }
           }}
         >
-          {tabs.map((t) => (
-            <Tab
-              key={t}
-              label={TAB_LABELS[t]}
-            />
-          ))}
+          {tabs.map((t) =>
+            t === 'feedback' && attention ? (
+              <Tab
+                key={t}
+                label={TAB_LABELS[t]}
+                aria-label={`${TAB_LABELS[t]} (needs attention)`}
+                icon={
+                  <WarningAmberIcon
+                    fontSize="small"
+                    color={attention === 'problem' ? 'error' : 'warning'}
+                  />
+                }
+                iconPosition="end"
+                sx={{ minHeight: 48 }}
+              />
+            ) : (
+              <Tab
+                key={t}
+                label={TAB_LABELS[t]}
+              />
+            )
+          )}
         </Tabs>
       </Box>
       <Box sx={{ p: 0 }}>
@@ -108,7 +148,10 @@ const JobAnalysisTabs = ({
         )}
         {tab === 'feedback' &&
           (source.kind === 'owner' ? (
-            <BilboMdFeedback feedback={view.feedback} />
+            <BilboMdFeedback
+              feedback={view.feedback}
+              id={source.id}
+            />
           ) : (
             <BilboMdFeedback publicId={source.token} />
           ))}

@@ -5,6 +5,10 @@ import { engineLabel } from 'features/shared/engineLabel'
 
 export type AnalysisTab = 'foxs' | 'movies' | 'feedback' | 'pae' | 'domains'
 
+// id of the Analysis heading; the page scrolls here when it opens a tab on
+// the user's behalf
+export const ANALYSIS_HEADING_ID = 'job-analysis'
+
 const FOXS_JOB_TYPES: JobType[] = [
   'pdb',
   'crd',
