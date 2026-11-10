@@ -1,5 +1,11 @@
 # @bilbomd/bilbomd-types
 
+## 1.14.1
+
+### Patch Changes
+
+- 4dc5ad6: Show the submitted sequences in the "Inputs & parameters" section of the job page for AlphaFold, OpenFold3 and BioEmu2 jobs: name, type, copies and length per molecule, the sequence in numbered blocks of ten, copy buttons (one sequence, or everything as FASTA) and the total size counting copies. Shared results pages show them too.
+
 ## 1.14.0
 
 ### Minor Changes
