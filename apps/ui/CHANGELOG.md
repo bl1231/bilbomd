@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.39.0
+
+### Minor Changes
+
+- 6de0d55: Add a "Rigid Domains" analysis tab to BilboMD BioEmu2 job pages. It shows how much every residue-pair distance varies across the sampled structures, the rigid domains found from that matrix, and which domain the ensemble members were superposed on.
+
 ## 2.38.0
 
 ### Minor Changes
