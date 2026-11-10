@@ -17,8 +17,9 @@ const proteinSeqRegex = /^[ACDEFGHIKLMNPQRSTVWY]+$/
 const dnaSeqRegex = /^[ACGT]+$/
 
 // Sampling time and GPU memory grow with the square of the system size
-// (residues + nucleotides, times copies). Phase 0 covered up to ~820; ~1,600
-// fits on an 80 GB A100 but takes hours.
+// (residues + nucleotides, times copies). Measured on Perlmutter (bilbomd#1249):
+// a 40 GB A100 fits ~1,400 and an 80 GB A100 2,000 (~1.5 h for 300 structures).
+// Deployments raise the default with BIOEMU_MAX_TOKENS.
 export const BIOEMU_DEFAULT_MAX_TOKENS = 1000
 
 export const bioemuMaxTokens = (): number => {
