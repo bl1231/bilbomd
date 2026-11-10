@@ -22,7 +22,7 @@ const FoXSAnalysis = lazy(() => import('features/jobs/FoXSAnalysis'))
 const TAB_LABELS: Record<AnalysisTab, string> = {
   foxs: 'FoXS Analysis',
   movies: 'MD Movies',
-  feedback: 'Feedback',
+  feedback: 'Feedback & Validation',
   pae: 'PAE',
   domains: 'Rigid Domains'
 }

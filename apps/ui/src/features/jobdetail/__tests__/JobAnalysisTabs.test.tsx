@@ -82,7 +82,7 @@ describe('JobAnalysisTabs', () => {
         eventsConnected={false}
       />
     )
-    fireEvent.click(screen.getByRole('tab', { name: 'Feedback' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Feedback & Validation' }))
     expect(screen.getByTestId('feedback')).toHaveTextContent('"mw_saxs":1')
     unmount()
 
@@ -93,7 +93,7 @@ describe('JobAnalysisTabs', () => {
         eventsConnected={false}
       />
     )
-    fireEvent.click(screen.getByRole('tab', { name: 'Feedback' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Feedback & Validation' }))
     expect(screen.getByTestId('feedback')).toHaveTextContent('"publicId":"tok"')
   })
 
