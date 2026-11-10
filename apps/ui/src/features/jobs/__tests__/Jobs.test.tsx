@@ -193,6 +193,27 @@ describe('Jobs table', () => {
     expect(engineCell).toBeInTheDocument()
   })
 
+  it('shows BioEmu2, not the polishing engine, for BioEmu2 jobs', async () => {
+    server.use(
+      http.get('http://localhost:3003/api/v1/jobs', () => {
+        return HttpResponse.json([
+          createMockJobDTO({
+            mongo: createMockPdbMongo({
+              jobType: 'bioemu',
+              md_engine: 'OpenMM'
+            } as never)
+          })
+        ])
+      })
+    )
+
+    renderWithProviders(<Jobs />)
+
+    // once in the Type column (the pipeline) and once in the Engine column
+    expect(await screen.findAllByText('BioEmu2')).toHaveLength(2)
+    expect(screen.queryByText('OpenMM')).not.toBeInTheDocument()
+  })
+
   it('shows User → Engine → Status order for admins', async () => {
     vi.mocked(useAuth).mockReturnValue({
       username: 'admin',

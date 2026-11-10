@@ -185,8 +185,9 @@ const NewBioEmuJob = () => {
               jobResponse={{
                 message: jobResponse.message || 'Job submitted successfully',
                 jobid: jobResponse.jobid,
-                uuid: jobResponse.uuid,
-                md_engine: jobResponse.md_engine
+                uuid: jobResponse.uuid
+                // no md_engine: this pipeline has no Molecular Dynamics step
+                // for the alert to name (OpenMM only polishes the ensembles)
               }}
               jobType="BioEmu2"
             />

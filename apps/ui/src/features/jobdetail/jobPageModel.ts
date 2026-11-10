@@ -1,6 +1,7 @@
 import { alpha, type Theme } from '@mui/material/styles'
 import type { JobType } from '@bilbomd/bilbomd-types'
 import type { JobView } from './jobView'
+import { engineLabel } from 'features/shared/engineLabel'
 
 export type AnalysisTab = 'foxs' | 'movies' | 'feedback' | 'pae' | 'domains'
 
@@ -48,12 +49,12 @@ export const resubmitPathFor = (
 export const resubmitPath = (view: JobView): string | undefined =>
   resubmitPathFor(view.jobType, view.id)
 
-// Scoper runs KGSRNA rather than MD; jobs from before md_engine existed
-// were all CHARMM. Multi jobs combine other jobs and have no engine.
+// Scoper and BioEmu2 don't sample with MD (see engineLabel.ts); jobs from
+// before md_engine existed were all CHARMM. Multi jobs combine other jobs and
+// have no engine.
 export const mdEngineLabel = (view: JobView): string | undefined => {
-  if (view.jobType === 'scoper') return 'KGSRNA'
   if (view.jobType === 'multi') return undefined
-  return view.md_engine ?? 'CHARMM'
+  return engineLabel(view.jobType, view.md_engine) ?? 'CHARMM'
 }
 
 // Pale tints in light mode; translucent ones in dark mode so the chip's
