@@ -407,6 +407,8 @@ def build_report(results_dir: Path) -> Dict:
             "[%s] %s — %s", finding["severity"], finding["title"], finding["detail"]
         )
 
+    # Shared edges for the legacy q_ranges field. They cannot describe a skipped
+    # region (too few points); `regions` carries each region's own bounds.
     edges = [regions[0].q_min] + [r.q_max for r in regions] if regions else []
     diff = mw["diff_fraction"]
 

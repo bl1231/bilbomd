@@ -98,6 +98,42 @@ describe('BilboMdFeedback Component', () => {
     ).toBeInTheDocument()
   })
 
+  it("labels a version 2 report from each region's own bounds", () => {
+    // Mid q was skipped for having too few points, so the shared edges in
+    // q_ranges would label high q as starting where low q ends
+    const feedback: IFeedbackData = {
+      ...mockFeedback,
+      version: 2,
+      q_ranges: [0.01, 0.09, 0.4],
+      chi_squares_of_regions: [0.8, 2.5],
+      residuals_of_regions: [0.02, 0.1],
+      regions: [
+        {
+          name: 'low',
+          q_min: 0.01,
+          q_max: 0.09,
+          n_points: 80,
+          chi_square: 0.8,
+          mean_residual: 0.02
+        },
+        {
+          name: 'high',
+          q_min: 0.21,
+          q_max: 0.4,
+          n_points: 190,
+          chi_square: 2.5,
+          mean_residual: 0.1
+        }
+      ]
+    }
+    renderWithProviders(<BilboMdFeedback feedback={feedback} />)
+
+    expect(
+      screen.getByText('Mean residuals of 0.21 < q < 0.40:')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/0\.09 < q < 0\.40/)).not.toBeInTheDocument()
+  })
+
   it('renders data that cover fewer than three q-regions', () => {
     const feedback: IFeedbackData = {
       ...mockFeedback,

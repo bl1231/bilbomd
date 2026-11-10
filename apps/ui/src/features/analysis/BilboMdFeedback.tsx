@@ -61,16 +61,27 @@ const BilboMdFeedback = ({ feedback, publicId }: FeedbackProps) => {
   }
 
   // The q-regions that were assessed, labelled from the data. A report can
-  // cover fewer than three when the data stop at low q.
-  const regions = actualFeedback.chi_squares_of_regions.map(
-    (chiSquare, index) => ({
-      label: `${(actualFeedback.q_ranges[index] ?? 0).toFixed(2)} < q < ${(
-        actualFeedback.q_ranges[index + 1] ?? 0
-      ).toFixed(2)}`,
-      chiSquare,
-      residual: actualFeedback.residuals_of_regions[index]
-    })
-  )
+  // cover fewer than three when the data stop at low q or a region has too
+  // few points. Version 2 reports give each region's own bounds; q_ranges is
+  // a list of shared edges, which cannot describe a skipped region, so it is
+  // only used for reports from before version 2.
+  const qLabel = (qMin: number, qMax: number): string =>
+    `${qMin.toFixed(2)} < q < ${qMax.toFixed(2)}`
+  const regions: { label: string; chiSquare: number; residual?: number }[] =
+    actualFeedback.regions
+      ? actualFeedback.regions.map((region) => ({
+          label: qLabel(region.q_min, region.q_max),
+          chiSquare: region.chi_square,
+          residual: region.mean_residual
+        }))
+      : actualFeedback.chi_squares_of_regions.map((chiSquare, index) => ({
+          label: qLabel(
+            actualFeedback.q_ranges[index] ?? 0,
+            actualFeedback.q_ranges[index + 1] ?? 0
+          ),
+          chiSquare,
+          residual: actualFeedback.residuals_of_regions[index]
+        }))
 
   // The molecular-weight comparison is advisory and can be unavailable
   const formatMw = (value: number | null | undefined): string =>
