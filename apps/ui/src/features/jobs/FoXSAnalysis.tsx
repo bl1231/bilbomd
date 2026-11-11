@@ -130,9 +130,14 @@ const combineFoxsData = (foxsDataArray: FoxsData[]): CombinedFoxsData[] => {
       if (currentPoint) {
         const model_intensity =
           currentPoint.model_intensity != null
-            ? Math.max(parseFloat(currentPoint.model_intensity.toFixed(4)), 0)
+            ? parseFloat(currentPoint.model_intensity.toFixed(4))
             : 0
-        combinedData[modelIntensityKey] = model_intensity
+        // The I(q) chart has a log axis, where a single non-positive value
+        // blanks the whole chart, so those points are left out of the
+        // series (the line breaks there). Residuals use the real value.
+        if (model_intensity > 0) {
+          combinedData[modelIntensityKey] = model_intensity
+        }
         combinedData[residualKey] =
           error !== 0
             ? parseFloat(((exp_intensity - model_intensity) / error).toFixed(4))
