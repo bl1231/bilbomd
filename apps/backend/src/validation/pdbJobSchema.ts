@@ -28,7 +28,7 @@ export const pdbJobSchema = yup.object({
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),
   const_inp_file: requiredFile('const.inp file is required')
-    .concat(constInpCheck())
+    .concat(constInpCheck('pdb'))
     .concat(fileSizeTest(2_000_000))
     .concat(fileExtTest('inp'))
     .concat(noSpacesTest())
