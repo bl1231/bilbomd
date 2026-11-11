@@ -208,6 +208,30 @@ export const CONST_INP_ALLOWED_PREFIXES = [
  */
 export const MAX_CONST_INP_SHAPE_COMMANDS = 20
 
+// CHARMM reads a file one record per line; split on any line ending so a
+// bare carriage return can't hide a second line from the checks below
+const splitLines = (text: string): string[] => text.split(/\r\n|\r|\n/)
+
+/**
+ * The first line of a constraint file that doesn't start with one of
+ * CONST_INP_ALLOWED_PREFIXES (trimmed), or null when every line does. Blank
+ * lines are skipped. The worker runs this on the file right before CHARMM
+ * streams it, whatever path the job took to the queue.
+ */
+export const findDisallowedConstInpLine = (text: string): string | null => {
+  for (const line of splitLines(text)) {
+    const trimmed = line.trim()
+    if (trimmed === '') continue
+    const lower = trimmed.toLowerCase()
+    if (
+      !CONST_INP_ALLOWED_PREFIXES.some((prefix) => lower.startsWith(prefix))
+    ) {
+      return trimmed
+    }
+  }
+  return null
+}
+
 /**
  * Checks a CHARMM constraint file. `mode` is the job's input mode: 'pdb' and
  * 'crd_psf' also check the segment IDs that define lines select.
@@ -217,7 +241,7 @@ export const checkConstInpText = (
   text: string,
   mode?: string
 ): string | true => {
-  const lines = text.split('\n').filter((line) => line.trim() !== '')
+  const lines = splitLines(text).filter((line) => line.trim() !== '')
 
   if (lines.length === 0 || lines[lines.length - 1]?.trim() !== 'return') {
     return 'The last line must be "return".'
@@ -256,13 +280,9 @@ export const checkConstInpText = (
     return `Too many CHARMM shape commands. Maximum allowed is ${MAX_CONST_INP_SHAPE_COMMANDS}.`
   }
 
-  for (const line of lines) {
-    const lower = line.trim().toLowerCase()
-    if (
-      !CONST_INP_ALLOWED_PREFIXES.some((prefix) => lower.startsWith(prefix))
-    ) {
-      return `Disallowed keyword in constraint file: "${line.trim()}"`
-    }
+  const disallowed = findDisallowedConstInpLine(text)
+  if (disallowed !== null) {
+    return `Disallowed keyword in constraint file: "${disallowed}"`
   }
 
   return true

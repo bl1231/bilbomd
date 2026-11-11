@@ -1,3 +1,4 @@
+import path from 'path'
 import { Job as BullMQJob } from 'bullmq'
 import { Job, IJob } from '@bilbomd/mongodb-schema'
 import { logger } from '../../helpers/loggers.js'
@@ -7,6 +8,8 @@ import {
   submitBilboMDSlurm
 } from '../functions/nersc-slurm.js'
 import { prepareNerscInputs } from '../functions/nersc-inputs.js'
+import { assertConstInpAllowed } from '../functions/const-inp-guard.js'
+import { config } from '../../config/config.js'
 import {
   recordWorkerUsageEvent,
   buildContext,
@@ -63,6 +66,20 @@ const processBilboMDJobNersc = async (MQjob: BullMQJob) => {
     } catch (error) {
       logger.error(`Failed to prepare NERSC inputs: ${MQjob.data.uuid}`)
       throw error
+    }
+
+    // CHARMM on Perlmutter streams an uploaded constraint file as is
+    const constInp = foundJob.get('const_inp_file') as string | undefined
+    if (constInp) {
+      try {
+        await assertConstInpAllowed(
+          path.join(config.uploadDir, foundJob.uuid),
+          constInp
+        )
+      } catch (error) {
+        logger.error(`Constraint file check failed: ${MQjob.data.uuid}`)
+        throw error
+      }
     }
 
     // Prepare bilbomd.slurm file
