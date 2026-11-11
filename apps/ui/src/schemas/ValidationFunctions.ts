@@ -13,7 +13,11 @@ import {
   pdbIsSingleModel,
   findUnsupportedPdbResidues,
   checkRnaResidues,
-  checkConstInpText
+  checkConstInpText,
+  findSharedResidueNumbers,
+  countPdbResidues,
+  countCifResidues,
+  getPaeMatrixSize
 } from '@bilbomd/bilbomd-types'
 import type { QUnits, SaxsDataAnalysis } from '@bilbomd/bilbomd-types'
 import { parsePLDDTFromPDB, parsePLDDTFromCIF } from '../utils/pdbUtils'
@@ -271,6 +275,53 @@ const isRNA = async (
   return checkRnaResidues(text)
 }
 
+// Residues sharing a chain and residue number, as findSharedResidueNumbers
+// describes them. Empty when the file cannot be read.
+const findSharedResidueNumbersInFile = async (
+  file: File
+): Promise<string[]> => {
+  const text = await readText(file)
+  return text === null ? [] : findSharedResidueNumbers(text)
+}
+
+// PAE files run to 120 MB and Formik re-validates every field on each change,
+// so each PAE and structure file is read and parsed once
+const paeSizeCache = new WeakMap<
+  File,
+  Promise<ReturnType<typeof getPaeMatrixSize>>
+>()
+const residueCountCache = new WeakMap<File, Promise<number>>()
+
+// The PAE matrix size (see getPaeMatrixSize), or null when the file is not
+// valid JSON or cannot be read
+const getPaeFileMatrixSize = (
+  file: File
+): Promise<ReturnType<typeof getPaeMatrixSize>> => {
+  let result = paeSizeCache.get(file)
+  if (!result) {
+    result = readText(file).then((text) =>
+      text === null ? null : getPaeMatrixSize(text)
+    )
+    paeSizeCache.set(file, result)
+  }
+  return result
+}
+
+// Distinct residues in a PDB or CIF file, counted the way pae2const.py does.
+// 0 when the file cannot be read.
+const countStructureFileResidues = (file: File): Promise<number> => {
+  let result = residueCountCache.get(file)
+  if (!result) {
+    const isCif = file.name.toLowerCase().endsWith('.cif')
+    result = readText(file).then((text) => {
+      if (text === null) return 0
+      return isCif ? countCifResidues(text) : countPdbResidues(text)
+    })
+    residueCountCache.set(file, result)
+  }
+  return result
+}
+
 const isSingleModel = async (file: File): Promise<boolean> => {
   const text = await readText(file)
   return text !== null && pdbIsSingleModel(text)
@@ -421,6 +472,9 @@ export {
   noLeadingSpaceOnPDBLines,
   isValidConstInpFile,
   hasAllowedResiduesOnly,
+  findSharedResidueNumbersInFile,
+  getPaeFileMatrixSize,
+  countStructureFileResidues,
   detectGaffCofactors,
   detectMetalCofactors,
   isPlddtColumnAllZero

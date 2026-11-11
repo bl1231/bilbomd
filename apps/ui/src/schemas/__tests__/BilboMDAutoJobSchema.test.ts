@@ -20,7 +20,10 @@ vi.mock('../ValidationFunctions', () => ({
   cifContainsChainId: async () => true,
   noLeadingSpaceOnPDBLines: async () => true,
   isSingleModel: async () => true,
-  cifIsSingleModel: async () => true
+  cifIsSingleModel: async () => true,
+  findSharedResidueNumbersInFile: async () => [],
+  getPaeFileMatrixSize: async () => null,
+  countStructureFileResidues: async () => 0
 }))
 
 const makeFile = (name: string, size = 100, content = 'x'): File => {

@@ -9,6 +9,7 @@ import {
   findLowercaseResidueNames,
   residueCaseMessage,
   findSharedResidueNumbers,
+  sharedResidueNumbersMessage,
   checkRnaResidues,
   checkConstInpText,
   MAX_CONST_INP_SHAPE_COMMANDS
@@ -286,6 +287,25 @@ describe('findSharedResidueNumbers', () => {
       atomLine('NAG', { record: 'HETATM', number: 7 })
     )
     expect(findSharedResidueNumbers(text)).toEqual([])
+  })
+})
+
+describe('sharedResidueNumbersMessage', () => {
+  it('names each shared residue', () => {
+    expect(
+      sharedResidueNumbersMessage(['chain E residue 215 (ASP and NAG)'])
+    ).toMatch(
+      /^PDB has residues that share a chain and residue number: chain E residue 215 \(ASP and NAG\)\. Give each residue/
+    )
+  })
+
+  it('lists three and counts the rest', () => {
+    const shared = [1, 2, 3, 4, 5].map(
+      (n) => `chain A residue ${n} (ALA and NAG)`
+    )
+    const message = sharedResidueNumbersMessage(shared)
+    expect(message).toContain('residue 3 (ALA and NAG) and 2 more')
+    expect(message).not.toContain('residue 4')
   })
 })
 

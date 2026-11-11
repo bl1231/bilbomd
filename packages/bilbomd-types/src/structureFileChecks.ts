@@ -155,6 +155,13 @@ export const findSharedResidueNumbers = (text: string): string[] => {
     .map(([key, names]) => `${key} (${[...names].join(' and ')})`)
 }
 
+/** Message for the residues findSharedResidueNumbers found; lists three. */
+export const sharedResidueNumbersMessage = (shared: string[]): string => {
+  const shown = shared.slice(0, 3).join(', ')
+  const more = shared.length > 3 ? ` and ${shared.length - 3} more` : ''
+  return `PDB has residues that share a chain and residue number: ${shown}${more}. Give each residue its own number within its chain (for example, number sugars and ligands after the last protein residue).`
+}
+
 /** Scoper takes plain RNA: A, C, G and U residues, no HETATM records. */
 export const checkRnaResidues = (
   text: string
