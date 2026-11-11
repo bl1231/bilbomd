@@ -51,6 +51,7 @@ vi.mock('features/foxs/FoXSEnsembleCharts', () => ({
       data-series={Object.keys(combinedData[0] ?? {})
         .filter((key) => key.startsWith('model_intensity_'))
         .join(',')}
+      data-combined={JSON.stringify(combinedData)}
       data-max-y={maxYAxis}
     >
       Ensemble Charts
@@ -580,6 +581,68 @@ describe('FoXSAnalysis', () => {
         'data-max-y',
         '5'
       )
+    })
+  })
+
+  // MultiFoXS curves can dip below zero at high q; on the log I(q) axis a
+  // zero or negative value blanks the whole chart
+  describe('ensemble with a negative model curve', () => {
+    const negativeTail: FoxsData[] = [
+      {
+        filename: 'multi_state_model_1_1_1.dat',
+        kind: 'ensemble',
+        chisq: 0.8,
+        c1: 'unk',
+        c2: 'unk',
+        data: [
+          { q: 0.01, exp_intensity: 100, model_intensity: 98, error: 2 },
+          { q: 0.4, exp_intensity: 0.5, model_intensity: 0.2, error: 0.1 }
+        ]
+      },
+      {
+        filename: 'multi_state_model_2_1_1.dat',
+        kind: 'ensemble',
+        chisq: 0.7,
+        c1: 'unk',
+        c2: 'unk',
+        data: [
+          { q: 0.01, exp_intensity: 100, model_intensity: 99, error: 2 },
+          { q: 0.4, exp_intensity: 0.5, model_intensity: -0.3, error: 0.1 }
+        ]
+      }
+    ]
+
+    const renderCombined = async () => {
+      vi.spyOn(jobsApiSlice, 'useGetFoxsAnalysisByIdQuery').mockReturnValue({
+        data: negativeTail,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn()
+      } as never)
+      renderWithProviders(<FoXSAnalysis id="job-123" />)
+      const charts = await screen.findByTestId('foxs-ensemble-charts')
+      return JSON.parse(charts.getAttribute('data-combined') ?? '[]') as Array<
+        Record<string, number>
+      >
+    }
+
+    it('leaves non-positive model values out of the I(q) series', async () => {
+      const combined = await renderCombined()
+
+      expect(combined[0]).toMatchObject({
+        model_intensity_0: 98,
+        model_intensity_1: 99
+      })
+      expect(combined[1]).toHaveProperty('model_intensity_0', 0.2)
+      expect(combined[1]).not.toHaveProperty('model_intensity_1')
+    })
+
+    it('computes residuals from the real model value', async () => {
+      const combined = await renderCombined()
+
+      // (0.5 - -0.3) / 0.1
+      expect(combined[1]).toHaveProperty('residual_1', 8)
     })
   })
 
