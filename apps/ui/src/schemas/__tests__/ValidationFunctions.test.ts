@@ -11,6 +11,7 @@ import {
   isPsfData,
   isCRD,
   containsChainId,
+  isSingleModel,
   cifContainsChainId,
   cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines,
@@ -115,7 +116,7 @@ describe('ValidationFunctions', () => {
       '! BilboMD const.inp',
       'define segid PROA',
       'cons fix sele segid PROA end',
-      'shape ellipsoid',
+      'shape desc dock1 rigid sele segid PROA end',
       'return'
     ].join('\n')
     const result = await isValidConstInpFile(
@@ -123,6 +124,42 @@ describe('ValidationFunctions', () => {
       'pdb'
     )
     expect(result).toBe(true)
+  })
+
+  // The backend accepts only "shape desc" lines, so the form does too
+  it('isValidConstInpFile rejects shape lines other than shape desc', async () => {
+    const content = [
+      'define fixed sele segid PROA end',
+      'cons fix sele fixed end',
+      'shape ellipsoid',
+      'return'
+    ].join('\n')
+    const result = await isValidConstInpFile(
+      makeFile('const.inp', content),
+      'pdb'
+    )
+    expect(result).toBe(
+      'Disallowed keyword in constraint file: "shape ellipsoid"'
+    )
+  })
+
+  // An empty file used to reject the promise, which Formik treats as valid
+  it('isValidConstInpFile reports an empty file instead of rejecting', async () => {
+    const result = await isValidConstInpFile(makeFile('const.inp', ''), 'pdb')
+    expect(result).toBe('The last line must be "return".')
+  })
+
+  it('isValidConstInpFile reports a file that cannot be read', async () => {
+    const file = makeFile('const.inp', 'x')
+    ;(file as unknown as { text: () => Promise<string> }).text = async () => {
+      throw new Error('read failed')
+    }
+    expect(await isValidConstInpFile(file, 'pdb')).toBe('Error reading file')
+  })
+
+  it('containsChainId and isSingleModel answer for an empty file', async () => {
+    expect(await containsChainId(makeFile('empty.pdb', ''))).toBe(false)
+    expect(await isSingleModel(makeFile('empty.pdb', ''))).toBe(true)
   })
 
   it('isValidConstInpFile rejects system directive (CHARMM RCE vector)', async () => {

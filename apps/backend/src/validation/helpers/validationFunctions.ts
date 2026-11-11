@@ -1,114 +1,50 @@
 import fs from 'fs/promises'
 import {
-  SUPPORTED_PDB_RESIDUES,
   parseCifAtomSite,
   cifContainsChainId as cifContainsChainIdUtil,
   cifHasAllowedResiduesOnly as cifHasAllowedResiduesOnlyUtil,
   cifIsSingleModel as cifIsSingleModelUtil,
-  PROTEIN_RESIDUES,
-  DNA_RESIDUES,
-  RNA_RESIDUES,
-  CARBOHYDRATE_RESIDUES,
-  GAFF_COFACTORS,
-  METAL_COFACTORS,
-  analyzeSaxsData
+  analyzeSaxsData,
+  isFromCharmmGui,
+  isCrdText,
+  isPsfText,
+  pdbContainsChainId,
+  pdbIsSingleModel,
+  findUnsupportedPdbResidues,
+  findSharedResidueNumbers,
+  checkRnaResidues,
+  checkConstInpText
 } from '@bilbomd/bilbomd-types'
 import type { QUnits, SaxsDataAnalysis } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
 
-const fromCharmmGui = async (file: Express.Multer.File): Promise<boolean> => {
+// The file checks themselves live in @bilbomd/bilbomd-types, shared with the
+// job forms. These wrappers read the upload and run them.
+
+// An upload's text, or null when it cannot be read
+const readUpload = async (
+  file: Express.Multer.File
+): Promise<string | null> => {
   try {
-    const text = await fs.readFile(file.path, 'utf8')
-    const lines = text.split(/[\r\n]+/)
-    for (let i = 0; i < 5 && i < lines.length; i++) {
-      if (/CHARMM-GUI/.test(lines[i])) return true
-    }
-    return false
+    return await fs.readFile(file.path, 'utf8')
   } catch {
-    return false
+    return null
   }
+}
+
+const fromCharmmGui = async (file: Express.Multer.File): Promise<boolean> => {
+  const text = await readUpload(file)
+  return text !== null && isFromCharmmGui(text)
 }
 
 const isCRD = async (file: Express.Multer.File): Promise<boolean> => {
-  try {
-    const text = await fs.readFile(file.path, 'utf8')
-    const lines = text.split(/[\r\n]+/)
-    let starLinesCount = 0
-    let foundEndPattern = false
-
-    // Check for lines starting with *
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith('*')) {
-        starLinesCount++
-        if (starLinesCount > 6) {
-          // More than 6 lines starting with *, not matching the pattern
-          break
-        }
-      } else {
-        // Check if the line immediately after the last *-line matches the specified pattern
-        if (starLinesCount >= 2 && starLinesCount <= 6) {
-          const endPattern = /^\s+\d+\s+EXT$/
-          foundEndPattern = endPattern.test(lines[i])
-        }
-        break // No more lines starting with * consecutively, exit the loop
-      }
-    }
-
-    return foundEndPattern
-  } catch {
-    return false
-  }
+  const text = await readUpload(file)
+  return text !== null && isCrdText(text)
 }
 
 const isPsfData = async (file: Express.Multer.File): Promise<boolean> => {
-  try {
-    const text = await fs.readFile(file.path, 'utf8')
-    const lines = text.split(/[\r\n]+/g)
-    const atomRegex =
-      /^\s*\d+\s+[A-Z]{4}\s+\d+\s+[A-Z]{3,}\s+[a-zA-Z0-9_']+\s+[a-zA-Z0-9_']+\s+-?\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+\.\d+(?:[eE][+-]?\d+)?\s+\d+/
-
-    if (!lines[0].includes('PSF')) {
-      return false
-    }
-
-    if (!lines.some((line) => line.trim().endsWith('!NTITLE'))) {
-      return false
-    }
-
-    const natomLineIndex = lines.findIndex((line) => /\d+\s+!NATOM/.test(line))
-    if (natomLineIndex === -1) {
-      return false
-    }
-
-    const natomResult = lines[natomLineIndex].match(/(\d+)\s+!NATOM/)
-    if (!natomResult) {
-      return false
-    }
-
-    const natom = parseInt(natomResult[1], 10)
-    if (isNaN(natom)) {
-      return false
-    }
-
-    // Check for atom lines directly following the !NATOM line
-    const atomLines = lines.slice(
-      natomLineIndex + 1,
-      natomLineIndex + 1 + natom
-    )
-    if (atomLines.length !== natom) {
-      return false
-    }
-
-    for (const line of atomLines) {
-      if (!atomRegex.test(line)) {
-        return false
-      }
-    }
-
-    return true
-  } catch {
-    return false
-  }
+  const text = await readUpload(file)
+  return text !== null && isPsfText(text)
 }
 
 const noSpaces = (file: File): Promise<boolean> => {
@@ -144,205 +80,52 @@ const isSaxsData = async (
 }
 
 const containsChainId = async (file: Express.Multer.File): Promise<boolean> => {
-  try {
-    const text = await fs.readFile(file.path, 'utf8')
-    const lines = text.split('\n')
-    const isValid = lines.some((line) => {
-      return (
-        (line.startsWith('ATOM') || line.startsWith('HETATM')) &&
-        /^[A-Za-z]$/.test(line[21])
-      )
-    })
-    return isValid
-  } catch {
-    return false
-  }
+  const text = await readUpload(file)
+  return text !== null && pdbContainsChainId(text)
 }
 
 const isRNA = async (
   file: Express.Multer.File
 ): Promise<{ valid: boolean; message?: string }> => {
-  try {
-    const text = await fs.readFile(file.path, 'utf8')
-    const lines = text.split(/\r?\n/)
-    const validNucleotides = new Set(['A', 'C', 'G', 'U'])
-
-    for (const line of lines) {
-      if (line.startsWith('HETATM')) {
-        return {
-          valid: false,
-          message: 'File contains HETATM lines which are not allowed.'
-        }
-      }
-
-      if (line.startsWith('ATOM')) {
-        const parts = line.split(/\s+/)
-        const residueName = parts[3]
-        if (residueName.length !== 1 || !validNucleotides.has(residueName)) {
-          return {
-            valid: false,
-            message: `Invalid residue name '${residueName}'. Expected A, C, G, U.`
-          }
-        }
-      }
-    }
-
-    return { valid: true }
-  } catch {
-    return { valid: false, message: 'Error reading the file.' }
-  }
-}
-
-// Residues that stay in the model. Waters and ions are stripped before MD, so
-// how they are numbered does not matter.
-const MODELLED_RESIDUES = new Set<string>([
-  ...PROTEIN_RESIDUES,
-  ...DNA_RESIDUES,
-  ...RNA_RESIDUES,
-  ...CARBOHYDRATE_RESIDUES,
-  ...GAFF_COFACTORS,
-  ...METAL_COFACTORS
-])
-
-// A residue is identified by chain + number + insertion code, and constraints
-// select residues by chain and number. Two residues sharing all three (e.g. a
-// glycan numbered inside the protein's range) cannot be told apart: the GLYCAM
-// renaming merges them and minimization fails on the leftover sugar.
-const findSharedResidueNumbers = (lines: string[]): string[] => {
-  const namesByResidue = new Map<string, Set<string>>()
-  for (const line of lines) {
-    // Later models repeat the first one
-    if (line.startsWith('ENDMDL')) break
-    if (!line.startsWith('ATOM') && !line.startsWith('HETATM')) continue
-    // Alternate conformers may legitimately differ in residue name
-    const altLoc = line[16] ?? ' '
-    if (altLoc !== ' ' && altLoc !== 'A') continue
-    const residue = line.slice(17, 20).trim()
-    if (!MODELLED_RESIDUES.has(residue)) continue
-    const chain = line[21] ?? ' '
-    const number = line.slice(22, 27).trim()
-    // CHARMM-written files give every segment the same chain letter and tell
-    // residues apart by segment ID (columns 73-76)
-    const segid = line.slice(72, 76).trim()
-    const key = `chain ${chain} residue ${number}${segid ? ` (segment ${segid})` : ''}`
-    const names = namesByResidue.get(key) ?? new Set<string>()
-    names.add(residue)
-    namesByResidue.set(key, names)
-  }
-  return [...namesByResidue]
-    .filter(([, names]) => names.size > 1)
-    .map(([key, names]) => `${key} (${[...names].join(' and ')})`)
+  const text = await readUpload(file)
+  if (text === null) return { valid: false, message: 'Error reading the file.' }
+  return checkRnaResidues(text)
 }
 
 const checkPdbResidues = async (
   file: Express.Multer.File
 ): Promise<{ valid: boolean; message?: string }> => {
-  try {
-    const text = await fs.readFile(file.path, 'utf8')
-    const lines = text.split('\n')
-    const unsupported = new Set<string>()
+  const text = await readUpload(file)
+  if (text === null) return { valid: false, message: 'Error reading PDB file.' }
 
-    for (const line of lines) {
-      if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
-        const residue = line.slice(17, 20).trim()
-        if (residue && !SUPPORTED_PDB_RESIDUES.has(residue)) {
-          unsupported.add(residue)
-        }
-      }
+  const unsupported = findUnsupportedPdbResidues(text)
+  if (unsupported.length > 0) {
+    return {
+      valid: false,
+      message: `PDB contains unsupported residues: ${unsupported.join(', ')}. These cannot be processed by BilboMD.`
     }
-
-    if (unsupported.size > 0) {
-      const list = [...unsupported].sort().join(', ')
-      return {
-        valid: false,
-        message: `PDB contains unsupported residues: ${list}. These cannot be processed by BilboMD.`
-      }
-    }
-
-    const shared = findSharedResidueNumbers(lines)
-    if (shared.length > 0) {
-      const shown = shared.slice(0, 3).join(', ')
-      const more = shared.length > 3 ? ` and ${shared.length - 3} more` : ''
-      return {
-        valid: false,
-        message: `PDB has residues that share a chain and residue number: ${shown}${more}. Give each residue its own number within its chain (for example, number sugars and ligands after the last protein residue).`
-      }
-    }
-
-    return { valid: true }
-  } catch {
-    return { valid: false, message: 'Error reading PDB file.' }
   }
+
+  const shared = findSharedResidueNumbers(text)
+  if (shared.length > 0) {
+    const shown = shared.slice(0, 3).join(', ')
+    const more = shared.length > 3 ? ` and ${shared.length - 3} more` : ''
+    return {
+      valid: false,
+      message: `PDB has residues that share a chain and residue number: ${shown}${more}. Give each residue its own number within its chain (for example, number sugars and ligands after the last protein residue).`
+    }
+  }
+
+  return { valid: true }
 }
 
 const isValidConstInpFile = async (
   file: Express.Multer.File,
   mode: string
 ): Promise<string | true> => {
-  try {
-    const text = await fs.readFile(file.path, 'utf8')
-    const lines = text.split('\n').filter((line) => line.trim() !== '') // Filter out empty lines
-
-    // Check if the last non-empty line is exactly 'return'
-    if (lines.length === 0 || lines[lines.length - 1].trim() !== 'return') {
-      return 'The last line must be "return".'
-    }
-
-    // Check for at least one 'define' and one 'cons fix sele' line
-    const hasDefine = lines.some((line) => line.startsWith('define'))
-    if (!hasDefine) {
-      return 'At least one line must start with "define".'
-    }
-
-    const hasConsFixSele = lines.some((line) =>
-      line.startsWith('cons fix sele')
-    )
-    if (!hasConsFixSele) {
-      return 'At least one line must start with "cons fix sele".'
-    }
-
-    // Check 'define' lines for 'segid' followed by the correct format
-    if (mode === 'pdb') {
-      const segidRegex = /segid\s+((PRO|DNA|RNA|CAR|CAL)[A-Z])\b/
-      const validSegid = lines
-        .filter((line) => line.startsWith('define'))
-        .every((line) => segidRegex.test(line))
-      if (!validSegid) {
-        return 'segid must be: PRO[A-Z], DNA[A-Z], RNA[A-Z], etc.'
-      }
-    } else if (mode === 'crd_psf') {
-      const segidRegex = /segid\s+([A-Z]{4})\b/
-      const validSegid = lines
-        .filter((line) => line.startsWith('define'))
-        .every((line) => segidRegex.test(line))
-      if (!validSegid) {
-        return 'segid must contain 4 uppercase letters [A-Z]'
-      }
-    }
-
-    // Allowlist check: reject any line that doesn't start with a permitted keyword.
-    // This blocks CHARMM directives like 'system', 'open', 'read', etc. that could
-    // execute arbitrary OS commands or perform file I/O when the file is STREAMed.
-    const ALLOWED_PREFIXES = [
-      'define',
-      'cons fix',
-      'cons harm',
-      'shape desc',
-      'return',
-      '!',
-      '*'
-    ]
-    for (const line of lines) {
-      const lower = line.trim().toLowerCase()
-      if (!ALLOWED_PREFIXES.some((pfx) => lower.startsWith(pfx))) {
-        return `Disallowed keyword in constraint file: "${line.trim()}"`
-      }
-    }
-
-    return true // All checks passed
-  } catch {
-    return 'Error reading file'
-  }
+  const text = await readUpload(file)
+  if (text === null) return 'Error reading file'
+  return checkConstInpText(text, mode)
 }
 
 const cifContainsChainId = async (
@@ -378,25 +161,17 @@ const checkCifResidues = async (
   }
 }
 
-// NMR entries ship every model of the ensemble in one file. The pipelines
-// expect one structure (KGSrna, for one, fails on the repeated atoms), so a
-// file with more than one MODEL record (or CIF model number) is rejected.
+// A file with more than one model (PDB MODEL records or CIF model numbers) is
+// rejected: see pdbIsSingleModel in @bilbomd/bilbomd-types
 const isSingleModel = async (file: Express.Multer.File): Promise<boolean> => {
-  try {
-    const text = await fs.readFile(file.path, 'utf8')
-    if (file.originalname?.toLowerCase().endsWith('.cif')) {
-      const parsed = parseCifAtomSite(text)
-      // No _atom_site block: the residue check reports that
-      return parsed === null || cifIsSingleModelUtil(parsed)
-    }
-    let models = 0
-    for (const line of text.split(/\r?\n/)) {
-      if (/^MODEL(\s|$)/.test(line) && ++models > 1) return false
-    }
-    return true
-  } catch {
-    return false
+  const text = await readUpload(file)
+  if (text === null) return false
+  if (file.originalname?.toLowerCase().endsWith('.cif')) {
+    const parsed = parseCifAtomSite(text)
+    // No _atom_site block: the residue check reports that
+    return parsed === null || cifIsSingleModelUtil(parsed)
   }
+  return pdbIsSingleModel(text)
 }
 
 // --- PAE ↔ structure size -------------------------------------------------

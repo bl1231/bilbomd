@@ -50,11 +50,6 @@ describe('fromCharmmGui', () => {
     expect(await fromCharmmGui(mockFile())).toBe(false)
   })
 
-  it('returns false when "CHARMM-GUI" appears after line 5', async () => {
-    mockReadFile('a\nb\nc\nd\ne\nCHARMM-GUI\n')
-    expect(await fromCharmmGui(mockFile())).toBe(false)
-  })
-
   it('returns false on fs error', async () => {
     vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'))
     expect(await fromCharmmGui(mockFile())).toBe(false)
@@ -70,23 +65,8 @@ describe('isCRD', () => {
     expect(await isCRD(mockFile())).toBe(true)
   })
 
-  it('returns true with up to 6 star lines', async () => {
-    mockReadFile('* a\n* b\n* c\n* d\n* e\n* f\n     99 EXT\n')
-    expect(await isCRD(mockFile())).toBe(true)
-  })
-
-  it('returns false when more than 6 star lines', async () => {
-    mockReadFile('* a\n* b\n* c\n* d\n* e\n* f\n* g\nEXT\n')
-    expect(await isCRD(mockFile())).toBe(false)
-  })
-
   it('returns false when EXT marker is missing', async () => {
     mockReadFile('* title\n* subtitle\nno EXT here\n')
-    expect(await isCRD(mockFile())).toBe(false)
-  })
-
-  it('returns false with only one star line', async () => {
-    mockReadFile('* title\n     12345 EXT\n')
     expect(await isCRD(mockFile())).toBe(false)
   })
 
@@ -120,24 +100,6 @@ describe('isPsfData', () => {
     mockReadFile(
       validPsfContent.replace('PSF EXT CMAP XPLOR', 'XPLOR EXT CMAP')
     )
-    expect(await isPsfData(mockFile())).toBe(false)
-  })
-
-  it('returns false when !NTITLE line is missing', async () => {
-    const content = validPsfContent.replace(
-      '       1 !NTITLE',
-      '       1 !OTHER'
-    )
-    mockReadFile(content)
-    expect(await isPsfData(mockFile())).toBe(false)
-  })
-
-  it('returns false when !NATOM line is missing', async () => {
-    const content = validPsfContent.replace(
-      '       2 !NATOM',
-      '       2 !BONDS'
-    )
-    mockReadFile(content)
     expect(await isPsfData(mockFile())).toBe(false)
   })
 
@@ -283,43 +245,6 @@ describe('checkPdbResidues', () => {
     expect(result.valid).toBe(true)
   })
 
-  it('returns valid:true for phosphorylated residues SEP, TPO, PTR', async () => {
-    const content = ['SEP', 'TPO', 'PTR'].map((r) => atomLine(r)).join('\n')
-    mockReadFile(content)
-    const result = await checkPdbResidues(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
-  it('returns valid:true for nucleotide residues (DNA/RNA)', async () => {
-    const content = ['DA ', 'DC ', 'DG ', 'DT ', 'A  ', 'C  ', 'G  ', 'U  ']
-      .map((r) => atomLine(r))
-      .join('\n')
-    mockReadFile(content)
-    const result = await checkPdbResidues(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
-  it('returns valid:true for supported carbohydrate residues', async () => {
-    const content = ['NAG', 'BMA', 'MAN', 'GAL', 'SIA']
-      .map((r) => atomLine(r))
-      .join('\n')
-    mockReadFile(content)
-    const result = await checkPdbResidues(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
-  it('returns valid:true for HOH (water is removed by pdb2crd.py)', async () => {
-    mockReadFile(atomLine('HOH'))
-    const result = await checkPdbResidues(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
-  it('returns valid:true for HETATM lines with supported residues', async () => {
-    mockReadFile(atomLine('NAG', 'HETATM'))
-    const result = await checkPdbResidues(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
   it('returns valid:false with message listing unsupported residues', async () => {
     const content = [
       atomLine('ALA'),
@@ -336,32 +261,11 @@ describe('checkPdbResidues', () => {
     expect(result.message).not.toMatch(/TPO/)
   })
 
-  it('returns valid:true for common ion residues (MG, CA, ZN)', async () => {
-    const content = [atomLine('MG '), atomLine('CA '), atomLine('ZN ')].join(
-      '\n'
-    )
-    mockReadFile(content)
-    const result = await checkPdbResidues(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
-  it('returns valid:true for HSD (CHARMM HIS variant)', async () => {
-    mockReadFile(atomLine('HSD'))
-    const result = await checkPdbResidues(mockFile())
-    expect(result.valid).toBe(true)
-  })
-
   it('returns valid:false and message on fs error', async () => {
     vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'))
     const result = await checkPdbResidues(mockFile())
     expect(result.valid).toBe(false)
     expect(result.message).toBe('Error reading PDB file.')
-  })
-
-  it('ignores non-ATOM/HETATM lines', async () => {
-    mockReadFile('REMARK  some remark\nHEADER  some header\nEND\n')
-    const result = await checkPdbResidues(mockFile())
-    expect(result.valid).toBe(true)
   })
 
   it('rejects a sugar that shares a chain and number with a protein residue', async () => {
@@ -389,52 +293,6 @@ describe('checkPdbResidues', () => {
     expect(result.valid).toBe(false)
     expect(result.message).toMatch(/residue 217 .* and 2 more/)
     expect(result.message).not.toMatch(/residue 218/)
-  })
-
-  it('accepts the same residue number in different chains', async () => {
-    const content = [
-      atomLine('ASP', 'ATOM  ', { chain: 'A', number: 215 }),
-      atomLine('NAG', 'HETATM', { chain: 'B', number: 215 })
-    ].join('\n')
-    mockReadFile(content)
-    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
-  })
-
-  it('accepts waters and ions numbered like a protein residue', async () => {
-    const content = [
-      atomLine('ASP', 'ATOM  ', { number: 5 }),
-      atomLine('HOH', 'HETATM', { number: 5 }),
-      atomLine('ZN ', 'HETATM', { number: 5 })
-    ].join('\n')
-    mockReadFile(content)
-    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
-  })
-
-  it('accepts alternate conformers with different residue names', async () => {
-    const content = [
-      atomLine('SER', 'ATOM  ', { number: 9, altLoc: 'A' }),
-      atomLine('THR', 'ATOM  ', { number: 9, altLoc: 'B' })
-    ].join('\n')
-    mockReadFile(content)
-    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
-  })
-
-  it('accepts CHARMM segments that share a chain letter and numbering', async () => {
-    const charmmLine = (residue: string, segid: string) =>
-      `ATOM      1  CA  ${residue} P   3       1.000   2.000   3.000  1.00  0.00      ${segid}`
-    mockReadFile(
-      [charmmLine('ILE', 'PROA'), charmmLine('ASN', 'PROB')].join('\n')
-    )
-    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
-  })
-
-  it('accepts an insertion code that separates two residues', async () => {
-    const content = [
-      'ATOM      1  CA  ASP A 100       1.000   2.000   3.000  1.00  0.00           C',
-      'ATOM      2  CA  GLY A 100A      1.000   2.000   3.000  1.00  0.00           C'
-    ].join('\n')
-    mockReadFile(content)
-    expect((await checkPdbResidues(mockFile())).valid).toBe(true)
   })
 })
 
@@ -564,26 +422,6 @@ describe('isValidConstInpFile', () => {
     expect(await isValidConstInpFile(mockFile(), 'crd_psf')).toBe(true)
   })
 
-  it('returns error when last line is not "return"', async () => {
-    mockReadFile(
-      'define PROA sele segid PROA end\ncons fix sele PROA end\nnotreturn'
-    )
-    const result = await isValidConstInpFile(mockFile(), 'pdb')
-    expect(result).toMatch(/last line must be "return"/)
-  })
-
-  it('returns error when no "define" line', async () => {
-    mockReadFile('cons fix sele PROA end\nreturn')
-    const result = await isValidConstInpFile(mockFile(), 'pdb')
-    expect(result).toMatch(/define/)
-  })
-
-  it('returns error when no "cons fix sele" line', async () => {
-    mockReadFile('define PROA sele segid PROA end\nreturn')
-    const result = await isValidConstInpFile(mockFile(), 'pdb')
-    expect(result).toMatch(/cons fix sele/)
-  })
-
   it('returns error for invalid pdb-mode segid format', async () => {
     mockReadFile(
       'define BADID sele segid BADID end\ncons fix sele BADID end\nreturn'
@@ -592,16 +430,29 @@ describe('isValidConstInpFile', () => {
     expect(result).toMatch(/segid must be/)
   })
 
-  it('returns error for invalid crd_psf-mode segid (not 4 uppercase letters)', async () => {
-    mockReadFile('define abc sele segid abc end\ncons fix sele abc end\nreturn')
-    const result = await isValidConstInpFile(mockFile(), 'crd_psf')
-    expect(result).toMatch(/segid must contain 4 uppercase letters/)
-  })
-
   it('returns error string on fs error', async () => {
     vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'))
     const result = await isValidConstInpFile(mockFile(), 'pdb')
     expect(result).toBe('Error reading file')
+  })
+
+  // The rules themselves are tested in @bilbomd/bilbomd-types; this one was
+  // enforced only by the job forms before the check was shared
+  it('rejects more than 20 shape commands', async () => {
+    const shapes = Array.from(
+      { length: 21 },
+      (_, i) => `shape desc dock${i + 1} rigid sele PROA end`
+    )
+    mockReadFile(
+      [
+        'define PROA sele segid PROA end',
+        'cons fix sele PROA end',
+        ...shapes,
+        'return'
+      ].join('\n')
+    )
+    const result = await isValidConstInpFile(mockFile(), 'pdb')
+    expect(result).toMatch(/Too many CHARMM shape commands/)
   })
 
   it('returns error when file is empty', async () => {
@@ -620,52 +471,6 @@ describe('isValidConstInpFile', () => {
     mockReadFile(content)
     const result = await isValidConstInpFile(mockFile(), 'pdb')
     expect(result).toMatch(/Disallowed keyword/)
-  })
-
-  it('rejects a file containing an "open" directive', async () => {
-    const content = [
-      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
-      'cons fix sele fixed1 end',
-      'open unit 10 write card name /tmp/evil',
-      'return'
-    ].join('\n')
-    mockReadFile(content)
-    const result = await isValidConstInpFile(mockFile(), 'pdb')
-    expect(result).toMatch(/Disallowed keyword/)
-  })
-
-  it('accepts comment lines starting with "!" alongside valid keywords', async () => {
-    const content = [
-      '! constraint file header',
-      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
-      'cons fix sele fixed1 end',
-      '! end of constraints',
-      'return'
-    ].join('\n')
-    mockReadFile(content)
-    expect(await isValidConstInpFile(mockFile(), 'pdb')).toBe(true)
-  })
-
-  it('accepts comment lines starting with "*" alongside valid keywords', async () => {
-    const content = [
-      '* CHARMM constraint file',
-      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
-      'cons fix sele fixed1 end',
-      'return'
-    ].join('\n')
-    mockReadFile(content)
-    expect(await isValidConstInpFile(mockFile(), 'pdb')).toBe(true)
-  })
-
-  it('accepts "cons harm" lines for harmonic constraints', async () => {
-    const content = [
-      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
-      'cons fix sele fixed1 end',
-      'cons harm force 10.0 sele fixed1 end',
-      'return'
-    ].join('\n')
-    mockReadFile(content)
-    expect(await isValidConstInpFile(mockFile(), 'pdb')).toBe(true)
   })
 })
 
