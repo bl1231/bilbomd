@@ -1,9 +1,8 @@
 import { useCallback, useState } from 'react'
 import { useStore } from 'react-redux'
-import { axiosInstance, isAxiosError } from 'app/api/axios'
-import { refreshAccessToken } from 'app/api/apiSlice'
-import type { AppDispatch, RootState } from 'app/store'
-import { selectCurrentToken } from 'slices/authSlice'
+import { axiosInstance } from 'app/api/axios'
+import { getWithFreshToken } from 'app/api/getWithFreshToken'
+import type { RootState } from 'app/store'
 import { logger } from 'utils/logger'
 import type { JobSource } from './jobSource'
 
@@ -44,33 +43,10 @@ export const useJobDownload = (source: JobSource) => {
   const download = useCallback(async () => {
     setError(null)
     setIsDownloading(true)
-    // The token is read at request time: access tokens are short-lived
-    const request = () => {
-      const token = selectCurrentToken(store.getState())
-      return axiosInstance.get<Blob>(url, {
-        responseType: 'blob',
-        headers:
-          isOwner && token ? { Authorization: `Bearer ${token}` } : undefined
-      })
-    }
     try {
-      let response
-      try {
-        response = await request()
-      } catch (err) {
-        // An expired access token gives a 403. This request is made outside
-        // RTK Query, so nothing has refreshed the token on a page that has
-        // stopped polling: refresh it here and try once more.
-        const expired =
-          isOwner && isAxiosError(err) && err.response?.status === 403
-        if (
-          !expired ||
-          !(await refreshAccessToken(store.dispatch as AppDispatch))
-        ) {
-          throw err
-        }
-        response = await request()
-      }
+      const response = isOwner
+        ? await getWithFreshToken<Blob>(store, url, { responseType: 'blob' })
+        : await axiosInstance.get<Blob>(url, { responseType: 'blob' })
       if (!response?.data) {
         setError(
           'No data received from server. Please try again or contact support.'

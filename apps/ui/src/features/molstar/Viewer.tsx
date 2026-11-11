@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState, createRef } from 'react'
+import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import Grid from '@mui/material/Grid'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import MobileControlsShield from './MobileControlsShield'
 import { axiosInstance } from 'app/api/axios'
-import { useSelector } from 'react-redux'
-import { selectCurrentToken } from '../../slices/authSlice'
+import { getWithFreshToken } from 'app/api/getWithFreshToken'
+import type { RootState } from 'app/store'
+import { useStore } from 'react-redux'
 import type { JobType, JobResultsDTO } from '@bilbomd/bilbomd-types'
 import { getEnsemblesForJob, mayHaveStartingModel } from './ensembleResults'
 import type { DomainColoring } from './domainColoring'
@@ -104,9 +107,11 @@ const MolstarViewer = ({
   results,
   isPublic,
   publicId,
-  constraints
-}: MolstarViewerProps) => {
-  const token = useSelector(selectCurrentToken)
+  constraints,
+  onRetry
+}: MolstarViewerProps & { onRetry: () => void }) => {
+  const store = useStore<RootState>()
+  const [loadFailed, setLoadFailed] = useState(false)
   const theme = useTheme()
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'))
   // On touch devices the Molstar canvas captures pan/zoom gestures, which
@@ -199,18 +204,13 @@ const MolstarViewer = ({
     return Array.from(loadParamsMap.values())
   }
 
-  const fetchPdbData = async (url: string) => {
-    try {
-      const headers = isPublic ? {} : { Authorization: `Bearer ${token}` }
-      const response = await axiosInstance.get(url, {
-        responseType: 'text',
-        headers
-      })
-      return response.data
-    } catch (error) {
-      logger.error('Error fetching PDB data:', error)
-      return null
-    }
+  // Throws when the file can't be fetched, rather than handing Molstar
+  // nothing to parse
+  const fetchPdbData = async (url: string): Promise<string> => {
+    const response = isPublic
+      ? await axiosInstance.get<string>(url, { responseType: 'text' })
+      : await getWithFreshToken<string>(store, url, { responseType: 'text' })
+    return response.data
   }
 
   const parent = createRef<HTMLDivElement>()
@@ -480,9 +480,17 @@ const MolstarViewer = ({
       }
     }
 
-    void init()
+    // Unmounted mid-load: the cleanup below has disposed the plugin, so a
+    // failure from here on is expected and not worth reporting
+    let unmounted = false
+    init().catch((error: unknown) => {
+      if (unmounted) return
+      logger.error('Failed to load the Molstar viewer:', error)
+      setLoadFailed(true)
+    })
 
     return () => {
+      unmounted = true
       window.molstar?.dispose()
       window.molstar = undefined
       hasRun.current = false
@@ -589,6 +597,23 @@ const MolstarViewer = ({
     <Item>
       <Grid container>
         <Box sx={{ width: '100%' }}>
+          {loadFailed && (
+            <Alert
+              severity="error"
+              sx={{ mb: 1 }}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={onRetry}
+                >
+                  Retry
+                </Button>
+              }
+            >
+              The 3D models could not be loaded.
+            </Alert>
+          )}
           <EnsembleTogglePanel
             ensembleSizes={Object.keys(ensembleVisibility).map(Number)}
             visibility={ensembleVisibility}
@@ -631,4 +656,17 @@ const MolstarViewer = ({
   )
 }
 
-export default MolstarViewer
+// Retry remounts the viewer, so it starts again from a fresh Molstar plugin
+// and empty refs
+const MolstarViewerWithRetry = (props: MolstarViewerProps) => {
+  const [attempt, setAttempt] = useState(0)
+  return (
+    <MolstarViewer
+      key={attempt}
+      {...props}
+      onRetry={() => setAttempt((n) => n + 1)}
+    />
+  )
+}
+
+export default MolstarViewerWithRetry
