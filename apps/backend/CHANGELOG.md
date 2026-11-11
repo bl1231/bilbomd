@@ -1,5 +1,34 @@
 # @bilbomd/backend
 
+## 2.21.2
+
+### Patch Changes
+
+- 7a201ae: The job forms now run two structure checks that only the backend ran before, so users see these problems when they pick their files instead of after they submit:
+
+  - A PDB with residues that share a chain and residue number (for example, a glycan numbered inside the protein's range) is rejected, with the same message as the backend. This applies to the Classic, Auto and SANS forms.
+  - On the Auto form (new and resubmit), a PAE matrix whose size doesn't match the structure's residue count is rejected, with the same message as the backend. Each PAE and structure file is read and parsed once, not on every form change.
+
+  The residue counting, PAE parsing and both messages moved from the backend into `@bilbomd/bilbomd-types`, so the form and the backend use the same code.
+
+- 263d3db: Validate SANS job uploads on the backend, as the other job types already do. The new `sansJobSchema` runs the same file checks as the SANS job form (structure, constraint file, file names and sizes) and checks the Rg range and D2O percentage. A failing upload gets a 400 with the list of errors, in the same format as the Classic job endpoints.
+
+  The constraint file's segment ID rule now runs on the backend too. Each job schema names its input mode (Classic PDB and SANS use the PDB rule, Classic CRD/PSF the 4-letter rule), where before the backend read the mode from a validation context the handlers never set. The SANS job form also applies the PDB rule now.
+
+- 789e456: Share the structure and constraint file checks between the job forms and the backend upload validation, so a file the form accepts is one the backend accepts too. The checks now live in `@bilbomd/bilbomd-types` (`structureFileChecks.ts`).
+
+  Behaviour that now matches on both sides:
+
+  - Constraint files accept only `shape desc` lines (the form used to accept any `shape` line), and the backend now enforces the form's limit of 20 shape commands.
+  - The form no longer accepts lowercase residue names (the backend already rejected them), and no longer flags a blank residue name. A supported residue written in lowercase, such as `ala`, now gets its own message on both sides asking for uppercase names, instead of "unsupported residue".
+  - Only `MODEL` records count as models in the form, not other lines starting with `MODEL`.
+  - The form now checks an empty structure or constraint file (and one that cannot be read) instead of passing it.
+
+- Updated dependencies [7a201ae]
+- Updated dependencies [789e456]
+  - @bilbomd/bilbomd-types@1.17.0
+  - @bilbomd/md-utils@1.3.4
+
 ## 2.21.1
 
 ### Patch Changes
