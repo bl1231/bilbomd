@@ -178,7 +178,10 @@ export const CONST_INP_ALLOWED_PREFIXES = [
   '*'
 ] as const
 
-/** Most shape commands a constraint file may hold. */
+/**
+ * Most shape commands a constraint file may hold: CHARMM's MAXSHP limit
+ * (https://academiccharmm.org/documentation/version/c51b1/shapes).
+ */
 export const MAX_CONST_INP_SHAPE_COMMANDS = 20
 
 /**
