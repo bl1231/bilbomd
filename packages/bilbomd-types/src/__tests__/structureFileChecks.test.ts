@@ -399,6 +399,20 @@ describe('checkConstInpText', () => {
   })
 
   it.each([
+    ['uppercase', 'SHAPE DESC'],
+    ['mixed case', 'Shape Desc'],
+    ['indented', '   shape desc']
+  ])('counts %s shape commands toward the limit', (_, command) => {
+    const shapes = Array.from(
+      { length: MAX_CONST_INP_SHAPE_COMMANDS + 1 },
+      (_, i) => `${command} dock${i + 1} rigid sele fixed1 end`
+    )
+    expect(checkConstInpText(valid(...shapes), 'pdb')).toMatch(
+      /Too many CHARMM shape commands/
+    )
+  })
+
+  it.each([
     'system "curl https://example.com"',
     'open unit 10 write card name /tmp/out',
     'stream other.str',

@@ -240,7 +240,11 @@ export const checkConstInpText = (
     return 'segid must contain 4 uppercase letters [A-Z]'
   }
 
-  const shapeCommands = lines.filter((line) => line.startsWith('shape')).length
+  // CHARMM ignores case and leading spaces, so count lines the way the
+  // allowlist below reads them
+  const shapeCommands = lines.filter((line) =>
+    line.trim().toLowerCase().startsWith('shape')
+  ).length
   if (shapeCommands > MAX_CONST_INP_SHAPE_COMMANDS) {
     return `Too many CHARMM shape commands. Maximum allowed is ${MAX_CONST_INP_SHAPE_COMMANDS}.`
   }
