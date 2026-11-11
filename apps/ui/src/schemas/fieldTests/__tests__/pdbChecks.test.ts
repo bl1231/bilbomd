@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   chainIdCheck,
   pdbLineStartCheck,
-  singleModelCheck
+  singleModelCheck,
+  pdbOrCifResidueCheck
 } from '../fieldTests'
 
 const makeFile = (name: string, content: string, type = 'text/plain') => {
@@ -110,5 +111,44 @@ describe('PDB validators', () => {
     ].join('\n')
     const multiCif = makeFile('model.cif', cifContent)
     await expect(schema.isValid(multiCif)).resolves.toBe(false)
+  })
+
+  describe('pdbOrCifResidueCheck messages', () => {
+    const atom = (residue: string, n: number) =>
+      `ATOM      1  CA  ${residue.padEnd(3)} A${String(n).padStart(4)}       1.000   2.000   3.000  1.00  0.00           C`
+    const message = async (...residues: string[]) => {
+      const pdb = makeFile(
+        'model.pdb',
+        residues.map((r, i) => atom(r, i + 1)).join('\n')
+      )
+      try {
+        await pdbOrCifResidueCheck().validate(pdb)
+        return null
+      } catch (e) {
+        return (e as Error).message
+      }
+    }
+
+    it('accepts supported residues', async () => {
+      expect(await message('ALA', 'GLY')).toBeNull()
+    })
+
+    it('asks for uppercase names when that is the only problem', async () => {
+      expect(await message('ALA', 'gly', 'Leu')).toBe(
+        'Residue names must be uppercase (found: Leu, gly). Change them to uppercase, for example Leu to LEU.'
+      )
+    })
+
+    it('lists residues that are not supported in any case', async () => {
+      const result = await message('ALA', 'UNK')
+      expect(result).toMatch(/^Unsupported residues found: UNK /)
+      expect(result).not.toMatch(/uppercase/)
+    })
+
+    it('reports both problems together', async () => {
+      const result = await message('gly', 'UNK')
+      expect(result).toMatch(/^Unsupported residues found: UNK /)
+      expect(result).toMatch(/Residue names must be uppercase \(found: gly\)/)
+    })
   })
 })

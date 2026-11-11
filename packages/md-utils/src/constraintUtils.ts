@@ -12,7 +12,8 @@ import {
   PROTEIN_RESIDUES,
   DNA_RESIDUES,
   RNA_RESIDUES,
-  CARBOHYDRATE_RESIDUES
+  CARBOHYDRATE_RESIDUES,
+  CONST_INP_ALLOWED_PREFIXES
 } from '@bilbomd/bilbomd-types'
 import type { Logger } from './index.js'
 
@@ -270,16 +271,6 @@ export async function validateYamlConstraints(
   }
 }
 
-const ALLOWED_INP_PREFIXES = [
-  'define',
-  'cons fix',
-  'cons harm',
-  'shape desc',
-  'return',
-  '!',
-  '*'
-]
-
 /**
  * Validates INP constraint file format
  */
@@ -296,12 +287,13 @@ export async function validateInpConstraints(
 
     const lines = inpContent.split('\n').filter((line: string) => line.trim())
 
-    // Allowlist check: reject any line that doesn't start with a permitted keyword.
-    // Mirrors the backend isValidConstInpFile check to block CHARMM directives like
-    // 'system', 'open', 'read', etc. that could execute OS commands or perform file I/O.
+    // Allowlist check: reject any line that doesn't start with a permitted
+    // keyword. Uses the same list as the job forms and the backend upload check
+    // to block CHARMM directives like 'system', 'open', 'read', etc. that could
+    // execute OS commands or perform file I/O.
     for (const line of lines) {
       const lower = line.trim().toLowerCase()
-      if (!ALLOWED_INP_PREFIXES.some((pfx) => lower.startsWith(pfx))) {
+      if (!CONST_INP_ALLOWED_PREFIXES.some((pfx) => lower.startsWith(pfx))) {
         throw new Error(
           `Disallowed keyword in constraint file: "${line.trim()}"`
         )
