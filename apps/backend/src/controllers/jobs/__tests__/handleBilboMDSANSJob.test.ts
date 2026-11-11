@@ -37,8 +37,10 @@ vi.mock('../../config/config.js', () => ({
 // Mock fs-extra to avoid filesystem operations failing in tests
 vi.mock('fs-extra', () => ({
   copyFile: vi.fn(async () => {}),
+  remove: vi.fn(async () => {}),
   default: {
-    copyFile: vi.fn(async () => {})
+    copyFile: vi.fn(async () => {}),
+    remove: vi.fn(async () => {})
   }
 }))
 
@@ -227,6 +229,16 @@ describe('handleBilboMDSANSJob', () => {
       ]
     })
     expect(fs.copyFile).not.toHaveBeenCalled()
+    expect(fs.remove).toHaveBeenCalledWith(expect.stringContaining(UUID))
     expect(queueJob).not.toHaveBeenCalled()
+  })
+
+  it('keeps the job directory when validation passes', async () => {
+    const { req, res } = makeReqRes()
+
+    await handleBilboMDSANSJob(req, res, user, UUID, { accessMode: 'user' })
+
+    expect(res.status).toHaveBeenCalledWith(200)
+    expect(fs.remove).not.toHaveBeenCalled()
   })
 })

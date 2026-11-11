@@ -74,6 +74,8 @@ const handleBilboMDSANSJob = async (
     } catch (validationErr) {
       if (validationErr instanceof ValidationError) {
         logger.warn('SANS job payload validation failed', validationErr)
+        // No job record will point at these uploads, so drop them now
+        await fs.remove(jobDir)
         return res.status(400).json({
           message: 'Validation failed',
           errors: validationErr.inner?.map((err) => ({
