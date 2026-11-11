@@ -49,6 +49,19 @@ vi.mock('../../functions/nersc-inputs.js', () => ({
   prepareNerscInputs: record('prepareNerscInputs')
 }))
 
+vi.mock('../../functions/const-inp-guard.js', () => ({
+  assertConstInpAllowed: vi.fn(async (dir: string, name: string) => {
+    trace.push(`fn:assertConstInpAllowed:${dir}:${name}`)
+    if (state.failAt === 'assertConstInpAllowed') {
+      throw new Error('assertConstInpAllowed failed')
+    }
+  })
+}))
+
+vi.mock('../../../config/config.js', () => ({
+  config: { uploadDir: '/uploads' }
+}))
+
 vi.mock('../../functions/bilbomd-multi-functions.js', () => ({
   initializeJob: record('initializeJob'),
   prepareMultiMDdatFileList: record('prepareMultiMDdatFileList'),
@@ -96,6 +109,8 @@ const makeJob = (fields: Record<string, unknown>) => {
     user: { username: 'u' },
     ...fields
   }
+  // Mongoose document accessor, as the pipelines read untyped fields
+  job.get = (key: string) => job[key]
   job.save = vi.fn(async () => {
     trace.push(
       `save:status=${job.status ?? '-'},progress=${job.progress ?? '-'}`
@@ -210,6 +225,29 @@ describe('nersc pipeline', () => {
           ],
         }
       `)
+  })
+
+  it('checks an uploaded constraint file before making the slurm file', async () => {
+    const job = nerscJob()
+    job.const_inp_file = 'const.inp'
+    const { trace: steps, error } = await run(processBilboMDJobNersc, job)
+    expect(error).toBeUndefined()
+    expect(steps).toContain(
+      'fn:assertConstInpAllowed:/uploads/uuid-1:const.inp'
+    )
+    expect(
+      steps.indexOf('fn:assertConstInpAllowed:/uploads/uuid-1:const.inp')
+    ).toBeLessThan(steps.indexOf('fn:makeBilboMDSlurm'))
+  })
+
+  it('stops before the slurm file when the constraint file is not allowed', async () => {
+    const job = nerscJob()
+    job.const_inp_file = 'const.inp'
+    state.failAt = 'assertConstInpAllowed'
+    const { trace: steps, error } = await run(processBilboMDJobNersc, job)
+    expect(error).toBe('assertConstInpAllowed failed')
+    expect(steps).not.toContain('fn:makeBilboMDSlurm')
+    expect(steps).not.toContain('fn:submitBilboMDSlurm')
   })
 
   it('falls back to the auto pipeline name for a bare job type', async () => {

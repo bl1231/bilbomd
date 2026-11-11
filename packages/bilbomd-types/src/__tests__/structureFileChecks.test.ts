@@ -12,6 +12,7 @@ import {
   sharedResidueNumbersMessage,
   checkRnaResidues,
   checkConstInpText,
+  findDisallowedConstInpLine,
   MAX_CONST_INP_SHAPE_COMMANDS
 } from '../structureFileChecks.js'
 
@@ -447,5 +448,74 @@ describe('checkConstInpText', () => {
     expect(checkConstInpText(valid('   CONS HARM force 1 sele x end'))).toBe(
       true
     )
+  })
+})
+
+describe('findDisallowedConstInpLine', () => {
+  // As pae2const.py writes it
+  const generated = lines(
+    'define fixed1 sele ( resid 2:27 .and. segid PROA ) end',
+    'cons fix sele fixed1 end ',
+    '',
+    'define rigid1 sele ( resid 9:28 .and. segid PROB ) end',
+    'shape desc dock1 rigid sele rigid1 end ',
+    '',
+    'return ',
+    ''
+  )
+
+  it('returns null for a generated constraint file', () => {
+    expect(findDisallowedConstInpLine(generated)).toBeNull()
+  })
+
+  it('allows titles, comments and blank lines', () => {
+    expect(
+      findDisallowedConstInpLine(
+        lines('* title', '*', '! note', '   ', 'return')
+      )
+    ).toBeNull()
+  })
+
+  it.each([
+    ['system', 'system "touch ../../x.txt"'],
+    ['the abbreviated form', 'syst "id"'],
+    ['any case', 'SyStEm "id"'],
+    ['leading spaces', '   syst "id"'],
+    ['a tab', '\tsystem "id"'],
+    ['bomlev', 'bomlev -5'],
+    ['stream', 'stream other.str']
+  ])('returns the first disallowed line: %s', (_, line) => {
+    expect(findDisallowedConstInpLine(lines('* t', line, 'return'))).toBe(
+      line.trim()
+    )
+  })
+
+  it.each([
+    ['CRLF', '\r\n'],
+    ['bare CR', '\r']
+  ])('splits %s line endings', (_, eol) => {
+    const file = ['define x sele segid PROA end', 'system "id"', 'return'].join(
+      eol
+    )
+    expect(findDisallowedConstInpLine(file)).toBe('system "id"')
+  })
+})
+
+describe('checkConstInpText line endings', () => {
+  it('rejects a command hidden behind a bare carriage return', () => {
+    const file =
+      'define x sele segid PROA end\rsystem "id"\ncons fix sele x end\nreturn'
+    expect(checkConstInpText(file, 'pdb')).toBe(
+      'Disallowed keyword in constraint file: "system "id""'
+    )
+  })
+
+  it('accepts a valid file with CRLF line endings', () => {
+    const file = [
+      'define x sele ( segid PROA ) end',
+      'cons fix sele x end',
+      'return'
+    ].join('\r\n')
+    expect(checkConstInpText(file, 'pdb')).toBe(true)
   })
 })

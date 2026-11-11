@@ -18,6 +18,7 @@ import {
   spawnCharmm,
   handleError
 } from './job-utils.js'
+import { assertConstInpAllowed } from './const-inp-guard.js'
 
 // CHARMM minimize -> heat -> dynamics, run in <jobDir>/charmm/<step>/
 
@@ -94,6 +95,7 @@ const runHeat = async (
   }
   try {
     logger.info(`Starting CHARMM heat for job ${DBjob.uuid}`)
+    if (params.constinp) await assertConstInpAllowed(outputDir, params.constinp)
     let status: IStepStatus = {
       status: 'Running',
       message: 'CHARMM Heating has started.'
@@ -147,6 +149,7 @@ const runMolecularDynamics = async (
 
   try {
     logger.info(`Starting CHARMM MD for job ${DBjob.uuid}`)
+    if (params.constinp) await assertConstInpAllowed(outputDir, params.constinp)
     let status: IStepStatus = {
       status: 'Running',
       message: 'CHARMM Molecular Dynamics has started.'
