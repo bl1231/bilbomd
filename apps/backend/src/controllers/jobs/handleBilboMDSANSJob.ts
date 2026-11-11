@@ -9,6 +9,7 @@ import {
   IBilboMDSteps
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
+import { ValidationError } from 'yup'
 import { sanitizeConstInpFile, writeJobParams } from './index.js'
 import { queueJob } from '../../queues/bilbomd.js'
 import { DispatchUser } from '../../types/bilbomd.js'
@@ -16,6 +17,7 @@ import { config } from '../../config/config.js'
 import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
+import { sansJobSchema } from '../../validation/index.js'
 
 const uploadFolder = config.uploadDir
 
@@ -53,6 +55,35 @@ const handleBilboMDSANSJob = async (
       files['inp_file'] && files['inp_file'][0]
         ? files['inp_file'][0].originalname.toLowerCase()
         : ''
+
+    // Validate before touching the uploaded files
+    try {
+      await sansJobSchema.validate(
+        {
+          title: req.body.title,
+          bilbomd_mode: bilbomdMode,
+          pdb_file: files['pdb_file']?.[0],
+          dat_file: files['dat_file']?.[0],
+          inp_file: files['inp_file']?.[0],
+          rg_min: req.body.rg_min,
+          rg_max: req.body.rg_max,
+          d2o_fraction: req.body.d2o_fraction
+        },
+        { abortEarly: false }
+      )
+    } catch (validationErr) {
+      if (validationErr instanceof ValidationError) {
+        logger.warn('SANS job payload validation failed', validationErr)
+        return res.status(400).json({
+          message: 'Validation failed',
+          errors: validationErr.inner?.map((err) => ({
+            path: err.path,
+            message: err.message
+          }))
+        })
+      }
+      throw validationErr
+    }
 
     // Rename the original inp_file to create a backup
     const constInpFilePath = path.join(jobDir, constInpFile)

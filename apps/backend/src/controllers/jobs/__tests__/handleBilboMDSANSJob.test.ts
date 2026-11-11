@@ -3,6 +3,8 @@ import type { Request, Response } from 'express'
 import { handleBilboMDSANSJob } from '../handleBilboMDSANSJob.js'
 import { queueJob } from '../../../queues/bilbomd.js'
 import { announceNewJob } from '../../../services/announceNewJob.js'
+import { ValidationError } from 'yup'
+import fs from 'fs-extra'
 
 // Mocks
 vi.mock('../../middleware/loggers.js', () => ({
@@ -18,6 +20,14 @@ vi.mock('../../../services/announceNewJob.js', () => ({
 }))
 vi.mock('../../../queues/bilbomd.js', () => ({
   queueJob: vi.fn(async () => 'bull-id-123')
+}))
+
+// The schema itself is tested in validation/__tests__/sansJobSchema.test.ts
+const { validateSans } = vi.hoisted(() => ({
+  validateSans: vi.fn(async () => ({}))
+}))
+vi.mock('../../../validation/index.js', () => ({
+  sansJobSchema: { validate: validateSans }
 }))
 
 vi.mock('../../config/config.js', () => ({
@@ -176,5 +186,47 @@ describe('handleBilboMDSANSJob', () => {
     }
     const queued = vi.mocked(queueJob).mock.calls[0][0] as { uuid: string }
     expect(announced.uuid).toBe(queued.uuid)
+  })
+
+  it('validates the upload before touching its files', async () => {
+    const { req, res } = makeReqRes()
+
+    await handleBilboMDSANSJob(req, res, user, UUID, { accessMode: 'user' })
+
+    expect(validateSans).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bilbomd_mode: 'sans',
+        inp_file: { originalname: 'const.inp' },
+        d2o_fraction: 0.7
+      }),
+      { abortEarly: false }
+    )
+  })
+
+  it('returns 400 with the errors when validation fails', async () => {
+    const inner = new ValidationError(
+      'Disallowed keyword in constraint file: "system"',
+      undefined,
+      'inp_file'
+    )
+    validateSans.mockRejectedValueOnce(new ValidationError([inner]))
+    const { req, res } = makeReqRes()
+
+    await handleBilboMDSANSJob(req, res, user, UUID, { accessMode: 'user' })
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    const body = (res.json as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0][0]
+    expect(body).toEqual({
+      message: 'Validation failed',
+      errors: [
+        {
+          path: 'inp_file',
+          message: 'Disallowed keyword in constraint file: "system"'
+        }
+      ]
+    })
+    expect(fs.copyFile).not.toHaveBeenCalled()
+    expect(queueJob).not.toHaveBeenCalled()
   })
 })
