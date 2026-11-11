@@ -168,9 +168,10 @@ export const pdbResidueCheck = () =>
     }
   )
 
-export const constInpCheck = () =>
-  mixed().test('const-inp-file-check', '', async function (file, ctx) {
-    const mode = ctx?.options?.context?.bilbomd_mode
+// Each job schema serves one input mode, so it names the mode here rather
+// than relying on a validation context the handlers would have to pass
+export const constInpCheck = (mode: 'pdb' | 'crd_psf') =>
+  mixed().test('const-inp-file-check', '', async function (file) {
     const constInpFile = file as Express.Multer.File | undefined
     if (!constInpFile?.path) return true
     const result = await isValidConstInpFile(constInpFile, mode)

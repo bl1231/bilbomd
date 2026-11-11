@@ -55,7 +55,8 @@ const BilboMDSANSJobSchema = object().shape({
     ),
   inp_file: requiredFile('const.inp file is required')
     .concat(fileExtTest('inp'))
-    .concat(constInpCheck())
+    // SANS jobs start from a PDB file, so segment IDs follow the PDB rule
+    .concat(constInpCheck('pdb'))
     .concat(fileSizeTest(2_000_000))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),

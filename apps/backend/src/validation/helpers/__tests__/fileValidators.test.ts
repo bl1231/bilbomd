@@ -347,20 +347,27 @@ describe('pdbResidueCheck', () => {
 describe('constInpCheck', () => {
   it('passes when isValidConstInpFile returns true', async () => {
     vi.mocked(validationFunctions.isValidConstInpFile).mockResolvedValue(true)
-    const schema = yup.object({ file: constInpCheck() })
-    const ctx = { context: { bilbomd_mode: 'pdb' } }
-    await expect(
-      schema.validate({ file: multerFile() }, ctx)
-    ).resolves.toBeDefined()
+    const schema = yup.object({ file: constInpCheck('pdb') })
+    await expect(schema.validate({ file: multerFile() })).resolves.toBeDefined()
+  })
+
+  it('checks the file in the mode the schema names, not the context', async () => {
+    vi.mocked(validationFunctions.isValidConstInpFile).mockResolvedValue(true)
+    const file = multerFile()
+    const schema = yup.object({ file: constInpCheck('crd_psf') })
+    await schema.validate({ file }, { context: { bilbomd_mode: 'pdb' } })
+    expect(validationFunctions.isValidConstInpFile).toHaveBeenCalledWith(
+      file,
+      'crd_psf'
+    )
   })
 
   it('fails with message when isValidConstInpFile returns an error string', async () => {
     vi.mocked(validationFunctions.isValidConstInpFile).mockResolvedValue(
       'Missing define line'
     )
-    const schema = yup.object({ file: constInpCheck() })
-    const ctx = { context: { bilbomd_mode: 'pdb' } }
-    await expect(schema.validate({ file: multerFile() }, ctx)).rejects.toThrow(
+    const schema = yup.object({ file: constInpCheck('pdb') })
+    await expect(schema.validate({ file: multerFile() })).rejects.toThrow(
       'Missing define line'
     )
   })

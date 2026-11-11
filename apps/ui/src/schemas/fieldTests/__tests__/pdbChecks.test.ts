@@ -4,7 +4,8 @@ import {
   pdbLineStartCheck,
   singleModelCheck,
   pdbOrCifResidueCheck,
-  paeMatchesStructureCheck
+  paeMatchesStructureCheck,
+  constInpCheck
 } from '../fieldTests'
 import { mixed, object } from 'yup'
 
@@ -234,6 +235,41 @@ describe('PDB validators', () => {
       expect(
         await check({ pdb_file: structure(2), pae_file: 'pae.json' })
       ).toBeNull()
+    })
+  })
+
+  describe('constInpCheck segment ID rule', () => {
+    const inp = (segid: string) =>
+      makeFile(
+        'const.inp',
+        [
+          `define fixed1 sele ( resid 1:20 .and. segid ${segid} ) end`,
+          'cons fix sele fixed1 end',
+          'return'
+        ].join('\n')
+      )
+    const PDB_RULE = 'segid must be: PRO[A-Z], DNA[A-Z], RNA[A-Z], etc.'
+
+    it('uses the mode it is given', async () => {
+      await expect(constInpCheck('pdb').validate(inp('ABCD'))).rejects.toThrow(
+        PDB_RULE
+      )
+      await expect(constInpCheck('pdb').isValid(inp('PROA'))).resolves.toBe(
+        true
+      )
+    })
+
+    it("otherwise follows the form's bilbomd_mode", async () => {
+      await expect(
+        constInpCheck().validate(inp('ABCD'), {
+          context: { bilbomd_mode: 'pdb' }
+        })
+      ).rejects.toThrow(PDB_RULE)
+      await expect(
+        constInpCheck().isValid(inp('ABCD'), {
+          context: { bilbomd_mode: 'crd_psf' }
+        })
+      ).resolves.toBe(true)
     })
   })
 })

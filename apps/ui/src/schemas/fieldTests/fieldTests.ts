@@ -187,11 +187,14 @@ export const singleModelCheck = () =>
     }
   )
 
-export const constInpCheck = () =>
+// `mode` sets the segment ID rule. Without it, the rule follows the form's
+// bilbomd_mode (the Classic form switches between pdb and crd_psf).
+export const constInpCheck = (mode?: 'pdb' | 'crd_psf') =>
   mixed().test('const-inp-file-check', '', async function (file, ctx) {
-    const mode = ctx?.options?.context?.bilbomd_mode
+    const inputMode: string | undefined =
+      mode ?? ctx?.options?.context?.bilbomd_mode
     if (file instanceof File) {
-      const result = await isValidConstInpFile(file, mode)
+      const result = await isValidConstInpFile(file, inputMode ?? '')
       if (result === true) return true
       return this.createError({ message: result })
     }
