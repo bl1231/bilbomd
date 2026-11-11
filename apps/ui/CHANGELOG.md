@@ -1,5 +1,11 @@
 # @bilbomd/ui
 
+## 2.42.2
+
+### Patch Changes
+
+- 09802c7: Refresh an expired access token before the Molstar viewer fetches the model PDBs, and show an error with a Retry button instead of a blank viewer when they can't be loaded.
+
 ## 2.42.1
 
 ### Patch Changes
