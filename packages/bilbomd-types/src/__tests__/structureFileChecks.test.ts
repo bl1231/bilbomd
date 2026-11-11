@@ -6,6 +6,8 @@ import {
   pdbContainsChainId,
   pdbIsSingleModel,
   findUnsupportedPdbResidues,
+  findLowercaseResidueNames,
+  residueCaseMessage,
   findSharedResidueNumbers,
   checkRnaResidues,
   checkConstInpText,
@@ -198,6 +200,27 @@ describe('findUnsupportedPdbResidues', () => {
 
   it('ignores records other than ATOM and HETATM', () => {
     expect(findUnsupportedPdbResidues(lines('REMARK UNK', 'END'))).toEqual([])
+  })
+})
+
+describe('findLowercaseResidueNames', () => {
+  it('picks out supported residues written in lower or mixed case', () => {
+    expect(findLowercaseResidueNames(['ala', 'Gly', 'UNK', 'unk'])).toEqual([
+      'ala',
+      'Gly'
+    ])
+  })
+
+  it('is empty when every name is uppercase', () => {
+    expect(findLowercaseResidueNames(['UNK', 'MSE'])).toEqual([])
+  })
+})
+
+describe('residueCaseMessage', () => {
+  it('lists the names and shows the fix', () => {
+    expect(residueCaseMessage(['gly', 'leu'])).toBe(
+      'Residue names must be uppercase (found: gly, leu). Change them to uppercase, for example gly to GLY.'
+    )
   })
 })
 

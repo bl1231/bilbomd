@@ -268,6 +268,24 @@ describe('checkPdbResidues', () => {
     expect(result.message).toBe('Error reading PDB file.')
   })
 
+  it('asks for uppercase names when residues are only lowercase', async () => {
+    mockReadFile([atomLine('ALA'), atomLine('gly')].join('\n'))
+    const result = await checkPdbResidues(mockFile())
+    expect(result).toEqual({
+      valid: false,
+      message:
+        'Residue names must be uppercase (found: gly). Change them to uppercase, for example gly to GLY.'
+    })
+  })
+
+  it('reports unknown and lowercase residues together', async () => {
+    mockReadFile([atomLine('UNK'), atomLine('gly')].join('\n'))
+    const result = await checkPdbResidues(mockFile())
+    expect(result.valid).toBe(false)
+    expect(result.message).toMatch(/^PDB contains unsupported residues: UNK\./)
+    expect(result.message).toMatch(/must be uppercase \(found: gly\)/)
+  })
+
   it('rejects a sugar that shares a chain and number with a protein residue', async () => {
     const content = [
       atomLine('ASP', 'ATOM  ', { chain: 'E', number: 215 }),

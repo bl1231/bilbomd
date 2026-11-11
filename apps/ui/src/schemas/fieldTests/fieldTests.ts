@@ -1,5 +1,11 @@
 import { mixed, string } from 'yup'
-import { isQUnits, Q_UNITS, SAXS_MAX_FILE_SIZE } from '@bilbomd/bilbomd-types'
+import {
+  isQUnits,
+  Q_UNITS,
+  SAXS_MAX_FILE_SIZE,
+  findLowercaseResidueNames,
+  residueCaseMessage
+} from '@bilbomd/bilbomd-types'
 import {
   noSpaces,
   isSansData,
@@ -120,6 +126,16 @@ export const crdCheck = () =>
     }
   )
 
+// Names that only need uppercasing (e.g. 'ala') get their own message: the
+// fix is to edit the file, not to add a residue
+const unsupportedResiduesMessage = (unsupported: string[]): string => {
+  const lowercase = findLowercaseResidueNames(unsupported)
+  const unknown = unsupported.filter((name) => !lowercase.includes(name))
+  const caseNote = lowercase.length > 0 ? residueCaseMessage(lowercase) : ''
+  if (unknown.length === 0) return caseNote
+  return `Unsupported residues found: ${unknown.join(', ')} Please ask Scott to add them to the list of supported residues.${caseNote ? ` ${caseNote}` : ''}`
+}
+
 export const pdbCheck = () =>
   mixed().test('pdb-check', '', async function (file) {
     const { path, createError } = this
@@ -131,7 +147,7 @@ export const pdbCheck = () =>
 
     return createError({
       path,
-      message: `Unsupported residues found: ${result.unsupportedResidues.join(', ')} Please ask Scott to add them to the list of supported residues.`
+      message: unsupportedResiduesMessage(result.unsupportedResidues)
     })
   })
 
@@ -224,6 +240,6 @@ export const pdbOrCifResidueCheck = () =>
       : await hasAllowedResiduesOnly(file)
     if (result.valid) return true
     return this.createError({
-      message: `Unsupported residues found: ${result.unsupportedResidues.join(', ')} Please ask Scott to add them to the list of supported residues.`
+      message: unsupportedResiduesMessage(result.unsupportedResidues)
     })
   })

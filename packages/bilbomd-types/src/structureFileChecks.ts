@@ -92,6 +92,23 @@ export const findUnsupportedPdbResidues = (text: string): string[] => {
   return [...unsupported].sort()
 }
 
+/**
+ * The residue names in `unsupported` that are supported residues written in
+ * lower or mixed case, such as 'ala' or 'Gly'. The PDB format uses uppercase
+ * names and the MD steps match them exactly, so these are rejected too, but
+ * the fix is to uppercase them rather than to add a new residue.
+ */
+export const findLowercaseResidueNames = (unsupported: string[]): string[] =>
+  unsupported.filter(
+    (name) =>
+      name !== name.toUpperCase() &&
+      SUPPORTED_PDB_RESIDUES.has(name.toUpperCase())
+  )
+
+/** Message for residue names that only need uppercasing. */
+export const residueCaseMessage = (names: string[]): string =>
+  `Residue names must be uppercase (found: ${names.join(', ')}). Change them to uppercase, for example ${names[0]} to ${names[0]?.toUpperCase()}.`
+
 // Residues that stay in the model. Waters and ions are stripped before MD, so
 // how they are numbered does not matter.
 const MODELLED_RESIDUES = new Set<string>([

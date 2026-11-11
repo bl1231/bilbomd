@@ -12,6 +12,8 @@ import {
   pdbIsSingleModel,
   findUnsupportedPdbResidues,
   findSharedResidueNumbers,
+  findLowercaseResidueNames,
+  residueCaseMessage,
   checkRnaResidues,
   checkConstInpText
 } from '@bilbomd/bilbomd-types'
@@ -99,11 +101,18 @@ const checkPdbResidues = async (
   if (text === null) return { valid: false, message: 'Error reading PDB file.' }
 
   const unsupported = findUnsupportedPdbResidues(text)
-  if (unsupported.length > 0) {
+  const lowercase = findLowercaseResidueNames(unsupported)
+  const unknown = unsupported.filter((name) => !lowercase.includes(name))
+  if (unknown.length > 0) {
+    const caseNote =
+      lowercase.length > 0 ? ` ${residueCaseMessage(lowercase)}` : ''
     return {
       valid: false,
-      message: `PDB contains unsupported residues: ${unsupported.join(', ')}. These cannot be processed by BilboMD.`
+      message: `PDB contains unsupported residues: ${unknown.join(', ')}. These cannot be processed by BilboMD.${caseNote}`
     }
+  }
+  if (lowercase.length > 0) {
+    return { valid: false, message: residueCaseMessage(lowercase) }
   }
 
   const shared = findSharedResidueNumbers(text)
