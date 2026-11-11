@@ -3,8 +3,10 @@ import {
   chainIdCheck,
   pdbLineStartCheck,
   singleModelCheck,
-  pdbOrCifResidueCheck
+  pdbOrCifResidueCheck,
+  paeMatchesStructureCheck
 } from '../fieldTests'
+import { mixed, object } from 'yup'
 
 const makeFile = (name: string, content: string, type = 'text/plain') => {
   const blob = new Blob([content], { type })
@@ -149,6 +151,89 @@ describe('PDB validators', () => {
       const result = await message('gly', 'UNK')
       expect(result).toMatch(/^Unsupported residues found: UNK /)
       expect(result).toMatch(/Residue names must be uppercase \(found: gly\)/)
+    })
+  })
+
+  describe('pdbOrCifResidueCheck shared residue numbers', () => {
+    const atom = (residue: string, n: number, record = 'ATOM  ') =>
+      `${record}    1  CA  ${residue.padEnd(3)} A${String(n).padStart(4)}       1.000   2.000   3.000  1.00  0.00           C`
+
+    it('rejects a PDB where a sugar shares a protein residue number', async () => {
+      const pdb = makeFile(
+        'model.pdb',
+        [atom('ASP', 215), atom('NAG', 215, 'HETATM')].join('\n')
+      )
+      await expect(pdbOrCifResidueCheck().validate(pdb)).rejects.toThrow(
+        'PDB has residues that share a chain and residue number: chain A residue 215 (ASP and NAG).'
+      )
+    })
+
+    it('accepts distinct residue numbers', async () => {
+      const pdb = makeFile(
+        'model.pdb',
+        [atom('ASP', 215), atom('NAG', 401, 'HETATM')].join('\n')
+      )
+      await expect(pdbOrCifResidueCheck().isValid(pdb)).resolves.toBe(true)
+    })
+  })
+
+  describe('paeMatchesStructureCheck', () => {
+    const atom = (n: number) =>
+      `ATOM      1  CA  ALA A${String(n).padStart(4)}       1.000   2.000   3.000  1.00  0.00           C`
+    const structure = (residues: number) =>
+      makeFile(
+        'model.pdb',
+        Array.from({ length: residues }, (_, i) => atom(i + 1)).join('\n')
+      )
+    const pae = (n: number) =>
+      makeFile(
+        'pae.json',
+        JSON.stringify({
+          pae: Array.from({ length: n }, () => Array<number>(n).fill(1))
+        }),
+        'application/json'
+      )
+    const schema = object({
+      pdb_file: mixed(),
+      pae_file: paeMatchesStructureCheck()
+    })
+    const check = (values: { pdb_file: unknown; pae_file: unknown }) =>
+      schema.validateAt('pae_file', values).then(
+        () => null,
+        (e: Error) => e.message
+      )
+
+    it('accepts a PAE matrix that matches the residue count', async () => {
+      expect(
+        await check({ pdb_file: structure(3), pae_file: pae(3) })
+      ).toBeNull()
+    })
+
+    it('reports a mismatch with both sizes', async () => {
+      const message = await check({ pdb_file: structure(2), pae_file: pae(3) })
+      expect(message).toContain('3 × 3')
+      expect(message).toContain('2 residues')
+    })
+
+    it('reports a PAE file the worker would reject', async () => {
+      const bad = makeFile('pae.json', '{"plddt": []}', 'application/json')
+      expect(await check({ pdb_file: structure(2), pae_file: bad })).toMatch(
+        /must contain a 'predicted_aligned_error'/
+      )
+    })
+
+    it('leaves invalid JSON to jsonFileCheck', async () => {
+      const bad = makeFile('pae.json', '{nope', 'application/json')
+      expect(await check({ pdb_file: structure(2), pae_file: bad })).toBeNull()
+    })
+
+    it('skips files reused on resubmit, which are names, not Files', async () => {
+      expect(
+        await check({ pdb_file: 'model.pdb', pae_file: pae(3) })
+      ).toBeNull()
+      expect(
+        await check({ pdb_file: structure(2), pae_file: 'pae.json' })
+      ).toBeNull()
     })
   })
 })

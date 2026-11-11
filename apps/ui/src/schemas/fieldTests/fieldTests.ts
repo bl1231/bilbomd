@@ -4,7 +4,9 @@ import {
   Q_UNITS,
   SAXS_MAX_FILE_SIZE,
   findLowercaseResidueNames,
-  residueCaseMessage
+  residueCaseMessage,
+  sharedResidueNumbersMessage,
+  paeResidueMismatchMessage
 } from '@bilbomd/bilbomd-types'
 import {
   noSpaces,
@@ -19,7 +21,10 @@ import {
   containsChainId,
   cifContainsChainId,
   cifHasAllowedResiduesOnly,
-  noLeadingSpaceOnPDBLines
+  noLeadingSpaceOnPDBLines,
+  findSharedResidueNumbersInFile,
+  getPaeFileMatrixSize,
+  countStructureFileResidues
 } from '../ValidationFunctions'
 
 const isFileOrString = (file: unknown): boolean =>
@@ -238,8 +243,34 @@ export const pdbOrCifResidueCheck = () =>
     const result = isCif
       ? await cifHasAllowedResiduesOnly(file)
       : await hasAllowedResiduesOnly(file)
-    if (result.valid) return true
-    return this.createError({
-      message: unsupportedResiduesMessage(result.unsupportedResidues)
-    })
+    if (!result.valid) {
+      return this.createError({
+        message: unsupportedResiduesMessage(result.unsupportedResidues)
+      })
+    }
+    // Like the backend, only PDB files are checked for shared numbers
+    const shared = isCif ? [] : await findSharedResidueNumbersInFile(file)
+    if (shared.length > 0) {
+      return this.createError({ message: sharedResidueNumbersMessage(shared) })
+    }
+    return true
+  })
+
+// Runs on pae_file and compares it with the pdb_file sibling field, as the
+// backend does. Formik re-validates every field on each change, so the error
+// updates when either file changes.
+export const paeMatchesStructureCheck = () =>
+  mixed().test('pae-matches-structure', '', async function (file) {
+    const structure: unknown = this.parent?.pdb_file
+    // A file reused on resubmit is a name, not a File: the backend checks it
+    if (!(file instanceof File) || !(structure instanceof File)) return true
+    const pae = await getPaeFileMatrixSize(file)
+    // Invalid JSON is reported by jsonFileCheck
+    if (pae === null) return true
+    if ('error' in pae) return this.createError({ message: pae.error })
+    const message = paeResidueMismatchMessage(
+      pae.size,
+      await countStructureFileResidues(structure)
+    )
+    return message ? this.createError({ message }) : true
   })

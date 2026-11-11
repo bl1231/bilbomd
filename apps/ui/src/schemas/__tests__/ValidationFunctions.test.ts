@@ -17,7 +17,10 @@ import {
   noLeadingSpaceOnPDBLines,
   detectGaffCofactors,
   detectMetalCofactors,
-  isPlddtColumnAllZero
+  isPlddtColumnAllZero,
+  findSharedResidueNumbersInFile,
+  getPaeFileMatrixSize,
+  countStructureFileResidues
 } from '../ValidationFunctions'
 
 const makeFile = (name: string, content: string, type = 'text/plain') => {
@@ -706,5 +709,76 @@ describe('isPlddtColumnAllZero', () => {
 
   it('returns false for an empty or unparseable file (no warning)', async () => {
     expect(await isPlddtColumnAllZero(makeFile('empty.pdb', ''))).toBe(false)
+  })
+})
+
+describe('PAE and residue-number wrappers', () => {
+  const atom = (residue: string, n: number, record = 'ATOM  ') =>
+    `${record}    1  CA  ${residue.padEnd(3)} A${String(n).padStart(4)}       1.000   2.000   3.000  1.00  0.00           C`
+  const squarePae = (n: number) =>
+    JSON.stringify({
+      predicted_aligned_error: Array.from({ length: n }, () =>
+        Array<number>(n).fill(1)
+      )
+    })
+  // A file whose text() calls are counted
+  const countedFile = (name: string, content: string) => {
+    const file = makeFile(name, content)
+    const calls = { n: 0 }
+    ;(file as unknown as { text: () => Promise<string> }).text = async () => {
+      calls.n++
+      return content
+    }
+    return { file, calls }
+  }
+
+  it('findSharedResidueNumbersInFile finds a sugar numbered like a protein residue', async () => {
+    const pdb = makeFile(
+      'model.pdb',
+      [atom('ASP', 215), atom('NAG', 215, 'HETATM')].join('\n')
+    )
+    expect(await findSharedResidueNumbersInFile(pdb)).toEqual([
+      'chain A residue 215 (ASP and NAG)'
+    ])
+  })
+
+  it('getPaeFileMatrixSize reads the matrix size once per file', async () => {
+    const { file, calls } = countedFile('pae.json', squarePae(3))
+    expect(await getPaeFileMatrixSize(file)).toEqual({ size: 3 })
+    expect(await getPaeFileMatrixSize(file)).toEqual({ size: 3 })
+    expect(calls.n).toBe(1)
+  })
+
+  it('getPaeFileMatrixSize is null for invalid JSON or an unreadable file', async () => {
+    expect(await getPaeFileMatrixSize(makeFile('pae.json', '{nope'))).toBeNull()
+    const broken = makeFile('pae.json', 'x')
+    ;(broken as unknown as { text: () => Promise<string> }).text = async () => {
+      throw new Error('read failed')
+    }
+    expect(await getPaeFileMatrixSize(broken)).toBeNull()
+  })
+
+  it('countStructureFileResidues counts PDB residues once per file', async () => {
+    const { file, calls } = countedFile(
+      'model.pdb',
+      [atom('ALA', 1), atom('ALA', 1), atom('GLY', 2)].join('\n')
+    )
+    expect(await countStructureFileResidues(file)).toBe(2)
+    expect(await countStructureFileResidues(file)).toBe(2)
+    expect(calls.n).toBe(1)
+  })
+
+  it('countStructureFileResidues reads a .cif file as mmCIF', async () => {
+    const cif = [
+      'data_x',
+      'loop_',
+      '_atom_site.group_PDB',
+      '_atom_site.auth_seq_id',
+      '_atom_site.auth_asym_id',
+      'ATOM 1 A',
+      'ATOM 2 A',
+      'ATOM 2 A'
+    ].join('\n')
+    expect(await countStructureFileResidues(makeFile('model.cif', cif))).toBe(2)
   })
 })

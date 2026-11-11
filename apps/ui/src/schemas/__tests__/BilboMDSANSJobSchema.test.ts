@@ -15,7 +15,8 @@ vi.mock('../ValidationFunctions', () => ({
   hasAllowedResiduesOnly: vi
     .fn()
     .mockResolvedValue({ valid: true, unsupportedResidues: [] }),
-  isValidConstInpFile: vi.fn().mockResolvedValue(true)
+  isValidConstInpFile: vi.fn().mockResolvedValue(true),
+  findSharedResidueNumbersInFile: vi.fn().mockResolvedValue([])
 }))
 
 const makeFile = (name: string, size = 100): File => {
