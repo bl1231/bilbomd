@@ -1,0 +1,8 @@
+# Maps each contributor's commit identities to one canonical name and email,
+# so `git shortlog`, `git blame` and tools like scc count each person once.
+# Format: Canonical Name <canonical@email> <email-used-in-commits>
+Scott Classen <sclassen@lbl.gov> <dsclassen@users.noreply.github.com>
+Shreyas Prabhakar <shrprabh@ttu.edu> <148508046+shrprabh@users.noreply.github.com>
+Shreyas Prabhakar <shrprabh@ttu.edu> shreyasprabhakar <shrprabh@ttu.edu>
+Alan C. Hicks <34522472+achicks15@users.noreply.github.com> <hicks.alanc15@gmail.com>
+github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> <github-actions[bot]@users.noreply.github.com>
