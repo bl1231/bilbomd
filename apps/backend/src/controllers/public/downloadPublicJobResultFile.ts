@@ -8,6 +8,22 @@ import { publicJobQuery } from './utils/publicJobQuery.js'
 
 const uploadFolder = path.join(getEnvVar('DATA_VOL'))
 
+// The files the public job page loads by name: the Mol* ensemble and starting
+// models, the PAE tab images and the BioEmu2 alignment report. Nothing else
+// in the job dir (inputs, params.json, logs, intermediate files) is served
+// here; the full results come from the /results tarball.
+const PUBLIC_RESULT_FILES: RegExp[] = [
+  /^ensemble_size_\d+_model\.pdb$/,
+  /^minimization_output\.pdb$/,
+  /^scoper_combined_[A-Za-z0-9._-]+\.pdb$/,
+  /^pae\.png$/,
+  /^viz\.png$/,
+  /^alignment\.json$/
+]
+
+const isPublicResultFile = (filename: string): boolean =>
+  PUBLIC_RESULT_FILES.some((pattern) => pattern.test(filename))
+
 const downloadPublicJobResultFile = async (req: Request, res: Response) => {
   const { publicId: rawPublicId, filename: rawFilename } = req.params
 
@@ -20,6 +36,18 @@ const downloadPublicJobResultFile = async (req: Request, res: Response) => {
     return
   }
 
+  // Answered like a missing file, so the response doesn't say which names
+  // exist in the job dir
+  if (!filename || !isPublicResultFile(filename)) {
+    logger.warn(
+      `downloadPublicJobResultFile: file not served for publicId=${publicId}, filename=${filename}`
+    )
+    res
+      .status(404)
+      .json({ message: 'Requested result file not found for this job.' })
+    return
+  }
+
   try {
     const job = await Job.findOne(publicJobQuery(publicId)).exec()
 
@@ -28,7 +56,8 @@ const downloadPublicJobResultFile = async (req: Request, res: Response) => {
       return
     }
 
-    // Prevent path traversal
+    // The allowlist already rules out path separators; basename stays as a
+    // second guard against path traversal
     const safeFileName = path.basename(filename)
     const jobDir = path.join(uploadFolder, job.uuid)
 
@@ -64,4 +93,4 @@ const downloadPublicJobResultFile = async (req: Request, res: Response) => {
   }
 }
 
-export { downloadPublicJobResultFile }
+export { downloadPublicJobResultFile, isPublicResultFile }
