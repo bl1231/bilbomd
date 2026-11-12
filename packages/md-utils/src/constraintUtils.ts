@@ -13,7 +13,8 @@ import {
   DNA_RESIDUES,
   RNA_RESIDUES,
   CARBOHYDRATE_RESIDUES,
-  CONST_INP_ALLOWED_PREFIXES
+  CONST_INP_ALLOWED_PREFIXES,
+  duplicateShapeNamesMessage
 } from '@bilbomd/bilbomd-types'
 import type { Logger } from './index.js'
 
@@ -325,6 +326,11 @@ export async function validateInpConstraints(
       throw new Error(
         'INP file must contain at least one constraint command ("cons fix" or "shape desc")'
       )
+    }
+
+    const duplicateShapes = duplicateShapeNamesMessage(inpContent)
+    if (duplicateShapes !== null) {
+      throw new Error(duplicateShapes)
     }
 
     // Rigid bodies are numbered in the order of the 'shape desc' lines

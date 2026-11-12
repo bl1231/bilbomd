@@ -233,6 +233,47 @@ export const findDisallowedConstInpLine = (text: string): string | null => {
 }
 
 /**
+ * Names given to more than one `shape desc` line, in the order they first
+ * repeat. CHARMM treats a repeated name as a change to the existing shape, not
+ * a new one (https://academiccharmm.org/documentation/version/c51b1/shapes),
+ * so a copy-pasted `dock1` silently drops a rigid body. Names are compared
+ * case-insensitively, as CHARMM reads them.
+ */
+export const findDuplicateShapeNames = (text: string): string[] => {
+  const seen = new Set<string>()
+  const duplicates: string[] = []
+  for (const line of splitLines(text)) {
+    const match = line.trim().match(/^shape\s+desc\w*\s+(\S+)/i)
+    if (!match) continue
+    const name = match[1]
+    const key = name.toLowerCase()
+    if (seen.has(key)) {
+      if (!duplicates.some((d) => d.toLowerCase() === key)) {
+        duplicates.push(name)
+      }
+    } else {
+      seen.add(key)
+    }
+  }
+  return duplicates
+}
+
+/**
+ * The message for repeated `shape desc` names, or null when every name is
+ * unique.
+ */
+export const duplicateShapeNamesMessage = (text: string): string | null => {
+  const duplicates = findDuplicateShapeNames(text)
+  if (duplicates.length === 0) return null
+  const quoted = duplicates.map((name) => `"${name}"`).join(', ')
+  return (
+    `Each "shape desc" line needs its own name, but ${quoted} is used more ` +
+    'than once. CHARMM would treat the repeat as a change to the earlier ' +
+    'rigid body, not a new one. Rename them, e.g. dock1, dock2.'
+  )
+}
+
+/**
  * Checks a CHARMM constraint file. `mode` is the job's input mode: 'pdb' and
  * 'crd_psf' also check the segment IDs that define lines select.
  * Returns true, or a message saying what is wrong.
@@ -278,6 +319,11 @@ export const checkConstInpText = (
   ).length
   if (shapeCommands > MAX_CONST_INP_SHAPE_COMMANDS) {
     return `Too many CHARMM shape commands. Maximum allowed is ${MAX_CONST_INP_SHAPE_COMMANDS}.`
+  }
+
+  const duplicateShapes = duplicateShapeNamesMessage(text)
+  if (duplicateShapes !== null) {
+    return duplicateShapes
   }
 
   const disallowed = findDisallowedConstInpLine(text)

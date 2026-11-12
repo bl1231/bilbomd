@@ -831,6 +831,26 @@ return`
       )
     })
 
+    test('validateInpConstraints rejects a reused shape desc name', async () => {
+      const inpPath = path.join(tempDir, 'duplicate-shape-name.inp')
+      await fs.writeFile(
+        inpPath,
+        [
+          'define fixed1 sele ( resid 1:130 .and. segid PROA ) end',
+          'cons fix sele fixed1 end',
+          'define rigid1 sele ( resid 52:64 .and. segid PROC ) end',
+          'shape desc dock1 rigid sele rigid1 end',
+          'define rigid1 sele ( resid 133:144 .and. segid PROA ) end',
+          'define rigid2 sele ( resid 151:225 .and. segid PROA ) end',
+          'shape desc dock1 rigid sele rigid1 .or. rigid2 end',
+          'return'
+        ].join('\n')
+      )
+      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+        /Invalid INP constraints file: Each "shape desc" line needs its own name, but "dock1" is used more than once/
+      )
+    })
+
     test('validateYamlConstraints rejects overlapping rigid bodies', async () => {
       const yamlPath = path.join(tempDir, 'overlap.yaml')
       await fs.writeFile(

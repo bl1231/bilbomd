@@ -13,6 +13,8 @@ import {
   checkRnaResidues,
   checkConstInpText,
   findDisallowedConstInpLine,
+  findDuplicateShapeNames,
+  duplicateShapeNamesMessage,
   MAX_CONST_INP_SHAPE_COMMANDS
 } from '../structureFileChecks.js'
 
@@ -448,6 +450,117 @@ describe('checkConstInpText', () => {
     expect(checkConstInpText(valid('   CONS HARM force 1 sele x end'))).toBe(
       true
     )
+  })
+})
+
+describe('findDuplicateShapeNames', () => {
+  it('returns nothing when every shape desc name is unique', () => {
+    expect(
+      findDuplicateShapeNames(
+        lines(
+          'shape desc dock1 rigid sele rigid1 end',
+          'shape desc dock2 rigid sele rigid2 end'
+        )
+      )
+    ).toEqual([])
+  })
+
+  it('finds a name reused by a later shape desc line', () => {
+    expect(
+      findDuplicateShapeNames(
+        lines(
+          'define rigid1 sele ( resid 52:64 .and. segid PROC ) end',
+          'shape desc dock1 rigid sele rigid1 end ',
+          'define rigid1 sele ( resid 133:144 .and. segid PROA ) end',
+          'shape desc dock1 rigid sele rigid1 end ',
+          'return'
+        )
+      )
+    ).toEqual(['dock1'])
+  })
+
+  it('ignores case, indentation and the long DESCriptor keyword', () => {
+    expect(
+      findDuplicateShapeNames(
+        lines(
+          'SHAPE DESC DOCK1 RIGID SELE rigid1 END',
+          '   shape descriptor dock1 rigid sele rigid2 end',
+          'shape desc dock2 rigid sele rigid3 end',
+          'Shape Desc Dock2 rigid sele rigid4 end',
+          'shape desc dock1 rigid sele rigid5 end'
+        )
+      )
+    ).toEqual(['dock1', 'Dock2'])
+  })
+
+  it('ignores comments and other shape commands', () => {
+    expect(
+      findDuplicateShapeNames(
+        lines(
+          '! shape desc dock1 rigid sele rigid1 end',
+          'shape desc dock1 rigid sele rigid1 end'
+        )
+      )
+    ).toEqual([])
+  })
+})
+
+describe('duplicateShapeNamesMessage', () => {
+  it('is null when names are unique', () => {
+    expect(
+      duplicateShapeNamesMessage('shape desc dock1 rigid sele rigid1 end')
+    ).toBeNull()
+  })
+
+  it('names the repeated shape and how to fix it', () => {
+    expect(
+      duplicateShapeNamesMessage(
+        lines(
+          'shape desc dock1 rigid sele rigid1 end',
+          'shape desc dock1 rigid sele rigid2 end'
+        )
+      )
+    ).toBe(
+      'Each "shape desc" line needs its own name, but "dock1" is used more ' +
+        'than once. CHARMM would treat the repeat as a change to the earlier ' +
+        'rigid body, not a new one. Rename them, e.g. dock1, dock2.'
+    )
+  })
+})
+
+describe('checkConstInpText duplicate shape names', () => {
+  it('rejects a constraint file that reuses a shape desc name', () => {
+    expect(
+      checkConstInpText(
+        lines(
+          'define fixed1 sele ( resid 1:130 .and. segid PROA ) end',
+          'cons fix sele fixed1 end',
+          'define rigid1 sele ( resid 52:64 .and. segid PROC ) end',
+          'shape desc dock1 rigid sele rigid1 end',
+          'define rigid1 sele ( resid 133:144 .and. segid PROA ) end',
+          'shape desc dock1 rigid sele rigid1 end',
+          'return'
+        ),
+        'pdb'
+      )
+    ).toMatch(/"dock1" is used more than once/)
+  })
+
+  it('accepts reused define names when shape names are unique', () => {
+    expect(
+      checkConstInpText(
+        lines(
+          'define fixed1 sele ( resid 1:130 .and. segid PROA ) end',
+          'cons fix sele fixed1 end',
+          'define rigid1 sele ( resid 52:64 .and. segid PROC ) end',
+          'shape desc dock1 rigid sele rigid1 end',
+          'define rigid1 sele ( resid 133:144 .and. segid PROA ) end',
+          'shape desc dock2 rigid sele rigid1 end',
+          'return'
+        ),
+        'pdb'
+      )
+    ).toBe(true)
   })
 })
 
