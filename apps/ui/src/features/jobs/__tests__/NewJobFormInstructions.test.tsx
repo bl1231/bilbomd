@@ -183,6 +183,19 @@ describe('NewJobFormInstructions', () => {
       expect(screen.getByText(/data structure/)).toBeInTheDocument()
     })
 
+    it('should link the PSF description to the c51b1 CHARMM docs', async () => {
+      const user = userEvent.setup()
+
+      renderWithProviders(<NewJobFormInstructions />)
+
+      await user.click(screen.getByRole('button', { name: /instructions/i }))
+
+      expect(screen.getByText('data structure').closest('a')).toHaveAttribute(
+        'href',
+        'https://academiccharmm.org/documentation/version/c51b1/struct'
+      )
+    })
+
     it('should show PDB file requirements', async () => {
       const user = userEvent.setup()
 

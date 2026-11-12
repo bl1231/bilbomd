@@ -17,7 +17,11 @@ import { handleError } from './job-utils.js'
 import fs from 'fs-extra'
 import YAML from 'yaml'
 import { runPythonStep } from '../../helpers/runPythonStep.js'
-import { convertInpToYaml } from '@bilbomd/md-utils'
+import {
+  convertInpToYaml,
+  assertNoRigidBodyOverlaps,
+  type IMDConstraints
+} from '@bilbomd/md-utils'
 
 type OmmCapableJob =
   | IBilboMDPDBJob
@@ -244,6 +248,10 @@ const prepareOpenMMConfig = async (DBjob: OmmCapableJob): Promise<void> => {
   if (!cfg.constraints) {
     cfg.constraints = { fixed_bodies: [], rigid_bodies: [] }
   }
+
+  // Overlapping rigid bodies crash heat.py ("Virtual site has nonzero mass").
+  // Fail here, outside the swallowing try blocks above, with a clear message.
+  assertNoRigidBodyOverlaps(cfg.constraints as IMDConstraints)
 
   const yamlPath = await writeOpenMMConfigYaml(workDir, cfg)
   logger.info(`OpenMM config YAML written: ${yamlPath}`)
