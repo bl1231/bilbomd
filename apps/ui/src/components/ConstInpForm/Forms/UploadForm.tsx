@@ -295,7 +295,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                 Molecular Dynamics steps to run successfully you must define the
                 rigid and flexible regions of your molecule using proper CHARMM{' '}
                 <Link
-                  href="https://academiccharmm.org/documentation/version/c47b2/select"
+                  href="https://academiccharmm.org/documentation/version/c51b1/select"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -370,9 +370,9 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                     shape desc dock1 rigid sele rigid1 end
                     <br />
                     <br />
-                    define rigid1 sele ( resid 51:79 .and. segid PROB ) end
+                    define rigid2 sele ( resid 51:79 .and. segid PROB ) end
                     <br />
-                    shape desc dock2 rigid sele rigid1 end
+                    shape desc dock2 rigid sele rigid2 end
                     <br />
                     <br />
                     return

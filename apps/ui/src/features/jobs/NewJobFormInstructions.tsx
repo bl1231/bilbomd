@@ -100,7 +100,7 @@ const NewJobFormInstructions = () => {
             <li>
               <b>*.psf</b> file (A CHARMM{' '}
               <Link
-                href="https://academiccharmm.org/documentation/version/c47b2/struct"
+                href="https://academiccharmm.org/documentation/version/c51b1/struct"
                 target="_blank"
                 rel="noopener noreferrer"
               >
