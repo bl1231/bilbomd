@@ -7,7 +7,7 @@ vi.mock('../loggers.js', () => ({
 }))
 
 import { loginLimiter } from '../loginLimiter.js'
-import { externalApiLimiter } from '../externalApiLimiter.js'
+import { EXTERNAL_IP_MAX, externalApiLimiter } from '../externalApiLimiter.js'
 import { publicJobLimiter } from '../publicJobLimiter.js'
 
 // Each limiter is a module-level instance with its own in-memory store, so
@@ -20,7 +20,7 @@ const buildApp = (limiter: RequestHandler) =>
 
 describe.each([
   ['loginLimiter', loginLimiter, 3, '203.0.113'],
-  ['externalApiLimiter', externalApiLimiter, 10, '198.51.100'],
+  ['externalApiLimiter', externalApiLimiter, EXTERNAL_IP_MAX, '198.51.100'],
   ['publicJobLimiter', publicJobLimiter, 5, '192.0.2']
 ])('%s', (_, limiter, max, net) => {
   // One listening server per limiter. Passing the bare app would make

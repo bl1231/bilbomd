@@ -11,6 +11,8 @@ declare global {
       sfApiToken?: string
       id?: string
       apiUser?: IUser
+      // SHA-256 of the API token, set by verifyAPIToken (rate-limit key)
+      apiTokenHash?: string
     }
   }
 }

@@ -69,6 +69,7 @@ describe('verifyAPIToken middleware', () => {
     expect(mockNext).toHaveBeenCalledOnce()
     expect(statusSpy).not.toHaveBeenCalled()
     expect(mockRequest.apiUser).toBeDefined()
+    expect(mockRequest.apiTokenHash).toBe(hash)
   })
 
   it('returns 401 when Authorization header is missing', async () => {

@@ -5,6 +5,10 @@ import { getExternalJobResults } from '../controllers/external/getResults.js'
 import { verifyAPIToken } from '../middleware/verifyAPIToken.js'
 import { verifyJobOwnership } from '../middleware/verifyJobOwnership.js'
 import { logApiRequest } from '../middleware/logApiRequests.js'
+import {
+  externalReadLimiter,
+  externalSubmitLimiter
+} from '../middleware/externalApiLimiter.js'
 
 const router = express.Router()
 
@@ -12,7 +16,7 @@ router.use(verifyAPIToken)
 router.use(logApiRequest)
 
 // Health check or root endpoint for /external
-router.get('/', (req, res) => {
+router.get('/', externalReadLimiter, (req, res) => {
   res.json({ message: 'External API route is working.' })
 })
 
@@ -170,8 +174,14 @@ router.get('/', (req, res) => {
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         $ref: '#/components/responses/ForbiddenAlphaFold'
+ *       429:
+ *         description: At most 20 job submissions per API token per 15 minutes
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Too many job submissions for this API token (at most 20 per 15 minutes), please try again later."
  */
-router.post('/', createApiJob)
+router.post('/', externalSubmitLimiter, createApiJob)
 
 /**
  * @swagger
@@ -209,6 +219,8 @@ router.post('/', createApiJob)
  *               message: "No job found with ID: 680aa4ffce4a325a086cbced"
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       429:
+ *         description: At most 300 status and results requests per API token per 15 minutes. Poll job status every 30-60 seconds.
  *       500:
  *         description: Server error retrieving job status
  *         content:
@@ -216,7 +228,7 @@ router.post('/', createApiJob)
  *             example:
  *               message: "Failed to retrieve job status"
  */
-router.get('/:id/status', getApiJobStatus)
+router.get('/:id/status', externalReadLimiter, getApiJobStatus)
 
 /**
  * @swagger
@@ -273,6 +285,8 @@ router.get('/:id/status', getApiJobStatus)
  *                   message: Results file not found.
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       429:
+ *         description: At most 300 status and results requests per API token per 15 minutes. Poll job status every 30-60 seconds.
  *       500:
  *         description: Server error
  *         content:
@@ -287,6 +301,11 @@ router.get('/:id/status', getApiJobStatus)
  *                 value:
  *                   message: An error occurred while processing your request.
  */
-router.get('/:id/results', verifyJobOwnership, getExternalJobResults)
+router.get(
+  '/:id/results',
+  externalReadLimiter,
+  verifyJobOwnership,
+  getExternalJobResults
+)
 
 export default router
