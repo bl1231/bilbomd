@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { runOmmMD } from '../openmm-functions.js'
+import { runOmmMD, prepareOpenMMConfig } from '../openmm-functions.js'
 import { Job as BullMQJob } from 'bullmq'
 import type { IBilboMDPDBJob } from '@bilbomd/mongodb-schema'
 
@@ -300,5 +300,58 @@ describe('runOmmMD failure reporting', () => {
     expect(message).toBe(
       'OpenMM md failed: 1/2 failures (50% > 0% threshold). Errors: rg=40: md.py (rg=40, GPU=0) failed (exit 1)'
     )
+  })
+})
+
+describe('prepareOpenMMConfig rigid body overlaps', () => {
+  const rigidBody = (
+    name: string,
+    chain_id: string,
+    start: number,
+    stop: number
+  ) => ({
+    name,
+    segments: [{ chain_id, residues: { start, stop } }]
+  })
+
+  const makeConfigJob = () =>
+    ({
+      ...makeDBJob(),
+      __t: 'BilboMdPDB',
+      pdb_file: 'model.pdb'
+    }) as unknown as IBilboMDPDBJob
+
+  const loadConstraints = async (rigid_bodies: unknown[]) => {
+    const fsMod = await import('fs-extra')
+    const yamlMod = await import('yaml')
+    vi.mocked(fsMod.default.pathExists).mockResolvedValue(true as never)
+    vi.mocked(fsMod.default.readFile).mockResolvedValue('' as never)
+    vi.mocked(fsMod.default.writeFile).mockClear()
+    vi.mocked(yamlMod.default.parse).mockReturnValue({
+      constraints: { fixed_bodies: [], rigid_bodies }
+    })
+    return fsMod.default
+  }
+
+  it('fails before writing the config when rigid bodies share residues', async () => {
+    const fs = await loadConstraints([
+      rigidBody('RigidBody1', 'C', 1, 26),
+      rigidBody('RigidBody2', 'C', 1, 26)
+    ])
+
+    await expect(prepareOpenMMConfig(makeConfigJob())).rejects.toThrow(
+      'Rigid bodies must not overlap: RigidBody1 and RigidBody2 both include chain C residues 1-26'
+    )
+    expect(fs.writeFile).not.toHaveBeenCalled()
+  })
+
+  it('writes the config when rigid bodies are disjoint', async () => {
+    const fs = await loadConstraints([
+      rigidBody('RigidBody1', 'A', 1, 238),
+      rigidBody('RigidBody2', 'C', 1, 26)
+    ])
+
+    await expect(prepareOpenMMConfig(makeConfigJob())).resolves.toBeUndefined()
+    expect(fs.writeFile).toHaveBeenCalled()
   })
 })

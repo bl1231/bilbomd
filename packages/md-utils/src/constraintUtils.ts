@@ -261,6 +261,8 @@ export async function validateYamlConstraints(
       throw new Error('No constraint bodies found in YAML file')
     }
 
+    assertNoRigidBodyOverlaps(constraints)
+
     logger.info('YAML constraints file validated successfully')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
@@ -325,6 +327,9 @@ export async function validateInpConstraints(
       )
     }
 
+    // Rigid bodies are numbered in the order of the 'shape desc' lines
+    assertNoRigidBodyOverlaps(parseInpConstraints(inpContent))
+
     logger.info('INP constraints file validated successfully')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
@@ -332,6 +337,54 @@ export async function validateInpConstraints(
     throw new Error(`Invalid INP constraints file: ${errorMessage}`, {
       cause: error
     })
+  }
+}
+
+/**
+ * Lists every place where two rigid bodies share residues. OpenMM turns most
+ * atoms of a rigid body into virtual sites tied to that body, so an atom in two
+ * rigid bodies makes the simulation fail ("Virtual site has nonzero mass").
+ * Residue ranges are inclusive, as in the OpenMM scripts.
+ */
+export const findRigidBodyOverlaps = (
+  constraints: IMDConstraints
+): string[] => {
+  const bodies = constraints.rigid_bodies ?? []
+  const overlaps: string[] = []
+
+  bodies.forEach((a, i) => {
+    bodies.slice(i + 1).forEach((b) => {
+      for (const sa of a.segments ?? []) {
+        for (const sb of b.segments ?? []) {
+          if (sa.chain_id !== sb.chain_id) continue
+          const start = Math.max(sa.residues.start, sb.residues.start)
+          const stop = Math.min(sa.residues.stop, sb.residues.stop)
+          if (start <= stop) {
+            overlaps.push(
+              `${a.name} and ${b.name} both include chain ${sa.chain_id} residues ${start}-${stop}`
+            )
+          }
+        }
+      }
+    })
+  })
+
+  return overlaps
+}
+
+/**
+ * Throws if any residue belongs to more than one rigid body.
+ */
+export const assertNoRigidBodyOverlaps = (
+  constraints: IMDConstraints
+): void => {
+  const overlaps = findRigidBodyOverlaps(constraints)
+  if (overlaps.length > 0) {
+    throw new Error(
+      `Rigid bodies must not overlap: ${overlaps.join('; ')}. ` +
+        'A residue can belong to only one rigid body. Merge the overlapping ' +
+        'rigid bodies into one, or remove the shared residues from one of them.'
+    )
   }
 }
 
@@ -376,7 +429,10 @@ function validateConstraintBodies(
   }
 }
 
-// Helper function to parse INP constraints
+// Helper function to parse INP constraints.
+// CHARMM runs the file top to bottom: a 'define' may reuse an earlier name, and
+// each 'cons fix' / 'shape desc' uses the definitions current at that line. So
+// parse in a single pass instead of collecting every define first.
 function parseInpConstraints(inpContent: string): IMDConstraints {
   const lines = inpContent
     .split('\n')
@@ -392,7 +448,6 @@ function parseInpConstraints(inpContent: string): IMDConstraints {
   let fixedBodyCounter = 1
   let rigidBodyCounter = 1
 
-  // Parse definitions
   for (const line of lines) {
     const defineMatch = line.match(
       /define\s+(\w+)\s+sele\s+\(\s*resid\s+(\d+):(\d+)\s+\.and\.\s+segid\s+(\w+)\s*\)\s+end/
@@ -405,34 +460,26 @@ function parseInpConstraints(inpContent: string): IMDConstraints {
           resid: `${startRes}:${endRes}`
         }
       ]
+      continue
     }
-  }
 
-  // Parse fixed constraints
-  for (const line of lines) {
     const fixMatch = line.match(/cons\s+fix\s+sele\s+(.+)\s+end/)
     if (fixMatch) {
-      const selectionExpr = fixMatch[1]
-      const segments = parseSelectionExpression(selectionExpr, definitions)
-
+      const segments = parseSelectionExpression(fixMatch[1], definitions)
       if (segments.length > 0) {
         constraints.fixed_bodies!.push({
           name: `FixedBody${fixedBodyCounter++}`,
           segments
         })
       }
+      continue
     }
-  }
 
-  // Parse rigid constraints
-  for (const line of lines) {
     const rigidMatch = line.match(
       /shape\s+desc\s+\w+\s+rigid\s+sele\s+(.+)\s+end/
     )
     if (rigidMatch) {
-      const selectionExpr = rigidMatch[1]
-      const segments = parseSelectionExpression(selectionExpr, definitions)
-
+      const segments = parseSelectionExpression(rigidMatch[1], definitions)
       if (segments.length > 0) {
         constraints.rigid_bodies!.push({
           name: `RigidBody${rigidBodyCounter++}`,

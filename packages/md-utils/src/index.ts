@@ -6,7 +6,9 @@ export {
   extractConstraintsFromYaml,
   buildChainSegidMap,
   buildChainMolTypes,
-  buildChainMolTypesFromInp
+  buildChainMolTypesFromInp,
+  findRigidBodyOverlaps,
+  assertNoRigidBodyOverlaps
 } from './constraintUtils.js'
 
 export { toPipeline, discriminatorToPipeline } from './pipelineUtils.js'
