@@ -47,6 +47,7 @@ export const verifyAPIToken = async (
     }
 
     req.apiUser = user
+    req.apiTokenHash = hashed
     logger.info(`API token verified for user: ${user.email}`)
     next()
   } catch (err) {
