@@ -45,12 +45,25 @@ ARG CHARMM_MAKE_JOBS=
 RUN ./configure && \
     make -j"${CHARMM_MAKE_JOBS:-$(nproc)}" -C build/cmake install && \
     (strip bin/charmm || true)
+# Collect what the final image needs. Up to c49b2, bin/charmm is one static
+# program; from c51 it is a small launcher that loads lib/libchmm.so through a
+# RUNPATH pointing at this source tree, so lib/ has to come along.
+RUN mkdir -p /opt/charmm/bin /opt/charmm/lib && \
+    cp bin/charmm /opt/charmm/bin/ && \
+    if [ -d lib ]; then cp -a lib/. /opt/charmm/lib/; fi
 
 # -----------------------------------------------------------------------------
 FROM ${WORKER_IMAGE} AS bilbomd-worker-charmm
 USER root
-COPY --from=build-charmm /usr/local/src/charmm/bin/charmm /usr/local/bin/charmm
+COPY --from=build-charmm /opt/charmm/bin/charmm /usr/local/bin/charmm
+COPY --from=build-charmm /opt/charmm/lib/ /usr/local/lib/charmm/
 COPY --from=build-charmm /usr/local/src/charmm/toppar /app/charmm-toppar
-# CHARMM prints its banner before it reads any input.
-RUN echo stop | charmm 2>&1 | grep -q "Chemistry at HARvard Macromolecular Mechanics"
+# The RUNPATH baked into a c51+ launcher points at the builder's source tree,
+# which doesn't exist here, so the loader falls back to its cache: register
+# the library directory there. CHARMM prints its banner before it reads any
+# input; if it can't start, show which libraries are missing.
+RUN echo /usr/local/lib/charmm > /etc/ld.so.conf.d/charmm.conf && ldconfig && \
+    if ! echo stop | charmm 2>&1 | grep -q "Chemistry at HARvard Macromolecular Mechanics"; then \
+      ldd /usr/local/bin/charmm; exit 1; \
+    fi
 USER bilbo:bilbomd
