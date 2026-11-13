@@ -16,16 +16,47 @@ export interface ConstInpImport {
 const range = ({ residues }: ConstInpSelection) =>
   residues ? `resid ${residues.start}:${residues.stop}` : 'the whole segment'
 
-// pdb2crd writes carbohydrate chains as CAR (uppercase ID) or CAL (lowercase)
-const molType = (prefix: string) => (prefix === 'CAL' ? 'CAR' : prefix)
+// A lowercase chain ID is written uppercased after a prefix ending in 'L':
+// the jiffy does this for every type (PRLA = protein chain 'a'), pdb2crd for
+// carbohydrates (CALG = carbohydrate chain 'g')
+const LOWERCASE_CHAIN_PREFIXES: Record<string, string> = {
+  PRL: 'PRO',
+  DNL: 'DNA',
+  RNL: 'RNA',
+  CAL: 'CAR'
+}
+const MOL_TYPES = ['PRO', 'DNA', 'RNA', 'CAR']
 
 /**
- * The PDB chain a const.inp segid selects. Tries the segid the jiffy itself
- * writes (PRLA for chain 'a'), then the pdb2crd form (PROa, CALg).
+ * The chain ID and molecule type a segid names, read from the segid alone:
+ * PROA → A (PRO), PROa → a (PRO), PRLA → a (PRO), DNLB → b (DNA),
+ * CALG → g (CAR). Null for segids in no known form, such as HETA.
  */
-const findChain = (segid: string, chains: Chain[]): Chain | undefined =>
-  chains.find((c) => jiffySegid(c.id, chains) === segid) ??
-  chains.find((c) => c.id === segidToChainId(segid))
+export const decodeSegid = (
+  segid: string
+): { chainId: string; type: string } | null => {
+  const prefix = segid.slice(0, 3)
+  const rest = segid.slice(3)
+  if (!rest) return null
+  const lowercaseType = LOWERCASE_CHAIN_PREFIXES[prefix]
+  if (lowercaseType) return { chainId: rest.toLowerCase(), type: lowercaseType }
+  if (MOL_TYPES.includes(prefix)) return { chainId: rest, type: prefix }
+  return null
+}
+
+/**
+ * The PDB chain a const.inp segid selects: by the chain ID the segid names,
+ * whatever molecule type it claims, or else by the segid the jiffy would
+ * write for a chain (OTHERA for a chain of type Other).
+ */
+const findChain = (segid: string, chains: Chain[]): Chain | undefined => {
+  const decoded = decodeSegid(segid)
+  if (decoded) return chains.find((c) => c.id === decoded.chainId)
+  return (
+    chains.find((c) => jiffySegid(c.id, chains) === segid) ??
+    chains.find((c) => c.id === segidToChainId(segid))
+  )
+}
 
 /**
  * Turns an existing const.inp into the jiffy's rigid bodies for the uploaded
@@ -57,12 +88,12 @@ export const importConstInp = (
         )
         return []
       }
-      const prefix = sel.segid.slice(0, sel.segid.length - chain.id.length)
-      const written = jiffySegid(chain.id, chains)
-      if (sel.segid !== written && molType(prefix) !== chain.type) {
+      const claimed = decodeSegid(sel.segid)?.type
+      if (claimed && claimed !== chain.type) {
         notes.push(
-          `segid ${sel.segid} says chain ${chain.id} is ${molType(prefix)}, ` +
-            `but in the PDB it is ${chain.type}. The new file uses ${written}.`
+          `segid ${sel.segid} says chain ${chain.id} is ${claimed}, but in ` +
+            `the PDB it is ${chain.type}. The new file uses ` +
+            `${jiffySegid(chain.id, chains)}.`
         )
       }
       // A whole-segment selection ('segid HETA') covers the whole chain

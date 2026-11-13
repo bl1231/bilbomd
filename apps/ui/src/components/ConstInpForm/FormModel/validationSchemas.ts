@@ -71,15 +71,20 @@ const validationSchemas = [
         ),
       src: Yup.string()
         .nullable()
-        .test(
-          'const-inp-has-bodies',
-          'No fixed or rigid bodies could be read from this file.',
-          (src) => {
-            if (!src) return true
-            const { fixed_bodies, rigid_bodies } = readConstInp(src)
-            return fixed_bodies.length + rigid_bodies.length > 0
+        .test('const-inp-has-bodies', '', function (src) {
+          // Nothing to check until a file is picked
+          if (!this.parent?.file) return true
+          // FileReader hasn't finished; Next stays off until it has
+          if (this.parent.reading) {
+            return this.createError({ message: 'Reading the file…' })
           }
-        )
+          // Formik passes an empty file's '' as undefined
+          const { fixed_bodies, rigid_bodies } = readConstInp(src ?? '')
+          if (fixed_bodies.length + rigid_bodies.length > 0) return true
+          return this.createError({
+            message: 'No fixed or rigid bodies could be read from this file.'
+          })
+        })
     })
   }),
   // Define rigid domains
@@ -275,7 +280,16 @@ const validationSchemas = [
                   }
                 )
             })
-          ).min(0, 'please prove at least one rigid domain')
+          )
+            .min(0, 'please prove at least one rigid domain')
+            .when('id', {
+              is: 'PRIMARY',
+              then: (domains) =>
+                domains.min(
+                  1,
+                  'PRIMARY needs at least one fixed segment. Add one with "Add New Rigid Segment".'
+                )
+            })
         })
       ).min(1, 'Need at least one protein or nucleic acid chain')
     })

@@ -43,6 +43,8 @@ const initialValues = {
     file: null,
     src: null,
     name: '',
+    // True while the picked file is being read
+    reading: false,
     // What the import found; null until a const.inp has been read against the PDB
     notes: null as string[] | null
   }

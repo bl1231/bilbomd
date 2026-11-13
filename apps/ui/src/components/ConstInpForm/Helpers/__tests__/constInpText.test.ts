@@ -65,6 +65,25 @@ describe('buildConstInp', () => {
     )
   })
 
+  it('leaves out bodies with no segments', () => {
+    expect(
+      buildConstInp(
+        [
+          { id: 'PRIMARY', domains: [] },
+          { id: 'RIGID 1', domains: [{ chainid: 'A', start: 5, end: 9 }] }
+        ],
+        chains
+      )
+    ).toBe(
+      [
+        'define rigid1 sele ( resid 5:9 .and. segid PROA ) end',
+        'shape desc dock1 rigid sele rigid1 end',
+        ' ',
+        'return'
+      ].join('\n')
+    )
+  })
+
   it('writes just return when there are no bodies', () => {
     expect(buildConstInp([], chains)).toBe('return')
   })

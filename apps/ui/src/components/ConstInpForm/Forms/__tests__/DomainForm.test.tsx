@@ -3,6 +3,7 @@ import { screen, fireEvent, within, waitFor } from '@testing-library/react'
 import { Formik } from 'formik'
 import { renderWithProviders } from 'test/test-utils'
 import DomainForm from '../DomainForm'
+import validationSchemas from '../../FormModel/validationSchemas'
 import type { RigidBody } from 'types/interfaces'
 
 const chainA = {
@@ -43,21 +44,27 @@ const bodyIds = () =>
     .map((el) => within(el).getByText(/PRIMARY|RIGID/).textContent)
 
 describe('DomainForm', () => {
-  it('shows what the const.inp import found', () => {
+  it('shows what the const.inp import found', async () => {
     renderDomainForm(
       [{ id: 'PRIMARY', domains: [{ chainid: 'A', start: 1, end: 100 }] }],
       ['segid PROZ matches no chain in the PDB, so resid 1:50 was left out.']
     )
-    expect(screen.getByTestId('const-inp-import-notes')).toHaveTextContent(
-      'segid PROZ matches no chain'
+    expect(
+      await screen.findByTestId('const-inp-import-notes')
+    ).toHaveTextContent('segid PROZ matches no chain')
+    // Let the check on entering the step finish
+    await waitFor(() =>
+      expect(screen.getAllByText(/^Rigid Body:/)).toHaveLength(1)
     )
   })
 
-  it('shows no import notes without a const.inp', () => {
+  it('shows no import notes without a const.inp', async () => {
     renderDomainForm([
       { id: 'PRIMARY', domains: [{ chainid: 'A', start: 1, end: 100 }] }
     ])
-    expect(screen.queryByTestId('const-inp-import-notes')).toBeNull()
+    await waitFor(() =>
+      expect(screen.queryByTestId('const-inp-import-notes')).toBeNull()
+    )
   })
 
   it('gives an added rigid body an ID no imported body has', async () => {
@@ -70,5 +77,62 @@ describe('DomainForm', () => {
     await waitFor(() =>
       expect(bodyIds()).toEqual(['PRIMARY', 'RIGID 1', 'RIGID 2', 'RIGID 3'])
     )
+  })
+})
+
+const renderValidated = (rigid_bodies: RigidBody[]) => {
+  const setStepIsValid = vi.fn()
+  renderWithProviders(
+    <Formik
+      initialValues={{
+        pdb_file: {
+          file: 'model.pdb',
+          src: 'ATOM',
+          name: 'model.pdb',
+          chains: [chainA],
+          rigid_bodies
+        },
+        const_inp_file: { file: null, src: null, name: '', notes: null }
+      }}
+      validationSchema={validationSchemas[1]}
+      onSubmit={vi.fn()}
+    >
+      <DomainForm setStepIsValid={setStepIsValid} />
+    </Formik>
+  )
+  return setStepIsValid
+}
+
+describe('DomainForm checks the bodies on entering the step', () => {
+  it('keeps Next off and shows the error for an imported out-of-range segment', async () => {
+    const setStepIsValid = renderValidated([
+      { id: 'PRIMARY', domains: [{ chainid: 'A', start: 250, end: 350 }] }
+    ])
+    expect(setStepIsValid).toHaveBeenCalledWith(false)
+    expect(
+      await screen.findByText(
+        'Please choose number between chain start and end residue'
+      )
+    ).toBeInTheDocument()
+    expect(setStepIsValid).not.toHaveBeenCalledWith(true)
+  })
+
+  it('asks for a PRIMARY segment when the import had none', async () => {
+    const setStepIsValid = renderValidated([
+      { id: 'PRIMARY', domains: [] },
+      { id: 'RIGID 1', domains: [{ chainid: 'A', start: 10, end: 50 }] }
+    ])
+    expect(
+      await screen.findByText(/PRIMARY needs at least one fixed segment/)
+    ).toBeInTheDocument()
+    expect(setStepIsValid).not.toHaveBeenCalledWith(true)
+  })
+
+  it('turns Next on once valid bodies have been checked', async () => {
+    const setStepIsValid = renderValidated([
+      { id: 'PRIMARY', domains: [{ chainid: 'A', start: 1, end: 100 }] }
+    ])
+    expect(setStepIsValid).toHaveBeenNthCalledWith(1, false)
+    await waitFor(() => expect(setStepIsValid).toHaveBeenLastCalledWith(true))
   })
 })

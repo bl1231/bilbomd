@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Chain, RigidBody } from 'types/interfaces'
 import { buildConstInp } from '../constInpText'
-import { importConstInp, nextRigidBodyId } from '../importConstInp'
+import { decodeSegid, importConstInp, nextRigidBodyId } from '../importConstInp'
 
 const chain = (id: string, type: string, first = 1, last = 300): Chain => ({
   id,
@@ -93,6 +93,21 @@ cons fix sele fixed1 end`
     ])
   })
 
+  it('keeps a lowercase jiffy segid whose type differs from the PDB', () => {
+    // Written for a protein chain 'a'; in this PDB chain 'a' is DNA
+    const dnaChains = [chain('A', 'PRO'), chain('a', 'DNA', 1, 40)]
+    const inp = `define fixed1 sele ( resid 1:20 .and. segid PRLA ) end
+cons fix sele fixed1 end`
+    expect(importConstInp(inp, dnaChains)).toEqual({
+      rigidBodies: [
+        { id: 'PRIMARY', domains: [{ chainid: 'a', start: 1, end: 20 }] }
+      ],
+      notes: [
+        'segid PRLA says chain a is PRO, but in the PDB it is DNA. The new file uses DNLA.'
+      ]
+    })
+  })
+
   it('merges several cons fix commands into PRIMARY', () => {
     const inp = `define fixed1 sele ( resid 1:100 .and. segid PROA ) end
 cons fix sele fixed1 end
@@ -182,5 +197,23 @@ describe('nextRigidBodyId', () => {
         { id: 'RIGID 2', domains: [] }
       ])
     ).toBe('RIGID 3')
+  })
+})
+
+describe('decodeSegid', () => {
+  it('reads the chain ID and type from each segid form', () => {
+    expect(decodeSegid('PROA')).toEqual({ chainId: 'A', type: 'PRO' })
+    expect(decodeSegid('PROa')).toEqual({ chainId: 'a', type: 'PRO' })
+    expect(decodeSegid('PRLA')).toEqual({ chainId: 'a', type: 'PRO' })
+    expect(decodeSegid('DNLB')).toEqual({ chainId: 'b', type: 'DNA' })
+    expect(decodeSegid('RNAC')).toEqual({ chainId: 'C', type: 'RNA' })
+    expect(decodeSegid('CARG')).toEqual({ chainId: 'G', type: 'CAR' })
+    expect(decodeSegid('CALG')).toEqual({ chainId: 'g', type: 'CAR' })
+  })
+
+  it('returns null for other segids', () => {
+    expect(decodeSegid('HETA')).toBeNull()
+    expect(decodeSegid('OTHERA')).toBeNull()
+    expect(decodeSegid('PRO')).toBeNull()
   })
 })

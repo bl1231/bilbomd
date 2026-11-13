@@ -35,31 +35,35 @@ export const buildConstInp = (
   const selection = (names: string[]) =>
     names.map((name) => `${name} `).join('.or. ')
 
-  rigidBodies.forEach((rb) => {
-    const names: string[] = []
-    if (rb.id === 'PRIMARY') {
-      rb.domains.forEach(({ chainid, start, end }, index) => {
-        const name = `fixed${index + 1}`
-        push(
-          `define ${name} sele ( resid ${start}:${end} .and. segid ${jiffySegid(chainid, chains)} ) end`
-        )
-        names.push(name)
-      })
-      push(`cons fix sele ${selection(names)}end`)
-    } else {
-      rb.domains.forEach(({ chainid, start, end }) => {
-        const name = `rigid${rigidCount}`
-        push(
-          `define ${name} sele ( resid ${start}:${end} .and. segid ${jiffySegid(chainid, chains)} ) end`
-        )
-        names.push(name)
-        rigidCount++
-      })
-      push(`shape desc dock${dockCount} rigid sele ${selection(names)}end`)
-      dockCount++
-    }
-    contentArray.push(' ')
-  })
+  // A body with no segments would give 'cons fix sele end'; step 2 asks for
+  // a PRIMARY segment, and an empty rigid body moves nothing
+  rigidBodies
+    .filter((rb) => rb.domains.length > 0)
+    .forEach((rb) => {
+      const names: string[] = []
+      if (rb.id === 'PRIMARY') {
+        rb.domains.forEach(({ chainid, start, end }, index) => {
+          const name = `fixed${index + 1}`
+          push(
+            `define ${name} sele ( resid ${start}:${end} .and. segid ${jiffySegid(chainid, chains)} ) end`
+          )
+          names.push(name)
+        })
+        push(`cons fix sele ${selection(names)}end`)
+      } else {
+        rb.domains.forEach(({ chainid, start, end }) => {
+          const name = `rigid${rigidCount}`
+          push(
+            `define ${name} sele ( resid ${start}:${end} .and. segid ${jiffySegid(chainid, chains)} ) end`
+          )
+          names.push(name)
+          rigidCount++
+        })
+        push(`shape desc dock${dockCount} rigid sele ${selection(names)}end`)
+        dockCount++
+      }
+      contentArray.push(' ')
+    })
 
   contentArray.push('return')
   return contentArray.join('\n')

@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useCallback, useState } from 'react'
+import { ChangeEvent, useEffect, useCallback, useRef, useState } from 'react'
 import { CARBOHYDRATE_RESIDUES } from '@bilbomd/bilbomd-types'
 import { logger } from 'utils/logger'
 import { Field, useFormikContext } from 'formik'
@@ -41,6 +41,7 @@ interface MyFormValues {
     file: File | null
     src: string | null
     name: string
+    reading: boolean
     notes: string[] | null
   }
 }
@@ -95,6 +96,9 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
   const constInpNotes = constInp.notes
   // Remounts the const.inp picker on Remove, so it forgets the old file
   const [constInpKey, setConstInpKey] = useState(0)
+  // Counts const.inp picks and removals, so a read that finishes after a newer
+  // pick or a Remove is ignored instead of bringing back the wrong file
+  const constInpRead = useRef(0)
 
   const parsePdbFile = useCallback(() => {
     const src = values.pdb_file.src
@@ -286,25 +290,37 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
   const onConstInpChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    void setFieldValue('const_inp_file.file', file)
-    void setFieldValue('const_inp_file.name', file.name)
+    const read = ++constInpRead.current
+    const picked = (src: string | null, reading: boolean) => ({
+      file,
+      src,
+      name: file.name,
+      reading,
+      notes: null
+    })
+    void setFieldValue('const_inp_file', picked(null, true))
     const reader = new FileReader()
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        void setFieldValue('const_inp_file.src', reader.result)
-      }
+      if (read !== constInpRead.current) return
+      const text = typeof reader.result === 'string' ? reader.result : ''
+      void setFieldValue('const_inp_file', picked(text, false))
     }
     reader.onerror = (error) => {
       logger.error('File reading error:', error)
+      if (read === constInpRead.current) {
+        void setFieldValue('const_inp_file', picked('', false))
+      }
     }
     reader.readAsText(file)
   }
 
   const removeConstInp = () => {
+    constInpRead.current++
     void setFieldValue('const_inp_file', {
       file: null,
       src: null,
       name: '',
+      reading: false,
       notes: null
     })
     setConstInpKey((key) => key + 1)
@@ -316,8 +332,12 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
     }
   }, [src, parsePdbFile])
 
+  // While the file is still being read its error only keeps Next off; it
+  // isn't shown
   const constInpError =
-    errors.const_inp_file?.file || errors.const_inp_file?.src || ''
+    errors.const_inp_file?.file ||
+    (constInp.reading ? '' : errors.const_inp_file?.src) ||
+    ''
 
   useEffect(() => {
     setStepIsValid(isValid && dirty)

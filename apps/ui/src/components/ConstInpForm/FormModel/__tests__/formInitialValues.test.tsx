@@ -71,6 +71,7 @@ describe('const_inp_file initial value', () => {
       file: null,
       src: null,
       name: '',
+      reading: false,
       notes: null
     })
   })

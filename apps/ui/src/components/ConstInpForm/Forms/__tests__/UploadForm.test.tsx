@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { Formik, useFormikContext } from 'formik'
 import { renderWithProviders } from 'test/test-utils'
 import UploadForm from '../UploadForm'
@@ -176,5 +176,59 @@ describe('UploadForm with an existing const.inp', () => {
       }
     ])
     expect(screen.queryByTestId('const-inp-import-notes')).toBeNull()
+  })
+})
+
+describe('UploadForm const.inp reads', () => {
+  const otherInp = `define fixed1 sele ( resid 10:20 .and. segid PROA ) end
+cons fix sele fixed1 end
+return
+`
+
+  it('ignores a read that finishes after Remove', async () => {
+    renderWithBodies()
+    upload('pdb_file', 'model.pdb', pdbText())
+    await waitFor(() => expect(rigidBodies()).toHaveLength(1))
+
+    upload('const_inp_file', 'const.inp', constInpText)
+    // Before the FileReader is done
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+    // Long enough for the dropped read to have finished
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)))
+    expect(rigidBodies()).toHaveLength(1)
+    expect(rigidBodies()[0]?.domains).toHaveLength(2)
+    expect(screen.queryByTestId('const-inp-import-notes')).toBeNull()
+  })
+
+  it('uses the newest pick when an older read finishes later', async () => {
+    renderWithBodies()
+    upload('pdb_file', 'model.pdb', pdbText())
+    await waitFor(() => expect(rigidBodies()).toHaveLength(1))
+
+    upload('const_inp_file', 'first.inp', constInpText)
+    upload('const_inp_file', 'second.inp', otherInp)
+
+    await waitFor(() =>
+      expect(rigidBodies()).toEqual([
+        { id: 'PRIMARY', domains: [{ chainid: 'A', start: 10, end: 20 }] }
+      ])
+    )
+    // Long enough for the dropped read to have finished
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)))
+    expect(rigidBodies()).toHaveLength(1)
+  })
+
+  it('rejects an empty file', async () => {
+    renderWithBodies()
+    upload('pdb_file', 'model.pdb', pdbText())
+    await waitFor(() => expect(rigidBodies()).toHaveLength(1))
+    upload('const_inp_file', 'empty.inp', '')
+
+    expect(
+      await screen.findByText(
+        'No fixed or rigid bodies could be read from this file.'
+      )
+    ).toBeInTheDocument()
   })
 })
