@@ -11,6 +11,8 @@ its constraint silently dropped. Long commands must be wrapped with CHARMM's
 import sys
 from pathlib import Path
 
+import pytest
+
 _TOOLS_PYTHON = Path(__file__).resolve().parents[1]
 if str(_TOOLS_PYTHON) not in sys.path:
     sys.path.insert(0, str(_TOOLS_PYTHON))
@@ -89,3 +91,25 @@ def test_const_file_keeps_a_small_body_on_one_line(tmp_path):
         "return ",
         "",
     ]
+
+
+def test_wrap_rejects_a_command_charmm_cuts_short():
+    # Short lines don't help: CHARMM limits the joined command too
+    names = " .or. ".join(f"fixed{i}" for i in range(1, 401))
+    command = f"cons fix sele {names} end"
+    assert len(command) > pae2const.MAX_CONST_INP_COMMAND_LENGTH
+    with pytest.raises(ValueError, match="more than the 5000 CHARMM accepts"):
+        pae2const.wrap_charmm_command(command)
+
+
+def test_wrap_accepts_a_command_at_the_limit():
+    command = "x" * pae2const.MAX_CONST_INP_COMMAND_LENGTH
+    assert pae2const.wrap_charmm_command(command) == [command]
+
+
+def test_const_file_with_too_many_domains_is_not_written(tmp_path):
+    fixed = [(i * 10 + 1, i * 10 + 5, "A", 90.0) for i in range(400)]
+    out = tmp_path / "const.inp"
+    with pytest.raises(ValueError):
+        pae2const.PAEProcessor._write_const_file([fixed], str(out))
+    assert not out.exists()

@@ -31,13 +31,27 @@ from pdb_utils import get_segid_renaming_map, get_segid_renaming_map_from_cif
 # BilboMD web app's const.inp writers.
 CONST_INP_WRAP_WIDTH = 77
 
+# CHARMM also cuts a command short once its continuation lines are joined past
+# about 5000 characters (measured with c49b2: 5000 work, 5025 don't), however
+# short each line is. Matches MAX_CONST_INP_COMMAND_LENGTH in the web app.
+MAX_CONST_INP_COMMAND_LENGTH = 5000
+
 
 def wrap_charmm_command(command: str, width: int = CONST_INP_WRAP_WIDTH) -> List[str]:
     """Split one CHARMM command into lines of at most ``width`` characters.
 
     Every line but the last ends in " -", CHARMM's continuation mark. Breaks
     only at spaces; a single word longer than ``width`` gets a line of its own.
+
+    Raises ValueError when the command is longer than CHARMM accepts even when
+    wrapped, so the constraint is never silently dropped.
     """
+    if len(command.strip()) > MAX_CONST_INP_COMMAND_LENGTH:
+        raise ValueError(
+            f"const.inp command is {len(command.strip())} characters long, more"
+            f" than the {MAX_CONST_INP_COMMAND_LENGTH} CHARMM accepts: "
+            f"{command[:60]}..."
+        )
     lines: List[str] = []
     current = ""
     for word in command.split():
@@ -1582,54 +1596,56 @@ class PAEProcessor:
         elif input_file and input_file.endswith(".cif"):
             renaming = get_segid_renaming_map_from_cif(input_file)
 
+        # Build the whole file first, so a command CHARMM can't take raises
+        # before anything is written
+        out: List[str] = []
         dock_count = 0
         rigid_body_count = 0
+        for rigid_body in rigid_body_list:
+            rigid_body_count += 1
+            p = 0
+            n = 0
+            for rigid_domain in rigid_body:
+                start_residue = int(rigid_domain[0])
+                end_residue = int(rigid_domain[1])
+                segment = rigid_domain[2]
+                if start_residue > end_residue:
+                    start_residue, end_residue = end_residue, start_residue
+                # Apply renaming if available
+                renamed_segment = renaming.get(segment, segment)
+                if rigid_body_count == 1:
+                    p += 1
+                    out.append(
+                        f"define fixed{p} sele ( resid {start_residue}:{end_residue}"
+                        f" .and. segid {renamed_segment} ) end\n"
+                    )
+                    if p == len(rigid_body):
+                        names = " .or. ".join(
+                            f"fixed{number}" for number in range(1, p + 1)
+                        )
+                        for line in wrap_charmm_command(f"cons fix sele {names} end"):
+                            out.append(f"{line}\n")
+                        out.append("\n")
+                elif rigid_body_count > 1:
+                    n += 1
+                    out.append(
+                        f"define rigid{n} sele ( resid {start_residue}:{end_residue}"
+                        f" .and. segid {renamed_segment} ) end\n"
+                    )
+                    if n == len(rigid_body):
+                        dock_count += 1
+                        names = " .or. ".join(
+                            f"rigid{number}" for number in range(1, n + 1)
+                        )
+                        for line in wrap_charmm_command(
+                            f"shape desc dock{dock_count} rigid sele {names} end"
+                        ):
+                            out.append(f"{line}\n")
+                        out.append("\n")
+        out.append("return \n")
+        out.append("\n")
         with open(file=output_file, mode="w", encoding="utf8") as const_file:
-            for rigid_body in rigid_body_list:
-                rigid_body_count += 1
-                p = 0
-                n = 0
-                for rigid_domain in rigid_body:
-                    start_residue = int(rigid_domain[0])
-                    end_residue = int(rigid_domain[1])
-                    segment = rigid_domain[2]
-                    if start_residue > end_residue:
-                        start_residue, end_residue = end_residue, start_residue
-                    # Apply renaming if available
-                    renamed_segment = renaming.get(segment, segment)
-                    if rigid_body_count == 1:
-                        p += 1
-                        const_file.write(
-                            f"define fixed{p} sele ( resid {start_residue}:{end_residue}"
-                            f" .and. segid {renamed_segment} ) end\n"
-                        )
-                        if p == len(rigid_body):
-                            names = " .or. ".join(
-                                f"fixed{number}" for number in range(1, p + 1)
-                            )
-                            for line in wrap_charmm_command(
-                                f"cons fix sele {names} end"
-                            ):
-                                const_file.write(f"{line}\n")
-                            const_file.write("\n")
-                    elif rigid_body_count > 1:
-                        n += 1
-                        const_file.write(
-                            f"define rigid{n} sele ( resid {start_residue}:{end_residue}"
-                            f" .and. segid {renamed_segment} ) end\n"
-                        )
-                        if n == len(rigid_body):
-                            dock_count += 1
-                            names = " .or. ".join(
-                                f"rigid{number}" for number in range(1, n + 1)
-                            )
-                            for line in wrap_charmm_command(
-                                f"shape desc dock{dock_count} rigid sele {names} end"
-                            ):
-                                const_file.write(f"{line}\n")
-                            const_file.write("\n")
-            const_file.write("return \n")
-            const_file.write("\n")
+            const_file.writelines(out)
 
     @staticmethod
     def _sort_and_separate_cluster(numbers, chain_segs: list):

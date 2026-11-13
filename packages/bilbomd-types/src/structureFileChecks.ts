@@ -286,6 +286,34 @@ export const wrapConstInpCommand = (
 }
 
 /**
+ * Rewraps each line of a constraint file that is longer than `width` at word
+ * boundaries, ending every new line but the last in ' -', so CHARMM still
+ * joins them into the same command. A line that already ends in '-' keeps it
+ * on its last piece, so a continuation stays a continuation; nothing else is
+ * added. Lines that fit, comment and title lines, and lines with a tab, an
+ * inline comment or a carriage return are left as they are (the length checks
+ * already limit them to what CHARMM reads).
+ */
+export const wrapLongConstInpLines = (
+  text: string,
+  width: number = CONST_INP_WRAP_WIDTH
+): string =>
+  text
+    .split('\n')
+    .flatMap((line) => {
+      const trimmed = line.trim()
+      if (
+        line.length <= width ||
+        trimmed.startsWith('*') ||
+        /[\t!\r]/.test(line)
+      ) {
+        return [line]
+      }
+      return wrapConstInpCommand(line, width)
+    })
+    .join('\n')
+
+/**
  * Why a constraint file has a line or command too long for CHARMM, or null
  * when every one fits. CHARMM cuts an over-long line short, and the MD steps
  * run with 'bomlev -2', so the broken command is skipped with only a warning

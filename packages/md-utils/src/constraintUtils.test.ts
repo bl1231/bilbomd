@@ -965,6 +965,37 @@ describe('long commands and continuation lines', () => {
     )
   })
 
+  test('an inline comment after a continued command is not parsed as part of it', async () => {
+    const inpPath = path.join(tempDir, 'inline-comment.inp')
+    await fs.writeFile(
+      inpPath,
+      [
+        'define fixed1 sele ( resid 1:5 .and. segid PROA ) end ! first domain',
+        'define rigid1 sele ( resid 11:15 .and. segid PROA ) end',
+        'cons fix sele -',
+        'fixed1 end ! end of selection',
+        'shape desc dock1 rigid sele rigid1 end ! the end',
+        'return'
+      ].join('\n')
+    )
+    await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
+    const constraints = extractConstraintsFromYaml(
+      await convertInpToYaml(inpPath)
+    )
+    expect(constraints.fixed_bodies).toEqual([
+      {
+        name: 'FixedBody1',
+        segments: [{ chain_id: 'A', residues: { start: 1, stop: 5 } }]
+      }
+    ])
+    expect(constraints.rigid_bodies).toEqual([
+      {
+        name: 'RigidBody1',
+        segments: [{ chain_id: 'A', residues: { start: 11, stop: 15 } }]
+      }
+    ])
+  })
+
   test('YAML with many segments converts to wrapped lines that read back', async () => {
     const yamlPath = path.join(tempDir, 'many-segments.yaml')
     const constraints = {

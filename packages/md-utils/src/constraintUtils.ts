@@ -448,10 +448,11 @@ function validateConstraintBodies(
 // parse in a single pass instead of collecting every define first.
 function parseInpConstraints(inpContent: string): IMDConstraints {
   // Join '-' continuation lines first, so a command wrapped over several lines
-  // (as the Inp Jiffy writes long ones) is parsed whole
+  // (as the Inp Jiffy writes long ones) is parsed whole. Then drop '!'
+  // comments, so a trailing '! ... end ...' can't leak into a selection.
   const lines = joinConstInpLines(inpContent)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('!') && line !== 'return')
+    .map((line) => (line.split('!')[0] ?? '').trim())
+    .filter((line) => line && line !== 'return')
 
   const constraints: IMDConstraints = {
     fixed_bodies: [],

@@ -17,6 +17,7 @@ import {
   duplicateShapeNamesMessage,
   joinConstInpLines,
   wrapConstInpCommand,
+  wrapLongConstInpLines,
   constInpLengthMessage,
   MAX_CONST_INP_SHAPE_COMMANDS,
   MAX_CONST_INP_LINE_LENGTH,
@@ -757,6 +758,56 @@ describe('wrapConstInpCommand', () => {
       `${'x'.repeat(20)} -`,
       'b'
     ])
+  })
+})
+
+describe('wrapLongConstInpLines', () => {
+  const defines = Array.from(
+    { length: 12 },
+    (_, i) =>
+      `define fixed${i + 1} sele ( resid ${i * 10 + 1}:${i * 10 + 5} .and. segid PROA ) end`
+  )
+
+  it('leaves a file whose lines fit unchanged', () => {
+    const text = lines(
+      ...defines,
+      ...wrapConstInpCommand(`cons fix sele ${names('fixed', 12)} end`),
+      'return'
+    )
+    expect(wrapLongConstInpLines(text)).toBe(text)
+  })
+
+  it('wraps a long single-line command without adding "end"', () => {
+    const command = `cons fix sele ${names('fixed', 12)} end`
+    const wrapped = wrapLongConstInpLines(lines(...defines, command, 'return'))
+    for (const line of wrapped.split('\n')) {
+      expect(line.length).toBeLessThanOrEqual(CONST_INP_WRAP_WIDTH)
+    }
+    expect(joinConstInpLines(wrapped).slice(-2)).toEqual([command, 'return'])
+  })
+
+  it('keeps a long continuation line a continuation', () => {
+    // A valid file whose first line is wider than the wrap width and ends in
+    // ' -' (as a 200-character-wide writer would produce)
+    const first = `cons fix sele ${names('fixed', 8)} -`
+    const second = '.or. fixed9 .or. fixed10 end'
+    expect(first.length).toBeGreaterThan(CONST_INP_WRAP_WIDTH)
+    const text = lines(...defines, first, second, 'return')
+
+    const wrapped = wrapLongConstInpLines(text)
+    expect(wrapped).not.toMatch(/- end/)
+    expect(
+      joinConstInpLines(wrapped).map((c) => c.replace(/ +/g, ' '))
+    ).toEqual(joinConstInpLines(text).map((c) => c.replace(/ +/g, ' ')))
+    expect(checkConstInpText(wrapped)).toBe(true)
+  })
+
+  it('leaves long comment, title and inline-comment lines alone', () => {
+    const comment = `! ${'note '.repeat(30)}`
+    const title = `* ${'title '.repeat(20)}`
+    const inline = `cons fix sele ${names('fixed', 8)} end ! the fixed body`
+    const text = lines(title, comment, ...defines, inline, 'return')
+    expect(wrapLongConstInpLines(text)).toBe(text)
   })
 })
 
