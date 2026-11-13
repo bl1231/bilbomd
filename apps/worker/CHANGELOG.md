@@ -1,5 +1,17 @@
 # @bilbomd/worker
 
+## 2.26.7
+
+### Patch Changes
+
+- 0362714: Handle long const.inp commands the way CHARMM reads them. CHARMM cuts input lines over 200 characters short, and the MD steps run with `bomlev -2`, so an over-long `cons fix` or `shape desc` line was skipped and its constraint silently dropped. The constraint file checks and the INP-to-YAML conversion for OpenMM now join `-` continuation lines before reading them, so files wrapped by the Inp Jiffy are accepted and parsed whole. Lines over 200 characters, or commands over 5000 once joined, are rejected with a clear message. pae2const.py, the YAML-to-INP conversion, and the Inp Jiffy now wrap long commands at word boundaries. The backend's upload rewrap of long const.inp lines now uses the same wrapper, so it keeps `-` continuations intact instead of appending `end` after them. pae2const.py fails instead of writing a command over 5000 characters, and inline `!` comments no longer leak into selections in the INP-to-YAML conversion.
+- 00a7dd1: Read `const.inp` files in order, as CHARMM does, so a `define` that reuses an earlier name no longer changes rigid bodies defined before it. OpenMM jobs whose constraint files did this were simulated with the wrong rigid bodies, or failed in the heat step with "Virtual site has nonzero mass". Constraints in which two rigid bodies share residues are now rejected at submission with a clear message, and the worker checks again before the OpenMM steps start.
+- Updated dependencies [00a7dd1]
+- Updated dependencies [0362714]
+- Updated dependencies [00a7dd1]
+  - @bilbomd/bilbomd-types@1.17.2
+  - @bilbomd/md-utils@1.3.6
+
 ## 2.26.6
 
 ### Patch Changes
