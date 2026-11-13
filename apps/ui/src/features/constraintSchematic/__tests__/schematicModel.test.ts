@@ -12,6 +12,7 @@ import {
   describeLinker,
   fitViewBox,
   isTaut,
+  keepInside,
   linkerPath,
   makeLinker,
   pinFixed,
@@ -323,6 +324,49 @@ describe('layout', () => {
     }
     expect(layout(3)).toEqual(layout(3))
     expect(layout(3)).not.toEqual(layout(4))
+  })
+})
+
+describe('keepInside', () => {
+  const box = { x: -100, y: -100, width: 200, height: 200 }
+
+  it('pulls free bodies back inside the frame, leaving pinned ones', () => {
+    const model = buildSchematicModel(twoChains)
+    pinFixed(model)
+    const fixed = bodyByName(model, 'Fixed')
+    fixed.x = 500
+    const dock2 = bodyByName(model, 'RigidBody2')
+    dock2.x = 900
+    dock2.y = -900
+    keepInside(model, box)
+    expect(fixed.x).toBe(500)
+    expect(dock2.x + dock2.R).toBeLessThanOrEqual(box.x + box.width)
+    expect(dock2.y - dock2.R).toBeGreaterThanOrEqual(box.y)
+  })
+
+  it('keeps a dragged body in view in the running simulation', () => {
+    const model = buildSchematicModel(twoChains)
+    const sim = createSchematicSimulation(model, {
+      motion: () => 0,
+      normal: () => 0,
+      random: seededRandom(2)
+    })
+    sim.settle()
+    const view = fitViewBox(model)
+    sim.setBounds(view)
+    const tail = model.bodies.find((b) => b.kind === 'tail')!
+    tail.target = { x: view.x + view.width * 10, y: view.y - view.height * 10 }
+    for (let i = 0; i < 200; i++) {
+      sim.simulation.tick()
+      sim.constrain()
+    }
+    sim.simulation.stop()
+    for (const body of model.bodies) {
+      expect(body.x).toBeGreaterThanOrEqual(view.x)
+      expect(body.x).toBeLessThanOrEqual(view.x + view.width)
+      expect(body.y).toBeGreaterThanOrEqual(view.y)
+      expect(body.y).toBeLessThanOrEqual(view.y + view.height)
+    }
   })
 })
 

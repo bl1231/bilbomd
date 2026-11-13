@@ -301,6 +301,30 @@ export const applyLinkerLimits = (
   }
 }
 
+export interface Box {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/**
+ * Keeps every free body, with its label, inside the drawing's frame, so a
+ * body dragged far on a long linker or kicked by strong motion isn't cut off.
+ */
+export const keepInside = (model: SchematicModel, box: Box, margin = 4) => {
+  for (const body of model.bodies) {
+    if (!movable(body)) continue
+    const r = body.R + margin
+    body.x = Math.min(Math.max(body.x, box.x + r), box.x + box.width - r)
+    // Room under the body for its name
+    body.y = Math.min(
+      Math.max(body.y, box.y + r),
+      box.y + box.height - r - (body.kind === 'rigid' ? 22 : 0)
+    )
+  }
+}
+
 /** Pushes apart beads of different bodies that overlap. */
 export const applyBeadCollisions = (
   model: SchematicModel,
@@ -507,7 +531,7 @@ export const describeLinker = (linker: Linker): string =>
  * A view box around every body with room for labels, at least 560 × 320 and
  * no narrower than 1.4:1, so small systems don't fill the panel.
  */
-export const fitViewBox = (model: SchematicModel) => {
+export const fitViewBox = (model: SchematicModel): Box => {
   if (model.bodies.length === 0)
     return { x: -280, y: -160, width: 560, height: 320 }
   let x0 = Infinity

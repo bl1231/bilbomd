@@ -141,7 +141,9 @@ export const ConstraintSchematic = ({
       random: seededRandom(seed)
     })
     sim.settle()
-    return { model, sim, viewBox: fitViewBox(model) }
+    const viewBox = fitViewBox(model)
+    sim.setBounds(viewBox)
+    return { model, sim, viewBox }
   }, [constraints, seed])
 
   const tracks = useMemo(() => layoutTracks(model), [model])

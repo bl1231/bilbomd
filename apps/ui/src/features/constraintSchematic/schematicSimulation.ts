@@ -8,11 +8,13 @@ import {
 import {
   applyBeadCollisions,
   applyLinkerLimits,
+  keepInside,
   pinFixed,
   placeOnCircle,
   springForce,
   targetForce,
   thermalForce,
+  type Box,
   type SchematicBody,
   type SchematicModel
 } from './schematicModel'
@@ -43,6 +45,9 @@ export interface SchematicSimulation {
   settle: () => void
   // The position limits that run after every live step
   constrain: () => void
+  // The frame bodies are kept inside from then on; set once the layout is
+  // settled and the view box is known
+  setBounds: (box: Box | null) => void
 }
 
 interface Options {
@@ -89,7 +94,13 @@ export const createSchematicSimulation = (
     )
     .stop()
 
+  let bounds: Box | null = null
+  const setBounds = (box: Box | null) => {
+    bounds = box
+  }
+
   const constrain = () => {
+    if (bounds) keepInside(model, bounds)
     applyBeadCollisions(model)
     applyLinkerLimits(model)
   }
@@ -114,5 +125,5 @@ export const createSchematicSimulation = (
     settling = false
   }
 
-  return { simulation, settle, constrain }
+  return { simulation, settle, constrain, setBounds }
 }
