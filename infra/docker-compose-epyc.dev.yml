@@ -144,7 +144,7 @@ services:
   # docker-compose-epyc.prod.yml. The dev and prod fold services also use GPU 0
   # but don't connect to MPS. If this container restarts, restart the worker too.
   mps:
-    image: ghcr.io/bl1231/bilbomd-worker:2.27.0
+    image: ghcr.io/bl1231/bilbomd-worker:2.28.0
     pull_policy: missing
     entrypoint: ['nvidia-cuda-mps-control', '-f']
     security_opt:
@@ -188,7 +188,7 @@ services:
       context: ../apps/worker
       dockerfile: bilbomd-worker-charmm.dockerfile
       args:
-        WORKER_IMAGE: ghcr.io/bl1231/bilbomd-worker:2.27.0
+        WORKER_IMAGE: ghcr.io/bl1231/bilbomd-worker:2.28.0
         CHARMM_VER: c49b2
         # Leave most of the 96 cores to MD jobs running while this builds
         CHARMM_MAKE_JOBS: '8'
