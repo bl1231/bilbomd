@@ -91,9 +91,10 @@ jobs:
           package: ${{ matrix.package }}
           dry-run: ${{ env.DELETE != 'true' }}
           older-than: ${{ env.OLDER_THAN }}
+          # With use-regex each input is ONE regular expression (the action
+          # does not split it on commas), so list alternatives with `|`.
           use-regex: true
-          # Comma-separated regexes, so no commas inside a pattern.
-          delete-tags: '^pr-.+$,^sha-[0-9a-f]+$,^branch-.+$,^[0-9a-f]{7}[0-9a-f]*$'
-          exclude-tags: '^v?[0-9]+\.[0-9]+\.[0-9]+.*$,^latest$,^buildcache$'
+          delete-tags: '^(pr-.+|sha-[0-9a-f]+|branch-.+|[0-9a-f]{7,40})$'
+          exclude-tags: '^(v?[0-9]+\.[0-9]+\.[0-9]+.*|latest|buildcache)$'
           delete-untagged: true
           validate: true
