@@ -13,7 +13,8 @@ export interface ConstInpImport {
   notes: string[]
 }
 
-const range = ({ start, stop }: ConstInpSelection) => `resid ${start}:${stop}`
+const range = ({ residues }: ConstInpSelection) =>
+  residues ? `resid ${residues.start}:${residues.stop}` : 'the whole segment'
 
 // pdb2crd writes carbohydrate chains as CAR (uppercase ID) or CAL (lowercase)
 const molType = (prefix: string) => (prefix === 'CAL' ? 'CAR' : prefix)
@@ -64,13 +65,18 @@ export const importConstInp = (
             `but in the PDB it is ${chain.type}. The new file uses ${written}.`
         )
       }
-      if (sel.start < chain.first_res || sel.stop > chain.last_res) {
+      // A whole-segment selection ('segid HETA') covers the whole chain
+      const { start, stop } = sel.residues ?? {
+        start: chain.first_res,
+        stop: chain.last_res
+      }
+      if (start < chain.first_res || stop > chain.last_res) {
         notes.push(
           `${range(sel)} on chain ${chain.id} is outside the PDB's residues ` +
             `${chain.first_res}–${chain.last_res}. Fix it in the next step.`
         )
       }
-      return [{ chainid: chain.id, start: sel.start, end: sel.stop }]
+      return [{ chainid: chain.id, start, end: stop }]
     })
 
   if (report.fixed_bodies.length > 1) {

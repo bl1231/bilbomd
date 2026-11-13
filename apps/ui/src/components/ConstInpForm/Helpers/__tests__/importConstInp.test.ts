@@ -124,6 +124,37 @@ return`
     })
   })
 
+  it('reads whole segments, single residues and segid lists', () => {
+    const glycoChains = [
+      chain('A', 'PRO', 2, 344),
+      chain('B', 'CAR', 1, 2),
+      chain('C', 'CAR', 1, 3),
+      chain('D', 'CAR', 1, 1)
+    ]
+    const inp = `define fixed1 sele ( resid 2:344 .and. segid PROA ) end
+define fixed2 sele ( segid CARB .or. segid CARC ) end
+define fixed3 sele ( resid 1 .and. segid CARD ) end
+define fixed4 sele ( segid HETA ) end
+cons fix sele fixed1 .or. fixed2 .or. fixed3 .or. fixed4 end
+return`
+    expect(importConstInp(inp, glycoChains)).toEqual({
+      rigidBodies: [
+        {
+          id: 'PRIMARY',
+          domains: [
+            { chainid: 'A', start: 2, end: 344 },
+            { chainid: 'B', start: 1, end: 2 },
+            { chainid: 'C', start: 1, end: 3 },
+            { chainid: 'D', start: 1, end: 1 }
+          ]
+        }
+      ],
+      notes: [
+        'segid HETA matches no chain in the PDB, so the whole segment was left out.'
+      ]
+    })
+  })
+
   it('returns null for a file with no fixed or rigid body', () => {
     expect(
       importConstInp('cons harm force 5.0 sele all end\nreturn', chains)
