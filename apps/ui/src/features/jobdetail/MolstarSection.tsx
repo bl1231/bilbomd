@@ -18,6 +18,7 @@ import { useGetJobAlignmentQuery } from 'slices/jobsApiSlice'
 import { useGetPublicJobAlignmentQuery } from 'slices/publicJobsApiSlice'
 import {
   alignmentDomainColoring,
+  mdConstraintsColoring,
   type DomainColoring
 } from 'features/molstar/domainColoring'
 
@@ -39,7 +40,11 @@ const useDomainColoring = (
   )
   const report = source.kind === 'owner' ? owner.data : anon.data
   const rigidDomains = useMemo(() => alignmentDomainColoring(report), [report])
-  return bioemu ? rigidDomains : view.md_constraints
+  const constraints = useMemo(
+    () => mdConstraintsColoring(view.md_constraints),
+    [view.md_constraints]
+  )
+  return bioemu ? rigidDomains : constraints
 }
 
 // Molstar fetches and parses every model PDB (~10 MB for a 5-ensemble job)

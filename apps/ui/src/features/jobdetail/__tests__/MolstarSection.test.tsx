@@ -87,8 +87,14 @@ describe('MolstarSection', () => {
       screen.getByRole('button', { name: /load 3d viewer/i })
     )
     await screen.findByTestId('molstar')
+    // In the shared constraint palette: fixed segments are blue
     expect(viewerProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ constraints })
+      expect.objectContaining({
+        constraints: {
+          fixed_bodies: [{ ...constraints.fixed_bodies[0], color: 0x2f54eb }],
+          rigid_bodies: []
+        }
+      })
     )
     expect(requested).toEqual([])
   })

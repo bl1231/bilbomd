@@ -1,12 +1,19 @@
+import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 import {
   domainColor,
   hexToRgb,
   type AlignmentReport
 } from 'features/jobdetail/rigidDomains'
+import {
+  fixedColor,
+  hexToNumber,
+  rigidColor,
+  rigidColorIndices
+} from 'features/constraintSchematic/constraintColors'
 
 // What the viewer's "Color by Domain" mode paints. For MD jobs these are the
-// fixed and rigid bodies of the job's constraints, in the viewer's two
-// standard colors. A body may carry its own color (0xRRGGBB) instead: BioEmu2
+// fixed and rigid bodies of the job's constraints, in the colors the other
+// constraint views use (see mdConstraintsColoring). A body may carry its own color (0xRRGGBB) instead: BioEmu2
 // jobs have no constraints, and are colored by the rigid domains found in
 // their sampled structures (see alignmentDomainColoring).
 interface ColoredBody {
@@ -57,4 +64,26 @@ export const alignmentDomainColoring = (
   const [anchor, ...others] = bodies
   if (!anchor) return undefined
   return { fixed_bodies: [anchor], rigid_bodies: others }
+}
+
+// A job's MD constraints as a coloring, in the palette the chain track and the
+// schematic use: fixed segments blue, each rigid body its own color. The
+// viewer's canvas is always light, so the light colors.
+export const mdConstraintsColoring = (
+  constraints: MDConstraintsDTO | undefined
+): DomainColoring | undefined => {
+  if (!constraints) return undefined
+  const indices = rigidColorIndices(constraints)
+  return {
+    fixed_bodies: (constraints.fixed_bodies ?? []).map((body) => ({
+      ...body,
+      color: hexToNumber(fixedColor(false))
+    })),
+    rigid_bodies: (constraints.rigid_bodies ?? []).map((body, i) => {
+      const index = indices[i]
+      return index === null || index === undefined
+        ? body
+        : { ...body, color: hexToNumber(rigidColor(index, false)) }
+    })
+  }
 }

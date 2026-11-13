@@ -2,7 +2,6 @@ import fs from 'fs-extra'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import {
   IMDConstraints,
-  ISegment,
   IFixedBody,
   IRigidBody,
   IChainMolType,
@@ -17,6 +16,8 @@ import {
   duplicateShapeNamesMessage,
   findDisallowedConstInpLine,
   joinConstInpLines,
+  parseConstInp,
+  SEGID_MOL_TYPE_PREFIXES,
   wrapConstInpCommand
 } from '@bilbomd/bilbomd-types'
 import type { Logger } from './index.js'
@@ -48,10 +49,6 @@ export function extractConstraintsFromYaml(
     return parsed as IMDConstraints
   }
 }
-
-// pdb2crd assigns segids as {MOL_TYPE}{chain_id} where MOL_TYPE is one of these prefixes.
-// Carbohydrates use CAR (uppercase chain) or CAL (lowercase chain).
-const MOL_TYPE_PREFIXES = ['PRO', 'DNA', 'RNA', 'CAR', 'CAL'] as const
 
 function classifyResidue(name: string): ChainMolType | null {
   if (PROTEIN_RESIDUES.has(name)) return 'PRO'
@@ -122,7 +119,7 @@ export async function buildChainMolTypesFromInp(
   const chainTypes: Record<string, ChainMolType> = {}
 
   for (const [, segid] of content.matchAll(/\bsegid\s+(\w+)/gi)) {
-    const prefix = MOL_TYPE_PREFIXES.find(
+    const prefix = SEGID_MOL_TYPE_PREFIXES.find(
       (pfx) => segid.startsWith(pfx) && segid.length > pfx.length
     )
     if (!prefix) continue
@@ -138,20 +135,6 @@ export async function buildChainMolTypesFromInp(
 }
 
 /**
- * Extracts the PDB chain ID from a pdb2crd-style CHARMM segid.
- * e.g. "DNAD" → "D", "PROP" → "P", "RNAB" → "B", "CARG" → "G"
- * Falls back to the raw segid if no known prefix matches.
- */
-function segidToChainId(segid: string): string {
-  for (const prefix of MOL_TYPE_PREFIXES) {
-    if (segid.startsWith(prefix) && segid.length > prefix.length) {
-      return segid.slice(prefix.length)
-    }
-  }
-  return segid
-}
-
-/**
  * Converts CHARMM INP constraint file to YAML format for OpenMM
  */
 export async function convertInpToYaml(
@@ -160,7 +143,7 @@ export async function convertInpToYaml(
 ): Promise<string> {
   try {
     const inpContent = await fs.readFile(inpFilePath, 'utf8')
-    const constraints = parseInpConstraints(inpContent)
+    const constraints = parseConstInp(inpContent)
 
     // Wrap constraints under 'constraints' key for OpenMM config compatibility
     const wrappedConstraints = {
@@ -341,7 +324,7 @@ export async function validateInpConstraints(
     }
 
     // Rigid bodies are numbered in the order of the 'shape desc' lines
-    assertNoRigidBodyOverlaps(parseInpConstraints(inpContent))
+    assertNoRigidBodyOverlaps(parseConstInp(inpContent))
 
     logger.info('INP constraints file validated successfully')
   } catch (error) {
@@ -440,99 +423,6 @@ function validateConstraintBodies(
       }
     }
   }
-}
-
-// Helper function to parse INP constraints.
-// CHARMM runs the file top to bottom: a 'define' may reuse an earlier name, and
-// each 'cons fix' / 'shape desc' uses the definitions current at that line. So
-// parse in a single pass instead of collecting every define first.
-function parseInpConstraints(inpContent: string): IMDConstraints {
-  // Join '-' continuation lines first, so a command wrapped over several lines
-  // (as the Inp Jiffy writes long ones) is parsed whole. Then drop '!'
-  // comments, so a trailing '! ... end ...' can't leak into a selection.
-  const lines = joinConstInpLines(inpContent)
-    .map((line) => (line.split('!')[0] ?? '').trim())
-    .filter((line) => line && line !== 'return')
-
-  const constraints: IMDConstraints = {
-    fixed_bodies: [],
-    rigid_bodies: []
-  }
-
-  const definitions: Record<string, { segid: string; resid: string }[]> = {}
-  let fixedBodyCounter = 1
-  let rigidBodyCounter = 1
-
-  for (const line of lines) {
-    const defineMatch = line.match(
-      /define\s+(\w+)\s+sele\s+\(\s*resid\s+(\d+):(\d+)\s+\.and\.\s+segid\s+(\w+)\s*\)\s+end/
-    )
-    if (defineMatch) {
-      const [, name, startRes, endRes, segid] = defineMatch
-      definitions[name] = [
-        {
-          segid,
-          resid: `${startRes}:${endRes}`
-        }
-      ]
-      continue
-    }
-
-    const fixMatch = line.match(/cons\s+fix\s+sele\s+(.+)\s+end/)
-    if (fixMatch) {
-      const segments = parseSelectionExpression(fixMatch[1], definitions)
-      if (segments.length > 0) {
-        constraints.fixed_bodies!.push({
-          name: `FixedBody${fixedBodyCounter++}`,
-          segments
-        })
-      }
-      continue
-    }
-
-    const rigidMatch = line.match(
-      /shape\s+desc\s+\w+\s+rigid\s+sele\s+(.+)\s+end/
-    )
-    if (rigidMatch) {
-      const segments = parseSelectionExpression(rigidMatch[1], definitions)
-      if (segments.length > 0) {
-        constraints.rigid_bodies!.push({
-          name: `RigidBody${rigidBodyCounter++}`,
-          segments
-        })
-      }
-    }
-  }
-
-  return constraints
-}
-
-// Helper function to parse selection expressions (fixed1 .or. fixed2 .or. fixed3)
-function parseSelectionExpression(
-  expr: string,
-  definitions: Record<string, { segid: string; resid: string }[]>
-): ISegment[] {
-  const segments: ISegment[] = []
-
-  // Split by .or. and extract definition names
-  const defNames = expr.split(/\s*\.or\.\s*/).map((name) => name.trim())
-
-  for (const defName of defNames) {
-    const definition = definitions[defName]
-    if (definition) {
-      for (const def of definition) {
-        const chainId = segidToChainId(def.segid)
-        const [start, stop] = def.resid.split(':').map(Number)
-
-        segments.push({
-          chain_id: chainId,
-          residues: { start, stop }
-        })
-      }
-    }
-  }
-
-  return segments
 }
 
 // Helper function to generate INP from constraints object. Long 'cons fix' and

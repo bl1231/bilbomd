@@ -1,11 +1,14 @@
 import React from 'react'
 import { Box, Chip, Tooltip, Typography } from '@mui/material'
-import { alpha } from '@mui/material/styles'
+import { alpha, useTheme } from '@mui/material/styles'
 import type { ChainMolType, MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 import {
-  BODY_COLORS,
+  flexibleColor,
+  rigidColorIndices
+} from 'features/constraintSchematic/constraintColors'
+import {
   BODY_LABELS,
-  FLEXIBLE_COLOR,
+  bodyTypeColor,
   buildChainTracks,
   type Body,
   type BodyType,
@@ -51,7 +54,13 @@ const TrackBlock = ({
   </Tooltip>
 )
 
-const ChainTrackRow = ({ track }: { track: ChainTrack }) => (
+const ChainTrackRow = ({
+  track,
+  dark
+}: {
+  track: ChainTrack
+  dark: boolean
+}) => (
   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
     <Typography
       variant="body2"
@@ -77,7 +86,7 @@ const ChainTrackRow = ({ track }: { track: ChainTrack }) => (
             start={start}
             stop={stop}
             type="flexible"
-            color={FLEXIBLE_COLOR}
+            color={flexibleColor(dark)}
             title={`Flexible · ${rangeLabel(track.chainId, start, stop)}`}
           />
         ))}
@@ -88,7 +97,7 @@ const ChainTrackRow = ({ track }: { track: ChainTrack }) => (
             start={seg.start}
             stop={seg.stop}
             type={seg.type}
-            color={BODY_COLORS[seg.type]}
+            color={bodyTypeColor(seg.type, seg.colorIndex, dark)}
             title={`${BODY_LABELS[seg.type]} · ${seg.bodyName} · ${rangeLabel(track.chainId, seg.start, seg.stop)}`}
           />
         ))}
@@ -141,76 +150,84 @@ const MolTypeChip = ({ type }: { type: ChainMolType }) => (
 const ConstraintLine = ({
   tag,
   color,
-  tagTextColor = '#fff',
   name,
   ranges,
   molTypes
 }: {
   tag: string
   color: string
-  tagTextColor?: string
   name?: string
   ranges: LineRange[]
   molTypes: MolTypes
-}) => (
-  <Box
-    sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}
-  >
-    <Chip
-      size="small"
-      label={tag}
+}) => {
+  const theme = useTheme()
+  return (
+    <Box
       sx={{
-        width: 64,
-        color: tagTextColor,
-        fontWeight: 600,
-        backgroundColor: color
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 0.75
       }}
-    />
-    {name && (
-      <Typography
-        variant="body2"
-        sx={{ fontWeight: 600 }}
-      >
-        {name}
-      </Typography>
-    )}
-    {ranges.map(({ chainId, start, stop }, i) => {
-      const molType = molTypes[chainId]
-      const prev = ranges[i - 1]
-      // One type chip per group of consecutive ranges with the same molecule type
-      const startsGroup = !prev || molTypes[prev.chainId] !== molType
-      return (
-        <React.Fragment key={`${chainId}-${start}`}>
-          {molType && startsGroup && <MolTypeChip type={molType} />}
-          <Chip
-            size="small"
-            variant="outlined"
-            label={rangeLabel(chainId, start, stop)}
-            sx={{
-              fontVariantNumeric: 'tabular-nums',
-              borderColor: color,
-              backgroundColor: alpha(color, 0.12)
-            }}
-          />
-        </React.Fragment>
-      )
-    })}
-  </Box>
-)
+    >
+      <Chip
+        size="small"
+        label={tag}
+        sx={{
+          width: 64,
+          color: theme.palette.getContrastText(color),
+          fontWeight: 600,
+          backgroundColor: color
+        }}
+      />
+      {name && (
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: 600 }}
+        >
+          {name}
+        </Typography>
+      )}
+      {ranges.map(({ chainId, start, stop }, i) => {
+        const molType = molTypes[chainId]
+        const prev = ranges[i - 1]
+        // One type chip per group of consecutive ranges with the same molecule type
+        const startsGroup = !prev || molTypes[prev.chainId] !== molType
+        return (
+          <React.Fragment key={`${chainId}-${start}`}>
+            {molType && startsGroup && <MolTypeChip type={molType} />}
+            <Chip
+              size="small"
+              variant="outlined"
+              label={rangeLabel(chainId, start, stop)}
+              sx={{
+                fontVariantNumeric: 'tabular-nums',
+                borderColor: color,
+                backgroundColor: alpha(color, 0.12)
+              }}
+            />
+          </React.Fragment>
+        )
+      })}
+    </Box>
+  )
+}
 
 const BodyLine = ({
   body,
   type,
+  color,
   molTypes
 }: {
   body: Body
   type: BodyType
+  color: string
   molTypes: MolTypes
 }) => (
   <ConstraintLine
     molTypes={molTypes}
     tag={BODY_LABELS[type]}
-    color={BODY_COLORS[type]}
+    color={color}
     name={body.name}
     ranges={(body.segments ?? []).map(({ chain_id, residues }) => ({
       chainId: chain_id,
@@ -232,6 +249,8 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
     rigid_bodies = [],
     chain_mol_types = []
   } = constraints
+  const theme = useTheme()
+  const dark = theme.palette.mode === 'dark'
   const molTypes: MolTypes = Object.fromEntries(
     chain_mol_types.map(({ chain_id, mol_type }) => [chain_id, mol_type])
   )
@@ -248,6 +267,7 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
   }
 
   const tracks = buildChainTracks(constraints)
+  const rigidIndices = rigidColorIndices(constraints)
   const flexible = tracks.flatMap((track) =>
     track.flexible.map((range) => ({ chainId: track.chainId, ...range }))
   )
@@ -271,6 +291,7 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
             <ChainTrackRow
               key={track.chainId}
               track={track}
+              dark={dark}
             />
           ))}
         </Box>
@@ -281,22 +302,23 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
             key={`fixed-${body.name}`}
             body={body}
             type="fixed"
+            color={bodyTypeColor('fixed', null, dark)}
             molTypes={molTypes}
           />
         ))}
-        {rigid_bodies.map((body) => (
+        {rigid_bodies.map((body, i) => (
           <BodyLine
             key={`rigid-${body.name}`}
             body={body}
             type="rigid"
+            color={bodyTypeColor('rigid', rigidIndices[i] ?? null, dark)}
             molTypes={molTypes}
           />
         ))}
         {flexible.length > 0 && (
           <ConstraintLine
             tag="Flexible"
-            color={FLEXIBLE_COLOR}
-            tagTextColor="rgba(0, 0, 0, 0.87)"
+            color={flexibleColor(dark)}
             ranges={flexible}
             molTypes={molTypes}
           />

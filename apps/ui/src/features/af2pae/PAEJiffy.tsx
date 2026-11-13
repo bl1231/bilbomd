@@ -44,6 +44,8 @@ import ConstInpFile from './ConstInpFile'
 import PAEMatrixPlot from './PAEMatrixPlot'
 import PAEMatrixPlotExplanation from './PAEMatrixPlotExplanation'
 import PLDDTPlot from './PLDDTPlot'
+import { constraintsFromConstInp } from 'features/constraintSchematic/constInpConstraints'
+import ConstraintSchematic from 'features/constraintSchematic/ConstraintSchematic'
 import {
   parsePLDDTFromPDB,
   parsePLDDTFromCIF,
@@ -74,6 +76,11 @@ const Alphafold2PAEJiffy = () => {
   const [status, setStatus] = useState('')
   const [constfile, setConstfile] = useState('')
   const [shapeCount, setShapeCount] = useState(0)
+  // The generated const.inp as bodies, for the schematic
+  const constraints = useMemo(
+    () => constraintsFromConstInp(constfile),
+    [constfile]
+  )
   const [jobStartTime, setJobStartTime] = useState<number | null>(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [showRigid, setShowRigid] = useState(false)
@@ -493,6 +500,20 @@ const Alphafold2PAEJiffy = () => {
                               </Box>
                             </Box>
                           </Box>
+                          {constraints && (
+                            <Box
+                              sx={{ mt: 3 }}
+                              data-testid="pae-jiffy-schematic"
+                            >
+                              <Typography
+                                variant="h6"
+                                sx={{ mb: 1 }}
+                              >
+                                How these constraints move
+                              </Typography>
+                              <ConstraintSchematic constraints={constraints} />
+                            </Box>
+                          )}
                         </>
                       )}
                     </>

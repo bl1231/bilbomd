@@ -1,15 +1,23 @@
 import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
+import {
+  fixedColor,
+  rigidColor,
+  rigidColorIndices
+} from 'features/constraintSchematic/constraintColors'
 
 export type Body = NonNullable<MDConstraintsDTO['fixed_bodies']>[number]
 export type BodyType = 'fixed' | 'rigid'
 
-// Same colors as the Molstar domain-color preset
-export const BODY_COLORS: Record<BodyType, string> = {
-  fixed: '#2f54eb',
-  rigid: '#fa8c16'
-}
-// Unconstrained residues; not a body type, so kept apart from BODY_COLORS
-export const FLEXIBLE_COLOR = '#b7eb8f'
+// A body's color, from the palette every constraint view shares: fixed
+// segments are blue, and each rigid body has its own color
+export const bodyTypeColor = (
+  type: BodyType,
+  colorIndex: number | null,
+  dark: boolean
+): string =>
+  type === 'fixed' || colorIndex === null
+    ? fixedColor(dark)
+    : rigidColor(colorIndex, dark)
 
 export const BODY_LABELS: Record<BodyType, string> = {
   fixed: 'Fixed',
@@ -19,6 +27,8 @@ export const BODY_LABELS: Record<BodyType, string> = {
 type TrackSegment = {
   type: BodyType
   bodyName: string
+  // The rigid body's palette index; null for fixed segments
+  colorIndex: number | null
   start: number
   stop: number
 }
@@ -52,8 +62,12 @@ export const buildChainTracks = (
   constraints: MDConstraintsDTO
 ): ChainTrack[] => {
   const tracks = new Map<string, ChainTrack>()
-  const add = (bodies: Body[] | undefined, type: BodyType) => {
-    for (const body of bodies ?? []) {
+  const add = (
+    bodies: Body[] | undefined,
+    type: BodyType,
+    colorIndex: (i: number) => number | null
+  ) => {
+    for (const [i, body] of (bodies ?? []).entries()) {
       for (const { chain_id, residues } of body.segments ?? []) {
         const track = tracks.get(chain_id) ?? {
           chainId: chain_id,
@@ -65,6 +79,7 @@ export const buildChainTracks = (
         track.segments.push({
           type,
           bodyName: body.name,
+          colorIndex: colorIndex(i),
           start: residues.start,
           stop: residues.stop
         })
@@ -72,8 +87,9 @@ export const buildChainTracks = (
       }
     }
   }
-  add(constraints.fixed_bodies, 'fixed')
-  add(constraints.rigid_bodies, 'rigid')
+  const rigidIndices = rigidColorIndices(constraints)
+  add(constraints.fixed_bodies, 'fixed', () => null)
+  add(constraints.rigid_bodies, 'rigid', (i) => rigidIndices[i] ?? null)
   return [...tracks.values()]
     .map((track) => ({ ...track, flexible: flexibleRanges(track) }))
     .sort((a, b) => a.chainId.localeCompare(b.chainId))
