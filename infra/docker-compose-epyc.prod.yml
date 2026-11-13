@@ -189,7 +189,7 @@ services:
       dockerfile: bilbomd-worker-charmm.dockerfile
       args:
         WORKER_IMAGE: ghcr.io/bl1231/bilbomd-worker:2.28.0
-        CHARMM_VER: c49b2
+        CHARMM_VER: c51b1
         # Leave most of the 96 cores to MD jobs running while this builds
         CHARMM_MAKE_JOBS: '8'
     pull_policy: build
