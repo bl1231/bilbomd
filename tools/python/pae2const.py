@@ -25,6 +25,31 @@ from helpers_viz import (
 )
 from pdb_utils import get_segid_renaming_map, get_segid_renaming_map_from_cif
 
+# CHARMM cuts input lines over 200 characters short (measured with c49b2), and
+# the MD steps run with "bomlev -2", so a cut-short command is skipped with only
+# a warning. Long const.inp commands are wrapped well under that, matching the
+# BilboMD web app's const.inp writers.
+CONST_INP_WRAP_WIDTH = 77
+
+
+def wrap_charmm_command(command: str, width: int = CONST_INP_WRAP_WIDTH) -> List[str]:
+    """Split one CHARMM command into lines of at most ``width`` characters.
+
+    Every line but the last ends in " -", CHARMM's continuation mark. Breaks
+    only at spaces; a single word longer than ``width`` gets a line of its own.
+    """
+    lines: List[str] = []
+    current = ""
+    for word in command.split():
+        if current and len(current) + 1 + len(word) + 2 > width:
+            lines.append(f"{current} -")
+            current = word
+        else:
+            current = f"{current} {word}" if current else word
+    lines.append(current)
+    return lines
+
+
 
 class InputHandler(ABC):
     @abstractmethod
@@ -1579,10 +1604,13 @@ class PAEProcessor:
                             f" .and. segid {renamed_segment} ) end\n"
                         )
                         if p == len(rigid_body):
-                            const_file.write("cons fix sele ")
-                            for number in range(1, p):
-                                const_file.write(f"fixed{number} .or. ")
-                            const_file.write(f"fixed{p} end \n")
+                            names = " .or. ".join(
+                                f"fixed{number}" for number in range(1, p + 1)
+                            )
+                            for line in wrap_charmm_command(
+                                f"cons fix sele {names} end"
+                            ):
+                                const_file.write(f"{line}\n")
                             const_file.write("\n")
                     elif rigid_body_count > 1:
                         n += 1
@@ -1592,10 +1620,13 @@ class PAEProcessor:
                         )
                         if n == len(rigid_body):
                             dock_count += 1
-                            const_file.write(f"shape desc dock{dock_count} rigid sele ")
-                            for number in range(1, n):
-                                const_file.write(f"rigid{number} .or. ")
-                            const_file.write(f"rigid{n} end \n")
+                            names = " .or. ".join(
+                                f"rigid{number}" for number in range(1, n + 1)
+                            )
+                            for line in wrap_charmm_command(
+                                f"shape desc dock{dock_count} rigid sele {names} end"
+                            ):
+                                const_file.write(f"{line}\n")
                             const_file.write("\n")
             const_file.write("return \n")
             const_file.write("\n")

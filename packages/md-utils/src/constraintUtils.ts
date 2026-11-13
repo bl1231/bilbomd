@@ -13,8 +13,11 @@ import {
   DNA_RESIDUES,
   RNA_RESIDUES,
   CARBOHYDRATE_RESIDUES,
-  CONST_INP_ALLOWED_PREFIXES,
-  duplicateShapeNamesMessage
+  constInpLengthMessage,
+  duplicateShapeNamesMessage,
+  findDisallowedConstInpLine,
+  joinConstInpLines,
+  wrapConstInpCommand
 } from '@bilbomd/bilbomd-types'
 import type { Logger } from './index.js'
 
@@ -113,8 +116,7 @@ export async function buildChainMolTypesFromInp(
   inpFilePath: string
 ): Promise<IChainMolType[]> {
   const inpContent = await fs.readFile(inpFilePath, 'utf8')
-  const content = inpContent
-    .split('\n')
+  const content = joinConstInpLines(inpContent)
     .filter((line) => !/^\s*[!*]/.test(line))
     .join('\n')
   const chainTypes: Record<string, ChainMolType> = {}
@@ -288,19 +290,24 @@ export async function validateInpConstraints(
       throw new Error('Empty INP constraint file')
     }
 
-    const lines = inpContent.split('\n').filter((line: string) => line.trim())
+    // One entry per command, with '-' continuation lines joined as CHARMM
+    // reads them
+    const lines = joinConstInpLines(inpContent).filter((line: string) =>
+      line.trim()
+    )
 
-    // Allowlist check: reject any line that doesn't start with a permitted
-    // keyword. Uses the same list as the job forms and the backend upload check
-    // to block CHARMM directives like 'system', 'open', 'read', etc. that could
-    // execute OS commands or perform file I/O.
-    for (const line of lines) {
-      const lower = line.trim().toLowerCase()
-      if (!CONST_INP_ALLOWED_PREFIXES.some((pfx) => lower.startsWith(pfx))) {
-        throw new Error(
-          `Disallowed keyword in constraint file: "${line.trim()}"`
-        )
-      }
+    // Allowlist check: reject any command that doesn't start with a permitted
+    // keyword. Uses the same check as the job forms and the backend upload
+    // check to block CHARMM directives like 'system', 'open', 'read', etc. that
+    // could execute OS commands or perform file I/O.
+    const disallowed = findDisallowedConstInpLine(inpContent)
+    if (disallowed !== null) {
+      throw new Error(`Disallowed keyword in constraint file: "${disallowed}"`)
+    }
+
+    const tooLong = constInpLengthMessage(inpContent)
+    if (tooLong !== null) {
+      throw new Error(tooLong)
     }
 
     // Check for required CHARMM commands (skip comment lines)
@@ -440,8 +447,9 @@ function validateConstraintBodies(
 // each 'cons fix' / 'shape desc' uses the definitions current at that line. So
 // parse in a single pass instead of collecting every define first.
 function parseInpConstraints(inpContent: string): IMDConstraints {
-  const lines = inpContent
-    .split('\n')
+  // Join '-' continuation lines first, so a command wrapped over several lines
+  // (as the Inp Jiffy writes long ones) is parsed whole
+  const lines = joinConstInpLines(inpContent)
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith('!') && line !== 'return')
 
@@ -526,7 +534,8 @@ function parseSelectionExpression(
   return segments
 }
 
-// Helper function to generate INP from constraints object
+// Helper function to generate INP from constraints object. Long 'cons fix' and
+// 'shape desc' commands are wrapped, since CHARMM cuts lines over 200 characters
 function generateInpFromConstraints(
   constraints: IMDConstraints,
   chainSegidMap?: Record<string, string>
@@ -556,7 +565,9 @@ function generateInpFromConstraints(
     }
 
     if (defNames.length > 0) {
-      lines.push(`cons fix sele ${defNames.join(' .or. ')} end`)
+      lines.push(
+        ...wrapConstInpCommand(`cons fix sele ${defNames.join(' .or. ')} end`)
+      )
       lines.push('')
     }
   }
@@ -580,7 +591,9 @@ function generateInpFromConstraints(
 
       if (defNames.length > 0) {
         lines.push(
-          `shape desc dock${dockCounter++} rigid sele ${defNames.join(' .or. ')} end`
+          ...wrapConstInpCommand(
+            `shape desc dock${dockCounter++} rigid sele ${defNames.join(' .or. ')} end`
+          )
         )
         lines.push('')
       }

@@ -884,3 +884,107 @@ return`
     })
   })
 })
+
+describe('long commands and continuation lines', () => {
+  const segments = Array.from({ length: 20 }, (_, i) => ({
+    chain_id: 'A',
+    residues: { start: i * 10 + 1, stop: i * 10 + 5 }
+  }))
+  const defines = (prefix: string) =>
+    segments.map(
+      ({ residues }, i) =>
+        `define ${prefix}${i + 1} sele ( resid ${residues.start}:${residues.stop} .and. segid PROA ) end`
+    )
+  const orNames = (prefix: string) =>
+    segments.map((_, i) => `${prefix}${i + 1}`).join(' .or. ')
+
+  // How the Inp Jiffy used to wrap: every 77 characters, even mid-word
+  const wrapMidWord = (line: string): string[] => {
+    const out: string[] = []
+    for (let i = 0; i < line.length; i += 77) {
+      const piece = line.slice(i, i + 77)
+      out.push(i + 77 < line.length ? `${piece}-` : piece)
+    }
+    return out
+  }
+
+  const wrappedInp = [
+    ...defines('fixed'),
+    ...wrapMidWord(`cons fix sele ${orNames('fixed')} end`),
+    '',
+    ...defines('rigid'),
+    ...wrapMidWord(`shape desc dock1 rigid sele ${orNames('rigid')} end`),
+    '',
+    'return'
+  ].join('\n')
+
+  test('a wrapped file passes validation', async () => {
+    const inpPath = path.join(tempDir, 'wrapped.inp')
+    await fs.writeFile(inpPath, wrappedInp)
+    await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
+  })
+
+  test('wrapped commands are parsed whole', async () => {
+    const inpPath = path.join(tempDir, 'wrapped-parse.inp')
+    await fs.writeFile(inpPath, wrappedInp)
+    const constraints = extractConstraintsFromYaml(
+      await convertInpToYaml(inpPath)
+    )
+    expect(constraints.fixed_bodies).toEqual([{ name: 'FixedBody1', segments }])
+    expect(constraints.rigid_bodies).toEqual([{ name: 'RigidBody1', segments }])
+  })
+
+  test('a line longer than CHARMM reads fails validation', async () => {
+    const inpPath = path.join(tempDir, 'too-long.inp')
+    await fs.writeFile(
+      inpPath,
+      [
+        ...defines('fixed'),
+        `cons fix sele ${orNames('fixed')} end`,
+        'return'
+      ].join('\n')
+    )
+    await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+      /Line 21 is longer than 200 characters/
+    )
+  })
+
+  test('a disallowed command after a tab-hyphen line still fails', async () => {
+    const inpPath = path.join(tempDir, 'tab-hyphen.inp')
+    await fs.writeFile(
+      inpPath,
+      [
+        'define fixed1 sele ( resid 1:5 .and. segid PROA ) end -\t',
+        'system "id"',
+        'cons fix sele fixed1 end',
+        'return'
+      ].join('\n')
+    )
+    await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+      /Disallowed keyword in constraint file: "system "id""/
+    )
+  })
+
+  test('YAML with many segments converts to wrapped lines that read back', async () => {
+    const yamlPath = path.join(tempDir, 'many-segments.yaml')
+    const constraints = {
+      fixed_bodies: [{ name: 'FixedBody1', segments }],
+      rigid_bodies: [{ name: 'RigidBody1', segments: segments.slice(0, 11) }]
+    }
+    await fs.writeFile(yamlPath, JSON.stringify(constraints))
+
+    const inp = await convertYamlToInp(yamlPath)
+    for (const line of inp.split('\n')) {
+      expect(line.length).toBeLessThanOrEqual(77)
+    }
+    expect(inp).toMatch(/ -\n/)
+
+    const inpPath = path.join(tempDir, 'many-segments.inp')
+    await fs.writeFile(inpPath, inp)
+    await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
+    // Not overlapping: rigid segments get their own residues
+    expect(
+      extractConstraintsFromYaml(await convertInpToYaml(inpPath)).fixed_bodies
+    ).toEqual([{ name: 'FixedBody1', segments }])
+  })
+})

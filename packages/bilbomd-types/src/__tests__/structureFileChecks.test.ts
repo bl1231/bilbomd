@@ -15,7 +15,13 @@ import {
   findDisallowedConstInpLine,
   findDuplicateShapeNames,
   duplicateShapeNamesMessage,
-  MAX_CONST_INP_SHAPE_COMMANDS
+  joinConstInpLines,
+  wrapConstInpCommand,
+  constInpLengthMessage,
+  MAX_CONST_INP_SHAPE_COMMANDS,
+  MAX_CONST_INP_LINE_LENGTH,
+  MAX_CONST_INP_COMMAND_LENGTH,
+  CONST_INP_WRAP_WIDTH
 } from '../structureFileChecks.js'
 
 const lines = (...l: string[]) => l.join('\n')
@@ -629,6 +635,218 @@ describe('checkConstInpText line endings', () => {
       'cons fix sele x end',
       'return'
     ].join('\r\n')
+    expect(checkConstInpText(file, 'pdb')).toBe(true)
+  })
+})
+
+// How the Inp Jiffy used to wrap long commands: cut every 77 characters, even
+// mid-word, and add '-'. CHARMM reads these fine and users still have such
+// files, so the checks must keep accepting them.
+const wrapMidWord = (line: string): string[] => {
+  const out: string[] = []
+  for (let i = 0; i < line.length; i += 77) {
+    const piece = line.slice(i, i + 77)
+    out.push(i + 77 < line.length ? `${piece}-` : piece)
+  }
+  return out
+}
+
+const names = (prefix: string, count: number) =>
+  Array.from({ length: count }, (_, i) => `${prefix}${i + 1}`).join(' .or. ')
+
+describe('joinConstInpLines', () => {
+  // Each case matches what the worker's CHARMM (c49b2) was seen to do
+
+  it('joins a line ending in "-" to the next with no space added', () => {
+    expect(joinConstInpLines(lines('sele r-', 'igid5 end'))).toEqual([
+      'sele rigid5 end'
+    ])
+  })
+
+  it.each([
+    ['trailing spaces', 'a .or. -   '],
+    ['a comment after the hyphen', 'a .or. - ! note'],
+    ['two hyphens (one is kept)', 'a .or. --']
+  ])('joins after %s', (_, first) => {
+    expect(joinConstInpLines(lines(first, 'b end'))).toHaveLength(1)
+  })
+
+  it('joins across a CRLF line ending', () => {
+    expect(joinConstInpLines('a .or. -\r\nb end')).toEqual(['a .or. b end'])
+  })
+
+  it.each([
+    ['a hyphen inside a comment', 'a .or. ! note -'],
+    ['a comment line', '! comment -'],
+    ['a tab after the hyphen', 'a .or. -\t'],
+    ['a title line', '* title -']
+  ])('does not join after %s', (_, first) => {
+    expect(joinConstInpLines(lines(first, 'b end'))).toEqual([first, 'b end'])
+  })
+
+  it('joins only the very next line, even a blank one', () => {
+    expect(joinConstInpLines(lines('a .or. -', '', 'b end'))).toEqual([
+      'a .or. ',
+      'b end'
+    ])
+  })
+
+  it('keeps a hyphen on the last line as its own command', () => {
+    expect(joinConstInpLines('a .or. -')).toEqual(['a .or. '])
+  })
+})
+
+describe('findDisallowedConstInpLine with continuation lines', () => {
+  it('accepts commands the Inp Jiffy wrapped mid-word', () => {
+    const file = lines(
+      'define rigid1 sele ( resid 1:5 .and. segid PROA ) end',
+      ...wrapMidWord(`shape desc dock1 rigid sele ${names('rigid', 10)} end`),
+      'return'
+    )
+    expect(findDisallowedConstInpLine(file)).toBeNull()
+  })
+
+  it.each([
+    ['a tab after the hyphen', 'define x sele segid PROA end -\t'],
+    ['a hyphen inside a comment', 'define x sele segid PROA end ! -'],
+    ['a comment line', '! note -'],
+    ['a title line', '* title -']
+  ])('still sees a command after %s', (_, first) => {
+    expect(
+      findDisallowedConstInpLine(lines(first, 'system "id"', 'return'))
+    ).toBe('system "id"')
+  })
+
+  it('still sees a command after the blank line a hyphen joins', () => {
+    expect(
+      findDisallowedConstInpLine(
+        lines('define x sele segid PROA end -', '', 'system "id"', 'return')
+      )
+    ).toBe('system "id"')
+  })
+})
+
+describe('wrapConstInpCommand', () => {
+  const command = `cons fix sele ${names('fixed', 30)} end`
+
+  it('keeps every line within the width, ending all but the last in " -"', () => {
+    const wrapped = wrapConstInpCommand(command)
+    expect(wrapped.length).toBeGreaterThan(1)
+    for (const line of wrapped) {
+      expect(line.length).toBeLessThanOrEqual(CONST_INP_WRAP_WIDTH)
+    }
+    expect(wrapped.slice(0, -1).every((l) => l.endsWith(' -'))).toBe(true)
+    expect(wrapped.at(-1)).toMatch(/end$/)
+  })
+
+  it('reads back as the same command', () => {
+    expect(joinConstInpLines(wrapConstInpCommand(command).join('\n'))).toEqual([
+      command
+    ])
+  })
+
+  it('leaves a short command on one line', () => {
+    expect(wrapConstInpCommand('cons fix sele fixed1 end')).toEqual([
+      'cons fix sele fixed1 end'
+    ])
+  })
+
+  it('puts a word longer than the width on a line of its own', () => {
+    expect(wrapConstInpCommand(`a ${'x'.repeat(20)} b`, 10)).toEqual([
+      'a -',
+      `${'x'.repeat(20)} -`,
+      'b'
+    ])
+  })
+})
+
+describe('constInpLengthMessage', () => {
+  const lineOf = (length: number) =>
+    `define x sele segid PROA end ${'!'.padEnd(length - 29, '.')}`
+
+  it(`accepts a line of ${MAX_CONST_INP_LINE_LENGTH} characters`, () => {
+    expect(lineOf(MAX_CONST_INP_LINE_LENGTH)).toHaveLength(200)
+    expect(constInpLengthMessage(lineOf(MAX_CONST_INP_LINE_LENGTH))).toBeNull()
+  })
+
+  it('rejects a longer line, naming it', () => {
+    expect(
+      constInpLengthMessage(lines('* t', lineOf(MAX_CONST_INP_LINE_LENGTH + 1)))
+    ).toMatch(/^Line 2 is longer than 200 characters/)
+  })
+
+  it('ignores trailing spaces', () => {
+    expect(
+      constInpLengthMessage(`${lineOf(MAX_CONST_INP_LINE_LENGTH)}      `)
+    ).toBeNull()
+  })
+
+  it(`rejects a continued command over ${MAX_CONST_INP_COMMAND_LENGTH} characters`, () => {
+    const long = `cons fix sele ${names('fixed', 400)} end`
+    expect(long.length).toBeGreaterThan(MAX_CONST_INP_COMMAND_LENGTH)
+    expect(constInpLengthMessage(wrapConstInpCommand(long).join('\n'))).toMatch(
+      /^A command is longer than 5000 characters/
+    )
+  })
+
+  it('accepts a long command wrapped over many lines', () => {
+    const wrapped = wrapConstInpCommand(
+      `cons fix sele ${names('fixed', 100)} end`
+    )
+    expect(constInpLengthMessage(wrapped.join('\n'))).toBeNull()
+  })
+})
+
+describe('checkConstInpText with long commands', () => {
+  const defines = Array.from(
+    { length: 20 },
+    (_, i) =>
+      `define fixed${i + 1} sele ( resid ${i * 10 + 1}:${i * 10 + 5} .and. segid PROA ) end`
+  )
+
+  it('accepts a file the Inp Jiffy wrapped mid-word', () => {
+    const file = lines(
+      ...defines,
+      ...wrapMidWord(`cons fix sele ${names('fixed', 20)} end`),
+      'return'
+    )
+    expect(checkConstInpText(file, 'pdb')).toBe(true)
+  })
+
+  it('accepts a file wrapped at spaces', () => {
+    const file = lines(
+      ...defines,
+      ...wrapConstInpCommand(`cons fix sele ${names('fixed', 20)} end`),
+      'return'
+    )
+    expect(checkConstInpText(file, 'pdb')).toBe(true)
+  })
+
+  it('rejects a command on one line longer than CHARMM reads', () => {
+    const file = lines(
+      ...defines,
+      `cons fix sele ${names('fixed', 20)} end`,
+      'return'
+    )
+    expect(checkConstInpText(file, 'pdb')).toMatch(
+      /^Line 21 is longer than 200 characters/
+    )
+  })
+
+  it('counts a wrapped shape command once', () => {
+    const shapes = Array.from(
+      { length: MAX_CONST_INP_SHAPE_COMMANDS },
+      (_, i) =>
+        wrapConstInpCommand(
+          `shape desc dock${i + 1} rigid sele ${names('fixed', 8)} end`
+        )
+    ).flat()
+    const file = lines(
+      ...defines,
+      'cons fix sele fixed1 end',
+      ...shapes,
+      'return'
+    )
     expect(checkConstInpText(file, 'pdb')).toBe(true)
   })
 })

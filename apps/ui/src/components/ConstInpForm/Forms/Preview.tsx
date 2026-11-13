@@ -9,6 +9,13 @@ import CopyToClipboardButton from 'components/Common/CopyToClipboardButton'
 import Download from '../Helpers/Download'
 import { RigidBody, Chain } from 'types/interfaces'
 import HeaderBox from 'components/HeaderBox'
+import { wrapConstInpCommand } from '@bilbomd/bilbomd-types'
+
+// CHARMM cuts lines over 200 characters short, so long commands are continued
+// over several lines ending in ' -'
+const pushWrappedLine = (contentArray: string[], line: string) => {
+  contentArray.push(...wrapConstInpCommand(line))
+}
 
 const Preview = () => {
   useTitle('BilboMD: Preview const.inp file')
@@ -17,33 +24,6 @@ const Preview = () => {
   const { values } = useFormikContext<FormikValues>()
   const rigid_bodies = values.pdb_file.rigid_bodies as RigidBody[]
   const chains = values.pdb_file.chains
-
-  const pushWrappedLine = useCallback(
-    (contentArray: string[], line: string) => {
-      const maxLength = 77
-      let currentLine = ''
-      let numCharacters = 0
-
-      for (let i = 0; i < line.length; i++) {
-        const char = line.charAt(i)
-        if (numCharacters + 1 > maxLength) {
-          contentArray.push(currentLine)
-          currentLine = ''
-          numCharacters = 0
-        }
-        currentLine += char
-        numCharacters++
-
-        if (numCharacters === maxLength && i !== line.length - 1) {
-          currentLine += '-'
-          numCharacters++
-        }
-      }
-
-      contentArray.push(currentLine)
-    },
-    []
-  )
 
   const prepareConstInputFile = useCallback(
     (rigidBodies: RigidBody[], chains: Chain[]) => {
@@ -138,7 +118,7 @@ const Preview = () => {
       const file = new Blob([content], { type: 'text/plain' })
       setConstFileBlob(file)
     },
-    [pushWrappedLine]
+    []
   )
 
   useEffect(() => {
