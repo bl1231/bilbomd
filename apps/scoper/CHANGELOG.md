@@ -1,5 +1,12 @@
 # @bilbomd/scoper
 
+## 1.10.24
+
+### Patch Changes
+
+- Updated dependencies [c0b6709]
+  - @bilbomd/bilbomd-types@1.18.0
+
 ## 1.10.23
 
 ### Patch Changes
