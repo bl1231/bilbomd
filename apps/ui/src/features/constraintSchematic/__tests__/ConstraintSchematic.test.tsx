@@ -134,6 +134,41 @@ describe('ConstraintSchematic', () => {
     expect(screen.getByRole('slider', { name: 'Motion' })).toBeDisabled()
   })
 
+  it('shows the linear view with a bar per segment and an arc per joined pair', () => {
+    render(<ConstraintSchematic constraints={constraints} />)
+    expect(screen.getByTestId('schematic-tracks')).toBeInTheDocument()
+    expect(
+      screen
+        .getAllByTestId('schematic-track-segment')
+        .map((el) => el.getAttribute('data-kind'))
+    ).toEqual(['fixed', 'fixed', 'rigid', 'rigid', 'rigid'])
+    // RigidBody1 joins A 181–290 to B 20–95
+    expect(screen.getAllByTestId('schematic-track-arc')).toHaveLength(1)
+  })
+
+  it('highlights a body in both views when its bar is hovered', () => {
+    render(<ConstraintSchematic constraints={constraints} />)
+    const bar = screen
+      .getAllByTestId('schematic-track-segment')
+      .find((el) => el.getAttribute('data-kind') === 'rigid')!
+    fireEvent.pointerEnter(bar, { clientX: 10, clientY: 10 })
+    expect(screen.getByTestId('schematic-tooltip')).toHaveTextContent(
+      'RigidBody1 · moves as one unit'
+    )
+    expect(
+      screen
+        .getAllByTestId('schematic-body')
+        .map((el) => el.getAttribute('opacity'))
+    ).toEqual(['0.18', '0.18', '1', '0.18', '0.18'])
+    expect(
+      screen
+        .getAllByTestId('schematic-track-segment')
+        .map((el) => el.getAttribute('opacity'))
+    ).toEqual(['0.18', '0.18', '1', '1', '0.18'])
+    fireEvent.pointerLeave(bar)
+    expect(screen.getByTestId('schematic-tooltip')).not.toBeVisible()
+  })
+
   it('lays out again on re-shuffle', async () => {
     const user = userEvent.setup()
     render(<ConstraintSchematic constraints={constraints} />)

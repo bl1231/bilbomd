@@ -37,6 +37,7 @@ import {
   seededRandom,
   standardNormal
 } from './schematicSimulation'
+import { BAR_HEIGHT, layoutTracks } from './trackLayout'
 
 const HINT =
   'Hover a bead or a spring for details. Drag a rigid body to see how far its linkers let it go.'
@@ -47,7 +48,7 @@ const labelY = (body: SchematicBody) =>
 
 type Drag = { body: SchematicBody; dx: number; dy: number }
 
-// Puts the hover popup beside the pointer, kept inside the panel, flipping
+// Puts the hover popup beside the pointer, kept inside the component, flipping
 // above the pointer near the bottom edge. Set directly on the element, so
 // following the pointer doesn't re-render the drawing.
 const positionTip = (
@@ -121,6 +122,8 @@ export const ConstraintSchematic = ({
     sim.settle()
     return { model, sim, viewBox: fitViewBox(model) }
   }, [constraints, seed])
+
+  const tracks = useMemo(() => layoutTracks(model), [model])
 
   const rigidBodies = useMemo(
     () => model.bodies.filter((b) => b.kind === 'rigid'),
@@ -246,7 +249,15 @@ export const ConstraintSchematic = ({
   const segmentCount = (n: number) => `${n} seg${n === 1 ? '' : 's'}`
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+    <Box
+      ref={panelRef}
+      sx={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1.5
+      }}
+    >
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
         <Button
           size="small"
@@ -297,9 +308,7 @@ export const ConstraintSchematic = ({
       </Box>
 
       <Box
-        ref={panelRef}
         sx={{
-          position: 'relative',
           border: 1,
           borderColor: 'divider',
           borderRadius: 2,
@@ -520,30 +529,6 @@ export const ConstraintSchematic = ({
             ))}
           </g>
         </svg>
-        <Box
-          ref={tipRef}
-          role="tooltip"
-          data-testid="schematic-tooltip"
-          sx={{
-            display: tipText ? 'block' : 'none',
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            zIndex: 1,
-            maxWidth: 320,
-            px: 1,
-            py: 0.5,
-            borderRadius: 1,
-            pointerEvents: 'none',
-            backgroundColor: alpha(grey[700], 0.92),
-            color: theme.palette.common.white,
-            fontSize: theme.typography.pxToRem(12),
-            lineHeight: 1.4,
-            fontVariantNumeric: 'tabular-nums'
-          }}
-        >
-          {tipText}
-        </Box>
         <Typography
           role="status"
           aria-live="polite"
@@ -656,6 +641,157 @@ export const ConstraintSchematic = ({
             </svg>
           }
         />
+      </Box>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        <Typography variant="subtitle2">Linear view</Typography>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+        >
+          Bars are constrained segments in their body&apos;s color and the thin
+          line is flexible. Arcs join the segments of one rigid body, across
+          chains too.
+        </Typography>
+        <Box
+          sx={{
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 2,
+            overflowX: 'auto',
+            backgroundColor: 'background.paper'
+          }}
+        >
+          <svg
+            data-testid="schematic-tracks"
+            viewBox={`0 0 ${tracks.width} ${tracks.height}`}
+            role="img"
+            aria-label="Chain tracks, with arcs joining the segments of each rigid body"
+            style={{
+              display: 'block',
+              width: '100%',
+              minWidth: 560,
+              height: 'auto'
+            }}
+          >
+            {tracks.rows.map((row) => (
+              <g key={row.chainId}>
+                <text
+                  x={0}
+                  y={row.y + 4}
+                  fontSize={12}
+                  fontWeight={500}
+                  fontFamily={theme.typography.fontFamily}
+                  fill={theme.palette.text.primary}
+                >
+                  Chain {row.chainId}
+                </text>
+                <line
+                  x1={row.x0}
+                  x2={row.x1}
+                  y1={row.y}
+                  y2={row.y}
+                  stroke={theme.palette.text.secondary}
+                  strokeWidth={1.5}
+                />
+                <text
+                  x={row.x0}
+                  y={row.y + 20}
+                  fontSize={10}
+                  fontFamily={theme.typography.fontFamily}
+                  fill={theme.palette.text.secondary}
+                >
+                  1
+                </text>
+                <text
+                  x={row.x1}
+                  y={row.y + 20}
+                  fontSize={10}
+                  textAnchor="end"
+                  fontFamily={theme.typography.fontFamily}
+                  fill={theme.palette.text.secondary}
+                >
+                  {row.length}
+                </text>
+              </g>
+            ))}
+            {tracks.arcs.map((arc, i) => (
+              <path
+                key={`${arc.body.key}-${i}`}
+                data-testid="schematic-track-arc"
+                d={arc.d}
+                fill="none"
+                stroke={bodyColor(arc.body, dark)}
+                strokeWidth={1.6}
+                opacity={dimmed(arc.body.key) ? 0.18 : 1}
+              />
+            ))}
+            {tracks.gaps.map((gap) => (
+              <rect
+                key={`${gap.linker.chainId}-${gap.linker.start}`}
+                x={gap.x}
+                y={gap.y}
+                width={gap.width}
+                height={BAR_HEIGHT}
+                fill="transparent"
+                onPointerEnter={(e) => showTip(describeLinker(gap.linker), e)}
+                onPointerMove={moveTip}
+                onPointerLeave={hideTip}
+              />
+            ))}
+            {tracks.segments.map(({ bead, x, y, width }) => {
+              const body = bead.body
+              const color = bodyColor(body, dark)
+              const fixed = body.kind === 'fixed'
+              return (
+                <rect
+                  key={`${bead.chainId}-${bead.start}`}
+                  data-testid="schematic-track-segment"
+                  data-kind={body.kind}
+                  x={x}
+                  y={y}
+                  width={width}
+                  height={BAR_HEIGHT}
+                  rx={2}
+                  fill={fixed ? `url(#${patternId})` : color}
+                  stroke={fixed ? color : surface}
+                  strokeWidth={fixed ? 1.4 : 0.8}
+                  opacity={dimmed(body.key) ? 0.18 : 1}
+                  onPointerEnter={(e) =>
+                    enter(body.key, describeBody(model, body), e)
+                  }
+                  onPointerMove={moveTip}
+                  onPointerLeave={leave}
+                />
+              )
+            })}
+          </svg>
+        </Box>
+      </Box>
+
+      <Box
+        ref={tipRef}
+        role="tooltip"
+        data-testid="schematic-tooltip"
+        sx={{
+          display: tipText ? 'block' : 'none',
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          zIndex: 1,
+          maxWidth: 320,
+          px: 1,
+          py: 0.5,
+          borderRadius: 1,
+          pointerEvents: 'none',
+          backgroundColor: alpha(grey[700], 0.92),
+          color: theme.palette.common.white,
+          fontSize: theme.typography.pxToRem(12),
+          lineHeight: 1.4,
+          fontVariantNumeric: 'tabular-nums'
+        }}
+      >
+        {tipText}
       </Box>
 
       <Typography
