@@ -59,6 +59,34 @@ describe('assertConstInpAllowed', () => {
     }
   )
 
+  const fixedNames = (count: number) =>
+    Array.from({ length: count }, (_, i) => `fixed${i + 1}`).join(' .or. ')
+
+  it('accepts a command continued over several lines', async () => {
+    await write(
+      'const.inp',
+      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
+      `cons fix sele ${fixedNames(5)} .or. fix-`,
+      `ed6 .or. ${fixedNames(3)} end`,
+      'return'
+    )
+    await expect(assertConstInpAllowed(dir, 'const.inp')).resolves.toBe(
+      undefined
+    )
+  })
+
+  it('rejects a line too long for CHARMM', async () => {
+    await write(
+      'const.inp',
+      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
+      `cons fix sele ${fixedNames(20)} end`,
+      'return'
+    )
+    await expect(assertConstInpAllowed(dir, 'const.inp')).rejects.toThrow(
+      /^Constraint file const.inp: Line 2 is longer than 200 characters/
+    )
+  })
+
   it('fails when the file is missing', async () => {
     await expect(assertConstInpAllowed(dir, 'const.inp')).rejects.toThrow(
       /ENOENT/

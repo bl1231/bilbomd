@@ -1,6 +1,9 @@
 import path from 'path'
 import fs from 'fs-extra'
-import { findDisallowedConstInpLine } from '@bilbomd/bilbomd-types'
+import {
+  constInpLengthMessage,
+  findDisallowedConstInpLine
+} from '@bilbomd/bilbomd-types'
 
 // The constraint file name goes into the CHARMM input as `STREAM ../../<name>`
 const SAFE_FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
@@ -12,7 +15,9 @@ const MAX_QUOTED = 80
  * Checks a job's constraint file right before CHARMM streams it. The backend
  * checks uploads too, but CHARMM runs whatever the file in the job dir says,
  * so the worker checks the file it is about to use, whatever path the job
- * took to the queue. Throws when the file name or any line isn't allowed.
+ * took to the queue. Throws when the file name or any line isn't allowed, or
+ * when a line is too long for CHARMM: the MD steps run with 'bomlev -2', so
+ * CHARMM would skip the cut-short command and silently drop that constraint.
  */
 export const assertConstInpAllowed = async (
   jobDir: string,
@@ -31,5 +36,9 @@ export const assertConstInpAllowed = async (
     throw new Error(
       `Constraint file ${fileName} has a line BilboMD does not allow: "${quoted}"`
     )
+  }
+  const tooLong = constInpLengthMessage(text)
+  if (tooLong !== null) {
+    throw new Error(`Constraint file ${fileName}: ${tooLong}`)
   }
 }

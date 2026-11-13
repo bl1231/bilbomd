@@ -2,6 +2,7 @@ import { logger } from '../../../middleware/loggers.js'
 import fs from 'fs-extra'
 import path from 'path'
 import { Job } from '@bilbomd/mongodb-schema'
+import { wrapLongConstInpLines } from '@bilbomd/bilbomd-types'
 import { BilboMDSteps } from '../../../types/bilbomd.js'
 import { getEnvVar } from '../../../config/config.js'
 
@@ -33,47 +34,12 @@ const writeJobParams = async (jobID: string): Promise<void> => {
   }
 }
 
-const wrapLine = (line: string): string[] => {
-  const words = line.split(/\s+/)
-  const wrappedLines: string[] = []
-  let currentLine = ''
-
-  for (const word of words) {
-    if ((currentLine + word).length > 78) {
-      wrappedLines.push(currentLine.trim() + ' -')
-      currentLine = word + ' '
-    } else {
-      currentLine += word + ' '
-    }
-  }
-
-  if (currentLine.trim().length > 0) {
-    wrappedLines.push(
-      currentLine.trim().endsWith('end')
-        ? currentLine.trim()
-        : currentLine.trim() + ' end'
-    )
-  }
-
-  return wrappedLines
-}
-
+// Rewraps long lines with the shared const.inp wrapper, which keeps '-'
+// continuations intact and never adds 'end'. The upload checks have already
+// limited every line to what CHARMM reads, so this only shortens lines.
 const sanitizeConstInpFile = async (filePath: string): Promise<void> => {
   const fileContents = await fs.readFile(filePath, 'utf-8')
-  const lines = fileContents.split('\n')
-  const sanitizedLines: string[] = []
-
-  for (const line of lines) {
-    if (line.length > 78) {
-      const wrappedLines = wrapLine(line)
-      sanitizedLines.push(...wrappedLines)
-    } else {
-      sanitizedLines.push(line)
-    }
-  }
-
-  const sanitizedContent = sanitizedLines.join('\n')
-  await fs.writeFile(filePath, sanitizedContent, 'utf-8')
+  await fs.writeFile(filePath, wrapLongConstInpLines(fileContents), 'utf-8')
 }
 
 const calculateNumEnsembles = async (
@@ -164,7 +130,6 @@ const getFileStats = (filePath: string) => fs.statSync(filePath)
 
 export {
   writeJobParams,
-  wrapLine,
   sanitizeConstInpFile,
   calculateNumEnsembles,
   calculateNumEnsembles2,

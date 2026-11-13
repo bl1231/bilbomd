@@ -208,18 +208,150 @@ export const CONST_INP_ALLOWED_PREFIXES = [
  */
 export const MAX_CONST_INP_SHAPE_COMMANDS = 20
 
+/**
+ * Longest line CHARMM reads in full. Measured with the worker's CHARMM (c49b2):
+ * 200 characters work, 201 break the command. Trailing spaces don't count.
+ */
+export const MAX_CONST_INP_LINE_LENGTH = 200
+
+/**
+ * Longest command CHARMM accepts once '-' continuation lines are joined.
+ * Measured with the worker's CHARMM (c49b2): 5000 characters work, 5025 are
+ * truncated ("Command line too long").
+ */
+export const MAX_CONST_INP_COMMAND_LENGTH = 5000
+
+/**
+ * Width the constraint file writers wrap commands at, well under
+ * MAX_CONST_INP_LINE_LENGTH.
+ */
+export const CONST_INP_WRAP_WIDTH = 77
+
 // CHARMM reads a file one record per line; split on any line ending so a
 // bare carriage return can't hide a second line from the checks below
 const splitLines = (text: string): string[] => text.split(/\r\n|\r|\n/)
 
+// A '-' at the end of a line's code (the part before any '!' comment),
+// followed by nothing but spaces
+const CONTINUATION = /- *$/
+
 /**
- * The first line of a constraint file that doesn't start with one of
- * CONST_INP_ALLOWED_PREFIXES (trimmed), or null when every line does. Blank
- * lines are skipped. The worker runs this on the file right before CHARMM
- * streams it, whatever path the job took to the queue.
+ * Joins CHARMM continuation lines, so each entry is one command as CHARMM runs
+ * it. CHARMM continues a command on the next line when the code before any '!'
+ * comment ends in '-' (trailing spaces allowed), and joins the very next line
+ * with no space added, even a blank one. It does not continue after a tab, a
+ * '-' inside a comment, or a title ('*') line, and it runs the next line as a
+ * command of its own. These checks guard what CHARMM runs, so lines are joined
+ * only where CHARMM was seen to join them (c49b2); anything else stays a
+ * separate entry and is checked on its own.
+ */
+export const joinConstInpLines = (text: string): string[] => {
+  const commands: string[] = []
+  let pending: string | null = null
+  for (const line of splitLines(text)) {
+    const command: string = (pending ?? '') + line
+    const code: string = command.split('!')[0] ?? ''
+    if (!command.trimStart().startsWith('*') && CONTINUATION.test(code)) {
+      pending = code.replace(CONTINUATION, '')
+      continue
+    }
+    commands.push(command)
+    pending = null
+  }
+  if (pending !== null) commands.push(pending)
+  return commands
+}
+
+/**
+ * Splits one CHARMM command into lines of at most `width` characters, each but
+ * the last ending in ' -' so CHARMM reads them as one command. Breaks only at
+ * spaces; a single word longer than `width` gets a line of its own.
+ */
+export const wrapConstInpCommand = (
+  command: string,
+  width: number = CONST_INP_WRAP_WIDTH
+): string[] => {
+  const lines: string[] = []
+  let current = ''
+  for (const word of command.trim().split(/ +/)) {
+    if (current !== '' && current.length + 1 + word.length + 2 > width) {
+      lines.push(`${current} -`)
+      current = word
+    } else {
+      current = current === '' ? word : `${current} ${word}`
+    }
+  }
+  lines.push(current)
+  return lines
+}
+
+/**
+ * Rewraps each line of a constraint file that is longer than `width` at word
+ * boundaries, ending every new line but the last in ' -', so CHARMM still
+ * joins them into the same command. A line that already ends in '-' keeps it
+ * on its last piece, so a continuation stays a continuation; nothing else is
+ * added. Lines that fit, comment and title lines, and lines with a tab, an
+ * inline comment or a carriage return are left as they are (the length checks
+ * already limit them to what CHARMM reads).
+ */
+export const wrapLongConstInpLines = (
+  text: string,
+  width: number = CONST_INP_WRAP_WIDTH
+): string =>
+  text
+    .split('\n')
+    .flatMap((line) => {
+      const trimmed = line.trim()
+      if (
+        line.length <= width ||
+        trimmed.startsWith('*') ||
+        /[\t!\r]/.test(line)
+      ) {
+        return [line]
+      }
+      return wrapConstInpCommand(line, width)
+    })
+    .join('\n')
+
+/**
+ * Why a constraint file has a line or command too long for CHARMM, or null
+ * when every one fits. CHARMM cuts an over-long line short, and the MD steps
+ * run with 'bomlev -2', so the broken command is skipped with only a warning
+ * and its fixed or rigid body is silently left out of the run.
+ */
+export const constInpLengthMessage = (text: string): string | null => {
+  const lineNumber = splitLines(text).findIndex(
+    (line) => line.replace(/ +$/, '').length > MAX_CONST_INP_LINE_LENGTH
+  )
+  if (lineNumber !== -1) {
+    return (
+      `Line ${lineNumber + 1} is longer than ${MAX_CONST_INP_LINE_LENGTH} ` +
+      'characters, which CHARMM cuts short. Split it over several lines, ' +
+      'ending each line but the last with " -".'
+    )
+  }
+  if (
+    joinConstInpLines(text).some(
+      (command) => command.trim().length > MAX_CONST_INP_COMMAND_LENGTH
+    )
+  ) {
+    return (
+      `A command is longer than ${MAX_CONST_INP_COMMAND_LENGTH} characters, ` +
+      'which CHARMM cuts short. Split it into smaller selections.'
+    )
+  }
+  return null
+}
+
+/**
+ * The first command of a constraint file that doesn't start with one of
+ * CONST_INP_ALLOWED_PREFIXES (trimmed), or null when every command does.
+ * Continuation lines are joined first, as CHARMM reads them, and blank lines
+ * are skipped. The worker runs this on the file right before CHARMM streams
+ * it, whatever path the job took to the queue.
  */
 export const findDisallowedConstInpLine = (text: string): string | null => {
-  for (const line of splitLines(text)) {
+  for (const line of joinConstInpLines(text)) {
     const trimmed = line.trim()
     if (trimmed === '') continue
     const lower = trimmed.toLowerCase()
@@ -242,7 +374,7 @@ export const findDisallowedConstInpLine = (text: string): string | null => {
 export const findDuplicateShapeNames = (text: string): string[] => {
   const seen = new Set<string>()
   const duplicates: string[] = []
-  for (const line of splitLines(text)) {
+  for (const line of joinConstInpLines(text)) {
     const match = line.trim().match(/^shape\s+desc\w*\s+(\S+)/i)
     if (!match) continue
     const name = match[1]
@@ -282,10 +414,16 @@ export const checkConstInpText = (
   text: string,
   mode?: string
 ): string | true => {
-  const lines = splitLines(text).filter((line) => line.trim() !== '')
+  // One entry per command, with continuation lines joined as CHARMM reads them
+  const lines = joinConstInpLines(text).filter((line) => line.trim() !== '')
 
   if (lines.length === 0 || lines[lines.length - 1]?.trim() !== 'return') {
     return 'The last line must be "return".'
+  }
+
+  const tooLong = constInpLengthMessage(text)
+  if (tooLong !== null) {
+    return tooLong
   }
 
   const defineLines = lines.filter((line) => line.startsWith('define'))
