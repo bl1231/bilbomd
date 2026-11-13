@@ -189,7 +189,9 @@ services:
       dockerfile: bilbomd-worker-charmm.dockerfile
       args:
         WORKER_IMAGE: ghcr.io/bl1231/bilbomd-worker:2.28.0
-        CHARMM_VER: c49b2
+        # Trying c51b1 on dev before prod (prod stays on c49b2). Only the CGenFF
+        # files BilboMD loads differ from c49b2; protein/NA/carb parameters match.
+        CHARMM_VER: c51b1
         # Leave most of the 96 cores to MD jobs running while this builds
         CHARMM_MAKE_JOBS: '8'
       # Re-pull the worker image (and builder) on every build, like pull_policy: always
