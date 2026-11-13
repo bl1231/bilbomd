@@ -15,7 +15,7 @@ Both are built by CI and pushed to `ghcr.io/bl1231`:
 
 Neither contains CHARMM. Published images only carry software we can share, so CHARMM is compiled on the host that runs it from a source tarball in `charmm/` (gitignored, see [`charmm/README.md`](charmm/README.md)):
 
-- `bilbomd-worker-charmm` (`bilbomd-worker-charmm.dockerfile`): the released `bilbomd-worker` plus CHARMM. The epyc compose files build it on `deploy-to-beamline.sh up` (`pull_policy: build`) and it is never pushed. The Version Packages release keeps its `WORKER_IMAGE` build arg in step with the worker version.
+- `bilbomd-worker-charmm` (`bilbomd-worker-charmm.dockerfile`): the released `bilbomd-worker` plus CHARMM. The epyc compose files build it on `deploy-to-beamline.sh up` (`pull_policy: build`) and it is never pushed. Run `deploy-to-beamline.sh build <env>` first to compile CHARMM without touching the running stack; `up` then reuses the cached build. The compile is capped at 8 parallel jobs (`CHARMM_MAKE_JOBS`) so it leaves CPU to running MD jobs. The Version Packages release keeps its `WORKER_IMAGE` build arg in step with the worker version.
 - Workers without CHARMM (Berkelium, NERSC Spin) fail CHARMM jobs at the start with a message to resubmit with OpenMM. Perlmutter's CHARMM runs use the image below.
 
 Versions inside the base image are pinned in the Dockerfile's `ARG`s (`OPENMM_VERSION`, `OPENMM_CUDA_VERSION`, …). Keep `OPENMM_CUDA_VERSION` at or below the CUDA version the GPU hosts' drivers support: OpenMM compiles its kernels at run time, and a newer NVRTC makes it fall back to the CPU (#1222).

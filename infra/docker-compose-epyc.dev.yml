@@ -181,6 +181,7 @@ services:
   # The released worker image plus CHARMM, built here on every `up` from the
   # tarball in apps/worker/charmm/ (see its README). Cached, so a rebuild only
   # redoes the last layer when the worker version changes. Never pushed.
+  # `deploy-to-beamline.sh build dev` builds it ahead of `up`.
   worker:
     image: bilbomd-worker-charmm:dev
     build:
@@ -189,6 +190,8 @@ services:
       args:
         WORKER_IMAGE: ghcr.io/bl1231/bilbomd-worker:2.26.7
         CHARMM_VER: c49b2
+        # Leave most of the 96 cores to MD jobs running while this builds
+        CHARMM_MAKE_JOBS: '8'
       # Re-pull the worker image (and builder) on every build, like pull_policy: always
       pull: true
     pull_policy: build

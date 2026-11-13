@@ -9,7 +9,9 @@
 #
 # The epyc compose files build it on `up` (pull_policy: build), with the context
 # set to apps/worker; bilbomd-worker-charmm.dockerfile.dockerignore keeps that
-# context down to the tarball. By hand:
+# context down to the tarball. `deploy-to-beamline.sh build <env>` builds it
+# ahead of time without touching the running stack, so `up` then only hits the
+# cache. By hand:
 #
 #   docker build -f bilbomd-worker-charmm.dockerfile \
 #     --build-arg WORKER_IMAGE=ghcr.io/bl1231/bilbomd-worker:<version> \
@@ -36,8 +38,12 @@ RUN --mount=type=bind,source=charmm/${CHARMM_VER}.tar.gz,target=/tmp/charmm.tar.
     mkdir -p /usr/local/src && \
     tar --no-same-owner -xzf /tmp/charmm.tar.gz -C /usr/local/src
 WORKDIR /usr/local/src/charmm
+# Parallel compile jobs; empty means all cores. The epyc compose files cap it so
+# a build doesn't starve MD jobs running on the same host. Declared here, after
+# the extract, so changing it only reruns the compile.
+ARG CHARMM_MAKE_JOBS=
 RUN ./configure && \
-    make -j"$(nproc)" -C build/cmake install && \
+    make -j"${CHARMM_MAKE_JOBS:-$(nproc)}" -C build/cmake install && \
     (strip bin/charmm || true)
 
 # -----------------------------------------------------------------------------

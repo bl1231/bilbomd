@@ -61,6 +61,9 @@ Commands:
   down     <env>              Stop and remove the stack's containers
   restart  <env> [service...] Restart the whole stack, or just the named services
   pull     <env> [service...] Pull the images named in the compose file
+  build    <env> [service...] Build the locally built images (the CHARMM worker)
+                              without touching the running stack; \`up\` then
+                              reuses the cached build
   ps       <env> [service...] Show the stack's containers
   logs     <env> [service...] Follow logs (last 100 lines)
   config   <env>              Print the fully resolved compose config
@@ -83,6 +86,7 @@ Examples:
   $0 logs dev backend worker  # epyc only
   $0 --host epyc down dev
   $0 --dry-run up prod
+  $0 build prod               # build the CHARMM worker on epyc, then: up prod
 EOF
 }
 
@@ -131,7 +135,7 @@ fi
 set -- "${POSITIONAL[@]}"
 
 case "$1" in
-  up|down|restart|pull|ps|logs|config)
+  up|down|restart|pull|build|ps|logs|config)
     COMMAND="$1"
     shift
     ;;
@@ -366,6 +370,19 @@ run_target() {
         echo -e "${GREEN}✅ Restarted on $(short_hostname).${NC}"
       fi
       ;;
+    build)
+      # Only epyc builds anything (the CHARMM worker); hyperion just pulls.
+      if have jq && [[ $# -eq 0 ]] &&
+        [[ "$(compose config --format json 2>/dev/null | jq '[.services[] | select(.build != null)] | length')" == 0 ]]; then
+        echo "Nothing is built locally in $COMPOSE_FILE; skipping."
+        return 0
+      fi
+      check_charmm_source "$@"
+      run_compose build "$@"
+      if [[ $DRY_RUN -eq 0 ]]; then
+        echo -e "${GREEN}✅ Built on $(short_hostname). The running stack is unchanged; 'up' will use this build.${NC}"
+      fi
+      ;;
     pull)
       image_summary
       # Locally built services (the CHARMM worker) have nothing to pull; their
@@ -506,7 +523,7 @@ confirm_prod "${TARGETS[@]}"
 
 if [[ $NO_PULL -eq 0 ]]; then
   case "$COMMAND" in
-    up|pull|restart)
+    up|pull|build|restart)
       # Local targets use this checkout; remote ones use $REMOTE_DIR, which is
       # the same NFS directory on both hosts, so it only needs pulling once —
       # and not at all if it is this checkout.
