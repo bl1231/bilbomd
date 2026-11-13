@@ -1,7 +1,7 @@
 import formModel from './formModel'
 
 const {
-  formField: { pdb_file }
+  formField: { pdb_file, const_inp_file }
 } = formModel
 
 const initialValues = {
@@ -37,6 +37,14 @@ const initialValues = {
         ]
       }
     ]
+  },
+  // Optional: an existing const.inp to start the rigid bodies from
+  [const_inp_file.name]: {
+    file: null,
+    src: null,
+    name: '',
+    // What the import found; null until a const.inp has been read against the PDB
+    notes: null as string[] | null
   }
 }
 

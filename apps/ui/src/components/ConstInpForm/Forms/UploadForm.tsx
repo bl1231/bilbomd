@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useCallback } from 'react'
+import { ChangeEvent, useEffect, useCallback, useState } from 'react'
 import { CARBOHYDRATE_RESIDUES } from '@bilbomd/bilbomd-types'
 import { logger } from 'utils/logger'
 import { Field, useFormikContext } from 'formik'
@@ -8,11 +8,14 @@ import {
   Chip,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Button
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import FileField from '../FormFields/FileField'
 import ChainSummary from '../Helpers/ChainSummary'
+import ImportNotes from '../Helpers/ImportNotes'
+import { importConstInp } from '../Helpers/importConstInp'
 import Paper from '@mui/material/Paper'
 import { useTheme } from '@mui/material/styles'
 import useTitle from 'hooks/useTitle'
@@ -33,6 +36,12 @@ interface MyFormValues {
     name: string
     chains: Chain[]
     rigid_bodies: RigidBody[]
+  }
+  const_inp_file: {
+    file: File | null
+    src: string | null
+    name: string
+    notes: string[] | null
   }
 }
 const proteinResidues = new Set([
@@ -81,6 +90,11 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
   const { values, setFieldValue, setFieldError, isValid, dirty, errors } =
     useFormikContext<MyFormValues>()
   const { name, src, chains, rigid_bodies } = values.pdb_file
+  const constInp = values.const_inp_file
+  const constInpSrc = constInp.src
+  const constInpNotes = constInp.notes
+  // Remounts the const.inp picker on Remove, so it forgets the old file
+  const [constInpKey, setConstInpKey] = useState(0)
 
   const parsePdbFile = useCallback(() => {
     const src = values.pdb_file.src
@@ -218,15 +232,33 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
       })
     })
 
+    // Start from the uploaded const.inp, if any, instead of whole chains
+    const imported = constInpSrc
+      ? importConstInp(constInpSrc, charmmChains)
+      : null
+    const nextRigidBodies = imported ? imported.rigidBodies : demRigidBodies
+    const nextNotes = imported ? imported.notes : null
+
     // Before updating Formik state, check if new data is different from current state
     if (
       JSON.stringify(chains) !== JSON.stringify(charmmChains) ||
-      JSON.stringify(rigid_bodies) !== JSON.stringify(demRigidBodies)
+      JSON.stringify(rigid_bodies) !== JSON.stringify(nextRigidBodies)
     ) {
       void setFieldValue('pdb_file.chains', charmmChains)
-      void setFieldValue('pdb_file.rigid_bodies', demRigidBodies)
+      void setFieldValue('pdb_file.rigid_bodies', nextRigidBodies)
     }
-  }, [values.pdb_file.src, chains, rigid_bodies, setFieldError, setFieldValue])
+    if (JSON.stringify(constInpNotes) !== JSON.stringify(nextNotes)) {
+      void setFieldValue('const_inp_file.notes', nextNotes)
+    }
+  }, [
+    values.pdb_file.src,
+    chains,
+    rigid_bodies,
+    constInpSrc,
+    constInpNotes,
+    setFieldError,
+    setFieldValue
+  ])
 
   const onChange = async (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
@@ -251,11 +283,41 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
     }
   }
 
+  const onConstInpChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    void setFieldValue('const_inp_file.file', file)
+    void setFieldValue('const_inp_file.name', file.name)
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        void setFieldValue('const_inp_file.src', reader.result)
+      }
+    }
+    reader.onerror = (error) => {
+      logger.error('File reading error:', error)
+    }
+    reader.readAsText(file)
+  }
+
+  const removeConstInp = () => {
+    void setFieldValue('const_inp_file', {
+      file: null,
+      src: null,
+      name: '',
+      notes: null
+    })
+    setConstInpKey((key) => key + 1)
+  }
+
   useEffect(() => {
     if (src) {
       parsePdbFile()
     }
   }, [src, parsePdbFile])
+
+  const constInpError =
+    errors.const_inp_file?.file || errors.const_inp_file?.src || ''
 
   useEffect(() => {
     setStepIsValid(isValid && dirty)
@@ -324,6 +386,18 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                     </b>{' '}
                     file with segid names that are compatible with{' '}
                     <b>BilboMD Classic</b>.
+                  </Typography>
+                </li>
+                <li>
+                  <Typography>
+                    Already have a{' '}
+                    <b>
+                      <code>const.inp</code>
+                    </b>{' '}
+                    file? Upload it along with your PDB file to start from its
+                    rigid bodies. The <b>Inp Jiffy{'\u2122'}</b> checks it
+                    against the PDB and writes a new file, so comments and{' '}
+                    <code>define</code> names are not kept.
                   </Typography>
                 </li>
               </ul>
@@ -408,6 +482,43 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                   fileExt=".pdb"
                 />
               </Grid>
+              <Grid
+                size={{ xs: 12 }}
+                sx={{ mt: 2 }}
+              >
+                <Typography sx={{ mb: 1 }}>
+                  Optional: start from an existing <code>const.inp</code> file
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Field
+                    key={constInpKey}
+                    name="const_inp_file.file"
+                    id="const_inp_file"
+                    title="Select const.inp"
+                    as={FileField}
+                    onChange={onConstInpChange}
+                    setFieldValue={setFieldValue}
+                    isError={Boolean(constInpError)}
+                    errorMessage={constInpError}
+                    fileExt=".inp,.txt"
+                  />
+                  {constInp.name && (
+                    <Button
+                      variant="outlined"
+                      onClick={removeConstInp}
+                      sx={{ ml: 2 }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </Box>
+                {constInpSrc && !constInpError && !name && (
+                  <Typography sx={{ m: 1 }}>
+                    Upload the PDB file to check <b>{constInp.name}</b> against
+                    it.
+                  </Typography>
+                )}
+              </Grid>
             </Grid>
           </Paper>
         </Grid>
@@ -435,6 +546,12 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                 ))}
               </Grid>
               <ChainSummary chains={chains}></ChainSummary>
+              {constInpNotes && !constInpError && (
+                <ImportNotes
+                  name={constInp.name}
+                  notes={constInpNotes}
+                />
+              )}
             </Paper>
           </Grid>
         ) : (

@@ -151,3 +151,59 @@ describe('validationSchemas', () => {
     })
   })
 })
+
+describe('File Upload Schema, optional const.inp', () => {
+  const fileUploadSchema = validationSchemas[0]!
+  const pdb_file = {
+    file: new File(['dummy content'], 'example.pdb', { type: 'text/plain' }),
+    name: 'example.pdb'
+  }
+  const constInp = `define fixed1 sele ( resid 1:10 .and. segid PROA ) end
+cons fix sele fixed1 end
+return`
+
+  it('accepts no const.inp at all', async () => {
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: { file: null, src: null, name: '', notes: null }
+      })
+    ).resolves.toBeTruthy()
+  })
+
+  it('accepts a const.inp with a body it can read', async () => {
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: {
+          file: new File([constInp], 'const.inp'),
+          src: constInp,
+          name: 'const.inp'
+        }
+      })
+    ).resolves.toBeTruthy()
+  })
+
+  it('rejects a const.inp with no fixed or rigid body', async () => {
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: {
+          file: new File(['return'], 'const.inp'),
+          src: 'return',
+          name: 'const.inp'
+        }
+      })
+    ).rejects.toThrow('No fixed or rigid bodies could be read from this file.')
+  })
+
+  it('rejects a const.inp over 1MB', async () => {
+    const big = new File(['!'.repeat(1_000_001)], 'const.inp')
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: { file: big, src: constInp, name: 'const.inp' }
+      })
+    ).rejects.toThrow('Max const.inp file size is 1MB')
+  })
+})
