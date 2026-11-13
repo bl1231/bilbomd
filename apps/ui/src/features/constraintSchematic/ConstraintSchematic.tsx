@@ -23,7 +23,6 @@ import {
   buildSchematicModel,
   describeBody,
   describeLinker,
-  FIXED_PALETTE,
   fitViewBox,
   isTaut,
   linkerPath,
@@ -32,6 +31,7 @@ import {
   type Linker,
   type SchematicBody
 } from './schematicModel'
+import { fixedColor as fixedPaletteColor } from './constraintColors'
 import {
   createSchematicSimulation,
   seededRandom,
@@ -241,7 +241,7 @@ export const ConstraintSchematic = ({
   const dimmed = (...keys: string[]) =>
     highlight !== null && !keys.includes(highlight)
 
-  const fixedColor = dark ? FIXED_PALETTE[1] : FIXED_PALETTE[0]
+  const fixedColor = fixedPaletteColor(dark)
   const surface = theme.palette.background.paper
   const fixedBeads = model.beads.filter((b) => b.body.kind === 'fixed')
   const chainsOf = (beads: { chainId: string }[]) =>

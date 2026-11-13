@@ -49,8 +49,14 @@ describe('buildChainTracks', () => {
       ['B', 196]
     ])
     expect(tracks[1]?.segments).toEqual([
-      { type: 'fixed', bodyName: 'Core', start: 16, stop: 42 },
-      { type: 'rigid', bodyName: 'Arm', start: 67, stop: 196 }
+      {
+        type: 'fixed',
+        bodyName: 'Core',
+        colorIndex: null,
+        start: 16,
+        stop: 42
+      },
+      { type: 'rigid', bodyName: 'Arm', colorIndex: 0, start: 67, stop: 196 }
     ])
   })
 
@@ -259,5 +265,31 @@ describe('MDConstraintsRenderer', () => {
     )
     expect(screen.getByText('Empty')).toBeInTheDocument()
     expect(screen.queryByTestId(/constraint-track-/)).not.toBeInTheDocument()
+  })
+})
+
+describe('per-body colors', () => {
+  it('gives each rigid body its own color on the track', () => {
+    render(
+      <MDConstraintsRenderer
+        constraints={{
+          rigid_bodies: [
+            {
+              name: 'RigidBody1',
+              segments: [{ chain_id: 'A', residues: { start: 1, stop: 50 } }]
+            },
+            {
+              name: 'RigidBody2',
+              segments: [{ chain_id: 'A', residues: { start: 60, stop: 90 } }]
+            }
+          ]
+        }}
+      />
+    )
+    const [first, second] = screen
+      .getAllByTestId('constraint-track-segment')
+      .filter((el) => el.getAttribute('data-type') === 'rigid')
+    expect(first).toHaveStyle({ backgroundColor: '#e8710a' })
+    expect(second).toHaveStyle({ backgroundColor: '#12946b' })
   })
 })

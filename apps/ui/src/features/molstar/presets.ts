@@ -670,8 +670,8 @@ export const createUniformColorPreset = (colorValue: number, alpha = 1) =>
 
 export const ShowButtons = PluginConfig.item('showButtons', true)
 
-// Colors matching MDConstraintsRenderer; a body may bring its own instead
-// (see domainColoring.ts)
+// Fallback colors for a body that brings none. MD jobs pass per-body colors
+// from the shared constraint palette (see domainColoring.ts)
 const FIXED_COLOR = Color(0x2f54eb)
 const RIGID_COLOR = Color(0xfa8c16)
 const bodyColor = (color: number | undefined, fallback: Color): Color =>

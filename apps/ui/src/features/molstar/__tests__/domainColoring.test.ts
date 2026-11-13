@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import type { AlignmentReport } from 'features/jobdetail/rigidDomains'
-import { alignmentDomainColoring } from '../domainColoring'
+import {
+  alignmentDomainColoring,
+  mdConstraintsColoring
+} from '../domainColoring'
 
 const report = {
   method: 'rigid-domain',
@@ -70,5 +73,38 @@ describe('alignmentDomainColoring', () => {
     expect(
       alignmentDomainColoring({ ...report, domains: [] } as AlignmentReport)
     ).toBeUndefined()
+  })
+})
+
+describe('mdConstraintsColoring', () => {
+  const seg = (start: number) => ({
+    chain_id: 'A',
+    residues: { start, stop: start + 9 }
+  })
+
+  it('colors fixed bodies blue and each rigid body from the shared palette', () => {
+    expect(
+      mdConstraintsColoring({
+        fixed_bodies: [{ name: 'FixedBody1', segments: [seg(1)] }],
+        rigid_bodies: [
+          { name: 'RigidBody1', segments: [seg(20)] },
+          { name: 'Empty', segments: [] },
+          { name: 'RigidBody2', segments: [seg(40)] }
+        ]
+      })
+    ).toEqual({
+      fixed_bodies: [
+        { name: 'FixedBody1', segments: [seg(1)], color: 0x2f54eb }
+      ],
+      rigid_bodies: [
+        { name: 'RigidBody1', segments: [seg(20)], color: 0xe8710a },
+        { name: 'Empty', segments: [] },
+        { name: 'RigidBody2', segments: [seg(40)], color: 0x12946b }
+      ]
+    })
+  })
+
+  it('is undefined without constraints', () => {
+    expect(mdConstraintsColoring(undefined)).toBeUndefined()
   })
 })

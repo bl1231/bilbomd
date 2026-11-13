@@ -1,6 +1,7 @@
 import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 import { packEnclose, packSiblings } from 'd3-hierarchy'
 import type { SimulationNodeDatum } from 'd3-force'
+import { fixedColor, rigidColor } from './constraintColors'
 
 // A bead-and-spring picture of a constraint file. Each constrained segment is
 // a bead, every flexible stretch between two segments on a chain is a spring,
@@ -504,28 +505,10 @@ export const visibleLabels = (
   return shown
 }
 
-// Rigid-body colors, light and dark. Fixed keeps the blue the other
-// constraint views use; none of these is close to it.
-export const RIGID_PALETTE: [string, string][] = [
-  ['#e8710a', '#ff9a3d'],
-  ['#12946b', '#3cc79a'],
-  ['#c93a72', '#f06ba0'],
-  ['#7c4dcc', '#a98af0'],
-  ['#9c7600', '#d9ae2a'],
-  ['#0a8fa8', '#3cc0d8'],
-  ['#b83227', '#ef6d61'],
-  ['#5f8a1f', '#93c050'],
-  ['#c2780a', '#f2b23a']
-]
-export const FIXED_PALETTE: [string, string] = ['#2f54eb', '#7896ff']
-
 export const bodyColor = (body: SchematicBody, dark: boolean): string => {
-  const pick = ([light, darkColor]: [string, string]) =>
-    dark ? darkColor : light
-  if (body.kind === 'fixed') return pick(FIXED_PALETTE)
-  if (body.kind === 'tail' || body.colorIndex === null)
+  if (body.kind === 'fixed') return fixedColor(dark)
+  if (body.kind === 'tail' || body.colorIndex === null) {
     return dark ? '#9aa5b5' : '#5d6878'
-  return pick(
-    RIGID_PALETTE[body.colorIndex % RIGID_PALETTE.length] as [string, string]
-  )
+  }
+  return rigidColor(body.colorIndex, dark)
 }

@@ -3,7 +3,7 @@ import React from 'react'
 import type { JobView } from 'features/jobdetail/jobView'
 import type { MongoDBProperty } from '../types'
 import { createJobHandler } from '../handlers/jobHandlerFactory'
-import { MDConstraintsRenderer } from '../components/MDConstraintsRenderer'
+import { MDConstraintsSection } from '../components/MDConstraintsSection'
 
 // Input files and MD parameters for the job page's Inputs section. Job type,
 // engine and timings are shown in the page header instead.
@@ -19,7 +19,7 @@ export const useJobProperties = (
             {
               label: 'MD Constraints',
               render: () =>
-                React.createElement(MDConstraintsRenderer, { constraints })
+                React.createElement(MDConstraintsSection, { constraints })
             }
           ]
         : []
