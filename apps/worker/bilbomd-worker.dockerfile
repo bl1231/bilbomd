@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.10
+ARG BASE_IMAGE=ghcr.io/bl1231/bilbomd-worker-base:0.0.11
 ########################################
 # Stage 1: deps (prefetch pnpm store)
 ########################################
