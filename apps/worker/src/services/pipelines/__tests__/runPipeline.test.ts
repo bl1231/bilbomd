@@ -46,6 +46,14 @@ vi.mock('../../functions/progress-tracker.js', () => ({
   })
 }))
 
+const { assertCharmmAvailableMock } = vi.hoisted(() => ({
+  assertCharmmAvailableMock: vi.fn(async () => undefined)
+}))
+
+vi.mock('../../functions/charmm.js', () => ({
+  assertCharmmAvailable: assertCharmmAvailableMock
+}))
+
 import { runPipeline, type PipelineDefinition } from '../runPipeline.js'
 
 type TestJob = IJob & { flag?: boolean }
@@ -113,6 +121,33 @@ describe('runPipeline', () => {
         )
       )
     ).rejects.toThrow('The pdb pipeline does not support md_engine=CHARMM')
+    expect(calls).not.toContain('init')
+  })
+
+  it('checks that CHARMM is installed before initializing a CHARMM job', async () => {
+    assertCharmmAvailableMock.mockImplementationOnce(async () => {
+      calls.push('charmm-check')
+    })
+    await runPipeline(mq, define({ uuid: 'u', md_engine: 'CHARMM' }))
+
+    expect(assertCharmmAvailableMock).toHaveBeenCalledTimes(1)
+    expect(calls.indexOf('charmm-check')).toBeLessThan(calls.indexOf('init'))
+  })
+
+  it('does not look for CHARMM on OpenMM jobs', async () => {
+    await runPipeline(mq, define({ uuid: 'u', md_engine: 'OpenMM' }))
+
+    expect(assertCharmmAvailableMock).not.toHaveBeenCalled()
+  })
+
+  it('fails a CHARMM job without initializing when CHARMM is missing', async () => {
+    assertCharmmAvailableMock.mockRejectedValueOnce(
+      new Error('CHARMM is not installed on this BilboMD worker')
+    )
+
+    await expect(
+      runPipeline(mq, define({ uuid: 'u' }, { fixedEngine: 'CHARMM' }))
+    ).rejects.toThrow('CHARMM is not installed on this BilboMD worker')
     expect(calls).not.toContain('init')
   })
 

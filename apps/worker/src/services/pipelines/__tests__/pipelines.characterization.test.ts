@@ -71,6 +71,11 @@ vi.mock('../../functions/charmm-md.js', () => ({
   runMolecularDynamics: record('runMolecularDynamics')
 }))
 
+// The test machine has no CHARMM binary; runPipeline.test.ts covers the check.
+vi.mock('../../functions/charmm.js', () => ({
+  assertCharmmAvailable: vi.fn(async () => undefined)
+}))
+
 vi.mock('../../functions/multifoxs.js', () => ({
   runMultiFoxs: record('runMultiFoxs')
 }))

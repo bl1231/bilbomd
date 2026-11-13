@@ -52,6 +52,21 @@ describe('syncContent', () => {
     assert.match(out, /bilbomd-ui\n {4}tag: 2\.35\.5\n/)
   })
 
+  it('updates the worker image a locally built compose service is based on', () => {
+    const input = [
+      '  worker:',
+      '    image: bilbomd-worker-charmm:prod',
+      '    build:',
+      '      args:',
+      '        WORKER_IMAGE: ghcr.io/bl1231/bilbomd-worker:2.26.7',
+      ''
+    ].join('\n')
+    assert.equal(
+      syncContent(input, 'bilbomd-worker', '2.27.0'),
+      input.replace('bilbomd-worker:2.26.7', 'bilbomd-worker:2.27.0')
+    )
+  })
+
   it('does not touch other images that share a name prefix', () => {
     const input =
       '  ui:\n    repository: harbor.bk.lbl.gov/ghcr.io/bl1231/bilbomd-ui-extra\n    tag: 1.0.0\n'

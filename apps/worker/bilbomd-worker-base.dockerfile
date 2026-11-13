@@ -3,7 +3,6 @@
 FROM nvidia/cuda:12.9.2-devel-ubuntu22.04 AS install-dependencies
 
 # Pin versions for better caching
-ARG CHARMM_VER=c49b2
 ARG OPENMM_VERSION=8.6.1
 ARG PYTHON_VERSION=3.12
 # CUDA version of the OpenMM conda env (cuda-version / cuda-nvrtc). OpenMM
@@ -43,22 +42,13 @@ RUN make -j"$(nproc)" GPU=1 TARGET=foxs-gpu NVCCFLAGS="-O3 -std=c++17 ${FOXS_CUD
     git rev-parse HEAD > FOXS_REF
 WORKDIR /
 
-# -----------------------------------------------------------------------------
-# Build CHARMM
-FROM install-dependencies AS build_charmm
-RUN wget https://bl1231.als.lbl.gov/pickup/charmm/${CHARMM_VER}.tar.gz -O /usr/local/src/${CHARMM_VER}.tar.gz
-RUN mkdir -p /usr/local/src/charmm && \
-    tar -zxvf /usr/local/src/${CHARMM_VER}.tar.gz -C /usr/local/src && \
-    rm /usr/local/src/${CHARMM_VER}.tar.gz && \
-    cd /usr/local/src/charmm && \
-    ./configure && \
-    make -j$(nproc) -C build/cmake install && \
-    strip /usr/local/src/charmm/bin/charmm || true
-
+# CHARMM is not in this image: it is published, so it only carries software we
+# can share. Deployments that run CHARMM jobs build bilbomd-worker-charmm.dockerfile
+# on top of the worker image, on the host, from a local CHARMM source tarball.
 
 # -----------------------------------------------------------------------------
 # Miniforge / Conda base build stage
-FROM build_charmm AS install-conda
+FROM install-dependencies AS install-conda
 RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
     bash Miniforge3-$(uname)-$(uname -m).sh -b -p "/opt/envs/base" && \
     rm Miniforge3-$(uname)-$(uname -m).sh
@@ -216,8 +206,6 @@ RUN add-apt-repository -y ppa:salilab/ppa && \
 RUN mkdir -p /bilbomd/uploads /bilbomd/logs /opt/envs/openmm /opt/envs/base
 
 # ---- Copy runtime artifacts from builder stages ----
-COPY --from=build_charmm /usr/local/src/charmm/bin/charmm /usr/local/bin/charmm
-COPY --from=build_charmm /usr/local/src/charmm/toppar /app/charmm-toppar
 COPY --from=install-sans-tools /usr/local/bin/Pepsi-SANS /usr/local/bin/Pepsi-SANS
 COPY --from=build-foxs-gpu /src/foxs/foxs-gpu /usr/local/bin/foxs-gpu
 COPY --from=build-foxs-gpu /src/foxs/FOXS_REF /usr/local/share/foxs-gpu/FOXS_REF

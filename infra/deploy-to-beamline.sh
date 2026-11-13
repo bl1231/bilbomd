@@ -61,6 +61,9 @@ Commands:
   down     <env>              Stop and remove the stack's containers
   restart  <env> [service...] Restart the whole stack, or just the named services
   pull     <env> [service...] Pull the images named in the compose file
+  build    <env> [service...] Build the locally built images (the CHARMM worker)
+                              without touching the running stack; \`up\` then
+                              reuses the cached build
   ps       <env> [service...] Show the stack's containers
   logs     <env> [service...] Follow logs (last 100 lines)
   config   <env>              Print the fully resolved compose config
@@ -83,6 +86,7 @@ Examples:
   $0 logs dev backend worker  # epyc only
   $0 --host epyc down dev
   $0 --dry-run up prod
+  $0 build prod               # build the CHARMM worker on epyc, then: up prod
 EOF
 }
 
@@ -131,7 +135,7 @@ fi
 set -- "${POSITIONAL[@]}"
 
 case "$1" in
-  up|down|restart|pull|ps|logs|config)
+  up|down|restart|pull|build|ps|logs|config)
     COMMAND="$1"
     shift
     ;;
@@ -282,12 +286,47 @@ check_external_volumes() {
   fi
 }
 
+# Services built here with CHARMM (the epyc worker) compile it from a tarball in
+# their build context, which is gitignored and has to be put there by hand
+# (apps/worker/charmm/README.md). Without it the build fails deep inside
+# BuildKit, so check first. Only the services being started are checked.
+check_charmm_source() {
+  if ! have jq; then
+    echo -e "${YELLOW}⚠️  jq not found — skipping the CHARMM source check.${NC}"
+    return 0
+  fi
+
+  local missing=() svc tarball wanted s
+  while IFS=$'\t' read -r svc tarball; do
+    [[ -z "$svc" ]] && continue
+    if [[ $# -gt 0 ]]; then
+      wanted=0
+      for s in "$@"; do [[ "$s" == "$svc" ]] && wanted=1; done
+      [[ $wanted -eq 1 ]] || continue
+    fi
+    [[ -f "$tarball" ]] || missing+=("$svc: $tarball")
+  done < <(compose config --format json 2>/dev/null |
+    jq -r '.services | to_entries[]
+      | select(.value.build.args.CHARMM_VER? != null)
+      | "\(.key)\t\(.value.build.context)/charmm/\(.value.build.args.CHARMM_VER).tar.gz"')
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo -e "${RED}❌ CHARMM source tarball not found:${NC}" >&2
+    printf '   %s\n' "${missing[@]}" >&2
+    echo -e "${YELLOW}See apps/worker/charmm/README.md.${NC}" >&2
+    exit 1
+  fi
+}
+
 # Print the image each service will run, so you can see what is about to start.
+# A locally built image also shows the released image it is built on.
 image_summary() {
   echo -e "${BLUE}📦 Images in $COMPOSE_FILE:${NC}"
   if have jq; then
     compose config --format json 2>/dev/null |
-      jq -r '.services | to_entries[] | "   \(.key)\t\(.value.image // "(built locally)")"' |
+      jq -r '.services | to_entries[]
+        | "   \(.key)\t\(.value.image // "(built locally)")\(
+            if .value.build.args.WORKER_IMAGE? then " (built on \(.value.build.args.WORKER_IMAGE))" else "" end)"' |
       column -t -s $'\t'
   else
     compose config --images 2>/dev/null | sed 's/^/   /'
@@ -310,6 +349,7 @@ run_target() {
       check_intel
       image_summary
       check_external_volumes
+      check_charmm_source "$@"
       run_compose up -d "$@"
       if [[ $DRY_RUN -eq 0 ]]; then
         echo "--------------------------------"
@@ -330,9 +370,24 @@ run_target() {
         echo -e "${GREEN}✅ Restarted on $(short_hostname).${NC}"
       fi
       ;;
+    build)
+      # Only epyc builds anything (the CHARMM worker); hyperion just pulls.
+      if have jq && [[ $# -eq 0 ]] &&
+        [[ "$(compose config --format json 2>/dev/null | jq '[.services[] | select(.build != null)] | length')" == 0 ]]; then
+        echo "Nothing is built locally in $COMPOSE_FILE; skipping."
+        return 0
+      fi
+      check_charmm_source "$@"
+      run_compose build "$@"
+      if [[ $DRY_RUN -eq 0 ]]; then
+        echo -e "${GREEN}✅ Built on $(short_hostname). The running stack is unchanged; 'up' will use this build.${NC}"
+      fi
+      ;;
     pull)
       image_summary
-      run_compose pull "$@"
+      # Locally built services (the CHARMM worker) have nothing to pull; their
+      # base images are pulled when `up` builds them.
+      run_compose pull --ignore-buildable "$@"
       ;;
     ps)
       run_compose ps "$@"
@@ -468,7 +523,7 @@ confirm_prod "${TARGETS[@]}"
 
 if [[ $NO_PULL -eq 0 ]]; then
   case "$COMMAND" in
-    up|pull|restart)
+    up|pull|build|restart)
       # Local targets use this checkout; remote ones use $REMOTE_DIR, which is
       # the same NFS directory on both hosts, so it only needs pulling once —
       # and not at all if it is this checkout.

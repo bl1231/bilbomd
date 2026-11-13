@@ -41,8 +41,9 @@ ENV PATH="/miniforge3/envs/bilbomd/bin:/miniforge3/bin:${PATH}"
 FROM build-conda AS build-charmm
 ARG CHARMM_VER=c49b2
 
-# COPY ./charmm/${CHARMM_VER}.tar.gz /usr/local/src/
-RUN wget https://bl1231.als.lbl.gov/pickup/charmm/${CHARMM_VER}.tar.gz -O /usr/local/src/${CHARMM_VER}.tar.gz
+# Build from the repo root with the CHARMM source tarball in apps/worker/charmm/
+# (see its README). Only the compiled binary reaches the final stage.
+COPY apps/worker/charmm/${CHARMM_VER}.tar.gz /usr/local/src/
 RUN mkdir -p /usr/local/src && \
     tar -zxvf /usr/local/src/${CHARMM_VER}.tar.gz -C /usr/local/src && \
     rm /usr/local/src/${CHARMM_VER}.tar.gz
