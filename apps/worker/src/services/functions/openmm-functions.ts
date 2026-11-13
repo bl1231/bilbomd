@@ -10,7 +10,10 @@ import {
   IBilboMDSteps,
   IStepStatus
 } from '@bilbomd/mongodb-schema'
-import { CARBOHYDRATE_RESIDUES } from '@bilbomd/bilbomd-types'
+import {
+  CARBOHYDRATE_RESIDUES,
+  findOpenMMIgnoredConstInpLines
+} from '@bilbomd/bilbomd-types'
 import { logger } from '../../helpers/loggers.js'
 import { updateStepStatus } from './mongo-utils.js'
 import { handleError } from './job-utils.js'
@@ -230,6 +233,15 @@ const prepareOpenMMConfig = async (DBjob: OmmCapableJob): Promise<void> => {
     const constInpPath = path.join(workDir, DBjob.const_inp_file)
     if (await fs.pathExists(constInpPath)) {
       try {
+        // New jobs are checked at upload; say so if an older one loses lines
+        const ignored = findOpenMMIgnoredConstInpLines(
+          await fs.readFile(constInpPath, 'utf8')
+        )
+        if (ignored.length > 0) {
+          logger.warn(
+            `const.inp lines OpenMM will not apply: ${ignored.join(' | ')}`
+          )
+        }
         const yamlContent = await convertInpToYaml(constInpPath, logger)
         const constCfg = YAML.parse(yamlContent)
         if (constCfg?.constraints) {

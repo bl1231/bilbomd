@@ -13,6 +13,7 @@ import {
   isSansData,
   analyzeSaxsFile,
   isValidConstInpFile,
+  isOpenMMConstInpFile,
   hasAllowedResiduesOnly,
   isPsfData,
   isCRD,
@@ -199,6 +200,21 @@ export const constInpCheck = (mode?: 'pdb' | 'crd_psf') =>
       return this.createError({ message: result })
     }
     return true
+  })
+
+/**
+ * For OpenMM jobs: every constraint in the const.inp must reach OpenMM, as the
+ * upload check requires. Uses the sibling md_engine ('openmm' | 'charmm');
+ * CHARMM reads the file itself.
+ */
+export const openmmConstInpCheck = () =>
+  mixed().test('openmm-const-inp-check', '', async function (file) {
+    if (!(file instanceof File) || this.parent?.md_engine !== 'openmm') {
+      return true
+    }
+    const result = await isOpenMMConstInpFile(file)
+    if (result === true) return true
+    return this.createError({ message: result })
   })
 
 export const jsonFileCheck = () =>

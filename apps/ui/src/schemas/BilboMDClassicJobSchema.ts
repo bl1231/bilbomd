@@ -12,6 +12,7 @@ import {
   pdbLineStartCheck,
   singleModelCheck,
   constInpCheck,
+  openmmConstInpCheck,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
   pdbOrCifResidueCheck
@@ -63,6 +64,7 @@ const BilboMDClassicJobSchema = object().shape({
   inp_file: mixed()
     .concat(requiredFile('A CONST.INP file is required'))
     .concat(constInpCheck())
+    .concat(openmmConstInpCheck())
     .concat(fileSizeTest(2_000_000))
     .concat(fileExtTest('inp'))
     .concat(noSpacesTest())
