@@ -6,7 +6,11 @@ import {
   useRef,
   useState
 } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type {
+  FocusEvent as ReactFocusEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent
+} from 'react'
 import {
   Box,
   Button,
@@ -22,6 +26,7 @@ import {
   bodyColor,
   buildSchematicModel,
   describeBody,
+  describeFixedBodies,
   describeLinker,
   fitViewBox,
   isTaut,
@@ -40,13 +45,22 @@ import {
 import { BAR_HEIGHT, layoutTracks } from './trackLayout'
 
 const HINT =
-  'Hover a bead or a spring for details. Drag a rigid body to see how far its linkers let it go.'
+  'Hover a bead or a spring for details. Drag a rigid body, or focus it and use the arrow keys, to see how far its linkers let it go.'
 const FIXED_MESSAGE = 'Fixed segments stay where they are during MD.'
 
 const labelY = (body: SchematicBody) =>
   body.y + body.R + (body.beads.length > 1 ? 19 : 14)
 
 type Drag = { body: SchematicBody; dx: number; dy: number }
+
+// How far one arrow key press pulls a rigid body (three times with Shift)
+const NUDGE = 12
+const NUDGES: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1]
+}
 
 // Puts the hover popup beside the pointer, kept inside the component, flipping
 // above the pointer near the bottom edge. Set directly on the element, so
@@ -88,6 +102,13 @@ export const ConstraintSchematic = ({
     noSsr: true
   })
   const [playing, setPlaying] = useState(() => !reducedMotion)
+  // Turning reduced motion on while the panel is open pauses the motion; the
+  // user can still start it again
+  const [prevReducedMotion, setPrevReducedMotion] = useState(reducedMotion)
+  if (reducedMotion !== prevReducedMotion) {
+    setPrevReducedMotion(reducedMotion)
+    if (reducedMotion) setPlaying(false)
+  }
   const playingRef = useRef(playing)
   // How strongly the bodies jiggle while the motion plays
   const [motion, setMotion] = useState(1)
@@ -171,8 +192,10 @@ export const ConstraintSchematic = ({
   }, [sim, rigidBodies])
 
   useEffect(() => {
+    // Pausing stops at once rather than letting the layout drift to rest; a
+    // drag or a nudge starts it again
     if (playing) sim.simulation.alphaTarget(0.3).restart()
-    else sim.simulation.alphaTarget(0)
+    else sim.simulation.alphaTarget(0).stop()
   }, [sim, playing])
 
   const toSvg = (event: ReactPointerEvent) => {
@@ -203,11 +226,40 @@ export const ConstraintSchematic = ({
     if (p) body.target = { x: p.x + current.dx, y: p.y + current.dy }
   }
 
+  // Lets go of a body that a drag or the arrow keys were pulling
+  const release = (body: SchematicBody) => {
+    body.target = null
+    if (!playingRef.current) sim.simulation.alphaTarget(0)
+  }
+
   const endDrag = (body: SchematicBody) => {
     if (drag.current?.body !== body) return
     drag.current = null
-    body.target = null
-    if (!playingRef.current) sim.simulation.alphaTarget(0)
+    release(body)
+  }
+
+  // Arrow keys pull a focused rigid body through the same target as a drag,
+  // so its linkers limit it the same way. Escape lets go.
+  const nudge = (body: SchematicBody, event: ReactKeyboardEvent) => {
+    if (event.key === 'Escape') {
+      release(body)
+      return
+    }
+    const direction = NUDGES[event.key]
+    if (!direction) return
+    event.preventDefault()
+    const step = event.shiftKey ? NUDGE * 3 : NUDGE
+    // Start again from the body if earlier presses pulled past its reach
+    const held = body.target
+    const base =
+      held && Math.hypot(held.x - body.x, held.y - body.y) < 3 * step
+        ? held
+        : { x: body.x, y: body.y }
+    body.target = {
+      x: base.x + direction[0] * step,
+      y: base.y + direction[1] * step
+    }
+    sim.simulation.alphaTarget(0.3).restart()
   }
 
   const placeTip = () =>
@@ -237,6 +289,35 @@ export const ConstraintSchematic = ({
     setHighlight(null)
     setReadout(HINT)
     hideTip()
+  }
+
+  // A focused body: highlighted, read out for screen readers, and shown in
+  // the popup beside it
+  const focusBody = (body: SchematicBody, el: Element) => {
+    const text = describeBody(model, body)
+    const rect = el.getBoundingClientRect()
+    pointer.current = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    }
+    setHighlight(body.key)
+    setReadout(text)
+    setTipText(text)
+  }
+  const blurBody = (body: SchematicBody) => {
+    release(body)
+    leave()
+  }
+
+  // Legend chips: the body's segments go to the status line, which screen
+  // readers announce
+  const chipEnter = (key: string, text: string) => {
+    setHighlight(key)
+    setReadout(text)
+  }
+  const chipLeave = () => {
+    setHighlight(null)
+    setReadout(HINT)
   }
   const dimmed = (...keys: string[]) =>
     highlight !== null && !keys.includes(highlight)
@@ -321,6 +402,13 @@ export const ConstraintSchematic = ({
             maxHeight: 560,
             touchAction: 'none'
           },
+          // A focused rigid body gets a ring in the focus color
+          '& g[tabindex]:focus': { outline: 'none' },
+          '& g[tabindex]:focus-visible .bead, & g[tabindex]:focus-visible .halo':
+            {
+              stroke: theme.palette.primary.main,
+              strokeWidth: 3
+            },
           '& .linker': {
             fill: 'none',
             stroke: theme.palette.text.secondary,
@@ -357,7 +445,7 @@ export const ConstraintSchematic = ({
         <svg
           ref={svgRef}
           viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-          role="img"
+          role="group"
           aria-label="Bead-and-spring schematic of the fixed, rigid and flexible regions"
         >
           <defs>
@@ -431,6 +519,16 @@ export const ConstraintSchematic = ({
                   data-kind={body.kind}
                   opacity={dimmed(body.key) ? 0.18 : 1}
                   style={{ cursor: body.pinned ? 'not-allowed' : 'grab' }}
+                  {...(body.kind === 'rigid' && {
+                    tabIndex: 0,
+                    role: 'button',
+                    'aria-roledescription': 'movable rigid body',
+                    'aria-label': `${describeBody(model, body)}. Arrow keys pull it, Shift for bigger steps, Escape lets go.`,
+                    onKeyDown: (e: ReactKeyboardEvent) => nudge(body, e),
+                    onFocus: (e: ReactFocusEvent<SVGGElement>) =>
+                      focusBody(body, e.currentTarget),
+                    onBlur: () => blurBody(body)
+                  })}
                   ref={(el) => {
                     if (!el) return
                     bodyEls.current.set(body, el)
@@ -465,6 +563,7 @@ export const ConstraintSchematic = ({
                     <>
                       {body.kind === 'rigid' && body.beads.length > 1 && (
                         <circle
+                          className="halo"
                           r={body.R + 5}
                           fill={color}
                           fillOpacity={0.13}
@@ -475,6 +574,7 @@ export const ConstraintSchematic = ({
                       {body.beads.map((bead) => (
                         <circle
                           key={`${bead.chainId}-${bead.start}`}
+                          className="bead"
                           data-testid="schematic-bead"
                           cx={bead.ox}
                           cy={bead.oy}
@@ -570,10 +670,10 @@ export const ConstraintSchematic = ({
               />
             }
             label={`Fixed (pinned) · ${segmentCount(fixedBeads.length)} · ${chainsOf(fixedBeads)}`}
-            onMouseEnter={() => setHighlight('fixed')}
-            onMouseLeave={() => setHighlight(null)}
-            onFocus={() => setHighlight('fixed')}
-            onBlur={() => setHighlight(null)}
+            onMouseEnter={() => chipEnter('fixed', describeFixedBodies(model))}
+            onMouseLeave={chipLeave}
+            onFocus={() => chipEnter('fixed', describeFixedBodies(model))}
+            onBlur={chipLeave}
           />
         )}
         {rigidBodies.map((body) => (
@@ -595,10 +695,10 @@ export const ConstraintSchematic = ({
               />
             }
             label={`${body.name} · ${segmentCount(body.beads.length)} · ${chainsOf(body.beads)}`}
-            onMouseEnter={() => setHighlight(body.key)}
-            onMouseLeave={() => setHighlight(null)}
-            onFocus={() => setHighlight(body.key)}
-            onBlur={() => setHighlight(null)}
+            onMouseEnter={() => chipEnter(body.key, describeBody(model, body))}
+            onMouseLeave={chipLeave}
+            onFocus={() => chipEnter(body.key, describeBody(model, body))}
+            onBlur={chipLeave}
           />
         ))}
         <Chip

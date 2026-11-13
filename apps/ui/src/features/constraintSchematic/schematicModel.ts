@@ -102,14 +102,34 @@ const newBody = (
   y: 0
 })
 
-// Packs a body's beads into a tight cluster around its center
-const packBeads = (body: SchematicBody) => {
-  const circles = body.beads.map((bead) => ({
-    r: bead.r + 2,
-    bead,
-    x: 0,
-    y: 0
-  }))
+// Gap between two beads' surfaces from their offsets in one body
+const offsetGap = (a: Bead, b: Bead) =>
+  Math.hypot(b.ox - a.ox, b.oy - a.oy) - a.r - b.r
+
+// Beads side by side in sequence order, centered on the body
+const layOutInRow = (ordered: Bead[]) => {
+  let x = 0
+  for (const bead of ordered) {
+    bead.ox = x + bead.r + 2
+    bead.oy = 0
+    x += 2 * (bead.r + 2)
+  }
+  for (const bead of ordered) bead.ox -= x / 2
+  return x / 2
+}
+
+/**
+ * Packs a body's beads into a tight cluster around its center. The beads are
+ * fixed relative to each other from then on, so a linker between two beads of
+ * the same body can never stretch or relax: if the packing puts its ends
+ * further apart than it can reach, the beads go in a row in sequence order
+ * instead, where consecutive segments touch.
+ */
+export const packBeads = (body: SchematicBody, linkers: Linker[]): void => {
+  const ordered = [...body.beads].sort(
+    (a, b) => a.chainId.localeCompare(b.chainId) || a.start - b.start
+  )
+  const circles = ordered.map((bead) => ({ r: bead.r + 2, bead, x: 0, y: 0 }))
   packSiblings(circles)
   const enclosing = packEnclose(circles) ?? { x: 0, y: 0, r: 0 }
   for (const c of circles) {
@@ -117,7 +137,12 @@ const packBeads = (body: SchematicBody) => {
     c.bead.oy = c.y - enclosing.y
   }
   body.R = enclosing.r
-  body.residues = body.beads.reduce((sum, b) => sum + b.n, 0)
+  const internal = linkers.filter(
+    (l) => l.n > 0 && l.a.body === body && l.b.body === body
+  )
+  if (internal.some((l) => offsetGap(l.a, l.b) > l.max)) {
+    body.R = layOutInRow(ordered)
+  }
 }
 
 export const buildSchematicModel = (
@@ -146,7 +171,7 @@ export const buildSchematicModel = (
       beads.push(bead)
     }
     if (body.beads.length === 0) return
-    packBeads(body)
+    body.residues = body.beads.reduce((sum, b) => sum + b.n, 0)
     bodies.push(body)
   }
 
@@ -211,6 +236,11 @@ export const buildSchematicModel = (
     }
   }
 
+  // Packed once the linkers are known, so a body's internal linkers fit
+  for (const body of bodies) {
+    if (body.kind !== 'tail') packBeads(body, linkers)
+  }
+
   return { bodies, beads, linkers, chainIds, fixedCount, rigidCount }
 }
 
@@ -242,13 +272,24 @@ export const isTaut = (linker: Linker): boolean =>
   linker.n > 0 && surfaceGap(linker).gap >= linker.max * 0.97
 
 /** Pulls bodies back so no linker stretches past its full length. */
-export const applyLinkerLimits = (model: SchematicModel, passes = 3): void => {
-  for (let pass = 0; pass < passes; pass++) {
+export const applyLinkerLimits = (
+  model: SchematicModel,
+  maxPasses = 50,
+  tolerance = 0.5
+): void => {
+  // Correcting one linker moves a body that other linkers share, so repeat
+  // until every linker is within its length. A layout that can't be satisfied
+  // (two pinned ends too far apart) stops after maxPasses.
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let worst = 0
     for (const linker of model.linkers) {
       const { dx, dy, d, gap } = surfaceGap(linker)
       const over = gap - linker.max
       if (over <= 0) continue
       const [wa, wb] = shares(linker.a.body, linker.b.body)
+      // Both ends pinned, or both in one body: moving can't help
+      if (linker.a.body === linker.b.body || wa + wb === 0) continue
+      worst = Math.max(worst, over)
       const ux = dx / d
       const uy = dy / d
       linker.a.body.x += ux * over * wa
@@ -256,6 +297,7 @@ export const applyLinkerLimits = (model: SchematicModel, passes = 3): void => {
       linker.b.body.x -= ux * over * wb
       linker.b.body.y -= uy * over * wb
     }
+    if (worst <= tolerance) return
   }
 }
 
@@ -445,6 +487,17 @@ export const describeBody = (
     return `Fixed · ${segments} · ${residueCount(body.residues)} · held in place${rest}`
   }
   return `${body.name} · moves as one unit · ${segments} · ${residueCount(body.residues)}`
+}
+
+/** Every fixed segment in one line, for the legend's Fixed chip. */
+export const describeFixedBodies = (model: SchematicModel): string => {
+  const fixed = model.bodies.filter((b) => b.kind === 'fixed')
+  const segments = fixed
+    .flatMap((b) => b.beads)
+    .map((b) => formatRange(b.chainId, b.start, b.stop))
+    .join(', ')
+  const residues = fixed.reduce((sum, b) => sum + b.residues, 0)
+  return `Fixed · ${segments} · ${residueCount(residues)} · held in place`
 }
 
 export const describeLinker = (linker: Linker): string =>

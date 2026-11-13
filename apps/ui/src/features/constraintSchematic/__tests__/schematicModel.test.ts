@@ -8,6 +8,7 @@ import {
   bodyColor,
   buildSchematicModel,
   describeBody,
+  describeFixedBodies,
   describeLinker,
   fitViewBox,
   isTaut,
@@ -162,15 +163,60 @@ describe('linkers', () => {
     pinFixed(model)
     dock2.x = 5000
     dock2.y = 0
-    applyLinkerLimits(model, 40)
+    applyLinkerLimits(model)
     expect(fixed.x).toBe(0)
     for (const linker of model.linkers) {
       const a = beadPosition(linker.a)
       const b = beadPosition(linker.b)
       const gap = Math.hypot(b.x - a.x, b.y - a.y) - linker.a.r - linker.b.r
-      expect(gap).toBeLessThanOrEqual(linker.max + 1e-6)
+      expect(gap).toBeLessThanOrEqual(linker.max + 0.5)
     }
     expect(model.linkers.some(isTaut)).toBe(true)
+  })
+
+  it('keeps a chain of free bodies within every linker when one is pulled far', () => {
+    // Five rigid bodies in a row, linked by short linkers
+    const model = buildSchematicModel({
+      rigid_bodies: Array.from({ length: 5 }, (_, i) => ({
+        name: `R${i}`,
+        segments: [
+          { chain_id: 'A', residues: { start: i * 20 + 1, stop: i * 20 + 15 } }
+        ]
+      }))
+    })
+    model.bodies.forEach((b, i) => {
+      b.x = i * 30
+      b.y = 0
+    })
+    const last = model.bodies[model.bodies.length - 1]!
+    last.x = 10000
+    last.y = 4000
+    applyLinkerLimits(model)
+    for (const linker of model.linkers) {
+      const a = beadPosition(linker.a)
+      const b = beadPosition(linker.b)
+      const gap = Math.hypot(b.x - a.x, b.y - a.y) - linker.a.r - linker.b.r
+      expect(gap).toBeLessThanOrEqual(linker.max + 0.5)
+    }
+  })
+
+  it('leaves linkers between two pinned ends alone', () => {
+    const model = buildSchematicModel({
+      fixed_bodies: [
+        {
+          name: 'FixedBody1',
+          segments: [
+            { chain_id: 'A', residues: { start: 1, stop: 10 } },
+            { chain_id: 'A', residues: { start: 13, stop: 20 } }
+          ]
+        }
+      ]
+    })
+    pinFixed(model)
+    const [, second] = model.bodies
+    second!.x = 500
+    applyLinkerLimits(model)
+    expect(second!.x).toBe(500)
   })
 
   it('describes the flexible range', () => {
@@ -310,6 +356,39 @@ describe('squigglePath', () => {
   })
 })
 
+describe('packBeads', () => {
+  it('keeps the linkers inside a rigid body within their length', () => {
+    // A big segment with short single-residue segments around it, all one
+    // body, joined by one-residue linkers that can only reach ~14 units
+    const segments = [
+      { chain_id: 'A', residues: { start: 1, stop: 400 } },
+      ...Array.from({ length: 8 }, (_, i) => ({
+        chain_id: 'A',
+        residues: { start: 402 + 2 * i, stop: 402 + 2 * i }
+      }))
+    ]
+    const model = buildSchematicModel({
+      rigid_bodies: [{ name: 'R1', segments }]
+    })
+    const [body] = model.bodies
+    expect(model.linkers).toHaveLength(8)
+    for (const linker of model.linkers) {
+      expect(linker.a.body).toBe(body)
+      const gap =
+        Math.hypot(linker.b.ox - linker.a.ox, linker.b.oy - linker.a.oy) -
+        linker.a.r -
+        linker.b.r
+      expect(gap).toBeLessThanOrEqual(linker.max)
+    }
+    // Every bead fits inside the body's circle
+    for (const bead of body!.beads) {
+      expect(Math.hypot(bead.ox, bead.oy) + bead.r).toBeLessThanOrEqual(
+        body!.R + 1e-6
+      )
+    }
+  })
+})
+
 describe('describeBody', () => {
   it('names segments and what the body does', () => {
     const model = buildSchematicModel(twoChains)
@@ -322,6 +401,23 @@ describe('describeBody', () => {
     const tail = model.bodies.find((b) => b.kind === 'tail')!
     expect(describeBody(model, tail)).toBe(
       'Chain B N-terminus · free end of 19 flexible residues'
+    )
+  })
+
+  it('sums up every fixed segment for the legend', () => {
+    const model = buildSchematicModel({
+      fixed_bodies: [
+        {
+          name: 'FixedBody1',
+          segments: [
+            { chain_id: 'A', residues: { start: 1, stop: 10 } },
+            { chain_id: 'B', residues: { start: 5, stop: 5 } }
+          ]
+        }
+      ]
+    })
+    expect(describeFixedBodies(model)).toBe(
+      'Fixed · A 1–10, B 5 · 11 residues · held in place'
     )
   })
 

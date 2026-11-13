@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect } from 'vitest'
 import '@testing-library/jest-dom'
 import { parseConstInp } from '@bilbomd/bilbomd-types'
 import { ConstraintSchematic } from '../ConstraintSchematic'
@@ -21,8 +21,47 @@ return
 `)
 
 const status = () => screen.getByRole('status')
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+const transforms = () =>
+  screen
+    .getAllByTestId('schematic-body')
+    .map((el) => el.getAttribute('transform'))
+const rigidBody = (name: string) =>
+  screen.getByRole('button', {
+    name: new RegExp(`^${name} · moves as one unit`)
+  })
+
+// A controllable prefers-reduced-motion media query
+const mockReducedMotion = (initial: boolean) => {
+  let matches = initial
+  const listeners = new Set<(e: { matches: boolean }) => void>()
+  window.matchMedia = ((query: string) => ({
+    get matches() {
+      return query.includes('reduce') ? matches : false
+    },
+    media: query,
+    onchange: null,
+    addEventListener: (_: string, l: (e: { matches: boolean }) => void) =>
+      listeners.add(l),
+    removeEventListener: (_: string, l: (e: { matches: boolean }) => void) =>
+      listeners.delete(l),
+    addListener: (l: (e: { matches: boolean }) => void) => listeners.add(l),
+    removeListener: (l: (e: { matches: boolean }) => void) =>
+      listeners.delete(l),
+    dispatchEvent: () => true
+  })) as unknown as typeof window.matchMedia
+  return (next: boolean) => {
+    matches = next
+    listeners.forEach((l) => l({ matches: next }))
+  }
+}
+const originalMatchMedia = window.matchMedia
 
 describe('ConstraintSchematic', () => {
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia
+  })
+
   it('draws a bead per segment, a body per fixed segment, rigid body and tail', () => {
     const { unmount } = render(
       <ConstraintSchematic constraints={constraints} />
@@ -167,6 +206,80 @@ describe('ConstraintSchematic', () => {
     ).toEqual(['0.18', '0.18', '1', '1', '0.18'])
     fireEvent.pointerLeave(bar)
     expect(screen.getByTestId('schematic-tooltip')).not.toBeVisible()
+  })
+
+  it('stops moving as soon as the motion is paused', async () => {
+    const user = userEvent.setup()
+    render(<ConstraintSchematic constraints={constraints} />)
+    await sleep(150)
+    await user.click(screen.getByRole('button', { name: 'Pause motion' }))
+    const paused = transforms()
+    await sleep(300)
+    expect(transforms()).toEqual(paused)
+  })
+
+  it('starts paused under reduced motion, and pauses when it is turned on', () => {
+    const setReduced = mockReducedMotion(true)
+    const { unmount } = render(
+      <ConstraintSchematic constraints={constraints} />
+    )
+    expect(
+      screen.getByRole('button', { name: 'Animate motion' })
+    ).toBeInTheDocument()
+    unmount()
+
+    setReduced(false)
+    render(<ConstraintSchematic constraints={constraints} />)
+    expect(
+      screen.getByRole('button', { name: 'Pause motion' })
+    ).toBeInTheDocument()
+    act(() => setReduced(true))
+    expect(
+      screen.getByRole('button', { name: 'Animate motion' })
+    ).toBeInTheDocument()
+  })
+
+  it('lets the keyboard pull a rigid body, within its linkers', async () => {
+    const user = userEvent.setup()
+    render(<ConstraintSchematic constraints={constraints} />)
+    await user.click(screen.getByRole('button', { name: 'Pause motion' }))
+    const dock2 = rigidBody('RigidBody2')
+    expect(dock2).toHaveAttribute('tabindex', '0')
+    expect(dock2).toHaveAccessibleName(/Arrow keys pull it/)
+    act(() => dock2.focus())
+    expect(status()).toHaveTextContent(
+      'RigidBody2 · moves as one unit · A 311–400'
+    )
+    expect(screen.getByTestId('schematic-tooltip')).toBeVisible()
+
+    const x = () =>
+      Number(
+        /translate\(([-\d.]+),/.exec(dock2.getAttribute('transform') ?? '')?.[1]
+      )
+    const before = x()
+    fireEvent.keyDown(dock2, { key: 'ArrowRight', shiftKey: true })
+    await sleep(300)
+    expect(x()).toBeGreaterThan(before)
+
+    fireEvent.keyDown(dock2, { key: 'Escape' })
+    act(() => dock2.blur())
+    expect(status()).toHaveTextContent(/Hover a bead/)
+    expect(screen.getByTestId('schematic-tooltip')).not.toBeVisible()
+  })
+
+  it("reads out a body's segments when its legend chip has focus", () => {
+    render(<ConstraintSchematic constraints={constraints} />)
+    const [chip] = screen.getAllByTestId('schematic-legend-rigid')
+    fireEvent.focus(chip!)
+    expect(status()).toHaveTextContent(
+      'RigidBody1 · moves as one unit · A 181–290, B 20–95 · 186 residues'
+    )
+    fireEvent.blur(chip!)
+    expect(status()).toHaveTextContent(/Hover a bead/)
+    fireEvent.mouseEnter(screen.getByTestId('schematic-legend-fixed'))
+    expect(status()).toHaveTextContent(
+      'Fixed · A 1–150, A 155–170 · 166 residues · held in place'
+    )
   })
 
   it('lays out again on re-shuffle', async () => {
