@@ -14,7 +14,14 @@ vi.mock('../../../helpers/loggers.js', () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() }
 }))
 
-import { summarizeCharmmErrors, runCharmm } from '../charmm.js'
+import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import {
+  assertCharmmAvailable,
+  summarizeCharmmErrors,
+  runCharmm
+} from '../charmm.js'
 import { ProcessError } from '../../../helpers/runProcess.js'
 
 const cleanExit = {
@@ -113,5 +120,51 @@ describe('runCharmm', () => {
     expect((err as Error).message).toBe(
       'CHARMM heat.inp timed out after 21600s'
     )
+  })
+})
+
+describe('assertCharmmAvailable', () => {
+  let dir: string
+
+  beforeEach(async () => {
+    dir = await mkdtemp(path.join(tmpdir(), 'charmm-check-'))
+    return () => rm(dir, { recursive: true, force: true })
+  })
+
+  it('accepts an executable CHARMM binary', async () => {
+    const bin = path.join(dir, 'charmm')
+    await writeFile(bin, '#!/bin/sh\n')
+    await chmod(bin, 0o755)
+
+    await expect(assertCharmmAvailable(bin)).resolves.toBeUndefined()
+  })
+
+  it('rejects a missing binary with a message for the user', async () => {
+    const bin = path.join(dir, 'charmm')
+
+    await expect(assertCharmmAvailable(bin)).rejects.toThrow(
+      `CHARMM is not installed on this BilboMD worker (${bin}), so CHARMM jobs cannot run here. ` +
+        'Submit the job as a PDB job with the OpenMM engine instead.'
+    )
+  })
+
+  it('rejects a binary that is not executable', async () => {
+    const bin = path.join(dir, 'charmm')
+    await writeFile(bin, '')
+    await chmod(bin, 0o644)
+
+    await expect(assertCharmmAvailable(bin)).rejects.toThrow(
+      'CHARMM is not installed on this BilboMD worker'
+    )
+  })
+
+  it('defaults to the CHARMM environment variable', async () => {
+    const bin = path.join(dir, 'charmm-from-env')
+    vi.stubEnv('CHARMM', bin)
+    try {
+      await expect(assertCharmmAvailable()).rejects.toThrow(`(${bin})`)
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })

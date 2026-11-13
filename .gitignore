@@ -195,3 +195,5 @@ tools/python/pae_testing/out
 
 # OpenFold example data output
 example-data/of3/out
+# Licensed CHARMM source: kept on the build hosts, never committed
+apps/worker/charmm/*.tar.gz

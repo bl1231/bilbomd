@@ -178,9 +178,18 @@ services:
       start_period: 5s
 
   # ------------------------------------------------------------------------------------
+  # The released worker image plus CHARMM, built here on every `up` from the
+  # tarball in apps/worker/charmm/ (see its README). Cached, so a rebuild only
+  # redoes the last layer when the worker version changes. Never pushed.
   worker:
-    image: ghcr.io/bl1231/bilbomd-worker:2.26.7
-    pull_policy: missing
+    image: bilbomd-worker-charmm:prod
+    build:
+      context: ../apps/worker
+      dockerfile: bilbomd-worker-charmm.dockerfile
+      args:
+        WORKER_IMAGE: ghcr.io/bl1231/bilbomd-worker:2.26.7
+        CHARMM_VER: c49b2
+    pull_policy: build
     security_opt:
       - no-new-privileges:true
       - seccomp:./seccomp/bilbomd-seccomp.json

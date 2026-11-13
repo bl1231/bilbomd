@@ -8,13 +8,13 @@ import {
 import { logger } from '../../helpers/loggers.js'
 import { config } from '../../config/config.js'
 import { runProcess } from '../../helpers/runProcess.js'
-import { runCharmm } from './charmm.js'
+import { defaultCharmmBin, runCharmm } from './charmm.js'
 import { updateStepStatus } from './mongo-utils.js'
 import { handleError } from './job-utils.js'
 import path from 'path'
 
 const uploadFolder = process.env.DATA_VOL ?? '/bilbomd/uploads'
-const CHARMM_BIN = process.env.CHARMM ?? '/usr/local/bin/charmm'
+const CHARMM_BIN = defaultCharmmBin()
 const PYTHON_BIN = '/opt/envs/base/bin/python'
 
 interface Pdb2CrdCharmmInputData {

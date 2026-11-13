@@ -15,6 +15,7 @@ import {
   buildContext
 } from '../functions/usage-events.js'
 import { createProgressTracker } from '../functions/progress-tracker.js'
+import { assertCharmmAvailable } from '../functions/charmm.js'
 
 export interface PipelineContext<J> {
   MQjob: BullMQJob
@@ -101,6 +102,7 @@ export const runPipeline = async <J extends IJob>(
         `The ${def.pipeline} pipeline does not support md_engine=${engine}`
     )
   }
+  if (engine === 'CHARMM') await assertCharmmAvailable()
   await MQjob.log(`Using MD engine: ${engine}`)
 
   await initializeJob(MQjob, job)

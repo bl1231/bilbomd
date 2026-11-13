@@ -2,10 +2,13 @@
 set -e
 
 echo "Testing CLI tools..."
-if charmm 2>&1 | grep -q "Chemistry at HARvard Macromolecular Mechanics"; then
+# Only the locally built bilbomd-worker-charmm image has CHARMM.
+if ! command -v charmm >/dev/null 2>&1; then
+    echo "CHARMM not installed (expected in the published images)"
+elif echo stop | charmm 2>&1 | grep -q "Chemistry at HARvard Macromolecular Mechanics"; then
     echo "CHARMM OK"
 else
-    echo "CHARMM not found or not working"
+    echo "CHARMM installed but not working"
 fi
 
 if Pepsi-SANS 2>&1 | grep -q "Pepsi-SANS : an adaptive method for rapid and accurate"; then

@@ -1,3 +1,4 @@
+import { access, constants } from 'node:fs/promises'
 import { logger } from '../../helpers/loggers.js'
 import {
   spawnProcess,
@@ -20,6 +21,26 @@ export const summarizeCharmmErrors = (lines: string[]): string => {
   return errorLines.length > 0
     ? errorLines.join(' | ')
     : 'see CHARMM log for details'
+}
+
+export const defaultCharmmBin = (): string =>
+  process.env.CHARMM ?? '/usr/local/bin/charmm'
+
+// The published worker image has no CHARMM; only hosts that build
+// bilbomd-worker-charmm.dockerfile can run CHARMM jobs. Check before a CHARMM
+// pipeline starts, so the job fails with this instead of a spawn error halfway
+// through the first CHARMM step.
+export const assertCharmmAvailable = async (
+  charmmBin: string = defaultCharmmBin()
+): Promise<void> => {
+  try {
+    await access(charmmBin, constants.X_OK)
+  } catch {
+    throw new Error(
+      `CHARMM is not installed on this BilboMD worker (${charmmBin}), so CHARMM jobs cannot run here. ` +
+        'Submit the job as a PDB job with the OpenMM engine instead.'
+    )
+  }
 }
 
 interface RunCharmmOptions {

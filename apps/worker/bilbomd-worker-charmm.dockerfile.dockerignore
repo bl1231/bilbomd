@@ -1,0 +1,3 @@
+# Build context for bilbomd-worker-charmm.dockerfile: only the CHARMM tarball.
+**
+!charmm/*.tar.gz

@@ -282,12 +282,47 @@ check_external_volumes() {
   fi
 }
 
+# Services built here with CHARMM (the epyc worker) compile it from a tarball in
+# their build context, which is gitignored and has to be put there by hand
+# (apps/worker/charmm/README.md). Without it the build fails deep inside
+# BuildKit, so check first. Only the services being started are checked.
+check_charmm_source() {
+  if ! have jq; then
+    echo -e "${YELLOW}⚠️  jq not found — skipping the CHARMM source check.${NC}"
+    return 0
+  fi
+
+  local missing=() svc tarball wanted s
+  while IFS=$'\t' read -r svc tarball; do
+    [[ -z "$svc" ]] && continue
+    if [[ $# -gt 0 ]]; then
+      wanted=0
+      for s in "$@"; do [[ "$s" == "$svc" ]] && wanted=1; done
+      [[ $wanted -eq 1 ]] || continue
+    fi
+    [[ -f "$tarball" ]] || missing+=("$svc: $tarball")
+  done < <(compose config --format json 2>/dev/null |
+    jq -r '.services | to_entries[]
+      | select(.value.build.args.CHARMM_VER? != null)
+      | "\(.key)\t\(.value.build.context)/charmm/\(.value.build.args.CHARMM_VER).tar.gz"')
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo -e "${RED}❌ CHARMM source tarball not found:${NC}" >&2
+    printf '   %s\n' "${missing[@]}" >&2
+    echo -e "${YELLOW}See apps/worker/charmm/README.md.${NC}" >&2
+    exit 1
+  fi
+}
+
 # Print the image each service will run, so you can see what is about to start.
+# A locally built image also shows the released image it is built on.
 image_summary() {
   echo -e "${BLUE}📦 Images in $COMPOSE_FILE:${NC}"
   if have jq; then
     compose config --format json 2>/dev/null |
-      jq -r '.services | to_entries[] | "   \(.key)\t\(.value.image // "(built locally)")"' |
+      jq -r '.services | to_entries[]
+        | "   \(.key)\t\(.value.image // "(built locally)")\(
+            if .value.build.args.WORKER_IMAGE? then " (built on \(.value.build.args.WORKER_IMAGE))" else "" end)"' |
       column -t -s $'\t'
   else
     compose config --images 2>/dev/null | sed 's/^/   /'
@@ -310,6 +345,7 @@ run_target() {
       check_intel
       image_summary
       check_external_volumes
+      check_charmm_source "$@"
       run_compose up -d "$@"
       if [[ $DRY_RUN -eq 0 ]]; then
         echo "--------------------------------"
@@ -332,7 +368,9 @@ run_target() {
       ;;
     pull)
       image_summary
-      run_compose pull "$@"
+      # Locally built services (the CHARMM worker) have nothing to pull; their
+      # base images are pulled when `up` builds them.
+      run_compose pull --ignore-buildable "$@"
       ;;
     ps)
       run_compose ps "$@"
