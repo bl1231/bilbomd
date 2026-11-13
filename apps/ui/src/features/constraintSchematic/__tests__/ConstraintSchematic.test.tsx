@@ -52,15 +52,36 @@ describe('ConstraintSchematic', () => {
     ).toEqual(['RigidBody1 · 2 segs · A+B', 'RigidBody2 · 1 seg · A'])
   })
 
-  it('reads out a hovered body and goes back to the hint', () => {
+  it('shows a popup for a hovered body and hides it on leave', () => {
     render(<ConstraintSchematic constraints={constraints} />)
+    const tooltip = screen.getByTestId('schematic-tooltip')
+    expect(tooltip).not.toBeVisible()
     const [, , dock1] = screen.getAllByTestId('schematic-body')
-    fireEvent.pointerEnter(dock1!)
-    expect(status()).toHaveTextContent(
+    fireEvent.pointerEnter(dock1!, { clientX: 40, clientY: 30 })
+    expect(tooltip).toBeVisible()
+    expect(tooltip).toHaveTextContent(
       'RigidBody1 · moves as one unit · A 181–290, B 20–95 · 186 residues'
     )
+    expect(tooltip.style.left).toMatch(/px$/)
+    fireEvent.pointerMove(dock1!, { clientX: 60, clientY: 50 })
+    expect(tooltip).toBeVisible()
     fireEvent.pointerLeave(dock1!)
+    expect(tooltip).not.toBeVisible()
     expect(status()).toHaveTextContent(/Hover a bead/)
+  })
+
+  it('shows a popup for a hovered spring', () => {
+    const { container } = render(
+      <ConstraintSchematic constraints={constraints} />
+    )
+    const hit = container.querySelector('path.hit')
+    if (!hit) throw new Error('no spring hit area')
+    fireEvent.pointerEnter(hit)
+    expect(screen.getByTestId('schematic-tooltip')).toHaveTextContent(
+      'Flexible · A 151–154 · 4 residues'
+    )
+    fireEvent.pointerLeave(hit)
+    expect(screen.getByTestId('schematic-tooltip')).not.toBeVisible()
   })
 
   it('says fixed segments stay put when one is grabbed', () => {
@@ -97,6 +118,20 @@ describe('ConstraintSchematic', () => {
     expect(
       screen.getByRole('button', { name: 'Animate motion' })
     ).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('has a motion slider that is off while paused', async () => {
+    const user = userEvent.setup()
+    render(<ConstraintSchematic constraints={constraints} />)
+    const slider = screen.getByRole('slider', { name: 'Motion' })
+    expect(slider).toHaveAttribute('aria-valuenow', '1')
+    expect(slider).toHaveAttribute('aria-valuemax', '3')
+    expect(slider).not.toBeDisabled()
+    fireEvent.change(slider, { target: { value: 2.5 } })
+    expect(slider).toHaveAttribute('aria-valuenow', '2.5')
+    expect(slider).toHaveAttribute('aria-valuetext', '2.5×')
+    await user.click(screen.getByRole('button', { name: 'Pause motion' }))
+    expect(screen.getByRole('slider', { name: 'Motion' })).toBeDisabled()
   })
 
   it('lays out again on re-shuffle', async () => {

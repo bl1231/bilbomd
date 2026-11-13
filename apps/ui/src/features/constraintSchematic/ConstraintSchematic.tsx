@@ -1,7 +1,22 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { Box, Button, Chip, Typography, useMediaQuery } from '@mui/material'
+import {
+  Box,
+  Button,
+  Chip,
+  Slider,
+  Typography,
+  useMediaQuery
+} from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
+import { grey } from '@mui/material/colors'
 import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 import {
   bodyColor,
@@ -24,13 +39,35 @@ import {
 } from './schematicSimulation'
 
 const HINT =
-  'Hover a bead, a spring or a body below to read it. Drag a rigid body to see how far its linkers let it go.'
+  'Hover a bead or a spring for details. Drag a rigid body to see how far its linkers let it go.'
 const FIXED_MESSAGE = 'Fixed segments stay where they are during MD.'
 
 const labelY = (body: SchematicBody) =>
   body.y + body.R + (body.beads.length > 1 ? 19 : 14)
 
 type Drag = { body: SchematicBody; dx: number; dy: number }
+
+// Puts the hover popup beside the pointer, kept inside the panel, flipping
+// above the pointer near the bottom edge. Set directly on the element, so
+// following the pointer doesn't re-render the drawing.
+const positionTip = (
+  panel: HTMLElement | null,
+  tip: HTMLElement | null,
+  p: { x: number; y: number } | null
+) => {
+  if (!panel || !tip || !p) return
+  const rect = panel.getBoundingClientRect()
+  const x = Math.max(
+    8,
+    Math.min(p.x - rect.left + 14, rect.width - tip.offsetWidth - 8)
+  )
+  let y = p.y - rect.top + 16
+  if (y + tip.offsetHeight > rect.height - 4) {
+    y = p.y - rect.top - tip.offsetHeight - 10
+  }
+  tip.style.left = `${x}px`
+  tip.style.top = `${Math.max(4, y)}px`
+}
 
 interface ConstraintSchematicProps {
   constraints: MDConstraintsDTO
@@ -51,9 +88,18 @@ export const ConstraintSchematic = ({
   })
   const [playing, setPlaying] = useState(() => !reducedMotion)
   const playingRef = useRef(playing)
+  // How strongly the bodies jiggle while the motion plays
+  const [motion, setMotion] = useState(1)
+  const motionRef = useRef(motion)
+  const motionLabelId = useId()
   const [seed, setSeed] = useState(1)
   const [highlight, setHighlight] = useState<string | null>(null)
   const [readout, setReadout] = useState(HINT)
+  // What the hover popup says, or null when it is hidden
+  const [tipText, setTipText] = useState<string | null>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const tipRef = useRef<HTMLDivElement>(null)
+  const pointer = useRef<{ x: number; y: number } | null>(null)
   const patternId = `hatch-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
 
   const svgRef = useRef<SVGSVGElement>(null)
@@ -68,7 +114,7 @@ export const ConstraintSchematic = ({
   const { model, sim, viewBox } = useMemo(() => {
     const model = buildSchematicModel(constraints)
     const sim = createSchematicSimulation(model, {
-      motion: () => (playingRef.current ? 1 : 0),
+      motion: () => (playingRef.current ? motionRef.current : 0),
       normal: standardNormal,
       random: seededRandom(seed)
     })
@@ -84,6 +130,10 @@ export const ConstraintSchematic = ({
   useEffect(() => {
     playingRef.current = playing
   }, [playing])
+
+  useEffect(() => {
+    motionRef.current = motion
+  }, [motion])
 
   useEffect(() => {
     const draw = () => {
@@ -157,13 +207,33 @@ export const ConstraintSchematic = ({
     if (!playingRef.current) sim.simulation.alphaTarget(0)
   }
 
-  const enter = (key: string, text: string) => {
+  const placeTip = () =>
+    positionTip(panelRef.current, tipRef.current, pointer.current)
+  const moveTip = (event: ReactPointerEvent) => {
+    pointer.current = { x: event.clientX, y: event.clientY }
+    placeTip()
+  }
+  const showTip = (text: string, event: ReactPointerEvent) => {
+    pointer.current = { x: event.clientX, y: event.clientY }
+    setTipText(text)
+  }
+  const hideTip = () => setTipText(null)
+
+  // A new text changes the popup's size, so place it again once it renders
+  useLayoutEffect(() => {
+    if (tipText) {
+      positionTip(panelRef.current, tipRef.current, pointer.current)
+    }
+  }, [tipText])
+
+  const enter = (key: string, text: string, event: ReactPointerEvent) => {
     setHighlight(key)
-    setReadout(text)
+    showTip(text, event)
   }
   const leave = () => {
     setHighlight(null)
     setReadout(HINT)
+    hideTip()
   }
   const dimmed = (...keys: string[]) =>
     highlight !== null && !keys.includes(highlight)
@@ -193,10 +263,43 @@ export const ConstraintSchematic = ({
         >
           Re-shuffle layout
         </Button>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            minWidth: 200,
+            flex: '0 1 260px',
+            pl: 1
+          }}
+        >
+          <Typography
+            id={motionLabelId}
+            variant="body2"
+            color="text.secondary"
+          >
+            Motion
+          </Typography>
+          <Slider
+            size="small"
+            min={0}
+            max={3}
+            step={0.25}
+            value={motion}
+            onChange={(_, value) => setMotion(value as number)}
+            aria-labelledby={motionLabelId}
+            getAriaValueText={(v) => `${v}×`}
+            valueLabelDisplay="auto"
+            valueLabelFormat={(v) => `${v}×`}
+            disabled={!playing}
+          />
+        </Box>
       </Box>
 
       <Box
+        ref={panelRef}
         sx={{
+          position: 'relative',
           border: 1,
           borderColor: 'divider',
           borderRadius: 2,
@@ -301,8 +404,9 @@ export const ConstraintSchematic = ({
                       hitEls.current.delete(linker)
                     }
                   }}
-                  onPointerEnter={() => setReadout(describeLinker(linker))}
-                  onPointerLeave={() => setReadout(HINT)}
+                  onPointerEnter={(e) => showTip(describeLinker(linker), e)}
+                  onPointerMove={moveTip}
+                  onPointerLeave={hideTip}
                 />
               </g>
             ))}
@@ -325,12 +429,15 @@ export const ConstraintSchematic = ({
                       bodyEls.current.delete(body)
                     }
                   }}
-                  onPointerEnter={() =>
-                    enter(body.key, describeBody(model, body))
+                  onPointerEnter={(e) =>
+                    enter(body.key, describeBody(model, body), e)
                   }
                   onPointerLeave={leave}
                   onPointerDown={(e) => startDrag(body, e)}
-                  onPointerMove={(e) => moveDrag(body, e)}
+                  onPointerMove={(e) => {
+                    moveTip(e)
+                    moveDrag(body, e)
+                  }}
                   onPointerUp={() => endDrag(body)}
                   onPointerCancel={() => endDrag(body)}
                 >
@@ -413,6 +520,30 @@ export const ConstraintSchematic = ({
             ))}
           </g>
         </svg>
+        <Box
+          ref={tipRef}
+          role="tooltip"
+          data-testid="schematic-tooltip"
+          sx={{
+            display: tipText ? 'block' : 'none',
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            zIndex: 1,
+            maxWidth: 320,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            pointerEvents: 'none',
+            backgroundColor: alpha(grey[700], 0.92),
+            color: theme.palette.common.white,
+            fontSize: theme.typography.pxToRem(12),
+            lineHeight: 1.4,
+            fontVariantNumeric: 'tabular-nums'
+          }}
+        >
+          {tipText}
+        </Box>
         <Typography
           role="status"
           aria-live="polite"
