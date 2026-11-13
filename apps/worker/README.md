@@ -16,7 +16,7 @@ Both are built by CI and pushed to `ghcr.io/bl1231`:
 Neither contains CHARMM. Published images only carry software we can share, so CHARMM is compiled on the host that runs it from a source tarball in `charmm/` (gitignored, see [`charmm/README.md`](charmm/README.md)):
 
 - `bilbomd-worker-charmm` (`bilbomd-worker-charmm.dockerfile`): the released `bilbomd-worker` plus CHARMM. The epyc compose files build it on `deploy-to-beamline.sh up` (`pull_policy: build`) and it is never pushed. Run `deploy-to-beamline.sh build <env>` first to compile CHARMM without touching the running stack; `up` then reuses the cached build. The compile is capped at 8 parallel jobs (`CHARMM_MAKE_JOBS`) so it leaves CPU to running MD jobs. The Version Packages release keeps its `WORKER_IMAGE` build arg in step with the worker version.
-- Workers without CHARMM (Berkelium, NERSC Spin) fail CHARMM jobs at the start with a message to resubmit with OpenMM. Perlmutter's CHARMM runs use the image below.
+- Berkelium's per-job pods run the published image, so they fail CHARMM jobs at the start with a message to resubmit with OpenMM. NERSC Spin also runs the published image but never runs CHARMM itself: its NERSC backend sends every CHARMM step to Slurm jobs on Perlmutter, which use `bilbomd-perlmutter-worker` (below).
 
 Versions inside the base image are pinned in the Dockerfile's `ARG`s (`OPENMM_VERSION`, `OPENMM_CUDA_VERSION`, …). Keep `OPENMM_CUDA_VERSION` at or below the CUDA version the GPU hosts' drivers support: OpenMM compiles its kernels at run time, and a newer NVRTC makes it fall back to the CPU (#1222).
 
@@ -41,6 +41,14 @@ Slurm jobs on Perlmutter use images that live only in NERSC's podman-hpc store. 
 
    The build cache and any image that isn't migrated yet exist only on that login node. Do every later step on the same node (`ssh login12` from another login node).
 
+   For `bilbomd-perlmutter-worker`, also put the CHARMM source tarball named by `CHARMM_VER` in the Dockerfile into `apps/worker/charmm/` (gitignored; see its README). It never leaves the login node's build cache: only the compiled binary, library and toppar reach the image.
+
+   ```bash
+   # from a machine that can reach both hosts
+   scp -3 epyc:projects/bilbomd/apps/worker/charmm/c51b1.tar.gz \
+     perlmutter:projects/bilbomd/apps/worker/charmm/
+   ```
+
 2. Build from the repo root. Use an explicit version tag, **never `latest`**:
 
    ```bash
@@ -49,12 +57,25 @@ Slurm jobs on Perlmutter use images that live only in NERSC's podman-hpc store. 
      -f apps/worker/bilbomd-openmm.dockerfile .
    ```
 
-   `--network slirp4netns` is needed for network access during the build on login nodes. A source build of OpenMM takes a while, so run it under `nohup … > build.log 2>&1 &`.
+   ```bash
+   podman-hpc build --network slirp4netns --build-arg USER_ID=$UID \
+     --build-arg CHARMM_MAKE_JOBS=8 \
+     -t bilbomd/bilbomd-perlmutter-worker:<version> \
+     -f apps/worker/bilbomd-perlmutter-worker.dockerfile .
+   ```
+
+   `--network slirp4netns` is needed for network access during the build on login nodes. A source build of OpenMM takes a while, so run it under `nohup … > build.log 2>&1 &`. `CHARMM_MAKE_JOBS` keeps the CHARMM compile from taking every core of a shared login node; the build fails if CHARMM can't start in the final image.
 
 3. Test on the login node's GPU. Check that the CUDA platform passes, not just CPU:
 
    ```bash
    podman-hpc run --rm --gpu bilbomd/bilbomd-openmm-worker:<version> python -m openmm.testInstallation
+   ```
+
+   For `bilbomd-perlmutter-worker`, run its smoke test (CHARMM, FoXS, MultiFoXS and the Python packages):
+
+   ```bash
+   podman-hpc run --rm bilbomd/bilbomd-perlmutter-worker:<version> smoke_test.sh
    ```
 
 4. Migrate the image to the shared store so Slurm jobs on compute nodes can use it:

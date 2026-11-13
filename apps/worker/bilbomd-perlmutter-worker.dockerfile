@@ -39,20 +39,28 @@ ENV PATH="/miniforge3/envs/bilbomd/bin:/miniforge3/bin:${PATH}"
 # -----------------------------------------------------------------------------
 # Build stage 3 - CHARMM
 FROM build-conda AS build-charmm
-ARG CHARMM_VER=c49b2
+ARG CHARMM_VER=c51b1
 
 # Build from the repo root with the CHARMM source tarball in apps/worker/charmm/
-# (see its README). Only the compiled binary reaches the final stage.
+# (see its README). Only CHARMM's binary, library and toppar reach the final
+# stage, and this image stays in NERSC's podman-hpc store: never push it.
 COPY apps/worker/charmm/${CHARMM_VER}.tar.gz /usr/local/src/
 RUN mkdir -p /usr/local/src && \
-    tar -zxvf /usr/local/src/${CHARMM_VER}.tar.gz -C /usr/local/src && \
+    tar --no-same-owner -xzf /usr/local/src/${CHARMM_VER}.tar.gz -C /usr/local/src && \
     rm /usr/local/src/${CHARMM_VER}.tar.gz
 
 WORKDIR /usr/local/src/charmm
 RUN ./configure --with-gnu
 
-RUN make -j$(nproc) -C build/cmake install
-RUN cp /usr/local/src/charmm/bin/charmm /usr/local/bin/
+# Parallel compile jobs; empty means all cores.
+ARG CHARMM_MAKE_JOBS=
+RUN make -j"${CHARMM_MAKE_JOBS:-$(nproc)}" -C build/cmake install
+# Up to c49b2, bin/charmm is one static program; from c51 it is a small
+# launcher that loads lib/libchmm.so through a RUNPATH into this source tree,
+# so lib/ has to come along (same as bilbomd-worker-charmm.dockerfile).
+RUN mkdir -p /opt/charmm/bin /opt/charmm/lib && \
+    cp bin/charmm /opt/charmm/bin/ && \
+    if [ -d lib ]; then cp -a lib/. /opt/charmm/lib/; fi
 
 # -----------------------------------------------------------------------------
 # Build stage 4 - worker app (intermediate)
@@ -82,9 +90,17 @@ COPY --from=bilbomd-perlmutter-worker-intermediate /miniforge3 /miniforge3
 # Copy the app from the intermediate stage
 COPY --from=bilbomd-perlmutter-worker-intermediate /app /app
 
-# Copy only the CHARMM binary and its required libs
-COPY --from=bilbomd-perlmutter-worker-intermediate /usr/local/bin/charmm /usr/local/bin/charmm
+# CHARMM: the binary, its shared library (c51+) and the force field files
+COPY --from=build-charmm /opt/charmm/bin/charmm /usr/local/bin/charmm
+COPY --from=build-charmm /opt/charmm/lib/ /usr/local/lib/charmm/
 COPY --from=build-charmm /usr/local/src/charmm/toppar /app/charmm-toppar
+# The launcher's RUNPATH points at the builder's source tree, which doesn't
+# exist here, so register the library with the loader cache. CHARMM prints its
+# banner before it reads any input; if it can't start, show what is missing.
+RUN echo /usr/local/lib/charmm > /etc/ld.so.conf.d/charmm.conf && ldconfig && \
+    if ! echo stop | charmm 2>&1 | grep -q "Chemistry at HARvard Macromolecular Mechanics"; then \
+      ldd /usr/local/bin/charmm; exit 1; \
+    fi
 
 # Set environment variables
 ENV PATH="/miniforge3/envs/bilbomd/bin:/miniforge3/bin:${PATH}"

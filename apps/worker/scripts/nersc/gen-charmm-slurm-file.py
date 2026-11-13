@@ -34,7 +34,7 @@ def setup_environment(uuid):
     template_dir = str(Path(__file__).resolve().parent / "bilbomd-templates")
 
     # Docker images
-    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.31"
+    bilbomd_worker = "bilbomd/bilbomd-perlmutter-worker:0.0.32"
     af_worker = "bilbomd/bilbomd-colabfold:0.0.10"
 
     # Number of cores
