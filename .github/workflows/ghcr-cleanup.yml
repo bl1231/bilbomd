@@ -1,0 +1,100 @@
+name: GHCR cleanup
+
+# Prunes CI-only images from the BilboMD packages on ghcr.io. CI pushes an image
+# for every PR commit (pr-*) and main commit (sha-*), and older workflows added
+# branch-* and bare commit-hash tags; superseded builds are left untagged.
+# Deployments only pull release tags, so this deletes the rest once it is more
+# than OLDER_THAN old.
+#
+# Never deleted: release tags (X.Y.Z, with any suffix), `latest`, and the
+# `buildcache` tag the image workflows use as a registry build cache. A CI tag
+# on an image that also has a release tag is removed without deleting the image,
+# and untagged platform/attestation manifests of a kept image are left alone.
+#
+# Deletes only when
+#   - started by hand (Actions → GHCR cleanup → Run workflow) with "delete"
+#     ticked, or
+#   - on the weekly schedule once the repository variable GHCR_CLEANUP_ENABLED
+#     is 'true'.
+# Every other run (schedule before that, a manual run without "delete", a PR
+# that changes this file) is a dry run that only logs what it would delete.
+#
+# The workflow's GITHUB_TOKEN can only delete from a package that grants this
+# repository the Admin role (Package settings → Manage Actions access).
+
+on:
+  schedule:
+    - cron: '23 9 * * 0' # Sundays 09:23 UTC
+  workflow_dispatch:
+    inputs:
+      delete:
+        description: 'Delete (unticked = dry run that only logs)'
+        type: boolean
+        default: false
+      older_than:
+        description: 'Only touch images older than this'
+        type: string
+        default: '30 days'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/ghcr-cleanup.yml'
+
+permissions:
+  contents: read
+
+# The action is not safe to run twice against the same package at once.
+concurrency:
+  group: ghcr-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    # Same-repo PRs only: fork PRs get a read-only token.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        package:
+          - bilbomd-backend
+          - bilbomd-ui
+          - bilbomd-worker
+          - bilbomd-worker-base
+          - bilbomd-scoper
+          - bilbomd-scoper-base
+          - bilbomd-colabfold
+          - bilbomd-colabfold-service
+          - bilbomd-of3-service
+          - bilbomd-msa-service
+          - bilbomd-bioemu2-service
+    env:
+      DELETE: ${{ (github.event_name == 'workflow_dispatch' && inputs.delete) || (github.event_name == 'schedule' && vars.GHCR_CLEANUP_ENABLED == 'true') }}
+      OLDER_THAN: ${{ inputs.older_than || '30 days' }}
+    steps:
+      - name: Mode
+        run: |
+          if [ "$DELETE" = true ]; then
+            echo "::warning::Deleting CI images older than $OLDER_THAN from ${{ matrix.package }}"
+          else
+            echo "Dry run: logging what would be deleted from ${{ matrix.package }} (older than $OLDER_THAN)"
+          fi
+
+      # v1.2.2
+      - uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f
+        with:
+          owner: ${{ github.repository_owner }}
+          package: ${{ matrix.package }}
+          dry-run: ${{ env.DELETE != 'true' }}
+          older-than: ${{ env.OLDER_THAN }}
+          # With use-regex each input is ONE regular expression (the action
+          # does not split it on commas), so list alternatives with `|`.
+          use-regex: true
+          delete-tags: '^(pr-.+|sha-[0-9a-f]+|branch-.+|[0-9a-f]{7,40})$'
+          exclude-tags: '^(v?[0-9]+\.[0-9]+\.[0-9]+.*|latest|buildcache)$'
+          delete-untagged: true
+          validate: true
