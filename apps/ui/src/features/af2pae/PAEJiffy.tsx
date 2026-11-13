@@ -44,7 +44,7 @@ import ConstInpFile from './ConstInpFile'
 import PAEMatrixPlot from './PAEMatrixPlot'
 import PAEMatrixPlotExplanation from './PAEMatrixPlotExplanation'
 import PLDDTPlot from './PLDDTPlot'
-import { parseConstInp } from '@bilbomd/bilbomd-types'
+import { constraintsFromConstInp } from 'features/constraintSchematic/constInpConstraints'
 import ConstraintSchematic from 'features/constraintSchematic/ConstraintSchematic'
 import {
   parsePLDDTFromPDB,
@@ -76,15 +76,11 @@ const Alphafold2PAEJiffy = () => {
   const [status, setStatus] = useState('')
   const [constfile, setConstfile] = useState('')
   const [shapeCount, setShapeCount] = useState(0)
-  // The generated const.inp as bodies, for the schematic; null until there is
-  // one with at least one body
-  const constraints = useMemo(() => {
-    if (!constfile) return null
-    const parsed = parseConstInp(constfile)
-    const bodies =
-      (parsed.fixed_bodies?.length ?? 0) + (parsed.rigid_bodies?.length ?? 0)
-    return bodies > 0 ? parsed : null
-  }, [constfile])
+  // The generated const.inp as bodies, for the schematic
+  const constraints = useMemo(
+    () => constraintsFromConstInp(constfile),
+    [constfile]
+  )
   const [jobStartTime, setJobStartTime] = useState<number | null>(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [showRigid, setShowRigid] = useState(false)

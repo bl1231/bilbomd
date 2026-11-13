@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useFormikContext, FormikValues } from 'formik'
 import { Typography } from '@mui/material'
 import Grid from '@mui/material/Grid'
@@ -10,6 +10,8 @@ import Download from '../Helpers/Download'
 import { RigidBody, Chain } from 'types/interfaces'
 import HeaderBox from 'components/HeaderBox'
 import { wrapConstInpCommand } from '@bilbomd/bilbomd-types'
+import ConstraintSchematic from 'features/constraintSchematic/ConstraintSchematic'
+import { constraintsFromConstInp } from 'features/constraintSchematic/constInpConstraints'
 
 // CHARMM cuts lines over 200 characters short, so long commands are continued
 // over several lines ending in ' -'
@@ -127,6 +129,12 @@ const Preview = () => {
     }
   }, [values, rigid_bodies, chains, prepareConstInputFile])
 
+  // The file above as bodies, for the schematic
+  const constraints = useMemo(
+    () => constraintsFromConstInp(constFilePreview),
+    [constFilePreview]
+  )
+
   return (
     <>
       <Grid container>
@@ -170,6 +178,20 @@ const Preview = () => {
               </Grid>
             </Box>
             <Download file={constFileBlob} />
+            {constraints && (
+              <Box
+                sx={{ m: 2, mt: 3 }}
+                data-testid="const-inp-jiffy-schematic"
+              >
+                <Typography
+                  variant="h6"
+                  sx={{ mb: 1 }}
+                >
+                  How these constraints move
+                </Typography>
+                <ConstraintSchematic constraints={constraints} />
+              </Box>
+            )}
           </Paper>
         </Grid>
       </Grid>
