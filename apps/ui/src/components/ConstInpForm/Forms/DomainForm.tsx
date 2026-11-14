@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, Fragment } from 'react'
-import { useFormikContext, FieldArray, FormikValues } from 'formik'
+import { useEffect, useState, Fragment } from 'react'
+import { useFormikContext, FieldArray, FormikValues, getIn } from 'formik'
 import { Typography, Button, Chip, Box, Alert } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import { useTheme } from '@mui/material/styles'
@@ -8,6 +8,8 @@ import AddIcon from '@mui/icons-material/Add'
 import useTitle from 'hooks/useTitle'
 import HeaderBox from 'components/HeaderBox'
 import RigidBody from '../Helpers/RigidBody'
+import ImportNotes from '../Helpers/ImportNotes'
+import { nextRigidBodyId } from '../Helpers/importConstInp'
 import GapWarning from '../Helpers/GapWarning'
 import { MIN_FLEX_GAP } from '@bilbomd/bilbomd-types'
 import type { Chain, RigidBody as IRigidBody } from 'types/interfaces'
@@ -19,9 +21,10 @@ interface DomainFormProps {
 const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
   useTitle('BilboMD: Define domains')
   const theme = useTheme()
-  const { values, isValid } = useFormikContext<FormikValues>()
-  const [rigidBodyIndex, setRigidBodyIndex] = useState(1)
-  const effectRan = useRef(false)
+  const { values, errors, isValid, validateForm, setTouched } =
+    useFormikContext<FormikValues>()
+  // False until the bodies have been checked against this step's rules
+  const [checked, setChecked] = useState(false)
 
   // Define background colors for different chain types
   const customColors: Record<string, string> = {
@@ -32,21 +35,40 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
     Other: theme.palette.mode === 'light' ? '#D1A8E6' : '#9773b9'
   }
 
-  const incrementRigidBodyIndex = () => {
-    setRigidBodyIndex(rigidBodyIndex + 1)
-  }
-  const decrementRigidBodyIndex = () => {
-    setRigidBodyIndex(rigidBodyIndex - 1)
-  }
+  // Formik doesn't revalidate when the stepper switches schemas, so isValid
+  // still describes step 1. Check the bodies on entering this step, and mark
+  // every segment touched so errors in imported ones show without editing.
+  useEffect(() => {
+    let active = true
+    setStepIsValid(false)
+    const rigidBodies = values.pdb_file.rigid_bodies as IRigidBody[]
+    void setTouched(
+      {
+        pdb_file: {
+          rigid_bodies: rigidBodies.map((rb) => ({
+            domains: rb.domains.map(() => ({
+              chainid: true,
+              start: true,
+              end: true
+            }))
+          }))
+        }
+      },
+      false
+    )
+    void validateForm().then(() => {
+      if (active) setChecked(true)
+    })
+    return () => {
+      active = false
+    }
+    // Once, on entering the step
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
-    if (effectRan.current === true || process.env.NODE_ENV !== 'development') {
-      setStepIsValid(isValid)
-    }
-    return () => {
-      effectRan.current = true
-    }
-  }, [isValid, setStepIsValid])
+    if (checked) setStepIsValid(isValid)
+  }, [checked, isValid, setStepIsValid])
 
   const macroMolecules = ['PRO', 'DNA', 'RNA', 'CAR', 'Other']
 
@@ -102,6 +124,12 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                 </li>
               </ul>
             </Box>
+            {values.const_inp_file?.notes && (
+              <ImportNotes
+                name={values.const_inp_file.name}
+                notes={values.const_inp_file.notes}
+              />
+            )}
           </Paper>
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -197,6 +225,20 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                                     </Alert>
                                   )}
                                 </Grid>
+                                {typeof getIn(
+                                  errors,
+                                  `pdb_file.rigid_bodies[${index}].domains`
+                                ) === 'string' && (
+                                  <Alert
+                                    severity="error"
+                                    sx={{ m: 1 }}
+                                  >
+                                    {getIn(
+                                      errors,
+                                      `pdb_file.rigid_bodies[${index}].domains`
+                                    )}
+                                  </Alert>
+                                )}
                                 <RigidBody
                                   rigidBodyIndex={index}
                                   // rigidBodiesArrayHelpers={arrayHelpers}
@@ -208,7 +250,6 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                                     variant="contained"
                                     color="error"
                                     onClick={() => {
-                                      decrementRigidBodyIndex()
                                       arrayHelpers.remove(index)
                                     }}
                                     size="small"
@@ -238,9 +279,10 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                           <Button
                             variant="contained"
                             onClick={() => {
-                              incrementRigidBodyIndex()
                               const new_rigid_body = {
-                                id: 'RIGID ' + rigidBodyIndex,
+                                id: nextRigidBodyId(
+                                  values.pdb_file.rigid_bodies
+                                ),
                                 domains: [
                                   {
                                     chainid: values.pdb_file.chains[0].id,
