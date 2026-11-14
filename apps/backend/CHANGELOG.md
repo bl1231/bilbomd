@@ -1,5 +1,11 @@
 # @bilbomd/backend
 
+## 2.23.1
+
+### Patch Changes
+
+- 6c2298e: Fix the BilboMD Multi job page failing to load. The lookup of the combined runs was rejected by the backend's query sanitizing.
+
 ## 2.23.0
 
 ### Minor Changes
