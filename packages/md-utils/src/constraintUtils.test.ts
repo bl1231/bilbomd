@@ -829,7 +829,7 @@ return`
         ].join('\n')
       )
       await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'Invalid INP constraints file: Rigid bodies must not overlap: RigidBody1 and RigidBody2 both include chain C residues 1-26'
+        'Invalid INP constraints file: Constraint bodies must not overlap: RigidBody1 and RigidBody2 both include segid DNAC residues 1-26'
       )
     })
 
@@ -1087,7 +1087,7 @@ shape desc dock1 rigid sele rigid1 end
 return`
       )
       await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'Fixed and rigid bodies must not overlap'
+        'Constraint bodies must not overlap: FixedBody1 and RigidBody1 both include segid PROA residues 45-50'
       )
 
       const yamlPath = path.join(dir, 'const.yml')

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Alert } from '@mui/material'
 import {
-  closeBodiesMessage,
-  parseConstInp,
+  constInpCloseBodiesMessage,
   MIN_FLEX_GAP
 } from '@bilbomd/bilbomd-types'
 
@@ -27,7 +26,7 @@ const ConstInpGapWarning = ({ file }: { file: unknown }) => {
       .text()
       .then((text) => {
         if (active) {
-          setChecked({ file, message: closeBodiesMessage(parseConstInp(text)) })
+          setChecked({ file, message: constInpCloseBodiesMessage(text) })
         }
       })
       .catch(() => {

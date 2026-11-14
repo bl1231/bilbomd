@@ -13,6 +13,7 @@ import {
   RNA_RESIDUES,
   CARBOHYDRATE_RESIDUES,
   constInpLengthMessage,
+  constInpOverlapMessage,
   duplicateShapeNamesMessage,
   findDisallowedConstInpLine,
   joinConstInpLines,
@@ -324,10 +325,13 @@ export async function validateInpConstraints(
       throw new Error(duplicateShapes)
     }
 
-    // Rigid bodies are numbered in the order of the 'shape desc' lines
-    const parsed = parseConstInp(inpContent)
-    assertNoRigidBodyOverlaps(parsed)
-    assertNoFixedRigidOverlaps(parsed)
+    // Rigid/rigid and fixed/rigid overlaps, by segid, reading every selection
+    // form the upload accepts (the same check the job forms run). Bodies are
+    // numbered in file order.
+    const overlap = constInpOverlapMessage(inpContent)
+    if (overlap !== null) {
+      throw new Error(overlap)
+    }
 
     logger.info('INP constraints file validated successfully')
   } catch (error) {

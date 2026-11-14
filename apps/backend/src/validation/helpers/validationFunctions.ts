@@ -21,6 +21,7 @@ import {
   paeResidueMismatchMessage,
   checkRnaResidues,
   checkConstInpText,
+  constInpOverlapMessage,
   openmmConstInpMessage
 } from '@bilbomd/bilbomd-types'
 import type { QUnits, SaxsDataAnalysis } from '@bilbomd/bilbomd-types'
@@ -135,7 +136,11 @@ const isValidConstInpFile = async (
 ): Promise<string | true> => {
   const text = await readUpload(file)
   if (text === null) return 'Error reading file'
-  return checkConstInpText(text, mode)
+  const checked = checkConstInpText(text, mode)
+  if (checked !== true) return checked
+  // Every route that takes a const.inp (PDB, CRD/PSF, SANS) runs this before
+  // the job is created
+  return constInpOverlapMessage(text) ?? true
 }
 
 // Why OpenMM can't use this const.inp as it stands, or true

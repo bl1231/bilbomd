@@ -20,7 +20,7 @@ describe('ConstInpGapWarning', () => {
     expect(
       await screen.findByTestId('const-inp-gap-warning')
     ).toHaveTextContent(
-      'FixedBody1 (chain A 1–50) and RigidBody1 (52–80): 1 residue between'
+      'FixedBody1 (PROA 1–50) and RigidBody1 (52–80): 1 residue between'
     )
   })
 

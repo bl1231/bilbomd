@@ -1,4 +1,5 @@
 import type { MDConstraintsDTO } from './jobs/mdConstraints.js'
+import { readConstInp, type ConstInpSelection } from './constInpParser.js'
 
 /**
  * Fewest flexible residues wanted between two constraint bodies on the same
@@ -93,12 +94,111 @@ export const closeBodiesMessage = (
   if (close.length === 0) return null
   const pairs = close.map(
     (c) =>
-      `${c.first} (chain ${c.chain_id} ${c.first_range}) and ${c.second} ` +
+      `${c.first} (${c.chain_id} ${c.first_range}) and ${c.second} ` +
       `(${c.second_range}): ${c.gap === 0 ? 'adjacent' : `${c.gap} residue${c.gap === 1 ? '' : 's'} between`}`
   )
   return (
     `Some bodies have fewer than ${minGap} flexible residues between them: ` +
     `${pairs.join('; ')}. Leaving at least ${minGap} flexible residues ` +
     'between bodies gives the linker room to move. You can still submit.'
+  )
+}
+
+// --- Checks on const.inp text ----------------------------------------------
+// These read the file with readConstInp, which understands every selection
+// form the upload accepts (single residues, whole segments, several segids),
+// and key segments by segid, so a carbohydrate segment CARA is never mistaken
+// for protein chain A.
+
+interface TextSegment {
+  body: string
+  fixed: boolean
+  segid: string
+  residues: ConstInpSelection['residues']
+}
+
+const textSegments = (text: string): TextSegment[] => {
+  const { fixed_bodies, rigid_bodies } = readConstInp(text)
+  return [
+    ...fixed_bodies.flatMap((body) =>
+      body.selections.map((sel) => ({ body: body.name, fixed: true, ...sel }))
+    ),
+    ...rigid_bodies.flatMap((body) =>
+      body.selections.map((sel) => ({ body: body.name, fixed: false, ...sel }))
+    )
+  ]
+}
+
+/**
+ * Residues a const.inp puts in two bodies: two rigid bodies, or a fixed and a
+ * rigid one. A residue is either held in place or moves with one rigid body.
+ * Two fixed bodies may share residues; segments of one body may too.
+ * A whole-segment selection (`segid HETA`) overlaps anything on that segid.
+ */
+export const findConstInpOverlaps = (text: string): string[] => {
+  const segments = textSegments(text)
+  const overlaps: string[] = []
+  segments.forEach((a, i) => {
+    segments.slice(i + 1).forEach((b) => {
+      if (a.segid !== b.segid || a.body === b.body) return
+      if (a.fixed && b.fixed) return
+      if (!a.residues || !b.residues) {
+        overlaps.push(`${a.body} and ${b.body} both include segid ${a.segid}`)
+        return
+      }
+      const start = Math.max(a.residues.start, b.residues.start)
+      const stop = Math.min(a.residues.stop, b.residues.stop)
+      if (start <= stop) {
+        overlaps.push(
+          `${a.body} and ${b.body} both include segid ${a.segid} residues ${start}-${stop}`
+        )
+      }
+    })
+  })
+  return overlaps
+}
+
+/** Why the bodies in a const.inp overlap, or null when they don't. */
+export const constInpOverlapMessage = (text: string): string | null => {
+  const overlaps = findConstInpOverlaps(text)
+  if (overlaps.length === 0) return null
+  return (
+    `Constraint bodies must not overlap: ${overlaps.join('; ')}. A residue is ` +
+    'either held in place (fixed) or moves with one rigid body. Remove the ' +
+    'shared residues from one of them.'
+  )
+}
+
+/**
+ * The close-bodies warning for a const.inp file, by segid. Whole-segment
+ * selections have no range to measure from, so they are left out.
+ */
+export const constInpCloseBodiesMessage = (
+  text: string,
+  minGap: number = MIN_FLEX_GAP
+): string | null => {
+  const toBodies = (fixed: boolean) =>
+    textSegments(text)
+      .filter((seg) => seg.fixed === fixed && seg.residues)
+      .reduce<
+        Record<
+          string,
+          { chain_id: string; residues: { start: number; stop: number } }[]
+        >
+      >((bodies, seg) => {
+        ;(bodies[seg.body] ??= []).push({
+          chain_id: seg.segid,
+          residues: seg.residues!
+        })
+        return bodies
+      }, {})
+  const asBodies = (bodies: ReturnType<typeof toBodies>) =>
+    Object.entries(bodies).map(([name, segments]) => ({ name, segments }))
+  return closeBodiesMessage(
+    {
+      fixed_bodies: asBodies(toBodies(true)),
+      rigid_bodies: asBodies(toBodies(false))
+    },
+    minGap
   )
 }

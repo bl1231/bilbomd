@@ -39,7 +39,7 @@ describe('GapWarning', () => {
       />
     )
     expect(screen.getByTestId('jiffy-gap-warning')).toHaveTextContent(
-      'PRIMARY (chain A 1–50) and RIGID 1 (51–80): adjacent'
+      'PRIMARY (A 1–50) and RIGID 1 (51–80): adjacent'
     )
   })
 
