@@ -44,6 +44,7 @@ vi.mock('../fieldTests/fieldTests', () => ({
   pdbLineStartCheck: () => mixed(),
   singleModelCheck: () => mixed(),
   constInpCheck: () => mixed(),
+  openmmConstInpCheck: () => mixed(),
   pdbOrCifExtTest: () => mixed(),
   pdbOrCifChainIdCheck: () => mixed(),
   pdbOrCifResidueCheck: () => mixed()

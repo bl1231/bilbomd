@@ -6,6 +6,7 @@ import {
   isCRD,
   isPsfData,
   isValidConstInpFile,
+  isOpenMMConstInpFile,
   containsChainId,
   cifContainsChainId,
   checkPdbResidues,
@@ -175,6 +176,21 @@ export const constInpCheck = (mode: 'pdb' | 'crd_psf') =>
     const constInpFile = file as Express.Multer.File | undefined
     if (!constInpFile?.path) return true
     const result = await isValidConstInpFile(constInpFile, mode)
+    if (result === true) return true
+    return this.createError({ message: result })
+  })
+
+/**
+ * For OpenMM jobs: every constraint in the const.inp must reach OpenMM. The
+ * conversion (parseConstInp) skips selections it doesn't read, which would
+ * run the job with fewer constraints than asked for. Uses the sibling
+ * md_engine ('OpenMM' | 'CHARMM'); CHARMM reads the file itself.
+ */
+export const openmmConstInpCheck = () =>
+  mixed().test('openmm-const-inp-check', '', async function (file) {
+    const constInpFile = file as Express.Multer.File | undefined
+    if (!constInpFile?.path || this.parent?.md_engine !== 'OpenMM') return true
+    const result = await isOpenMMConstInpFile(constInpFile)
     if (result === true) return true
     return this.createError({ message: result })
   })

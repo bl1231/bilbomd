@@ -10,7 +10,8 @@ import {
   noSpacesTest,
   sansCheck,
   fileExtTest,
-  constInpCheck
+  constInpCheck,
+  openmmConstInpCheck
 } from './fieldTests/fieldTests'
 import { titleSchema } from './titleSchema'
 
@@ -57,6 +58,7 @@ const BilboMDSANSJobSchema = object().shape({
     .concat(fileExtTest('inp'))
     // SANS jobs start from a PDB file, so segment IDs follow the PDB rule
     .concat(constInpCheck('pdb'))
+    .concat(openmmConstInpCheck())
     .concat(fileSizeTest(2_000_000))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),

@@ -376,13 +376,15 @@ describe('POST /api/v1/jobs', () => {
 describe('POST /api/v1/jobs (resubmit)', () => {
   const pdbData = `${__dirname}/../../../../test_scripts/data/pdb`
 
-  const submitOriginalPdbJob = async () => {
+  // const.inp selects DNA chains by segid only, which CHARMM reads but the
+  // OpenMM conversion can't; const-openmm.inp uses residue ranges throughout
+  const submitOriginalPdbJob = async (inpFile = 'const.inp') => {
     const res = await request(app)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${generateAccessToken()}`)
       .field('title', 'Original Job')
       .attach('pdb_file', `${pdbData}/pro_dna.pdb`)
-      .attach('inp_file', `${pdbData}/const.inp`)
+      .attach('inp_file', `${pdbData}/${inpFile}`)
       .attach('dat_file', `${pdbData}/saxs-data.dat`)
       .field('rg', 35)
       .field('rg_min', 30)
@@ -412,7 +414,7 @@ describe('POST /api/v1/jobs (resubmit)', () => {
       .field('md_engine', 'openmm')
 
   test('reuses the original files and reprocesses constraints for the new engine', async () => {
-    const original = await submitOriginalPdbJob()
+    const original = await submitOriginalPdbJob('const-openmm.inp')
 
     const res = await resubmit(original.jobid)
 
@@ -427,6 +429,20 @@ describe('POST /api/v1/jobs (resubmit)', () => {
     expect(await fs.pathExists(path.join(newDir, 'saxs-data.dat'))).toBe(true)
     expect(await fs.pathExists(path.join(newDir, 'openmm_const.yml'))).toBe(
       true
+    )
+  })
+
+  test('refuses to move to OpenMM a const.inp it would not apply in full', async () => {
+    const original = await submitOriginalPdbJob()
+
+    const res = await resubmit(original.jobid)
+
+    expect(res.statusCode).toBe(400)
+    expect(JSON.stringify(res.body)).toContain(
+      'OpenMM would ignore these lines'
+    )
+    expect(JSON.stringify(res.body)).toContain(
+      'define fixed3 sele ( segid DNAA) end'
     )
   })
 

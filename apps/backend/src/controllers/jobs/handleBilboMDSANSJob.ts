@@ -67,7 +67,8 @@ const handleBilboMDSANSJob = async (
           inp_file: files['inp_file']?.[0],
           rg_min: req.body.rg_min,
           rg_max: req.body.rg_max,
-          d2o_fraction: req.body.d2o_fraction
+          d2o_fraction: req.body.d2o_fraction,
+          md_engine
         },
         { abortEarly: false }
       )
