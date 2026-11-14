@@ -15,8 +15,8 @@ def apply_fixed_body_constraints_zero_mass(system, modeller, fixed_bodies):
       system (openmm.System): The OpenMM system to modify.
       modeller (openmm.app.Modeller): Contains the topology with atoms and residues.
       fixed_bodies (list): A list of dictionaries defining fixed bodies. Each dictionary should
-                           contain keys "name", "chain_id", and "residues" (with "start" and "stop").
-      amu: The unit for atomic mass (e.g., openmm.unit.amu).
+                           contain keys "name" and "segments", each segment with "chain_id" and
+                           "residues" ("start" and "stop", both included).
     """
     for atom in modeller.topology.atoms():
         res_id = int(atom.residue.id)
@@ -27,7 +27,9 @@ def apply_fixed_body_constraints_zero_mass(system, modeller, fixed_bodies):
                 if chain_id == segment["chain_id"]:
                     start = segment["residues"]["start"]
                     stop = segment["residues"]["stop"]
-                    if start <= res_id < stop:
+                    # Inclusive, like CHARMM's resid start:stop and the rigid
+                    # bodies (rigid_body.py)
+                    if start <= res_id <= stop:
                         system.setParticleMass(atom.index, 0.0 * unit.amu)
                         break
     zero_mass_atoms = [
@@ -46,7 +48,8 @@ def apply_fixed_body_constraints(system, modeller, fixed_bodies, kfixed=100000.0
       system (openmm.System): The OpenMM system to modify.
       modeller (openmm.app.Modeller): Contains the topology with atoms and residues.
       fixed_bodies (list): A list of dictionaries defining fixed bodies. Each dictionary should
-                           contain keys "name", "chain_id", and "residues" (with "start" and "stop").
+                           contain keys "name" and "segments", each segment with "chain_id" and
+                           "residues" ("start" and "stop", both included).
       kfixed (float): Force constant for the harmonic restraint (in kJ/mol/nm^2).
     """
     force = CustomExternalForce("0.5 * kfixed * ((x - x0)^2 + (y - y0)^2 + (z - z0)^2)")
@@ -64,7 +67,9 @@ def apply_fixed_body_constraints(system, modeller, fixed_bodies, kfixed=100000.0
                 if chain_id == segment["chain_id"]:
                     start = segment["residues"]["start"]
                     stop = segment["residues"]["stop"]
-                    if start <= res_id < stop:
+                    # Inclusive, like CHARMM's resid start:stop and the rigid
+                    # bodies (rigid_body.py)
+                    if start <= res_id <= stop:
                         pos = modeller.positions[atom.index]
                         force.addParticle(atom.index, [pos.x, pos.y, pos.z])
                         break  # Move to next atom once matched
