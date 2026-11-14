@@ -58,20 +58,6 @@ export const findOpenMMIgnoredConstInpLines = (text: string): string[] => {
   return ignored
 }
 
-/**
- * Fixed segments of a single residue. OpenMM's fixed bodies leave out a
- * range's last residue (#1101), so these would fix nothing.
- */
-export const findSingleResidueFixedSegments = (text: string): string[] =>
-  (parseConstInp(text).fixed_bodies ?? []).flatMap((body) =>
-    body.segments
-      .filter(({ residues }) => residues.start === residues.stop)
-      .map(
-        ({ chain_id, residues }) =>
-          `resid ${residues.start} on chain ${chain_id}`
-      )
-  )
-
 const listed = (items: string[], max = 3): string => {
   const shown = items.slice(0, max).map((item) => `"${item}"`)
   const more = items.length - shown.length
@@ -92,14 +78,6 @@ export const openmmConstInpMessage = (text: string): string | null => {
       'as in "define fixed1 sele ( resid 1:100 .and. segid PROA ) end", and ' +
       'only "cons fix" and "shape desc … rigid" are applied. The Inp Jiffy ' +
       'can rewrite a file in this form, or run the job with CHARMM.'
-    )
-  }
-  const single = findSingleResidueFixedSegments(text)
-  if (single.length > 0) {
-    return (
-      'OpenMM cannot fix a single residue yet, so these fixed segments ' +
-      `would not be held in place: ${listed(single)}. Use a range of two or ` +
-      'more residues, or run the job with CHARMM.'
     )
   }
   return null

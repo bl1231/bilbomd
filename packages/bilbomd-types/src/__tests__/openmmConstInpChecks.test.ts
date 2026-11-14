@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   findOpenMMIgnoredConstInpLines,
-  findSingleResidueFixedSegments,
   openmmConstInpMessage
 } from '../openmmConstInpChecks.js'
 import { wrapConstInpCommand } from '../structureFileChecks.js'
@@ -82,18 +81,6 @@ shape desc dock1 rigid sele rigid1 end
   })
 })
 
-describe('findSingleResidueFixedSegments', () => {
-  it('lists fixed segments of one residue, not rigid ones', () => {
-    const inp = `define fixed1 sele ( resid 5:5 .and. segid PROA ) end
-define fixed2 sele ( resid 10:20 .and. segid PROA ) end
-cons fix sele fixed1 .or. fixed2 end
-define rigid1 sele ( resid 30:30 .and. segid PROA ) end
-shape desc dock1 rigid sele rigid1 end
-`
-    expect(findSingleResidueFixedSegments(inp)).toEqual(['resid 5 on chain A'])
-  })
-})
-
 describe('openmmConstInpMessage', () => {
   it('names the ignored lines and how to fix them', () => {
     const message = openmmConstInpMessage(
@@ -111,14 +98,5 @@ cons fix sele fixed1 end`
       (_, i) => `cons harm force 1.0 sele x${i} end`
     ).join('\n')
     expect(openmmConstInpMessage(inp)).toContain('; and 2 more.')
-  })
-
-  it('explains single fixed residues', () => {
-    const message = openmmConstInpMessage(
-      `define fixed1 sele ( resid 5:5 .and. segid PROA ) end
-cons fix sele fixed1 end`
-    )
-    expect(message).toContain('OpenMM cannot fix a single residue yet')
-    expect(message).toContain('"resid 5 on chain A"')
   })
 })

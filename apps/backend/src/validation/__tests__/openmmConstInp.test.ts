@@ -27,6 +27,7 @@ define fixed2 sele ( segid CARB .or. segid CARC ) end
 cons fix sele fixed1 .or. fixed2 end
 return`
 
+// A single fixed residue: OpenMM's fixed ranges include both ends (#1101)
 const SINGLE_FIXED = `define fixed1 sele ( resid 7:7 .and. segid RNAB ) end
 cons fix sele fixed1 end
 return`
@@ -64,14 +65,11 @@ describe.each(schemas)('%s const.inp for OpenMM', (_, schema, field) => {
     )
   })
 
-  it('rejects a single fixed residue', async () => {
-    expect(await check(schema, field, SINGLE_FIXED, 'OpenMM')).toContain(
-      'OpenMM cannot fix a single residue yet'
-    )
+  it('accepts a single fixed residue', async () => {
+    expect(await check(schema, field, SINGLE_FIXED, 'OpenMM')).toBe(true)
   })
 
   it('leaves CHARMM jobs alone, since CHARMM reads the file itself', async () => {
     expect(await check(schema, field, WHOLE_SEGMENTS, 'CHARMM')).toBe(true)
-    expect(await check(schema, field, SINGLE_FIXED, 'CHARMM')).toBe(true)
   })
 })
