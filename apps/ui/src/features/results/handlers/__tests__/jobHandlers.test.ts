@@ -238,10 +238,40 @@ describe('jobHandlers', () => {
   })
 
   describe('createMultiJobHandler', () => {
-    it('has no job-specific properties', () => {
-      const handler = createMultiJobHandler()
-      expect(handler.getJobTypeDisplayName()).toBe('BilboMD MultiMD')
-      expect(handler.getJobSpecificProperties(makeView())).toEqual([])
+    const conformations = (view: JobView) =>
+      byLabel(
+        createMultiJobHandler().getJobSpecificProperties(view),
+        'Number of conformations'
+      )?.value
+
+    it('is named BilboMD MultiMD', () => {
+      expect(createMultiJobHandler().getJobTypeDisplayName()).toBe(
+        'BilboMD MultiMD'
+      )
+    })
+
+    it('totals the conformations pooled from the combined runs', () => {
+      expect(
+        conformations(
+          makeView({
+            jobType: 'multi',
+            combinedJobs: [
+              { uuid: 'a', conformations: 3600 },
+              { uuid: 'b', conformations: 3000 },
+              { uuid: 'c' }
+            ]
+          })
+        )
+      ).toBe(6600)
+    })
+
+    it('leaves the total out until the counts are known', () => {
+      expect(conformations(makeView({ jobType: 'multi' }))).toBeUndefined()
+      expect(
+        conformations(
+          makeView({ jobType: 'multi', combinedJobs: [{ uuid: 'a' }] })
+        )
+      ).toBeUndefined()
     })
   })
 })

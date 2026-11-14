@@ -6,6 +6,7 @@ import {
   IBilboMDAutoJob,
   IBilboMDAlphaFoldJob,
   IBilboMDSteps,
+  IFeedbackData,
   INerscInfo
 } from './jobInterface'
 import { IJobResults } from './resultsInterface'
@@ -32,6 +33,8 @@ interface IMultiJob extends Document {
   nersc?: INerscInfo
   results_ready?: boolean
   results?: IJobResults
+  // Fit assessment of the MultiFoXS result (Feedback & Validation)
+  feedback?: IFeedbackData
 }
 
 export { IMultiJob }

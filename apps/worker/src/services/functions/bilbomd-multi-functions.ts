@@ -21,6 +21,7 @@ import {
   createResultsArchive
 } from './prepare-results.js'
 import { createReadmeFile } from './create-readme-file.js'
+import { spawnFeedbackScript, type FeedbackInputModel } from './feedback.js'
 
 const prepareMultiMDdatFileList = async (DBJob: IMultiJob): Promise<void> => {
   const startingDir = path.join(config.uploadDir, DBJob.uuid)
@@ -194,6 +195,42 @@ const spawnMultiFoxs = async (DBjob: IMultiJob): Promise<void> => {
   logger.info('spawnMultiFoxs completed successfully')
 }
 
+// One model PDB per combined run, for the molecular-weight check: the first
+// conformer each run contributed to the MultiFoXS pool (the .pdb.dat list
+// names the profiles; the PDB sits beside each one). All conformers of a run
+// have the same composition, so any one will do.
+const findInputModels = async (
+  DBjob: IMultiJob
+): Promise<FeedbackInputModel[]> => {
+  const listFile = path.join(
+    config.uploadDir,
+    DBjob.uuid,
+    'multi_md_foxs_files.txt'
+  )
+  let lines: string[]
+  try {
+    lines = (await fs.readFile(listFile, 'utf8')).split('\n')
+  } catch (error) {
+    logger.warn(`Cannot read ${listFile}: ${getErrorMessage(error)}`)
+    return []
+  }
+
+  const models: FeedbackInputModel[] = []
+  for (const uuid of DBjob.bilbomd_uuids) {
+    const profile = lines.find((line) => line.includes(`/${uuid}/`))
+    if (!profile) continue
+    const pdb = profile.trim().replace(/\.dat$/, '')
+    if (!(await fs.pathExists(pdb))) {
+      logger.warn(`Input model for ${uuid} not found: ${pdb}`)
+      continue
+    }
+    const title = DBjob.bilbomd_jobs?.find((job) => job.uuid === uuid)?.title
+    const short = uuid.slice(0, 8)
+    models.push({ label: title ? `${title} (${short})` : short, pdb })
+  }
+  return models
+}
+
 const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
   const jobDir = path.join(config.uploadDir, DBjob.uuid)
   const resultsDir = path.join(jobDir, 'results')
@@ -291,6 +328,15 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
       await assembleEnsemblePdbFiles({
         DBjob
       })
+    }
+
+    // Fit assessment (Feedback & Validation). Needs the ensemble PDBs above;
+    // runs before the archive so feedback.json is in it. Non-fatal, as for
+    // other job types.
+    try {
+      await spawnFeedbackScript(DBjob, await findInputModels(DBjob))
+    } catch (error) {
+      logger.error(`Error running feedback script: ${getErrorMessage(error)}`)
     }
 
     // Create README file — reuse saxsDataFileName resolved above
@@ -405,6 +451,7 @@ const handleJobEmailNotification = async (
 
 export {
   prepareMultiMDdatFileList,
+  findInputModels,
   runMultiFoxs,
   spawnMultiFoxs,
   prepareMultiMDResults,

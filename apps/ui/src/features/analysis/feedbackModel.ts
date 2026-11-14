@@ -16,6 +16,8 @@ export type MwStatus =
   | 'differs'
   | 'low_confidence'
   | 'not_assessed'
+  // Multi job whose combined runs model systems of different mass
+  | 'mixed_inputs'
   // Reports from before version 2 computed MW unreliably; it is not shown
   | 'legacy'
 
@@ -102,6 +104,7 @@ const mwStatusFromFindings = (findings: FeedbackFinding[]): MwStatus => {
   if (codes.has('mw_differs')) return 'differs'
   if (codes.has('mw_consistent')) return 'consistent'
   if (codes.has('mw_low_confidence')) return 'low_confidence'
+  if (codes.has('mw_mixed_inputs')) return 'mixed_inputs'
   return 'not_assessed'
 }
 

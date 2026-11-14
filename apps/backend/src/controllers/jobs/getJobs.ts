@@ -11,6 +11,7 @@ import { Types } from 'mongoose'
 import { Request, Response } from 'express'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobDTOMapper.js'
+import { buildCombinedJobs } from '../../services/multi/combinedJobs.js'
 
 // Helper to resolve username from user field
 type UserField =
@@ -217,11 +218,15 @@ const getJobById = async (req: Request, res: Response) => {
         return
       }
 
-      const username = await resolveUsername(multiJob.user)
+      const [username, combinedJobs] = await Promise.all([
+        resolveUsername(multiJob.user),
+        buildCombinedJobs(multiJob)
+      ])
       const dto = buildMultiJobDTO({
         jobId: jobIdString,
         mongo: multiJob,
-        username
+        username,
+        combinedJobs
       })
 
       res.status(200).json(dto)

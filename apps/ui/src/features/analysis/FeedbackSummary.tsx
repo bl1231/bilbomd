@@ -92,6 +92,7 @@ const MW_CHIP: Record<
   differs: { label: 'Differs', color: 'warning' },
   low_confidence: { label: 'Indicative only', color: 'default' },
   not_assessed: { label: 'Not assessed', color: 'default' },
+  mixed_inputs: { label: 'Runs differ in mass', color: 'default' },
   legacy: { label: 'Not available', color: 'default' }
 }
 
@@ -105,7 +106,7 @@ const MwTile = ({ view }: { view: FeedbackView }) => {
         spacing={1}
         sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}
       >
-        {mw.status !== 'legacy' && (
+        {mw.status !== 'legacy' && mw.status !== 'mixed_inputs' && (
           <Headline
             value={format(mw.modelKda, 1)}
             unit="kDa model"

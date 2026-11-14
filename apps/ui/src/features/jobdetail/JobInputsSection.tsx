@@ -15,6 +15,7 @@ import { useLazyGetFileByIdAndNameQuery } from 'slices/jobsApiSlice'
 import { useJobProperties } from 'features/results/hooks/useJobProperties'
 import { FileModal } from 'features/results/components/FileModal'
 import JobSequences from './JobSequences'
+import CombinedJobs from './CombinedJobs'
 import type { JobSource } from './jobSource'
 import type { JobView } from './jobView'
 
@@ -99,7 +100,6 @@ const JobInputsSection = ({
     view.inputs.const_inp_file
   )
   const properties = useJobProperties(view, onOpen)
-  const combined = view.inputs.bilbomd_uuids ?? []
 
   return (
     <>
@@ -146,22 +146,12 @@ const JobInputsSection = ({
             {view.inputs.sequence_entities && (
               <JobSequences entities={view.inputs.sequence_entities} />
             )}
-            {combined.length > 0 && (
-              <Row label="Combined">
-                <Box>
-                  {combined.map((uuid) => (
-                    <Box
-                      key={uuid}
-                      sx={{ my: 1 }}
-                    >
-                      <CopyableChip
-                        label="UUID"
-                        value={uuid}
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              </Row>
+            {view.jobType === 'multi' && (
+              <CombinedJobs
+                jobs={view.combinedJobs}
+                uuids={view.inputs.bilbomd_uuids ?? []}
+                dataFileFrom={view.dataFileFrom}
+              />
             )}
             {source.kind === 'owner' &&
               view.accessMode === 'anonymous' &&

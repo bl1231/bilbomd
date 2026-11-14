@@ -146,8 +146,19 @@ export const createBioEmuJobHandler = (): JobHandler => ({
   }
 })
 
-// The combined job UUIDs are rendered by the inputs section itself
+// Conformers pooled for MultiFoXS, summed over the combined runs. Unknown
+// until the Multi job has listed them (or for an older backend).
+export const multiConformationCount = (view: JobView): number | undefined => {
+  const counts = (view.combinedJobs ?? [])
+    .map((job) => job.conformations)
+    .filter((count): count is number => typeof count === 'number')
+  return counts.length > 0 ? counts.reduce((a, b) => a + b, 0) : undefined
+}
+
+// The combined runs themselves are rendered by the inputs section
 export const createMultiJobHandler = (): JobHandler => ({
   getJobTypeDisplayName: () => 'BilboMD MultiMD',
-  getJobSpecificProperties: () => []
+  getJobSpecificProperties: (view) => [
+    { label: 'Number of conformations', value: multiConformationCount(view) }
+  ]
 })

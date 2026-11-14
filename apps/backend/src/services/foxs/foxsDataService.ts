@@ -1,7 +1,7 @@
 import { logger } from '../../middleware/loggers.js'
 import fs from 'fs-extra'
 import path from 'path'
-import { IJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
+import { IJob, IBilboMDScoperJob, IMultiJob } from '@bilbomd/mongodb-schema'
 import { FoxsData, FoxsDataPoint, FoxsFitKind } from '@bilbomd/bilbomd-types'
 import { getEnvVar } from '../../config/config.js'
 import {
@@ -107,8 +107,78 @@ const buildBilboFoxsData = async (job: IJob): Promise<FoxsData[]> => {
     )
   }
 
+  const ensembles = await readEnsembleFits(resultsDir, jobDir)
+  data.push(...ensembles)
+
+  if (!foundDatFile && ensembles.length === 0) {
+    throw Object.assign(
+      new Error(
+        'No FoXS data available for this job (experimental .dat missing and no ensemble outputs found).'
+      ),
+      {
+        status: 404,
+        code: 'FOXS_DATA_UNAVAILABLE',
+        details: { datBase: datFileBase }
+      }
+    )
+  }
+
+  await attachGuinier(data, jobDir, job.data_file)
+
+  return data
+}
+
+// The SAXS data a Multi job was fitted against belongs to one of the runs it
+// combines (`data_file_from`).
+type MultiDataSource = { uuid: string; data_file: string }
+
+// A Multi job has no starting model of its own, so its FoXS data are the
+// MultiFoXS ensembles only. The Guinier fit comes from the run whose SAXS data
+// MultiFoXS used; without that run (deleted) the fits are still returned.
+const buildMultiFoxsData = async (
+  job: IMultiJob,
+  source: MultiDataSource | null
+): Promise<FoxsData[]> => {
+  const jobDir = path.join(uploadFolder, job.uuid)
+  const resultsDir = path.join(jobDir, 'results')
+
+  if (!fs.existsSync(resultsDir)) {
+    throw Object.assign(new Error('results directory unavailable.'), {
+      status: 404
+    })
+  }
+
+  const data = await readEnsembleFits(resultsDir, jobDir)
+  if (data.length === 0) {
+    throw Object.assign(
+      new Error(
+        'No FoXS data available for this job (no ensemble outputs found).'
+      ),
+      { status: 404, code: 'FOXS_DATA_UNAVAILABLE' }
+    )
+  }
+
+  if (source) {
+    await attachGuinier(
+      data,
+      path.join(uploadFolder, source.uuid),
+      source.data_file
+    )
+  } else {
+    logger.warn(
+      `Multi job ${job.uuid}: data source ${job.data_file_from} not found; no Guinier fit`
+    )
+  }
+  return data
+}
+
+// The MultiFoXS fit of each ensemble size, in order of size
+const readEnsembleFits = async (
+  resultsDir: string,
+  jobDir: string
+): Promise<FoxsData[]> => {
+  const fits: FoxsData[] = []
   let files: string[] = []
-  let ensembleCount = 0
   try {
     files = await fs.readdir(resultsDir)
   } catch (e) {
@@ -129,38 +199,29 @@ const buildBilboFoxsData = async (job: IJob): Promise<FoxsData[]> => {
   for (const file of matchingFiles) {
     const filename = path.join(resultsDir, file)
     try {
-      data.push(await createDataObject(filename, jobDir, 'ensemble'))
-      ensembleCount += 1
+      fits.push(await createDataObject(filename, jobDir, 'ensemble'))
     } catch (e) {
       logger.warn(
         `Skipping unreadable FoXS ensemble file ${filename}: ${(e as Error).message}`
       )
     }
   }
+  return fits
+}
 
-  if (!foundDatFile && ensembleCount === 0) {
-    throw Object.assign(
-      new Error(
-        'No FoXS data available for this job (experimental .dat missing and no ensemble outputs found).'
-      ),
-      {
-        status: 404,
-        code: 'FOXS_DATA_UNAVAILABLE',
-        details: { datBase: datFileBase }
-      }
-    )
-  }
-
-  // Attach the Guinier fit of the experimental profile (for dimensionless
-  // Kratky normalization in the UI). Absence is non-fatal — the UI degrades
-  // to an informative alert.
-  const guinier = await getGuinierFit(jobDir, job.data_file)
+// Attach the Guinier fit of the experimental profile (for dimensionless
+// Kratky normalization in the UI) and the fit metrics that need its Rg.
+// Absence is non-fatal — the UI degrades to an informative alert.
+const attachGuinier = async (
+  data: FoxsData[],
+  dataDir: string,
+  dataFile: string
+): Promise<void> => {
+  const guinier = await getGuinierFit(dataDir, dataFile)
   if (guinier && data[0]) {
     data[0].guinier = guinier
     addFitMetrics(data, estimateDmax(guinier.rg))
   }
-
-  return data
 }
 
 // Adds χ²free and Vr to every fit, all scored with the same Dmax so they are
@@ -242,4 +303,4 @@ const buildScoperFoxsData = async (
   ]
 }
 
-export { buildBilboFoxsData, buildScoperFoxsData }
+export { buildBilboFoxsData, buildMultiFoxsData, buildScoperFoxsData }

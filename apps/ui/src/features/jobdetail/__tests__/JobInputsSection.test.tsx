@@ -97,7 +97,7 @@ describe('JobInputsSection', () => {
     expect(await screen.findByText('constraint file text')).toBeInTheDocument()
   })
 
-  it('lists the jobs a multi job combines', () => {
+  it('lists the uuids of the runs a multi job combines (older backend)', () => {
     renderSection(
       { kind: 'owner', id: 'job-1' },
       makeView({
@@ -105,9 +105,58 @@ describe('JobInputsSection', () => {
         inputs: { bilbomd_uuids: ['uuid-a', 'uuid-b'] }
       })
     )
-    expect(screen.getByText('Combined:')).toBeInTheDocument()
+    expect(screen.getByText('Combined runs:')).toBeInTheDocument()
     expect(screen.getByText('uuid-a')).toBeInTheDocument()
     expect(screen.getByText('uuid-b')).toBeInTheDocument()
+  })
+
+  it('links each combined run and marks the one whose SAXS data was used', () => {
+    renderSection(
+      { kind: 'owner', id: 'job-1' },
+      makeView({
+        jobType: 'multi',
+        inputs: { bilbomd_uuids: ['uuid-a', 'uuid-b'] },
+        dataFileFrom: 'uuid-b',
+        combinedJobs: [
+          {
+            uuid: 'uuid-a',
+            id: 'id-a',
+            title: 'monomer',
+            jobType: 'auto',
+            status: 'Completed',
+            md_engine: 'OpenMM',
+            conformations: 3600
+          },
+          { uuid: 'uuid-b', id: 'id-b', title: 'dimer', conformations: 3000 }
+        ]
+      })
+    )
+    expect(screen.getByRole('link', { name: 'monomer' })).toHaveAttribute(
+      'href',
+      '/dashboard/jobs/id-a'
+    )
+    expect(
+      screen.getByText('BilboMD Auto · OpenMM · 3,600 conformations')
+    ).toBeInTheDocument()
+    const runs = screen.getAllByRole('listitem')
+    expect(runs[0]).not.toHaveTextContent('SAXS data used')
+    expect(runs[1]).toHaveTextContent('SAXS data used')
+    // Total pooled for MultiFoXS
+    expect(screen.getByText('Number of conformations:')).toBeInTheDocument()
+    expect(screen.getByText('6600')).toBeInTheDocument()
+  })
+
+  it('says when a combined run has been deleted', () => {
+    renderSection(
+      { kind: 'owner', id: 'job-1' },
+      makeView({
+        jobType: 'multi',
+        inputs: { bilbomd_uuids: ['uuid-a'] },
+        combinedJobs: [{ uuid: 'uuid-a', conformations: 3600 }]
+      })
+    )
+    expect(screen.getByText('Job no longer available')).toBeInTheDocument()
+    expect(screen.getByText('uuid-a')).toBeInTheDocument()
   })
 
   it('links an anonymous job to its public page for owners', () => {

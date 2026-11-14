@@ -164,10 +164,26 @@ export interface BilboMDScoperDTO extends BaseJobDTO {
   foxs_top_file?: string
 }
 
+// A run that a Multi job combines. Only the uuid is certain: the run may
+// have been deleted since, and `conformations` is known once the Multi job
+// has listed the FoXS profiles it pools.
+export interface MultiCombinedJobDTO {
+  uuid: string
+  id?: string
+  title?: string
+  jobType?: JobType
+  status?: JobStatusEnum
+  md_engine?: MDEngine
+  // Conformers (FoXS profiles) this run contributed to the MultiFoXS pool
+  conformations?: number
+}
+
 export interface BilboMDMultiDTO extends BaseJobDTO {
   bilbomd_uuids: string[]
   data_file_from: string
   bilbomd_jobs?: []
+  // In bilbomd_uuids order; sent by the single-job endpoint only
+  combined_jobs?: MultiCombinedJobDTO[]
 }
 
 export type BilboMDMongoJobDTO =

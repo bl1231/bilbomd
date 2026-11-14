@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { buildBilboFoxsData, buildScoperFoxsData } from '../foxsDataService.js'
+import {
+  buildBilboFoxsData,
+  buildMultiFoxsData,
+  buildScoperFoxsData
+} from '../foxsDataService.js'
 
 vi.mock('fs-extra')
 vi.mock('../foxsParser.js')
@@ -220,6 +224,92 @@ describe('buildBilboFoxsData', () => {
     vi.mocked(fs.readdir).mockResolvedValue([] as never)
 
     await expect(buildBilboFoxsData(makeJob())).rejects.toMatchObject({
+      status: 404,
+      code: 'FOXS_DATA_UNAVAILABLE'
+    })
+  })
+})
+
+describe('buildMultiFoxsData', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  const multiJob = {
+    uuid: 'multi-uuid',
+    data_file_from: 'run-a'
+  } as never
+  const source = { uuid: 'run-a', data_file: 'saxs.dat' }
+
+  const ensemblesOnDisk = async () => {
+    const { default: fs } = await import('fs-extra')
+    const parser = await import('../foxsParser.js')
+    vi.mocked(fs.existsSync).mockReturnValue(true)
+    vi.mocked(fs.access).mockImplementation((async (file: string) => {
+      if (!String(file).includes('multi_state_model_'))
+        throw new Error('ENOENT')
+    }) as never)
+    vi.mocked(fs.readFile).mockResolvedValue(makeDatContent() as never)
+    vi.mocked(fs.readdir).mockResolvedValue([
+      'multi_state_model_2_1_1.dat',
+      'multi_state_model_1_1_1.dat',
+      'ensemble_size_1_model.pdb'
+    ] as never)
+    vi.mocked(parser.parseFileContent).mockReturnValue([
+      { q: 0.001, exp_intensity: 100, model_intensity: 99, error: 2 }
+    ])
+    vi.mocked(parser.extractChiSquared).mockReturnValue(1.23)
+    return fs
+  }
+
+  it('returns the MultiFoXS ensembles from the Multi job results', async () => {
+    const fs = await ensemblesOnDisk()
+
+    const result = await buildMultiFoxsData(multiJob, source)
+
+    expect(result.map(({ filename, kind }) => ({ filename, kind }))).toEqual([
+      { filename: 'multi_state_model_1_1_1.dat', kind: 'ensemble' },
+      { filename: 'multi_state_model_2_1_1.dat', kind: 'ensemble' }
+    ])
+    expect(fs.readdir).toHaveBeenCalledWith('/data/multi-uuid/results')
+  })
+
+  it('takes the Guinier fit from the run whose SAXS data was used', async () => {
+    await ensemblesOnDisk()
+    const guinierService = await import('../guinierService.js')
+    const fit = { rg: 30.1, i0: 100, qmin: 0.01, qmax: 0.04, r2: 0.99 }
+    vi.mocked(guinierService.getGuinierFit).mockResolvedValue(fit)
+
+    const result = await buildMultiFoxsData(multiJob, source)
+
+    expect(guinierService.getGuinierFit).toHaveBeenCalledWith(
+      '/data/run-a',
+      'saxs.dat'
+    )
+    expect(result[0].guinier).toEqual(fit)
+    expect(result[0].fitMetrics?.dmaxSource).toBe('guinier_rg')
+  })
+
+  it('still returns the fits when the data run has been deleted', async () => {
+    await ensemblesOnDisk()
+    const guinierService = await import('../guinierService.js')
+
+    const result = await buildMultiFoxsData(multiJob, null)
+
+    expect(result).toHaveLength(2)
+    expect(guinierService.getGuinierFit).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 before the results exist or without ensembles', async () => {
+    const { default: fs } = await import('fs-extra')
+    vi.mocked(fs.existsSync).mockReturnValue(false)
+    await expect(buildMultiFoxsData(multiJob, source)).rejects.toMatchObject({
+      status: 404
+    })
+
+    vi.mocked(fs.existsSync).mockReturnValue(true)
+    vi.mocked(fs.readdir).mockResolvedValue([] as never)
+    await expect(buildMultiFoxsData(multiJob, source)).rejects.toMatchObject({
       status: 404,
       code: 'FOXS_DATA_UNAVAILABLE'
     })

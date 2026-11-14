@@ -19,7 +19,7 @@ import type {
   IJob,
   IMultiJob
 } from '@bilbomd/mongodb-schema'
-import type { BilboMDSANSDTO } from '@bilbomd/bilbomd-types'
+import type { BilboMDMultiDTO, BilboMDSANSDTO } from '@bilbomd/bilbomd-types'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -427,6 +427,35 @@ describe('mapMultiJobMongoToDTO', () => {
     )
     expect(dto.time_started).toBe(started)
     expect(dto.time_completed).toBe(completed)
+  })
+
+  it('includes the fit assessment', () => {
+    const feedback = { overall_chi_square: 1.2 } as IMultiJob['feedback']
+    const dto = mapMultiJobMongoToDTO(makeMultiJob({ feedback }))
+    expect(dto.feedback).toBe(feedback)
+  })
+
+  it('includes the combined runs only when given', () => {
+    const combined = [{ uuid: 'uuid-a', title: 'A', conformations: 3600 }]
+    const withRuns = mapMultiJobMongoToDTO(
+      makeMultiJob(),
+      combined
+    ) as BilboMDMultiDTO
+    expect(withRuns.combined_jobs).toEqual(combined)
+
+    const without = mapMultiJobMongoToDTO(makeMultiJob())
+    expect('combined_jobs' in without).toBe(false)
+  })
+
+  it('buildMultiJobDTO passes the combined runs through', () => {
+    const dto = buildMultiJobDTO({
+      jobId: 'multi-id',
+      mongo: makeMultiJob(),
+      combinedJobs: [{ uuid: 'uuid-a' }]
+    })
+    expect((dto.mongo as BilboMDMultiDTO).combined_jobs).toEqual([
+      { uuid: 'uuid-a' }
+    ])
   })
 })
 

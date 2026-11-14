@@ -59,6 +59,44 @@ describe('BilboMdFeedback', () => {
     expect(screen.getByText(/q from 0.009 to 0.350 Å⁻¹/)).toBeVisible()
   })
 
+  it('shows a Multi job with runs of different mass without a model mass', () => {
+    const reason =
+      'The combined runs model systems of different mass (monomer 37.6 kDa, dimer 74.1 kDa), so no single model mass applies.'
+    renderWithProviders(
+      <BilboMdFeedback
+        feedback={{
+          ...reportV2,
+          findings: [
+            reportV2.findings![0]!,
+            {
+              code: 'mw_mixed_inputs',
+              severity: 'info',
+              title:
+                'Molecular weight: SAXS estimate 70.2 kDa; the combined runs differ in mass',
+              detail: reason
+            }
+          ],
+          mw: {
+            ...reportV2.mw!,
+            model_kda: null,
+            diff_fraction: null,
+            confidence: null,
+            saxs_kda: 70.2,
+            reason
+          },
+          mw_model: null,
+          mw_err: null
+        }}
+      />
+    )
+
+    const mwTile = screen.getByText('Molecular weight').parentElement!
+    expect(within(mwTile).getByText('Runs differ in mass')).toBeVisible()
+    expect(within(mwTile).queryByText('kDa model')).toBeNull()
+    expect(within(mwTile).getByText('SAXS estimate ≈ 70.2 kDa')).toBeVisible()
+    expect(within(mwTile).getByText(reason)).toBeVisible()
+  })
+
   it('lists the findings other than the verdict, with their severity', () => {
     renderWithProviders(<BilboMdFeedback feedback={reportMismatch} />)
 

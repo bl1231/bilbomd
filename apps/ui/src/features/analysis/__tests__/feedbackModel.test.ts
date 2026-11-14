@@ -72,6 +72,41 @@ describe('toFeedbackView (version 2)', () => {
       saxsKda: null
     })
   })
+
+  it('reads a Multi job whose runs differ in mass', () => {
+    const reason =
+      'The combined runs model systems of different mass (monomer 37.6 kDa, dimer 74.1 kDa), so no single model mass applies.'
+    const view = toFeedbackView({
+      ...reportV2,
+      findings: [
+        reportV2.findings![0]!,
+        {
+          code: 'mw_mixed_inputs',
+          severity: 'info',
+          title:
+            'Molecular weight: SAXS estimate 70.2 kDa; the combined runs differ in mass',
+          detail: reason
+        }
+      ],
+      mw: {
+        ...reportV2.mw!,
+        model_kda: null,
+        diff_fraction: null,
+        confidence: null,
+        saxs_kda: 70.2,
+        reason
+      },
+      mw_model: null,
+      mw_err: null
+    })
+    expect(view.mw).toMatchObject({
+      status: 'mixed_inputs',
+      modelKda: null,
+      saxsKda: 70.2,
+      diffFraction: null,
+      note: reason
+    })
+  })
 })
 
 describe('toFeedbackView (before version 2)', () => {
