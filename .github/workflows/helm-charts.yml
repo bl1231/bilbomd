@@ -38,7 +38,7 @@ jobs:
 
       - uses: azure/setup-helm@v4
         with:
-          version: v4.3.1
+          version: v4.3.2
 
       - name: Install helm-unittest
         run: helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.2.1 --verify=false
@@ -60,7 +60,7 @@ jobs:
 
       - uses: azure/setup-helm@v4
         with:
-          version: v4.3.1
+          version: v4.3.2
 
       # Not --strict: mongo-backup-cronjob.yaml wraps its CronJob in a
       # kind: List, which has no metadata.name, and strict lint flags that
