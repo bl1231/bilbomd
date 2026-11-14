@@ -20,7 +20,8 @@ import {
   getPaeMatrixSize,
   paeResidueMismatchMessage,
   checkRnaResidues,
-  checkConstInpText
+  checkConstInpText,
+  openmmConstInpMessage
 } from '@bilbomd/bilbomd-types'
 import type { QUnits, SaxsDataAnalysis } from '@bilbomd/bilbomd-types'
 import { logger } from '../../middleware/loggers.js'
@@ -137,6 +138,15 @@ const isValidConstInpFile = async (
   return checkConstInpText(text, mode)
 }
 
+// Why OpenMM can't use this const.inp as it stands, or true
+const isOpenMMConstInpFile = async (
+  file: Express.Multer.File
+): Promise<string | true> => {
+  const text = await readUpload(file)
+  if (text === null) return 'Error reading file'
+  return openmmConstInpMessage(text) ?? true
+}
+
 const cifContainsChainId = async (
   file: Express.Multer.File
 ): Promise<boolean> => {
@@ -225,5 +235,6 @@ export {
   checkCifResidues,
   isSingleModel,
   isValidConstInpFile,
+  isOpenMMConstInpFile,
   checkPaeMatchesStructure
 }

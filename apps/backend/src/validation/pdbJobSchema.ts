@@ -8,6 +8,7 @@ import {
   saxsCheck,
   qUnitsField,
   constInpCheck,
+  openmmConstInpCheck,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
   pdbOrCifResidueCheck
@@ -29,6 +30,7 @@ export const pdbJobSchema = yup.object({
     .concat(fileNameLengthTest()),
   const_inp_file: requiredFile('const.inp file is required')
     .concat(constInpCheck('pdb'))
+    .concat(openmmConstInpCheck())
     .concat(fileSizeTest(2_000_000))
     .concat(fileExtTest('inp'))
     .concat(noSpacesTest())

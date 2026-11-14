@@ -30,6 +30,7 @@ import { config } from '../../config/config.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { isResubmitRequest } from './utils/resubmission.js'
 import { serverFile } from './utils/serverFiles.js'
+import { openmmConstInpMessage } from '@bilbomd/bilbomd-types'
 import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
 
 const uploadFolder = config.uploadDir
@@ -376,6 +377,12 @@ async function processConstraintFile({
       // Convert CHARMM INP to YAML for OpenMM
       logger.info('Converting INP file to YAML for OpenMM')
       await validateInpConstraints(filePath)
+      // The upload check already ran this; a resubmission reuses the
+      // original file without it
+      const openmmProblem = openmmConstInpMessage(
+        await fs.readFile(filePath, 'utf8')
+      )
+      if (openmmProblem !== null) throw new Error(openmmProblem)
       const yamlContent = await convertInpToYaml(filePath, logger)
 
       // Write YAML content to standardized filename

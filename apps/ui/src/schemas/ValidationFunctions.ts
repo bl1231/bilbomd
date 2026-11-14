@@ -14,6 +14,7 @@ import {
   findUnsupportedPdbResidues,
   checkRnaResidues,
   checkConstInpText,
+  openmmConstInpMessage,
   findSharedResidueNumbers,
   countPdbResidues,
   countCifResidues,
@@ -336,6 +337,13 @@ const isValidConstInpFile = async (
   return checkConstInpText(text, mode)
 }
 
+// Why OpenMM can't use this const.inp as it stands, or true
+const isOpenMMConstInpFile = async (file: File): Promise<string | true> => {
+  const text = await readText(file)
+  if (text === null) return 'Error reading file'
+  return openmmConstInpMessage(text) ?? true
+}
+
 const cifContainsChainId = (file: File): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -471,6 +479,7 @@ export {
   cifHasAllowedResiduesOnly,
   noLeadingSpaceOnPDBLines,
   isValidConstInpFile,
+  isOpenMMConstInpFile,
   hasAllowedResiduesOnly,
   findSharedResidueNumbersInFile,
   getPaeFileMatrixSize,

@@ -11,6 +11,7 @@ vi.mock('../helpers/fileValidators.js', () => ({
   saxsCheck: () => mixed(),
   qUnitsField: () => mixed(),
   constInpCheck: () => mixed(),
+  openmmConstInpCheck: () => mixed(),
   chainIdCheck: () => mixed(),
   pdbResidueCheck: () => mixed(),
   pdbOrCifExtTest: () => mixed(),
