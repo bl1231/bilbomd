@@ -1,5 +1,13 @@
 # @bilbomd/bilbomd-types
 
+## 1.19.0
+
+### Minor Changes
+
+- a2fd2cd: Constraint bodies that leave fewer than 2 flexible residues between them on a chain now get a warning (not an error) in the Classic, SANS and resubmit job forms and in the Inp Jiffy, so users know the linker has little room to move (#1101). The minimum is one shared constant, `MIN_FLEX_GAP` in `@bilbomd/bilbomd-types`, matching what `pae2const.py` enforces for Auto/AF/OF3 jobs. Uploads where a fixed body and a rigid body share residues are now rejected, and overlap checks now run on every route that takes a `const.inp` (Classic PDB, Classic CRD/PSF, SANS) in the upload schema and the job forms, before a job is created; before, only rigid↔rigid overlaps were checked, and only for Classic PDB. The `const.inp` checks read every accepted selection form (single residues, whole segments, several segids) and key by segid. `@bilbomd/bilbomd-types` adds `findConstInpOverlaps`, `constInpOverlapMessage` and `constInpCloseBodiesMessage`; `@bilbomd/md-utils` adds `findFixedRigidOverlaps` and `assertNoFixedRigidOverlaps` for YAML constraints.
+- 79aad04: The Inp Jiffy can start from an existing `const.inp`: upload it with the PDB and its fixed and rigid bodies fill in the next step, checked against the PDB's chains. Anything it can't use (unknown chains, unreadable selections, `cons harm`, undefined names) is listed instead of dropped silently. `@bilbomd/bilbomd-types` adds `readConstInp`, which keeps each segid, reads single residues, whole segments (`segid HETA`), several segids per range and 4-letter keyword abbreviations, and reports the commands it skipped. `parseConstInp` (used for `md_constraints` and the OpenMM constraints) still reads only `resid a:b .and. segid S` defines, so its output is unchanged. New rigid bodies in the jiffy no longer reuse an ID after a delete.
+- df5afc9: OpenMM Classic PDB and SANS jobs no longer run with fewer constraints than their `const.inp` asks for. The OpenMM conversion only reads `define NAME sele ( resid A:B .and. segid S ) end`, and used to drop any other selection (whole segids, single residues, several segids per range), names no define sets, and commands such as `cons harm`, with no warning. Such files are now rejected at upload, in the job forms and in the backend, with a message naming the lines. CHARMM jobs are unchanged. The worker logs a warning if an older OpenMM job's `const.inp` has lines it will not apply. `@bilbomd/bilbomd-types` adds `findOpenMMIgnoredConstInpLines` and `openmmConstInpMessage`.
+
 ## 1.18.0
 
 ### Minor Changes

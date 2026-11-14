@@ -1,5 +1,17 @@
 # @bilbomd/worker
 
+## 2.28.3
+
+### Patch Changes
+
+- df5afc9: OpenMM Classic PDB and SANS jobs no longer run with fewer constraints than their `const.inp` asks for. The OpenMM conversion only reads `define NAME sele ( resid A:B .and. segid S ) end`, and used to drop any other selection (whole segids, single residues, several segids per range), names no define sets, and commands such as `cons harm`, with no warning. Such files are now rejected at upload, in the job forms and in the backend, with a message naming the lines. CHARMM jobs are unchanged. The worker logs a warning if an older OpenMM job's `const.inp` has lines it will not apply. `@bilbomd/bilbomd-types` adds `findOpenMMIgnoredConstInpLines` and `openmmConstInpMessage`.
+- d1761f8: OpenMM fixed bodies now include the last residue of each range (`resid 9:108` holds 9–108), as CHARMM and the OpenMM rigid bodies already did. Before, the last residue of every fixed segment was free to move, and a single-residue fixed segment held nothing (#1101).
+- Updated dependencies [a2fd2cd]
+- Updated dependencies [79aad04]
+- Updated dependencies [df5afc9]
+  - @bilbomd/bilbomd-types@1.19.0
+  - @bilbomd/md-utils@1.4.0
+
 ## 2.28.2
 
 ### Patch Changes
