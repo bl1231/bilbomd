@@ -46,6 +46,7 @@ import JobSuccessAlert from './JobSuccessAlert'
 import MdEngineField from 'components/MdEngineField'
 import TitleField from 'components/TitleField'
 import { getRgMaxWarning } from './rgMaxWarning'
+import ConstInpGapWarning from 'features/jobs/ConstInpGapWarning'
 import MwCheck from 'features/mwcheck/MwCheck'
 
 type NewJobFormProps = {
@@ -661,6 +662,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             useExampleData ? 'example-const.inp' : undefined
                           }
                         />
+                        <ConstInpGapWarning file={values.inp_file} />
                       </Grid>
                     </Grid>
                     <Grid

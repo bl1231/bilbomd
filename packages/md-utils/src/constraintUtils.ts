@@ -248,6 +248,7 @@ export async function validateYamlConstraints(
     }
 
     assertNoRigidBodyOverlaps(constraints)
+    assertNoFixedRigidOverlaps(constraints)
 
     logger.info('YAML constraints file validated successfully')
   } catch (error) {
@@ -324,7 +325,9 @@ export async function validateInpConstraints(
     }
 
     // Rigid bodies are numbered in the order of the 'shape desc' lines
-    assertNoRigidBodyOverlaps(parseConstInp(inpContent))
+    const parsed = parseConstInp(inpContent)
+    assertNoRigidBodyOverlaps(parsed)
+    assertNoFixedRigidOverlaps(parsed)
 
     logger.info('INP constraints file validated successfully')
   } catch (error) {
@@ -380,6 +383,51 @@ export const assertNoRigidBodyOverlaps = (
       `Rigid bodies must not overlap: ${overlaps.join('; ')}. ` +
         'A residue can belong to only one rigid body. Merge the overlapping ' +
         'rigid bodies into one, or remove the shared residues from one of them.'
+    )
+  }
+}
+
+/**
+ * Lists every place where a fixed body and a rigid body share residues. Such
+ * a residue would be both held in place and moved with the rigid body, which
+ * is never what a constraint file means. OpenMM runs it anyway, so this is an
+ * upload check, not a worker one. Residue ranges are inclusive.
+ */
+export const findFixedRigidOverlaps = (
+  constraints: IMDConstraints
+): string[] => {
+  const overlaps: string[] = []
+  for (const fixed of constraints.fixed_bodies ?? []) {
+    for (const rigid of constraints.rigid_bodies ?? []) {
+      for (const sf of fixed.segments ?? []) {
+        for (const sr of rigid.segments ?? []) {
+          if (sf.chain_id !== sr.chain_id) continue
+          const start = Math.max(sf.residues.start, sr.residues.start)
+          const stop = Math.min(sf.residues.stop, sr.residues.stop)
+          if (start <= stop) {
+            overlaps.push(
+              `${fixed.name} and ${rigid.name} both include chain ${sf.chain_id} residues ${start}-${stop}`
+            )
+          }
+        }
+      }
+    }
+  }
+  return overlaps
+}
+
+/**
+ * Throws if any residue is in both a fixed body and a rigid body.
+ */
+export const assertNoFixedRigidOverlaps = (
+  constraints: IMDConstraints
+): void => {
+  const overlaps = findFixedRigidOverlaps(constraints)
+  if (overlaps.length > 0) {
+    throw new Error(
+      `Fixed and rigid bodies must not overlap: ${overlaps.join('; ')}. ` +
+        'A residue is either held in place (fixed) or moves with one rigid ' +
+        'body. Remove the shared residues from one of them.'
     )
   }
 }

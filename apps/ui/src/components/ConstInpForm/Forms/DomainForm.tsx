@@ -8,6 +8,8 @@ import AddIcon from '@mui/icons-material/Add'
 import useTitle from 'hooks/useTitle'
 import HeaderBox from 'components/HeaderBox'
 import RigidBody from '../Helpers/RigidBody'
+import GapWarning from '../Helpers/GapWarning'
+import { MIN_FLEX_GAP } from '@bilbomd/bilbomd-types'
 import type { Chain, RigidBody as IRigidBody } from 'types/interfaces'
 
 interface DomainFormProps {
@@ -93,8 +95,9 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                 </li>
                 <li>
                   <Typography>
-                    Leave at least <b>one residue</b> between Rigid Segments to
-                    allow for efficient conformational sampling.
+                    Leave at least <b>{MIN_FLEX_GAP} residues</b> between Rigid
+                    Segments to allow for efficient conformational sampling.
+                    Closer segments give a warning, not an error.
                   </Typography>
                 </li>
               </ul>
@@ -151,6 +154,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                   />
                 ))}
               </Grid>
+              <GapWarning rigidBodies={values.pdb_file.rigid_bodies} />
               <Grid sx={{ my: 3 }}>
                 <FieldArray name="pdb_file.rigid_bodies">
                   {(arrayHelpers) => (
