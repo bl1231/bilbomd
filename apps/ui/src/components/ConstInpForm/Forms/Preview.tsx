@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useFormikContext, FormikValues } from 'formik'
 import { Typography } from '@mui/material'
 import Grid from '@mui/material/Grid'
@@ -8,16 +8,10 @@ import { Box } from '@mui/system'
 import CopyToClipboardButton from 'components/Common/CopyToClipboardButton'
 import Download from '../Helpers/Download'
 import { RigidBody, Chain } from 'types/interfaces'
+import { buildConstInp } from '../Helpers/constInpText'
 import HeaderBox from 'components/HeaderBox'
-import { wrapConstInpCommand } from '@bilbomd/bilbomd-types'
 import ConstraintSchematic from 'features/constraintSchematic/ConstraintSchematic'
 import { constraintsFromConstInp } from 'features/constraintSchematic/constInpConstraints'
-
-// CHARMM cuts lines over 200 characters short, so long commands are continued
-// over several lines ending in ' -'
-const pushWrappedLine = (contentArray: string[], line: string) => {
-  contentArray.push(...wrapConstInpCommand(line))
-}
 
 const Preview = () => {
   useTitle('BilboMD: Preview const.inp file')
@@ -25,109 +19,13 @@ const Preview = () => {
   const [constFileBlob, setConstFileBlob] = useState<Blob | null>(null)
   const { values } = useFormikContext<FormikValues>()
   const rigid_bodies = values.pdb_file.rigid_bodies as RigidBody[]
-  const chains = values.pdb_file.chains
-
-  const prepareConstInputFile = useCallback(
-    (rigidBodies: RigidBody[], chains: Chain[]) => {
-      const contentArray: string[] = []
-      let dockCount = 1
-      let rigidCount = 1
-
-      rigidBodies.forEach((rb) => {
-        if (rb.id === 'PRIMARY') {
-          const rigid_domains: string[] = []
-          rb.domains.forEach(
-            ({ chainid: originalChainid, start, end }, d_index) => {
-              let chainid = originalChainid
-              const rd_index = d_index + 1
-              const chain = chains.find((c) => c.id === chainid)
-              let chainType = chain ? chain.type : ''
-              chainType = chainType.toUpperCase()
-
-              if (chainid.toLowerCase() === chainid) {
-                chainType = chainType.slice(0, -1) + 'L'
-                chainid = chainid.toUpperCase()
-              }
-
-              const line =
-                'define fixed' +
-                rd_index +
-                ' sele ( resid ' +
-                start +
-                ':' +
-                end +
-                ' .and. segid ' +
-                chainType +
-                chainid +
-                ' ) end'
-
-              pushWrappedLine(contentArray, line)
-              rigid_domains.push('fixed' + rd_index, '.or.')
-            }
-          )
-
-          rigid_domains.pop()
-          rigid_domains.push('end')
-          const consFixSeleString = 'cons fix sele ' + rigid_domains.join(' ')
-          pushWrappedLine(contentArray, consFixSeleString)
-          contentArray.push(' ')
-        } else {
-          const rigid_domains: string[] = []
-          rb.domains.forEach(({ chainid: originalChainid, start, end }) => {
-            let chainid = originalChainid
-            const chain = chains.find((c) => c.id === chainid)
-            let chainType = chain ? chain.type : ''
-            chainType = chainType.toUpperCase()
-
-            if (chainid.toLowerCase() === chainid) {
-              chainType = chainType.slice(0, -1) + 'L'
-              chainid = chainid.toUpperCase()
-            }
-
-            const line =
-              'define rigid' +
-              rigidCount +
-              ' sele ( resid ' +
-              start +
-              ':' +
-              end +
-              ' .and. segid ' +
-              chainType +
-              chainid +
-              ' ) end'
-
-            pushWrappedLine(contentArray, line)
-            rigid_domains.push('rigid' + rigidCount, '.or.')
-            rigidCount++
-          })
-
-          rigid_domains.pop()
-          rigid_domains.push('end')
-          const shapeDescLine =
-            'shape desc dock' +
-            dockCount +
-            ' rigid sele ' +
-            rigid_domains.join(' ')
-          pushWrappedLine(contentArray, shapeDescLine)
-          contentArray.push(' ')
-          dockCount++
-        }
-      })
-
-      contentArray.push('return')
-      const content = contentArray.join('\n')
-      setConstFilePreview(content)
-      const file = new Blob([content], { type: 'text/plain' })
-      setConstFileBlob(file)
-    },
-    []
-  )
+  const chains = values.pdb_file.chains as Chain[]
 
   useEffect(() => {
-    if (values) {
-      prepareConstInputFile(rigid_bodies, chains)
-    }
-  }, [values, rigid_bodies, chains, prepareConstInputFile])
+    const content = buildConstInp(rigid_bodies, chains)
+    setConstFilePreview(content)
+    setConstFileBlob(new Blob([content], { type: 'text/plain' }))
+  }, [rigid_bodies, chains])
 
   // The file above as bodies, for the schematic
   const constraints = useMemo(

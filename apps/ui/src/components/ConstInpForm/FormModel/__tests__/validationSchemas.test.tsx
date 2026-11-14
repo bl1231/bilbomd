@@ -151,3 +151,127 @@ describe('validationSchemas', () => {
     })
   })
 })
+
+describe('File Upload Schema, optional const.inp', () => {
+  const fileUploadSchema = validationSchemas[0]!
+  const pdb_file = {
+    file: new File(['dummy content'], 'example.pdb', { type: 'text/plain' }),
+    name: 'example.pdb'
+  }
+  const constInp = `define fixed1 sele ( resid 1:10 .and. segid PROA ) end
+cons fix sele fixed1 end
+return`
+
+  it('accepts no const.inp at all', async () => {
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: { file: null, src: null, name: '', notes: null }
+      })
+    ).resolves.toBeTruthy()
+  })
+
+  it('accepts a const.inp with a body it can read', async () => {
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: {
+          file: new File([constInp], 'const.inp'),
+          src: constInp,
+          name: 'const.inp'
+        }
+      })
+    ).resolves.toBeTruthy()
+  })
+
+  it('rejects a const.inp with no fixed or rigid body', async () => {
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: {
+          file: new File(['return'], 'const.inp'),
+          src: 'return',
+          name: 'const.inp'
+        }
+      })
+    ).rejects.toThrow('No fixed or rigid bodies could be read from this file.')
+  })
+
+  it('rejects a const.inp over 1MB', async () => {
+    const big = new File(['!'.repeat(1_000_001)], 'const.inp')
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: { file: big, src: constInp, name: 'const.inp' }
+      })
+    ).rejects.toThrow('Max const.inp file size is 1MB')
+  })
+})
+
+describe('optional const.inp, while and after reading', () => {
+  const fileUploadSchema = validationSchemas[0]!
+  const pdb_file = {
+    file: new File(['dummy content'], 'example.pdb', { type: 'text/plain' }),
+    name: 'example.pdb'
+  }
+
+  it('is not ready while a picked file is still being read', async () => {
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: {
+          file: new File(['x'], 'const.inp'),
+          src: null,
+          name: 'const.inp',
+          reading: true
+        }
+      })
+    ).rejects.toThrow('Reading the file…')
+  })
+
+  it('rejects a picked file that is empty', async () => {
+    await expect(
+      fileUploadSchema.validate({
+        pdb_file,
+        const_inp_file: {
+          file: new File([''], 'const.inp'),
+          // Formik hands an empty string to Yup as undefined
+          src: undefined,
+          name: 'const.inp',
+          reading: false
+        }
+      })
+    ).rejects.toThrow('No fixed or rigid bodies could be read from this file.')
+  })
+})
+
+describe('Rigid Domains Schema, PRIMARY', () => {
+  const rigidDomainsSchema = validationSchemas[1]!
+  const chains = [{ id: 'A', first_res: 1, last_res: 300 }]
+  const values = (primaryDomains: unknown[]) => ({
+    pdb_file: {
+      file: 'model.pdb',
+      src: 'ATOM',
+      name: 'model.pdb',
+      chains,
+      rigid_bodies: [
+        { id: 'PRIMARY', domains: primaryDomains },
+        { id: 'RIGID 1', domains: [{ chainid: 'A', start: 200, end: 250 }] }
+      ]
+    }
+  })
+
+  it('needs at least one fixed segment', async () => {
+    await expect(rigidDomainsSchema.validate(values([]))).rejects.toThrow(
+      'PRIMARY needs at least one fixed segment'
+    )
+  })
+
+  it('accepts a PRIMARY with a segment', async () => {
+    await expect(
+      rigidDomainsSchema.validate(
+        values([{ chainid: 'A', start: 1, end: 100 }])
+      )
+    ).resolves.toBeTruthy()
+  })
+})

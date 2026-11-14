@@ -64,3 +64,15 @@ describe('forminitialValues', () => {
     expect(rigidBodyDomain).toHaveProperty('end', '')
   })
 })
+
+describe('const_inp_file initial value', () => {
+  it('starts with no file and nothing imported', () => {
+    expect(initialValues.const_inp_file).toEqual({
+      file: null,
+      src: null,
+      name: '',
+      reading: false,
+      notes: null
+    })
+  })
+})
