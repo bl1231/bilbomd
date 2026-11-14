@@ -1,5 +1,17 @@
 # @bilbomd/backend
 
+## 2.22.2
+
+### Patch Changes
+
+- a2fd2cd: Constraint bodies that leave fewer than 2 flexible residues between them on a chain now get a warning (not an error) in the Classic, SANS and resubmit job forms and in the Inp Jiffy, so users know the linker has little room to move (#1101). The minimum is one shared constant, `MIN_FLEX_GAP` in `@bilbomd/bilbomd-types`, matching what `pae2const.py` enforces for Auto/AF/OF3 jobs. Uploads where a fixed body and a rigid body share residues are now rejected, and overlap checks now run on every route that takes a `const.inp` (Classic PDB, Classic CRD/PSF, SANS) in the upload schema and the job forms, before a job is created; before, only rigid↔rigid overlaps were checked, and only for Classic PDB. The `const.inp` checks read every accepted selection form (single residues, whole segments, several segids) and key by segid. `@bilbomd/bilbomd-types` adds `findConstInpOverlaps`, `constInpOverlapMessage` and `constInpCloseBodiesMessage`; `@bilbomd/md-utils` adds `findFixedRigidOverlaps` and `assertNoFixedRigidOverlaps` for YAML constraints.
+- df5afc9: OpenMM Classic PDB and SANS jobs no longer run with fewer constraints than their `const.inp` asks for. The OpenMM conversion only reads `define NAME sele ( resid A:B .and. segid S ) end`, and used to drop any other selection (whole segids, single residues, several segids per range), names no define sets, and commands such as `cons harm`, with no warning. Such files are now rejected at upload, in the job forms and in the backend, with a message naming the lines. CHARMM jobs are unchanged. The worker logs a warning if an older OpenMM job's `const.inp` has lines it will not apply. `@bilbomd/bilbomd-types` adds `findOpenMMIgnoredConstInpLines` and `openmmConstInpMessage`.
+- Updated dependencies [a2fd2cd]
+- Updated dependencies [79aad04]
+- Updated dependencies [df5afc9]
+  - @bilbomd/bilbomd-types@1.19.0
+  - @bilbomd/md-utils@1.4.0
+
 ## 2.22.1
 
 ### Patch Changes
