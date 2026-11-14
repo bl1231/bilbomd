@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import mongoose from 'mongoose'
 import type { IMultiJob } from '@bilbomd/mongodb-schema'
 
 const { mockJobFind, mockReadFile } = vi.hoisted(() => ({
@@ -120,7 +121,7 @@ describe('buildCombinedJobs', () => {
     await buildCombinedJobs(multiJob)
 
     expect(mockJobFind).toHaveBeenCalledWith({
-      uuid: { $in: [RUN_A, RUN_B] },
+      uuid: mongoose.trusted({ $in: [RUN_A, RUN_B] }),
       'user._id': OWNER
     })
   })
@@ -151,7 +152,9 @@ describe('buildCombinedJobs', () => {
 
     await buildCombinedJobs(multiJob, { privileged: true })
 
-    expect(mockJobFind).toHaveBeenCalledWith({ uuid: { $in: [RUN_A, RUN_B] } })
+    expect(mockJobFind).toHaveBeenCalledWith({
+      uuid: mongoose.trusted({ $in: [RUN_A, RUN_B] })
+    })
   })
 
   it('looks nothing up when the Multi job has no owner', async () => {
