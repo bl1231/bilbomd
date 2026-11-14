@@ -1,4 +1,5 @@
 import fs from 'fs-extra'
+import mongoose from 'mongoose'
 import path from 'path'
 import { Job, type IMultiJob } from '@bilbomd/mongodb-schema'
 import type { MDEngine, MultiCombinedJobDTO } from '@bilbomd/bilbomd-types'
@@ -68,6 +69,17 @@ const ownerId = (multiJob: IMultiJob): unknown => {
   return user
 }
 
+// The Job lookup for a Multi job's runs. The backend sets mongoose's
+// `sanitizeFilter` globally, so the `$in` built here must be marked trusted
+// or it is wrapped in `$eq` and fails to cast.
+export const combinedJobsFilter = (
+  multiJob: IMultiJob,
+  privileged: boolean
+): Record<string, unknown> => {
+  const uuid = mongoose.trusted({ $in: [...multiJob.bilbomd_uuids] })
+  return privileged ? { uuid } : { uuid, 'user._id': ownerId(multiJob) }
+}
+
 // A summary of each run the Multi job combines, in bilbomd_uuids order.
 // A Multi job can name any run's uuid, so a run's details (title, id, status,
 // engine) are shown only for runs its owner owns, unless the viewer is an
@@ -79,12 +91,9 @@ export const buildCombinedJobs = async (
   { privileged = false }: { privileged?: boolean } = {}
 ): Promise<MultiCombinedJobDTO[]> => {
   const owner = ownerId(multiJob)
-  const filter = privileged
-    ? { uuid: { $in: multiJob.bilbomd_uuids } }
-    : { uuid: { $in: multiJob.bilbomd_uuids }, 'user._id': owner }
   const [docs, counts] = await Promise.all([
     privileged || owner
-      ? Job.find(filter)
+      ? Job.find(combinedJobsFilter(multiJob, privileged))
           .select('uuid title status md_engine __t')
           .lean<CombinedJobDoc[]>()
           .exec()

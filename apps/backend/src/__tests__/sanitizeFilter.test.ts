@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import mongoose, { Model } from 'mongoose'
-import { User, Job, JobStatus } from '@bilbomd/mongodb-schema'
+import { User, Job, JobStatus, type IMultiJob } from '@bilbomd/mongodb-schema'
+import { combinedJobsFilter } from '../services/multi/combinedJobs.js'
 
 // Reproduce mongoose's query-time `sanitizeFilter` + schema casting WITHOUT a
 // DB connection. This is the exact path that turned user registration into a
@@ -98,6 +99,29 @@ describe('sanitizeFilter operator-query regressions', () => {
     it('REGRESSION: a bare { $lt: date } fails to cast under sanitizeFilter', () => {
       expect(
         filterCastError(Job, { createdAt: { $lt: threshold } })
+      ).toBeInstanceOf(mongoose.Error.CastError)
+    })
+  })
+
+  describe('Multi job combined-runs lookup (Job.uuid: String)', () => {
+    const multiJob = {
+      uuid: 'multi-uuid',
+      bilbomd_uuids: [
+        'f3d05796-ffa0-4a6f-be5c-59ad4d4c5a49',
+        '5f38c967-3c64-4ea1-9c8d-af766e5f5694'
+      ],
+      user: { _id: new mongoose.Types.ObjectId() }
+    } as unknown as IMultiJob
+
+    it.each([false, true])('casts cleanly (privileged: %s)', (privileged) => {
+      expect(
+        filterCastError(Job, combinedJobsFilter(multiJob, privileged))
+      ).toBeNull()
+    })
+
+    it('REGRESSION: a bare { $in: uuids } fails to cast under sanitizeFilter', () => {
+      expect(
+        filterCastError(Job, { uuid: { $in: multiJob.bilbomd_uuids } })
       ).toBeInstanceOf(mongoose.Error.CastError)
     })
   })
