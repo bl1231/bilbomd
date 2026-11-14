@@ -19,6 +19,15 @@ interface FileFieldProps extends FormControlProps {
   setFieldValue: (field: string, value: File, shouldValidate?: boolean) => void
 }
 
+// As tall as the button beside it; a long message can still grow
+const alertSx = {
+  minHeight: '40px',
+  py: 0,
+  fontSize: '1.1rem',
+  alignItems: 'center',
+  '& .MuiAlert-icon, & .MuiAlert-message': { py: 0 }
+}
+
 const FileField = ({
   id,
   name,
@@ -65,7 +74,12 @@ const FileField = ({
               component="span"
               sx={{
                 height: '40px',
-                width: '160px',
+                // Grow for a longer title ("Select const.inp") instead of
+                // wrapping it onto a clipped second line
+                minWidth: '160px',
+                whiteSpace: 'nowrap',
+                // Show file names as written, not capitalised
+                textTransform: 'none',
                 fontSize: '1.1rem',
                 alignItems: 'center'
               }}
@@ -79,11 +93,7 @@ const FileField = ({
             <Alert
               variant="outlined"
               severity="success"
-              sx={{
-                height: '55px',
-                fontSize: '1.1rem',
-                alignItems: 'center'
-              }}
+              sx={alertSx}
             >
               {fileName}
             </Alert>
@@ -91,11 +101,7 @@ const FileField = ({
           {isError ? (
             <Alert
               severity="error"
-              sx={{
-                height: '55px',
-                fontSize: '1.1rem',
-                alignItems: 'center'
-              }}
+              sx={alertSx}
             >
               {errorMessage}
             </Alert>

@@ -493,7 +493,10 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                   as={FileField}
                   onChange={onChange}
                   setFieldValue={setFieldValue}
-                  isError={Boolean(errors.pdb_file)}
+                  // Only once a PDB has been picked: picking a const.inp first
+                  // validates the whole form, and shouldn't flag an untouched
+                  // PDB picker
+                  isError={Boolean(errors.pdb_file) && Boolean(name)}
                   errorMessage={
                     errors.pdb_file
                       ? errors.pdb_file.file || 'Error uploading file'
@@ -526,7 +529,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                     <Button
                       variant="outlined"
                       onClick={removeConstInp}
-                      sx={{ ml: 2 }}
+                      sx={{ ml: 2, height: '40px' }}
                     >
                       Remove
                     </Button>
