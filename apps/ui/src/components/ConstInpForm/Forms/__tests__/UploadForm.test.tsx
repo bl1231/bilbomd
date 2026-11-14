@@ -127,6 +127,8 @@ describe('UploadForm with an existing const.inp', () => {
     expect(
       await screen.findByText(/Upload the PDB file to check/)
     ).toBeInTheDocument()
+    // The untouched PDB picker isn't flagged by the whole-form validation
+    expect(screen.queryByText('Please select a PDB file')).toBeNull()
 
     upload('pdb_file', 'model.pdb', pdbText())
 

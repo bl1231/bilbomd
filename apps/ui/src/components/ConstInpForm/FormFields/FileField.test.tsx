@@ -110,4 +110,40 @@ describe('FileField Component', () => {
     // Verify that only the first file is processed
     expect(mockSetFieldValue).toHaveBeenCalledWith('file', files[0])
   })
+
+  it('keeps a long title on one line, as written', () => {
+    render(
+      <FileField
+        {...defaultProps}
+        title="Select const.inp"
+      />
+    )
+
+    expect(screen.getByText('Select const.inp')).toHaveStyle({
+      'min-width': '160px',
+      'white-space': 'nowrap',
+      'text-transform': 'none'
+    })
+  })
+
+  it('makes the file name and error boxes as tall as the button', () => {
+    const { rerender } = render(<FileField {...defaultProps} />)
+    fireEvent.change(screen.getByLabelText('Upload File'), {
+      target: { files: [new File(['x'], 'model.pdb')] }
+    })
+    expect(screen.getByRole('alert')).toHaveStyle({ 'min-height': '40px' })
+
+    rerender(
+      <FileField
+        {...defaultProps}
+        isError
+        errorMessage="Please select a PDB file"
+      />
+    )
+    expect(
+      screen.getByText('Please select a PDB file').closest('[role="alert"]')
+    ).toHaveStyle({
+      'min-height': '40px'
+    })
+  })
 })
