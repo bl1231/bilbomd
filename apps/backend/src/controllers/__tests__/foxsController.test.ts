@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Request, Response } from 'express'
 import { Types } from 'mongoose'
 
-const { mockJobFindOne, mockAccess } = vi.hoisted(() => ({
+const { mockJobFindOne, mockMultiJobFindOne, mockAccess } = vi.hoisted(() => ({
   mockJobFindOne: vi.fn(),
+  mockMultiJobFindOne: vi.fn(),
   mockAccess: vi.fn()
 }))
 
@@ -21,14 +22,20 @@ vi.mock('fs-extra', () => ({
 
 vi.mock('../../services/foxs/foxsDataService.js', () => ({
   buildBilboFoxsData: vi.fn(),
+  buildMultiFoxsData: vi.fn(),
   buildScoperFoxsData: vi.fn()
 }))
 
 vi.mock('@bilbomd/mongodb-schema', () => ({
-  Job: { findOne: mockJobFindOne }
+  Job: { findOne: mockJobFindOne },
+  MultiJob: { findOne: mockMultiJobFindOne }
 }))
 
-import { downloadPDB } from '../foxsController.js'
+import { downloadPDB, getFoxsData } from '../foxsController.js'
+import {
+  buildBilboFoxsData,
+  buildMultiFoxsData
+} from '../../services/foxs/foxsDataService.js'
 
 const jobId = new Types.ObjectId().toString()
 
@@ -117,5 +124,60 @@ describe('downloadPDB', () => {
     await downloadPDB(req, res)
     expect(res.status).toHaveBeenCalledWith(500)
     expect(res.sendFile).not.toHaveBeenCalled()
+  })
+})
+
+describe('getFoxsData', () => {
+  let res: ReturnType<typeof createMockResponse>
+  const req = { params: { id: jobId } } as unknown as Request
+
+  // Job.findOne(...).exec() for the job lookup; the Multi data-source lookup
+  // goes through .select().lean().exec()
+  const jobLookup = (job: object | null, source: object | null = null) =>
+    mockJobFindOne.mockImplementation((filter: Record<string, unknown>) =>
+      'uuid' in filter
+        ? {
+            select: () => ({ lean: () => ({ exec: async () => source }) })
+          }
+        : { exec: async () => job }
+    )
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    res = createMockResponse()
+  })
+
+  it('returns 404 when neither a job nor a Multi job matches', async () => {
+    jobLookup(null)
+    mockMultiJobFindOne.mockReturnValue({ exec: async () => null })
+
+    await getFoxsData(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(404)
+  })
+
+  it('builds a regular job without looking for a Multi job', async () => {
+    const job = { uuid: 'run-a', __t: 'BilboMdPDB' }
+    jobLookup(job)
+    vi.mocked(buildBilboFoxsData).mockResolvedValue([])
+
+    await getFoxsData(req, res)
+
+    expect(buildBilboFoxsData).toHaveBeenCalledWith(job)
+    expect(mockMultiJobFindOne).not.toHaveBeenCalled()
+  })
+
+  it("builds a Multi job's fits against its data-source run", async () => {
+    const multiJob = { uuid: 'multi', data_file_from: 'run-a' }
+    const source = { uuid: 'run-a', data_file: 'saxs.dat' }
+    jobLookup(null, source)
+    mockMultiJobFindOne.mockReturnValue({ exec: async () => multiJob })
+    vi.mocked(buildMultiFoxsData).mockResolvedValue([])
+
+    await getFoxsData(req, res)
+
+    expect(mockJobFindOne).toHaveBeenCalledWith({ uuid: 'run-a' })
+    expect(buildMultiFoxsData).toHaveBeenCalledWith(multiJob, source)
+    expect(res.json).toHaveBeenCalledWith([])
   })
 })

@@ -1,11 +1,12 @@
 import { logger } from '../middleware/loggers.js'
 import fs from 'fs-extra'
 import path from 'path'
-import { Job, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
+import { Job, MultiJob, IBilboMDScoperJob } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { getEnvVar } from '../config/config.js'
 import {
   buildBilboFoxsData,
+  buildMultiFoxsData,
   buildScoperFoxsData
 } from '../services/foxs/foxsDataService.js'
 
@@ -73,17 +74,25 @@ const getFoxsData = async (req: Request, res: Response) => {
   }
 
   const job = await Job.findOne({ _id: jobId }).exec()
-  if (!job) {
+  const multiJob = job ? null : await MultiJob.findOne({ _id: jobId }).exec()
+  if (!job && !multiJob) {
     res.status(404).json({ message: `No job matches ID ${jobId}.` })
     return
   }
 
   try {
-    if (job.__t === 'BilboMdScoper') {
+    if (multiJob) {
+      // MultiFoXS fitted the SAXS data of one of the combined runs
+      const source = await Job.findOne({ uuid: multiJob.data_file_from })
+        .select('uuid data_file')
+        .lean<{ uuid: string; data_file: string }>()
+        .exec()
+      res.json(await buildMultiFoxsData(multiJob, source))
+    } else if (job?.__t === 'BilboMdScoper') {
       const scoperJob = job as unknown as IBilboMDScoperJob
       const data = await buildScoperFoxsData(scoperJob)
       res.json(data)
-    } else {
+    } else if (job) {
       const data = await buildBilboFoxsData(job)
       res.json(data)
     }

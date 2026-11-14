@@ -11,6 +11,10 @@ import { Types } from 'mongoose'
 import { Request, Response } from 'express'
 import type { BilboMDJobDTO } from '@bilbomd/bilbomd-types'
 import { buildBilboMDJobDTO, buildMultiJobDTO } from './utils/jobDTOMapper.js'
+import { buildCombinedJobs } from '../../services/multi/combinedJobs.js'
+
+// May see every job's details (same roles as verifyJobOwnership)
+const PRIVILEGED_ROLES = ['Admin', 'Manager']
 
 // Helper to resolve username from user field
 type UserField =
@@ -217,11 +221,17 @@ const getJobById = async (req: Request, res: Response) => {
         return
       }
 
-      const username = await resolveUsername(multiJob.user)
+      const roles = req.roles ?? req.apiUser?.roles ?? []
+      const privileged = roles.some((role) => PRIVILEGED_ROLES.includes(role))
+      const [username, combinedJobs] = await Promise.all([
+        resolveUsername(multiJob.user),
+        buildCombinedJobs(multiJob, { privileged })
+      ])
       const dto = buildMultiJobDTO({
         jobId: jobIdString,
         mongo: multiJob,
-        username
+        username,
+        combinedJobs
       })
 
       res.status(200).json(dto)

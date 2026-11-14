@@ -3,10 +3,14 @@ Assess how well a finished BilboMD job's models fit the SAXS data, and say
 where a misfit most likely comes from.
 
 Usage:
-    python pipeline_decision_tree.py <results_dir>
+    python pipeline_decision_tree.py <results_dir> [--input-model LABEL PDB ...]
 
 Reads the MultiFoXS fits (multi_state_model_N_1_1.dat) and a model PDB from
 the results folder and writes feedback.json to the current directory.
+
+A BilboMD Multi job pools the conformers of several earlier runs. It passes
+one model PDB per run with --input-model, so the molecular-weight check knows
+whether the runs model the same system (see assess_mw_for_inputs).
 
 The interpretation of each q-region follows the original decision tree by
 Joshua Del Mundo (SIBYLS): low q reports on size and oligomeric state, mid q
@@ -53,6 +57,12 @@ MODEL_IMPROVEMENT_MIN = 0.20
 # Only a larger difference from the model is worth pointing out.
 MW_DIFF_WARN = 0.30
 
+# Multi jobs: input runs whose model masses differ by more than this fraction
+# of the largest are treated as different systems (a monomer and a dimer, or
+# two constructs), and no single model mass is compared with the SAXS data.
+# Same-system runs differ only by rounding.
+INPUT_MASS_SPREAD_MAX = 0.02
+
 # Between these nucleic-acid mass fractions the sample is a protein-nucleic
 # acid mixture, for which neither set of Vc constants applies.
 NUCLEIC_FRACTION_PROTEIN_MAX = 0.05
@@ -96,6 +106,13 @@ REGION_ADVICE = {
 
 class FitFile(NamedTuple):
     states: int
+    path: Path
+
+
+class InputModel(NamedTuple):
+    """One model PDB from a run that a Multi job combines."""
+
+    label: str
     path: Path
 
 
@@ -309,8 +326,71 @@ def assess_mw(profile: FitProfile, model_pdb: Optional[Path]) -> Dict:
     return mw
 
 
+def input_model_masses(input_models: Sequence[InputModel]) -> List[Dict]:
+    """
+    Mass of each input run's model, in kDa. A model that can't be read is left
+    out, so the check works with the runs that remain.
+    """
+    masses = []
+    for model in input_models:
+        try:
+            total_da = residue_composition(model.path)["total_da"]
+        except Exception as error:  # noqa: BLE001 - one bad file is not fatal
+            logger.warning("cannot read input model %s: %s", model.path, error)
+            continue
+        if total_da > 0:
+            masses.append({"label": model.label, "model_kda": round(total_da / 1000.0, 2)})
+    return masses
+
+
+def masses_differ(masses: Sequence[Dict]) -> bool:
+    """True when the input models are different systems, not one system."""
+    if len(masses) < 2:
+        return False
+    values = [m["model_kda"] for m in masses]
+    return (max(values) - min(values)) / max(values) > INPUT_MASS_SPREAD_MAX
+
+
+def assess_mw_for_inputs(
+    profile: FitProfile, model_pdb: Optional[Path], masses: Sequence[Dict]
+) -> Dict:
+    """
+    The `mw` block for a Multi job whose input runs model systems of different
+    mass. The SAXS estimate is still made (from the best model's composition,
+    which only sets protein or nucleic-acid constants), but there is no single
+    model mass to compare it with, so the model mass and difference are left
+    empty and the reason lists each run's mass. The estimate's own confidence
+    and caveat (noisy Guinier region, short q range, nucleic acid, or why
+    there is no estimate) are kept, after the mixed-mass explanation.
+    """
+    mw = assess_mw(profile, model_pdb)
+    listed = ", ".join(f"{m['label']} {m['model_kda']:.1f} kDa" for m in masses)
+    explanation = (
+        f"The combined runs model systems of different mass ({listed}), "
+        "so no single model mass applies. If the sample is a mixture of "
+        "these species (a monomer and a dimer, say), the SAXS estimate "
+        "should fall between their masses."
+    )
+    caveat = mw["reason"]
+    mw.update(
+        model_kda=None,
+        diff_fraction=None,
+        mixed_inputs=True,
+        reason=f"{explanation} {caveat}" if caveat else explanation,
+    )
+    return mw
+
+
 def mw_finding(mw: Dict) -> Dict[str, str]:
     """The advisory molecular-weight finding. Never worse than a warning."""
+    if mw.get("mixed_inputs") and mw["saxs_kda"] is not None:
+        return _finding(
+            "mw_mixed_inputs",
+            "info",
+            f"Molecular weight: SAXS estimate {mw['saxs_kda']:.1f} kDa; the "
+            "combined runs differ in mass",
+            mw["reason"],
+        )
     if mw["saxs_kda"] is None or mw["model_kda"] is None:
         return _finding(
             "mw_not_assessed",
@@ -369,8 +449,13 @@ def _legacy_region_sentence(regions: Sequence[RegionStats], rank: int) -> Option
     return sentence + "."
 
 
-def build_report(results_dir: Path) -> Dict:
-    """Assess the job in `results_dir` and return the feedback.json content."""
+def build_report(
+    results_dir: Path, input_models: Sequence[InputModel] = ()
+) -> Dict:
+    """
+    Assess the job in `results_dir` and return the feedback.json content.
+    `input_models` holds one model per run that a Multi job combines.
+    """
     fit_files = find_fit_files(results_dir)
     if not fit_files:
         raise FileNotFoundError(
@@ -403,8 +488,17 @@ def build_report(results_dir: Path) -> Dict:
     # The MW comparison is advisory and independent of the fit assessment: if
     # it cannot be made, everything else is still reported.
     model_pdb = find_model_pdb(results_dir)
+    masses = input_model_masses(input_models)
+    if masses:
+        logger.info(
+            "input models: %s",
+            ", ".join(f"{m['label']} {m['model_kda']} kDa" for m in masses),
+        )
     try:
-        mw = assess_mw(profile, model_pdb)
+        if masses_differ(masses):
+            mw = assess_mw_for_inputs(profile, model_pdb, masses)
+        else:
+            mw = assess_mw(profile, model_pdb)
     except Exception as error:  # noqa: BLE001 - any failure here is non-fatal
         logger.warning("molecular weight assessment failed: %s", error)
         mw = assess_mw(profile, None)
@@ -477,6 +571,14 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         description="Assess the SAXS fit of a finished BilboMD job."
     )
     parser.add_argument("results", help="results folder of the BilboMD job")
+    parser.add_argument(
+        "--input-model",
+        nargs=2,
+        action="append",
+        default=[],
+        metavar=("LABEL", "PDB"),
+        help="a model PDB from one run that a Multi job combines (repeat per run)",
+    )
     return parser.parse_args(argv)
 
 
@@ -485,7 +587,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
 
     try:
-        report = build_report(Path(args.results))
+        input_models = [InputModel(label, Path(pdb)) for label, pdb in args.input_model]
+        report = build_report(Path(args.results), input_models)
     except (FileNotFoundError, ValueError) as error:
         print(f"Cannot assess this job: {error}", file=sys.stderr)
         return 1

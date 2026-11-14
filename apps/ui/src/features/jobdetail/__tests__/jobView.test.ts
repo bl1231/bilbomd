@@ -57,6 +57,29 @@ describe('toJobView', () => {
     expect(view.steps?.md?.status).toBe('Running')
   })
 
+  it("keeps a Multi job's combined runs and data source", () => {
+    const combined = [{ uuid: 'run-a', title: 'A', conformations: 3600 }]
+    const view = toJobView({
+      ...ownerDto,
+      mongo: {
+        ...ownerDto.mongo,
+        jobType: 'multi',
+        bilbomd_uuids: ['run-a'],
+        data_file_from: 'run-a',
+        combined_jobs: combined
+      }
+    } as unknown as BilboMDJobDTO)
+    expect(view.combinedJobs).toEqual(combined)
+    expect(view.dataFileFrom).toBe('run-a')
+    expect(view.inputs.bilbomd_uuids).toEqual(['run-a'])
+  })
+
+  it('has no combined runs for other job types', () => {
+    const view = toJobView(ownerDto)
+    expect(view.combinedJobs).toBeUndefined()
+    expect(view.dataFileFrom).toBeUndefined()
+  })
+
   it('copies only whitelisted inputs, never user details', () => {
     const view = toJobView(ownerDto)
     expect(view.inputs).toMatchObject({

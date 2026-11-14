@@ -21,8 +21,9 @@ const FOXS_JOB_TYPES: JobType[] = [
 // viz.png into the job directory while building the constraints.
 const PAE_JOB_TYPES: JobType[] = ['auto', 'alphafold', 'openfold']
 
-// SANS runs MD but not FoXS; Scoper has its own analysis section and Multi
-// only combines other jobs' results.
+// SANS runs MD but not FoXS, and Scoper has its own analysis section. Multi
+// runs MultiFoXS over other jobs' conformers: no trajectory of its own, so no
+// movies, and no input model, so no PAE.
 export const analysisTabs = (jobType: JobType): AnalysisTab[] => {
   if (PAE_JOB_TYPES.includes(jobType)) {
     return ['foxs', 'movies', 'feedback', 'pae']
@@ -32,6 +33,7 @@ export const analysisTabs = (jobType: JobType): AnalysisTab[] => {
   // Its members are superposed on a rigid domain found from the samples.
   if (jobType === 'bioemu') return ['foxs', 'feedback', 'domains']
   if (jobType === 'sans') return ['movies']
+  if (jobType === 'multi') return ['foxs', 'feedback']
   return []
 }
 

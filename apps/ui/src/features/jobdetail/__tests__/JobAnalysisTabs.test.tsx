@@ -48,7 +48,7 @@ describe('analysisTabs', () => {
     expect(analysisTabs('bioemu')).toEqual(['foxs', 'feedback', 'domains'])
     expect(analysisTabs('sans')).toEqual(['movies'])
     expect(analysisTabs('scoper')).toEqual([])
-    expect(analysisTabs('multi')).toEqual([])
+    expect(analysisTabs('multi')).toEqual(['foxs', 'feedback'])
   })
 })
 
@@ -228,11 +228,25 @@ describe('JobAnalysisTabs', () => {
     renderWithProviders(
       <JobAnalysisTabs
         source={{ kind: 'owner', id: 'job-1' }}
-        view={makeView({ jobType: 'multi' })}
+        view={makeView({ jobType: 'scoper' })}
         eventsConnected={false}
       />
     )
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+  })
+
+  it('gives a Multi job FoXS and Feedback tabs but no movies', () => {
+    renderWithProviders(
+      <JobAnalysisTabs
+        source={{ kind: 'owner', id: 'job-1' }}
+        view={makeView({ jobType: 'multi' })}
+        eventsConnected={false}
+      />
+    )
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'FoXS Analysis',
+      'Feedback & Validation'
+    ])
   })
 
   it('shows the Rigid Domains tab for a BioEmu2 job', () => {

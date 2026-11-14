@@ -9,6 +9,8 @@ import type {
   BilboMDBioEmuDTO,
   BilboMDSANSDTO,
   BilboMDScoperDTO,
+  BilboMDMultiDTO,
+  MultiCombinedJobDTO,
   JobType,
   JobStatusEnum as JobStatus,
   UserSummaryDTO,
@@ -269,7 +271,8 @@ export const mapJobMongoToDTO = (job: IJob) => {
 }
 
 export const mapMultiJobMongoToDTO = (
-  multiJob: IMultiJob
+  multiJob: IMultiJob,
+  combinedJobs?: MultiCombinedJobDTO[]
 ): BilboMDMongoJobDTO => {
   const jobType: JobType = 'multi'
   return {
@@ -286,8 +289,10 @@ export const mapMultiJobMongoToDTO = (
     progress: multiJob.progress ?? 0,
     steps: multiJob.steps,
     nersc: multiJob.nersc,
-    results_ready: multiJob.results_ready
-  } as BilboMDMongoJobDTO
+    results_ready: multiJob.results_ready,
+    feedback: multiJob.feedback,
+    ...(combinedJobs && { combined_jobs: combinedJobs })
+  } as BilboMDMultiDTO
 }
 
 export const buildBilboMDJobDTO = (opts: {
@@ -314,9 +319,10 @@ export const buildMultiJobDTO = (opts: {
   jobId: string
   mongo: IMultiJob
   username?: string
+  combinedJobs?: MultiCombinedJobDTO[]
 }): BilboMDJobDTO => {
-  const { jobId, mongo, username } = opts
-  const mongoDTO = mapMultiJobMongoToDTO(mongo)
+  const { jobId, mongo, username, combinedJobs } = opts
+  const mongoDTO = mapMultiJobMongoToDTO(mongo, combinedJobs)
   const userSummary = mapUserToSummary(mongo.user as IUser | undefined)
 
   return {

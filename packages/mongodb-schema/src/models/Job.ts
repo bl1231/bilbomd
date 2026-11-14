@@ -519,6 +519,7 @@ export {
   BilboMdOpenFoldJob,
   BilboMdBioEmuJob,
   BilboMdSANSJob,
+  feedbackSchema,
   nerscInfoSchema,
   mdConstraintsSchema,
   fixedBodySchema,

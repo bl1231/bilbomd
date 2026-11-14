@@ -1,11 +1,13 @@
 import type {
   BilboMDJobDTO,
+  BilboMDMultiDTO,
   JobFeedbackDTO,
   JobResultsDTO,
   JobStatusEnum,
   JobStepsDTO,
   JobType,
   MDConstraintsDTO,
+  MultiCombinedJobDTO,
   PublicJobInputsDTO,
   SequenceEntityDTO,
   PublicJobStatus
@@ -33,6 +35,9 @@ export type JobView = {
   resultsReady?: boolean
   accessMode?: 'user' | 'anonymous'
   publicId?: string
+  // Multi jobs: the runs combined, and the one whose SAXS data was fitted
+  combinedJobs?: MultiCombinedJobDTO[]
+  dataFileFrom?: string
 }
 
 const pickInputs = (src: PublicJobInputsDTO): PublicJobInputsDTO => ({
@@ -103,7 +108,11 @@ export const toJobView = (dto: BilboMDJobDTO): JobView => {
     feedback: m.feedback,
     resultsReady: m.results_ready,
     accessMode: m.access_mode,
-    publicId: m.public_id
+    publicId: m.public_id,
+    ...(m.jobType === 'multi' && {
+      combinedJobs: (m as BilboMDMultiDTO).combined_jobs,
+      dataFileFrom: (m as BilboMDMultiDTO).data_file_from
+    })
   }
 }
 

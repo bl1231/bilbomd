@@ -7,6 +7,7 @@ import pytest
 
 import pipeline_decision_tree as pdt
 from saxs_fit import RegionStats
+from saxs_mw import MwEstimate
 
 LEGACY_KEYS = {
     "mw_saxs",
@@ -276,6 +277,128 @@ def test_mw_mismatch_does_not_replace_the_fit_findings(tmp_path):
     assert "Excellent" in report["overall_chi_square_feedback"]
     assert "No q-region stands out" in report["regional_chi_square_feedback"]
     assert "lower" in report["mw_feedback"]
+
+
+# ------------------------------------------------- Multi jobs: input runs
+
+
+def input_models(folder, *residue_counts):
+    """One model PDB per input run, labelled run1, run2, ..."""
+    return [
+        pdt.InputModel(f"run{n}", write_pdb(folder, f"run{n}.pdb", residues=count))
+        for n, count in enumerate(residue_counts, start=1)
+    ]
+
+
+def test_runs_of_one_system_are_compared_as_usual(tmp_path):
+    write_fit_file(tmp_path, 1, noise=0.9)
+    write_pdb(tmp_path)
+    # 406 and 410 residues: 1 % apart, the same system
+    report = pdt.build_report(tmp_path, input_models(tmp_path, 406, 410))
+
+    assert codes(report["findings"])[-1] == "mw_consistent"
+    assert report["mw"]["model_kda"] == pytest.approx(28.88, abs=0.01)
+    assert "mixed_inputs" not in report["mw"]
+
+
+def test_runs_of_different_systems_are_not_compared_with_one_mass(tmp_path):
+    # A monomer and a dimer: the best single model alone would be a false
+    # warning against the dimer data
+    write_fit_file(tmp_path, 1, noise=0.9)
+    write_pdb(tmp_path, residues=812)  # best model is the dimer, ~58 kDa
+    report = pdt.build_report(tmp_path, input_models(tmp_path, 406, 812))
+
+    finding = report["findings"][-1]
+    assert (finding["code"], finding["severity"]) == ("mw_mixed_inputs", "info")
+    assert f"SAXS estimate {report['mw']['saxs_kda']:.1f} kDa" in finding["title"]
+    assert "run1 28.9 kDa" in finding["detail"]
+    assert "run2 57.7 kDa" in finding["detail"]
+    mw = report["mw"]
+    assert mw["model_kda"] is None and mw["diff_fraction"] is None
+    assert mw["saxs_kda"] == pytest.approx(28.9, rel=0.05)
+    assert report["mw_err"] is None
+    assert codes(report["findings"])[:2] == ["fit_excellent", "regions_ok"]
+    json.dumps(report)
+
+
+def test_mixed_inputs_keep_the_estimate_caveat(tmp_path, monkeypatch):
+    # A noisy Guinier region makes the estimate low-confidence; mixed-mass
+    # handling must not hide that
+    import saxs_mw
+
+    monkeypatch.setattr(saxs_mw, "GUINIER_R2_GOOD", 1.01)
+    write_fit_file(tmp_path, 1, noise=0.9)
+    write_pdb(tmp_path, residues=812)
+    report = pdt.build_report(tmp_path, input_models(tmp_path, 406, 812))
+
+    mw = report["mw"]
+    assert mw["confidence"] == "low"
+    assert mw["reason"].startswith("The combined runs model systems")
+    assert "Guinier region of the data is noisy" in mw["reason"]
+    finding = report["findings"][-1]
+    assert (finding["code"], finding["severity"]) == ("mw_mixed_inputs", "info")
+    assert "noisy" in finding["detail"]
+
+
+def test_mixed_inputs_without_an_estimate_say_why(tmp_path, monkeypatch):
+    write_fit_file(tmp_path, 1, noise=0.9)
+    write_pdb(tmp_path, residues=812)
+    monkeypatch.setattr(
+        pdt,
+        "estimate_mw_vc",
+        lambda *a, **k: MwEstimate(reason="No usable Guinier region."),
+    )
+    report = pdt.build_report(tmp_path, input_models(tmp_path, 406, 812))
+
+    finding = report["findings"][-1]
+    assert finding["code"] == "mw_not_assessed"
+    assert "different mass" in finding["detail"]
+    assert "No usable Guinier region." in finding["detail"]
+
+
+def test_an_unreadable_input_model_is_left_out(tmp_path):
+    write_fit_file(tmp_path, 1, noise=0.9)
+    write_pdb(tmp_path)
+    models = input_models(tmp_path, 406) + [
+        pdt.InputModel("missing", tmp_path / "missing.pdb")
+    ]
+    report = pdt.build_report(tmp_path, models)
+
+    assert codes(report["findings"])[-1] == "mw_consistent"
+
+
+@pytest.mark.parametrize(
+    "masses, differ",
+    [
+        ([], False),
+        ([28.9], False),
+        ([28.9, 29.4], False),  # 1.7 %
+        ([28.9, 29.6], True),  # 2.4 %
+        ([37.6, 74.1], True),
+    ],
+)
+def test_masses_differ(masses, differ):
+    blocks = [{"label": str(i), "model_kda": m} for i, m in enumerate(masses)]
+    assert pdt.masses_differ(blocks) is differ
+
+
+def test_main_passes_input_models(tmp_path, monkeypatch):
+    results = tmp_path / "results"
+    results.mkdir()
+    write_fit_file(results, 1, noise=0.9)
+    write_pdb(results, residues=812)
+    a = write_pdb(tmp_path, "a.pdb", residues=406)
+    b = write_pdb(tmp_path, "b.pdb", residues=812)
+    monkeypatch.chdir(tmp_path)
+
+    status = pdt.main(
+        [str(results), "--input-model", "monomer", str(a), "--input-model", "dimer", str(b)]
+    )
+
+    assert status == 0
+    report = json.loads((tmp_path / pdt.OUTPUT_FILENAME).read_text())
+    assert report["findings"][-1]["code"] == "mw_mixed_inputs"
+    assert "monomer 28.9 kDa, dimer 57.7 kDa" in report["mw"]["reason"]
 
 
 def test_protein_dna_complex_gets_a_low_confidence_mw(tmp_path):

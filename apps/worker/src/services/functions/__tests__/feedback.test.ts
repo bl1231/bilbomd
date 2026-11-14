@@ -49,6 +49,25 @@ describe('feedback - spawnFeedbackScript', () => {
       timeoutMs: config.processTimeouts.helperScriptMs
     })
     expect(opts.args[0]).toBe('/app/scripts/pipeline_decision_tree.py')
+    expect(opts.args).toHaveLength(2)
+  })
+
+  it('passes one --input-model per combined run for Multi jobs', async () => {
+    readFileMock.mockResolvedValue('{}')
+
+    await spawnFeedbackScript(makeJob(), [
+      { label: 'monomer (aaaaaaaa)', pdb: '/data/a/foxs/rg30/md_1.pdb' },
+      { label: 'dimer (bbbbbbbb)', pdb: '/data/b/foxs/rg30/md_1.pdb' }
+    ])
+
+    expect(runProcessMock.mock.calls[0][0].args.slice(2)).toEqual([
+      '--input-model',
+      'monomer (aaaaaaaa)',
+      '/data/a/foxs/rg30/md_1.pdb',
+      '--input-model',
+      'dimer (bbbbbbbb)',
+      '/data/b/foxs/rg30/md_1.pdb'
+    ])
   })
 
   it('reads feedback.json, stores it on the job, and saves', async () => {

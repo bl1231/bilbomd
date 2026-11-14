@@ -2,16 +2,33 @@ import { logger } from '../../helpers/loggers.js'
 import { config } from '../../config/config.js'
 import { runProcess } from '../../helpers/runProcess.js'
 import fs from 'fs-extra'
-import { IJob } from '@bilbomd/mongodb-schema'
+import { IJob, IMultiJob } from '@bilbomd/mongodb-schema'
 import path from 'path'
 
-const spawnFeedbackScript = async (DBjob: IJob): Promise<void> => {
+// A model PDB from one of the runs a Multi job combines. The feedback script
+// compares their masses before it compares a model mass with the SAXS data.
+export type FeedbackInputModel = {
+  label: string
+  pdb: string
+}
+
+const inputModelArgs = (inputModels: FeedbackInputModel[]): string[] =>
+  inputModels.flatMap(({ label, pdb }) => ['--input-model', label, pdb])
+
+const spawnFeedbackScript = async (
+  DBjob: IJob | IMultiJob,
+  inputModels: FeedbackInputModel[] = []
+): Promise<void> => {
   const resultsDir = path.join(config.uploadDir, DBjob.uuid, 'results')
 
   await runProcess({
     label: 'Feedback script',
     cmd: '/opt/envs/base/bin/python',
-    args: ['/app/scripts/pipeline_decision_tree.py', resultsDir],
+    args: [
+      '/app/scripts/pipeline_decision_tree.py',
+      resultsDir,
+      ...inputModelArgs(inputModels)
+    ],
     cwd: resultsDir,
     stdoutFile: path.join(resultsDir, 'feedback.log'),
     stderrFile: path.join(resultsDir, 'feedback_error.log'),
