@@ -488,12 +488,38 @@ describe('getJobById', () => {
       })
     )
     // The combined runs are summarised for the job page
-    expect(buildCombinedJobs).toHaveBeenCalledWith(mockMultiJob)
+    expect(buildCombinedJobs).toHaveBeenCalledWith(mockMultiJob, {
+      privileged: false
+    })
     expect(buildMultiJobDTO).toHaveBeenCalledWith(
       expect.objectContaining({
         combinedJobs: [{ uuid: 'run-a', conformations: 3600 }]
       })
     )
+  })
+
+  it('lets an Admin see every combined run of a multi job', async () => {
+    const jobId = new Types.ObjectId()
+    mockReq.params = { id: jobId.toString() }
+    mockReq.roles = ['User', 'Admin']
+    const mockMultiJob = { _id: jobId, title: 'Test MultiJob', user: null }
+
+    mockJobFindOne.mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        exec: vi.fn().mockResolvedValue(null)
+      })
+    })
+    mockMultiJobFindOne.mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        exec: vi.fn().mockResolvedValue(mockMultiJob)
+      })
+    })
+
+    await getJobById(mockReq as Request, mockRes)
+
+    expect(buildCombinedJobs).toHaveBeenCalledWith(mockMultiJob, {
+      privileged: true
+    })
   })
 
   it('should return 500 if job found but missing _id', async () => {

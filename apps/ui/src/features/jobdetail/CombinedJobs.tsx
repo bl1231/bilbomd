@@ -58,7 +58,7 @@ const CombinedJob = ({
           </Link>
         ) : (
           <Typography sx={{ fontStyle: 'italic' }}>
-            Job no longer available
+            Details not available
           </Typography>
         )}
         {status && (
@@ -97,7 +97,9 @@ const CombinedJob = ({
 }
 
 // The runs a Multi job pooled for MultiFoXS. `jobs` comes from the backend;
-// an older backend sends only the uuids, which are shown on their own.
+// an older backend sends only the uuids, which are shown on their own. A run
+// that was deleted, or that the job's owner doesn't own, comes without its
+// details.
 const CombinedJobs = ({
   jobs,
   uuids,

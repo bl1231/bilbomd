@@ -59,16 +59,36 @@ const readConformationCounts = async (
   }
 }
 
-// A summary of each run the Multi job combines, in bilbomd_uuids order. Runs
-// deleted since keep their uuid (and conformation count) only.
+// The Multi job's owner id, whether `user` is populated or a bare ref
+const ownerId = (multiJob: IMultiJob): unknown => {
+  const user = multiJob.user as unknown
+  if (user && typeof user === 'object' && '_id' in user) {
+    return (user as { _id: unknown })._id
+  }
+  return user
+}
+
+// A summary of each run the Multi job combines, in bilbomd_uuids order.
+// A Multi job can name any run's uuid, so a run's details (title, id, status,
+// engine) are shown only for runs its owner owns, unless the viewer is an
+// Admin or Manager, who may see every job. Other runs, and runs deleted
+// since, keep their uuid (and conformation count, which comes from the Multi
+// job's own files) only.
 export const buildCombinedJobs = async (
-  multiJob: IMultiJob
+  multiJob: IMultiJob,
+  { privileged = false }: { privileged?: boolean } = {}
 ): Promise<MultiCombinedJobDTO[]> => {
+  const owner = ownerId(multiJob)
+  const filter = privileged
+    ? { uuid: { $in: multiJob.bilbomd_uuids } }
+    : { uuid: { $in: multiJob.bilbomd_uuids }, 'user._id': owner }
   const [docs, counts] = await Promise.all([
-    Job.find({ uuid: { $in: multiJob.bilbomd_uuids } })
-      .select('uuid title status md_engine __t')
-      .lean<CombinedJobDoc[]>()
-      .exec(),
+    privileged || owner
+      ? Job.find(filter)
+          .select('uuid title status md_engine __t')
+          .lean<CombinedJobDoc[]>()
+          .exec()
+      : Promise.resolve([] as CombinedJobDoc[]),
     readConformationCounts(multiJob)
   ])
   const byUuid = new Map(docs.map((doc) => [doc.uuid, doc]))

@@ -21,9 +21,13 @@ const RUN_B = 'd8f60793-84b8-47b7-bee2-490d250dcdcb'
 const profile = (run: string, n: number) =>
   `/bilbomd/uploads/${run}/foxs/rg30/md_${n}.pdb.dat`
 
+const OWNER = 'owner-id'
+
 const multiJob = {
   uuid: 'multi-uuid',
-  bilbomd_uuids: [RUN_A, RUN_B]
+  bilbomd_uuids: [RUN_A, RUN_B],
+  // populated, as getJobById loads it
+  user: { _id: OWNER, username: 'alice' }
 } as unknown as IMultiJob
 
 const findReturns = (docs: object[]) =>
@@ -107,6 +111,62 @@ describe('buildCombinedJobs', () => {
       '/data/multi-uuid/multi_md_foxs_files.txt',
       'utf8'
     )
+  })
+
+  it("only looks up runs the Multi job's owner owns", async () => {
+    findReturns([])
+    mockReadFile.mockResolvedValue('')
+
+    await buildCombinedJobs(multiJob)
+
+    expect(mockJobFind).toHaveBeenCalledWith({
+      uuid: { $in: [RUN_A, RUN_B] },
+      'user._id': OWNER
+    })
+  })
+
+  it("shows another user's run as its uuid and count only", async () => {
+    // RUN_B belongs to someone else, so the owner-filtered lookup misses it
+    findReturns([
+      {
+        _id: { toString: () => 'id-a' },
+        __t: 'BilboMdPDB',
+        uuid: RUN_A,
+        title: 'mine',
+        status: 'Completed'
+      }
+    ])
+    mockReadFile.mockResolvedValue(
+      [profile(RUN_A, 1), profile(RUN_B, 1)].join('\n')
+    )
+
+    const [, other] = await buildCombinedJobs(multiJob)
+
+    expect(other).toEqual({ uuid: RUN_B, conformations: 1 })
+  })
+
+  it('looks up every run for an Admin or Manager', async () => {
+    findReturns([])
+    mockReadFile.mockResolvedValue('')
+
+    await buildCombinedJobs(multiJob, { privileged: true })
+
+    expect(mockJobFind).toHaveBeenCalledWith({ uuid: { $in: [RUN_A, RUN_B] } })
+  })
+
+  it('looks nothing up when the Multi job has no owner', async () => {
+    mockReadFile.mockResolvedValue('')
+
+    const runs = await buildCombinedJobs({
+      ...multiJob,
+      user: undefined
+    } as unknown as IMultiJob)
+
+    expect(mockJobFind).not.toHaveBeenCalled()
+    expect(runs).toEqual([
+      { uuid: RUN_A, conformations: 0 },
+      { uuid: RUN_B, conformations: 0 }
+    ])
   })
 
   it('keeps a deleted run as its uuid and leaves counts out before the list exists', async () => {

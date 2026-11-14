@@ -359,21 +359,24 @@ def assess_mw_for_inputs(
     mass. The SAXS estimate is still made (from the best model's composition,
     which only sets protein or nucleic-acid constants), but there is no single
     model mass to compare it with, so the model mass and difference are left
-    empty and the reason lists each run's mass.
+    empty and the reason lists each run's mass. The estimate's own confidence
+    and caveat (noisy Guinier region, short q range, nucleic acid, or why
+    there is no estimate) are kept, after the mixed-mass explanation.
     """
     mw = assess_mw(profile, model_pdb)
     listed = ", ".join(f"{m['label']} {m['model_kda']:.1f} kDa" for m in masses)
+    explanation = (
+        f"The combined runs model systems of different mass ({listed}), "
+        "so no single model mass applies. If the sample is a mixture of "
+        "these species (a monomer and a dimer, say), the SAXS estimate "
+        "should fall between their masses."
+    )
+    caveat = mw["reason"]
     mw.update(
         model_kda=None,
         diff_fraction=None,
-        confidence=None,
         mixed_inputs=True,
-        reason=(
-            f"The combined runs model systems of different mass ({listed}), "
-            "so no single model mass applies. If the sample is a mixture of "
-            "these species (a monomer and a dimer, say), the SAXS estimate "
-            "should fall between their masses."
-        ),
+        reason=f"{explanation} {caveat}" if caveat else explanation,
     )
     return mw
 

@@ -146,7 +146,7 @@ describe('JobInputsSection', () => {
     expect(screen.getByText('6600')).toBeInTheDocument()
   })
 
-  it('says when a combined run has been deleted', () => {
+  it("shows a run without details (deleted or not the owner's) by uuid", () => {
     renderSection(
       { kind: 'owner', id: 'job-1' },
       makeView({
@@ -155,7 +155,7 @@ describe('JobInputsSection', () => {
         combinedJobs: [{ uuid: 'uuid-a', conformations: 3600 }]
       })
     )
-    expect(screen.getByText('Job no longer available')).toBeInTheDocument()
+    expect(screen.getByText('Details not available')).toBeInTheDocument()
     expect(screen.getByText('uuid-a')).toBeInTheDocument()
   })
 

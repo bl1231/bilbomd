@@ -7,6 +7,7 @@ import pytest
 
 import pipeline_decision_tree as pdt
 from saxs_fit import RegionStats
+from saxs_mw import MwEstimate
 
 LEGACY_KEYS = {
     "mw_saxs",
@@ -318,6 +319,41 @@ def test_runs_of_different_systems_are_not_compared_with_one_mass(tmp_path):
     assert report["mw_err"] is None
     assert codes(report["findings"])[:2] == ["fit_excellent", "regions_ok"]
     json.dumps(report)
+
+
+def test_mixed_inputs_keep_the_estimate_caveat(tmp_path, monkeypatch):
+    # A noisy Guinier region makes the estimate low-confidence; mixed-mass
+    # handling must not hide that
+    import saxs_mw
+
+    monkeypatch.setattr(saxs_mw, "GUINIER_R2_GOOD", 1.01)
+    write_fit_file(tmp_path, 1, noise=0.9)
+    write_pdb(tmp_path, residues=812)
+    report = pdt.build_report(tmp_path, input_models(tmp_path, 406, 812))
+
+    mw = report["mw"]
+    assert mw["confidence"] == "low"
+    assert mw["reason"].startswith("The combined runs model systems")
+    assert "Guinier region of the data is noisy" in mw["reason"]
+    finding = report["findings"][-1]
+    assert (finding["code"], finding["severity"]) == ("mw_mixed_inputs", "info")
+    assert "noisy" in finding["detail"]
+
+
+def test_mixed_inputs_without_an_estimate_say_why(tmp_path, monkeypatch):
+    write_fit_file(tmp_path, 1, noise=0.9)
+    write_pdb(tmp_path, residues=812)
+    monkeypatch.setattr(
+        pdt,
+        "estimate_mw_vc",
+        lambda *a, **k: MwEstimate(reason="No usable Guinier region."),
+    )
+    report = pdt.build_report(tmp_path, input_models(tmp_path, 406, 812))
+
+    finding = report["findings"][-1]
+    assert finding["code"] == "mw_not_assessed"
+    assert "different mass" in finding["detail"]
+    assert "No usable Guinier region." in finding["detail"]
 
 
 def test_an_unreadable_input_model_is_left_out(tmp_path):
