@@ -8,7 +8,9 @@ export {
   buildChainMolTypes,
   buildChainMolTypesFromInp,
   findRigidBodyOverlaps,
-  assertNoRigidBodyOverlaps
+  assertNoRigidBodyOverlaps,
+  findFixedRigidOverlaps,
+  assertNoFixedRigidOverlaps
 } from './constraintUtils.js'
 
 export { toPipeline, discriminatorToPipeline } from './pipelineUtils.js'

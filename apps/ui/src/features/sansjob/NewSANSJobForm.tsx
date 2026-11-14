@@ -15,6 +15,7 @@ import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
+import ConstInpGapWarning from 'features/jobs/ConstInpGapWarning'
 import {
   useAddNewSANSJobMutation,
   useCalculateAutoRgMutation
@@ -498,6 +499,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         fileType="CHARMM const.inp file"
                         fileExt=".inp"
                       />
+                      <ConstInpGapWarning file={values.inp_file} />
                     </Grid>
 
                     {/* D2O Fraction Slider */}

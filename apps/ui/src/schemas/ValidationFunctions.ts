@@ -14,6 +14,7 @@ import {
   findUnsupportedPdbResidues,
   checkRnaResidues,
   checkConstInpText,
+  constInpOverlapMessage,
   openmmConstInpMessage,
   findSharedResidueNumbers,
   countPdbResidues,
@@ -334,7 +335,10 @@ const isValidConstInpFile = async (
 ): Promise<string | true> => {
   const text = await readText(file)
   if (text === null) return 'Error reading file'
-  return checkConstInpText(text, mode)
+  const checked = checkConstInpText(text, mode)
+  if (checked !== true) return checked
+  // The same overlap rule the upload check applies
+  return constInpOverlapMessage(text) ?? true
 }
 
 // Why OpenMM can't use this const.inp as it stands, or true

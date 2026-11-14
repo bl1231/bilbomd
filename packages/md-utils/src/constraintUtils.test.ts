@@ -9,7 +9,9 @@ import {
   buildChainMolTypes,
   buildChainMolTypesFromInp,
   findRigidBodyOverlaps,
-  assertNoRigidBodyOverlaps
+  assertNoRigidBodyOverlaps,
+  findFixedRigidOverlaps,
+  assertNoFixedRigidOverlaps
 } from './constraintUtils.js'
 import type { IMDConstraints } from '@bilbomd/mongodb-schema'
 import fs from 'fs-extra'
@@ -827,7 +829,7 @@ return`
         ].join('\n')
       )
       await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'Invalid INP constraints file: Rigid bodies must not overlap: RigidBody1 and RigidBody2 both include chain C residues 1-26'
+        'Invalid INP constraints file: Constraint bodies must not overlap: RigidBody1 and RigidBody2 both include segid DNAC residues 1-26'
       )
     })
 
@@ -890,10 +892,12 @@ describe('long commands and continuation lines', () => {
     chain_id: 'A',
     residues: { start: i * 10 + 1, stop: i * 10 + 5 }
   }))
-  const defines = (prefix: string) =>
+  // Rigid bodies on chain B, so they don't overlap the fixed ones
+  const rigidSegments = segments.map((s) => ({ ...s, chain_id: 'B' }))
+  const defines = (prefix: string, segid = 'PROA') =>
     segments.map(
       ({ residues }, i) =>
-        `define ${prefix}${i + 1} sele ( resid ${residues.start}:${residues.stop} .and. segid PROA ) end`
+        `define ${prefix}${i + 1} sele ( resid ${residues.start}:${residues.stop} .and. segid ${segid} ) end`
     )
   const orNames = (prefix: string) =>
     segments.map((_, i) => `${prefix}${i + 1}`).join(' .or. ')
@@ -912,7 +916,7 @@ describe('long commands and continuation lines', () => {
     ...defines('fixed'),
     ...wrapMidWord(`cons fix sele ${orNames('fixed')} end`),
     '',
-    ...defines('rigid'),
+    ...defines('rigid', 'PROB'),
     ...wrapMidWord(`shape desc dock1 rigid sele ${orNames('rigid')} end`),
     '',
     'return'
@@ -931,7 +935,9 @@ describe('long commands and continuation lines', () => {
       await convertInpToYaml(inpPath)
     )
     expect(constraints.fixed_bodies).toEqual([{ name: 'FixedBody1', segments }])
-    expect(constraints.rigid_bodies).toEqual([{ name: 'RigidBody1', segments }])
+    expect(constraints.rigid_bodies).toEqual([
+      { name: 'RigidBody1', segments: rigidSegments }
+    ])
   })
 
   test('a line longer than CHARMM reads fails validation', async () => {
@@ -1000,7 +1006,9 @@ describe('long commands and continuation lines', () => {
     const yamlPath = path.join(tempDir, 'many-segments.yaml')
     const constraints = {
       fixed_bodies: [{ name: 'FixedBody1', segments }],
-      rigid_bodies: [{ name: 'RigidBody1', segments: segments.slice(0, 11) }]
+      rigid_bodies: [
+        { name: 'RigidBody1', segments: rigidSegments.slice(0, 11) }
+      ]
     }
     await fs.writeFile(yamlPath, JSON.stringify(constraints))
 
@@ -1017,5 +1025,92 @@ describe('long commands and continuation lines', () => {
     expect(
       extractConstraintsFromYaml(await convertInpToYaml(inpPath)).fixed_bodies
     ).toEqual([{ name: 'FixedBody1', segments }])
+  })
+})
+
+describe('fixed and rigid body overlaps', () => {
+  const body = (
+    name: string,
+    chain_id: string,
+    start: number,
+    stop: number
+  ) => ({
+    name,
+    segments: [{ chain_id, residues: { start, stop } }]
+  })
+
+  test('lists residues in both a fixed and a rigid body', () => {
+    expect(
+      findFixedRigidOverlaps({
+        fixed_bodies: [body('FixedBody1', 'A', 1, 50)],
+        rigid_bodies: [
+          body('RigidBody1', 'A', 45, 80),
+          body('RigidBody2', 'B', 1, 50),
+          body('RigidBody3', 'A', 51, 60)
+        ]
+      })
+    ).toEqual(['FixedBody1 and RigidBody1 both include chain A residues 45-50'])
+  })
+
+  test('counts a shared end residue, since ranges are inclusive', () => {
+    expect(
+      findFixedRigidOverlaps({
+        fixed_bodies: [body('FixedBody1', 'A', 1, 50)],
+        rigid_bodies: [body('RigidBody1', 'A', 50, 80)]
+      })
+    ).toEqual(['FixedBody1 and RigidBody1 both include chain A residues 50-50'])
+  })
+
+  test('throws with the overlaps named', () => {
+    expect(() =>
+      assertNoFixedRigidOverlaps({
+        fixed_bodies: [body('FixedBody1', 'A', 1, 50)],
+        rigid_bodies: [body('RigidBody1', 'A', 40, 80)]
+      })
+    ).toThrow(
+      'Fixed and rigid bodies must not overlap: FixedBody1 and RigidBody1 both include chain A residues 40-50'
+    )
+    expect(() => assertNoFixedRigidOverlaps({})).not.toThrow()
+  })
+
+  test('uploads with a fixed/rigid overlap are rejected, INP and YAML', async () => {
+    const dir = path.join('/tmp', `fixed-rigid-${uuid()}`)
+    await fs.ensureDir(dir)
+    try {
+      const inpPath = path.join(dir, 'const.inp')
+      await fs.writeFile(
+        inpPath,
+        `define fixed1 sele ( resid 1:50 .and. segid PROA ) end
+cons fix sele fixed1 end
+define rigid1 sele ( resid 45:80 .and. segid PROA ) end
+shape desc dock1 rigid sele rigid1 end
+return`
+      )
+      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
+        'Constraint bodies must not overlap: FixedBody1 and RigidBody1 both include segid PROA residues 45-50'
+      )
+
+      const yamlPath = path.join(dir, 'const.yml')
+      await fs.writeFile(
+        yamlPath,
+        `constraints:
+  fixed_bodies:
+    - name: FixedBody1
+      segments:
+        - chain_id: A
+          residues: { start: 1, stop: 50 }
+  rigid_bodies:
+    - name: RigidBody1
+      segments:
+        - chain_id: A
+          residues: { start: 45, stop: 80 }
+`
+      )
+      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
+        'Fixed and rigid bodies must not overlap'
+      )
+    } finally {
+      await fs.remove(dir)
+    }
   })
 })

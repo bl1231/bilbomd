@@ -37,6 +37,7 @@ import HeaderBox from 'components/HeaderBox'
 import useTitle from 'hooks/useTitle'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import FileSelect from './FileSelect'
+import ConstInpGapWarning from 'features/jobs/ConstInpGapWarning'
 import SaxsDataOptions from './SaxsDataOptions'
 import { Debug } from 'components/Debug'
 import NewJobFormInstructions from './NewJobFormInstructions'
@@ -589,6 +590,7 @@ const ResubmitJobForm = () => {
                             fileType="const.inp"
                             fileExt=".inp"
                           />
+                          <ConstInpGapWarning file={values.inp_file} />
                         </Grid>
                       </Grid>
                       <Grid
