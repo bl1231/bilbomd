@@ -55,7 +55,7 @@
     "multer": "^2.4.0",
     "nodemailer": "^10.0.12",
     "nodemailer-express-handlebars": "^7.0.0",
-    "openid-client": "~6.8.8",
+    "openid-client": "~6.9.0",
     "redis": "^6.2.1",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1",
