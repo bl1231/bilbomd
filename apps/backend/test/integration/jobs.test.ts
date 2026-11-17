@@ -376,8 +376,8 @@ describe('POST /api/v1/jobs', () => {
 describe('POST /api/v1/jobs (resubmit)', () => {
   const pdbData = `${__dirname}/../../../../test_scripts/data/pdb`
 
-  // const.inp selects DNA chains by segid only, which CHARMM reads but the
-  // OpenMM conversion can't; const-openmm.inp uses residue ranges throughout
+  // const.inp selects the DNA chain as a whole segment (segid only);
+  // const-openmm.inp uses residue ranges throughout
   const submitOriginalPdbJob = async (inpFile = 'const.inp') => {
     const res = await request(app)
       .post('/api/v1/jobs')
@@ -432,18 +432,18 @@ describe('POST /api/v1/jobs (resubmit)', () => {
     )
   })
 
-  test('refuses to move to OpenMM a const.inp it would not apply in full', async () => {
+  test('moves a whole-segment selection to OpenMM as a residue range', async () => {
     const original = await submitOriginalPdbJob()
 
     const res = await resubmit(original.jobid)
 
-    expect(res.statusCode).toBe(400)
-    expect(JSON.stringify(res.body)).toContain(
-      'OpenMM would ignore these lines'
+    expect(res.statusCode).toBe(200)
+    const yaml = await fs.readFile(
+      path.join(dataVolume, res.body.uuid, 'openmm_const.yml'),
+      'utf8'
     )
-    expect(JSON.stringify(res.body)).toContain(
-      'define fixed3 sele ( segid DNAA) end'
-    )
+    // Chain D (segment DNAD) holds residues 22-80
+    expect(yaml).toMatch(/chain_id: D\s+residues:\s+start: 22\s+stop: 80/)
   })
 
   test("refuses to reuse another user's job", async () => {
