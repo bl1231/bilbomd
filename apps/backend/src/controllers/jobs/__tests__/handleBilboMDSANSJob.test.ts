@@ -199,7 +199,8 @@ describe('handleBilboMDSANSJob', () => {
       expect.objectContaining({
         bilbomd_mode: 'sans',
         inp_file: { originalname: 'const.inp' },
-        d2o_fraction: 0.7
+        d2o_fraction: 0.7,
+        deuteration_fractions: { A: 0.5 }
       }),
       { abortEarly: false }
     )

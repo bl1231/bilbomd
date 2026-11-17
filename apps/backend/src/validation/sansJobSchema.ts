@@ -22,6 +22,40 @@ const rgField = (label: string) =>
     .max(100)
     .required(`${label} value is required`)
 
+// Chain IDs: 1-4 alphanumerics (PDB chainID or mmCIF auth_asym_id). The
+// handler turns these into object keys, so nothing else gets through.
+const CHAIN_ID_RE = /^[A-Za-z0-9]{1,4}$/
+
+// Per-chain deuteration percentages, collected by the handler from the
+// deuteration_fraction_<chainId> form fields. The form always sends one per
+// chain. An empty set must be rejected here: Mongoose drops the empty object
+// on save, and the worker can then never save the job again.
+const deuterationFractions = yup
+  .object()
+  .test(
+    'has-chains',
+    'At least one deuteration_fraction_<chainId> field is required',
+    (value) => !!value && Object.keys(value).length > 0
+  )
+  .test('valid-chains', function (value) {
+    for (const [chainId, fraction] of Object.entries(value ?? {})) {
+      if (!CHAIN_ID_RE.test(chainId)) {
+        return this.createError({ message: `Invalid chain ID "${chainId}"` })
+      }
+      if (
+        typeof fraction !== 'number' ||
+        !Number.isFinite(fraction) ||
+        fraction < 0 ||
+        fraction > 100
+      ) {
+        return this.createError({
+          message: `Deuteration fraction for chain ${chainId} must be a number from 0 to 100`
+        })
+      }
+    }
+    return true
+  })
+
 // Mirrors the SANS job form (apps/ui/src/schemas/BilboMDSANSJobSchema.ts).
 // The form's SANS data content check runs in the browser only.
 export const sansJobSchema = yup.object({
@@ -65,5 +99,6 @@ export const sansJobSchema = yup.object({
     .number()
     .min(0, 'D2O Fraction cannot be less than 0')
     .max(100, 'D2O Fraction cannot be more than 100')
-    .required('D2O Fraction is required')
+    .required('D2O Fraction is required'),
+  deuteration_fractions: deuterationFractions
 })
