@@ -158,7 +158,9 @@ const residueRangeSchema = new Schema<IResidueRange>({
 
 const segmentSchema = new Schema<ISegment>({
   chain_id: { type: String, required: true },
-  residues: { type: residueRangeSchema, required: true }
+  residues: { type: residueRangeSchema, required: true },
+  segid: { type: String, required: false },
+  whole_segment: { type: Boolean, required: false }
 })
 
 const fixedBodySchema = new Schema<IFixedBody>({
