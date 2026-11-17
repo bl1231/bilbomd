@@ -966,8 +966,10 @@ describe('long commands and continuation lines', () => {
         'return'
       ].join('\n')
     )
+    // CHARMM doesn't join after the tab, and the stray '-' trailing `end`
+    // already fails the check, before the system line
     await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-      /Disallowed keyword in constraint file: "system "id""/
+      /Disallowed keyword in constraint file: "define fixed1 sele \( resid 1:5 \.and\. segid PROA \) end -"/
     )
   })
 

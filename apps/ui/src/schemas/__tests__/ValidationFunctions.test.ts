@@ -117,7 +117,7 @@ describe('ValidationFunctions', () => {
   it('isValidConstInpFile returns true for valid const.inp (pdb mode)', async () => {
     const content = [
       '! BilboMD const.inp',
-      'define segid PROA',
+      'define fixed1 sele segid PROA end',
       'cons fix sele segid PROA end',
       'shape desc dock1 rigid sele segid PROA end',
       'return'

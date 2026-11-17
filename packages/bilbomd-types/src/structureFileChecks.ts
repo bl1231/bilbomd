@@ -188,19 +188,52 @@ export const checkRnaResidues = (
 }
 
 /**
- * Line prefixes allowed in a CHARMM constraint (const.inp) file. The worker
- * STREAMs the file into CHARMM, so anything else (system, open, read, ...) is
- * rejected.
+ * What a CHARMM constraint (const.inp) file may contain. The worker STREAMs
+ * the file into CHARMM, which runs every command in it, including `system`
+ * (a shell command) and file I/O. So instead of rejecting known-bad keywords,
+ * each command must match one of the few forms a constraint file needs, in
+ * full: checking only how a command starts let `cons fix sele x end; system
+ * "..."` and a `system` line joined on with a '-' continuation through.
+ *
+ * Selections are limited to the characters CHARMM selections use, which rules
+ * out quotes, ';', '@' and '?' substitution, '$', '/' and control characters
+ * (whitespace is spaces and tabs only). A selection ends at its one and only
+ * `end`, so nothing can trail it.
  */
-export const CONST_INP_ALLOWED_PREFIXES = [
-  'define',
-  'cons fix',
-  'cons harm',
-  'shape desc',
-  'return',
-  '!',
-  '*'
-] as const
+const SELECTION = String.raw`[A-Za-z0-9 \t().:*%#_-]*?`
+const NAME = String.raw`[A-Za-z0-9_]+`
+const SELE = String.raw`sele(?:ct(?:ion)?)?`
+const SP = String.raw`[ \t]+`
+const selectionCommand = (head: string) =>
+  new RegExp(String.raw`^${head}${SP}${SELE}[ \t]${SELECTION}\bend$`, 'i')
+const CONST_INP_COMMANDS: readonly RegExp[] = [
+  /^return$/i,
+  selectionCommand(String.raw`define${SP}${NAME}`),
+  selectionCommand(String.raw`cons${SP}fix`),
+  selectionCommand(String.raw`cons${SP}harm(?:[ \t][A-Za-z0-9 \t.-]*?)?`),
+  selectionCommand(String.raw`shape${SP}desc${SP}${NAME}${SP}rigid`)
+]
+
+/**
+ * Title ('*') lines are text, not commands, but CHARMM still substitutes
+ * '@' and '?' parameters in them, so they get a plain-text character set.
+ */
+const SAFE_TITLE = /^\*[A-Za-z0-9 \t().,:*%#_+=/-]*$/
+
+/** CHARMM keywords no constraint file uses, matched however abbreviated. */
+const FORBIDDEN_WORD = /\b(syst\w*|stre\w*|open|read|writ\w*|envi\w*)\b/i
+
+/** Whether one command (continuations joined, trimmed) is allowed. */
+const isAllowedConstInpCommand = (command: string): boolean => {
+  if (command.startsWith('*')) return SAFE_TITLE.test(command)
+  // CHARMM ignores everything after '!'. The code before it can't hold a
+  // quote, so a '!' can't be hidden inside a string.
+  const code = (command.split('!')[0] ?? '').trim()
+  if (code === '') return true
+  if (FORBIDDEN_WORD.test(code)) return false
+  if ((code.match(/\bend\b/gi) ?? []).length > 1) return false
+  return CONST_INP_COMMANDS.some((form) => form.test(code))
+}
 
 /**
  * Most shape commands a constraint file may hold: CHARMM's MAXSHP limit
@@ -344,22 +377,17 @@ export const constInpLengthMessage = (text: string): string | null => {
 }
 
 /**
- * The first command of a constraint file that doesn't start with one of
- * CONST_INP_ALLOWED_PREFIXES (trimmed), or null when every command does.
+ * The first command of a constraint file that isn't one of the allowed forms
+ * (see CONST_INP_COMMANDS), trimmed, or null when every command is.
  * Continuation lines are joined first, as CHARMM reads them, and blank lines
- * are skipped. The worker runs this on the file right before CHARMM streams
- * it, whatever path the job took to the queue.
+ * are skipped. The UI, the backend and the worker (right before CHARMM streams
+ * the file) all run this check.
  */
 export const findDisallowedConstInpLine = (text: string): string | null => {
   for (const line of joinConstInpLines(text)) {
     const trimmed = line.trim()
     if (trimmed === '') continue
-    const lower = trimmed.toLowerCase()
-    if (
-      !CONST_INP_ALLOWED_PREFIXES.some((prefix) => lower.startsWith(prefix))
-    ) {
-      return trimmed
-    }
+    if (!isAllowedConstInpCommand(trimmed)) return trimmed
   }
   return null
 }

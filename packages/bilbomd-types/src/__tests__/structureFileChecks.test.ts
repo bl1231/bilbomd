@@ -611,6 +611,57 @@ describe('findDisallowedConstInpLine', () => {
   })
 
   it.each([
+    [
+      'a selection with .or. and nested parens',
+      'define f sele ( resid 1:140 .and. ( segid PROA .or. segid PROB ) ) end'
+    ],
+    ['select spelled out', 'define f select segid PROA end'],
+    ['wildcards', 'define h sele ( segid PROA .and. type H* ) end'],
+    ['cons harm with options', 'cons harm force 5.0 sele fixed1 end'],
+    [
+      'an inline comment',
+      'cons fix sele fixed1 end ! keep "A" fixed; see notes'
+    ],
+    ['upper case', 'SHAPE DESC DOCK1 RIGID SELE RIGID1 END'],
+    ['tabs', 'define\tf\tsele\tsegid PROA\tend']
+  ])('allows %s', (_, line) => {
+    expect(findDisallowedConstInpLine(lines(line, 'return'))).toBeNull()
+  })
+
+  // Seen in uploads: each starts with an allowed command, so a check of only
+  // the start of a command let them through to CHARMM
+  it.each([
+    ['a ";" after end', 'cons fix sele rigid1 end; system "id"'],
+    ['a tab and ";" after end', 'cons fix sele rigid1 end\t; system "id"'],
+    ['words after end', 'define x sele segid PROA end system id'],
+    ['a second end', 'define x sele segid PROA end syst id end'],
+    ['quotes in a selection', 'define x sele segid "PROA" end'],
+    ['@ substitution', 'define x sele segid @a@b end'],
+    ['? substitution', 'define x sele resid ?nres end'],
+    ['a path', 'define x sele segid PROA/../x end'],
+    ['no end', 'cons fix sele fixed1'],
+    ['a forbidden keyword', 'cons harm stream x.str sele a end'],
+    ['an unknown command', 'cons fix'],
+    ['a title with a quote', '* title "x"'],
+    ['a title with @', '* @a@b'],
+    ['a control character', 'define x sele segid PROA\u000bend']
+  ])('rejects %s', (_, line) => {
+    expect(findDisallowedConstInpLine(lines('* t', line, 'return'))).toBe(
+      line.trim()
+    )
+  })
+
+  it.each([
+    ['a hyphen', 'define rigid1 sele ( segid PROA ) end-'],
+    ['a tab and a hyphen', 'define rigid1 sele ( segid PROA ) end\t-']
+  ])('rejects a system line joined onto a command by %s', (_, first) => {
+    const found = findDisallowedConstInpLine(
+      lines(first, 'system "id"', 'cons fix sele rigid1 end', 'return')
+    )
+    expect(found).toContain('system "id"')
+  })
+
+  it.each([
     ['CRLF', '\r\n'],
     ['bare CR', '\r']
   ])('splits %s line endings', (_, eol) => {
@@ -708,7 +759,6 @@ describe('findDisallowedConstInpLine with continuation lines', () => {
   })
 
   it.each([
-    ['a tab after the hyphen', 'define x sele segid PROA end -\t'],
     ['a hyphen inside a comment', 'define x sele segid PROA end ! -'],
     ['a comment line', '! note -'],
     ['a title line', '* title -']
@@ -716,6 +766,14 @@ describe('findDisallowedConstInpLine with continuation lines', () => {
     expect(
       findDisallowedConstInpLine(lines(first, 'system "id"', 'return'))
     ).toBe('system "id"')
+  })
+
+  it('rejects a hyphen after a tab, which CHARMM does not join', () => {
+    // CHARMM runs the next line on its own, and the stray '-' trails `end`
+    const first = 'define x sele segid PROA end -\t'
+    expect(
+      findDisallowedConstInpLine(lines(first, 'system "id"', 'return'))
+    ).toBe(first.trim())
   })
 
   it('still sees a command after the blank line a hyphen joins', () => {
