@@ -10,7 +10,8 @@ import {
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
-import { sanitizeConstInpFile, writeJobParams } from './index.js'
+import { writeJobParams } from './index.js'
+import { materializeConstraints } from './utils/constraints.js'
 import { queueJob } from '../../queues/bilbomd.js'
 import { DispatchUser } from '../../types/bilbomd.js'
 import { config } from '../../config/config.js'
@@ -50,10 +51,6 @@ const handleBilboMDSANSJob = async (
     const dataFile =
       files['dat_file'] && files['dat_file'][0]
         ? files['dat_file'][0].originalname.toLowerCase()
-        : ''
-    const constInpFile =
-      files['inp_file'] && files['inp_file'][0]
-        ? files['inp_file'][0].originalname.toLowerCase()
         : ''
 
     // Per-chain deuteration percentages from deuteration_fraction_<chainId>
@@ -102,14 +99,23 @@ const handleBilboMDSANSJob = async (
       throw validationErr
     }
 
-    // Rename the original inp_file to create a backup
-    const constInpFilePath = path.join(jobDir, constInpFile)
-    const constInpOrigFilePath = path.join(jobDir, `${constInpFile}.orig`)
-
-    await fs.copyFile(constInpFilePath, constInpOrigFilePath)
-
-    // Sanitize the uploaded file (constInpFilePath)
-    await sanitizeConstInpFile(constInpFilePath)
+    // Validate the constraints against the structure and write the only
+    // constraint file the MD engine will read
+    const constraints = await materializeConstraints({
+      mode: 'pdb',
+      md_engine,
+      jobDir,
+      structureFile: path.join(jobDir, pdbFile),
+      constraintsField: req.body.constraints,
+      legacyFile: files['inp_file']?.[0]
+    })
+    if (!constraints.ok) {
+      logger.warn('SANS job constraints rejected', constraints.errors)
+      await fs.remove(jobDir)
+      return res
+        .status(400)
+        .json({ message: 'Validation failed', errors: constraints.errors })
+    }
 
     let stepsInit: IBilboMDSteps
 
@@ -149,7 +155,8 @@ const handleBilboMDSANSJob = async (
       deuteration_fractions: deuterationFractions,
       d2o_fraction: req.body.d2o_fraction,
       data_file: dataFile,
-      const_inp_file: constInpFile,
+      const_inp_file: constraints.constFileName,
+      md_constraints: constraints.md_constraints,
       conformational_sampling: 1,
       rg: req.body.rg,
       rg_min: req.body.rg_min,

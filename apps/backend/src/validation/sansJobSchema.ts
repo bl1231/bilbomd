@@ -5,8 +5,6 @@ import {
   fileExtTest,
   fileNameLengthTest,
   noSpacesTest,
-  constInpCheck,
-  openmmConstInpCheck,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
   pdbOrCifResidueCheck,
@@ -74,14 +72,6 @@ export const sansJobSchema = yup.object({
     .concat(fileNameLengthTest()),
   dat_file: requiredFile('Experimental SANS data is required')
     .concat(fileExtTest('dat'))
-    .concat(fileSizeTest(2_000_000))
-    .concat(noSpacesTest())
-    .concat(fileNameLengthTest()),
-  inp_file: requiredFile('const.inp file is required')
-    .concat(fileExtTest('inp'))
-    // SANS jobs start from a PDB file, so segment IDs follow the PDB rule
-    .concat(constInpCheck('pdb'))
-    .concat(openmmConstInpCheck())
     .concat(fileSizeTest(2_000_000))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),

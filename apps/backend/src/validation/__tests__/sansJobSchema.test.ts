@@ -15,11 +15,6 @@ const atom = (residue: string, n: number) =>
   `ATOM      1  CA  ${residue.padEnd(3)} A${String(n).padStart(4)}       1.000   2.000   3.000  1.00  0.00           C`
 
 const GOOD_PDB = [atom('ALA', 1), atom('GLY', 2), 'END'].join('\n')
-const GOOD_INP = [
-  'define fixed1 sele ( resid 1:2 .and. segid PROA ) end',
-  'cons fix sele fixed1 end',
-  'return'
-].join('\n')
 
 let contents: Record<string, string> = {}
 let uploads = 0
@@ -36,7 +31,6 @@ const payload = (overrides: Record<string, unknown> = {}) => ({
   bilbomd_mode: 'sans',
   pdb_file: upload('protein.pdb', GOOD_PDB),
   dat_file: upload('curve.dat', '0.01 1.0 0.1\n'),
-  inp_file: upload('const.inp', GOOD_INP),
   rg_min: '20',
   rg_max: '40',
   d2o_fraction: '70',
@@ -73,37 +67,14 @@ describe('sansJobSchema', () => {
     expect(await errors(payload())).toEqual({})
   })
 
-  it('requires all three files', async () => {
+  // Constraints are validated against the structure by the handler
+  // (materializeConstraints), not by this schema
+  it('requires both files', async () => {
     const result = await errors(
-      payload({ pdb_file: undefined, dat_file: undefined, inp_file: undefined })
+      payload({ pdb_file: undefined, dat_file: undefined })
     )
     expect(result.pdb_file).toBe('A PDB or CIF file is required')
     expect(result.dat_file).toBe('Experimental SANS data is required')
-    expect(result.inp_file).toBe('const.inp file is required')
-  })
-
-  it('rejects a constraint file with a disallowed CHARMM keyword', async () => {
-    const inp = GOOD_INP.replace('return', 'system "ls"\nreturn')
-    expect(
-      (await errors(payload({ inp_file: upload('const.inp', inp) }))).inp_file
-    ).toBe('Disallowed keyword in constraint file: "system "ls""')
-  })
-
-  it('rejects more than 20 shape commands', async () => {
-    const shapes = Array.from(
-      { length: 21 },
-      (_, i) => `shape desc dock${i} rigid sele fixed1 end`
-    ).join('\n')
-    const inp = GOOD_INP.replace('return', `${shapes}\nreturn`)
-    expect(
-      (await errors(payload({ inp_file: upload('const.inp', inp) }))).inp_file
-    ).toMatch(/Too many CHARMM shape commands/)
-  })
-
-  it('rejects an empty constraint file', async () => {
-    expect(
-      (await errors(payload({ inp_file: upload('const.inp', '') }))).inp_file
-    ).toBe('The last line must be "return".')
   })
 
   it('checks the structure file', async () => {
@@ -132,13 +103,11 @@ describe('sansJobSchema', () => {
     const result = await errors(
       payload({
         pdb_file: upload('protein.txt', GOOD_PDB),
-        dat_file: upload('curve.csv', '0.01 1 0.1'),
-        inp_file: upload('const.txt', GOOD_INP)
+        dat_file: upload('curve.csv', '0.01 1 0.1')
       })
     )
     expect(result.pdb_file).toMatch(/\*\.pdb or \*\.cif/)
     expect(result.dat_file).toMatch(/\*\.dat/)
-    expect(result.inp_file).toMatch(/\*\.inp/)
   })
 
   it('needs rg_max above rg_min, both from 10 to 100', async () => {

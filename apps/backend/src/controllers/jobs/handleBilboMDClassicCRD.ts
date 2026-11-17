@@ -1,5 +1,4 @@
 import { logger } from '../../middleware/loggers.js'
-import fs from 'fs-extra'
 import path from 'path'
 import { queueJob } from '../../queues/bilbomd.js'
 import {
@@ -11,21 +10,16 @@ import {
 } from '@bilbomd/mongodb-schema'
 import { Request, Response } from 'express'
 import { ValidationError } from 'yup'
-import { writeJobParams, sanitizeConstInpFile } from './utils/jobUtils.js'
+import { writeJobParams } from './utils/jobUtils.js'
 import { maybeAutoCalculateRg } from './utils/maybeAutoCalculateRg.js'
 import { crdJobSchema } from '../../validation/index.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { config } from '../../config/config.js'
-import {
-  validateInpConstraints,
-  convertInpToYaml,
-  extractConstraintsFromYaml,
-  buildChainMolTypesFromInp
-} from '@bilbomd/md-utils'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { isResubmitRequest } from './utils/resubmission.js'
 import { serverFile } from './utils/serverFiles.js'
 import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
+import { materializeConstraints } from './utils/constraints.js'
 
 const uploadFolder = config.uploadDir
 
@@ -63,7 +57,6 @@ const handleBilboMDClassicCRD = async (
     }
     let { rg, rg_min, rg_max } = req.body
 
-    let inpFileName = ''
     let datFileName = ''
     let crdFileName = ''
     let psfFileName = ''
@@ -89,7 +82,6 @@ const handleBilboMDClassicCRD = async (
 
     crdFileName = crdFile?.originalname.toLowerCase() ?? ''
     psfFileName = psfFile?.originalname.toLowerCase() ?? ''
-    inpFileName = inpFile?.originalname.toLowerCase() ?? ''
     datFileName = datFile?.originalname.toLowerCase() ?? ''
 
     // Convert to Å⁻¹ and trim before AutoRg or validation read the file
@@ -117,7 +109,6 @@ const handleBilboMDClassicCRD = async (
       email: req.body.email,
       dat_file: datFile,
       q_units: req.body.q_units,
-      const_inp_file: inpFile,
       crd_file: crdFile,
       psf_file: psfFile,
       rg,
@@ -146,12 +137,25 @@ const handleBilboMDClassicCRD = async (
       }
     }
 
-    // Keep the original upload and sanitize the working copy (only once the
-    // inputs have passed validation)
-    const constInpFilePath = path.join(jobDir, inpFileName)
-    const constInpOrigFilePath = path.join(jobDir, `${inpFileName}.orig`)
-    await fs.copyFile(constInpFilePath, constInpOrigFilePath)
-    await sanitizeConstInpFile(constInpFilePath)
+    // Validate the constraints against the PSF and write the only
+    // constraint file CHARMM will read
+    const constraints = await materializeConstraints({
+      mode: 'crd_psf',
+      md_engine,
+      jobDir,
+      structureFile: path.join(jobDir, psfFileName),
+      constraintsField: req.body.constraints,
+      legacyFile: inpFile
+    })
+    if (!constraints.ok) {
+      logger.warn(
+        'Classic CRD/PSF job constraints rejected',
+        constraints.errors
+      )
+      return res
+        .status(400)
+        .json({ message: 'Validation failed', errors: constraints.errors })
+    }
 
     // Initialize BilboMdCRDJob Job Data
     const jobData = {
@@ -161,7 +165,8 @@ const handleBilboMDClassicCRD = async (
       data_file: datFileName,
       crd_file: crdFileName,
       psf_file: psfFileName,
-      const_inp_file: inpFileName,
+      const_inp_file: constraints.constFileName,
+      md_constraints: constraints.md_constraints,
       conformational_sampling: req.body.num_conf,
       rg,
       rg_min,
@@ -207,30 +212,6 @@ const handleBilboMDClassicCRD = async (
       `BilboMD-${bilbomdMode} Job saved to MongoDB: ${newJob._id.toString()}`
     )
 
-    // Store MD constraints in MongoDB (CRD only supports CHARMM/const.inp)
-    if (inpFile) {
-      try {
-        const constraintFilePath = path.join(jobDir, inpFileName)
-        await validateInpConstraints(constraintFilePath)
-        const yamlContent = await convertInpToYaml(constraintFilePath, logger)
-        const mdConstraints = extractConstraintsFromYaml(yamlContent)
-        newJob.md_constraints = {
-          ...mdConstraints,
-          chain_mol_types: await buildChainMolTypesFromInp(constraintFilePath)
-        }
-        await newJob.save()
-        logger.info(
-          `MD constraints stored in MongoDB for job ${newJob._id.toString()}`
-        )
-      } catch (constraintError) {
-        logger.warn(
-          `Failed to store MD constraints for job ${newJob._id.toString()}:`,
-          constraintError
-        )
-        // Don't fail job creation if constraint storage fails
-      }
-    }
-
     // Write Job params for use by NERSC job script.
     await writeJobParams(newJob._id.toString())
     // Create BullMQ Job object
@@ -264,6 +245,7 @@ const handleBilboMDClassicCRD = async (
       res.status(200).json({
         message: `New BilboMD Classic w/CRD Job successfully created`,
         saxs_warnings: saxsData.warnings,
+        constraint_warnings: constraints.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine,
@@ -275,6 +257,7 @@ const handleBilboMDClassicCRD = async (
       res.status(200).json({
         message: `New BilboMD Classic w/CRD Job successfully created`,
         saxs_warnings: saxsData.warnings,
+        constraint_warnings: constraints.warnings,
         jobid: newJob._id.toString(),
         uuid: newJob.uuid,
         md_engine

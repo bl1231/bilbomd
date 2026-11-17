@@ -68,13 +68,15 @@ const processBilboMDJobNersc = async (MQjob: BullMQJob) => {
       throw error
     }
 
-    // CHARMM on Perlmutter streams an uploaded constraint file as is
+    // CHARMM on Perlmutter streams the constraint file as is. OpenMM jobs
+    // name their openmm_const.yml here, which CHARMM never reads.
     const constInp = foundJob.get('const_inp_file') as string | undefined
-    if (constInp) {
+    if (constInp && !/\.ya?ml$/i.test(constInp)) {
       try {
         await assertConstInpAllowed(
           path.join(config.uploadDir, foundJob.uuid),
-          constInp
+          constInp,
+          foundJob.get('md_constraints')
         )
       } catch (error) {
         logger.error(`Constraint file check failed: ${MQjob.data.uuid}`)

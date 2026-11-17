@@ -2,7 +2,10 @@ import path from 'path'
 import fs from 'fs-extra'
 import {
   constInpLengthMessage,
-  findDisallowedConstInpLine
+  constraintsFromStored,
+  findDisallowedConstInpLine,
+  writeConstInp,
+  type MDConstraintsDTO
 } from '@bilbomd/bilbomd-types'
 
 // The constraint file name goes into the CHARMM input as `STREAM ../../<name>`
@@ -18,10 +21,16 @@ const MAX_QUOTED = 80
  * took to the queue. Throws when the file name or any line isn't allowed, or
  * when a line is too long for CHARMM: the MD steps run with 'bomlev -2', so
  * CHARMM would skip the cut-short command and silently drop that constraint.
+ *
+ * For jobs whose constraints were validated from structured input (their
+ * stored md_constraints carry segids), the file must also be exactly what
+ * BilboMD writes for those constraints, so a file changed after submission is
+ * caught. Older jobs and PAE-generated constraints get the line checks only.
  */
 export const assertConstInpAllowed = async (
   jobDir: string,
-  fileName: string
+  fileName: string,
+  stored?: MDConstraintsDTO | null
 ): Promise<void> => {
   if (!SAFE_FILE_NAME.test(fileName)) {
     throw new Error(
@@ -40,5 +49,11 @@ export const assertConstInpAllowed = async (
   const tooLong = constInpLengthMessage(text)
   if (tooLong !== null) {
     throw new Error(`Constraint file ${fileName}: ${tooLong}`)
+  }
+  const constraints = constraintsFromStored(stored)
+  if (constraints && text !== writeConstInp(constraints)) {
+    throw new Error(
+      `Constraint file ${fileName} does not match the job's constraints`
+    )
   }
 }

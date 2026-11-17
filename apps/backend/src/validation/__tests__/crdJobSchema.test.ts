@@ -105,12 +105,6 @@ describe('crdJobSchema - required files', () => {
     ).rejects.toThrow('required')
   })
 
-  it('rejects missing const_inp_file', async () => {
-    await expect(
-      crdJobSchema.validateAt('const_inp_file', { const_inp_file: undefined })
-    ).rejects.toThrow('required')
-  })
-
   it('rejects missing crd_file', async () => {
     await expect(
       crdJobSchema.validateAt('crd_file', { crd_file: undefined })
@@ -126,7 +120,6 @@ describe('crdJobSchema - required files', () => {
   it('accepts a multer file object for each file field', async () => {
     for (const [field, name] of [
       ['dat_file', 'data.dat'],
-      ['const_inp_file', 'const.inp'],
       ['crd_file', 'coords.crd'],
       ['psf_file', 'top.psf']
     ] as const) {
