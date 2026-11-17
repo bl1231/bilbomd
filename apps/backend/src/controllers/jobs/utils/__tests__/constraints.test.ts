@@ -192,6 +192,73 @@ describe('materializeConstraints', () => {
     expect(await fs.pathExists(reused.path)).toBe(true)
   })
 
+  // Protein chain a is CHARMM segment PROA; DNA chain A is DNAA. Reusing the
+  // const.inp BilboMD wrote must find chain a again, not guess A from PROA.
+  it('resubmits a generated const.inp for a lowercase chain unchanged', async () => {
+    await fs.writeFile(
+      path.join(jobDir, 'mixed.pdb'),
+      [
+        ...Array.from({ length: 50 }, (_, i) => atom('a', 'ALA', i + 1)),
+        ...Array.from({ length: 20 }, (_, i) => atom('A', 'DA', i + 1)),
+        'END'
+      ].join('\n')
+    )
+    const args = {
+      ...pdbArgs(),
+      md_engine: 'CHARMM' as const,
+      structureFile: path.join(jobDir, 'mixed.pdb')
+    }
+    const original = await materializeConstraints({
+      ...args,
+      constraintsField: JSON.stringify({
+        fixed_bodies: [
+          { segments: [{ chain_id: 'a', residues: { start: 1, stop: 20 } }] }
+        ],
+        rigid_bodies: [{ segments: [{ chain_id: 'A' }] }]
+      })
+    })
+    const written = await fs.readFile(path.join(jobDir, 'const.inp'), 'utf8')
+    expect(written).toContain('segid PROA')
+    expect(written).toContain('segid DNAA')
+
+    const reused = await materializeConstraints({
+      ...args,
+      legacyFile: {
+        originalname: 'const.inp',
+        path: path.join(jobDir, 'const.inp')
+      } as Express.Multer.File
+    })
+
+    expect(reused.ok).toBe(true)
+    expect(reused.ok && reused.md_constraints).toEqual(
+      original.ok && original.md_constraints
+    )
+    expect(await fs.readFile(path.join(jobDir, 'const.inp'), 'utf8')).toBe(
+      written
+    )
+  })
+
+  it('stores CRD/PSF segments under the chain the result PDBs use', async () => {
+    const result = await materializeConstraints({
+      mode: 'crd_psf',
+      md_engine: 'CHARMM',
+      jobDir,
+      structureFile: path.join(jobDir, 'model.psf'),
+      constraintsField: JSON.stringify({
+        fixed_bodies: [{ segments: [{ segid: 'PROA' }] }],
+        rigid_bodies: [{ segments: [{ segid: 'HETA' }] }]
+      })
+    })
+
+    // writeSegidToChainid puts the segid's last character in the chain column
+    expect(
+      result.ok && result.md_constraints.fixed_bodies?.[0]?.segments[0]
+    ).toMatchObject({ chain_id: 'A', segid: 'PROA' })
+    expect(result.ok && result.md_constraints.chain_mol_types).toEqual([
+      { chain_id: 'A', mol_type: 'PRO' }
+    ])
+  })
+
   it('names CRD/PSF segments by segid', async () => {
     const result = await materializeConstraints({
       mode: 'crd_psf',

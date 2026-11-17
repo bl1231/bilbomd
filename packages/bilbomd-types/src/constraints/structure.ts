@@ -147,6 +147,11 @@ export const readCifSegments = (cifText: string): StructureSegment[] => {
  * line starts: atom number, segid, resid, ... Residue IDs with an insertion
  * code (e.g. 52A) are left out of the residue list, since constraints take
  * whole numbers. Segids are uppercased, as CHARMM reads them.
+ *
+ * chain_id is the chain the worker writes into result PDBs for the segment:
+ * the segid's last character (writeSegidToChainid), so the job page's viewer
+ * finds the constrained residues. Several segments can share one (PROA and
+ * DNAA are both chain A); constraints themselves always use the segid.
  */
 export const readPsfSegments = (psfText: string): StructureSegment[] => {
   const lines = psfText.split(/\r\n|\r|\n/)
@@ -166,7 +171,7 @@ export const readPsfSegments = (psfText: string): StructureSegment[] => {
   }
   return [...segments.entries()].map(([segid, residues]) => ({
     segid,
-    chain_id: segid,
+    chain_id: segid.slice(-1),
     residues: sortedUnique(residues)
   }))
 }

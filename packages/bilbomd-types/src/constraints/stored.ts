@@ -45,44 +45,51 @@ export const inputFromStored = (
   stored: unknown,
   mode: ConstraintMode
 ): unknown => {
-  if (typeof stored !== 'object' || stored === null) return stored
-  const { fixed_bodies: fixed, rigid_bodies: rigid } = stored as {
-    fixed_bodies?: unknown
-    rigid_bodies?: unknown
+  if (!isRecord(stored)) return stored
+  // chain_mol_types is metadata stored alongside the bodies; every other
+  // field is kept so the validator rejects anything it doesn't know
+  const { fixed_bodies: fixed, rigid_bodies: rigid, ...rest } = stored
+  delete rest.chain_mol_types
+
+  const segment = (value: unknown): unknown => {
+    if (!isRecord(value)) return value
+    const {
+      chain_id: chainId,
+      segid,
+      residues,
+      whole_segment: whole,
+      ...other
+    } = value
+    return {
+      ...other,
+      // Segments are named by segid in CRD/PSF mode, by chain in PDB mode
+      // (the server works out the segid from the structure)
+      ...(mode === 'crd_psf' ? { segid } : { chain_id: chainId }),
+      ...(whole === true ? {} : { residues })
+    }
   }
   const bodies = (list: unknown): unknown =>
     Array.isArray(list)
       ? list.map((body: unknown): unknown => {
-          if (typeof body !== 'object' || body === null) return body
-          const { segments } = body as { segments?: unknown }
-          if (!Array.isArray(segments)) return { segments }
+          if (!isRecord(body)) return body
+          // The server names bodies, so a stored name is dropped
+          const { segments, ...other } = body
+          delete other.name
           return {
-            segments: segments.map((segment: unknown) => {
-              if (typeof segment !== 'object' || segment === null) {
-                return segment
-              }
-              const {
-                chain_id: chainId,
-                segid,
-                residues,
-                whole_segment: whole,
-                ...rest
-              } = segment as Record<string, unknown>
-              return {
-                ...rest,
-                ...(mode === 'crd_psf'
-                  ? { segid: segid ?? chainId }
-                  : { chain_id: chainId }),
-                ...(whole === true ? {} : { residues })
-              }
-            })
+            ...other,
+            segments: Array.isArray(segments) ? segments.map(segment) : segments
           }
         })
       : list
+
   return {
+    ...rest,
     fixed_bodies: bodies(fixed),
     ...(rigid === undefined || (Array.isArray(rigid) && rigid.length === 0)
       ? {}
       : { rigid_bodies: bodies(rigid) })
   }
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)

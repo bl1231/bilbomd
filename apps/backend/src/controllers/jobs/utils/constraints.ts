@@ -2,6 +2,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import {
+  chainIdFromSegid,
   importConstraintsFromConstInp,
   inputFromStored,
   parseConstraintsJson,
@@ -14,6 +15,7 @@ import {
   type ChainMolType,
   type ConstraintError,
   type ConstraintMode,
+  type ConstraintsInput,
   type StructureSegment
 } from '@bilbomd/bilbomd-types'
 import type { IMDConstraints } from '@bilbomd/mongodb-schema'
@@ -69,12 +71,44 @@ const molTypeOfSegid = (segid: string): ChainMolType | undefined => {
   return undefined
 }
 
+// A const.inp names segments by segid. For a PDB-mode job, find each one's
+// chain in the uploaded structure: the segid BilboMD wrote for chain `a` is
+// PROA, so spelling alone can't tell it from chain A. Only a segid the
+// structure doesn't have (an old Inp Jiffy name such as PRLA) is read by
+// its spelling.
+const segidsToChains = (
+  input: ConstraintsInput,
+  segments: StructureSegment[]
+): { input: ConstraintsInput } | { problems: string[] } => {
+  const problems: string[] = []
+  const toChains = (body: ConstraintsInput['fixed_bodies'][number]) => ({
+    segments: body.segments.flatMap(({ segid, residues }) => {
+      const chainId =
+        segments.find((s) => s.segid === segid)?.chain_id ??
+        chainIdFromSegid(segid ?? '')
+      if (chainId === null) {
+        problems.push(`Segment ${segid} is not in the structure`)
+        return []
+      }
+      return [{ chain_id: chainId, ...(residues ? { residues } : {}) }]
+    })
+  })
+  const converted: ConstraintsInput = {
+    fixed_bodies: input.fixed_bodies.map(toChains),
+    ...(input.rigid_bodies
+      ? { rigid_bodies: input.rigid_bodies.map(toChains) }
+      : {})
+  }
+  return problems.length > 0 ? { problems } : { input: converted }
+}
+
 // The constraints in a legacy file, as input to validate. The file is
 // removed afterwards, so its text can never reach CHARMM.
 const readLegacyFile = async (
   file: Express.Multer.File,
   mode: ConstraintMode,
-  jobDir: string
+  jobDir: string,
+  segments: StructureSegment[]
 ): Promise<{ ok: true; value: unknown } | MaterializedConstraints> => {
   try {
     const stat = await fs.stat(file.path)
@@ -93,17 +127,19 @@ const readLegacyFile = async (
       return { ok: true, value: inputFromStored(body, mode) }
     }
 
-    const imported = importConstraintsFromConstInp(text, mode)
+    // Read by segid, then (PDB mode) matched to the structure's chains
+    const imported = importConstraintsFromConstInp(text, 'crd_psf')
+    const asErrors = (problems: string[]): MaterializedConstraints => ({
+      ok: false,
+      errors: problems.map((message) => ({ path: 'inp_file', message }))
+    })
     if (!imported.input || imported.problems.length > 0) {
-      return {
-        ok: false,
-        errors: imported.problems.map((message) => ({
-          path: 'inp_file',
-          message
-        }))
-      }
+      return asErrors(imported.problems)
     }
-    return { ok: true, value: imported.input }
+    if (mode === 'crd_psf') return { ok: true, value: imported.input }
+    const resolved = segidsToChains(imported.input, segments)
+    if ('problems' in resolved) return asErrors(resolved.problems)
+    return { ok: true, value: resolved.input }
   } catch (error) {
     logger.warn(`Could not read constraint file ${file.originalname}`, error)
     return fail('inp_file', 'The constraint file could not be read')
@@ -146,13 +182,26 @@ export const materializeConstraints = async ({
     )
   }
 
+  let segments: StructureSegment[]
+  try {
+    segments = await readStructure(structureFile)
+  } catch (error) {
+    if (
+      legacyFile &&
+      path.dirname(path.resolve(legacyFile.path)) === path.resolve(jobDir)
+    ) {
+      await fs.remove(legacyFile.path)
+    }
+    throw error
+  }
+
   let raw: unknown
   if (hasJson) {
     const parsed = parseConstraintsJson(constraintsField)
     if (!parsed.ok) return { ok: false, errors: parsed.errors }
     raw = parsed.value
   } else if (legacyFile) {
-    const legacy = await readLegacyFile(legacyFile, mode, jobDir)
+    const legacy = await readLegacyFile(legacyFile, mode, jobDir, segments)
     if (!('value' in legacy)) return legacy
     raw = legacy.value
   } else {
@@ -162,7 +211,6 @@ export const materializeConstraints = async ({
     )
   }
 
-  const segments = await readStructure(structureFile)
   const result = validateConstraintsInput(raw, { mode, segments })
   if (!result.ok) return { ok: false, errors: result.errors }
   const { constraints, warnings } = result
@@ -178,10 +226,15 @@ export const materializeConstraints = async ({
       : writeConstInp(constraints)
   await fs.writeFile(path.join(jobDir, constFileName), content)
 
-  const chainMolTypes = segments.flatMap((s) => {
+  // One entry per viewer chain; CRD/PSF segments can share one (PROA and
+  // DNAA are both chain A), and the first keeps it, as before
+  const chainMolTypes: { chain_id: string; mol_type: ChainMolType }[] = []
+  for (const s of segments) {
     const molType = s.mol_type ?? molTypeOfSegid(s.segid)
-    return molType ? [{ chain_id: s.chain_id, mol_type: molType }] : []
-  })
+    if (molType && !chainMolTypes.some((c) => c.chain_id === s.chain_id)) {
+      chainMolTypes.push({ chain_id: s.chain_id, mol_type: molType })
+    }
+  }
 
   return {
     ok: true,

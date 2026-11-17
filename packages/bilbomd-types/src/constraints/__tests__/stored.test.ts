@@ -71,6 +71,24 @@ describe('inputFromStored', () => {
     })
   })
 
+  it('keeps a misspelled top-level field, so the job is not run without it', () => {
+    const typo = {
+      fixed_bodies: [
+        { segments: [{ chain_id: 'A', residues: { start: 1, stop: 2 } }] }
+      ],
+      rigid_body: [{ segments: [{ chain_id: 'A' }] }]
+    }
+    const result = validateConstraintsInput(inputFromStored(typo, 'pdb'), {
+      mode: 'pdb',
+      segments: [{ segid: 'PROA', chain_id: 'A', residues: [1, 2, 3] }]
+    })
+    expect(!result.ok && result.errors[0]?.message).toMatch(/rigid_body/)
+  })
+
+  it('drops only stored metadata: chain_mol_types and body names', () => {
+    expect(inputFromStored(stored, 'pdb')).not.toHaveProperty('chain_mol_types')
+  })
+
   it('keeps unexpected fields so validation rejects them', () => {
     const odd = {
       fixed_bodies: [{ segments: [{ chain_id: 'A', extra: 'system' }] }]

@@ -187,8 +187,8 @@ describe('readCifSegments', () => {
 describe('readPsfSegments', () => {
   it('reads segids and whole-number residue IDs from !NATOM', () => {
     expect(psfStructure.segments).toEqual([
-      { segid: 'PROA', chain_id: 'PROA', residues: [1, 2, 3] },
-      { segid: 'HETA', chain_id: 'HETA', residues: [1] }
+      { segid: 'PROA', chain_id: 'A', residues: [1, 2, 3] },
+      { segid: 'HETA', chain_id: 'A', residues: [1] }
     ])
   })
 
@@ -455,12 +455,28 @@ describe('validateConstraintsInput', () => {
         psfStructure
       )
       const constraints = ok(result)
+      // chain_id is the chain the worker writes into result PDBs (the
+      // segid's last character), for the job page's viewer
       expect(constraints.fixed_bodies[0]?.segments[0]).toEqual({
-        chain_id: 'PROA',
+        chain_id: 'A',
         segid: 'PROA',
         residues: { start: 1, stop: 2 }
       })
       expect(constraints.rigid_bodies[0]?.segments[0]?.whole_segment).toBe(true)
+    })
+
+    it('does not warn about close bodies on different segments that share a chain letter', () => {
+      // PROA and HETA are both chain A in the result PDBs
+      const result = validateConstraintsInput(
+        {
+          fixed_bodies: [
+            { segments: [{ segid: 'PROA', residues: { start: 1, stop: 1 } }] }
+          ],
+          rigid_bodies: [{ segments: [{ segid: 'HETA' }] }]
+        },
+        psfStructure
+      )
+      expect(result.ok && result.warnings).toEqual([])
     })
 
     it.each([
