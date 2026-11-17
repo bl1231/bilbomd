@@ -4,7 +4,11 @@ import {
   wrapConstInpCommand
 } from '../structureFileChecks.js'
 import type { ConstraintSegment, Constraints } from './types.js'
-import { MAX_RIGID_BODIES, SEGID_PATTERN } from './validate.js'
+import {
+  MAX_RESIDUE_NUMBER,
+  MAX_RIGID_BODIES,
+  SEGID_PATTERN
+} from './validate.js'
 
 const assertSegment = (segment: ConstraintSegment): void => {
   const { segid, residues } = segment
@@ -17,6 +21,7 @@ const assertSegment = (segment: ConstraintSegment): void => {
     !Number.isInteger(residues.start) ||
     !Number.isInteger(residues.stop) ||
     residues.start < 0 ||
+    residues.stop > MAX_RESIDUE_NUMBER ||
     residues.start > residues.stop
   ) {
     throw new Error(

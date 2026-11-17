@@ -10,7 +10,12 @@ import {
   parseConstraintsJson,
   validateConstraintsInput
 } from '../validate.js'
-import { pdb2crdSegid, readPdbSegments, readPsfSegments } from '../structure.js'
+import {
+  pdb2crdSegid,
+  readCifSegments,
+  readPdbSegments,
+  readPsfSegments
+} from '../structure.js'
 import { writeConstInp } from '../writeConstInp.js'
 import { toOpenMMConstraints } from '../toOpenMM.js'
 import {
@@ -25,8 +30,13 @@ import type {
 
 // --- Fixtures ----------------------------------------------------------------
 
-const atom = (chain: string, resName: string, resSeq: number) =>
-  `ATOM      1  CA  ${resName.padEnd(3)} ${chain}${String(resSeq).padStart(4)}       1.000   2.000   3.000  1.00  0.00           C`
+const atom = (
+  chain: string,
+  resName: string,
+  resSeq: number,
+  insertionCode = ' '
+) =>
+  `ATOM      1  CA  ${resName.padEnd(3)} ${chain}${String(resSeq).padStart(4)}${insertionCode}      1.000   2.000   3.000  1.00  0.00           C`
 
 const residues = (chain: string, resName: string, from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) =>
@@ -95,6 +105,11 @@ describe('pdb2crdSegid', () => {
     expect(pdb2crdSegid('C', 'CAR')).toBe('CARC')
     expect(pdb2crdSegid('c', 'CAR')).toBe('CALC')
   })
+
+  it('uses CAL for a carbohydrate chain that is not an uppercase letter', () => {
+    // pdb2crd tests chain.isupper(), which is false for digits
+    expect(pdb2crdSegid('1', 'CAR')).toBe('CAL1')
+  })
 })
 
 describe('readPdbSegments', () => {
@@ -104,6 +119,68 @@ describe('readPdbSegments', () => {
       ['B', 'DNAB']
     ])
     expect(pdbStructure.segments[0]?.residues).toHaveLength(200)
+  })
+
+  it('classifies the DNA names pdb_utils.py accepts (ADE, CYT, GUA, THY)', () => {
+    const segments = readPdbSegments(
+      [atom('B', 'ADE', 1), atom('B', 'THY', 2)].join('\n')
+    )
+    expect(segments).toEqual([
+      { segid: 'DNAB', chain_id: 'B', mol_type: 'DNA', residues: [1, 2] }
+    ])
+  })
+
+  // pdb2crd removes these before building the segment, so constraints on
+  // them would select no atoms
+  it('leaves out waters, ions and atoms with an insertion code', () => {
+    const segments = readPdbSegments(
+      [
+        ...residues('A', 'ALA', 1, 3),
+        atom('A', 'ALA', 3, 'A'),
+        atom('A', 'HOH', 500),
+        atom('A', 'NA', 600),
+        atom('A', 'SO4', 700)
+      ].join('\n')
+    )
+    expect(segments[0]?.residues).toEqual([1, 2, 3])
+    const result = validateConstraintsInput(
+      {
+        fixed_bodies: [
+          { segments: [{ chain_id: 'A', residues: { start: 500, stop: 500 } }] }
+        ]
+      },
+      { mode: 'pdb', segments }
+    )
+    expect(result.ok).toBe(false)
+  })
+})
+
+describe('readCifSegments', () => {
+  it('reads chains from auth_asym_id and residues from auth_seq_id', () => {
+    const cif = [
+      'data_test',
+      'loop_',
+      '_atom_site.group_PDB',
+      '_atom_site.id',
+      '_atom_site.label_atom_id',
+      '_atom_site.label_comp_id',
+      '_atom_site.label_asym_id',
+      '_atom_site.label_seq_id',
+      '_atom_site.auth_seq_id',
+      '_atom_site.pdbx_PDB_ins_code',
+      '_atom_site.auth_asym_id',
+      '_atom_site.pdbx_PDB_model_num',
+      'ATOM 1 CA ALA X 1 10 ? A 1',
+      'ATOM 2 CA GLY X 2 11 ? A 1',
+      'ATOM 3 CA GLY X 3 11 B A 1',
+      'ATOM 4 P DA Y 1 5 ? B 1',
+      'HETATM 5 O HOH Z . 900 ? W 1',
+      '#'
+    ].join('\n')
+    expect(readCifSegments(cif)).toEqual([
+      { segid: 'PROA', chain_id: 'A', mol_type: 'PRO', residues: [10, 11] },
+      { segid: 'DNAB', chain_id: 'B', mol_type: 'DNA', residues: [5] }
+    ])
   })
 })
 
@@ -161,6 +238,29 @@ describe('validateConstraintsInput', () => {
         }
       ]
     })
+  })
+
+  it('rejects a whole segment whose residue numbers go below 0', () => {
+    const structure: ConstraintStructure = {
+      mode: 'pdb',
+      segments: readPdbSegments(residues('A', 'ALA', -2, 5).join('\n'))
+    }
+    const result = validateConstraintsInput(
+      { fixed_bodies: [{ segments: [{ chain_id: 'A' }] }] },
+      structure
+    )
+    expect(errorsOf(result)[0]?.message).toMatch(/outside 0-99999/)
+    // A range inside 0-99999 on the same chain is fine
+    expect(
+      validateConstraintsInput(
+        {
+          fixed_bodies: [
+            { segments: [{ chain_id: 'A', residues: { start: 1, stop: 5 } }] }
+          ]
+        },
+        structure
+      ).ok
+    ).toBe(true)
   })
 
   it('resolves a whole segment to its full residue range', () => {
@@ -511,7 +611,8 @@ describe('writeConstInp', () => {
     ['a bad segid', { segid: 'PROA ) end\nsystem "id"' }],
     ['a lowercase segid', { segid: 'proa' }],
     ['a fractional residue', { residues: { start: 1.5, stop: 2 } }],
-    ['a reversed range', { residues: { start: 5, stop: 1 } }]
+    ['a reversed range', { residues: { start: 5, stop: 1 } }],
+    ['a residue number too large', { residues: { start: 1, stop: 1e21 } }]
   ])('refuses %s', (_, change) => {
     const segment = {
       chain_id: 'A',
@@ -647,6 +748,22 @@ describe('importConstraintsFromConstInp', () => {
     )
     expect(imported.problems.join(' ')).toMatch(/Segment HETA/)
     expect(imported.input?.rigid_bodies).toBeUndefined()
+  })
+
+  it('reports a shape name used twice, which CHARMM would merge', () => {
+    const twice = [
+      'define fixed1 sele ( resid 1:10 .and. segid PROA ) end',
+      'cons fix sele fixed1 end',
+      'define rigid1 sele ( resid 20:30 .and. segid PROA ) end',
+      'shape desc dock1 rigid sele rigid1 end',
+      'define rigid2 sele ( resid 40:50 .and. segid PROA ) end',
+      'shape desc dock1 rigid sele rigid2 end',
+      'return'
+    ].join('\n')
+    const imported = importConstraintsFromConstInp(twice, 'pdb')
+    expect(imported.problems.join(' ')).toMatch(
+      /"shape desc dock1" is used more than once/
+    )
   })
 
   it('needs a cons fix', () => {

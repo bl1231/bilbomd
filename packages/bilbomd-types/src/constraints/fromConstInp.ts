@@ -1,4 +1,5 @@
 import { readConstInp, type ConstInpBody } from '../constInpParser.js'
+import { findDuplicateShapeNames } from '../structureFileChecks.js'
 import type {
   ConstraintBodyInput,
   ConstraintMode,
@@ -96,6 +97,12 @@ export const importConstraintsFromConstInp = (
     ...report.skipped.map((line) => `Left out: ${line}`),
     ...report.undefined_names.map(
       (name) => `"${name}" is used but never defined`
+    ),
+    // CHARMM treats a repeated shape name as a change to the earlier shape,
+    // not a new rigid body, so the file doesn't mean what it seems to
+    ...findDuplicateShapeNames(text).map(
+      (name) =>
+        `"shape desc ${name}" is used more than once. CHARMM would treat the repeat as a change to the earlier rigid body, not a new one. Give each rigid body its own name.`
     )
   ]
 

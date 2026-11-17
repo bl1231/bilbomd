@@ -194,6 +194,15 @@ const readSegment = (
     return null
   }
   if (!range) {
+    // The whole segment is written as its full range for OpenMM, so that
+    // range must be one a residue range may be
+    if (first < 0 || last > MAX_RESIDUE_NUMBER) {
+      errors.push({
+        path,
+        message: `Segment ${target.segid} has residues ${first}-${last}, outside 0-${MAX_RESIDUE_NUMBER}. Give a residue range instead of the whole segment.`
+      })
+      return null
+    }
     return {
       chain_id: target.chain_id,
       segid: target.segid,
