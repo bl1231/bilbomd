@@ -40,6 +40,7 @@ const payload = (overrides: Record<string, unknown> = {}) => ({
   rg_min: '20',
   rg_max: '40',
   d2o_fraction: '70',
+  deuteration_fractions: { A: 50 },
   ...overrides
 })
 
@@ -161,6 +162,43 @@ describe('sansJobSchema', () => {
     expect(
       (await errors(payload({ d2o_fraction: undefined }))).d2o_fraction
     ).toBe('D2O Fraction is required')
+  })
+
+  it('needs at least one chain deuteration fraction', async () => {
+    const message =
+      'At least one deuteration_fraction_<chainId> field is required'
+    expect(
+      (await errors(payload({ deuteration_fractions: {} })))
+        .deuteration_fractions
+    ).toBe(message)
+    expect(
+      (await errors(payload({ deuteration_fractions: undefined })))
+        .deuteration_fractions
+    ).toBe(message)
+  })
+
+  it('needs each deuteration fraction from 0 to 100', async () => {
+    const fractionError = async (fraction: number) =>
+      (await errors(payload({ deuteration_fractions: { A: 0, B: fraction } })))
+        .deuteration_fractions
+    expect(await fractionError(0)).toBeUndefined()
+    expect(await fractionError(100)).toBeUndefined()
+    expect(await fractionError(101)).toBe(
+      'Deuteration fraction for chain B must be a number from 0 to 100'
+    )
+    expect(await fractionError(-1)).toBeDefined()
+    expect(await fractionError(NaN)).toBeDefined()
+  })
+
+  it('rejects malformed chain IDs', async () => {
+    expect(
+      (await errors(payload({ deuteration_fractions: { 'A.$b': 10 } })))
+        .deuteration_fractions
+    ).toBe('Invalid chain ID "A.$b"')
+    expect(
+      (await errors(payload({ deuteration_fractions: { ABCDE: 10 } })))
+        .deuteration_fractions
+    ).toBeDefined()
   })
 
   it('accepts only the sans mode', async () => {

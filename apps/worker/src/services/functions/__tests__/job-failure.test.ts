@@ -148,7 +148,8 @@ describe('reportFailedJob', () => {
     await reportFailedJob('bilbomd', mqJob(2), new Error('no engine'))
 
     expect(job.status).toBe('Error')
-    expect(job.save).toHaveBeenCalled()
+    // Unvalidated, so a job with an invalid document can still be marked Error
+    expect(job.save).toHaveBeenCalledWith({ validateBeforeSave: false })
     expect(notifyJobChanged).toHaveBeenCalledWith(job)
     expect(recorded()?.metadata).toMatchObject({ step: undefined })
   })
