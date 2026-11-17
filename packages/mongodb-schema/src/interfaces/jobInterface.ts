@@ -173,6 +173,10 @@ interface IResidueRange {
 interface ISegment {
   chain_id: string
   residues: IResidueRange
+  /** CHARMM segid; set on constraints validated from structured input */
+  segid?: string
+  /** The whole segment was selected; residues holds its full range */
+  whole_segment?: boolean
 }
 
 interface IFixedBody {
