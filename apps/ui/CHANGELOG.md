@@ -1,5 +1,15 @@
 # @bilbomd/ui
 
+## 2.45.1
+
+### Patch Changes
+
+- Updated dependencies [1df62b3]
+- Updated dependencies [7e1ef39]
+- Updated dependencies [e4830a2]
+  - @bilbomd/bilbomd-types@1.21.0
+  - @bilbomd/mongodb-schema@2.16.0
+
 ## 2.45.0
 
 ### Minor Changes
