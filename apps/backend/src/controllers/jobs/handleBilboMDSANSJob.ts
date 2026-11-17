@@ -61,7 +61,11 @@ const handleBilboMDSANSJob = async (
     for (const [key, value] of Object.entries(req.body)) {
       if (key.startsWith('deuteration_fraction_')) {
         const chainId = key.slice('deuteration_fraction_'.length)
-        deuterationFractions[chainId] = Number(value)
+        deuterationFractions[chainId] =
+          typeof value === 'number' ||
+          (typeof value === 'string' && value.trim() !== '')
+            ? Number(value)
+            : NaN
       }
     }
 
