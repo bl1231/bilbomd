@@ -15,7 +15,7 @@ import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
-import ConstInpGapWarning from 'features/jobs/ConstInpGapWarning'
+import { ConstraintsField } from 'features/constraints/ConstraintsField'
 import {
   useAddNewSANSJobMutation,
   useCalculateAutoRgMutation
@@ -129,7 +129,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     rg: 0,
     rg_min: 0,
     rg_max: 0,
-    inp_file: '',
+    constraints: null,
     d2o_fraction: 100,
     md_engine: 'openmm'
   }
@@ -143,7 +143,9 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('rg', values.rg.toString())
     form.append('rg_min', values.rg_min.toString())
     form.append('rg_max', values.rg_max.toString())
-    form.append('inp_file', values.inp_file)
+    if (values.constraints) {
+      form.append('constraints', JSON.stringify(values.constraints))
+    }
     form.append('d2o_fraction', values.d2o_fraction.toString())
     form.append('bilbomd_mode', 'sans')
     form.append('md_engine', values.md_engine)
@@ -203,7 +205,7 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
       values.title !== '' &&
       values.pdb_file !== '' &&
       values.dat_file !== '' &&
-      values.inp_file !== '' &&
+      values.constraints !== null &&
       values.d2o_fraction >= 0 &&
       values.d2o_fraction <= 100 &&
       hasValidDeuteration
@@ -484,23 +486,22 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       />
                     </Grid>
 
-                    {/* const.inp file */}
-                    <Grid>
-                      <Field
-                        name="inp_file"
-                        id="const-inp-file-upload"
-                        as={FileSelect}
-                        title="Select File"
+                    {/* MD constraints, checked against the structure */}
+                    <Box sx={{ width: '100%', maxWidth: '760px' }}>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ mb: 1 }}
+                      >
+                        MD constraints
+                      </Typography>
+                      <ConstraintsField
+                        name="constraints"
+                        mode="pdb"
+                        structureFile={values.pdb_file as File | string}
+                        engine={values.md_engine}
                         disabled={isSubmitting}
-                        setFieldValue={setFieldValue}
-                        setFieldTouched={setFieldTouched}
-                        error={errors.inp_file && touched.inp_file}
-                        errorMessage={errors.inp_file ? errors.inp_file : ''}
-                        fileType="CHARMM const.inp file"
-                        fileExt=".inp"
                       />
-                      <ConstInpGapWarning file={values.inp_file} />
-                    </Grid>
+                    </Box>
 
                     {/* D2O Fraction Slider */}
                     <Grid sx={{ my: 2, width: '100%', maxWidth: '520px' }}>

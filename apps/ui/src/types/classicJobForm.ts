@@ -1,4 +1,4 @@
-import type { QUnits } from '@bilbomd/bilbomd-types'
+import type { ConstraintsInput, QUnits } from '@bilbomd/bilbomd-types'
 
 export type BilboMDClassicJobFormValues = {
   bilbomd_mode: 'pdb' | 'crd_psf'
@@ -6,7 +6,7 @@ export type BilboMDClassicJobFormValues = {
   psf_file: File | string
   crd_file: File | string
   pdb_file: File | string
-  inp_file: File | string
+  constraints: ConstraintsInput | null
   dat_file: File | string
   q_units: QUnits
   num_conf: string

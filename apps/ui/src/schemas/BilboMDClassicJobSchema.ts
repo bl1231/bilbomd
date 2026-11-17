@@ -11,8 +11,6 @@ import {
   crdCheck,
   pdbLineStartCheck,
   singleModelCheck,
-  constInpCheck,
-  openmmConstInpCheck,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
   pdbOrCifResidueCheck
@@ -61,14 +59,7 @@ const BilboMDClassicJobSchema = object().shape({
         .concat(pdbOrCifResidueCheck()),
     otherwise: () => mixed().notRequired()
   }),
-  inp_file: mixed()
-    .concat(requiredFile('A CONST.INP file is required'))
-    .concat(constInpCheck())
-    .concat(openmmConstInpCheck())
-    .concat(fileSizeTest(2_000_000))
-    .concat(fileExtTest('inp'))
-    .concat(noSpacesTest())
-    .concat(fileNameLengthTest()),
+  // Constraints are checked against the structure by ConstraintsField
   q_units: qUnitsField(),
   dat_file: mixed()
     .concat(requiredFile('A SAXS data file is required'))

@@ -46,7 +46,7 @@ import JobSuccessAlert from './JobSuccessAlert'
 import MdEngineField from 'components/MdEngineField'
 import TitleField from 'components/TitleField'
 import { getRgMaxWarning } from './rgMaxWarning'
-import ConstInpGapWarning from 'features/jobs/ConstInpGapWarning'
+import { ConstraintsField } from 'features/constraints/ConstraintsField'
 import MwCheck from 'features/mwcheck/MwCheck'
 
 type NewJobFormProps = {
@@ -137,7 +137,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     psf_file: '',
     crd_file: '',
     pdb_file: '',
-    inp_file: '',
+    constraints: null,
     dat_file: '',
     q_units: 'auto',
     num_conf: '3',
@@ -228,10 +228,12 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     form.append('rg_max', values.rg_max)
     form.append('dat_file', values.dat_file)
     form.append('q_units', values.q_units)
-    form.append('inp_file', values.inp_file)
     form.append('md_engine', values.md_engine)
     if (useExampleData) {
+      // The server uses the example's own constraints
       form.append('useExampleData', 'true')
+    } else if (values.constraints) {
+      form.append('constraints', JSON.stringify(values.constraints))
     }
 
     try {
@@ -252,7 +254,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
       values.rg_min !== '' &&
       values.num_conf !== '' &&
       (useExampleData ||
-        (values.inp_file !== '' &&
+        (values.constraints !== null &&
           values.dat_file !== '' &&
           (values.bilbomd_mode === 'pdb'
             ? values.pdb_file !== ''
@@ -361,12 +363,12 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             if (!useExampleData) {
                               if (values.bilbomd_mode === 'pdb') {
                                 void setFieldValue('pdb_file', '')
-                                void setFieldValue('inp_file', '')
+                                void setFieldValue('constraints', null)
                                 void setFieldValue('dat_file', '')
                               } else {
                                 void setFieldValue('crd_file', '')
                                 void setFieldValue('psf_file', '')
-                                void setFieldValue('inp_file', '')
+                                void setFieldValue('constraints', null)
                                 void setFieldValue('dat_file', '')
                               }
                               if (values.bilbomd_mode === 'pdb') {
@@ -392,7 +394,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               void setFieldValue('psf_file', '')
                               void setFieldValue('crd_file', '')
                               void setFieldValue('pdb_file', '')
-                              void setFieldValue('inp_file', '')
+                              void setFieldValue('constraints', null)
                               void setFieldValue('dat_file', '')
                               void setFieldValue('title', '')
                               void setFieldValue('rg_min', '')
@@ -457,7 +459,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           void setFieldValue('pdb_file', '')
                           void setFieldValue('crd_file', '')
                           void setFieldValue('psf_file', '')
-                          void setFieldValue('inp_file', '')
+                          void setFieldValue('constraints', null)
                           void setFieldValue('dat_file', '')
                           void setFieldValue('title', '')
                           void setFieldValue('rg_min', '')
@@ -634,61 +636,35 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         </Grid>
                       </>
                     )}
-                    <Grid
-                      container
-                      direction="row"
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                        maxWidth: '520px'
-                      }}
-                    >
-                      <Grid>
-                        <Field
-                          name="inp_file"
-                          id="inp_file-file-upload"
-                          as={FileSelect}
-                          title="Select File"
-                          disabled={isSubmitting || useExampleData}
-                          setFieldValue={setFieldValue}
-                          setFieldTouched={setFieldTouched}
-                          onBlur={handleBlur}
-                          error={errors.inp_file && touched.inp_file}
-                          errorMessage={errors.inp_file ? errors.inp_file : ''}
-                          fileType="const.inp"
-                          fileExt=".inp"
-                          existingFileName={
-                            useExampleData ? 'example-const.inp' : undefined
-                          }
-                        />
-                        <ConstInpGapWarning file={values.inp_file} />
-                      </Grid>
-                    </Grid>
-                    <Grid
-                      container
-                      direction="row"
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                        maxWidth: '520px'
-                      }}
-                    >
-                      <Alert severity="info">
-                        <Typography component="div">
-                          Be sure to verify that the chain identifiers (
-                          <b>segid</b>) and residue numbering in your{' '}
-                          <b>const.inp</b> are consistent with your{' '}
-                          <b>
-                            {values.bilbomd_mode === 'pdb'
-                              ? `*.pdb / *.cif`
-                              : `*.crd`}
-                          </b>{' '}
-                          file.
+                    <Box sx={{ width: '100%', maxWidth: '760px' }}>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ mb: 1 }}
+                      >
+                        MD constraints
+                      </Typography>
+                      {useExampleData ? (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                        >
+                          The example&apos;s own fixed and rigid bodies will be
+                          used.
                         </Typography>
-                      </Alert>
-                    </Grid>
+                      ) : (
+                        <ConstraintsField
+                          name="constraints"
+                          mode={values.bilbomd_mode}
+                          structureFile={
+                            values.bilbomd_mode === 'pdb'
+                              ? values.pdb_file
+                              : values.psf_file
+                          }
+                          engine={values.md_engine}
+                          disabled={isSubmitting}
+                        />
+                      )}
+                    </Box>
                     <Grid
                       container
                       direction="row"

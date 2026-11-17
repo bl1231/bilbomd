@@ -216,7 +216,6 @@ describe('BilboMDClassicJobSchema - conditional file fields', () => {
     md_engine: 'charmm',
     title: 'Test Classic Job',
     dat_file: makeFile('data.dat'),
-    inp_file: makeFile('const.inp'),
     num_conf: 2,
     rg_min: 20,
     rg_max: 50
@@ -297,17 +296,6 @@ describe('BilboMDClassicJobSchema - conditional file fields', () => {
         bilbomd_mode: 'pdb',
         pdb_file: makeFile('model.pdb'),
         dat_file: makeFile('data.dat', 2_000_001)
-      })
-    ).resolves.toBe(false)
-  })
-
-  it('enforces inp_file extension', async () => {
-    await expect(
-      BilboMDClassicJobSchema.isValid({
-        ...base,
-        bilbomd_mode: 'pdb',
-        pdb_file: makeFile('model.pdb'),
-        inp_file: makeFile('const.txt')
       })
     ).resolves.toBe(false)
   })
