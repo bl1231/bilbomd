@@ -56,6 +56,15 @@ const handleBilboMDSANSJob = async (
         ? files['inp_file'][0].originalname.toLowerCase()
         : ''
 
+    // Per-chain deuteration percentages from deuteration_fraction_<chainId>
+    const deuterationFractions: Record<string, number> = {}
+    for (const [key, value] of Object.entries(req.body)) {
+      if (key.startsWith('deuteration_fraction_')) {
+        const chainId = key.slice('deuteration_fraction_'.length)
+        deuterationFractions[chainId] = Number(value)
+      }
+    }
+
     // Validate before touching the uploaded files
     try {
       await sansJobSchema.validate(
@@ -68,6 +77,7 @@ const handleBilboMDSANSJob = async (
           rg_min: req.body.rg_min,
           rg_max: req.body.rg_max,
           d2o_fraction: req.body.d2o_fraction,
+          deuteration_fractions: deuterationFractions,
           md_engine
         },
         { abortEarly: false }
@@ -96,15 +106,6 @@ const handleBilboMDSANSJob = async (
 
     // Sanitize the uploaded file (constInpFilePath)
     await sanitizeConstInpFile(constInpFilePath)
-
-    // Capture deuteration fractions from request body
-    const deuterationFractions: { [key: string]: number } = {}
-    for (const key in req.body) {
-      if (key.startsWith('deuteration_fraction_')) {
-        const chainId = key.replace('deuteration_fraction_', '')
-        deuterationFractions[chainId] = parseFloat(req.body[key])
-      }
-    }
 
     let stepsInit: IBilboMDSteps
 

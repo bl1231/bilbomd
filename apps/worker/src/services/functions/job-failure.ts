@@ -155,7 +155,9 @@ export const reportFailedJob = async (
 
     if (job.status !== 'Error') {
       job.status = 'Error'
-      await job.save()
+      // Skip validation: a job that failed because its document is invalid
+      // must still be marked Error, not left stuck at Submitted
+      await job.save({ validateBeforeSave: false })
       notifyJobChanged(job)
     }
 
