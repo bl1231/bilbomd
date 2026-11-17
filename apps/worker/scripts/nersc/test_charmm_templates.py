@@ -162,6 +162,23 @@ def test_crd_jobs_stream_the_uploaded_constraint_file(tmp_path):
         assert "STREAM ../../example-const.inp" in inp.read_text().splitlines(), inp
 
 
+def test_constraint_file_streams_at_bomlev_0(tmp_path):
+    # bomlev -2 would turn a bad constraint command into a skipped warning, so
+    # the uploaded file is streamed at bomlev 0 and the level restored after
+    workdir = _render(
+        tmp_path, _md_params("BilboMdCRD", **CRD_UPLOADS), list(CRD_UPLOADS.values())
+    )
+
+    for inp in _step_inputs(workdir)[1:]:
+        lines = inp.read_text().splitlines()
+        stream = lines.index("STREAM ../../example-const.inp")
+        assert lines[stream - 1 : stream + 2] == [
+            "bomlev 0",
+            "STREAM ../../example-const.inp",
+            "bomlev -2",
+        ], inp
+
+
 @pytest.mark.parametrize("const_inp_file", [None, "missing.inp"])
 def test_crd_job_without_its_constraint_file_fails_at_prep(tmp_path, const_inp_file):
     # CHARMM only warns on a STREAM it cannot open, so a bad name would run
