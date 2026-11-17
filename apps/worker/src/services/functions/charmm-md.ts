@@ -95,7 +95,13 @@ const runHeat = async (
   }
   try {
     logger.info(`Starting CHARMM heat for job ${DBjob.uuid}`)
-    if (params.constinp) await assertConstInpAllowed(outputDir, params.constinp)
+    if (params.constinp) {
+      await assertConstInpAllowed(
+        outputDir,
+        params.constinp,
+        DBjob.md_constraints
+      )
+    }
     let status: IStepStatus = {
       status: 'Running',
       message: 'CHARMM Heating has started.'
@@ -149,7 +155,13 @@ const runMolecularDynamics = async (
 
   try {
     logger.info(`Starting CHARMM MD for job ${DBjob.uuid}`)
-    if (params.constinp) await assertConstInpAllowed(outputDir, params.constinp)
+    if (params.constinp) {
+      await assertConstInpAllowed(
+        outputDir,
+        params.constinp,
+        DBjob.md_constraints
+      )
+    }
     let status: IStepStatus = {
       status: 'Running',
       message: 'CHARMM Molecular Dynamics has started.'

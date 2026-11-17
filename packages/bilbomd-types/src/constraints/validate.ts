@@ -122,7 +122,7 @@ const findStructureSegment = (
       })
       return null
     }
-    if (chainId !== undefined && chainId !== segid) {
+    if (chainId !== undefined) {
       errors.push({
         path: `${path}.chain_id`,
         message:
@@ -384,6 +384,16 @@ export const validateConstraintsInput = (
     }
   }
 
-  const close = closeBodiesMessage(constraints)
+  // Keyed by segid: in CRD/PSF structures several segments can share a
+  // viewer chain ID (PROA and DNAA are both chain A)
+  const bySegid = (bodies: ConstraintBody[]) =>
+    bodies.map((b) => ({
+      ...b,
+      segments: b.segments.map((s) => ({ ...s, chain_id: s.segid }))
+    }))
+  const close = closeBodiesMessage({
+    fixed_bodies: bySegid(constraints.fixed_bodies),
+    rigid_bodies: bySegid(constraints.rigid_bodies)
+  })
   return { ok: true, constraints, warnings: close ? [close] : [] }
 }

@@ -116,12 +116,6 @@ describe('pdbJobSchema - required files', () => {
     ).rejects.toThrow('required')
   })
 
-  it('rejects missing const_inp_file', async () => {
-    await expect(
-      pdbJobSchema.validateAt('const_inp_file', { const_inp_file: undefined })
-    ).rejects.toThrow('required')
-  })
-
   it('rejects missing pdb_file', async () => {
     await expect(
       pdbJobSchema.validateAt('pdb_file', { pdb_file: undefined })
@@ -131,11 +125,6 @@ describe('pdbJobSchema - required files', () => {
   it('accepts a multer file object for each file field', async () => {
     await expect(
       pdbJobSchema.validateAt('dat_file', { dat_file: multerFile('data.dat') })
-    ).resolves.toBeDefined()
-    await expect(
-      pdbJobSchema.validateAt('const_inp_file', {
-        const_inp_file: multerFile('const.inp')
-      })
     ).resolves.toBeDefined()
     await expect(
       pdbJobSchema.validateAt('pdb_file', { pdb_file: multerFile('model.pdb') })

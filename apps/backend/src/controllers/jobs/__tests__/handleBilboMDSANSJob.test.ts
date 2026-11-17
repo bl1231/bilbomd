@@ -45,9 +45,22 @@ vi.mock('fs-extra', () => ({
 }))
 
 vi.mock('../index.js', () => ({
-  sanitizeConstInpFile: vi.fn(async () => {}),
   writeJobParams: vi.fn(async () => {})
 }))
+
+// Constraint validation is tested in utils/__tests__/constraints.test.ts
+const { materialize } = vi.hoisted(() => ({
+  materialize: vi.fn()
+}))
+vi.mock('../utils/constraints.js', () => ({
+  materializeConstraints: materialize
+}))
+const MATERIALIZED = {
+  ok: true,
+  constFileName: 'const.inp',
+  md_constraints: { fixed_bodies: [], rigid_bodies: [] },
+  warnings: []
+}
 
 // Mock param builders
 vi.mock('../utils/openmmParams.js', () => ({
@@ -133,6 +146,7 @@ const UUID = 'uuid-123'
 describe('handleBilboMDSANSJob', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    materialize.mockResolvedValue(MATERIALIZED)
   })
 
   it('populates OpenMM parameters and md_engine in response', async () => {
@@ -229,7 +243,7 @@ describe('handleBilboMDSANSJob', () => {
         }
       ]
     })
-    expect(fs.copyFile).not.toHaveBeenCalled()
+    expect(materialize).not.toHaveBeenCalled()
     expect(fs.remove).toHaveBeenCalledWith(expect.stringContaining(UUID))
     expect(queueJob).not.toHaveBeenCalled()
   })
@@ -241,5 +255,49 @@ describe('handleBilboMDSANSJob', () => {
 
     expect(res.status).toHaveBeenCalledWith(200)
     expect(fs.remove).not.toHaveBeenCalled()
+  })
+
+  it('validates the constraints against the uploaded structure', async () => {
+    const { req, res } = makeReqRes({ constraints: '{"fixed_bodies":[]}' })
+
+    await handleBilboMDSANSJob(req, res, user, UUID, { accessMode: 'user' })
+
+    expect(materialize).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'pdb',
+        constraintsField: '{"fixed_bodies":[]}',
+        structureFile: expect.stringContaining('protein.pdb')
+      })
+    )
+  })
+
+  it('stores the server-written constraint file and md_constraints', async () => {
+    const { req, res } = makeReqRes()
+
+    await handleBilboMDSANSJob(req, res, user, UUID, { accessMode: 'user' })
+
+    const queued = vi.mocked(queueJob).mock.calls[0]?.[0]
+    expect(queued).toBeDefined()
+    const announced = vi.mocked(announceNewJob).mock
+      .calls[0]?.[0] as unknown as {
+      const_inp_file: string
+      md_constraints: unknown
+    }
+    expect(announced.const_inp_file).toBe('const.inp')
+    expect(announced.md_constraints).toEqual(MATERIALIZED.md_constraints)
+  })
+
+  it('returns 400 and drops the job directory when constraints are rejected', async () => {
+    materialize.mockResolvedValueOnce({
+      ok: false,
+      errors: [{ path: 'fixed_bodies', message: 'Give exactly one fixed body' }]
+    })
+    const { req, res } = makeReqRes()
+
+    await handleBilboMDSANSJob(req, res, user, UUID, { accessMode: 'user' })
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(fs.remove).toHaveBeenCalledWith(expect.stringContaining(UUID))
+    expect(queueJob).not.toHaveBeenCalled()
   })
 })

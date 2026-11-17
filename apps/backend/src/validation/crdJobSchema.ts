@@ -7,7 +7,6 @@ import {
   noSpacesTest,
   saxsCheck,
   qUnitsField,
-  constInpCheck,
   crdCheck,
   psfCheck
 } from './helpers/fileValidators.js'
@@ -24,12 +23,6 @@ export const crdJobSchema = yup.object({
     .concat(fileSizeTest(2_000_000))
     .concat(fileExtTest('dat'))
     .concat(saxsCheck())
-    .concat(noSpacesTest())
-    .concat(fileNameLengthTest()),
-  const_inp_file: requiredFile('const.inp file is required')
-    .concat(constInpCheck('crd_psf'))
-    .concat(fileSizeTest(2_000_000))
-    .concat(fileExtTest('inp'))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),
   crd_file: requiredFile('A CRD file is required')

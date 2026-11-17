@@ -35,7 +35,10 @@ export type ConstraintMode = 'pdb' | 'crd_psf'
 /** One segment of the uploaded structure, as CHARMM will name it */
 export interface StructureSegment {
   segid: string
-  /** PDB chain ID; the segid itself for CRD/PSF structures */
+  /**
+   * PDB chain ID; for CRD/PSF structures, the chain the worker writes into
+   * result PDBs (the segid's last character)
+   */
   chain_id: string
   mol_type?: ChainMolType
   /** Residue numbers present, ascending, without duplicates */

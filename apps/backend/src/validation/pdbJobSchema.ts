@@ -7,8 +7,6 @@ import {
   noSpacesTest,
   saxsCheck,
   qUnitsField,
-  constInpCheck,
-  openmmConstInpCheck,
   pdbOrCifExtTest,
   pdbOrCifChainIdCheck,
   pdbOrCifResidueCheck
@@ -26,13 +24,6 @@ export const pdbJobSchema = yup.object({
     .concat(fileSizeTest(2_000_000))
     .concat(fileExtTest('dat'))
     .concat(saxsCheck())
-    .concat(noSpacesTest())
-    .concat(fileNameLengthTest()),
-  const_inp_file: requiredFile('const.inp file is required')
-    .concat(constInpCheck('pdb'))
-    .concat(openmmConstInpCheck())
-    .concat(fileSizeTest(2_000_000))
-    .concat(fileExtTest('inp'))
     .concat(noSpacesTest())
     .concat(fileNameLengthTest()),
   pdb_file: requiredFile('A PDB or CIF file is required')
