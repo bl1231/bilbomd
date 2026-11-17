@@ -1,5 +1,27 @@
 # @bilbomd/bilbomd-types
 
+## 1.21.0
+
+### Minor Changes
+
+- e4830a2: Add a structured constraints model, the first step in replacing uploaded CHARMM `const.inp` files. New in `@bilbomd/bilbomd-types`:
+
+  - `validateConstraintsInput` validates constraints sent as JSON against the uploaded structure. Structures are read by `readPdbSegments`, with segids named the way pdb2crd names them, or by `readPsfSegments`.
+  - `writeConstInp` and `toOpenMMConstraints` turn the validated constraints into the CHARMM constraint file and the OpenMM constraints.
+  - `importConstraintsFromConstInp` reads an old `const.inp` into the new format (for use in the browser).
+
+  Constraint segments in `md_constraints` gain optional `segid` and `whole_segment` fields. Nothing uses these yet, so behaviour is unchanged.
+
+### Patch Changes
+
+- 1df62b3: Security: CHARMM no longer streams constraint text written by users. Classic PDB, Classic CRD/PSF and SANS jobs accept constraints as JSON in a new `constraints` field. The backend validates them against the uploaded structure, then writes the only constraint file the MD engine reads: `const.inp` for CHARMM or `openmm_const.yml` for OpenMM. It also stores `md_constraints` when the job is created; previously a failure there was only logged.
+
+  Until uploads are removed, an uploaded `inp_file` is still accepted. It is read into the same structured form, validated the same way, deleted, and replaced by a file BilboMD writes. Files with commands other than `define`, `cons fix` and `shape desc` (including `cons harm`) are now rejected.
+
+  The worker checks that a job's `const.inp` is exactly what BilboMD writes for its stored constraints. The NERSC path no longer runs the CHARMM constraint check on an OpenMM job's `openmm_const.yml`, which made those jobs fail. `@bilbomd/bilbomd-types` adds `constraintsFromStored` and `inputFromStored`.
+
+- 7e1ef39: Security: check every command in a CHARMM constraint (const.inp) file in full, not just how it starts. Each command must now be one of `define <name> sele … end`, `cons fix sele … end`, `cons harm … sele … end`, `shape desc <name> rigid sele … end` or `return`. Selections may use only the characters CHARMM selections need, with exactly one `end`, which must come last. Title lines are limited to plain text. This blocks `system`, `stream` and file I/O commands hidden after a valid command (`end; system "…"`) or joined on with a `-` continuation, plus `@`/`?` substitution tricks. The UI form, the backend upload check and the worker's pre-CHARMM guard all use this check.
+
 ## 1.20.0
 
 ### Minor Changes
