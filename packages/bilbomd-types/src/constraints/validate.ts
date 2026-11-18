@@ -333,6 +333,33 @@ const findOverlaps = (constraints: Constraints): string[] => {
   return overlaps
 }
 
+// Every OpenMM selection that would also take residues of another segment.
+// openmm_const.yml names residues by chain ID and number, so two molecules
+// that share a chain ID and residue numbers (strands both numbered 1-20 in
+// chain D) can't be told apart there.
+const openMMAmbiguities = (
+  constraints: Constraints,
+  structure: ConstraintStructure
+): string[] =>
+  [...constraints.fixed_bodies, ...constraints.rigid_bodies].flatMap((body) =>
+    body.segments.flatMap((s) => {
+      const others = structure.segments.filter(
+        (o) =>
+          o.segid !== s.segid &&
+          o.chain_id === s.chain_id &&
+          o.residues.some((r) => r >= s.residues.start && r <= s.residues.stop)
+      )
+      if (others.length === 0) return []
+      return [
+        `${body.name}: OpenMM selects residues by chain ID and number, and residues ` +
+          `${s.residues.start}-${s.residues.stop} of chain ${s.chain_id} are in ` +
+          `segments ${[s.segid, ...others.map((o) => o.segid)].join(' and ')}, ` +
+          `so it can't select only ${s.segid}. Give the separate molecules their ` +
+          `own chain IDs or residue numbers, or use CHARMM.`
+      ]
+    })
+  )
+
 /**
  * A warning for each chain break in the structure: two consecutive residues
  * of a chain that are not bonded (usually a missing loop). CHARMM builds the
@@ -386,6 +413,8 @@ const segidCollisions = (structure: ConstraintStructure): string[] => {
  * - segments name a chain (PDB jobs) or segid (CRD/PSF jobs) in the structure,
  *   with whole-number residue ranges that include residues the segment has
  * - no residue in two bodies
+ * - for OpenMM, no selection that would also take another segment's residues
+ *   (OpenMM names residues by chain ID and number only)
  * - no fields other than the documented ones
  * Bodies with too few flexible residues between them only give warnings.
  */
@@ -450,6 +479,15 @@ export const validateConstraintsInput = (
     return {
       ok: false,
       errors: overlaps.map((message) => ({ path: 'constraints', message }))
+    }
+  }
+  if (structure.engine === 'openmm' && structure.mode === 'pdb') {
+    const ambiguous = openMMAmbiguities(constraints, structure)
+    if (ambiguous.length > 0) {
+      return {
+        ok: false,
+        errors: ambiguous.map((message) => ({ path: 'constraints', message }))
+      }
     }
   }
 

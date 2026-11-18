@@ -1,13 +1,16 @@
-import type {
-  ConstraintMode,
-  ConstraintSegmentInput,
-  ConstraintsInput,
-  StructureSegment
+import {
+  segmentForChainSelection,
+  type ConstraintMode,
+  type ConstraintSegmentInput,
+  type ConstraintsInput,
+  type StructureSegment
 } from '@bilbomd/bilbomd-types'
 
 /**
  * The structure segment a constraint segment names: by segid, or for PDB
- * input without one, the chain's first segment
+ * input without one, the way the validator resolves it (the chain's only
+ * segment, or the one segment with residues in the range). Undefined when it
+ * could be several, so the picker asks instead of guessing.
  */
 export const segmentOf = (
   segments: StructureSegment[],
@@ -15,7 +18,7 @@ export const segmentOf = (
 ): StructureSegment | undefined =>
   value.segid !== undefined
     ? segments.find((s) => s.segid === value.segid)
-    : segments.find((s) => s.chain_id === value.chain_id)
+    : segmentForChainSelection(segments, value.chain_id, value.residues)
 
 /**
  * A constraint segment for a structure segment. PDB input names the chain and

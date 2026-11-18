@@ -54,6 +54,12 @@ export interface StructureSegment {
 export interface ConstraintStructure {
   mode: ConstraintMode
   segments: StructureSegment[]
+  /**
+   * The MD engine the constraints are for. OpenMM selects atoms by PDB chain
+   * ID and residue number only, so for 'openmm' a selection must not also
+   * match residues of another segment that shares its chain ID.
+   */
+  engine?: 'charmm' | 'openmm'
 }
 
 /** A validated segment, as stored in md_constraints */

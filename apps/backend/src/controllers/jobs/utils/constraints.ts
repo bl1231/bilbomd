@@ -149,7 +149,11 @@ export const materializeConstraints = async ({
     )
   }
 
-  const result = validateConstraintsInput(raw, { mode, segments })
+  const result = validateConstraintsInput(raw, {
+    mode,
+    segments,
+    engine: md_engine === 'OpenMM' ? 'openmm' : 'charmm'
+  })
   if (!result.ok) return { ok: false, errors: result.errors }
   const { constraints, warnings } = result
 

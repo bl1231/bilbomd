@@ -217,15 +217,33 @@ describe('ConstraintsEditor', () => {
     )
     await waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith({
+        // Fitted to the structure, so each selection names its segment
         fixed_bodies: [
-          { segments: [{ chain_id: 'a', residues: { start: 1, stop: 40 } }] }
+          {
+            segments: [
+              {
+                chain_id: 'a',
+                segid: 'PROA',
+                residues: { start: 1, stop: 40 }
+              }
+            ]
+          }
         ],
         rigid_bodies: [
-          { segments: [{ chain_id: 'A', residues: { start: 1, stop: 20 } }] }
+          {
+            segments: [
+              {
+                chain_id: 'A',
+                segid: 'DNAA',
+                residues: { start: 1, stop: 20 }
+              }
+            ]
+          }
         ]
       })
     )
     expect(screen.queryByTestId('const-inp-import-notes')).toBeNull()
+    expect(screen.queryByTestId('constraints-import-fitted')).toBeNull()
   })
 
   it('imports constraints JSON and reports fields it leaves out', async () => {

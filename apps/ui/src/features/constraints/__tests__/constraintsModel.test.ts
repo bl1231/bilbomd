@@ -32,8 +32,16 @@ describe('constraintsModel with a chain that is two segments', () => {
     expect(segmentOf(segments, { chain_id: 'D', segid: 'DNAB' })).toBe(
       segments[2]
     )
-    // Input without a segid (older saved input) picks the chain's first
-    expect(segmentOf(segments, { chain_id: 'D' })).toBe(segments[1])
+    // Input without a segid (an imported file) is resolved the way the
+    // validator does it: by the residues, and not at all when ambiguous
+    expect(
+      segmentOf(segments, { chain_id: 'D', residues: { start: 60, stop: 62 } })
+    ).toBe(segments[2])
+    expect(
+      segmentOf(segments, { chain_id: 'D', residues: { start: 22, stop: 24 } })
+    ).toBe(segments[1])
+    expect(segmentOf(segments, { chain_id: 'D' })).toBeUndefined()
+    expect(segmentOf(segments, { chain_id: 'P' })).toBe(segments[0])
   })
 
   it('shows the segid in the label, so the two strands can be told apart', () => {

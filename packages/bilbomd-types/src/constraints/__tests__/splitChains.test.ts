@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { readCifSegments, readPdbSegments } from '../structure.js'
 import { validateConstraintsInput } from '../validate.js'
+import { fitSavedSelection } from '../resolve.js'
+import { inputFromStored } from '../stored.js'
+import { importConstraintsFromData } from '../fromData.js'
+import { importConstraintsFromConstInp } from '../fromConstInp.js'
 import type { ConstraintStructure } from '../types.js'
 
 // Separate molecules that share a chain ID: pdb2crd.py builds each as its
@@ -328,5 +332,213 @@ describe('protein chain breaks (missing loops)', () => {
       structure
     )
     expect(result.ok && result.warnings).toEqual([])
+  })
+})
+
+// Chain A was one segment before chain breaks were built as breaks: PROA
+// 1-203. It is now PROA 1-123 and PROB 130-203.
+const span = (start: number, stop: number) =>
+  Array.from({ length: stop - start + 1 }, (_, i) => start + i)
+const splitA = [
+  {
+    segid: 'PROA',
+    chain_id: 'A',
+    mol_type: 'PRO' as const,
+    residues: span(1, 123)
+  },
+  {
+    segid: 'PROB',
+    chain_id: 'A',
+    mol_type: 'PRO' as const,
+    residues: span(130, 203)
+  }
+]
+
+describe('fitSavedSelection: selections saved before a chain split', () => {
+  it('selects both pieces of a whole chain saved as one segment', () => {
+    expect(
+      fitSavedSelection(
+        {
+          chain_id: 'A',
+          segid: 'PROA',
+          residues: { start: 1, stop: 203 },
+          whole_segment: true
+        },
+        splitA
+      )
+    ).toEqual({
+      segments: [
+        { chain_id: 'A', segid: 'PROA' },
+        { chain_id: 'A', segid: 'PROB' }
+      ],
+      split: true
+    })
+  })
+
+  it('splits a range across the break, clipped to each piece', () => {
+    expect(
+      fitSavedSelection(
+        { chain_id: 'A', segid: 'PROA', residues: { start: 100, stop: 150 } },
+        splitA
+      ).segments
+    ).toEqual([
+      { chain_id: 'A', segid: 'PROA', residues: { start: 100, stop: 123 } },
+      { chain_id: 'A', segid: 'PROB', residues: { start: 130, stop: 150 } }
+    ])
+  })
+
+  it('moves a range past the break to the piece that has it', () => {
+    expect(
+      fitSavedSelection(
+        { chain_id: 'A', segid: 'PROA', residues: { start: 140, stop: 150 } },
+        splitA
+      )
+    ).toEqual({
+      segments: [
+        { chain_id: 'A', segid: 'PROB', residues: { start: 140, stop: 150 } }
+      ],
+      split: false
+    })
+  })
+
+  it('keeps a selection its segment still holds', () => {
+    expect(
+      fitSavedSelection(
+        {
+          chain_id: 'A',
+          segid: 'PROA',
+          residues: { start: 1, stop: 123 },
+          whole_segment: true
+        },
+        splitA
+      ).segments
+    ).toEqual([{ chain_id: 'A', segid: 'PROA' }])
+  })
+
+  it('leaves strands with the same numbering for the user to pick', () => {
+    const strands = [
+      { segid: 'DNAD', chain_id: 'D', residues: span(1, 20) },
+      { segid: 'DNAB', chain_id: 'D', residues: span(1, 20) }
+    ]
+    expect(
+      fitSavedSelection(
+        { chain_id: 'D', residues: { start: 1, stop: 20 } },
+        strands
+      ).segments
+    ).toEqual([{ chain_id: 'D', residues: { start: 1, stop: 20 } }])
+  })
+})
+
+describe('inputFromStored and imports fit selections to the structure', () => {
+  const stored = {
+    fixed_bodies: [
+      {
+        name: 'FixedBody1',
+        segments: [
+          {
+            chain_id: 'A',
+            segid: 'PROA',
+            residues: { start: 1, stop: 203 },
+            whole_segment: true
+          }
+        ]
+      }
+    ]
+  }
+
+  it('resubmits a whole chain as both of its pieces', () => {
+    const input = inputFromStored(stored, 'pdb', splitA)
+    expect(input).toEqual({
+      fixed_bodies: [
+        {
+          segments: [
+            { chain_id: 'A', segid: 'PROA' },
+            { chain_id: 'A', segid: 'PROB' }
+          ]
+        }
+      ]
+    })
+    const result = validateConstraintsInput(input, {
+      mode: 'pdb',
+      segments: splitA
+    })
+    expect(result.ok).toBe(true)
+  })
+
+  it('imports a job snapshot the same way, and says so', () => {
+    const imported = importConstraintsFromData(
+      { md_constraints: stored },
+      'pdb',
+      { structure: splitA }
+    )
+    expect(imported.input?.fixed_bodies[0]?.segments).toEqual([
+      { chain_id: 'A', segid: 'PROA' },
+      { chain_id: 'A', segid: 'PROB' }
+    ])
+    expect(imported.problems).toEqual([])
+    expect(imported.notes).toEqual([
+      'Fixed body 1, segment 1: Chain A residues 1-203 is now segments PROA and PROB (separate molecules, or a chain break), so all of them were selected'
+    ])
+  })
+
+  it('imports a const.inp range across the break as both pieces', () => {
+    const imported = importConstraintsFromConstInp(
+      'define fixed1 sele ( resid 1:203 .and. segid PROA ) end\ncons fix sele fixed1 end\nreturn\n',
+      'pdb',
+      { structure: splitA }
+    )
+    expect(imported.input?.fixed_bodies[0]?.segments).toEqual([
+      { chain_id: 'A', segid: 'PROA', residues: { start: 1, stop: 123 } },
+      { chain_id: 'A', segid: 'PROB', residues: { start: 130, stop: 203 } }
+    ])
+    expect(imported.problems).toEqual([])
+    expect(imported.notes).toHaveLength(1)
+  })
+})
+
+describe('validateConstraintsInput for OpenMM', () => {
+  // Two strands in chain D, both numbered 1-20
+  const strands = [
+    { segid: 'DNAD', chain_id: 'D', residues: span(1, 20) },
+    { segid: 'DNAB', chain_id: 'D', residues: span(1, 20) }
+  ]
+  const input = {
+    fixed_bodies: [{ segments: [{ chain_id: 'D', segid: 'DNAD' }] }],
+    rigid_bodies: [{ segments: [{ chain_id: 'D', segid: 'DNAB' }] }]
+  }
+
+  it('rejects a selection OpenMM would also apply to another segment', () => {
+    const result = validateConstraintsInput(input, {
+      mode: 'pdb',
+      segments: strands,
+      engine: 'openmm'
+    })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.errors[0]?.message).toContain(
+      'residues 1-20 of chain D are in segments DNAD and DNAB'
+    )
+  })
+
+  it('accepts it for CHARMM, which selects by segid', () => {
+    expect(
+      validateConstraintsInput(input, {
+        mode: 'pdb',
+        segments: strands,
+        engine: 'charmm'
+      }).ok
+    ).toBe(true)
+  })
+
+  it('accepts the two sides of a chain break, whose numbers differ', () => {
+    expect(
+      validateConstraintsInput(
+        {
+          fixed_bodies: [{ segments: [{ chain_id: 'A', segid: 'PROA' }] }],
+          rigid_bodies: [{ segments: [{ chain_id: 'A', segid: 'PROB' }] }]
+        },
+        { mode: 'pdb', segments: splitA, engine: 'openmm' }
+      ).ok
+    ).toBe(true)
   })
 })

@@ -3,7 +3,9 @@ Provides functions to create CHARMM const.inp or OpenMM constraints.yaml file fr
 """
 
 import argparse
+import io as io_module
 import json
+import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import asdict, dataclass
@@ -11,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import igraph
-from Bio.PDB import MMCIFParser
+from Bio.PDB import MMCIFParser, PDBIO
 import numpy as np
 import yaml
 
@@ -23,6 +25,7 @@ from helpers_viz import (
     stride_downsample,
     write_viz_json,
 )
+from pdb2crd import charmm_segments
 from pdb_utils import get_segid_renaming_map, get_segid_renaming_map_from_cif
 
 # CHARMM cuts input lines over 200 characters short (measured with c49b2), and
@@ -35,6 +38,63 @@ CONST_INP_WRAP_WIDTH = 77
 # about 5000 characters (measured with c49b2: 5000 work, 5025 don't), however
 # short each line is. Matches MAX_CONST_INP_COMMAND_LENGTH in the web app.
 MAX_CONST_INP_COMMAND_LENGTH = 5000
+
+
+def _pdb_lines(input_file: str) -> List[str]:
+    """The structure's ATOM/HETATM records as PDB lines (mmCIF converted)."""
+    if input_file.endswith(".cif"):
+        structure = MMCIFParser(QUIET=True).get_structure("s", input_file)
+        io = PDBIO()
+        io.set_structure(structure)
+        buffer = io_module.StringIO()
+        io.save(buffer)
+        return buffer.getvalue().splitlines(keepends=True)
+    with open(input_file, "r", encoding="utf-8") as fh:
+        return fh.readlines()
+
+
+def _segment_resolver(input_file: Optional[str]):
+    """
+    A function (chain, start, stop) -> [(segid, start, stop), ...] giving the
+    CHARMM segments pdb2crd builds that a chain's residue range covers, each
+    with the range clipped to that segment. Without a PDB or mmCIF file (CRD
+    input already names segments by segid) the chain is taken as the segid.
+    """
+    segments = None
+    renaming = {}
+    if input_file and input_file.endswith((".pdb", ".cif")):
+        try:
+            segments = charmm_segments(_pdb_lines(input_file))
+        except Exception as exc:  # noqa: BLE001  fall back to one segid per chain
+            print(
+                f"WARNING: could not split {input_file} into CHARMM segments "
+                f"({exc}); naming each chain by its first segment",
+                file=sys.stderr,
+            )
+            renaming = (
+                get_segid_renaming_map(input_file)
+                if input_file.endswith(".pdb")
+                else get_segid_renaming_map_from_cif(input_file)
+            )
+
+    def resolve(chain, start, stop):
+        if segments is None:
+            return [(renaming.get(chain, chain), start, stop)]
+        hits = []
+        for seg_chain, segid, residues in segments:
+            if seg_chain != chain:
+                continue
+            inside = [r for r in residues if start <= r <= stop]
+            if inside:
+                hits.append((segid, min(inside), max(inside)))
+        if hits:
+            return hits
+        # No built segment has these residues (e.g. all water); keep the
+        # chain's first segid so the selection is still written as before
+        first = next((segid for c, segid, _ in segments if c == chain), chain)
+        return [(first, start, stop)]
+
+    return resolve
 
 
 def wrap_charmm_command(command: str, width: int = CONST_INP_WRAP_WIDTH) -> List[str]:
@@ -1586,62 +1646,48 @@ class PAEProcessor:
         """
         Write const.inp file for CHARMM molecular dynamics jobs.
 
-        Since PDB files are converted to CRD/PSF via pdb2crd.py, which renames chain segids
-        (e.g., Protein chain A -> PROA, DNA chain Y -> DNAY), we apply the same renaming
-        logic here to ensure segids in const.inp match those in the CRD/PSF files.
+        PDB and mmCIF files are converted to CRD/PSF by pdb2crd.py, which
+        builds each molecule, and each side of a chain break, as its own
+        segment (chain A can be PROA and PROB). Each rigid domain, given by
+        PDB chain and residue range, is therefore selected in every segment
+        of that chain it covers, by the segids pdb2crd gives them.
         """
-        renaming = {}
-        if input_file and input_file.endswith(".pdb"):
-            renaming = get_segid_renaming_map(input_file)
-        elif input_file and input_file.endswith(".cif"):
-            renaming = get_segid_renaming_map_from_cif(input_file)
+        resolve = _segment_resolver(input_file)
 
         # Build the whole file first, so a command CHARMM can't take raises
         # before anything is written
         out: List[str] = []
         dock_count = 0
-        rigid_body_count = 0
-        for rigid_body in rigid_body_list:
-            rigid_body_count += 1
-            p = 0
-            n = 0
+        for body_index, rigid_body in enumerate(rigid_body_list):
+            fixed = body_index == 0
+            selections = []
             for rigid_domain in rigid_body:
                 start_residue = int(rigid_domain[0])
                 end_residue = int(rigid_domain[1])
-                segment = rigid_domain[2]
                 if start_residue > end_residue:
                     start_residue, end_residue = end_residue, start_residue
-                # Apply renaming if available
-                renamed_segment = renaming.get(segment, segment)
-                if rigid_body_count == 1:
-                    p += 1
-                    out.append(
-                        f"define fixed{p} sele ( resid {start_residue}:{end_residue}"
-                        f" .and. segid {renamed_segment} ) end\n"
-                    )
-                    if p == len(rigid_body):
-                        names = " .or. ".join(
-                            f"fixed{number}" for number in range(1, p + 1)
-                        )
-                        for line in wrap_charmm_command(f"cons fix sele {names} end"):
-                            out.append(f"{line}\n")
-                        out.append("\n")
-                elif rigid_body_count > 1:
-                    n += 1
-                    out.append(
-                        f"define rigid{n} sele ( resid {start_residue}:{end_residue}"
-                        f" .and. segid {renamed_segment} ) end\n"
-                    )
-                    if n == len(rigid_body):
-                        dock_count += 1
-                        names = " .or. ".join(
-                            f"rigid{number}" for number in range(1, n + 1)
-                        )
-                        for line in wrap_charmm_command(
-                            f"shape desc dock{dock_count} rigid sele {names} end"
-                        ):
-                            out.append(f"{line}\n")
-                        out.append("\n")
+                selections.extend(
+                    resolve(rigid_domain[2], start_residue, end_residue)
+                )
+            if not selections:
+                continue
+            kind = "fixed" if fixed else "rigid"
+            for number, (segid, start, stop) in enumerate(selections, start=1):
+                out.append(
+                    f"define {kind}{number} sele ( resid {start}:{stop}"
+                    f" .and. segid {segid} ) end\n"
+                )
+            names = " .or. ".join(
+                f"{kind}{number}" for number in range(1, len(selections) + 1)
+            )
+            if fixed:
+                command = f"cons fix sele {names} end"
+            else:
+                dock_count += 1
+                command = f"shape desc dock{dock_count} rigid sele {names} end"
+            for line in wrap_charmm_command(command):
+                out.append(f"{line}\n")
+            out.append("\n")
         out.append("return \n")
         out.append("\n")
         with open(file=output_file, mode="w", encoding="utf8") as const_file:

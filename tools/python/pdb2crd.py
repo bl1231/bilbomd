@@ -548,18 +548,23 @@ def write_meld_chain_crd_files(segments, output_dir, pdb_file_path):
         outfile.write("stop\n")
 
 
-def split_and_process_pdb(pdb_file_path: str, output_dir: str):
+def build_segments(lines, warn=True):
     """
-    Reads a PDB file, splits it into CHARMM segments (one per molecule, see
-    read_raw_segments), processes each segment in memory, and writes each one
-    to a separate file in the specified output directory.
-    """
-    with open(pdb_file_path, "r", encoding="utf-8") as pdb_file:
-        segments = read_raw_segments(pdb_file.readlines())
+    Splits PDB lines into the CHARMM segments pdb2crd builds (one per
+    molecule, see read_raw_segments), each processed for CHARMM and named
+    (see assign_segids). Segments with no atoms left after filtering
+    (ion-only or water-only) are dropped before naming, so they do not use
+    up a segment letter. With warn=False nothing is printed.
 
-    # Process each segment. Segments with no atoms left after filtering
-    # (ion-only or water-only) are excluded from the CHARMM inp files, and
-    # are dropped before naming so they do not use up a segment letter.
+    Returns the segments: dicts with 'chainid', 'segid', 'type' and
+    'processed_lines', among others.
+    """
+
+    def warning(message):
+        if warn:
+            print(message, file=sys.stderr)
+
+    segments = read_raw_segments(lines)
     non_empty_segments = []
     for chain_data in segments:
         processed_lines = remove_water(chain_data["lines"])
@@ -577,10 +582,9 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
                 s["chainid"] == chain_data["chainid"] and s is not chain_data
                 for s in segments
             ):
-                print(
+                warning(
                     f"WARNING: Chain {chain_data['chainid']} contained only ions/water "
-                    f"and was skipped.",
-                    file=sys.stderr,
+                    f"and was skipped."
                 )
             continue
 
@@ -599,19 +603,55 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
 
         # Warn if segment contains mixed types or unknown residues
         if len(types_present) > 1:
-            print(
+            warning(
                 f"WARNING: Chain {chain_data['chainid']} contains mixed residue types: {types_present}. "
-                f"Using {chain_data['type']} (first recognized residue type)",
-                file=sys.stderr,
+                f"Using {chain_data['type']} (first recognized residue type)"
             )
         elif "UNKNOWN" in types_present:
-            print(
-                f"WARNING: Chain {chain_data['chainid']} contains unrecognized residues (type={chain_data['type']})",
-                file=sys.stderr,
+            warning(
+                f"WARNING: Chain {chain_data['chainid']} contains unrecognized residues (type={chain_data['type']})"
             )
 
     assign_segids(non_empty_segments)
-    warn_split_chains(non_empty_segments)
+    if warn:
+        warn_split_chains(non_empty_segments)
+    return non_empty_segments
+
+
+def segment_residues(segment):
+    """The residue numbers (resSeq) in a built segment, in file order."""
+    numbers = []
+    for line in segment["processed_lines"]:
+        if not line.startswith(("ATOM", "HETATM")):
+            continue
+        try:
+            number = int(line[22:26])
+        except ValueError:
+            continue
+        if not numbers or numbers[-1] != number:
+            numbers.append(number)
+    return numbers
+
+
+def charmm_segments(pdb_lines):
+    """
+    The CHARMM segments pdb2crd would build from these PDB lines, as
+    (chain ID, segid, residue numbers) tuples in build order, so other tools
+    (pae2const.py) name residues by the segids CHARMM will have.
+    """
+    return [
+        (s["chainid"], s["segid"], segment_residues(s))
+        for s in build_segments(pdb_lines, warn=False)
+    ]
+
+
+def split_and_process_pdb(pdb_file_path: str, output_dir: str):
+    """
+    Reads a PDB file, splits it into CHARMM segments (see build_segments),
+    and writes each one to a separate file in the specified output directory.
+    """
+    with open(pdb_file_path, "r", encoding="utf-8") as pdb_file:
+        non_empty_segments = build_segments(pdb_file.readlines())
 
     for chain_data in non_empty_segments:
         segment_filename = get_segment_filename(chain_data["segid"], pdb_file_path)

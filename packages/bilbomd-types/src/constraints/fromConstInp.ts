@@ -1,5 +1,6 @@
 import { readConstInp, type ConstInpBody } from '../constInpParser.js'
 import { findDuplicateShapeNames } from '../structureFileChecks.js'
+import { describeSplit, fitSavedSelection } from './resolve.js'
 import type {
   ConstraintBodyInput,
   ConstraintMode,
@@ -27,6 +28,12 @@ export interface ConstInpImport {
   fixed_choices: ConstraintBodyInput[]
   /** Commands and names that were left out, to show the user */
   problems: string[]
+  /**
+   * Selections that were fitted to the structure's segments, e.g. a chain
+   * now built as two segments, to show the user. Unlike `problems`, nothing
+   * was left out.
+   */
+  notes: string[]
 }
 
 // Segid prefixes the Inp Jiffy wrote for lowercase chains: PRLa, DNLa, RNLa
@@ -62,6 +69,7 @@ const toBody = (
   body: ConstInpBody,
   mode: ConstraintMode,
   problems: string[],
+  notes: string[],
   structure: StructureSegment[] | undefined
 ): ConstraintBodyInput | null => {
   const segments: ConstraintSegmentInput[] = []
@@ -84,6 +92,17 @@ const toBody = (
           ? `Segment ${written} in ${body.name} is not in the structure, so it was left out`
           : `Segment ${written} in ${body.name} is not a PDB chain segid (like PROA or DNAB), so it was left out`
       )
+      continue
+    }
+    // A const.inp from an older job may select a chain that BilboMD now
+    // builds as several segments; its range says how much of it was meant
+    if (structure && residues) {
+      const selection = { chain_id: chainId, segid, residues: { ...residues } }
+      const fitted = fitSavedSelection(selection, structure)
+      if (fitted.split) {
+        notes.push(`${body.name}: ${describeSplit(selection, fitted.segments)}`)
+      }
+      segments.push(...fitted.segments)
       continue
     }
     // A segid the structure has is kept: one chain can be several segments
@@ -125,12 +144,13 @@ export const importConstraintsFromConstInp = (
     )
   ]
 
+  const notes: string[] = []
   const fixedChoices = report.fixed_bodies.flatMap((body) => {
-    const read = toBody(body, mode, problems, options.structure)
+    const read = toBody(body, mode, problems, notes, options.structure)
     return read ? [read] : []
   })
   const rigid = report.rigid_bodies.flatMap((body) => {
-    const read = toBody(body, mode, problems, options.structure)
+    const read = toBody(body, mode, problems, notes, options.structure)
     return read ? [read] : []
   })
 
@@ -157,6 +177,7 @@ export const importConstraintsFromConstInp = (
         }
       : null,
     fixed_choices: fixedChoices,
-    problems
+    problems,
+    notes
   }
 }
