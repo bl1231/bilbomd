@@ -21,6 +21,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import {
   importConstraintsFromConstInp,
+  importConstraintsFromData,
   MAX_RIGID_BODIES,
   validateConstraintsInput,
   writeConstInp,
@@ -30,6 +31,7 @@ import {
   type ConstraintsInput,
   type StructureSegment
 } from '@bilbomd/bilbomd-types'
+import { parse as parseYaml } from 'yaml'
 import { readFileText } from './useStructureSegments'
 import {
   defaultConstraints,
@@ -324,6 +326,31 @@ export const ConstraintsEditor = ({
     if (imported.input) onChange(imported.input)
   }
 
+  // An OpenMM constraints YAML (openmm_const.yml) or constraints JSON; YAML
+  // reads JSON too
+  const applyDataImport = (text: string) => {
+    setFixedChoices([])
+    setImportText(null)
+    let data: unknown
+    try {
+      data = parseYaml(text, { maxAliasCount: 0 })
+    } catch {
+      setImportProblems(['The file could not be read as YAML or JSON'])
+      return
+    }
+    const imported = importConstraintsFromData(data, mode, {
+      structure: segments
+    })
+    setImportProblems(imported.problems)
+    if (imported.input) onChange(imported.input)
+  }
+
+  const importFile = async (file: File) => {
+    const text = await readFileText(file)
+    if (/\.(ya?ml|json)$/i.test(file.name)) applyDataImport(text)
+    else applyImport(text)
+  }
+
   const rigid = value.rigid_bodies ?? []
   const setRigid = (bodies: ConstraintBodyInput[]) =>
     onChange({
@@ -348,18 +375,18 @@ export const ConstraintsEditor = ({
           disabled={disabled}
           onClick={() => fileInput.current?.click()}
         >
-          Start from an existing const.inp
+          Start from an existing constraints file
         </Button>
         <input
           ref={fileInput}
           type="file"
-          accept=".inp"
+          accept=".inp,.yml,.yaml,.json"
           hidden
-          data-testid="const-inp-import"
+          data-testid="constraints-import"
           onChange={async (e) => {
             const file = e.target.files?.[0]
             e.target.value = ''
-            if (file) applyImport(await readFileText(file))
+            if (file) await importFile(file)
           }}
         />
         <Button
@@ -374,6 +401,15 @@ export const ConstraintsEditor = ({
           Reset
         </Button>
       </Stack>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ mt: -1 }}
+      >
+        A const.inp, an OpenMM constraints YAML (openmm_const.yml or
+        openmm_config.yaml from a BilboMD results download) or constraints JSON.
+        Files are read here in your browser.
+      </Typography>
 
       {fixedChoices.length > 1 && importText !== null && (
         <Alert

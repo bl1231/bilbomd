@@ -44,10 +44,10 @@ const Harness = ({
   )
 }
 
-const importFile = (text: string) => {
-  const input = screen.getByTestId('const-inp-import')
+const importFile = (text: string, name = 'const.inp') => {
+  const input = screen.getByTestId('constraints-import')
   fireEvent.change(input, {
-    target: { files: [new File([text], 'const.inp')] }
+    target: { files: [new File([text], name)] }
   })
 }
 
@@ -174,5 +174,80 @@ describe('ConstraintsEditor', () => {
     expect(
       await screen.findByTestId('const-inp-import-notes')
     ).toHaveTextContent('Left out: system "id"')
+  })
+
+  it("imports an OpenMM results download's openmm_config.yaml", async () => {
+    const onChange = vi.fn()
+    render(
+      <Harness
+        initial={defaultConstraints('pdb', segments)}
+        onChange={onChange}
+      />
+    )
+    importFile(
+      [
+        'input:',
+        '  pdb_file: model.pdb',
+        'constraints:',
+        '  fixed_bodies:',
+        '    - name: FixedBody1',
+        '      segments:',
+        '        - chain_id: a',
+        '          residues:',
+        '            start: 1',
+        '            stop: 40',
+        '  rigid_bodies:',
+        '    - name: RigidBody1',
+        '      segments:',
+        '        - chain_id: A',
+        '          residues:',
+        '            start: 1',
+        '            stop: 20'
+      ].join('\n'),
+      'openmm_config.yaml'
+    )
+    await waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith({
+        fixed_bodies: [
+          { segments: [{ chain_id: 'a', residues: { start: 1, stop: 40 } }] }
+        ],
+        rigid_bodies: [
+          { segments: [{ chain_id: 'A', residues: { start: 1, stop: 20 } }] }
+        ]
+      })
+    )
+    expect(screen.queryByTestId('const-inp-import-notes')).toBeNull()
+  })
+
+  it('imports constraints JSON and reports fields it leaves out', async () => {
+    const onChange = vi.fn()
+    render(
+      <Harness
+        initial={defaultConstraints('pdb', segments)}
+        onChange={onChange}
+      />
+    )
+    importFile(
+      JSON.stringify({
+        fixed_bodies: [{ segments: [{ chain_id: 'a', extra: 1 }] }]
+      }),
+      'constraints.json'
+    )
+    await waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith({
+        fixed_bodies: [{ segments: [{ chain_id: 'a' }] }]
+      })
+    )
+    expect(screen.getByTestId('const-inp-import-notes')).toHaveTextContent(
+      'left out field "extra"'
+    )
+  })
+
+  it('says so when a YAML file cannot be read', async () => {
+    render(<Harness initial={defaultConstraints('pdb', segments)} />)
+    importFile('constraints: [unclosed', 'broken.yml')
+    expect(
+      await screen.findByTestId('const-inp-import-notes')
+    ).toHaveTextContent('could not be read as YAML or JSON')
   })
 })
