@@ -104,17 +104,17 @@ describe('/api/v1/external/jobs', () => {
 
     const pdbFilePath = path.resolve(
       __dirname,
-      '../../../../test_scripts/data/pdb/pro_dna.pdb'
+      '../../../../test_scripts/data/sasdml3/sasdml3.pdb'
     )
     const datFilePath = path.resolve(
       __dirname,
-      '../../../../test_scripts/data/pdb/saxs-data.dat'
+      '../../../../test_scripts/data/sasdml3/sasdml3.dat'
     )
     // Constraints as JSON text in a form field
     const constraints = fs.readFileSync(
       path.resolve(
         __dirname,
-        '../../../../test_scripts/data/pdb/constraints.json'
+        '../../../../test_scripts/data/sasdml3/constraints.json'
       ),
       'utf8'
     )
@@ -138,21 +138,21 @@ describe('/api/v1/external/jobs', () => {
 
     const crdFilePath = path.resolve(
       __dirname,
-      '../../../../test_scripts/data/crd/pro_dna.crd'
+      '../../../../test_scripts/data/sasdml3/sasdml3.crd'
     )
     const psfFilePath = path.resolve(
       __dirname,
-      '../../../../test_scripts/data/crd/pro_dna.psf'
+      '../../../../test_scripts/data/sasdml3/sasdml3.psf'
     )
     const datFilePath = path.resolve(
       __dirname,
-      '../../../../test_scripts/data/crd/saxs-data.dat'
+      '../../../../test_scripts/data/sasdml3/sasdml3.dat'
     )
     // Constraints as JSON text in a form field
     const constraints = fs.readFileSync(
       path.resolve(
         __dirname,
-        '../../../../test_scripts/data/crd/constraints.json'
+        '../../../../test_scripts/data/sasdml3/constraints-crd.json'
       ),
       'utf8'
     )
@@ -173,16 +173,20 @@ describe('/api/v1/external/jobs', () => {
     )
   })
   test('should reject an uploaded const.inp, pointing to the constraints field', async () => {
-    const dir = path.resolve(__dirname, '../../../../test_scripts/data/pdb')
+    const dir = path.resolve(__dirname, '../../../../test_scripts/data/sasdml3')
+    const legacyInp = path.resolve(
+      __dirname,
+      '../../../../test_scripts/data/auto1/const.inp'
+    )
     const res = await request(app)
       .post('/api/v1/external/jobs')
       .set('Authorization', `Bearer ${apiTokenForTests}`)
       .set('Accept', 'application/json')
       .field('bilbomd_mode', 'pdb')
       .field('title', 'API Old Client')
-      .attach('pdb_file', `${dir}/pro_dna.pdb`)
-      .attach('dat_file', `${dir}/saxs-data.dat`)
-      .attach('inp_file', `${dir}/const.inp`)
+      .attach('pdb_file', `${dir}/sasdml3.pdb`)
+      .attach('dat_file', `${dir}/sasdml3.dat`)
+      .attach('inp_file', legacyInp)
     expect(res.status).toBe(400)
     expect(res.body.message).toMatch(
       /Constraint files \(inp_file\) are no longer accepted/

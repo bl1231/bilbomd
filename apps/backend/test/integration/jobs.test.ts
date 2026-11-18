@@ -33,7 +33,7 @@ const dataVolume: string = process.env.DATA_VOL ?? ''
 const testData = `${__dirname}/../../../../test_scripts/data`
 // Constraints as the job forms and API send them (JSON in a form field)
 const pdbConstraints = fs.readFileSync(
-  `${testData}/pdb/constraints.json`,
+  `${testData}/sasdml3/constraints.json`,
   'utf8'
 )
 
@@ -103,10 +103,10 @@ const createNewJob = async (user: IUser) => {
   const job = {
     title: 'test job',
     uuid: UUID,
-    psf_file: `${jobDir}/pro_dna_complex.psf`,
-    crd_file: `${jobDir}/pro_dna_complex.crd`,
+    psf_file: `${jobDir}/sasdml3.psf`,
+    crd_file: `${jobDir}/sasdml3.crd`,
     const_inp_file: `${jobDir}/my_const.inp`,
-    data_file: `${jobDir}/pro_dna_saxs.dat`,
+    data_file: `${jobDir}/sasdml3.dat`,
     conformational_sampling: 1,
     rg_min: 25,
     rg_max: 35,
@@ -254,12 +254,12 @@ describe('POST /api/v1/jobs', () => {
       .set('Authorization', `Bearer ${token}`)
       .attach(
         'pdb_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
+        `${__dirname}/../../../../test_scripts/data/sasdml3/sasdml3.pdb`
       )
       .field('constraints', pdbConstraints)
       .attach(
         'dat_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
+        `${__dirname}/../../../../test_scripts/data/sasdml3/sasdml3.dat`
       )
       .field('title', 'Test Job')
       .field('bilbomd_mode', 'pdb')
@@ -274,12 +274,12 @@ describe('POST /api/v1/jobs', () => {
       .set('Authorization', `Bearer ${token}`)
       .attach(
         'pdb_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
+        `${__dirname}/../../../../test_scripts/data/sasdml3/sasdml3.pdb`
       )
       .field('constraints', pdbConstraints)
       .attach(
         'dat_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
+        `${__dirname}/../../../../test_scripts/data/sasdml3/sasdml3.dat`
       )
       .field('title', 'Test Job')
       .field('rg', 35)
@@ -297,12 +297,12 @@ describe('POST /api/v1/jobs', () => {
       .set('Authorization', `Bearer ${token}`)
       .attach(
         'pdb_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
+        `${__dirname}/../../../../test_scripts/data/sasdml3/sasdml3.pdb`
       )
       .field('constraints', pdbConstraints)
       .attach(
         'dat_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
+        `${__dirname}/../../../../test_scripts/data/sasdml3/sasdml3.dat`
       )
       .field('title', 'Test Job')
       .field('rg', 35)
@@ -322,12 +322,12 @@ describe('POST /api/v1/jobs', () => {
       .field('title', 'BilboMD Test Job')
       .attach(
         'pdb_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
+        `${__dirname}/../../../../test_scripts/data/sasdml3/sasdml3.pdb`
       )
       .field('constraints', pdbConstraints)
       .attach(
         'dat_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
+        `${__dirname}/../../../../test_scripts/data/sasdml3/sasdml3.dat`
       )
       .field('rg', 35)
       .field('rg_min', 30)
@@ -368,7 +368,7 @@ describe('POST /api/v1/jobs', () => {
 })
 
 describe('POST /api/v1/jobs (resubmit)', () => {
-  const pdbData = `${__dirname}/../../../../test_scripts/data/pdb`
+  const pdbData = `${__dirname}/../../../../test_scripts/data/sasdml3`
 
   // pdb/constraints.json fixes the DNA chain as a whole segment
   const submitOriginalPdbJob = async () => {
@@ -376,9 +376,9 @@ describe('POST /api/v1/jobs (resubmit)', () => {
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${generateAccessToken()}`)
       .field('title', 'Original Job')
-      .attach('pdb_file', `${pdbData}/pro_dna.pdb`)
+      .attach('pdb_file', `${pdbData}/sasdml3.pdb`)
       .field('constraints', pdbConstraints)
-      .attach('dat_file', `${pdbData}/saxs-data.dat`)
+      .attach('dat_file', `${pdbData}/sasdml3.dat`)
       .field('rg', 35)
       .field('rg_min', 30)
       .field('rg_max', 40)
@@ -424,7 +424,7 @@ describe('POST /api/v1/jobs (resubmit)', () => {
     expect(newJob?.get('const_inp_file')).toBe('openmm_const.yml')
     expect(newJob?.get('md_constraints')).toBeTruthy()
     const newDir = path.join(dataVolume, res.body.uuid)
-    expect(await fs.pathExists(path.join(newDir, 'pro_dna.pdb'))).toBe(true)
+    expect(await fs.pathExists(path.join(newDir, 'sasdml3.pdb'))).toBe(true)
     expect(await fs.pathExists(path.join(newDir, 'saxs-data.dat'))).toBe(true)
     // A whole-segment selection is written for OpenMM as a residue range:
     // chain D (segment DNAD) holds residues 22-80
@@ -533,8 +533,8 @@ describe('DELETE /api/v1/jobs/:id', () => {
 })
 
 describe('POST /api/v1/jobs (input file names)', () => {
-  const crdData = `${__dirname}/../../../../test_scripts/data/crd`
-  const pdbData = `${__dirname}/../../../../test_scripts/data/pdb`
+  const crdData = `${__dirname}/../../../../test_scripts/data/sasdml3`
+  const pdbData = `${__dirname}/../../../../test_scripts/data/sasdml3`
   const longLine = `* ${'x'.repeat(120)}`
 
   // A file just outside any job directory that a crafted field could target
@@ -558,9 +558,9 @@ describe('POST /api/v1/jobs (input file names)', () => {
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${generateAccessToken()}`)
       .field('title', 'Crafted CRD Job')
-      .attach('crd_file', `${crdData}/pro_dna.crd`)
-      .attach('psf_file', `${crdData}/pro_dna.psf`)
-      .attach('dat_file', `${crdData}/saxs-data.dat`)
+      .attach('crd_file', `${crdData}/sasdml3.crd`)
+      .attach('psf_file', `${crdData}/sasdml3.psf`)
+      .attach('dat_file', `${crdData}/sasdml3.dat`)
       .field('inp_file', `../${planted.name}`)
       .field('rg', 35)
       .field('rg_min', 30)
@@ -580,7 +580,7 @@ describe('POST /api/v1/jobs (input file names)', () => {
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${generateAccessToken()}`)
       .field('title', 'Crafted PDB Job')
-      .attach('pdb_file', `${pdbData}/pro_dna.pdb`)
+      .attach('pdb_file', `${pdbData}/sasdml3.pdb`)
       .field('constraints', pdbConstraints)
       .field('dat_file', `../${planted.name}`)
       .field('rg', 35)
@@ -606,9 +606,9 @@ describe('POST /api/v1/jobs (constraint files)', () => {
       .set('Authorization', `Bearer ${generateAccessToken()}`)
       .field('title', 'Old Client Job')
       .field('bilbomd_mode', 'pdb')
-      .attach('pdb_file', `${testData}/pdb/pro_dna.pdb`)
-      .attach('dat_file', `${testData}/pdb/saxs-data.dat`)
-      .attach('inp_file', `${testData}/pdb/const.inp`)
+      .attach('pdb_file', `${testData}/sasdml3/sasdml3.pdb`)
+      .attach('dat_file', `${testData}/sasdml3/sasdml3.dat`)
+      .attach('inp_file', `${testData}/auto1/const.inp`)
 
     expect(res.statusCode).toBe(400)
     expect(res.body.message).toMatch(

@@ -13,10 +13,10 @@ set -a
 source "$SCRIPT_DIR/.env"
 set +a
 
-PDB_FILE="$SCRIPT_DIR/data/pdb/pro_dna.pdb"
-DAT_FILE="$SCRIPT_DIR/data/pdb/saxs-data.dat"
+PDB_FILE="$SCRIPT_DIR/data/sasdml3/sasdml3.pdb"
+DAT_FILE="$SCRIPT_DIR/data/sasdml3/sasdml3.dat"
 # Constraints as JSON (BilboMD no longer accepts const.inp uploads)
-CONSTRAINTS_FILE="$SCRIPT_DIR/data/pdb/constraints.json"
+CONSTRAINTS_FILE="$SCRIPT_DIR/data/sasdml3/constraints.json"
 
 TITLE_DATE=$(date +%m%d)
 TITLE_SUFFIX=$(date +%s | tail -c 5)

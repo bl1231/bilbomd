@@ -13,11 +13,11 @@ set -a
 source "$SCRIPT_DIR/.env"
 set +a
 
-CRD_FILE="$SCRIPT_DIR/data/crd/pro_dna.crd"
-PSF_FILE="$SCRIPT_DIR/data/crd/pro_dna.psf"
-DAT_FILE="$SCRIPT_DIR/data/crd/saxs-data.dat"
+CRD_FILE="$SCRIPT_DIR/data/sasdml3/sasdml3.crd"
+PSF_FILE="$SCRIPT_DIR/data/sasdml3/sasdml3.psf"
+DAT_FILE="$SCRIPT_DIR/data/sasdml3/sasdml3.dat"
 # Constraints as JSON (BilboMD no longer accepts const.inp uploads)
-CONSTRAINTS_FILE="$SCRIPT_DIR/data/crd/constraints.json"
+CONSTRAINTS_FILE="$SCRIPT_DIR/data/sasdml3/constraints-crd.json"
 
 TITLE_DATE=$(date +%m%d)
 TITLE_SUFFIX=$(date +%s | tail -c 5)
