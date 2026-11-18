@@ -1,0 +1,16 @@
+{
+  "fixed_bodies": [
+    {
+      "segments": [
+        { "chain_id": "A", "residues": { "start": 40, "stop": 137 } },
+        { "chain_id": "B" },
+        { "chain_id": "C" }
+      ]
+    }
+  ],
+  "rigid_bodies": [
+    {
+      "segments": [{ "chain_id": "A", "residues": { "start": 150, "stop": 203 } }]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "fixed_bodies": [
+    {
+      "segments": [
+        { "segid": "PROA", "residues": { "start": 40, "stop": 137 } },
+        { "segid": "DNAB" },
+        { "segid": "DNAC" }
+      ]
+    }
+  ],
+  "rigid_bodies": [
+    {
+      "segments": [{ "segid": "PROA", "residues": { "start": 150, "stop": 203 } }]
+    }
+  ]
+}
