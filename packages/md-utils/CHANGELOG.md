@@ -1,5 +1,16 @@
 # @bilbomd/md-utils
 
+## 2.0.0
+
+### Major Changes
+
+- 5a964aa: Remove exports nothing calls any more: `buildChainSegidMap`, `convertYamlToInp`, `validateInpConstraints`, `findFixedRigidOverlaps`, `assertNoFixedRigidOverlaps` and `findRigidBodyOverlaps`. The fixed/rigid overlap check still runs inside `validateYamlConstraints`, and the rigid/rigid check inside `assertNoRigidBodyOverlaps`. `buildChainMolTypes` now classifies residues with `classifyResidue` from `@bilbomd/bilbomd-types`, which also treats the CHARMM names ADE, CYT, GUA and THY as DNA.
+
+### Patch Changes
+
+- Updated dependencies [5a964aa]
+  - @bilbomd/bilbomd-types@1.22.1
+
 ## 1.4.4
 
 ### Patch Changes
