@@ -51,7 +51,7 @@ RUN echo "{ \"version\": \"${UI_VERSION}\", \"gitHash\": \"${UI_GIT_HASH}\" }" >
 
 # -----------------------------------------------------------------------------
 # Stage 3: serve (nginx)
-FROM nginx:alpine
+FROM nginx:1.31.9-alpine
 RUN apk add --no-cache bash
 
 # Copy the Vite build output (dist/build) to nginx serving directory
