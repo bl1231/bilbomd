@@ -6,16 +6,22 @@
 const isTrue = (value?: string): boolean =>
   value === 'true' || value === '1' || value?.toLowerCase() === 'yes'
 
-// The execution backend that rules BioEmu2 out here, or null if it can run.
-// Mirrors the worker's choice: EXECUTION_BACKEND wins, then USE_NERSC.
-const bioemuUnsupportedBackend = (): string | null => {
+// The worker's execution backend ('local', 'nersc' or 'k8s'). Mirrors the
+// worker's choice: EXECUTION_BACKEND wins, then USE_NERSC.
+const executionBackend = (): string => {
   const explicit = process.env.EXECUTION_BACKEND?.trim().toLowerCase()
-  if (explicit) return explicit === 'local' ? null : explicit
-  return isTrue(process.env.USE_NERSC) ? 'nersc' : null
+  if (explicit) return explicit
+  return isTrue(process.env.USE_NERSC) ? 'nersc' : 'local'
+}
+
+// The execution backend that rules BioEmu2 out here, or null if it can run.
+const bioemuUnsupportedBackend = (): string | null => {
+  const backend = executionBackend()
+  return backend === 'local' ? null : backend
 }
 
 const bioemuEnabled = (): boolean =>
   process.env.ENABLE_BILBOMD_BIOEMU === 'true' &&
   bioemuUnsupportedBackend() === null
 
-export { bioemuUnsupportedBackend, bioemuEnabled }
+export { executionBackend, bioemuUnsupportedBackend, bioemuEnabled }

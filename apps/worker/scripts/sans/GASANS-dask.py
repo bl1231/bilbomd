@@ -839,8 +839,14 @@ def _read_sans_files(sans_struct: pd.DataFrame) -> pd.DataFrame:
     # hard coding 501 for now. This assumes -ns 501 used in teh Pepsi-SANS calculations.
     qmin, qmax, nq = 0.0, 0.5, 501
 
+    # Start from a float frame. An empty DataFrame(index=, columns=) is object
+    # dtype, and pandas 3 keeps that dtype on .loc column assignment, which
+    # scipy's splrep then refuses ("Cannot cast array data from dtype('O')").
     scatteringdf = pd.DataFrame(
-        index=np.linspace(qmin, qmax, nq), columns=sans_struct.index
+        np.nan,
+        index=np.linspace(qmin, qmax, nq),
+        columns=sans_struct.index,
+        dtype=float,
     )
 
     # Iterate through each row in the DataFrame

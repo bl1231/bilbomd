@@ -22,6 +22,7 @@ import { isResubmitRequest } from './utils/resubmission.js'
 import { serverFile } from './utils/serverFiles.js'
 import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
 import { materializeConstraints } from './utils/constraints.js'
+import { parseMdEngine } from './utils/mdEngine.js'
 
 const uploadFolder = config.uploadDir
 
@@ -44,10 +45,7 @@ const handleBilboMDClassicPDB = async (
 
     const { bilbomd_mode: bilbomdMode } = req.body
 
-    // Normalize md_engine (default to 'charmm' if not provided/unknown)
-    const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-    const md_engine: 'CHARMM' | 'OpenMM' =
-      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+    const md_engine = parseMdEngine(req.body.md_engine)
     logger.info(`Selected md_engine: ${md_engine}`)
 
     let { rg, rg_min, rg_max } = req.body
