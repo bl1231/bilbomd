@@ -370,7 +370,7 @@ describe('POST /api/v1/jobs', () => {
 describe('POST /api/v1/jobs (resubmit)', () => {
   const pdbData = `${__dirname}/../../../../test_scripts/data/sasdml3`
 
-  // pdb/constraints.json fixes the DNA chain as a whole segment
+  // sasdml3/constraints.json fixes both DNA chains as whole segments
   const submitOriginalPdbJob = async () => {
     const res = await request(app)
       .post('/api/v1/jobs')
@@ -425,14 +425,15 @@ describe('POST /api/v1/jobs (resubmit)', () => {
     expect(newJob?.get('md_constraints')).toBeTruthy()
     const newDir = path.join(dataVolume, res.body.uuid)
     expect(await fs.pathExists(path.join(newDir, 'sasdml3.pdb'))).toBe(true)
-    expect(await fs.pathExists(path.join(newDir, 'saxs-data.dat'))).toBe(true)
+    expect(await fs.pathExists(path.join(newDir, 'sasdml3.dat'))).toBe(true)
     // A whole-segment selection is written for OpenMM as a residue range:
-    // chain D (segment DNAD) holds residues 22-80
+    // DNA chain B holds residues 20-43 and chain C residues 59-82
     const yaml = await fs.readFile(
       path.join(newDir, 'openmm_const.yml'),
       'utf8'
     )
-    expect(yaml).toMatch(/chain_id: D\s+residues:\s+start: 22\s+stop: 80/)
+    expect(yaml).toMatch(/chain_id: B\s+residues:\s+start: 20\s+stop: 43/)
+    expect(yaml).toMatch(/chain_id: C\s+residues:\s+start: 59\s+stop: 82/)
   })
 
   test('refuses to reuse the original constraint file', async () => {
@@ -461,12 +462,12 @@ describe('POST /api/v1/jobs (resubmit)', () => {
 
   test('asks for a re-upload when an original file is gone', async () => {
     const original = await submitOriginalPdbJob()
-    await fs.remove(path.join(dataVolume, original.uuid, 'saxs-data.dat'))
+    await fs.remove(path.join(dataVolume, original.uuid, 'sasdml3.dat'))
 
     const res = await resubmit(original.jobid)
 
     expect(res.statusCode).toBe(410)
-    expect(res.body.message).toMatch(/saxs-data\.dat.*upload it again/)
+    expect(res.body.message).toMatch(/sasdml3\.dat.*upload it again/)
   })
 })
 
