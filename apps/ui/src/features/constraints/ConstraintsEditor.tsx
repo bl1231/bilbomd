@@ -406,8 +406,8 @@ export const ConstraintsEditor = ({
         color="text.secondary"
         sx={{ mt: -1 }}
       >
-        A const.inp, an OpenMM constraints YAML (openmm_const.yml or
-        openmm_config.yaml from a BilboMD results download) or constraints JSON.
+        A const.inp, an OpenMM constraints YAML, or from a BilboMD results
+        download: openmm_const.yml, openmm_config.yaml or bilbomd_job.json.
         Files are read here in your browser.
       </Typography>
 

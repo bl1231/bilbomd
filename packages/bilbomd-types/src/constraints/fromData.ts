@@ -29,9 +29,11 @@ const unknownFields = (value: Json, known: string[]) =>
 
 /**
  * Reads constraints from a YAML or JSON file, already parsed: an OpenMM
- * constraints file (openmm_const.yml, constraints.yaml from pae2const), a
- * job's md_constraints, or the `constraints` JSON the API takes. Either
- * `{ constraints: { fixed_bodies, rigid_bodies } }` or the bodies at the top.
+ * constraints file (openmm_const.yml or openmm_config.yaml from a results
+ * download, constraints.yaml from pae2const), bilbomd_job.json from a results
+ * download (its md_constraints), or the `constraints` JSON the API takes.
+ * Either `{ constraints: {...} }`, `{ md_constraints: {...} }` or the bodies
+ * at the top.
  *
  * OpenMM holds every fixed body in place, so several fixed bodies are merged
  * into the one fixed body the editor has (unlike several `cons fix` in a
@@ -46,8 +48,15 @@ export const importConstraintsFromData = (
   options: { structure?: StructureSegment[] } = {}
 ): ConstraintsDataImport => {
   const problems: string[] = []
-  const root =
-    isObject(data) && isObject(data.constraints) ? data.constraints : data
+  // { constraints } in OpenMM files, { md_constraints } in bilbomd_job.json
+  // (the job snapshot in every results download), or bare bodies
+  const root = !isObject(data)
+    ? data
+    : isObject(data.constraints)
+      ? data.constraints
+      : isObject(data.md_constraints)
+        ? data.md_constraints
+        : data
   if (!isObject(root)) {
     return {
       input: null,

@@ -62,6 +62,61 @@ describe('importConstraintsFromData', () => {
     )
   })
 
+  // bilbomd_job.json in a results download: the whole job record, with the
+  // stored md_constraints (database ids, segids, whole-segment flags)
+  it("reads md_constraints from a results download's bilbomd_job.json", () => {
+    const jobJson = {
+      _id: 'job1',
+      title: 'my job',
+      md_engine: 'CHARMM',
+      md_constraints: {
+        _id: 'c0',
+        fixed_bodies: [
+          {
+            _id: 'b1',
+            name: 'FixedBody1',
+            segments: [
+              {
+                _id: 's1',
+                chain_id: 'a',
+                segid: 'PROA',
+                residues: { _id: 'r1', start: 1, stop: 100 }
+              },
+              {
+                _id: 's2',
+                chain_id: 'A',
+                segid: 'DNAA',
+                residues: { _id: 'r2', start: 1, stop: 30 },
+                whole_segment: true
+              }
+            ]
+          }
+        ],
+        rigid_bodies: [],
+        chain_mol_types: [{ chain_id: 'a', mol_type: 'PRO' }]
+      }
+    }
+    const imported = importConstraintsFromData(jobJson, 'pdb')
+    expect(imported.problems).toEqual([])
+    expect(imported.input).toEqual({
+      fixed_bodies: [
+        {
+          segments: [
+            { chain_id: 'a', residues: { start: 1, stop: 100 } },
+            { chain_id: 'A' }
+          ]
+        }
+      ]
+    })
+    expect(
+      importConstraintsFromData(jobJson, 'crd_psf').input?.fixed_bodies[0]
+        ?.segments
+    ).toEqual([
+      { segid: 'PROA', residues: { start: 1, stop: 100 } },
+      { segid: 'DNAA' }
+    ])
+  })
+
   it('reads the bodies at the top level too (the API JSON)', () => {
     const imported = importConstraintsFromData(openmmFile.constraints, 'pdb')
     expect(imported.input?.fixed_bodies).toHaveLength(1)
