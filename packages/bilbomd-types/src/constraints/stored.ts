@@ -1,5 +1,11 @@
 import type { MDConstraintsDTO } from '../jobs/mdConstraints.js'
-import type { ConstraintBody, ConstraintMode, Constraints } from './types.js'
+import { fitSavedSelection } from './resolve.js'
+import type {
+  ConstraintBody,
+  ConstraintMode,
+  Constraints,
+  StructureSegment
+} from './types.js'
 
 type StoredBody = NonNullable<MDConstraintsDTO['fixed_bodies']>[number]
 
@@ -42,10 +48,16 @@ export const constraintsFromStored = (
  * fields are kept, so the validator still rejects anything odd; stored
  * metadata is dropped: body names (the server names bodies), chain_mol_types,
  * and the `_id`/`id` MongoDB adds to every body, segment and residue range.
+ *
+ * Pass the structure's segments as `structure` in PDB mode, so a selection
+ * saved when a chain was one segment is fitted to the segments it is built
+ * as now (see fitSavedSelection): a whole chain A stored as PROA 1-203 is
+ * PROA and PROB, not just PROA, once a chain break splits it.
  */
 export const inputFromStored = (
   stored: unknown,
-  mode: ConstraintMode
+  mode: ConstraintMode,
+  structure?: StructureSegment[]
 ): unknown => {
   if (!isRecord(stored)) return stored
   // chain_mol_types is metadata stored alongside the bodies; every other
@@ -57,8 +69,8 @@ export const inputFromStored = (
   } = withoutDbIds(stored)
   delete rest.chain_mol_types
 
-  const segment = (value: unknown): unknown => {
-    if (!isRecord(value)) return value
+  const segments = (value: unknown): unknown[] => {
+    if (!isRecord(value)) return [value]
     const {
       chain_id: chainId,
       segid,
@@ -66,26 +78,53 @@ export const inputFromStored = (
       whole_segment: whole,
       ...other
     } = withoutDbIds(value)
-    return {
-      ...other,
-      // Segments are named by segid in CRD/PSF mode, by chain in PDB mode
-      // (the server works out the segid from the structure)
-      ...(mode === 'crd_psf' ? { segid } : { chain_id: chainId }),
-      ...(whole === true
-        ? {}
-        : { residues: isRecord(residues) ? withoutDbIds(residues) : residues })
+    const range = isRecord(residues) ? withoutDbIds(residues) : residues
+    if (mode === 'crd_psf') {
+      // CRD/PSF segments are named by segid and come from the PSF as is
+      return [
+        { ...other, segid, ...(whole === true ? {} : { residues: range }) }
+      ]
     }
+    if (
+      structure &&
+      typeof chainId === 'string' &&
+      (segid === undefined || typeof segid === 'string') &&
+      isRange(range)
+    ) {
+      return fitSavedSelection(
+        {
+          chain_id: chainId,
+          ...(segid === undefined ? {} : { segid }),
+          residues: { start: range.start, stop: range.stop },
+          whole_segment: whole === true
+        },
+        structure
+      ).segments.map((s) => ({ ...other, ...s }))
+    }
+    // Segments are named by chain in PDB mode. A stored segid is kept: it
+    // says which segment of a chain that is several molecules (and the
+    // server checks it matches)
+    return [
+      {
+        ...other,
+        chain_id: chainId,
+        ...(segid === undefined ? {} : { segid }),
+        ...(whole === true ? {} : { residues: range })
+      }
+    ]
   }
   const bodies = (list: unknown): unknown =>
     Array.isArray(list)
       ? list.map((body: unknown): unknown => {
           if (!isRecord(body)) return body
           // The server names bodies, so a stored name is dropped
-          const { segments, ...other } = withoutDbIds(body)
+          const { segments: segmentList, ...other } = withoutDbIds(body)
           delete other.name
           return {
             ...other,
-            segments: Array.isArray(segments) ? segments.map(segment) : segments
+            segments: Array.isArray(segmentList)
+              ? segmentList.flatMap(segments)
+              : segmentList
           }
         })
       : list
@@ -101,6 +140,12 @@ export const inputFromStored = (
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const isRange = (value: unknown): value is { start: number; stop: number } =>
+  isRecord(value) &&
+  Number.isInteger(value.start) &&
+  Number.isInteger(value.stop) &&
+  Object.keys(value).every((k) => k === 'start' || k === 'stop')
 
 // MongoDB adds _id (and mongoose an id virtual) to every subdocument
 const withoutDbIds = (value: Record<string, unknown>) => {

@@ -43,11 +43,23 @@ export interface StructureSegment {
   mol_type?: ChainMolType
   /** Residue numbers present, ascending, without duplicates */
   residues: number[]
+  /**
+   * Set when this segment starts at a chain break: the previous residue of
+   * the chain (`after`) is not bonded to this segment's first one, being
+   * `distance` A away. CHARMM builds the two sides as separate segments.
+   */
+  chain_break?: { after: number; distance: number }
 }
 
 export interface ConstraintStructure {
   mode: ConstraintMode
   segments: StructureSegment[]
+  /**
+   * The MD engine the constraints are for. OpenMM selects atoms by PDB chain
+   * ID and residue number only, so for 'openmm' a selection must not also
+   * match residues of another segment that shares its chain ID.
+   */
+  engine?: 'charmm' | 'openmm'
 }
 
 /** A validated segment, as stored in md_constraints */

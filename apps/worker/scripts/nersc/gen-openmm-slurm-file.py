@@ -157,12 +157,32 @@ KNOWN_IONS = frozenset(
 )  # fmt: skip
 
 
+def _insert_ter_records(lines):
+    """
+    pdb_segments.insert_ter_records: a TER wherever a chain holds more than
+    one molecule (a segid change or a chain break), so OpenMM does not bond
+    separate molecules or bond across a gap. pdb_segments.py is synced next
+    to this generator in job-scripts/ (job-scripts.txt); in the worker image
+    it is in /app/scripts, and in the repo in tools/python.
+    """
+    here = Path(__file__).resolve().parent
+    for candidate in (JOB_SCRIPTS_SRC, here.parent, here.parents[3] / "tools" / "python"):
+        if (candidate / "pdb_segments.py").exists():
+            if str(candidate) not in sys.path:
+                sys.path.insert(0, str(candidate))
+            break
+    from pdb_segments import insert_ter_records
+
+    return insert_ter_records(lines)
+
+
 def strip_waters_and_ions(pdb_path):
-    """Remove waters and ions from the PDB in the work dir, in place.
+    """Remove waters and ions from the PDB in the work dir, in place, and
+    add TER records between molecules (_insert_ter_records).
 
     The local worker does this with scripts/prep_pdb.py before it writes
-    openmm_config.yaml: neither has a template in the implicit-solvent force
-    fields, so minimize fails on them.
+    openmm_config.yaml: neither waters nor ions have a template in the
+    implicit-solvent force fields, so minimize fails on them.
     """
     try:
         with open(pdb_path, "r") as f:
@@ -178,11 +198,14 @@ def strip_waters_and_ions(pdb_path):
             line.startswith(("ATOM", "HETATM")) and line[17:20].strip() in unwanted
         )
     ]
-    if len(kept) != len(lines):
+    kept, n_breaks = _insert_ter_records(kept)
+    if len(kept) != len(lines) or n_breaks:
         with open(pdb_path, "w") as f:
             f.writelines(kept)
     print(
-        f"Removed {len(lines) - len(kept)} water/ion record(s) from {pdb_path}"
+        f"Removed {len(lines) - len(kept) + n_breaks} water/ion record(s) from "
+        f"{pdb_path}; added {n_breaks} TER record(s) between molecules or at "
+        "chain breaks"
     )
 
 

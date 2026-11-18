@@ -47,10 +47,10 @@ export const ConstraintsField = ({
     (value: ConstraintsInput | null) => {
       if (!segments) return 'Select a structure file to set up constraints'
       if (!value) return 'Constraints are required'
-      const result = validateConstraintsInput(value, { mode, segments })
+      const result = validateConstraintsInput(value, { mode, segments, engine })
       return result.ok ? undefined : 'Fix the constraints shown above'
     },
-    [mode, segments]
+    [mode, segments, engine]
   )
   const [field, , helpers] = useField<ConstraintsInput | null>({
     name,

@@ -1,4 +1,5 @@
 import { chainIdFromSegid } from './fromConstInp.js'
+import { describeSplit, fitSavedSelection } from './resolve.js'
 import type {
   ConstraintBodyInput,
   ConstraintMode,
@@ -13,6 +14,11 @@ export interface ConstraintsDataImport {
   input: ConstraintsInput | null
   /** What was left out or changed, to show the user */
   problems: string[]
+  /**
+   * Selections that were fitted to the structure's segments, e.g. a chain
+   * now built as two segments, to show the user
+   */
+  notes: string[]
 }
 
 type Json = Record<string, unknown>
@@ -48,6 +54,7 @@ export const importConstraintsFromData = (
   options: { structure?: StructureSegment[] } = {}
 ): ConstraintsDataImport => {
   const problems: string[] = []
+  const notes: string[] = []
   // { constraints } in OpenMM files, { md_constraints } in bilbomd_job.json
   // (the job snapshot in every results download), or bare bodies
   const root = !isObject(data)
@@ -62,7 +69,8 @@ export const importConstraintsFromData = (
       input: null,
       problems: [
         'The file does not hold constraints (fixed_bodies, rigid_bodies)'
-      ]
+      ],
+      notes
     }
   }
   for (const field of unknownFields(root, ['fixed_bodies', 'rigid_bodies'])) {
@@ -72,10 +80,10 @@ export const importConstraintsFromData = (
   const segmentOf = (
     value: unknown,
     where: string
-  ): ConstraintSegmentInput | null => {
+  ): ConstraintSegmentInput[] => {
     if (!isObject(value)) {
       problems.push(`${where}: not a segment, left out`)
-      return null
+      return []
     }
     for (const field of unknownFields(value, [
       'chain_id',
@@ -86,30 +94,60 @@ export const importConstraintsFromData = (
       problems.push(`${where}: left out field "${field}"`)
     }
     const { chain_id: chainId, segid, residues, whole_segment: whole } = value
-    const range =
-      whole !== true && isObject(residues)
-        ? { residues: { start: residues.start, stop: residues.stop } }
-        : {}
+    const saved = isObject(residues)
+      ? { start: residues.start, stop: residues.stop }
+      : undefined
+    const range = whole !== true && saved ? { residues: saved } : {}
 
     if (mode === 'crd_psf') {
       if (typeof segid !== 'string') {
         problems.push(`${where}: CRD/PSF jobs name segments by segid, left out`)
-        return null
+        return []
       }
-      return { segid: segid.toUpperCase(), ...range } as ConstraintSegmentInput
+      return [
+        { segid: segid.toUpperCase(), ...range } as ConstraintSegmentInput
+      ]
     }
+    // A segid the structure has is kept: one chain can be several segments
+    const known =
+      typeof segid === 'string'
+        ? options.structure?.find((s) => s.segid === segid.toUpperCase())
+        : undefined
     const chain =
       typeof chainId === 'string'
         ? chainId
         : typeof segid === 'string'
-          ? (options.structure?.find((s) => s.segid === segid.toUpperCase())
-              ?.chain_id ?? chainIdFromSegid(segid))
+          ? (known?.chain_id ?? chainIdFromSegid(segid))
           : null
     if (chain === null) {
       problems.push(`${where}: no chain_id, left out`)
-      return null
+      return []
     }
-    return { chain_id: chain, ...range } as ConstraintSegmentInput
+    const keptSegid =
+      known && known.chain_id === chain ? { segid: known.segid } : {}
+    // A file from an older job may select a chain that BilboMD now builds as
+    // several segments; the saved range says how much of it was meant
+    if (
+      options.structure &&
+      saved &&
+      Number.isInteger(saved.start) &&
+      Number.isInteger(saved.stop)
+    ) {
+      const selection = {
+        chain_id: chain,
+        ...(typeof segid === 'string' ? { segid } : {}),
+        residues: saved as { start: number; stop: number },
+        whole_segment: whole === true
+      }
+      const fitted = fitSavedSelection(selection, options.structure)
+      if (fitted.split) {
+        notes.push(`${where}: ${describeSplit(selection, fitted.segments)}`)
+      }
+      return fitted.segments
+    }
+    return [
+      { chain_id: chain, ...keptSegid, ...range } as ConstraintSegmentInput
+    ]
   }
 
   const bodiesOf = (
@@ -130,10 +168,9 @@ export const importConstraintsFromData = (
       for (const field of unknownFields(body, ['segments'])) {
         problems.push(`${where}: left out field "${field}"`)
       }
-      const segments = body.segments.flatMap((s: unknown, j) => {
-        const read = segmentOf(s, `${where}, segment ${j + 1}`)
-        return read ? [read] : []
-      })
+      const segments = body.segments.flatMap((s: unknown, j) =>
+        segmentOf(s, `${where}, segment ${j + 1}`)
+      )
       return segments.length > 0 ? [{ segments }] : []
     })
   }
@@ -142,7 +179,7 @@ export const importConstraintsFromData = (
   const rigid = bodiesOf(root.rigid_bodies, 'Rigid')
   if (fixed.length === 0) {
     problems.push('The file has no usable fixed body')
-    return { input: null, problems }
+    return { input: null, problems, notes }
   }
   if (fixed.length > 1) {
     problems.push(
@@ -154,6 +191,7 @@ export const importConstraintsFromData = (
       fixed_bodies: [{ segments: fixed.flatMap((b) => b.segments) }],
       ...(rigid.length > 0 ? { rigid_bodies: rigid } : {})
     },
-    problems
+    problems,
+    notes
   }
 }

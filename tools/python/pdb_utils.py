@@ -11,6 +11,15 @@ from Bio.Data.IUPACData import (
 from Bio.PDB import MMCIFParser
 from Bio.SeqUtils import molecular_weight as sequence_weight
 
+# Re-exported: pdb_utils has always been where these are imported from
+from pdb_segments import (  # noqa: F401
+    CARBOHYDRATE_RESIDUES,
+    DNA_RESIDUES,
+    PROTEIN_RESIDUES,
+    RNA_RESIDUES,
+    classify_residue,
+)
+
 # Standard atomic weights (Da). Covers biomolecules plus the ions and
 # heteroatoms that turn up in structures submitted to BilboMD.
 ATOMIC_WEIGHTS = {
@@ -43,7 +52,8 @@ ATOMIC_WEIGHTS = {
 _BIOPOLYMER_ELEMENTS = frozenset("HCNOPS")
 
 # Residue names classify_residue() does not know: CHARMM/AMBER protonation
-# variants and CHARMM uracil. Used only for mass bookkeeping.
+# variants and CHARMM uracil (HSD it does know). Used only for mass
+# bookkeeping.
 _EXTRA_PROTEIN_RESIDUES = frozenset(
     ["HSD", "HSE", "HSP", "HID", "HIE", "HIP", "MSE", "CYX", "CYM", "ASH", "GLH", "LYN"]
 )
@@ -363,85 +373,14 @@ def calculate_molecular_weight(pdb_file):
     return molecular_composition(pdb_file)["total_da"]
 
 
-def classify_residue(residue):
-    """
-    Classify a residue name into molecule type.
-    """
-    protein_residues = set(
-        [
-            "ALA",
-            "CYS",
-            "ASP",
-            "GLU",
-            "PHE",
-            "GLY",
-            "HIS",
-            "ILE",
-            "LYS",
-            "LEU",
-            "MET",
-            "ASN",
-            "PRO",
-            "GLN",
-            "ARG",
-            "SER",
-            "THR",
-            "VAL",
-            "TRP",
-            "TYR",
-            "SEP",
-            "TPO",
-            "PTR",
-        ]
-    )
-    dna_residues = set(["DA", "DC", "DG", "DT", "DI", "ADE", "CYT", "GUA", "THY"])
-    rna_residues = set(["A", "C", "G", "U", "I"])
-    carbohydrate_residues = set(
-        [
-            "AFL",
-            "ALL",
-            "BMA",
-            "BGC",
-            "BOG",
-            "FCA",
-            "FCB",
-            "FMF",
-            "FUC",
-            "FUL",
-            "G4S",
-            "GAL",
-            "GLA",
-            "GLB",
-            "GLC",
-            "GLS",
-            "GSA",
-            "LAK",
-            "LAT",
-            "MAF",
-            "MAL",
-            "NAG",
-            "NAN",
-            "NGA",
-            "SIA",
-            "SLB",
-        ]
-    )
-
-    if residue in protein_residues:
-        return "PRO"
-    elif residue in dna_residues:
-        return "DNA"
-    elif residue in rna_residues:
-        return "RNA"
-    elif residue in carbohydrate_residues:
-        return "CAR"
-    else:
-        return "UNKNOWN"
-
-
 def determine_molecule_type_details(lines):
     """
-    Returns a dictionary with molecule type info for the chain.
+    Returns a dictionary with molecule type info for a segment's lines.
+
+    molecule_type is the type of the first recognized residue (UNKNOWN when
+    none is), so a protein that starts with e.g. PCA is still a protein. The
+    constraint editor (packages/bilbomd-types/src/constraints/structure.ts)
+    types segments the same way.
     """
     types_present = set()
     residue_types = []
@@ -453,9 +392,10 @@ def determine_molecule_type_details(lines):
             types_present.add(mol_type)
             residue_types.append(mol_type)
 
+    recognized = [t for t in residue_types if t != "UNKNOWN"]
     return {
         "types_present": types_present,
-        "first_residue_type": residue_types[0] if residue_types else "UNKNOWN",
+        "molecule_type": recognized[0] if recognized else "UNKNOWN",
         "last_residue_type": residue_types[-1] if residue_types else "UNKNOWN",
     }
 
@@ -475,11 +415,7 @@ def get_segid_renaming_map(pdb_file: str) -> dict:
 
     renaming = {}
     for chain_id, lines in chains.items():
-        molinfo = determine_molecule_type_details(lines)
-        types_present = molinfo.get("types_present", set())
-        mol_type = (
-            "PRO" if types_present == {"PRO"} else next(iter(types_present), "UNKNOWN")
-        )
+        mol_type = determine_molecule_type_details(lines)["molecule_type"]
         renaming[chain_id] = f"{mol_type}{chain_id}"
 
     return renaming
@@ -498,12 +434,11 @@ def get_segid_renaming_map_from_cif(cif_file: str) -> dict:
             chain_id = chain.id
             if chain_id in renaming:
                 continue
-            res_types = set()
-            for residue in chain:
-                mol_type = classify_residue(residue.resname.strip())
-                res_types.add(mol_type)
-            mol_type = (
-                "PRO" if res_types == {"PRO"} else next(iter(res_types), "UNKNOWN")
-            )
+            recognized = [
+                t
+                for t in (classify_residue(r.resname.strip()) for r in chain)
+                if t != "UNKNOWN"
+            ]
+            mol_type = recognized[0] if recognized else "UNKNOWN"
             renaming[chain_id] = f"{mol_type}{chain_id}"
     return renaming

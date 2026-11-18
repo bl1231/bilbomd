@@ -78,7 +78,7 @@ export const ResubmitConstraints = ({
   const initialFor = useCallback(
     (segments: StructureSegment[]): ConstraintsInput | null => {
       if (storedUsable) {
-        const input = inputFromStored(mdConstraints, mode)
+        const input = inputFromStored(mdConstraints, mode, segments)
         return isInput(input) ? input : null
       }
       if (constInp.data !== undefined) {

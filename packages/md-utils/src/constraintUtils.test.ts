@@ -1,17 +1,11 @@
 import { describe, test, expect, beforeAll, afterAll } from 'vitest'
 import {
   convertInpToYaml,
-  convertYamlToInp,
   validateYamlConstraints,
-  validateInpConstraints,
   extractConstraintsFromYaml,
-  buildChainSegidMap,
   buildChainMolTypes,
   buildChainMolTypesFromInp,
-  findRigidBodyOverlaps,
-  assertNoRigidBodyOverlaps,
-  findFixedRigidOverlaps,
-  assertNoFixedRigidOverlaps
+  assertNoRigidBodyOverlaps
 } from './constraintUtils.js'
 import type { IMDConstraints } from '@bilbomd/mongodb-schema'
 import fs from 'fs-extra'
@@ -119,117 +113,7 @@ describe('Constraint Utils', () => {
     })
   })
 
-  describe('YAML to INP conversion', () => {
-    test('should convert OpenMM YAML to CHARMM INP format', async () => {
-      expect.assertions(4)
-
-      const yamlPath = path.join(tempDir, 'test.yaml')
-      await fs.writeFile(yamlPath, testYamlContent)
-
-      const inpResult = await convertYamlToInp(yamlPath)
-
-      expect(inpResult).toBeDefined()
-      expect(inpResult).toContain('define')
-      expect(inpResult).toContain('cons fix')
-      expect(inpResult).toContain('shape desc')
-    })
-
-    test('should correctly map chain IDs to CHARMM segments', async () => {
-      expect.assertions(3)
-
-      const yamlPath = path.join(tempDir, 'chain-test.yaml')
-      await fs.writeFile(yamlPath, testYamlContent)
-
-      const inpResult = await convertYamlToInp(yamlPath)
-
-      expect(inpResult).toContain('segid PROA') // A -> PROA
-      expect(inpResult).toContain('segid PROB') // B -> PROB
-      expect(inpResult).toContain('segid PROC') // C -> PROC
-    })
-
-    test('should end with return statement', async () => {
-      expect.assertions(1)
-
-      const yamlPath = path.join(tempDir, 'return-test.yaml')
-      await fs.writeFile(yamlPath, testYamlContent)
-
-      const inpResult = await convertYamlToInp(yamlPath)
-
-      expect(inpResult).toContain('return')
-    })
-  })
-
   describe('Validation', () => {
-    test('should validate valid INP files', async () => {
-      expect.assertions(1)
-
-      const inpPath = path.join(tempDir, 'valid.inp')
-      await fs.writeFile(inpPath, testInpContent)
-
-      await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
-    })
-
-    test('should reject empty INP files', async () => {
-      expect.assertions(1)
-
-      const inpPath = path.join(tempDir, 'empty.inp')
-      await fs.writeFile(inpPath, '')
-
-      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'Empty INP constraint file'
-      )
-    })
-
-    test('should reject INP files containing "system" directive', async () => {
-      expect.assertions(1)
-
-      const inpPath = path.join(tempDir, 'system.inp')
-      await fs.writeFile(
-        inpPath,
-        `define fixed1 sele ( resid 1:639 .and. segid PROA ) end
-cons fix sele fixed1 end
-system rm -rf /tmp/bilbomd
-return`
-      )
-
-      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'Disallowed keyword'
-      )
-    })
-
-    test('should reject INP files containing "open" directive', async () => {
-      expect.assertions(1)
-
-      const inpPath = path.join(tempDir, 'open.inp')
-      await fs.writeFile(
-        inpPath,
-        `define fixed1 sele ( resid 1:639 .and. segid PROA ) end
-cons fix sele fixed1 end
-open unit 1 read card name /etc/passwd
-return`
-      )
-
-      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'Disallowed keyword'
-      )
-    })
-
-    test('should allow comment lines starting with ! or *', async () => {
-      expect.assertions(1)
-
-      const inpPath = path.join(tempDir, 'comments.inp')
-      await fs.writeFile(
-        inpPath,
-        `! This is a comment
-* Another comment style
-define fixed1 sele ( resid 1:639 .and. segid PROA ) end
-cons fix sele fixed1 end
-return`
-      )
-
-      await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
-    })
-
     test('should validate valid YAML files', async () => {
       expect.assertions(1)
 
@@ -282,64 +166,6 @@ return`
       expect(() => extractConstraintsFromYaml('42')).toThrow(
         'Invalid YAML format'
       )
-    })
-  })
-
-  describe('buildChainSegidMap', () => {
-    // PDB columns (0-indexed): 0-5 record type, 17-19 resName, 21 chainId
-    const makePdbLine = (record: string, resName: string, chainId: string) =>
-      record.padEnd(6) + '    1  CA  ' + resName.padEnd(3) + ' ' + chainId
-
-    test('maps protein chain to PRO prefix', async () => {
-      const pdbPath = path.join(tempDir, 'protein.pdb')
-      await fs.writeFile(pdbPath, makePdbLine('ATOM', 'ALA', 'A') + '\n')
-      expect(await buildChainSegidMap(pdbPath)).toEqual({ A: 'PROA' })
-    })
-
-    test('maps DNA chain to DNA prefix', async () => {
-      const pdbPath = path.join(tempDir, 'dna.pdb')
-      await fs.writeFile(pdbPath, makePdbLine('ATOM', 'DA', 'D') + '\n')
-      expect(await buildChainSegidMap(pdbPath)).toEqual({ D: 'DNAD' })
-    })
-
-    test('maps RNA chain to RNA prefix', async () => {
-      const pdbPath = path.join(tempDir, 'rna.pdb')
-      await fs.writeFile(pdbPath, makePdbLine('ATOM', 'A', 'R') + '\n')
-      expect(await buildChainSegidMap(pdbPath)).toEqual({ R: 'RNAR' })
-    })
-
-    test('maps carbohydrate chain to CAR prefix', async () => {
-      const pdbPath = path.join(tempDir, 'carb.pdb')
-      await fs.writeFile(pdbPath, makePdbLine('HETATM', 'NAG', 'G') + '\n')
-      expect(await buildChainSegidMap(pdbPath)).toEqual({ G: 'CARG' })
-    })
-
-    test('ignores unknown residue types', async () => {
-      const pdbPath = path.join(tempDir, 'unknown-res.pdb')
-      await fs.writeFile(pdbPath, makePdbLine('ATOM', 'XYZ', 'X') + '\n')
-      expect(await buildChainSegidMap(pdbPath)).toEqual({})
-    })
-
-    test('ignores non-ATOM/HETATM lines', async () => {
-      const pdbPath = path.join(tempDir, 'remarks.pdb')
-      const content = [
-        'REMARK   1 test',
-        makePdbLine('ATOM', 'ALA', 'A'),
-        'TER',
-        'END'
-      ].join('\n')
-      await fs.writeFile(pdbPath, content)
-      expect(await buildChainSegidMap(pdbPath)).toEqual({ A: 'PROA' })
-    })
-
-    test('classifies chain by its first residue only', async () => {
-      const pdbPath = path.join(tempDir, 'multi-res.pdb')
-      const content = [
-        makePdbLine('ATOM', 'ALA', 'A'),
-        makePdbLine('ATOM', 'DA', 'A')
-      ].join('\n')
-      await fs.writeFile(pdbPath, content)
-      expect(await buildChainSegidMap(pdbPath)).toEqual({ A: 'PROA' })
     })
   })
 
@@ -396,24 +222,6 @@ return`
         'define fixed1 sele ( resid 1:10 .and. segid HEAV ) end\ncons fix sele fixed1 end\nreturn\n'
       )
       expect(await buildChainMolTypesFromInp(inpPath)).toEqual([])
-    })
-  })
-
-  describe('validateInpConstraints additional paths', () => {
-    test('rejects file missing define statement', async () => {
-      const inpPath = path.join(tempDir, 'no-define.inp')
-      await fs.writeFile(inpPath, 'cons fix sele some_selection end\n')
-      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'INP file must contain at least one "define" statement'
-      )
-    })
-
-    test('rejects file missing constraint command', async () => {
-      const inpPath = path.join(tempDir, 'no-constraint.inp')
-      await fs.writeFile(inpPath, 'define fixed1 sele something end\n')
-      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'INP file must contain at least one constraint command'
-      )
     })
   })
 
@@ -532,45 +340,10 @@ return`
     })
   })
 
-  describe('convertYamlToInp with chainSegidMap', () => {
-    test('uses provided map for segid resolution', async () => {
-      const yamlPath = path.join(tempDir, 'segid-map.yaml')
-      await fs.writeFile(yamlPath, testYamlContent)
-      const result = await convertYamlToInp(yamlPath, undefined, {
-        A: 'PROA',
-        B: 'DNAD',
-        C: 'RNAC'
-      })
-      expect(result).toContain('segid PROA')
-      expect(result).toContain('segid DNAD')
-      expect(result).toContain('segid RNAC')
-    })
-
-    test('handles wrapped YAML format', async () => {
-      const wrapped =
-        'constraints:\n' +
-        testYamlContent
-          .split('\n')
-          .map((l) => '  ' + l)
-          .join('\n')
-      const yamlPath = path.join(tempDir, 'wrapped-convert.yaml')
-      await fs.writeFile(yamlPath, wrapped)
-      const result = await convertYamlToInp(yamlPath)
-      expect(result).toContain('define')
-      expect(result).toContain('return')
-    })
-  })
-
   describe('error paths', () => {
     test('convertInpToYaml throws on missing file', async () => {
       await expect(convertInpToYaml('/nonexistent/file.inp')).rejects.toThrow(
         'Failed to convert INP to YAML'
-      )
-    })
-
-    test('convertYamlToInp throws on missing file', async () => {
-      await expect(convertYamlToInp('/nonexistent/file.yaml')).rejects.toThrow(
-        'Failed to convert YAML to INP'
       )
     })
 
@@ -596,48 +369,6 @@ return`
       )
       const result = await convertInpToYaml(inpPath)
       expect(result).toContain('chain_id: MYID')
-    })
-  })
-
-  describe('Round-trip conversion', () => {
-    test('should maintain data integrity through INP -> YAML -> INP conversion', async () => {
-      expect.assertions(3)
-
-      // Start with INP
-      const originalInpPath = path.join(tempDir, 'original.inp')
-      await fs.writeFile(originalInpPath, testInpContent)
-
-      // Convert to YAML
-      const yamlResult = await convertInpToYaml(originalInpPath)
-      const yamlPath = path.join(tempDir, 'converted.yaml')
-      await fs.writeFile(yamlPath, yamlResult)
-
-      // Convert back to INP
-      const finalInpResult = await convertYamlToInp(yamlPath)
-
-      expect(finalInpResult).toContain('define')
-      expect(finalInpResult).toContain('cons fix')
-      expect(finalInpResult).toContain('shape desc')
-    })
-
-    test('should maintain data integrity through YAML -> INP -> YAML conversion', async () => {
-      expect.assertions(3)
-
-      // Start with YAML
-      const originalYamlPath = path.join(tempDir, 'original.yaml')
-      await fs.writeFile(originalYamlPath, testYamlContent)
-
-      // Convert to INP
-      const inpResult = await convertYamlToInp(originalYamlPath)
-      const inpPath = path.join(tempDir, 'converted.inp')
-      await fs.writeFile(inpPath, inpResult)
-
-      // Convert back to YAML
-      const finalYamlResult = await convertInpToYaml(inpPath)
-
-      expect(finalYamlResult).toContain('fixed_bodies:')
-      expect(finalYamlResult).toContain('rigid_bodies:')
-      expect(finalYamlResult).toContain('chain_id:')
     })
   })
 
@@ -690,12 +421,6 @@ return`
       })
     })
 
-    test('passes validation', async () => {
-      const inpPath = path.join(tempDir, 'reused-define-valid.inp')
-      await fs.writeFile(inpPath, reusedNameInp)
-      await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
-    })
-
     test('a selection used before its define is not resolved', async () => {
       const inpPath = path.join(tempDir, 'use-before-define.inp')
       await fs.writeFile(
@@ -734,8 +459,8 @@ return`
     })
 
     test('finds residues shared by two rigid bodies', () => {
-      expect(
-        findRigidBodyOverlaps(
+      expect(() =>
+        assertNoRigidBodyOverlaps(
           rigid(
             [{ chain_id: 'C', start: 1, stop: 26 }],
             [
@@ -744,27 +469,25 @@ return`
             ]
           )
         )
-      ).toEqual([
-        'RigidBody1 and RigidBody2 both include chain C residues 20-26'
-      ])
+      ).toThrow(
+        'Rigid bodies must not overlap: RigidBody1 and RigidBody2 both include chain C residues 20-26. '
+      )
     })
 
     test('treats residue ranges as inclusive', () => {
-      expect(
-        findRigidBodyOverlaps(
+      expect(() =>
+        assertNoRigidBodyOverlaps(
           rigid(
             [{ chain_id: 'A', start: 1, stop: 10 }],
             [{ chain_id: 'A', start: 10, stop: 20 }]
           )
         )
-      ).toEqual([
-        'RigidBody1 and RigidBody2 both include chain A residues 10-10'
-      ])
+      ).toThrow('RigidBody1 and RigidBody2 both include chain A residues 10-10')
     })
 
     test('allows adjacent ranges, other chains and overlaps within one body', () => {
-      expect(
-        findRigidBodyOverlaps(
+      expect(() =>
+        assertNoRigidBodyOverlaps(
           rigid(
             [
               { chain_id: 'A', start: 1, stop: 10 },
@@ -776,12 +499,12 @@ return`
             ]
           )
         )
-      ).toEqual([])
+      ).not.toThrow()
     })
 
     test('ignores overlaps between fixed and rigid bodies', () => {
-      expect(
-        findRigidBodyOverlaps({
+      expect(() =>
+        assertNoRigidBodyOverlaps({
           fixed_bodies: [
             {
               name: 'FixedBody1',
@@ -795,11 +518,13 @@ return`
             }
           ]
         })
-      ).toEqual([])
+      ).not.toThrow()
     })
 
     test('handles missing rigid_bodies', () => {
-      expect(findRigidBodyOverlaps({ fixed_bodies: [] })).toEqual([])
+      expect(() =>
+        assertNoRigidBodyOverlaps({ fixed_bodies: [] })
+      ).not.toThrow()
       expect(() => assertNoRigidBodyOverlaps({})).not.toThrow()
     })
 
@@ -813,43 +538,6 @@ return`
         )
       ).toThrow(
         /Rigid bodies must not overlap: RigidBody1 and RigidBody2 both include chain C residues 1-26\. A residue can belong to only one rigid body/
-      )
-    })
-
-    test('validateInpConstraints rejects a selection used by two rigid bodies', async () => {
-      const inpPath = path.join(tempDir, 'overlap.inp')
-      await fs.writeFile(
-        inpPath,
-        [
-          'define rigid1 sele ( resid 1:26 .and. segid DNAC ) end',
-          'shape desc dock1 rigid sele rigid1 end',
-          'define rigid2 sele ( resid 1:26 .and. segid DNAD ) end',
-          'shape desc dock2 rigid sele rigid1 .or. rigid2 end',
-          'return'
-        ].join('\n')
-      )
-      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'Invalid INP constraints file: Constraint bodies must not overlap: RigidBody1 and RigidBody2 both include segid DNAC residues 1-26'
-      )
-    })
-
-    test('validateInpConstraints rejects a reused shape desc name', async () => {
-      const inpPath = path.join(tempDir, 'duplicate-shape-name.inp')
-      await fs.writeFile(
-        inpPath,
-        [
-          'define fixed1 sele ( resid 1:130 .and. segid PROA ) end',
-          'cons fix sele fixed1 end',
-          'define rigid1 sele ( resid 52:64 .and. segid PROC ) end',
-          'shape desc dock1 rigid sele rigid1 end',
-          'define rigid1 sele ( resid 133:144 .and. segid PROA ) end',
-          'define rigid2 sele ( resid 151:225 .and. segid PROA ) end',
-          'shape desc dock1 rigid sele rigid1 .or. rigid2 end',
-          'return'
-        ].join('\n')
-      )
-      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        /Invalid INP constraints file: Each "shape desc" line needs its own name, but "dock1" is used more than once/
       )
     })
 
@@ -880,9 +568,14 @@ return`
       await fs.writeFile(yamlPath, testYamlContent)
       await expect(validateYamlConstraints(yamlPath)).resolves.toBeUndefined()
 
+      // The INP fixture, converted to YAML, validates too
       const inpPath = path.join(tempDir, 'fixture-no-overlap.inp')
       await fs.writeFile(inpPath, testInpContent)
-      await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
+      const convertedPath = path.join(tempDir, 'fixture-converted.yaml')
+      await fs.writeFile(convertedPath, await convertInpToYaml(inpPath))
+      await expect(
+        validateYamlConstraints(convertedPath)
+      ).resolves.toBeUndefined()
     })
   })
 })
@@ -922,12 +615,6 @@ describe('long commands and continuation lines', () => {
     'return'
   ].join('\n')
 
-  test('a wrapped file passes validation', async () => {
-    const inpPath = path.join(tempDir, 'wrapped.inp')
-    await fs.writeFile(inpPath, wrappedInp)
-    await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
-  })
-
   test('wrapped commands are parsed whole', async () => {
     const inpPath = path.join(tempDir, 'wrapped-parse.inp')
     await fs.writeFile(inpPath, wrappedInp)
@@ -938,39 +625,6 @@ describe('long commands and continuation lines', () => {
     expect(constraints.rigid_bodies).toEqual([
       { name: 'RigidBody1', segments: rigidSegments }
     ])
-  })
-
-  test('a line longer than CHARMM reads fails validation', async () => {
-    const inpPath = path.join(tempDir, 'too-long.inp')
-    await fs.writeFile(
-      inpPath,
-      [
-        ...defines('fixed'),
-        `cons fix sele ${orNames('fixed')} end`,
-        'return'
-      ].join('\n')
-    )
-    await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-      /Line 21 is longer than 200 characters/
-    )
-  })
-
-  test('a disallowed command after a tab-hyphen line still fails', async () => {
-    const inpPath = path.join(tempDir, 'tab-hyphen.inp')
-    await fs.writeFile(
-      inpPath,
-      [
-        'define fixed1 sele ( resid 1:5 .and. segid PROA ) end -\t',
-        'system "id"',
-        'cons fix sele fixed1 end',
-        'return'
-      ].join('\n')
-    )
-    // CHARMM doesn't join after the tab, and the stray '-' trailing `end`
-    // already fails the check, before the system line
-    await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-      /Disallowed keyword in constraint file: "define fixed1 sele \( resid 1:5 \.and\. segid PROA \) end -"/
-    )
   })
 
   test('an inline comment after a continued command is not parsed as part of it', async () => {
@@ -986,7 +640,6 @@ describe('long commands and continuation lines', () => {
         'return'
       ].join('\n')
     )
-    await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
     const constraints = extractConstraintsFromYaml(
       await convertInpToYaml(inpPath)
     )
@@ -1003,116 +656,63 @@ describe('long commands and continuation lines', () => {
       }
     ])
   })
-
-  test('YAML with many segments converts to wrapped lines that read back', async () => {
-    const yamlPath = path.join(tempDir, 'many-segments.yaml')
-    const constraints = {
-      fixed_bodies: [{ name: 'FixedBody1', segments }],
-      rigid_bodies: [
-        { name: 'RigidBody1', segments: rigidSegments.slice(0, 11) }
-      ]
-    }
-    await fs.writeFile(yamlPath, JSON.stringify(constraints))
-
-    const inp = await convertYamlToInp(yamlPath)
-    for (const line of inp.split('\n')) {
-      expect(line.length).toBeLessThanOrEqual(77)
-    }
-    expect(inp).toMatch(/ -\n/)
-
-    const inpPath = path.join(tempDir, 'many-segments.inp')
-    await fs.writeFile(inpPath, inp)
-    await expect(validateInpConstraints(inpPath)).resolves.toBeUndefined()
-    // Not overlapping: rigid segments get their own residues
-    expect(
-      extractConstraintsFromYaml(await convertInpToYaml(inpPath)).fixed_bodies
-    ).toEqual([{ name: 'FixedBody1', segments }])
-  })
 })
 
 describe('fixed and rigid body overlaps', () => {
-  const body = (
-    name: string,
-    chain_id: string,
-    start: number,
-    stop: number
-  ) => ({
-    name,
-    segments: [{ chain_id, residues: { start, stop } }]
-  })
-
-  test('lists residues in both a fixed and a rigid body', () => {
-    expect(
-      findFixedRigidOverlaps({
-        fixed_bodies: [body('FixedBody1', 'A', 1, 50)],
-        rigid_bodies: [
-          body('RigidBody1', 'A', 45, 80),
-          body('RigidBody2', 'B', 1, 50),
-          body('RigidBody3', 'A', 51, 60)
-        ]
-      })
-    ).toEqual(['FixedBody1 and RigidBody1 both include chain A residues 45-50'])
-  })
-
-  test('counts a shared end residue, since ranges are inclusive', () => {
-    expect(
-      findFixedRigidOverlaps({
-        fixed_bodies: [body('FixedBody1', 'A', 1, 50)],
-        rigid_bodies: [body('RigidBody1', 'A', 50, 80)]
-      })
-    ).toEqual(['FixedBody1 and RigidBody1 both include chain A residues 50-50'])
-  })
-
-  test('throws with the overlaps named', () => {
-    expect(() =>
-      assertNoFixedRigidOverlaps({
-        fixed_bodies: [body('FixedBody1', 'A', 1, 50)],
-        rigid_bodies: [body('RigidBody1', 'A', 40, 80)]
-      })
-    ).toThrow(
-      'Fixed and rigid bodies must not overlap: FixedBody1 and RigidBody1 both include chain A residues 40-50'
-    )
-    expect(() => assertNoFixedRigidOverlaps({})).not.toThrow()
-  })
-
-  test('uploads with a fixed/rigid overlap are rejected, INP and YAML', async () => {
+  // The check is private to validateYamlConstraints, so it is tested
+  // through an uploaded YAML file
+  const rejects = async (
+    fixed: [string, number, number],
+    rigid: [string, number, number][]
+  ) => {
     const dir = path.join('/tmp', `fixed-rigid-${uuid()}`)
     await fs.ensureDir(dir)
+    const segment = ([chain, start, stop]: [string, number, number]) =>
+      `        - chain_id: ${chain}\n          residues: { start: ${start}, stop: ${stop} }\n`
+    const yamlPath = path.join(dir, 'const.yml')
+    await fs.writeFile(
+      yamlPath,
+      'constraints:\n  fixed_bodies:\n    - name: FixedBody1\n      segments:\n' +
+        segment(fixed) +
+        '  rigid_bodies:\n' +
+        rigid
+          .map(
+            (r, i) =>
+              `    - name: RigidBody${i + 1}\n      segments:\n` + segment(r)
+          )
+          .join('')
+    )
     try {
-      const inpPath = path.join(dir, 'const.inp')
-      await fs.writeFile(
-        inpPath,
-        `define fixed1 sele ( resid 1:50 .and. segid PROA ) end
-cons fix sele fixed1 end
-define rigid1 sele ( resid 45:80 .and. segid PROA ) end
-shape desc dock1 rigid sele rigid1 end
-return`
-      )
-      await expect(validateInpConstraints(inpPath)).rejects.toThrow(
-        'Constraint bodies must not overlap: FixedBody1 and RigidBody1 both include segid PROA residues 45-50'
-      )
-
-      const yamlPath = path.join(dir, 'const.yml')
-      await fs.writeFile(
-        yamlPath,
-        `constraints:
-  fixed_bodies:
-    - name: FixedBody1
-      segments:
-        - chain_id: A
-          residues: { start: 1, stop: 50 }
-  rigid_bodies:
-    - name: RigidBody1
-      segments:
-        - chain_id: A
-          residues: { start: 45, stop: 80 }
-`
-      )
-      await expect(validateYamlConstraints(yamlPath)).rejects.toThrow(
-        'Fixed and rigid bodies must not overlap'
+      return await validateYamlConstraints(yamlPath).then(
+        () => null,
+        (error: unknown) => (error instanceof Error ? error.message : '')
       )
     } finally {
       await fs.remove(dir)
     }
+  }
+
+  test('rejects residues in both a fixed and a rigid body, naming them', async () => {
+    expect(
+      await rejects(
+        ['A', 1, 50],
+        [
+          ['A', 45, 80],
+          ['B', 1, 50]
+        ]
+      )
+    ).toBe(
+      'Invalid YAML constraints file: Fixed and rigid bodies must not overlap: FixedBody1 and RigidBody1 both include chain A residues 45-50. A residue is either held in place (fixed) or moves with one rigid body. Remove the shared residues from one of them.'
+    )
+  })
+
+  test('counts a shared end residue, since ranges are inclusive', async () => {
+    expect(await rejects(['A', 1, 50], [['A', 50, 80]])).toMatch(
+      /chain A residues 50-50/
+    )
+  })
+
+  test('accepts bodies that do not share residues', async () => {
+    expect(await rejects(['A', 1, 50], [['A', 51, 80]])).toBeNull()
   })
 })

@@ -12,3 +12,4 @@ pae2const.py
 pdb_utils.py
 helpers_viz.py
 pdb2crd.py
+pdb_segments.py

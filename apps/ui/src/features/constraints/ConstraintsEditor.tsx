@@ -36,7 +36,7 @@ import { readFileText } from './useStructureSegments'
 import {
   defaultConstraints,
   describeSegment,
-  keyOf,
+  segmentOf,
   rangeOf,
   segmentFor
 } from './constraintsModel'
@@ -87,8 +87,8 @@ const SegmentRow = ({
   disabled,
   label
 }: SegmentRowProps) => {
-  const key = (mode === 'crd_psf' ? value.segid : value.chain_id) ?? ''
-  const target = segments.find((s) => keyOf(mode, s) === key)
+  const target = segmentOf(segments, value)
+  const key = target?.segid ?? ''
   const whole = value.residues === undefined
   const setNumber = (field: 'start' | 'stop', text: string) => {
     const base =
@@ -109,7 +109,7 @@ const SegmentRow = ({
         disabled={disabled}
         sx={{ minWidth: 260 }}
         onChange={(e) => {
-          const next = segments.find((s) => keyOf(mode, s) === e.target.value)
+          const next = segments.find((s) => s.segid === e.target.value)
           if (next)
             onChange(segmentFor(mode, next, value.residues && rangeOf(next)))
         }}
@@ -117,7 +117,7 @@ const SegmentRow = ({
         {segments.map((s) => (
           <MenuItem
             key={s.segid}
-            value={keyOf(mode, s)}
+            value={s.segid}
           >
             {describeSegment(mode, s)}
           </MenuItem>
@@ -132,7 +132,12 @@ const SegmentRow = ({
             onChange={(e) =>
               onChange(
                 e.target.checked
-                  ? segmentFor(mode, target ?? segments[0]!)
+                  ? segmentFor(
+                      mode,
+                      target ??
+                        segments.find((s) => s.chain_id === value.chain_id) ??
+                        segments[0]!
+                    )
                   : {
                       ...value,
                       residues: target ? rangeOf(target) : { start: 0, stop: 0 }
@@ -295,11 +300,12 @@ export const ConstraintsEditor = ({
   const fileInput = useRef<HTMLInputElement>(null)
   const [importText, setImportText] = useState<string | null>(null)
   const [importProblems, setImportProblems] = useState<string[]>([])
+  const [importNotes, setImportNotes] = useState<string[]>([])
   const [fixedChoices, setFixedChoices] = useState<ConstraintBodyInput[]>([])
 
   const result = useMemo(
-    () => validateConstraintsInput(value, { mode, segments }),
-    [value, mode, segments]
+    () => validateConstraintsInput(value, { mode, segments, engine }),
+    [value, mode, segments, engine]
   )
   const preview = useMemo(
     () =>
@@ -323,6 +329,7 @@ export const ConstraintsEditor = ({
         (p) => !p.includes('Choose which is the fixed body')
       )
     )
+    setImportNotes(imported.notes)
     if (imported.input) onChange(imported.input)
   }
 
@@ -336,12 +343,14 @@ export const ConstraintsEditor = ({
       data = parseYaml(text, { maxAliasCount: 0 })
     } catch {
       setImportProblems(['The file could not be read as YAML or JSON'])
+      setImportNotes([])
       return
     }
     const imported = importConstraintsFromData(data, mode, {
       structure: segments
     })
     setImportProblems(imported.problems)
+    setImportNotes(imported.notes)
     if (imported.input) onChange(imported.input)
   }
 
@@ -394,6 +403,7 @@ export const ConstraintsEditor = ({
           disabled={disabled}
           onClick={() => {
             setImportProblems([])
+            setImportNotes([])
             setFixedChoices([])
             onChange(defaultConstraints(mode, segments))
           }}
@@ -459,6 +469,24 @@ export const ConstraintsEditor = ({
             {importProblems.map((p) => (
               <li key={p}>
                 <Typography variant="body2">{p}</Typography>
+              </li>
+            ))}
+          </ul>
+        </Alert>
+      )}
+
+      {importNotes.length > 0 && (
+        <Alert
+          severity="info"
+          data-testid="constraints-import-fitted"
+        >
+          <Typography variant="body2">
+            Some selections were fitted to how BilboMD builds this structure:
+          </Typography>
+          <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
+            {importNotes.map((n) => (
+              <li key={n}>
+                <Typography variant="body2">{n}</Typography>
               </li>
             ))}
           </ul>

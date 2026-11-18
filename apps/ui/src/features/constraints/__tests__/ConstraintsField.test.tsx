@@ -89,7 +89,9 @@ describe('ConstraintsField', () => {
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(
         {
-          constraints: { fixed_bodies: [{ segments: [{ chain_id: 'A' }] }] }
+          constraints: {
+            fixed_bodies: [{ segments: [{ chain_id: 'A', segid: 'PROA' }] }]
+          }
         },
         expect.anything()
       )

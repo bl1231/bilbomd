@@ -127,7 +127,9 @@ def _repair_glycam_protein_topology(topology) -> int:
             _add_bond(atom.get(a1_name), atom.get(a2_name),
                       f"{res.name}[{res.id}].{a1_name} -- {res.name}[{res.id}].{a2_name}")
 
-        if i > 0:
+        # Only within a chain: a chain break is a separate chain (prep_pdb.py
+        # adds a TER there), and must not be bonded across
+        if i > 0 and res_list[i - 1].chain is res.chain:
             prev_res = res_list[i - 1]
             prev_C = next((a for a in prev_res.atoms() if a.name == "C"), None)
             _add_bond(prev_C, atom.get("N"),
@@ -671,15 +673,18 @@ def _repair_backbone_bonds(topology, charmm36_resnames: frozenset[str]) -> int:
 
         atom = {a.name: a for a in res.atoms()}
 
+        # Bonds only within a chain: a chain break is a separate chain
+        # (prep_pdb.py adds a TER there), and must not be bonded across
+
         # C(prev) → N(charmm36 residue)
-        if i > 0:
+        if i > 0 and res_list[i - 1].chain is res.chain:
             prev_res = res_list[i - 1]
             prev_C = next((a for a in prev_res.atoms() if a.name == "C"), None)
             _add_bond(prev_C, atom.get("N"),
                       f"{prev_res.name}[{prev_res.id}].C -- {res.name}[{res.id}].N")
 
         # C(charmm36 residue) → N(next)
-        if i < len(res_list) - 1:
+        if i < len(res_list) - 1 and res_list[i + 1].chain is res.chain:
             next_res = res_list[i + 1]
             next_N = next((a for a in next_res.atoms() if a.name == "N"), None)
             _add_bond(atom.get("C"), next_N,

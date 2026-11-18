@@ -98,6 +98,7 @@ const readRange = (
 // The structure segment a constraint segment refers to, or why it can't
 const findStructureSegment = (
   segment: Json,
+  range: Range | null,
   structure: ConstraintStructure,
   path: string,
   errors: ConstraintError[]
@@ -147,23 +148,63 @@ const findStructureSegment = (
     })
     return null
   }
-  const found = structure.segments.find((s) => s.chain_id === chainId)
-  if (!found) {
+  const candidates = structure.segments.filter((s) => s.chain_id === chainId)
+  if (candidates.length === 0) {
     errors.push({
       path: `${path}.chain_id`,
       message: `Chain ${chainId} is not in the structure (or has no protein, DNA, RNA or carbohydrate residues)`
     })
     return null
   }
-  if (segid !== undefined && segid !== found.segid) {
+  const names = candidates.map((s) => s.segid)
+  if (segid !== undefined) {
+    const found = candidates.find((s) => s.segid === segid)
+    if (!found) {
+      errors.push({
+        path: `${path}.segid`,
+        message:
+          candidates.length === 1
+            ? `Chain ${chainId} is segment ${names[0]}, not ${String(segid)}`
+            : `Chain ${chainId} is segments ${names.join(', ')}, not ${String(segid)}`
+      })
+    }
+    return found ?? null
+  }
+  if (candidates.length === 1) return candidates[0]!
+
+  // Separate molecules that share a chain ID are separate CHARMM segments
+  // (pdb2crd splits them), so the residues say which one is meant
+  const spans = candidates
+    .map((s) => `${s.segid} (residues ${describeResidues(s)})`)
+    .join(' and ')
+  const fix =
+    'Select each one with its own residue range, or name it with segid; ' +
+    'they can be in the same body.'
+  if (!range) {
     errors.push({
-      path: `${path}.segid`,
-      message: `Chain ${chainId} is segment ${found.segid}, not ${String(segid)}`
+      path,
+      message: `Chain ${chainId} is built as ${candidates.length} separate CHARMM segments, ${spans} (separate molecules, or a chain break). ${fix}`
     })
     return null
   }
-  return found
+  const hits = candidates.filter((s) =>
+    s.residues.some((r) => r >= range.start && r <= range.stop)
+  )
+  if (hits.length === 1) return hits[0]!
+  errors.push({
+    path: `${path}.residues`,
+    message:
+      hits.length === 0
+        ? `Chain ${chainId} has no residues in ${range.start}-${range.stop} (it is segments ${spans})`
+        : `Residues ${range.start}-${range.stop} of chain ${chainId} span ${hits.length} separate CHARMM segments, ${spans}. A selection must stay within one segment. ${fix}`
+  })
+  return null
 }
+
+const describeResidues = (s: StructureSegment) =>
+  s.residues.length === 0
+    ? 'none'
+    : `${s.residues[0]}-${s.residues[s.residues.length - 1]}`
 
 const readSegment = (
   value: unknown,
@@ -180,12 +221,13 @@ const readSegment = (
     errors.push({ path, message: `Unknown field(s): ${extra.join(', ')}` })
     return null
   }
-  const target = findStructureSegment(value, structure, path, errors)
   const range =
     value.residues === undefined
       ? null
       : readRange(value.residues, `${path}.residues`, errors)
-  if (!target || (value.residues !== undefined && !range)) return null
+  if (value.residues !== undefined && !range) return null
+  const target = findStructureSegment(value, range, structure, path, errors)
+  if (!target) return null
 
   const first = target.residues[0]
   const last = target.residues[target.residues.length - 1]
@@ -291,6 +333,60 @@ const findOverlaps = (constraints: Constraints): string[] => {
   return overlaps
 }
 
+// Every OpenMM selection that would also take residues of another segment.
+// openmm_const.yml names residues by chain ID and number, so two molecules
+// that share a chain ID and residue numbers (strands both numbered 1-20 in
+// chain D) can't be told apart there.
+const openMMAmbiguities = (
+  constraints: Constraints,
+  structure: ConstraintStructure
+): string[] =>
+  [...constraints.fixed_bodies, ...constraints.rigid_bodies].flatMap((body) =>
+    body.segments.flatMap((s) => {
+      const others = structure.segments.filter(
+        (o) =>
+          o.segid !== s.segid &&
+          o.chain_id === s.chain_id &&
+          o.residues.some((r) => r >= s.residues.start && r <= s.residues.stop)
+      )
+      if (others.length === 0) return []
+      return [
+        `${body.name}: OpenMM selects residues by chain ID and number, and residues ` +
+          `${s.residues.start}-${s.residues.stop} of chain ${s.chain_id} are in ` +
+          `segments ${[s.segid, ...others.map((o) => o.segid)].join(' and ')}, ` +
+          `so it can't select only ${s.segid}. Give the separate molecules their ` +
+          `own chain IDs or residue numbers, or use CHARMM.`
+      ]
+    })
+  )
+
+/**
+ * A warning for each chain break in the structure: two consecutive residues
+ * of a chain that are not bonded (usually a missing loop). CHARMM builds the
+ * two sides as separate segments with no bond between them, so they are free
+ * to move apart.
+ */
+export const chainBreakWarnings = (structure: ConstraintStructure): string[] =>
+  structure.segments.flatMap((s, i) => {
+    if (!s.chain_break) return []
+    const before = structure.segments
+      .slice(0, i)
+      .reverse()
+      .find((p) => p.chain_id === s.chain_id)
+    const { after, distance } = s.chain_break
+    const next = s.residues[0]
+    return [
+      `Chain ${s.chain_id} has a chain break between residues ${after} and ` +
+        `${next ?? '?'}: they are ${distance} Å apart, so they are not bonded. ` +
+        `BilboMD builds the two sides as separate segments` +
+        (before
+          ? ` (${before.segid} and ${s.segid})`
+          : ` (${s.segid} starts the second)`) +
+        `, which can move apart during MD. If residues are missing there, ` +
+        `model them before submitting.`
+    ]
+  })
+
 // Segids that more than one chain would get, e.g. protein chains A and a
 const segidCollisions = (structure: ConstraintStructure): string[] => {
   const chainsBySegid = new Map<string, string[]>()
@@ -317,6 +413,8 @@ const segidCollisions = (structure: ConstraintStructure): string[] => {
  * - segments name a chain (PDB jobs) or segid (CRD/PSF jobs) in the structure,
  *   with whole-number residue ranges that include residues the segment has
  * - no residue in two bodies
+ * - for OpenMM, no selection that would also take another segment's residues
+ *   (OpenMM names residues by chain ID and number only)
  * - no fields other than the documented ones
  * Bodies with too few flexible residues between them only give warnings.
  */
@@ -383,6 +481,15 @@ export const validateConstraintsInput = (
       errors: overlaps.map((message) => ({ path: 'constraints', message }))
     }
   }
+  if (structure.engine === 'openmm' && structure.mode === 'pdb') {
+    const ambiguous = openMMAmbiguities(constraints, structure)
+    if (ambiguous.length > 0) {
+      return {
+        ok: false,
+        errors: ambiguous.map((message) => ({ path: 'constraints', message }))
+      }
+    }
+  }
 
   // Keyed by segid: in CRD/PSF structures several segments can share a
   // viewer chain ID (PROA and DNAA are both chain A)
@@ -395,5 +502,9 @@ export const validateConstraintsInput = (
     fixed_bodies: bySegid(constraints.fixed_bodies),
     rigid_bodies: bySegid(constraints.rigid_bodies)
   })
-  return { ok: true, constraints, warnings: close ? [close] : [] }
+  return {
+    ok: true,
+    constraints,
+    warnings: [...chainBreakWarnings(structure), ...(close ? [close] : [])]
+  }
 }
