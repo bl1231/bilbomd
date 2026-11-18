@@ -1,5 +1,12 @@
 # @bilbomd/md-utils
 
+## 1.4.3
+
+### Patch Changes
+
+- Updated dependencies [33ce933]
+  - @bilbomd/bilbomd-types@1.21.1
+
 ## 1.4.2
 
 ### Patch Changes
