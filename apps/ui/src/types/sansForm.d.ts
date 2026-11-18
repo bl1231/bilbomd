@@ -5,7 +5,7 @@ export interface NewSANSJobFormValues {
   rg: number
   rg_min: number
   rg_max: number
-  inp_file: string
+  constraints: import('@bilbomd/bilbomd-types').ConstraintsInput | null
   d2o_fraction: number
   md_engine: 'charmm' | 'openmm'
   [key: `deuteration_fraction_${string}`]: number

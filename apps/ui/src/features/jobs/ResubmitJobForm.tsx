@@ -37,7 +37,7 @@ import HeaderBox from 'components/HeaderBox'
 import useTitle from 'hooks/useTitle'
 import NerscStatusChecker from 'features/nersc/NerscStatusChecker'
 import FileSelect from './FileSelect'
-import ConstInpGapWarning from 'features/jobs/ConstInpGapWarning'
+import { ResubmitConstraints } from 'features/jobs/ResubmitConstraints'
 import SaxsDataOptions from './SaxsDataOptions'
 import { Debug } from 'components/Debug'
 import NewJobFormInstructions from './NewJobFormInstructions'
@@ -153,7 +153,7 @@ const ResubmitJobForm = () => {
         psf_file: jobMongo.psf_file ?? '',
         crd_file: jobMongo.crd_file ?? '',
         pdb_file: '',
-        inp_file: jobMongo.const_inp_file ?? '',
+        constraints: null,
         dat_file: jobMongo.data_file ?? '',
         q_units: 'auto',
         num_conf: jobMongo.conformational_sampling?.toString() ?? '',
@@ -170,7 +170,7 @@ const ResubmitJobForm = () => {
         psf_file: '',
         crd_file: '',
         pdb_file: jobMongo.pdb_file ?? '',
-        inp_file: jobMongo.const_inp_file ?? '',
+        constraints: null,
         dat_file: jobMongo.data_file ?? '',
         q_units: 'auto',
         num_conf: jobMongo.conformational_sampling?.toString() ?? '',
@@ -253,10 +253,8 @@ const ResubmitJobForm = () => {
       form.append('reuse_dat_file', 'true')
     }
 
-    if (values.inp_file instanceof File) {
-      form.append('inp_file', values.inp_file)
-    } else if (fileCheckData?.inp_file) {
-      form.append('reuse_inp_file', 'true')
+    if (values.constraints) {
+      form.append('constraints', JSON.stringify(values.constraints))
     }
 
     try {
@@ -277,7 +275,7 @@ const ResubmitJobForm = () => {
     const hasPSF = values.psf_file instanceof File || reuseFlags?.psf_file
     const hasCRD = values.crd_file instanceof File || reuseFlags?.crd_file
     const hasExpData = values.dat_file instanceof File || reuseFlags?.dat_file
-    const hasConstInp = values.inp_file instanceof File || reuseFlags?.inp_file
+    const hasConstraints = values.constraints !== null
 
     const hasTitle = values.title.trim() !== ''
     const hasRgFields =
@@ -287,7 +285,7 @@ const ResubmitJobForm = () => {
     return (
       !isPerlmutterUnavailable &&
       hasTitle &&
-      hasConstInp &&
+      hasConstraints &&
       hasExpData &&
       hasRgFields &&
       modeReady
@@ -558,79 +556,27 @@ const ResubmitJobForm = () => {
                           </Grid>
                         </>
                       )}
-                      <Grid
-                        container
-                        direction="row"
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          width: '100%',
-                          maxWidth: '520px'
-                        }}
-                      >
-                        <Grid>
-                          <Field
-                            name="inp_file"
-                            id="inp_file-file-upload"
-                            as={FileSelect}
-                            title="Select File"
-                            existingFileName={
-                              fileCheckData?.inp_file
-                                ? jobMongo.const_inp_file
-                                : undefined
-                            }
-                            disabled={isSubmitting}
-                            setFieldValue={setFieldValue}
-                            setFieldTouched={setFieldTouched}
-                            onBlur={handleBlur}
-                            error={errors.inp_file && touched.inp_file}
-                            errorMessage={
-                              errors.inp_file ? errors.inp_file : ''
-                            }
-                            fileType="const.inp"
-                            fileExt=".inp"
-                          />
-                          <ConstInpGapWarning file={values.inp_file} />
-                        </Grid>
-                      </Grid>
-                      <Grid
-                        container
-                        direction="row"
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          width: '100%',
-                          maxWidth: '520px'
-                        }}
-                      >
-                        <Alert severity="info">
-                          <Typography component="div">
-                            Be sure to verify that the chain identifiers (
-                            <b>segid</b>) and residue numbering in your{' '}
-                            <b>const.inp</b> are consistent with your{' '}
-                            <b>
-                              {values.bilbomd_mode === 'pdb'
-                                ? `*.pdb`
-                                : `*.crd`}
-                            </b>{' '}
-                            file.
-                            {values.bilbomd_mode === 'pdb' ? (
-                              <>
-                                {' '}
-                                For example, Protein Chain ID <b>A</b> will be
-                                converted to segid <b>PROA</b> and DNA Chain ID{' '}
-                                <b>G</b> will be converted to segid <b>DNAG</b>.
-                              </>
-                            ) : (
-                              <>
-                                {' '}
-                                Keeping in mind that CHARMM-GUI creates segid
-                                names in a unique way.
-                              </>
-                            )}
-                          </Typography>
-                        </Alert>
-                      </Grid>
+                      <Box sx={{ width: '100%', maxWidth: '760px' }}>
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ mb: 1 }}
+                        >
+                          MD constraints
+                        </Typography>
+                        <ResubmitConstraints
+                          jobId={job.mongo.id}
+                          mode={values.bilbomd_mode}
+                          structure={
+                            values.bilbomd_mode === 'pdb'
+                              ? values.pdb_file
+                              : values.psf_file
+                          }
+                          constFileName={jobMongo.const_inp_file}
+                          mdConstraints={jobMongo.md_constraints}
+                          engine={values.md_engine}
+                          disabled={isSubmitting}
+                        />
+                      </Box>
                       <Grid
                         container
                         direction="row"

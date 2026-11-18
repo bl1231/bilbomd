@@ -9,9 +9,7 @@ import {
   fileNameLengthTest,
   noSpacesTest,
   sansCheck,
-  fileExtTest,
-  constInpCheck,
-  openmmConstInpCheck
+  fileExtTest
 } from './fieldTests/fieldTests'
 import { titleSchema } from './titleSchema'
 
@@ -54,14 +52,7 @@ const BilboMDSANSJobSchema = object().shape({
         return value > rg_min
       }
     ),
-  inp_file: requiredFile('const.inp file is required')
-    .concat(fileExtTest('inp'))
-    // SANS jobs start from a PDB file, so segment IDs follow the PDB rule
-    .concat(constInpCheck('pdb'))
-    .concat(openmmConstInpCheck())
-    .concat(fileSizeTest(2_000_000))
-    .concat(noSpacesTest())
-    .concat(fileNameLengthTest()),
+  // Constraints are checked against the structure by ConstraintsField
   d2o_fraction: number()
     .min(0, 'D2O Fraction cannot be less than 0')
     .max(100, 'D2O Fraction cannot be more than 100')
