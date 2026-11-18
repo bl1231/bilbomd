@@ -1,5 +1,13 @@
 # @bilbomd/worker
 
+## 2.29.4
+
+### Patch Changes
+
+- 0bb6100: CHARMM heat and dynamics now read the uploaded constraint file at `bomlev 0` and restore `bomlev -2` afterwards. A bad constraint command now fails the job, instead of being skipped with a warning and silently leaving its fixed or rigid body out of the run. Applies to the local templates and to the NERSC Slurm templates.
+- 2e61483: Fix the FoXS step sometimes staying "Running" on a completed job. Progress updates to the step were fire-and-forget, so the last one could land after the final "Success" and overwrite it. They are now written in order, and FoXS waits for them before reporting its result.
+- 6d03248: Default `md_engine` to OpenMM for PDB, Auto, SANS and AlphaFold jobs when a request omits it; CHARMM now runs only when asked for. AlphaFold jobs that ask for CHARMM get a 400 at submit time unless the deployment runs on NERSC, instead of failing in the worker after waiting in the queue. Fix GA-SANS crashing with "Cannot cast array data from dtype('O')" under pandas 3.
+
 ## 2.29.3
 
 ### Patch Changes
