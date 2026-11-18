@@ -244,6 +244,10 @@ const spawnFoXSOptimized = async (
   DBjob?: FoxsDBJob,
   gpu?: FoxsGpuOptions
 ): Promise<void> => {
+  // Progress updates to the foxs step, chained so they land in order. The
+  // function waits for the chain before returning, so the caller's final
+  // Success/Error update can't be overwritten by a late 'Running' one.
+  let progressWrites: Promise<void> = Promise.resolve()
   try {
     // Collect all PDB files from all directories
     const allTasks: FoxsTask[] = []
@@ -302,14 +306,23 @@ const spawnFoXSOptimized = async (
         `FoXS progress: ${completed}/${allTasks.length} files completed (${progress}%)`
       )
       if (DBjob) {
-        void Job.findByIdAndUpdate(
-          DBjob._id,
-          buildStepStatusUpdate('foxs', {
-            status: 'Running',
-            message: statusMsg
-          }),
-          { updatePipeline: true }
-        ).catch((err) => logger.error(`FoXS step status update failed: ${err}`))
+        progressWrites = progressWrites
+          .then(() =>
+            Job.findByIdAndUpdate(
+              DBjob._id,
+              buildStepStatusUpdate('foxs', {
+                status: 'Running',
+                message: statusMsg
+              }),
+              { updatePipeline: true }
+            )
+          )
+          .then(
+            () => undefined,
+            (err) => {
+              logger.error(`FoXS step status update failed: ${err}`)
+            }
+          )
       }
     }
 
@@ -374,6 +387,8 @@ const spawnFoXSOptimized = async (
   } catch (error) {
     logger.error(`FoXS optimization error: ${getErrorMessage(error)}`)
     throw error
+  } finally {
+    await progressWrites
   }
 }
 

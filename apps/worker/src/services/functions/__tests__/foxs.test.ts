@@ -152,6 +152,59 @@ describe('spawnFoXSOptimized', () => {
     expect(findByIdAndUpdateMock).toHaveBeenCalledTimes(2)
   })
 
+  it('waits for the last progress write before returning', async () => {
+    // A 'Running' progress write still in flight when runFoXS wrote
+    // 'Success' used to land last and leave the step stuck as Running
+    const dir = await makeDirWithPdbs('rg20', 50)
+    const MQjob = {
+      updateProgress: vi.fn(),
+      log: vi.fn()
+    } as unknown as BullMQJob
+    const DBjob = { _id: 'job-id' } as unknown as Parameters<
+      typeof spawnFoXSOptimized
+    >[3]
+    let finishWrite: () => void = () => {}
+    let written = false
+    findByIdAndUpdateMock.mockImplementationOnce(
+      () =>
+        new Promise<null>((resolve) => {
+          finishWrite = () => {
+            written = true
+            resolve(null)
+          }
+        })
+    )
+
+    let returned = false
+    const run = spawnFoXSOptimized([dir], MQjob, 4, DBjob).then(() => {
+      returned = true
+    })
+    await vi.waitFor(() => expect(findByIdAndUpdateMock).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 20))
+    expect(returned).toBe(false)
+
+    finishWrite()
+    await run
+    expect(written).toBe(true)
+    expect(returned).toBe(true)
+  })
+
+  it('still resolves when a progress write fails', async () => {
+    const dir = await makeDirWithPdbs('rg20', 50)
+    const MQjob = {
+      updateProgress: vi.fn(),
+      log: vi.fn()
+    } as unknown as BullMQJob
+    const DBjob = { _id: 'job-id' } as unknown as Parameters<
+      typeof spawnFoXSOptimized
+    >[3]
+    findByIdAndUpdateMock.mockRejectedValueOnce(new Error('mongo down'))
+
+    await expect(
+      spawnFoXSOptimized([dir], MQjob, 4, DBjob)
+    ).resolves.toBeUndefined()
+  })
+
   it('returns quietly when there are no PDB files', async () => {
     await spawnFoXSOptimized([path.join(tmp, 'missing')], undefined, 1)
     expect(runProcessMock).not.toHaveBeenCalled()
