@@ -85,6 +85,61 @@ describe('inputFromStored', () => {
     expect(!result.ok && result.errors[0]?.message).toMatch(/rigid_body/)
   })
 
+  // md_constraints as a job record returns them: MongoDB adds _id (and
+  // mongoose an id virtual) to every body, segment and residue range
+  it('drops the database ids on a job record, so resubmit validates', () => {
+    const fromDb = {
+      _id: 'c0',
+      fixed_bodies: [
+        {
+          _id: 'b1',
+          id: 'b1',
+          name: 'FixedBody1',
+          segments: [
+            {
+              _id: 's1',
+              chain_id: 'A',
+              segid: 'PROA',
+              residues: { _id: 'r1', start: 40, stop: 137 }
+            },
+            {
+              _id: 's2',
+              chain_id: 'A',
+              segid: 'DNAA',
+              residues: { _id: 'r2', start: 22, stop: 42 },
+              whole_segment: true
+            }
+          ]
+        }
+      ],
+      rigid_bodies: [],
+      chain_mol_types: [{ _id: 'm1', chain_id: 'A', mol_type: 'PRO' }]
+    }
+    const input = inputFromStored(fromDb, 'crd_psf')
+    expect(input).toEqual({
+      fixed_bodies: [
+        {
+          segments: [
+            { segid: 'PROA', residues: { start: 40, stop: 137 } },
+            { segid: 'DNAA' }
+          ]
+        }
+      ]
+    })
+    const result = validateConstraintsInput(input, {
+      mode: 'crd_psf',
+      segments: [
+        {
+          segid: 'PROA',
+          chain_id: 'A',
+          residues: Array.from({ length: 203 }, (_, i) => i + 1)
+        },
+        { segid: 'DNAA', chain_id: 'A', residues: [22, 42] }
+      ]
+    })
+    expect(result.ok).toBe(true)
+  })
+
   it('drops only stored metadata: chain_mol_types and body names', () => {
     expect(inputFromStored(stored, 'pdb')).not.toHaveProperty('chain_mol_types')
   })
