@@ -98,18 +98,26 @@ export const importConstraintsFromData = (
       }
       return { segid: segid.toUpperCase(), ...range } as ConstraintSegmentInput
     }
+    // A segid the structure has is kept: one chain can be several segments
+    const known =
+      typeof segid === 'string'
+        ? options.structure?.find((s) => s.segid === segid.toUpperCase())
+        : undefined
     const chain =
       typeof chainId === 'string'
         ? chainId
         : typeof segid === 'string'
-          ? (options.structure?.find((s) => s.segid === segid.toUpperCase())
-              ?.chain_id ?? chainIdFromSegid(segid))
+          ? (known?.chain_id ?? chainIdFromSegid(segid))
           : null
     if (chain === null) {
       problems.push(`${where}: no chain_id, left out`)
       return null
     }
-    return { chain_id: chain, ...range } as ConstraintSegmentInput
+    return {
+      chain_id: chain,
+      ...(known && known.chain_id === chain ? { segid: known.segid } : {}),
+      ...range
+    } as ConstraintSegmentInput
   }
 
   const bodiesOf = (

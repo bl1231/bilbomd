@@ -54,12 +54,17 @@ describe('constraintsFromStored', () => {
 })
 
 describe('inputFromStored', () => {
-  it('gives PDB-mode input by chain, keeping whole segments whole', () => {
+  it('gives PDB-mode input by chain and segid, keeping whole segments whole', () => {
+    // The segid says which segment of a chain that is several molecules
     expect(inputFromStored(stored, 'pdb')).toEqual({
       fixed_bodies: [
-        { segments: [{ chain_id: 'A', residues: { start: 1, stop: 5 } }] }
+        {
+          segments: [
+            { chain_id: 'A', segid: 'PROA', residues: { start: 1, stop: 5 } }
+          ]
+        }
       ],
-      rigid_bodies: [{ segments: [{ chain_id: 'B' }] }]
+      rigid_bodies: [{ segments: [{ chain_id: 'B', segid: 'DNAB' }] }]
     })
   })
 

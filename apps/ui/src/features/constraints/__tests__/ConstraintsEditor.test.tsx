@@ -120,13 +120,18 @@ describe('ConstraintsEditor', () => {
         'return'
       ].join('\n')
     )
-    // PROA is chain a here, not A
+    // PROA is chain a here, not A; the segid is kept, since one chain can
+    // be several segments
     await waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith({
         fixed_bodies: [
-          { segments: [{ chain_id: 'a', residues: { start: 1, stop: 40 } }] }
+          {
+            segments: [
+              { chain_id: 'a', segid: 'PROA', residues: { start: 1, stop: 40 } }
+            ]
+          }
         ],
-        rigid_bodies: [{ segments: [{ chain_id: 'A' }] }]
+        rigid_bodies: [{ segments: [{ chain_id: 'A', segid: 'DNAA' }] }]
       })
     )
   })
@@ -151,11 +156,15 @@ describe('ConstraintsEditor', () => {
     const choice = await screen.findByTestId('fixed-body-choice')
     expect(onChange).not.toHaveBeenCalled()
     fireEvent.click(
-      screen.getByRole('button', { name: /cons fix #2: chain a 20–30/ })
+      screen.getByRole('button', { name: /cons fix #2: PROA 20–30/ })
     )
     expect(onChange).toHaveBeenLastCalledWith({
       fixed_bodies: [
-        { segments: [{ chain_id: 'a', residues: { start: 20, stop: 30 } }] }
+        {
+          segments: [
+            { chain_id: 'a', segid: 'PROA', residues: { start: 20, stop: 30 } }
+          ]
+        }
       ]
     })
     expect(choice).not.toBeInTheDocument()

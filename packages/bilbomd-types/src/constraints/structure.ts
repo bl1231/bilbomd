@@ -59,68 +59,241 @@ export const pdb2crdSegid = (
 const sortedUnique = (values: Iterable<number>): number[] =>
   [...new Set(values)].sort((a, b) => a - b)
 
+// Nucleic-acid backbone link between residue i and i+1, as pdb2crd.py checks
+// it: O3'(i)-P(i+1) is a 1.6 A bond; when P is missing, O3'(i)-O5'(i+1) is
+// about 2.5 A through it
+const MAX_O3_P_BOND = 2.5
+const MAX_O3_O5_LINK = 3.5
+
+// Letters pdb2crd.py tries, in order, for a molecule split off a chain
+const SEGMENT_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+type Xyz = [number, number, number]
+
 interface Atom {
+  kind: 'atom'
   chainId: string
   resName: string
   resSeq: string
   /** PDB column 27 / mmCIF pdbx_PDB_ins_code; pdb2crd drops these atoms */
   insertionCode: string
+  atomName: string
+  /** PDB columns 73-76; blank for mmCIF (Biopython writes none) */
+  segid: string
+  xyz: Xyz | null
 }
 
-// One segment per chain, as pdb2crd builds them. A chain's molecule type is
-// that of its first recognized residue. Its residues are those left after
-// pdb2crd's preparation, which drops waters, ions and atoms with an insertion
-// code; chains with no recognized residue get no segment.
-const segmentsFromAtoms = (atoms: Atom[]): StructureSegment[] => {
-  const chains = new Map<
-    string,
-    { molType: ChainMolType | null; residues: number[] }
-  >()
-  for (const { chainId, resName, resSeq, insertionCode } of atoms) {
-    if (chainId.trim() === '' || chainId === '.' || chainId === '?') continue
-    const chain = chains.get(chainId) ?? { molType: null, residues: [] }
-    chain.molType ??= classifyResidue(resName)
-    const kept =
-      resName !== WATER &&
-      !PDB2CRD_IONS.has(resName) &&
-      (insertionCode.trim() === '' ||
-        insertionCode === '?' ||
-        insertionCode === '.')
-    if (kept && /^-?\d+$/.test(resSeq)) chain.residues.push(Number(resSeq))
-    chains.set(chainId, chain)
+/** A TER record: pdb2crd starts a new molecule after one */
+interface Ter {
+  kind: 'ter'
+}
+
+type PdbRecord = Atom | Ter
+
+const isNucleic = (resName: string) => {
+  const type = classifyResidue(resName)
+  return type === 'DNA' || type === 'RNA'
+}
+
+const coordsOf = (residue: Atom[], names: string[]): Xyz | null =>
+  residue.find((a) => names.includes(a.atomName))?.xyz ?? null
+
+const distance = (a: Xyz, b: Xyz) =>
+  Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+// Two consecutive nucleotides that are clearly not bonded (pdb2crd.py
+// _nucleic_link_broken)
+const nucleicLinkBroken = (prev: Atom[], next: Atom[]): boolean => {
+  const o3 = coordsOf(prev, ["O3'", 'O3*'])
+  if (!o3) return false
+  const p = coordsOf(next, ['P'])
+  if (p) return distance(o3, p) > MAX_O3_P_BOND
+  const o5 = coordsOf(next, ["O5'", 'O5*'])
+  return o5 ? distance(o3, o5) > MAX_O3_O5_LINK : false
+}
+
+// Consecutive atoms of one residue
+const residuesOf = (atoms: Atom[]): Atom[][] => {
+  const out: Atom[][] = []
+  let key: string | null = null
+  for (const a of atoms) {
+    const next = `${a.resName}|${a.resSeq}|${a.insertionCode}`
+    if (next !== key) out.push([])
+    key = next
+    out[out.length - 1]!.push(a)
   }
-  return [...chains.entries()].flatMap(([chainId, chain]) =>
-    chain.molType
-      ? [
-          {
-            segid: pdb2crdSegid(chainId, chain.molType),
-            chain_id: chainId,
-            mol_type: chain.molType,
-            residues: sortedUnique(chain.residues)
-          }
-        ]
-      : []
+  return out
+}
+
+// A molecule's atoms split wherever consecutive nucleotides are not bonded
+const splitAtNucleicBreaks = (atoms: Atom[]): Atom[][] => {
+  const pieces: Atom[][] = [[]]
+  let previous: Atom[] | null = null
+  for (const residue of residuesOf(atoms)) {
+    const first = residue[0]!
+    if (
+      previous &&
+      isNucleic(previous[0]!.resName) &&
+      isNucleic(first.resName) &&
+      nucleicLinkBroken(previous, residue)
+    ) {
+      pieces.push([])
+    }
+    pieces[pieces.length - 1]!.push(...residue)
+    previous = residue
+  }
+  return pieces.filter((p) => p.length > 0)
+}
+
+interface RawSegment {
+  chainId: string
+  segid: string
+  atoms: Atom[]
+}
+
+// The molecules pdb2crd.py builds (read_raw_segments): a chain's atoms start
+// a new one after a TER record, when the segid changes, or where
+// consecutive nucleotides are not bonded
+const rawSegments = (records: PdbRecord[]): RawSegment[] => {
+  const segments: RawSegment[] = []
+  const open = new Map<string, RawSegment>()
+  let lastChain: string | null = null
+  for (const record of records) {
+    if (record.kind === 'ter') {
+      if (lastChain !== null) open.delete(lastChain)
+      continue
+    }
+    lastChain = record.chainId
+    const current = open.get(record.chainId)
+    if (current && current.segid === record.segid) {
+      current.atoms.push(record)
+      continue
+    }
+    const segment = {
+      chainId: record.chainId,
+      segid: record.segid,
+      atoms: [record]
+    }
+    segments.push(segment)
+    open.set(record.chainId, segment)
+  }
+  return segments.flatMap((s) =>
+    splitAtNucleicBreaks(s.atoms).map((atoms) => ({ ...s, atoms }))
   )
+}
+
+const isWhole = (value: string) =>
+  value.trim() === '' || value === '?' || value === '.'
+
+// pdb2crd's preparation drops waters, ions and atoms with an insertion code
+const keptByPdb2crd = (a: Atom) =>
+  a.resName !== WATER &&
+  !PDB2CRD_IONS.has(a.resName) &&
+  isWhole(a.insertionCode)
+
+// The segments CHARMM builds, named as pdb2crd.py names them (assign_segids).
+// A chain's first molecule is type + chain ID. A later one gets its type with
+// the chain's own letter, else its input segid's last letter, else the first
+// letter no chain uses; letters other chains use are skipped. A molecule's
+// type is that of its first recognized residue; those with none get no
+// segment.
+const segmentsFromRecords = (records: PdbRecord[]): StructureSegment[] => {
+  const kept = rawSegments(records).filter(
+    (s) =>
+      !isWhole(s.chainId) && s.chainId !== '.' && s.atoms.some(keptByPdb2crd)
+  )
+  const chainLetters = new Set(kept.map((s) => s.chainId.toUpperCase()))
+  const taken = new Set<string>()
+  const namedChains = new Set<string>()
+  const out: StructureSegment[] = []
+  for (const s of kept) {
+    const molType = s.atoms
+      .map((a) => classifyResidue(a.resName))
+      .find((t) => t !== null)
+    const first = !namedChains.has(s.chainId)
+    namedChains.add(s.chainId)
+    if (!molType) continue
+
+    let segid: string | undefined
+    if (first) {
+      segid = pdb2crdSegid(s.chainId, molType)
+    } else {
+      const segidLetter = s.segid.slice(-1)
+      const candidates = [
+        s.chainId,
+        ...(/^[A-Za-z0-9]$/.test(segidLetter) &&
+        !chainLetters.has(segidLetter.toUpperCase())
+          ? [segidLetter]
+          : []),
+        ...[...SEGMENT_LETTERS].filter((c) => !chainLetters.has(c))
+      ]
+      segid = candidates
+        .map((c) => pdb2crdSegid(c, molType))
+        .find((name) => !taken.has(name))
+      // pdb2crd stops with an error when no letter is free
+      if (!segid) continue
+    }
+    taken.add(segid)
+    const residues = s.atoms
+      .filter((a) => keptByPdb2crd(a) && /^-?\d+$/.test(a.resSeq))
+      .map((a) => Number(a.resSeq))
+    out.push({
+      segid,
+      chain_id: s.chainId,
+      mol_type: molType,
+      residues: sortedUnique(residues)
+    })
+  }
+  return out
+}
+
+const coordinate = (text: string | undefined): number | null => {
+  const n = Number.parseFloat(text ?? '')
+  return Number.isFinite(n) ? n : null
+}
+
+const xyzOf = (x?: string, y?: string, z?: string): Xyz | null => {
+  const c = [coordinate(x), coordinate(y), coordinate(z)]
+  return c.every((v) => v !== null) ? (c as Xyz) : null
 }
 
 /** The segments CHARMM will build from a PDB file, named as pdb2crd.py does */
-export const readPdbSegments = (pdbText: string): StructureSegment[] =>
-  segmentsFromAtoms(
-    pdbText
-      .split(/\r\n|\r|\n/)
-      .filter((line) => line.startsWith('ATOM') || line.startsWith('HETATM'))
-      .map((line) => ({
-        chainId: line[21] ?? '',
-        resName: line.slice(17, 20).trim(),
-        resSeq: line.slice(22, 26).trim(),
-        insertionCode: line[26] ?? ''
-      }))
+export const readPdbSegments = (pdbText: string): StructureSegment[] => {
+  const lines = pdbText.split(/\r\n|\r|\n/)
+  // pdb2crd reads only the first model
+  const end = lines.findIndex((line) => line.startsWith('ENDMDL'))
+  return segmentsFromRecords(
+    lines
+      .slice(0, end === -1 ? undefined : end)
+      .flatMap((line): PdbRecord[] => {
+        if (line.startsWith('TER')) return [{ kind: 'ter' }]
+        if (!line.startsWith('ATOM') && !line.startsWith('HETATM')) return []
+        return [
+          {
+            kind: 'atom',
+            chainId: line[21] ?? '',
+            resName: line.slice(17, 20).trim(),
+            resSeq: line.slice(22, 26).trim(),
+            insertionCode: line[26] ?? '',
+            atomName: line.slice(12, 16).trim(),
+            segid: line.slice(72, 76).trim(),
+            xyz: xyzOf(
+              line.slice(30, 38),
+              line.slice(38, 46),
+              line.slice(46, 54)
+            )
+          }
+        ]
+      })
   )
+}
 
 /**
  * The segments CHARMM will build from an mmCIF file. The worker converts the
  * file to PDB with Biopython's MMCIFParser, which takes the chain from
  * auth_asym_id and the residue number from auth_seq_id, so these do too.
+ * PDBIO groups each chain's atoms together, writes TER only at the end of a
+ * chain and leaves segids blank, so only unbonded nucleotides split a chain.
  */
 export const readCifSegments = (cifText: string): StructureSegment[] => {
   const parsed = parseCifAtomSite(cifText)
@@ -131,14 +304,40 @@ export const readCifSegments = (cifText: string): StructureSegment[] => {
   const nameIdx = column('label_comp_id', 'auth_comp_id')
   const seqIdx = column('auth_seq_id', 'label_seq_id')
   const insIdx = column('pdbx_PDB_ins_code')
+  const atomIdx = column('label_atom_id', 'auth_atom_id')
+  const [xIdx, yIdx, zIdx] = ['Cartn_x', 'Cartn_y', 'Cartn_z'].map((n) =>
+    column(n)
+  )
+  const modelIdx = column('pdbx_PDB_model_num')
   if (chainIdx === -1 || nameIdx === -1 || seqIdx === -1) return []
-  return segmentsFromAtoms(
-    parsed.dataRows.map((row) => ({
-      chainId: row[chainIdx] ?? '',
+  // pdb2crd reads only the first model of the converted file
+  const firstModel =
+    modelIdx === -1 ? undefined : parsed.dataRows[0]?.[modelIdx]
+  const byChain = new Map<string, Atom[]>()
+  for (const row of parsed.dataRows) {
+    if (firstModel !== undefined && row[modelIdx] !== firstModel) continue
+    const chainId = row[chainIdx] ?? ''
+    const atoms = byChain.get(chainId) ?? []
+    atoms.push({
+      kind: 'atom',
+      chainId,
       resName: row[nameIdx] ?? '',
       resSeq: row[seqIdx] ?? '',
-      insertionCode: insIdx === -1 ? '' : (row[insIdx] ?? '')
-    }))
+      insertionCode: insIdx === -1 ? '' : (row[insIdx] ?? ''),
+      atomName: atomIdx === -1 ? '' : (row[atomIdx] ?? ''),
+      segid: '',
+      xyz:
+        xIdx === undefined || xIdx === -1
+          ? null
+          : xyzOf(row[xIdx], row[yIdx ?? -1], row[zIdx ?? -1])
+    })
+    byChain.set(chainId, atoms)
+  }
+  return segmentsFromRecords(
+    [...byChain.values()].flatMap((atoms): PdbRecord[] => [
+      ...atoms,
+      { kind: 'ter' }
+    ])
   )
 }
 

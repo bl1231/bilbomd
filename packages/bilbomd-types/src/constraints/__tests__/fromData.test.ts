@@ -184,8 +184,9 @@ describe('importConstraintsFromData', () => {
       'pdb',
       { structure }
     )
+    // The segid is kept, since one chain can be several segments
     expect(imported.input?.fixed_bodies[0]?.segments).toEqual([
-      { chain_id: 'a' }
+      { chain_id: 'a', segid: 'PROA' }
     ])
   })
 

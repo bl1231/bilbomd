@@ -36,7 +36,7 @@ import { readFileText } from './useStructureSegments'
 import {
   defaultConstraints,
   describeSegment,
-  keyOf,
+  segmentOf,
   rangeOf,
   segmentFor
 } from './constraintsModel'
@@ -87,8 +87,8 @@ const SegmentRow = ({
   disabled,
   label
 }: SegmentRowProps) => {
-  const key = (mode === 'crd_psf' ? value.segid : value.chain_id) ?? ''
-  const target = segments.find((s) => keyOf(mode, s) === key)
+  const target = segmentOf(segments, value)
+  const key = target?.segid ?? ''
   const whole = value.residues === undefined
   const setNumber = (field: 'start' | 'stop', text: string) => {
     const base =
@@ -109,7 +109,7 @@ const SegmentRow = ({
         disabled={disabled}
         sx={{ minWidth: 260 }}
         onChange={(e) => {
-          const next = segments.find((s) => keyOf(mode, s) === e.target.value)
+          const next = segments.find((s) => s.segid === e.target.value)
           if (next)
             onChange(segmentFor(mode, next, value.residues && rangeOf(next)))
         }}
@@ -117,7 +117,7 @@ const SegmentRow = ({
         {segments.map((s) => (
           <MenuItem
             key={s.segid}
-            value={keyOf(mode, s)}
+            value={s.segid}
           >
             {describeSegment(mode, s)}
           </MenuItem>

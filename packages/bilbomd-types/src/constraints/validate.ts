@@ -98,6 +98,7 @@ const readRange = (
 // The structure segment a constraint segment refers to, or why it can't
 const findStructureSegment = (
   segment: Json,
+  range: Range | null,
   structure: ConstraintStructure,
   path: string,
   errors: ConstraintError[]
@@ -147,23 +148,62 @@ const findStructureSegment = (
     })
     return null
   }
-  const found = structure.segments.find((s) => s.chain_id === chainId)
-  if (!found) {
+  const candidates = structure.segments.filter((s) => s.chain_id === chainId)
+  if (candidates.length === 0) {
     errors.push({
       path: `${path}.chain_id`,
       message: `Chain ${chainId} is not in the structure (or has no protein, DNA, RNA or carbohydrate residues)`
     })
     return null
   }
-  if (segid !== undefined && segid !== found.segid) {
+  const names = candidates.map((s) => s.segid)
+  if (segid !== undefined) {
+    const found = candidates.find((s) => s.segid === segid)
+    if (!found) {
+      errors.push({
+        path: `${path}.segid`,
+        message:
+          candidates.length === 1
+            ? `Chain ${chainId} is segment ${names[0]}, not ${String(segid)}`
+            : `Chain ${chainId} is segments ${names.join(', ')}, not ${String(segid)}`
+      })
+    }
+    return found ?? null
+  }
+  if (candidates.length === 1) return candidates[0]!
+
+  // Separate molecules that share a chain ID are separate CHARMM segments
+  // (pdb2crd splits them), so the residues say which one is meant
+  const spans = candidates
+    .map((s) => `${s.segid} (residues ${describeResidues(s)})`)
+    .join(' and ')
+  const fix =
+    'Select each one with its own residue range, or name it with segid.'
+  if (!range) {
     errors.push({
-      path: `${path}.segid`,
-      message: `Chain ${chainId} is segment ${found.segid}, not ${String(segid)}`
+      path,
+      message: `Chain ${chainId} is ${candidates.length} separate molecules, so CHARMM builds it as segments ${spans}. ${fix}`
     })
     return null
   }
-  return found
+  const hits = candidates.filter((s) =>
+    s.residues.some((r) => r >= range.start && r <= range.stop)
+  )
+  if (hits.length === 1) return hits[0]!
+  errors.push({
+    path: `${path}.residues`,
+    message:
+      hits.length === 0
+        ? `Chain ${chainId} has no residues in ${range.start}-${range.stop} (it is segments ${spans})`
+        : `Residues ${range.start}-${range.stop} of chain ${chainId} span ${hits.length} separate molecules, segments ${spans}. A selection must stay within one segment. ${fix}`
+  })
+  return null
 }
+
+const describeResidues = (s: StructureSegment) =>
+  s.residues.length === 0
+    ? 'none'
+    : `${s.residues[0]}-${s.residues[s.residues.length - 1]}`
 
 const readSegment = (
   value: unknown,
@@ -180,12 +220,13 @@ const readSegment = (
     errors.push({ path, message: `Unknown field(s): ${extra.join(', ')}` })
     return null
   }
-  const target = findStructureSegment(value, structure, path, errors)
   const range =
     value.residues === undefined
       ? null
       : readRange(value.residues, `${path}.residues`, errors)
-  if (!target || (value.residues !== undefined && !range)) return null
+  if (value.residues !== undefined && !range) return null
+  const target = findStructureSegment(value, range, structure, path, errors)
+  if (!target) return null
 
   const first = target.residues[0]
   const last = target.residues[target.residues.length - 1]

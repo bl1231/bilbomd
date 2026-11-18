@@ -76,9 +76,8 @@ const toBody = (
     // protein chain `a` too, so the spelling alone can't tell a from A. Only
     // a segid the structure doesn't have (an old Inp Jiffy name such as PRLA)
     // is read by its spelling.
-    const chainId =
-      structure?.find((s) => s.segid === segid)?.chain_id ??
-      chainIdFromSegid(segid)
+    const known = structure?.find((s) => s.segid === segid)
+    const chainId = known?.chain_id ?? chainIdFromSegid(segid)
     if (chainId === null) {
       problems.push(
         structure
@@ -87,7 +86,12 @@ const toBody = (
       )
       continue
     }
-    segments.push({ chain_id: chainId, ...range })
+    // A segid the structure has is kept: one chain can be several segments
+    segments.push({
+      chain_id: chainId,
+      ...(known ? { segid } : {}),
+      ...range
+    })
   }
   return segments.length > 0 ? { segments } : null
 }

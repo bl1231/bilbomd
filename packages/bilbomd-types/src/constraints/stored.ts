@@ -68,9 +68,12 @@ export const inputFromStored = (
     } = withoutDbIds(value)
     return {
       ...other,
-      // Segments are named by segid in CRD/PSF mode, by chain in PDB mode
-      // (the server works out the segid from the structure)
-      ...(mode === 'crd_psf' ? { segid } : { chain_id: chainId }),
+      // Segments are named by segid in CRD/PSF mode, by chain in PDB mode.
+      // A stored segid is kept in PDB mode too: it says which segment of a
+      // chain that is several molecules (and the server checks it matches)
+      ...(mode === 'crd_psf'
+        ? { segid }
+        : { chain_id: chainId, ...(segid === undefined ? {} : { segid }) }),
       ...(whole === true
         ? {}
         : { residues: isRecord(residues) ? withoutDbIds(residues) : residues })
