@@ -35,7 +35,7 @@ router.get('/', externalReadLimiter, (req, res) => {
  *           schema:
  *             oneOf:
  *               - title: PDB Job
- *                 required: [title, bilbomd_mode, pdb_file, crd_file, const_inp_file, dat_file]
+ *                 required: [title, bilbomd_mode, pdb_file, dat_file, constraints]
  *                 properties:
  *                   bilbomd_mode:
  *                     type: string
@@ -47,15 +47,18 @@ router.get('/', externalReadLimiter, (req, res) => {
  *                   pdb_file:
  *                     type: string
  *                     format: binary
- *                     description: Upload the PDB file containing the atomic coordinates.
- *                   crd_file:
+ *                     description: Upload the PDB or mmCIF file with the atomic coordinates. Constraints name its chains by chain_id.
+ *                   constraints:
  *                     type: string
- *                     format: binary
- *                     description: Upload the CHARMM CRD file associated with the structure.
- *                   const_inp_file:
- *                     type: string
- *                     format: binary
- *                     description: Upload the const.inp configuration file used by BilboMD.
+ *                     description: |
+ *                       MD constraints as JSON text (not a file): one fixed body, held in
+ *                       place, and up to 20 rigid bodies, each moved as one piece. Each body
+ *                       is a list of segments named by PDB chain_id, with an optional
+ *                       inclusive residue range; leave out "residues" for the whole chain.
+ *                       BilboMD checks them against the structure and writes the CHARMM or
+ *                       OpenMM constraint file itself; constraint files (inp_file) are not
+ *                       accepted. With curl: -F "constraints=<constraints.json"
+ *                     example: '{"fixed_bodies":[{"segments":[{"chain_id":"A","residues":{"start":1,"stop":297}},{"chain_id":"B","residues":{"start":16,"stop":42}}]}],"rigid_bodies":[{"segments":[{"chain_id":"B","residues":{"start":67,"stop":196}}]}]}'
  *                   dat_file:
  *                     type: string
  *                     format: binary
@@ -66,7 +69,7 @@ router.get('/', externalReadLimiter, (req, res) => {
  *                     default: auto
  *                     description: Units of q in dat_file. "A" is inverse angstroms and "nm" is inverse nanometers (converted to inverse angstroms). "auto" detects the units and rejects the file if they cannot be determined.
  *               - title: CRD/PSF Job
- *                 required: [title, bilbomd_mode, crd_file, psf_file, const_inp_file, dat_file]
+ *                 required: [title, bilbomd_mode, crd_file, psf_file, dat_file, constraints]
  *                 properties:
  *                   bilbomd_mode:
  *                     type: string
@@ -83,10 +86,13 @@ router.get('/', externalReadLimiter, (req, res) => {
  *                     type: string
  *                     format: binary
  *                     description: Upload the PSF file containing topology information.
- *                   const_inp_file:
+ *                   constraints:
  *                     type: string
- *                     format: binary
- *                     description: Upload the const.inp configuration file for BilboMD.
+ *                     description: |
+ *                       MD constraints as JSON text (not a file), as for PDB jobs, but each
+ *                       segment is named by its CHARMM segid from the PSF (e.g. PROA, HETA)
+ *                       instead of chain_id. With curl: -F "constraints=<constraints.json"
+ *                     example: '{"fixed_bodies":[{"segments":[{"segid":"PROA","residues":{"start":40,"stop":137}},{"segid":"DNAA"},{"segid":"DNAB"}]}]}'
  *                   dat_file:
  *                     type: string
  *                     format: binary

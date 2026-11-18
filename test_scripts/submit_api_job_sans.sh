@@ -15,7 +15,8 @@ set +a
 
 PDB_FILE="$SCRIPT_DIR/data/sans/sans.pdb"
 DAT_FILE="$SCRIPT_DIR/data/sans/sans-data.dat"
-INP_FILE="$SCRIPT_DIR/data/sans/const.inp"
+# Constraints as JSON (BilboMD no longer accepts const.inp uploads)
+CONSTRAINTS_FILE="$SCRIPT_DIR/data/sans/constraints.json"
 
 TITLE_DATE=$(date +%m%d)
 TITLE_SUFFIX=$(date +%s | tail -c 5)
@@ -29,7 +30,7 @@ HTTP_STATUS=$(curl -# -o "$RESPONSE_FILE" -w "%{http_code}" \
   -F "title=${TITLE_DATE}-api-test-sans-${TITLE_SUFFIX}" \
   -F "pdb_file=@${PDB_FILE}" \
   -F "dat_file=@${DAT_FILE}" \
-  -F "inp_file=@${INP_FILE}" )
+  -F "constraints=<${CONSTRAINTS_FILE}" )
 
 echo "HTTP Status: $HTTP_STATUS"
 jq . < "$RESPONSE_FILE" || cat "$RESPONSE_FILE"

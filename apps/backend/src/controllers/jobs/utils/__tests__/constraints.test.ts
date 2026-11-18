@@ -37,7 +37,7 @@ const CONSTRAINTS = JSON.stringify({
   rigid_bodies: [{ segments: [{ chain_id: 'B' }] }]
 })
 
-const LEGACY_INP = [
+const EXAMPLE_INP = [
   'define fixed1 sele ( resid 1:40 .and. segid PROA ) end',
   'cons fix sele fixed1 end',
   'define rigid1 sele ( segid DNAB ) end',
@@ -127,13 +127,13 @@ describe('materializeConstraints', () => {
     })
   })
 
-  it('reads an uploaded const.inp, deletes it and writes its own', async () => {
-    const legacyFile = await upload('my_const.inp', LEGACY_INP)
+  it("reads the example data's const.inp, deletes it and writes its own", async () => {
+    const exampleConstInp = await upload('example-const.inp', EXAMPLE_INP)
 
     const fromFile = await materializeConstraints({
       ...pdbArgs(),
       md_engine: 'CHARMM',
-      legacyFile
+      exampleConstInp
     })
     const written = await fs.readFile(path.join(jobDir, 'const.inp'), 'utf8')
     await materializeConstraints({
@@ -143,58 +143,33 @@ describe('materializeConstraints', () => {
     })
 
     expect(fromFile.ok).toBe(true)
-    expect(await fs.pathExists(legacyFile.path)).toBe(false)
+    expect(await fs.pathExists(exampleConstInp.path)).toBe(false)
     // Same constraints as JSON give the same file
     expect(await fs.readFile(path.join(jobDir, 'const.inp'), 'utf8')).toBe(
       written
     )
   })
 
-  it.each([
-    ['a system command', 'system "id"'],
-    ['a stream command', 'stream other.str'],
-    ['a harmonic restraint', 'cons harm force 5.0 sele fixed1 end']
-  ])('rejects and deletes an uploaded const.inp with %s', async (_, line) => {
-    const legacyFile = await upload(
-      'const.inp',
-      LEGACY_INP.replace('return', `${line}\nreturn`)
+  it('fails safely, deleting it, if an example const.inp cannot be read', async () => {
+    const exampleConstInp = await upload(
+      'example-const.inp',
+      EXAMPLE_INP.replace('return', 'system "id"\nreturn')
     )
 
     const result = await materializeConstraints({
       ...pdbArgs(),
       md_engine: 'CHARMM',
-      legacyFile
+      exampleConstInp
     })
 
     expect(result.ok).toBe(false)
-    expect(!result.ok && result.errors[0]?.message).toContain(line)
-    expect(await fs.pathExists(legacyFile.path)).toBe(false)
+    expect(await fs.pathExists(exampleConstInp.path)).toBe(false)
+    expect(await fs.pathExists(path.join(jobDir, 'const.inp'))).toBe(false)
   })
 
-  it('reads a reused openmm_const.yml (OpenMM resubmission)', async () => {
-    await materializeConstraints({
-      ...pdbArgs(),
-      md_engine: 'OpenMM',
-      constraintsField: CONSTRAINTS
-    })
-    const reused = {
-      originalname: 'openmm_const.yml',
-      path: path.join(jobDir, 'openmm_const.yml')
-    } as Express.Multer.File
-
-    const result = await materializeConstraints({
-      ...pdbArgs(),
-      md_engine: 'OpenMM',
-      legacyFile: reused
-    })
-
-    expect(result.ok).toBe(true)
-    expect(await fs.pathExists(reused.path)).toBe(true)
-  })
-
-  // Protein chain a is CHARMM segment PROA; DNA chain A is DNAA. Reusing the
-  // const.inp BilboMD wrote must find chain a again, not guess A from PROA.
-  it('resubmits a generated const.inp for a lowercase chain unchanged', async () => {
+  // Protein chain a is CHARMM segment PROA; DNA chain A is DNAA. Reading a
+  // const.inp must find chain a again, not guess A from PROA.
+  it('reads a const.inp for a lowercase chain back unchanged', async () => {
     await fs.writeFile(
       path.join(jobDir, 'mixed.pdb'),
       [
@@ -223,7 +198,7 @@ describe('materializeConstraints', () => {
 
     const reused = await materializeConstraints({
       ...args,
-      legacyFile: {
+      exampleConstInp: {
         originalname: 'const.inp',
         path: path.join(jobDir, 'const.inp')
       } as Express.Multer.File
@@ -297,17 +272,17 @@ describe('materializeConstraints', () => {
     expect(await fs.pathExists(path.join(jobDir, 'const.inp'))).toBe(false)
   })
 
-  it('rejects JSON and a file together, deleting the file', async () => {
-    const legacyFile = await upload('const.inp', LEGACY_INP)
+  it('uses JSON sent with example data, deleting the example file', async () => {
+    const exampleConstInp = await upload('example-const.inp', EXAMPLE_INP)
 
     const result = await materializeConstraints({
       ...pdbArgs(),
       md_engine: 'CHARMM',
       constraintsField: CONSTRAINTS,
-      legacyFile
+      exampleConstInp
     })
 
-    expect(result.ok).toBe(false)
-    expect(await fs.pathExists(legacyFile.path)).toBe(false)
+    expect(result.ok).toBe(true)
+    expect(await fs.pathExists(exampleConstInp.path)).toBe(false)
   })
 })

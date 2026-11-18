@@ -127,7 +127,7 @@ describe('NewJobFormInstructions', () => {
       })
     })
 
-    it('should link to inp Jiffy', async () => {
+    it('explains that constraints are set up in the form', async () => {
       const user = userEvent.setup()
 
       renderWithProviders(<NewJobFormInstructions />)
@@ -137,8 +137,10 @@ describe('NewJobFormInstructions', () => {
       })
       await user.click(accordionButton)
 
-      const jiffyLinks = screen.getAllByText(/inp Jiffy/)
-      expect(jiffyLinks.length).toBeGreaterThan(0)
+      expect(
+        screen.getAllByText(/set up the/, { exact: false }).length
+      ).toBeGreaterThan(0)
+      expect(screen.queryByText(/inp Jiffy/)).toBeNull()
     })
   })
 

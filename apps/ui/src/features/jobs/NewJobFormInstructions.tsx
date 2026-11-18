@@ -81,9 +81,9 @@ const NewJobFormInstructions = () => {
           >
             CHARMM-GUI
           </Link>{' '}
-          to paramaterize your input model. If you have generated your own{' '}
-          <b>const.inp</b> file, either manually or via one of our Jiffys, then
-          maybe <b>BilboMD Classic</b> is right for you. <br />
+          to paramaterize your input model. If you want to choose the fixed and
+          rigid bodies yourself, then maybe <b>BilboMD Classic</b> is right for
+          you. <br />
         </Typography>
         <Accordion>
           <AccordionSummary
@@ -109,12 +109,14 @@ const NewJobFormInstructions = () => {
               file)
             </li>
             <li>
-              <b>*.inp</b> file (defining the rigid domains of your protein.
-              Typically named <b>const.inp</b> )
-            </li>
-            <li>
               <b>*.dat</b> file (A 3-column SAXS data file)
             </li>
+          </Typography>
+          <Typography sx={{ mx: 1, my: 2 }}>
+            Then set up the <b>MD constraints</b> in the form: one fixed body,
+            held in place, and the rigid bodies that move as one piece, picked
+            from the segments in your PSF file. You can start from an existing{' '}
+            <b>const.inp</b> or OpenMM constraints file.
           </Typography>
           <Typography sx={{ mx: 1, my: 2 }}>
             Use the <b>PDB Reader</b> tool available from{' '}
@@ -125,21 +127,15 @@ const NewJobFormInstructions = () => {
             >
               CHARMM-GUI
             </Link>{' '}
-            to convert your standard PDB file to a CRD file. If you need help
-            generating a valid <b>const.inp</b> file you can use our{' '}
-            <Link href="/dashboard/jobs/constinp">
-              <b>inp Jiffy{'\u2122'}</b>
-            </Link>{' '}
-            to help get you started.
+            to convert your standard PDB file to a CRD file.
           </Typography>
           <Alert severity="warning">
             <AlertTitle>
               Warning about Chain ID and segid naming conventions
             </AlertTitle>
             <Typography sx={{ mx: 1, my: 2 }}>
-              If using CRD/PSF files coming from CHARMM-GUI make sure that the{' '}
-              <b>segid</b> names in your CRD file match the <b>segid</b> names
-              in you <b>const.inp</b> file. This is because CHARMM-GUI uses{' '}
+              If using CRD/PSF files coming from CHARMM-GUI, constraints name
+              segments by the <b>segid</b> in your PSF file. CHARMM-GUI uses{' '}
               <b>segid</b> formats PRO[A-Z] (protein), DNA[A-Z] (DNA), RNA[A-Z]
               (RNA), and HET[A-Z] (ligands), instead of your original PDB chain
               id, and will rename the first protein chain in your PDB file as
@@ -162,12 +158,13 @@ const NewJobFormInstructions = () => {
               <b>*.pdb</b> file (A PDB coordinate file)
             </li>
             <li>
-              <b>*.inp</b> file (defining the rigid domains of your protein.
-              Typically named <b>const.inp</b> )
-            </li>
-            <li>
               <b>*.dat</b> file (A 3-column SAXS data file)
             </li>
+          </Typography>
+          <Typography sx={{ mx: 1, my: 2 }}>
+            Then set up the <b>MD constraints</b> in the form, by chain and
+            residue range: one fixed body and the rigid bodies. You can start
+            from an existing <b>const.inp</b> or OpenMM constraints file.
           </Typography>
           <Typography sx={{ mx: 1, my: 2 }}>
             If you select <b>CHARMM</b> as the MD Engine, <b>BilboMD Classic</b>{' '}
@@ -178,9 +175,9 @@ const NewJobFormInstructions = () => {
             renames the first Protein chain as segid <b>PROA</b>, the second
             Protein chain as segid <b>PROB</b>,{' '}
             <span style={{ fontStyle: 'italic' }}>etc</span>. (see the notes
-            above). For that reason we strongly recommend that you use our{' '}
-            <b>inp Jiffy{'\u2122'}</b> to create your <b>const.inp</b> file.
-            Feel free to manually edit it, but pay attention to segid names.
+            above). You don&apos;t need to work out segid names: you pick chains
+            in the form, and BilboMD writes the <b>const.inp</b> for CHARMM
+            itself.
           </Typography>
         </Accordion>
         <Divider

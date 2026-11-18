@@ -74,7 +74,6 @@ const handleBilboMDSANSJob = async (
           bilbomd_mode: bilbomdMode,
           pdb_file: files['pdb_file']?.[0],
           dat_file: files['dat_file']?.[0],
-          inp_file: files['inp_file']?.[0],
           rg_min: req.body.rg_min,
           rg_max: req.body.rg_max,
           d2o_fraction: req.body.d2o_fraction,
@@ -106,8 +105,7 @@ const handleBilboMDSANSJob = async (
       md_engine,
       jobDir,
       structureFile: path.join(jobDir, pdbFile),
-      constraintsField: req.body.constraints,
-      legacyFile: files['inp_file']?.[0]
+      constraintsField: req.body.constraints
     })
     if (!constraints.ok) {
       logger.warn('SANS job constraints rejected', constraints.errors)

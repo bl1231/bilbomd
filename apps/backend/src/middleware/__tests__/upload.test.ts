@@ -6,6 +6,7 @@ import fs from 'fs-extra'
 import os from 'os'
 import path from 'path'
 import {
+  CONSTRAINT_FILE_REMOVED_MESSAGE,
   createUpload,
   getUploadErrorResponse,
   MAX_UPLOAD_FILE_SIZE
@@ -127,6 +128,17 @@ describe('getUploadErrorResponse', () => {
       'File exceeds the maximum upload size'
     )
   })
+
+  it.each(['inp_file', 'const_inp_file', 'omm_const_file'])(
+    'says constraint files are no longer accepted (%s)',
+    (field) => {
+      const err = new multer.MulterError('LIMIT_UNEXPECTED_FILE', field)
+      const response = getUploadErrorResponse(err)
+      expect(response.status).toBe(400)
+      expect(response.message).toBe(CONSTRAINT_FILE_REMOVED_MESSAGE)
+      expect(response.message).toMatch(/"constraints" field/)
+    }
+  )
 
   it('maps other multer errors to 400', () => {
     const err = new multer.MulterError('LIMIT_FILE_COUNT')

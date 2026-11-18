@@ -95,18 +95,30 @@ describe('prepareResubmission', () => {
   it('copies files flagged for reuse and points the body at them', async () => {
     const req = makeReq({
       reuse_pdb_file: 'true',
-      reuse_dat_file: 'true',
-      reuse_inp_file: 'true'
+      reuse_dat_file: 'true'
     })
     const result = await prepareResubmission(req, makeUser(OWNER_ID), jobDir)
 
     expect(result).toEqual({ ok: true })
     expect(serverFileName(req, 'pdb_file')).toBe('model.pdb')
     expect(serverFileName(req, 'dat_file')).toBe('saxs.dat')
-    expect(serverFileName(req, 'inp_file')).toBe('const.inp')
-    expect(await fs.readFile(path.join(jobDir, 'const.inp'), 'utf8')).toBe(
-      'define'
-    )
+  })
+
+  // The resubmit form sends the constraints as JSON; BilboMD writes the
+  // constraint file itself
+  it('refuses to reuse the original constraint file', async () => {
+    const req = makeReq({ reuse_pdb_file: 'true', reuse_inp_file: 'true' })
+    const result = await prepareResubmission(req, makeUser(OWNER_ID), jobDir)
+
+    expect(result).toEqual({
+      ok: false,
+      status: 400,
+      message: expect.stringMatching(
+        /Constraint files \(inp_file\) are no longer accepted/
+      )
+    })
+    expect(serverFileName(req, 'inp_file')).toBeUndefined()
+    expect(await fs.pathExists(path.join(jobDir, 'const.inp'))).toBe(false)
   })
 
   it('prefers a newly uploaded file over reusing the original', async () => {

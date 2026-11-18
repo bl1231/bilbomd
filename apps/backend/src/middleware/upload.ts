@@ -45,8 +45,29 @@ interface UploadErrorResponse {
   message: string
 }
 
+// Upload fields that once carried a CHARMM constraint file. Uploaded const.inp
+// text is no longer accepted: constraints are sent as JSON and BilboMD writes
+// the constraint file itself.
+const REMOVED_CONSTRAINT_FIELDS = [
+  'inp_file',
+  'const_inp_file',
+  'omm_const_file'
+]
+
+export const CONSTRAINT_FILE_REMOVED_MESSAGE =
+  'Constraint files (inp_file) are no longer accepted. Send the constraints ' +
+  'as JSON in the "constraints" field instead; see /api-docs for the format. ' +
+  'An existing const.inp or OpenMM constraints YAML can be converted with ' +
+  'the constraints editor in the BilboMD job form.'
+
 export const getUploadErrorResponse = (err: unknown): UploadErrorResponse => {
   if (err instanceof multer.MulterError) {
+    if (
+      err.code === 'LIMIT_UNEXPECTED_FILE' &&
+      REMOVED_CONSTRAINT_FIELDS.includes(err.field ?? '')
+    ) {
+      return { status: 400, message: CONSTRAINT_FILE_REMOVED_MESSAGE }
+    }
     if (err.code === 'LIMIT_FILE_SIZE') {
       const which = err.field ? `File ${err.field}` : 'File'
       return {

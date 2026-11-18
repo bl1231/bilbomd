@@ -23,11 +23,11 @@ There are several different SAXS modeling pipelines available.
 
 ### BilboMD Classic w/PDB inputs
 
-This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided PDB file and experimental SAXS data.
+This pipeline offers the classic BilboMD from years past where you choose the fixed and rigid bodies yourself (in the job form, or as JSON through the API) and adjust the `rg_min` and `rg_max` values. It takes a user provided PDB file and experimental SAXS data.
 
 ### BilboMD Classic w/CRD inputs
 
-This pipeline offers the classic BilboMD from years past where you can upload a custom `const.inp` file and adjust the `rg_min` and `rg_max` values. It takes a user provided CRD and PSF file and experimental SAXS data. The CRD and PSF files can be generated using [CHARMM GUI](https://www.charmm-gui.org/).
+This pipeline offers the classic BilboMD from years past where you choose the fixed and rigid bodies yourself (in the job form, or as JSON through the API) and adjust the `rg_min` and `rg_max` values. It takes a user provided CRD and PSF file and experimental SAXS data. The CRD and PSF files can be generated using [CHARMM GUI](https://www.charmm-gui.org/).
 
 ### BilboMD Auto
 

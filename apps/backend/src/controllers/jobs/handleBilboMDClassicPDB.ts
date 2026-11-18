@@ -56,19 +56,19 @@ const handleBilboMDClassicPDB = async (
     let pdbFileName = ''
     let pdbFile
     let datFile
-    let inpFile
 
     const jobDir = path.join(uploadFolder, UUID)
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
     pdbFile = files['pdb_file']?.[0]
-    inpFile = files['inp_file']?.[0]
     datFile = files['dat_file']?.[0]
 
     // Otherwise use a file the server placed in jobDir (example data or a
     // resubmission's reused file)
     if (!pdbFile) pdbFile = serverFile(req, jobDir, 'pdb_file')
-    if (!inpFile) inpFile = serverFile(req, jobDir, 'inp_file')
+    // Constraints come as JSON; the only constraint file is the example
+    // data's own const.inp, placed by the server
+    const exampleConstInp = serverFile(req, jobDir, 'inp_file')
     if (!datFile) datFile = serverFile(req, jobDir, 'dat_file')
 
     pdbFileName = pdbFile?.originalname.toLowerCase() ?? ''
@@ -132,7 +132,7 @@ const handleBilboMDClassicPDB = async (
       jobDir,
       structureFile: path.join(jobDir, pdbFileName),
       constraintsField: req.body.constraints,
-      legacyFile: inpFile
+      exampleConstInp
     })
     if (!constraints.ok) {
       logger.warn('Classic PDB job constraints rejected', constraints.errors)
