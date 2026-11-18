@@ -64,14 +64,24 @@ beforeEach(() => {
 
 describe('ResubmitConstraints', () => {
   it("starts from the original job's stored constraints", async () => {
-    const stored: MDConstraintsDTO = {
+    // As the job record returns them: MongoDB adds _id to every subdocument
+    const stored = {
+      _id: 'c0',
       fixed_bodies: [
         {
+          _id: 'b1',
           name: 'FixedBody1',
-          segments: [{ chain_id: 'A', residues: { start: 5, stop: 20 } }]
+          segments: [
+            {
+              _id: 's1',
+              chain_id: 'A',
+              segid: 'PROA',
+              residues: { _id: 'r1', start: 5, stop: 20 }
+            }
+          ]
         }
       ]
-    }
+    } as unknown as MDConstraintsDTO
     renderResubmit({ mdConstraints: stored, constFileName: 'const.inp' })
     expect(await screen.findByTestId('const-inp-preview')).toHaveTextContent(
       'resid 5:20 .and. segid PROA'

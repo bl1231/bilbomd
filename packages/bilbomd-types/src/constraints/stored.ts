@@ -38,8 +38,10 @@ export const constraintsFromStored = (
 /**
  * Constraints in the stored or OpenMM shape (bodies of { chain_id, residues,
  * segid? }), turned back into input to validate again, e.g. a resubmitted
- * job's openmm_const.yml. Unknown fields are kept, so the validator still
- * rejects anything odd; names are dropped since the server names bodies.
+ * job's openmm_const.yml or its md_constraints from the database. Unknown
+ * fields are kept, so the validator still rejects anything odd; stored
+ * metadata is dropped: body names (the server names bodies), chain_mol_types,
+ * and the `_id`/`id` MongoDB adds to every body, segment and residue range.
  */
 export const inputFromStored = (
   stored: unknown,
@@ -48,7 +50,11 @@ export const inputFromStored = (
   if (!isRecord(stored)) return stored
   // chain_mol_types is metadata stored alongside the bodies; every other
   // field is kept so the validator rejects anything it doesn't know
-  const { fixed_bodies: fixed, rigid_bodies: rigid, ...rest } = stored
+  const {
+    fixed_bodies: fixed,
+    rigid_bodies: rigid,
+    ...rest
+  } = withoutDbIds(stored)
   delete rest.chain_mol_types
 
   const segment = (value: unknown): unknown => {
@@ -59,13 +65,15 @@ export const inputFromStored = (
       residues,
       whole_segment: whole,
       ...other
-    } = value
+    } = withoutDbIds(value)
     return {
       ...other,
       // Segments are named by segid in CRD/PSF mode, by chain in PDB mode
       // (the server works out the segid from the structure)
       ...(mode === 'crd_psf' ? { segid } : { chain_id: chainId }),
-      ...(whole === true ? {} : { residues })
+      ...(whole === true
+        ? {}
+        : { residues: isRecord(residues) ? withoutDbIds(residues) : residues })
     }
   }
   const bodies = (list: unknown): unknown =>
@@ -73,7 +81,7 @@ export const inputFromStored = (
       ? list.map((body: unknown): unknown => {
           if (!isRecord(body)) return body
           // The server names bodies, so a stored name is dropped
-          const { segments, ...other } = body
+          const { segments, ...other } = withoutDbIds(body)
           delete other.name
           return {
             ...other,
@@ -93,3 +101,11 @@ export const inputFromStored = (
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
+
+// MongoDB adds _id (and mongoose an id virtual) to every subdocument
+const withoutDbIds = (value: Record<string, unknown>) => {
+  const copy = { ...value }
+  delete copy._id
+  delete copy.id
+  return copy
+}
