@@ -1,5 +1,15 @@
 # @bilbomd/bilbomd-types
 
+## 1.22.0
+
+### Minor Changes
+
+- 9bd98a4: The job forms' constraints editor can start from an OpenMM constraints YAML or a constraints JSON file, as well as a `const.inp`. That covers `openmm_const.yml`, the full `openmm_config.yaml` or `bilbomd_job.json` (its `md_constraints`) from a BilboMD results download, and the `constraints` JSON the API takes. Files are read in the browser. Several fixed bodies are merged into one, since OpenMM holds all of them in place. Fields other than `chain_id`, `segid`, `residues` and `whole_segment` are left out and listed for the user. New in `@bilbomd/bilbomd-types`: `importConstraintsFromData`.
+
+### Patch Changes
+
+- bf1937e: Fix resubmit: starting from a job's stored constraints showed "Unknown field(s): _id". `inputFromStored` now drops the `_id`/`id` that MongoDB adds to every stored body, segment and residue range, along with the other stored metadata. Fields it doesn't recognise are still kept, so the validator still rejects them.
+
 ## 1.21.1
 
 ### Patch Changes
