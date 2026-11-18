@@ -1,5 +1,25 @@
 # @bilbomd/backend
 
+## 3.1.1
+
+### Patch Changes
+
+- 5a964aa: Fix how CHARMM jobs build segments and read coordinates (#1331).
+
+  - **Separate molecules and chain breaks are no longer bonded.** `pdb2crd.py` starts a new CHARMM segment after a TER record, when the segid changes, or at a chain break: consecutive residues that are not bonded (protein C–N over 2 Å, or CA–CA over 4.5 Å when C or N is missing; nucleic O3′–P over 2.5 Å). Before, every chain ID was built as one polymer. Two DNA strands under one chain ID were bonded together, and the two sides of a missing loop were joined by a stretched bond that minimization pulled closed. A segment that ends at a chain break gets no C-terminal patch.
+  - **OpenMM gets the same molecules.** OpenMM bonded consecutive residues of a chain whatever the distance (a 31 Å C–N bond across a missing loop), and PDBFixer added a phosphate to the first residue of a second strand and bonded it to the first. `prep_pdb.py`, and `gen-openmm-slurm-file.py` on NERSC, now add a TER record at each boundary pdb2crd uses, and OpenMM starts a new chain at each TER. The CHARMM36 and GLYCAM backbone repairs in `model_prep.py` only bond residues within a chain. The rules live in a new standard-library-only `pdb_segments.py`, shared by pdb2crd, prep_pdb and the NERSC generator, which gets it through `job-scripts.txt`.
+  - **Coordinates are read by residue number.** The segment inputs used `read coor pdb ... offset`, which assigns coordinates by position in the sequence. In any PDB with a numbering gap, every residue after the gap got another residue's coordinates, and the residues at the end were dropped. They now use `read coor pdb ... resid`, with the CHARMM segid written to columns 73–76 of each segment PDB.
+  - **Segment naming.** A chain's first segment keeps its name (`DNAD`). A later one gets its own type and letter if that name is free (`CARA` for a glycan after protein chain A), otherwise its input segid's letter (`DNAB`), otherwise the first letter no chain uses. Segments with no recognized residue are `HET` + letter (was `UNKNOWN` + chain ID, too long for the PDB segid field). A segment's type is its first recognized residue, so a protein starting with PCA is still `PROA`. The Python residue lists now match `pdbResidues.ts` (adding `HSD` and ten carbohydrates), and a test checks they stay in sync. Only the first model of a multi-model file is read.
+  - **Constraints.** `readPdbSegments` and `readCifSegments` predict the same segments, and mark the ones that start at a chain break. The validator warns about each chain break (the two sides aren't bonded and can move apart; model any missing residues first). In PDB mode, constraint segments carry their segid wherever it's known (the editor, resubmits, const.inp and data imports). For a chain that is several segments, the validator picks the segment by segid or residue range, and rejects a whole-chain selection or a range that crosses segments, saying how to fix it.
+  - **Selections saved before the split are fitted to it.** A resubmit, a job snapshot or OpenMM file import, or a const.inp import that selects residues of a chain now built as several segments (a whole chain A saved as PROA 1–203, now PROA and PROB) selects every piece the saved range covers, instead of silently keeping only PROA. The editor says when it did this. Ranges that can't be told apart (strands that share a chain ID and numbering) are left for the user to pick, and the editor no longer guesses the chain's first segment for them.
+  - **OpenMM selections must be unambiguous.** `openmm_const.yml` names residues by chain ID and number only, so for OpenMM jobs the validator rejects a selection whose residues are also in another segment with the same chain ID, instead of constraining both.
+  - **PAE constraints follow the segments.** `pae2const.py` writes each rigid domain against the segments `pdb2crd.py` builds (through a new `build_segments`/`charmm_segments`), split across PROA and PROB where a domain covers a chain break, instead of naming every residue of chain A as PROA.
+
+- Updated dependencies [5a964aa]
+- Updated dependencies [5a964aa]
+  - @bilbomd/md-utils@2.0.0
+  - @bilbomd/bilbomd-types@1.22.1
+
 ## 3.1.0
 
 ### Minor Changes
