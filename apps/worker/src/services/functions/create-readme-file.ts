@@ -296,7 +296,7 @@ The Ensemble files will be present in multiple copies. There is one file for eac
 - Ensemble PDB file(s):  ensemble_size_N_model.pdb
 - Ensemble TXT file(s):  ensemble_size_N.txt
 - Ensemble DAT file(s):  multi_state_model_N_1_1.dat
-- Summary of DB info:    bilbomd_job.json
+- Job settings summary:  bilbomd_job.json
 ${MULTIFOXS_ENSEMBLE_EXPLANATION}
 
 If you use BilboMD in your research, please cite:

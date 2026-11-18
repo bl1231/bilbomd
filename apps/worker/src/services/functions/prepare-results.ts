@@ -29,6 +29,7 @@ import {
   isBilboMDOpenFoldJob,
   isBilboMDBioEmuJob
 } from './job-type-guards.js'
+import { resultsJobSnapshot } from './job-snapshot.js'
 
 const execFilePromise = promisify(execFile)
 
@@ -265,9 +266,13 @@ const prepareResults = async (
       logger.error(`Error running feedback script: ${error}`)
     }
 
-    // Write DBjob snapshot after feedback so it includes feedback fields
+    // Write the job snapshot after feedback so it includes feedback fields.
+    // Only the fields that describe the run: results downloads get shared.
     try {
-      await writeJsonFile(path.join(resultsDir, 'bilbomd_job.json'), DBjob)
+      await writeJsonFile(
+        path.join(resultsDir, 'bilbomd_job.json'),
+        resultsJobSnapshot(DBjob)
+      )
     } catch (error) {
       logger.error(`Error writing DBjob JSON file: ${error}`)
     }

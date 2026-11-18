@@ -286,16 +286,13 @@ const prepareResults = async (DBjob: IMultiJob): Promise<void> => {
       isCritical: false
     })
 
-    // Write the DBjob to a JSON file
+    // Write a summary of the job. No owner details: results downloads get
+    // shared.
     const simplifiedJob = {
       title: DBjob.title,
       uuid: DBjob.uuid,
       bilbomd_uuids: DBjob.bilbomd_uuids,
       data_file_from: DBjob.data_file_from,
-      user: {
-        username: DBjob.user.username,
-        email: DBjob.user.email
-      },
       status: DBjob.status,
       progress: DBjob.progress,
       time_submitted: DBjob.time_submitted,
