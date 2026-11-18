@@ -55,7 +55,6 @@ const createNewJob = async (req: Request, res: Response) => {
       { name: 'psf_file', maxCount: 1 },
       { name: 'pdb_file', maxCount: 1 },
       { name: 'crd_file', maxCount: 1 },
-      { name: 'inp_file', maxCount: 1 },
       { name: 'dat_file', maxCount: 1 },
       { name: 'pae_file', maxCount: 1 },
       { name: 'entities_json', maxCount: 1 }
@@ -168,7 +167,6 @@ const createPublicJob = async (req: Request, res: Response) => {
       { name: 'psf_file', maxCount: 1 },
       { name: 'pdb_file', maxCount: 1 },
       { name: 'crd_file', maxCount: 1 },
-      { name: 'inp_file', maxCount: 1 },
       { name: 'dat_file', maxCount: 1 },
       { name: 'pae_file', maxCount: 1 },
       { name: 'entities_json', maxCount: 1 }

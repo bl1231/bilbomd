@@ -6,15 +6,17 @@ import { Job, IUser } from '@bilbomd/mongodb-schema'
 import { logger } from '../../../middleware/loggers.js'
 import { config } from '../../../config/config.js'
 import { setServerFile, ServerFileField } from './serverFiles.js'
+import { CONSTRAINT_FILE_REMOVED_MESSAGE } from '../../../middleware/upload.js'
 
 const PRIVILEGED_ROLES = ['Admin', 'Manager']
 
-// Form field name -> Job document field holding that file's name
-const REUSABLE_FILES: Record<ServerFileField, string> = {
+// Form field name -> Job document field holding that file's name. The
+// constraint file is not reused: the resubmit form sends the constraints as
+// JSON, and BilboMD writes the constraint file itself.
+const REUSABLE_FILES: Partial<Record<ServerFileField, string>> = {
   pdb_file: 'pdb_file',
   crd_file: 'crd_file',
   psf_file: 'psf_file',
-  inp_file: 'const_inp_file',
   dat_file: 'data_file',
   pae_file: 'pae_file'
 }
@@ -37,6 +39,9 @@ const prepareResubmission = async (
   jobDir: string
 ): Promise<ResubmissionResult> => {
   if (!isResubmitRequest(req)) return { ok: true }
+  if (isTrue(req.body.reuse_inp_file)) {
+    return { ok: false, status: 400, message: CONSTRAINT_FILE_REMOVED_MESSAGE }
+  }
 
   const originalJobId: unknown = req.body.original_job_id
   if (

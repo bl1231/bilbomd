@@ -19,6 +19,7 @@ import { describe, test, expect, beforeEach, vi } from 'vitest'
 import request from 'supertest'
 import app from '../appMock.js'
 import path from 'path'
+import fs from 'fs-extra'
 import { User } from '@bilbomd/mongodb-schema'
 import { seedApiTokenUser } from '../helpers/seedApiTokenUser.js'
 
@@ -109,9 +110,13 @@ describe('/api/v1/external/jobs', () => {
       __dirname,
       '../../../../test_scripts/data/pdb/saxs-data.dat'
     )
-    const inpFilePath = path.resolve(
-      __dirname,
-      '../../../../test_scripts/data/pdb/const.inp'
+    // Constraints as JSON text in a form field
+    const constraints = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        '../../../../test_scripts/data/pdb/constraints.json'
+      ),
+      'utf8'
     )
 
     const res = await request(app)
@@ -122,7 +127,7 @@ describe('/api/v1/external/jobs', () => {
       .field('title', 'API Test Job PDB')
       .attach('pdb_file', pdbFilePath)
       .attach('dat_file', datFilePath)
-      .attach('inp_file', inpFilePath)
+      .field('constraints', constraints)
     expectSuccessfulJobResponse(
       res,
       'New BilboMD Classic w/PDB Job successfully created'
@@ -143,9 +148,13 @@ describe('/api/v1/external/jobs', () => {
       __dirname,
       '../../../../test_scripts/data/crd/saxs-data.dat'
     )
-    const inpFilePath = path.resolve(
-      __dirname,
-      '../../../../test_scripts/data/crd/const.inp'
+    // Constraints as JSON text in a form field
+    const constraints = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        '../../../../test_scripts/data/crd/constraints.json'
+      ),
+      'utf8'
     )
 
     const res = await request(app)
@@ -157,10 +166,26 @@ describe('/api/v1/external/jobs', () => {
       .attach('crd_file', crdFilePath)
       .attach('psf_file', psfFilePath)
       .attach('dat_file', datFilePath)
-      .attach('inp_file', inpFilePath)
+      .field('constraints', constraints)
     expectSuccessfulJobResponse(
       res,
       'New BilboMD Classic w/CRD Job successfully created'
+    )
+  })
+  test('should reject an uploaded const.inp, pointing to the constraints field', async () => {
+    const dir = path.resolve(__dirname, '../../../../test_scripts/data/pdb')
+    const res = await request(app)
+      .post('/api/v1/external/jobs')
+      .set('Authorization', `Bearer ${apiTokenForTests}`)
+      .set('Accept', 'application/json')
+      .field('bilbomd_mode', 'pdb')
+      .field('title', 'API Old Client')
+      .attach('pdb_file', `${dir}/pro_dna.pdb`)
+      .attach('dat_file', `${dir}/saxs-data.dat`)
+      .attach('inp_file', `${dir}/const.inp`)
+    expect(res.status).toBe(400)
+    expect(res.body.message).toMatch(
+      /Constraint files \(inp_file\) are no longer accepted/
     )
   })
   test('should submit a BilboMD alphafold job successfully', async () => {

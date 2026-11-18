@@ -1,9 +1,8 @@
 import fs from 'fs-extra'
 import path from 'path'
-import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
+import { stringify as stringifyYaml } from 'yaml'
 import {
   importConstraintsFromConstInp,
-  inputFromStored,
   parseConstraintsJson,
   readCifSegments,
   readPdbSegments,
@@ -18,9 +17,6 @@ import {
 } from '@bilbomd/bilbomd-types'
 import type { IMDConstraints } from '@bilbomd/mongodb-schema'
 import { logger } from '../../../middleware/loggers.js'
-
-/** Largest legacy constraint file read (const.inp or a stored YAML) */
-const MAX_LEGACY_FILE_BYTES = 2_000_000
 
 export type MaterializedConstraints =
   | {
@@ -41,11 +37,10 @@ interface MaterializeArgs {
   /** The `constraints` form field: JSON */
   constraintsField?: unknown
   /**
-   * A constraint file instead of JSON: an uploaded const.inp (until uploads
-   * are removed), or a file the server placed in the job dir (example data,
-   * or the constraint file a resubmission reuses, which may be YAML)
+   * The example data's own const.inp, which the server placed in the job dir.
+   * Users never send constraint files; this is the only one read.
    */
-  legacyFile?: Express.Multer.File
+  exampleConstInp?: Express.Multer.File
 }
 
 const fail = (path: string, message: string): MaterializedConstraints => ({
@@ -69,53 +64,34 @@ const molTypeOfSegid = (segid: string): ChainMolType | undefined => {
   return undefined
 }
 
-// The constraints in a legacy file, as input to validate. The file is
-// removed afterwards, so its text can never reach CHARMM.
-const readLegacyFile = async (
+const removeFromJobDir = async (file: Express.Multer.File, jobDir: string) => {
+  if (path.dirname(path.resolve(file.path)) === path.resolve(jobDir)) {
+    await fs.remove(file.path)
+  }
+}
+
+// The example data's constraints, as input to validate. The file is removed
+// afterwards; BilboMD writes its own const.inp from the result.
+const readExampleConstInp = async (
   file: Express.Multer.File,
   mode: ConstraintMode,
   jobDir: string,
   segments: StructureSegment[]
 ): Promise<{ ok: true; value: unknown } | MaterializedConstraints> => {
   try {
-    const stat = await fs.stat(file.path)
-    if (stat.size > MAX_LEGACY_FILE_BYTES) {
-      return fail('inp_file', 'The constraint file is larger than 2 MB')
-    }
     const text = await fs.readFile(file.path, 'utf8')
-    const name = file.originalname.toLowerCase()
-
-    if (name.endsWith('.yml') || name.endsWith('.yaml')) {
-      const parsed: unknown = parseYaml(text, { maxAliasCount: 0 })
-      const body =
-        typeof parsed === 'object' && parsed !== null && 'constraints' in parsed
-          ? (parsed as { constraints: unknown }).constraints
-          : parsed
-      return { ok: true, value: inputFromStored(body, mode) }
-    }
-
-    // Each segid is matched to its chain in the uploaded structure
     const imported = importConstraintsFromConstInp(text, mode, {
       structure: segments
     })
     if (!imported.input || imported.problems.length > 0) {
-      return {
-        ok: false,
-        errors: imported.problems.map((message) => ({
-          path: 'inp_file',
-          message
-        }))
-      }
+      logger.error(
+        `Example constraints ${file.originalname} did not import: ${imported.problems.join('; ')}`
+      )
+      return fail('constraints', 'The example constraints could not be read')
     }
     return { ok: true, value: imported.input }
-  } catch (error) {
-    logger.warn(`Could not read constraint file ${file.originalname}`, error)
-    return fail('inp_file', 'The constraint file could not be read')
   } finally {
-    // Never leave user-supplied constraint text where CHARMM could stream it
-    if (path.dirname(path.resolve(file.path)) === path.resolve(jobDir)) {
-      await fs.remove(file.path)
-    }
+    await removeFromJobDir(file, jobDir)
   }
 }
 
@@ -124,11 +100,9 @@ const readLegacyFile = async (
  * the only constraint file the MD engine will read: const.inp for CHARMM,
  * openmm_const.yml for OpenMM. Returns what to store as md_constraints.
  *
- * Constraints come as JSON (the `constraints` field). Until const.inp uploads
- * are removed, a legacy const.inp is accepted instead: it is read into the
- * same structured form (commands other than defines, `cons fix` and `shape
- * desc` are rejected), validated the same way, deleted, and replaced by a
- * file written by BilboMD. User text never reaches CHARMM.
+ * Constraints come as JSON (the `constraints` field). Users never send
+ * CHARMM text: the only constraint file read is the example data's own
+ * const.inp, which is converted the same way and replaced.
  */
 export const materializeConstraints = async ({
   mode,
@@ -136,30 +110,21 @@ export const materializeConstraints = async ({
   jobDir,
   structureFile,
   constraintsField,
-  legacyFile
+  exampleConstInp
 }: MaterializeArgs): Promise<MaterializedConstraints> => {
   const hasJson =
     constraintsField !== undefined && String(constraintsField).trim() !== ''
-  if (hasJson && legacyFile) {
-    if (path.dirname(path.resolve(legacyFile.path)) === path.resolve(jobDir)) {
-      await fs.remove(legacyFile.path)
-    }
-    return fail(
-      'constraints',
-      'Send constraints either as JSON in "constraints" or as a file, not both'
-    )
+  // Constraints sent with example data replace the example's own
+  const exampleFile = hasJson ? undefined : exampleConstInp
+  if (hasJson && exampleConstInp) {
+    await removeFromJobDir(exampleConstInp, jobDir)
   }
 
   let segments: StructureSegment[]
   try {
     segments = await readStructure(structureFile)
   } catch (error) {
-    if (
-      legacyFile &&
-      path.dirname(path.resolve(legacyFile.path)) === path.resolve(jobDir)
-    ) {
-      await fs.remove(legacyFile.path)
-    }
+    if (exampleFile) await removeFromJobDir(exampleFile, jobDir)
     throw error
   }
 
@@ -168,10 +133,15 @@ export const materializeConstraints = async ({
     const parsed = parseConstraintsJson(constraintsField)
     if (!parsed.ok) return { ok: false, errors: parsed.errors }
     raw = parsed.value
-  } else if (legacyFile) {
-    const legacy = await readLegacyFile(legacyFile, mode, jobDir, segments)
-    if (!('value' in legacy)) return legacy
-    raw = legacy.value
+  } else if (exampleFile) {
+    const example = await readExampleConstInp(
+      exampleFile,
+      mode,
+      jobDir,
+      segments
+    )
+    if (!('value' in example)) return example
+    raw = example.value
   } else {
     return fail(
       'constraints',

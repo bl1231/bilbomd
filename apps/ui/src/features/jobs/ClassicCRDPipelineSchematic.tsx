@@ -3,7 +3,7 @@ import PipelineSchematicBase, {
 } from 'features/shared/PipelineSchematicBase'
 
 const ROW0: PipelineStep[] = [
-  { lines: ['*.crd & *.psf', 'const.inp', 'SAXS *.dat'], color: 'blue' },
+  { lines: ['*.crd & *.psf', ' constraints', 'SAXS *.dat'], color: 'blue' },
   { lines: ['CHARMM', 'Minimize'], color: 'green' },
   { lines: ['CHARMM', 'Heat'], color: 'green' },
   { lines: ['CHARMM', 'Coarse Grained MD'], color: 'green' },

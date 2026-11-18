@@ -30,6 +30,12 @@ let testUser1: IUser
 
 const accessTokenSecret: string = process.env.ACCESS_TOKEN_SECRET ?? ''
 const dataVolume: string = process.env.DATA_VOL ?? ''
+const testData = `${__dirname}/../../../../test_scripts/data`
+// Constraints as the job forms and API send them (JSON in a form field)
+const pdbConstraints = fs.readFileSync(
+  `${testData}/pdb/constraints.json`,
+  'utf8'
+)
 
 interface JwtPayload {
   UserInfo: BilboMDJwtPayload
@@ -250,10 +256,7 @@ describe('POST /api/v1/jobs', () => {
         'pdb_file',
         `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
       )
-      .attach(
-        'inp_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/const.inp`
-      )
+      .field('constraints', pdbConstraints)
       .attach(
         'dat_file',
         `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
@@ -273,10 +276,7 @@ describe('POST /api/v1/jobs', () => {
         'pdb_file',
         `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
       )
-      .attach(
-        'inp_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/const.inp`
-      )
+      .field('constraints', pdbConstraints)
       .attach(
         'dat_file',
         `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
@@ -299,10 +299,7 @@ describe('POST /api/v1/jobs', () => {
         'pdb_file',
         `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
       )
-      .attach(
-        'inp_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/const.inp`
-      )
+      .field('constraints', pdbConstraints)
       .attach(
         'dat_file',
         `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
@@ -327,10 +324,7 @@ describe('POST /api/v1/jobs', () => {
         'pdb_file',
         `${__dirname}/../../../../test_scripts/data/pdb/pro_dna.pdb`
       )
-      .attach(
-        'inp_file',
-        `${__dirname}/../../../../test_scripts/data/pdb/const.inp`
-      )
+      .field('constraints', pdbConstraints)
       .attach(
         'dat_file',
         `${__dirname}/../../../../test_scripts/data/pdb/saxs-data.dat`
@@ -376,15 +370,14 @@ describe('POST /api/v1/jobs', () => {
 describe('POST /api/v1/jobs (resubmit)', () => {
   const pdbData = `${__dirname}/../../../../test_scripts/data/pdb`
 
-  // const.inp selects the DNA chain as a whole segment (segid only);
-  // const-openmm.inp uses residue ranges throughout
-  const submitOriginalPdbJob = async (inpFile = 'const.inp') => {
+  // pdb/constraints.json fixes the DNA chain as a whole segment
+  const submitOriginalPdbJob = async () => {
     const res = await request(app)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${generateAccessToken()}`)
       .field('title', 'Original Job')
       .attach('pdb_file', `${pdbData}/pro_dna.pdb`)
-      .attach('inp_file', `${pdbData}/${inpFile}`)
+      .field('constraints', pdbConstraints)
       .attach('dat_file', `${pdbData}/saxs-data.dat`)
       .field('rg', 35)
       .field('rg_min', 30)
@@ -396,7 +389,13 @@ describe('POST /api/v1/jobs (resubmit)', () => {
     return res.body as { jobid: string; uuid: string }
   }
 
-  const resubmit = (originalJobId: string, token = generateAccessToken()) =>
+  // The resubmit form reuses the structure and data files and sends the
+  // constraints as JSON, as a new submission does
+  const resubmit = (
+    originalJobId: string,
+    token = generateAccessToken(),
+    constraints = pdbConstraints
+  ) =>
     request(app)
       .post('/api/v1/jobs')
       .set('Authorization', `Bearer ${token}`)
@@ -404,8 +403,8 @@ describe('POST /api/v1/jobs (resubmit)', () => {
       .field('resubmit', 'true')
       .field('original_job_id', originalJobId)
       .field('reuse_pdb_file', 'true')
-      .field('reuse_inp_file', 'true')
       .field('reuse_dat_file', 'true')
+      .field('constraints', constraints)
       .field('rg', 35)
       .field('rg_min', 30)
       .field('rg_max', 40)
@@ -413,8 +412,8 @@ describe('POST /api/v1/jobs (resubmit)', () => {
       .field('bilbomd_mode', 'pdb')
       .field('md_engine', 'openmm')
 
-  test('reuses the original files and reprocesses constraints for the new engine', async () => {
-    const original = await submitOriginalPdbJob('const-openmm.inp')
+  test('reuses the original files and writes constraints for the new engine', async () => {
+    const original = await submitOriginalPdbJob()
 
     const res = await resubmit(original.jobid)
 
@@ -427,23 +426,24 @@ describe('POST /api/v1/jobs (resubmit)', () => {
     const newDir = path.join(dataVolume, res.body.uuid)
     expect(await fs.pathExists(path.join(newDir, 'pro_dna.pdb'))).toBe(true)
     expect(await fs.pathExists(path.join(newDir, 'saxs-data.dat'))).toBe(true)
-    expect(await fs.pathExists(path.join(newDir, 'openmm_const.yml'))).toBe(
-      true
-    )
-  })
-
-  test('moves a whole-segment selection to OpenMM as a residue range', async () => {
-    const original = await submitOriginalPdbJob()
-
-    const res = await resubmit(original.jobid)
-
-    expect(res.statusCode).toBe(200)
+    // A whole-segment selection is written for OpenMM as a residue range:
+    // chain D (segment DNAD) holds residues 22-80
     const yaml = await fs.readFile(
-      path.join(dataVolume, res.body.uuid, 'openmm_const.yml'),
+      path.join(newDir, 'openmm_const.yml'),
       'utf8'
     )
-    // Chain D (segment DNAD) holds residues 22-80
     expect(yaml).toMatch(/chain_id: D\s+residues:\s+start: 22\s+stop: 80/)
+  })
+
+  test('refuses to reuse the original constraint file', async () => {
+    const original = await submitOriginalPdbJob()
+
+    const res = await resubmit(original.jobid).field('reuse_inp_file', 'true')
+
+    expect(res.statusCode).toBe(400)
+    expect(res.body.message).toMatch(
+      /Constraint files \(inp_file\) are no longer accepted/
+    )
   })
 
   test("refuses to reuse another user's job", async () => {
@@ -581,7 +581,7 @@ describe('POST /api/v1/jobs (input file names)', () => {
       .set('Authorization', `Bearer ${generateAccessToken()}`)
       .field('title', 'Crafted PDB Job')
       .attach('pdb_file', `${pdbData}/pro_dna.pdb`)
-      .attach('inp_file', `${pdbData}/const.inp`)
+      .field('constraints', pdbConstraints)
       .field('dat_file', `../${planted.name}`)
       .field('rg', 35)
       .field('rg_min', 30)
@@ -596,5 +596,24 @@ describe('POST /api/v1/jobs (input file names)', () => {
       message: 'Experimental SAXS data is required'
     })
     await expectUntouched(planted.filePath)
+  })
+})
+
+describe('POST /api/v1/jobs (constraint files)', () => {
+  test('rejects an uploaded const.inp with a pointer to the constraints field', async () => {
+    const res = await request(app)
+      .post('/api/v1/jobs')
+      .set('Authorization', `Bearer ${generateAccessToken()}`)
+      .field('title', 'Old Client Job')
+      .field('bilbomd_mode', 'pdb')
+      .attach('pdb_file', `${testData}/pdb/pro_dna.pdb`)
+      .attach('dat_file', `${testData}/pdb/saxs-data.dat`)
+      .attach('inp_file', `${testData}/pdb/const.inp`)
+
+    expect(res.statusCode).toBe(400)
+    expect(res.body.message).toMatch(
+      /Constraint files \(inp_file\) are no longer accepted/
+    )
+    expect(res.body.message).toMatch(/"constraints" field/)
   })
 })

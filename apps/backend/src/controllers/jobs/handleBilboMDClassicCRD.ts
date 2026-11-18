@@ -63,21 +63,21 @@ const handleBilboMDClassicCRD = async (
     let crdFile
     let psfFile
     let datFile
-    let inpFile
 
     const jobDir = path.join(uploadFolder, UUID)
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
     crdFile = files['crd_file']?.[0]
     psfFile = files['psf_file']?.[0]
-    inpFile = files['inp_file']?.[0]
     datFile = files['dat_file']?.[0]
 
     // Otherwise use a file the server placed in jobDir (example data or a
     // resubmission's reused file)
     if (!crdFile) crdFile = serverFile(req, jobDir, 'crd_file')
     if (!psfFile) psfFile = serverFile(req, jobDir, 'psf_file')
-    if (!inpFile) inpFile = serverFile(req, jobDir, 'inp_file')
+    // Constraints come as JSON; the only constraint file is the example
+    // data's own const.inp, placed by the server
+    const exampleConstInp = serverFile(req, jobDir, 'inp_file')
     if (!datFile) datFile = serverFile(req, jobDir, 'dat_file')
 
     crdFileName = crdFile?.originalname.toLowerCase() ?? ''
@@ -145,7 +145,7 @@ const handleBilboMDClassicCRD = async (
       jobDir,
       structureFile: path.join(jobDir, psfFileName),
       constraintsField: req.body.constraints,
-      legacyFile: inpFile
+      exampleConstInp
     })
     if (!constraints.ok) {
       logger.warn(

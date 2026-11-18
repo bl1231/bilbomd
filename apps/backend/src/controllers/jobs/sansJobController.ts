@@ -40,7 +40,6 @@ const createSANSJob = async (req: Request, res: Response) => {
     upload.fields([
       { name: 'pdb_file', maxCount: 1 },
       { name: 'dat_file', maxCount: 1 },
-      { name: 'inp_file', maxCount: 1 },
       { name: 'rg', maxCount: 1 },
       { name: 'rg_min', maxCount: 1 },
       { name: 'rg_max', maxCount: 1 },
@@ -120,7 +119,6 @@ const createPublicSANSJob = async (req: Request, res: Response) => {
     upload.fields([
       { name: 'pdb_file', maxCount: 1 },
       { name: 'dat_file', maxCount: 1 },
-      { name: 'inp_file', maxCount: 1 },
       { name: 'rg', maxCount: 1 },
       { name: 'rg_min', maxCount: 1 },
       { name: 'rg_max', maxCount: 1 },

@@ -16,7 +16,8 @@ set +a
 CRD_FILE="$SCRIPT_DIR/data/crd/pro_dna.crd"
 PSF_FILE="$SCRIPT_DIR/data/crd/pro_dna.psf"
 DAT_FILE="$SCRIPT_DIR/data/crd/saxs-data.dat"
-INP_FILE="$SCRIPT_DIR/data/crd/const.inp"
+# Constraints as JSON (BilboMD no longer accepts const.inp uploads)
+CONSTRAINTS_FILE="$SCRIPT_DIR/data/crd/constraints.json"
 
 TITLE_DATE=$(date +%m%d)
 TITLE_SUFFIX=$(date +%s | tail -c 5)
@@ -31,7 +32,7 @@ HTTP_STATUS=$(curl -# -o "$RESPONSE_FILE" -w "%{http_code}" \
   -F "crd_file=@${CRD_FILE}" \
   -F "psf_file=@${PSF_FILE}" \
   -F "dat_file=@${DAT_FILE}" \
-  -F "inp_file=@${INP_FILE}")
+  -F "constraints=<${CONSTRAINTS_FILE}")
 
 echo "HTTP Status: $HTTP_STATUS"
 jq . < "$RESPONSE_FILE" || cat "$RESPONSE_FILE"
