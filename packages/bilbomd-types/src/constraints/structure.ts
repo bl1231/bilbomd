@@ -23,8 +23,12 @@ const PDB2CRD_IONS = new Set([
   'SO4', 'PO4', 'NO3', 'CN'
 ]) // prettier-ignore
 
-// Molecule type as pdb_utils.py classify_residue gives it
-const classifyResidue = (name: string): ChainMolType | null => {
+/**
+ * Molecule type of a residue name, as pdb_utils.py classify_residue gives it
+ * (null for its UNKNOWN). A segment's type is that of its first recognized
+ * residue.
+ */
+export const classifyResidue = (name: string): ChainMolType | null => {
   if (PROTEIN_RESIDUES.has(name)) return 'PRO'
   if (DNA_RESIDUES.has(name) || DNA_ALIASES.has(name)) return 'DNA'
   if (RNA_RESIDUES.has(name)) return 'RNA'
@@ -59,11 +63,29 @@ export const pdb2crdSegid = (
 const sortedUnique = (values: Iterable<number>): number[] =>
   [...new Set(values)].sort((a, b) => a - b)
 
-// Nucleic-acid backbone link between residue i and i+1, as pdb2crd.py checks
-// it: O3'(i)-P(i+1) is a 1.6 A bond; when P is missing, O3'(i)-O5'(i+1) is
-// about 2.5 A through it
-const MAX_O3_P_BOND = 2.5
-const MAX_O3_O5_LINK = 3.5
+// Backbone links between residue i and i+1, as pdb2crd.py checks them. A
+// link clearly longer than the bond is a chain break (a missing loop, or
+// separate molecules), which CHARMM does not bond across.
+// Nucleic acids: O3'(i)-P(i+1) is a 1.6 A bond; when P is missing,
+// O3'(i)-O5'(i+1) is about 2.5 A through it.
+// Proteins: C(i)-N(i+1) is a 1.33 A peptide bond; when C or N is missing,
+// CA(i)-CA(i+1) is 3.8 A (2.9 A for a cis peptide).
+const LINK_CHECKS: Partial<
+  Record<ChainMolType, { from: string[]; to: string[]; max: number }[]>
+> = {
+  DNA: [
+    { from: ["O3'", 'O3*'], to: ['P'], max: 2.5 },
+    { from: ["O3'", 'O3*'], to: ["O5'", 'O5*'], max: 3.5 }
+  ],
+  RNA: [
+    { from: ["O3'", 'O3*'], to: ['P'], max: 2.5 },
+    { from: ["O3'", 'O3*'], to: ["O5'", 'O5*'], max: 3.5 }
+  ],
+  PRO: [
+    { from: ['C'], to: ['N'], max: 2.0 },
+    { from: ['CA'], to: ['CA'], max: 4.5 }
+  ]
+}
 
 // Letters pdb2crd.py tries, in order, for a molecule split off a chain
 const SEGMENT_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -90,26 +112,27 @@ interface Ter {
 
 type PdbRecord = Atom | Ter
 
-const isNucleic = (resName: string) => {
-  const type = classifyResidue(resName)
-  return type === 'DNA' || type === 'RNA'
-}
-
 const coordsOf = (residue: Atom[], names: string[]): Xyz | null =>
   residue.find((a) => names.includes(a.atomName))?.xyz ?? null
 
 const distance = (a: Xyz, b: Xyz) =>
   Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
 
-// Two consecutive nucleotides that are clearly not bonded (pdb2crd.py
-// _nucleic_link_broken)
-const nucleicLinkBroken = (prev: Atom[], next: Atom[]): boolean => {
-  const o3 = coordsOf(prev, ["O3'", 'O3*'])
-  if (!o3) return false
-  const p = coordsOf(next, ['P'])
-  if (p) return distance(o3, p) > MAX_O3_P_BOND
-  const o5 = coordsOf(next, ["O5'", 'O5*'])
-  return o5 ? distance(o3, o5) > MAX_O3_O5_LINK : false
+// The gap between two consecutive residues of one polymer type that are
+// clearly not bonded, in A, else null (pdb2crd.py _chain_break). A link that
+// can't be judged (atoms missing) is left alone.
+const chainBreak = (prev: Atom[], next: Atom[]): number | null => {
+  const type = classifyResidue(prev[0]!.resName)
+  if (!type || type !== classifyResidue(next[0]!.resName)) return null
+  for (const { from, to, max } of LINK_CHECKS[type] ?? []) {
+    const a = coordsOf(prev, from)
+    const b = coordsOf(next, to)
+    if (a && b) {
+      const d = distance(a, b)
+      return d > max ? d : null
+    }
+  }
+  return null
 }
 
 // Consecutive atoms of one residue
@@ -125,35 +148,42 @@ const residuesOf = (atoms: Atom[]): Atom[][] => {
   return out
 }
 
-// A molecule's atoms split wherever consecutive nucleotides are not bonded
-const splitAtNucleicBreaks = (atoms: Atom[]): Atom[][] => {
-  const pieces: Atom[][] = [[]]
+interface Piece {
+  atoms: Atom[]
+  /** The break before this piece: the residue it follows, and the gap */
+  chainBreak?: { after: number; distance: number }
+}
+
+// A molecule's atoms split wherever consecutive residues are not bonded
+const splitAtChainBreaks = (atoms: Atom[]): Piece[] => {
+  const pieces: Piece[] = [{ atoms: [] }]
   let previous: Atom[] | null = null
   for (const residue of residuesOf(atoms)) {
-    const first = residue[0]!
-    if (
-      previous &&
-      isNucleic(previous[0]!.resName) &&
-      isNucleic(first.resName) &&
-      nucleicLinkBroken(previous, residue)
-    ) {
-      pieces.push([])
+    const gap = previous ? chainBreak(previous, residue) : null
+    if (previous && gap !== null) {
+      pieces.push({
+        atoms: [],
+        chainBreak: {
+          after: Number(previous[0]!.resSeq),
+          distance: Math.round(gap * 10) / 10
+        }
+      })
     }
-    pieces[pieces.length - 1]!.push(...residue)
+    pieces[pieces.length - 1]!.atoms.push(...residue)
     previous = residue
   }
-  return pieces.filter((p) => p.length > 0)
+  return pieces.filter((p) => p.atoms.length > 0)
 }
 
 interface RawSegment {
   chainId: string
   segid: string
   atoms: Atom[]
+  chainBreak?: Piece['chainBreak']
 }
 
 // The molecules pdb2crd.py builds (read_raw_segments): a chain's atoms start
-// a new one after a TER record, when the segid changes, or where
-// consecutive nucleotides are not bonded
+// a new one after a TER record, when the segid changes, or at a chain break
 const rawSegments = (records: PdbRecord[]): RawSegment[] => {
   const segments: RawSegment[] = []
   const open = new Map<string, RawSegment>()
@@ -178,7 +208,7 @@ const rawSegments = (records: PdbRecord[]): RawSegment[] => {
     open.set(record.chainId, segment)
   }
   return segments.flatMap((s) =>
-    splitAtNucleicBreaks(s.atoms).map((atoms) => ({ ...s, atoms }))
+    splitAtChainBreaks(s.atoms).map((piece) => ({ ...s, ...piece }))
   )
 }
 
@@ -241,7 +271,8 @@ const segmentsFromRecords = (records: PdbRecord[]): StructureSegment[] => {
       segid,
       chain_id: s.chainId,
       mol_type: molType,
-      residues: sortedUnique(residues)
+      residues: sortedUnique(residues),
+      ...(s.chainBreak ? { chain_break: s.chainBreak } : {})
     })
   }
   return out

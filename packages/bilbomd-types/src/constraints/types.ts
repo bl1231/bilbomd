@@ -43,6 +43,12 @@ export interface StructureSegment {
   mol_type?: ChainMolType
   /** Residue numbers present, ascending, without duplicates */
   residues: number[]
+  /**
+   * Set when this segment starts at a chain break: the previous residue of
+   * the chain (`after`) is not bonded to this segment's first one, being
+   * `distance` A away. CHARMM builds the two sides as separate segments.
+   */
+  chain_break?: { after: number; distance: number }
 }
 
 export interface ConstraintStructure {

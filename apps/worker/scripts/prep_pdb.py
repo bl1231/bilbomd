@@ -1,5 +1,10 @@
 """Prepare a PDB file for OpenMM by removing incompatible residues.
 
+Adds a TER record wherever a chain holds more than one molecule (a segid
+change, or a chain break such as a missing loop), using the same rules as
+pdb2crd.py uses for CHARMM (pdb_segments.py). OpenMM starts a new chain at each TER, so it does not
+bond separate molecules together, or bond across a gap.
+
 Removes:
   - Water molecules (HOH) — crystal waters from CIF conversion typically
     lack hydrogen atoms and cannot be matched to any force-field template.
@@ -18,6 +23,10 @@ SUPPORTED_PDB_RESIDUES in packages/bilbomd-types/src/pdbResidues.ts.
 """
 
 import sys
+
+# pdb_segments.py (tools/python) sits next to this script in the worker
+# image, in /app/scripts
+from pdb_segments import insert_ter_records
 
 KNOWN_IONS = frozenset([
     # Alkali metals
@@ -70,11 +79,13 @@ with open(pdb_path, encoding="utf-8") as f:
 
 lines, n_water = strip_water(lines)
 lines, n_ions = strip_ions(lines)
+lines, n_breaks = insert_ter_records(lines)
 
 with open(pdb_path, "w", encoding="utf-8") as f:
     f.writelines(lines)
 
 print(
     f"prep_pdb: removed {n_water} water record(s) and "
-    f"{n_ions} ion record(s) from {pdb_path}"
+    f"{n_ions} ion record(s) from {pdb_path}; "
+    f"added {n_breaks} TER record(s) between molecules or at chain breaks"
 )

@@ -216,9 +216,10 @@ describe('validateConstraintsInput: a chain that is several segments', () => {
   it('rejects the whole chain and says how to fix it', () => {
     const result = validate([{ chain_id: 'D' }])
     expect(!result.ok && result.errors[0]?.message).toBe(
-      'Chain D is 2 separate molecules, so CHARMM builds it as segments ' +
-        'DNAD (residues 22-24) and DNAB (residues 60-62). Select each one ' +
-        'with its own residue range, or name it with segid.'
+      'Chain D is built as 2 separate CHARMM segments, DNAD (residues ' +
+        '22-24) and DNAB (residues 60-62) (separate molecules, or a chain ' +
+        'break). Select each one with its own residue range, or name it ' +
+        'with segid; they can be in the same body.'
     )
   })
 
@@ -227,7 +228,7 @@ describe('validateConstraintsInput: a chain that is several segments', () => {
       { chain_id: 'D', residues: { start: 22, stop: 62 } }
     ])
     expect(!result.ok && result.errors[0]?.message).toMatch(
-      /span 2 separate molecules, segments DNAD .* and DNAB .*within one segment/
+      /span 2 separate CHARMM segments, DNAD .* and DNAB .*within one segment/
     )
   })
 
@@ -236,5 +237,96 @@ describe('validateConstraintsInput: a chain that is several segments', () => {
     expect(!result.ok && result.errors[0]?.message).toBe(
       'Chain D is segments DNAD, DNAB, not DNAA'
     )
+  })
+})
+
+// Backbone N, CA, C per residue along x; C(i)-N(i+1) is 1.33 A
+const peptide = (chain: string, first: number, count: number, x0 = 0) =>
+  Array.from({ length: count }, (_, i) => {
+    const x = x0 + 3.8 * i
+    return (
+      [
+        ['N', 0],
+        ['CA', 1.2],
+        ['C', 2.47]
+      ] as const
+    ).map(([name, dx]) =>
+      atomLine(name, 'ALA', chain, first + i, [x + dx, 50, 0])
+    )
+  }).flat()
+
+describe('protein chain breaks (missing loops)', () => {
+  // Residues 124-140 missing, the two sides 31.3 A apart (as pdb2crd.py
+  // reports it in test_pdb2crd.py)
+  const gapped = [
+    ...peptide('A', 120, 4),
+    ...peptide('A', 141, 3, 3.8 * 4 + 30)
+  ]
+
+  it('builds the two sides as separate segments', () => {
+    expect(readPdbSegments(gapped.join('\n'))).toEqual([
+      {
+        segid: 'PROA',
+        chain_id: 'A',
+        mol_type: 'PRO',
+        residues: [120, 121, 122, 123]
+      },
+      {
+        segid: 'PROB',
+        chain_id: 'A',
+        mol_type: 'PRO',
+        residues: [141, 142, 143],
+        chain_break: { after: 123, distance: 31.3 }
+      }
+    ])
+  })
+
+  it('does not split bonded residues with a numbering gap', () => {
+    expect(
+      segids([...peptide('A', 1, 3), ...peptide('A', 10, 3, 3.8 * 3)])
+    ).toEqual(['PROA'])
+  })
+
+  it('warns about the break, and accepts a body with both sides', () => {
+    const structure: ConstraintStructure = {
+      mode: 'pdb',
+      segments: readPdbSegments(gapped.join('\n'))
+    }
+    const result = validateConstraintsInput(
+      {
+        fixed_bodies: [
+          {
+            segments: [
+              { chain_id: 'A', residues: { start: 120, stop: 123 } },
+              { chain_id: 'A', residues: { start: 141, stop: 143 } }
+            ]
+          }
+        ]
+      },
+      structure
+    )
+    expect(result.ok && result.warnings).toEqual([
+      'Chain A has a chain break between residues 123 and 141: they are ' +
+        '31.3 Å apart, so they are not bonded. BilboMD builds the two sides ' +
+        'as separate segments (PROA and PROB), which can move apart during ' +
+        'MD. If residues are missing there, model them before submitting.'
+    ])
+  })
+
+  it('does not warn about separate molecules split at a segid change', () => {
+    const structure: ConstraintStructure = {
+      mode: 'pdb',
+      segments: readPdbSegments(
+        [
+          ...strand('D', 22, 3, [0, 0, 0], 'DNAA'),
+          ...strand('D', 60, 3, FAR, 'DNAB')
+        ].join('\n')
+      )
+    }
+    const result = validateConstraintsInput(
+      { fixed_bodies: [{ segments: [{ chain_id: 'D', segid: 'DNAD' }] }] },
+      structure
+    )
+    expect(result.ok && result.warnings).toEqual([])
   })
 })

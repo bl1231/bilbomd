@@ -1,16 +1,10 @@
 export {
   convertInpToYaml,
-  convertYamlToInp,
   validateYamlConstraints,
-  validateInpConstraints,
   extractConstraintsFromYaml,
-  buildChainSegidMap,
   buildChainMolTypes,
   buildChainMolTypesFromInp,
-  findRigidBodyOverlaps,
-  assertNoRigidBodyOverlaps,
-  findFixedRigidOverlaps,
-  assertNoFixedRigidOverlaps
+  assertNoRigidBodyOverlaps
 } from './constraintUtils.js'
 
 export { toPipeline, discriminatorToPipeline } from './pipelineUtils.js'

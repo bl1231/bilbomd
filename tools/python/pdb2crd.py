@@ -51,7 +51,11 @@ import argparse
 import os
 import sys
 
-from pdb_utils import classify_residue, determine_molecule_type_details
+from pdb_utils import determine_molecule_type_details
+from pdb_segments import (  # noqa: F401  (read_raw_segments, insert_ter_records re-exported)
+    insert_ter_records,
+    read_raw_segments,
+)
 
 TOPO_FILES = os.environ.get("CHARMM_TOPOLOGY", "/app/scripts/bilbomd_top_par_files.str")
 
@@ -74,12 +78,9 @@ KNOWN_IONS = frozenset([
 ])
 
 
-# Nucleic-acid backbone link between residue i and i+1. O3'(i)-P(i+1) is a
-# 1.6 A bond; when P is missing, O3'(i)-O5'(i+1) is about 2.5 A through it.
-# Anything clearly longer means the two residues are not linked.
-MAX_O3_P_BOND = 2.5
-MAX_O3_O5_LINK = 3.5
-NUCLEIC_TYPES = frozenset(["DNA", "RNA"])
+# The segid prefix for segments with no recognized residue (ligands such as
+# HEME), as CHARMM-GUI names them. Segids must fit PDB columns 73-76.
+HETERO_PREFIX = "HET"
 
 # Letters tried, in order, for a segment split off a chain whose own name is
 # already taken
@@ -105,148 +106,15 @@ def segment_name(molecule_type, letter):
     """
     The CHARMM segid for a molecule type and letter, as CHARMM-GUI names them:
     type then letter (PROA, DNAD). Carbohydrates are CAR + letter for an
-    uppercase letter, otherwise CAL + the letter uppercased.
+    uppercase letter, otherwise CAL + the letter uppercased; segments with no
+    recognized residue are HET + letter.
     """
     if molecule_type == "CAR":
         prefix = "CAR" if letter.isupper() else "CAL"
         return f"{prefix}{letter.upper()}"
+    if molecule_type == "UNKNOWN":
+        return f"{HETERO_PREFIX}{letter}"
     return f"{molecule_type}{letter}"
-
-
-def _residues(lines):
-    """Groups consecutive ATOM/HETATM lines into residues (lists of lines)."""
-    residues = []
-    current_key = None
-    for line in lines:
-        # resName, chainID, resSeq and iCode identify a residue
-        key = line[17:27]
-        if key != current_key:
-            residues.append([])
-            current_key = key
-        residues[-1].append(line)
-    return residues
-
-
-def _atom_coords(residue, names):
-    """Coordinates of the first atom in the residue with one of these names."""
-    for line in residue:
-        if line[12:16].strip() in names:
-            try:
-                return (float(line[30:38]), float(line[38:46]), float(line[46:54]))
-            except ValueError:
-                return None
-    return None
-
-
-def _distance(a, b):
-    return sum((p - q) ** 2 for p, q in zip(a, b)) ** 0.5
-
-
-def _nucleic_link_broken(prev_residue, next_residue):
-    """
-    True if two consecutive nucleotides are clearly not bonded: O3'(i) is far
-    from P(i+1), or from O5'(i+1) when P is missing. Missing O3' means the
-    link cannot be judged, so it is left alone.
-    """
-    o3 = _atom_coords(prev_residue, ("O3'", "O3*"))
-    if o3 is None:
-        return False
-    p = _atom_coords(next_residue, ("P",))
-    if p is not None:
-        return _distance(o3, p) > MAX_O3_P_BOND
-    o5 = _atom_coords(next_residue, ("O5'", "O5*"))
-    if o5 is not None:
-        return _distance(o3, o5) > MAX_O3_O5_LINK
-    return False
-
-
-def _residue_type(residue):
-    return classify_residue(residue[0][17:20].strip())
-
-
-def split_at_nucleic_breaks(lines):
-    """
-    Splits a segment's lines wherever two consecutive nucleotides are not
-    bonded, so separate strands are not generated as one polymer.
-
-    :return: A list of line lists, one per piece, in file order.
-    """
-    pieces = [[]]
-    previous = None
-    for residue in _residues(lines):
-        if (
-            previous is not None
-            and _residue_type(previous) in NUCLEIC_TYPES
-            and _residue_type(residue) in NUCLEIC_TYPES
-            and _nucleic_link_broken(previous, residue)
-        ):
-            pieces.append([])
-        pieces[-1].extend(residue)
-        previous = residue
-    return [piece for piece in pieces if piece]
-
-
-def read_raw_segments(lines):
-    """
-    Groups ATOM/HETATM lines into molecules. A chain's atoms start a new
-    molecule after a TER record, when the segid (columns 73-76) changes, or
-    where consecutive nucleotides are not bonded. Separate molecules that share
-    a chain ID would otherwise be generated as one polymer and bonded
-    together.
-
-    :return: A list of dicts with 'chainid', 'input_segid', 'reason' (why the
-        molecule was split from the previous one of its chain, or None) and
-        'lines', in file order.
-    """
-    segments = []
-    open_segment = {}  # chain ID -> its segment that atoms are still added to
-    last_chain = None
-    for line in lines:
-        if line.startswith("ENDMDL"):
-            # Only the first model is built
-            break
-        if line.startswith("TER"):
-            # TER ends the chain of the atoms before it (its own chain ID is
-            # often blank)
-            open_segment.pop(last_chain, None)
-            continue
-        if not line.startswith(("ATOM", "HETATM")):
-            continue
-        chain_id = line[21]
-        input_segid = line[72:76].strip()
-        last_chain = chain_id
-        current = open_segment.get(chain_id)
-        if current is not None and current["input_segid"] == input_segid:
-            current["lines"].append(line)
-            continue
-        seen = any(s["chainid"] == chain_id for s in segments)
-        if not seen:
-            reason = None
-        elif current is None:
-            reason = "TER record"
-        else:
-            reason = f"segid change {current['input_segid'] or '(blank)'} -> {input_segid or '(blank)'}"
-        segment = {
-            "chainid": chain_id,
-            "input_segid": input_segid,
-            "reason": reason,
-            "lines": [line],
-        }
-        segments.append(segment)
-        open_segment[chain_id] = segment
-
-    split = []
-    for segment in segments:
-        pieces = split_at_nucleic_breaks(segment["lines"])
-        for index, piece in enumerate(pieces):
-            split.append(
-                {
-                    **segment,
-                    "reason": segment["reason"] if index == 0 else "O3'-P gap",
-                    "lines": piece,
-                }
-            )
-    return split
 
 
 def assign_segids(segments):
@@ -296,6 +164,20 @@ def assign_segids(segments):
         segment["segid"] = segid
 
 
+def with_segid(lines, segid):
+    """
+    The lines with the CHARMM segid in columns 73-76, which `read coor pdb
+    resid` matches on, uppercased as CHARMM reads command input.
+    """
+    out = []
+    for line in lines:
+        if line.startswith(("ATOM", "HETATM")):
+            body = line.rstrip("\r\n")
+            line = f"{body[:72]:<72s}{segid.upper():<4s}{body[76:]}\n"
+        out.append(line)
+    return out
+
+
 def _residue_span(lines):
     numbers = [line[22:26].strip() for line in lines]
     return f"{numbers[0]}-{numbers[-1]}" if numbers else "none"
@@ -316,8 +198,8 @@ def warn_split_chains(segments):
             for s in chain_segments
         )
         print(
-            f"WARNING: Chain {chain_id} holds {len(chain_segments)} separate "
-            f"molecules, built as CHARMM segments {parts}",
+            f"WARNING: Chain {chain_id} is built as {len(chain_segments)} "
+            f"unbonded CHARMM segments {parts}",
             file=sys.stderr,
         )
 
@@ -468,15 +350,7 @@ def write_pdb_2_crd_inp_files(segments, output_dir, pdb_file_path):
         segment_filename = get_segment_filename(charmmgui_chain_id, pdb_file_path)
 
         output_file = f"{output_dir}/pdb2crd_charmm_{charmmgui_chain_id.lower()}.inp"
-        lines = chain_data["lines"]
         original_lines = chain_data["original_lines"]
-        if lines:  # Ensure there's at least one line to process
-            # Extract resnum
-            start_res_num_str = lines[0][22:26]
-            # Convert to integer and subtract 1
-            start_res_num = int(start_res_num_str) - 1
-            # Need string?... convert back to str
-            start_res_num_str = str(start_res_num)
         with open(output_file, mode="w", encoding="utf8") as outfile:
             outfile.write("* PURPOSE: Convert PDB file to CRD and PSF\n")
             outfile.write("* AUTHOR: Michal Hammel\n")
@@ -501,7 +375,12 @@ def write_pdb_2_crd_inp_files(segments, output_dir, pdb_file_path):
             types_present = molinfo.get("types_present", set())
             last_type = molinfo.get("last_residue_type", "UNKNOWN")
 
-            if types_present == {"PRO"} and last_type == "PRO":
+            # A segment that ends at a chain break has no real C-terminus
+            if (
+                types_present == {"PRO"}
+                and last_type == "PRO"
+                and not chain_data.get("ends_at_break")
+            ):
                 gen_opts = "setup warn first none last CTER"
             else:
                 gen_opts = charmm_gen_options.get(
@@ -509,7 +388,10 @@ def write_pdb_2_crd_inp_files(segments, output_dir, pdb_file_path):
                 )
 
             outfile.write(f"generate {charmmgui_chain_id} {gen_opts}\n")
-            outfile.write(f"read coor pdb unit 1 offset -{start_res_num_str}\n")
+            # Match coordinates by segid and residue number. The default
+            # (offset) matches by position in the sequence, which puts every
+            # residue after a numbering gap on the wrong coordinates.
+            outfile.write("read coor pdb unit 1 resid\n")
 
             # Detect phosphorylated residues and insert patch commands
             wrote_patch_comment = False
@@ -711,17 +593,15 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
         molinfo = determine_molecule_type_details(chain_data["lines"])
         chain_data["molinfo"] = molinfo
         types_present = molinfo.get("types_present", set())
-        first_type = molinfo.get("first_residue_type", "UNKNOWN")
-
-        # Determine the segment type consistently using first_residue_type
-        # This avoids non-deterministic set iteration order
-        chain_data["type"] = "PRO" if types_present == {"PRO"} else first_type
+        # The type of the first recognized residue, so e.g. a protein that
+        # starts with PCA is still generated (and named) as protein
+        chain_data["type"] = molinfo["molecule_type"]
 
         # Warn if segment contains mixed types or unknown residues
         if len(types_present) > 1:
             print(
                 f"WARNING: Chain {chain_data['chainid']} contains mixed residue types: {types_present}. "
-                f"Using {chain_data['type']} (first residue type)",
+                f"Using {chain_data['type']} (first recognized residue type)",
                 file=sys.stderr,
             )
         elif "UNKNOWN" in types_present:
@@ -738,7 +618,9 @@ def split_and_process_pdb(pdb_file_path: str, output_dir: str):
         with open(
             os.path.join(output_dir, segment_filename), "w", encoding="utf-8"
         ) as segment_file:
-            segment_file.writelines(chain_data["processed_lines"])
+            segment_file.writelines(
+                with_segid(chain_data["processed_lines"], chain_data["segid"])
+            )
             segment_file.write("TER\n")
     # Write individual inp files for each non-empty segment
     write_pdb_2_crd_inp_files(non_empty_segments, output_dir, pdb_file_path)

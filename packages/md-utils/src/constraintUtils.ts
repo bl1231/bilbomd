@@ -8,18 +8,10 @@ import {
   ChainMolType
 } from '@bilbomd/mongodb-schema'
 import {
-  PROTEIN_RESIDUES,
-  DNA_RESIDUES,
-  RNA_RESIDUES,
-  CARBOHYDRATE_RESIDUES,
-  constInpLengthMessage,
-  constInpOverlapMessage,
-  duplicateShapeNamesMessage,
-  findDisallowedConstInpLine,
+  classifyResidue,
   joinConstInpLines,
   parseConstInp,
-  SEGID_MOL_TYPE_PREFIXES,
-  wrapConstInpCommand
+  SEGID_MOL_TYPE_PREFIXES
 } from '@bilbomd/bilbomd-types'
 import type { Logger } from './index.js'
 
@@ -51,14 +43,6 @@ export function extractConstraintsFromYaml(
   }
 }
 
-function classifyResidue(name: string): ChainMolType | null {
-  if (PROTEIN_RESIDUES.has(name)) return 'PRO'
-  if (DNA_RESIDUES.has(name)) return 'DNA'
-  if (RNA_RESIDUES.has(name)) return 'RNA'
-  if (CARBOHYDRATE_RESIDUES.has(name)) return 'CAR'
-  return null
-}
-
 /**
  * Reads a PDB file and returns each chain's molecule type, classifying a chain
  * by its first recognized residue the same way pdb2crd.py does. Chains with no
@@ -87,22 +71,6 @@ export async function buildChainMolTypes(
     chain_id,
     mol_type
   }))
-}
-
-/**
- * Reads a PDB file and returns a map of chain_id → CHARMM segid, mirroring
- * pdb2crd.py's naming convention ({MOL_TYPE}{chain_id}).
- * Used when converting YAML constraints → CHARMM INP so that DNA/RNA chains
- * get the correct segid (e.g. "DNAD") rather than defaulting to "PROD".
- */
-export async function buildChainSegidMap(
-  pdbFilePath: string
-): Promise<Record<string, string>> {
-  const result: Record<string, string> = {}
-  for (const { chain_id, mol_type } of await buildChainMolTypes(pdbFilePath)) {
-    result[chain_id] = `${mol_type}${chain_id}`
-  }
-  return result
 }
 
 /**
@@ -168,49 +136,6 @@ export async function convertInpToYaml(
 }
 
 /**
- * Converts YAML constraint file to CHARMM INP format.
- *
- * @param chainSegidMap - Optional map of chain_id → CHARMM segid (e.g. {"D": "DNAD", "P": "PROP"}).
- *   Build this from the PDB file when chains include DNA/RNA so that the generated
- *   segids match what pdb2crd will produce.  Without it, all chains are assumed to
- *   be protein (segid = "PRO" + chain_id).
- */
-export async function convertYamlToInp(
-  yamlFilePath: string,
-  logger: Logger = defaultLogger,
-  chainSegidMap?: Record<string, string>
-): Promise<string> {
-  try {
-    const yamlContent = await fs.readFile(yamlFilePath, 'utf8')
-    const parsed = parseYaml(yamlContent)
-
-    // Handle both wrapped and unwrapped formats
-    let constraints: IMDConstraints
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      'constraints' in parsed &&
-      parsed.constraints
-    ) {
-      constraints = parsed.constraints as IMDConstraints
-    } else {
-      constraints = parsed as IMDConstraints
-    }
-
-    const inpContent = generateInpFromConstraints(constraints, chainSegidMap)
-
-    logger.info('Successfully converted YAML to INP')
-    return inpContent
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`Error converting YAML to INP: ${error}`)
-    throw new Error(`Failed to convert YAML to INP: ${errorMessage}`, {
-      cause: error
-    })
-  }
-}
-
-/**
  * Validates YAML constraint file format
  */
 export async function validateYamlConstraints(
@@ -262,96 +187,12 @@ export async function validateYamlConstraints(
 }
 
 /**
- * Validates INP constraint file format
- */
-export async function validateInpConstraints(
-  inpFilePath: string,
-  logger: Logger = defaultLogger
-): Promise<void> {
-  try {
-    const inpContent = await fs.readFile(inpFilePath, 'utf8')
-
-    if (!inpContent.trim()) {
-      throw new Error('Empty INP constraint file')
-    }
-
-    // One entry per command, with '-' continuation lines joined as CHARMM
-    // reads them
-    const lines = joinConstInpLines(inpContent).filter((line: string) =>
-      line.trim()
-    )
-
-    // Allowlist check: reject any command that doesn't start with a permitted
-    // keyword. Uses the same check as the job forms and the backend upload
-    // check to block CHARMM directives like 'system', 'open', 'read', etc. that
-    // could execute OS commands or perform file I/O.
-    const disallowed = findDisallowedConstInpLine(inpContent)
-    if (disallowed !== null) {
-      throw new Error(`Disallowed keyword in constraint file: "${disallowed}"`)
-    }
-
-    const tooLong = constInpLengthMessage(inpContent)
-    if (tooLong !== null) {
-      throw new Error(tooLong)
-    }
-
-    // Check for required CHARMM commands (skip comment lines)
-    const nonCommentLines = lines.filter((line: string) => {
-      const t = line.trim()
-      return !t.startsWith('!') && !t.startsWith('*')
-    })
-
-    const hasDefine = nonCommentLines.some((line: string) =>
-      line.toLowerCase().includes('define')
-    )
-    const hasConstraint = nonCommentLines.some(
-      (line: string) =>
-        line.toLowerCase().includes('cons fix') ||
-        line.toLowerCase().includes('shape desc')
-    )
-
-    if (!hasDefine) {
-      throw new Error('INP file must contain at least one "define" statement')
-    }
-
-    if (!hasConstraint) {
-      throw new Error(
-        'INP file must contain at least one constraint command ("cons fix" or "shape desc")'
-      )
-    }
-
-    const duplicateShapes = duplicateShapeNamesMessage(inpContent)
-    if (duplicateShapes !== null) {
-      throw new Error(duplicateShapes)
-    }
-
-    // Rigid/rigid and fixed/rigid overlaps, by segid, reading every selection
-    // form the upload accepts (the same check the job forms run). Bodies are
-    // numbered in file order.
-    const overlap = constInpOverlapMessage(inpContent)
-    if (overlap !== null) {
-      throw new Error(overlap)
-    }
-
-    logger.info('INP constraints file validated successfully')
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`Error validating INP constraints: ${error}`)
-    throw new Error(`Invalid INP constraints file: ${errorMessage}`, {
-      cause: error
-    })
-  }
-}
-
-/**
  * Lists every place where two rigid bodies share residues. OpenMM turns most
  * atoms of a rigid body into virtual sites tied to that body, so an atom in two
  * rigid bodies makes the simulation fail ("Virtual site has nonzero mass").
  * Residue ranges are inclusive, as in the OpenMM scripts.
  */
-export const findRigidBodyOverlaps = (
-  constraints: IMDConstraints
-): string[] => {
+const findRigidBodyOverlaps = (constraints: IMDConstraints): string[] => {
   const bodies = constraints.rigid_bodies ?? []
   const overlaps: string[] = []
 
@@ -391,15 +232,14 @@ export const assertNoRigidBodyOverlaps = (
   }
 }
 
+// Helper function to validate constraint bodies structure
 /**
  * Lists every place where a fixed body and a rigid body share residues. Such
  * a residue would be both held in place and moved with the rigid body, which
  * is never what a constraint file means. OpenMM runs it anyway, so this is an
  * upload check, not a worker one. Residue ranges are inclusive.
  */
-export const findFixedRigidOverlaps = (
-  constraints: IMDConstraints
-): string[] => {
+const findFixedRigidOverlaps = (constraints: IMDConstraints): string[] => {
   const overlaps: string[] = []
   for (const fixed of constraints.fixed_bodies ?? []) {
     for (const rigid of constraints.rigid_bodies ?? []) {
@@ -423,9 +263,7 @@ export const findFixedRigidOverlaps = (
 /**
  * Throws if any residue is in both a fixed body and a rigid body.
  */
-export const assertNoFixedRigidOverlaps = (
-  constraints: IMDConstraints
-): void => {
+const assertNoFixedRigidOverlaps = (constraints: IMDConstraints): void => {
   const overlaps = findFixedRigidOverlaps(constraints)
   if (overlaps.length > 0) {
     throw new Error(
@@ -436,7 +274,6 @@ export const assertNoFixedRigidOverlaps = (
   }
 }
 
-// Helper function to validate constraint bodies structure
 function validateConstraintBodies(
   bodies: IFixedBody[] | IRigidBody[],
   type: string
@@ -479,71 +316,3 @@ function validateConstraintBodies(
 
 // Helper function to generate INP from constraints object. Long 'cons fix' and
 // 'shape desc' commands are wrapped, since CHARMM cuts lines over 200 characters
-function generateInpFromConstraints(
-  constraints: IMDConstraints,
-  chainSegidMap?: Record<string, string>
-): string {
-  const lines: string[] = ['! Generated constraint file']
-  let defCounter = 1
-
-  const { fixed_bodies, rigid_bodies } = constraints
-
-  const resolveSegid = (chain_id: string): string =>
-    chainSegidMap?.[chain_id] ?? `PRO${chain_id}`
-
-  // Generate definitions and fixed constraints
-  if (fixed_bodies && fixed_bodies.length > 0) {
-    const defNames: string[] = []
-
-    for (const body of fixed_bodies) {
-      for (const segment of body.segments) {
-        const segid = resolveSegid(segment.chain_id)
-        const defName = `fixed${defCounter++}`
-
-        lines.push(
-          `define ${defName} sele ( resid ${segment.residues.start}:${segment.residues.stop} .and. segid ${segid} ) end`
-        )
-        defNames.push(defName)
-      }
-    }
-
-    if (defNames.length > 0) {
-      lines.push(
-        ...wrapConstInpCommand(`cons fix sele ${defNames.join(' .or. ')} end`)
-      )
-      lines.push('')
-    }
-  }
-
-  // Generate rigid body constraints
-  if (rigid_bodies && rigid_bodies.length > 0) {
-    let dockCounter = 1
-
-    for (const body of rigid_bodies) {
-      const defNames: string[] = []
-
-      for (const segment of body.segments) {
-        const segid = resolveSegid(segment.chain_id)
-        const defName = `rigid${defCounter++}`
-
-        lines.push(
-          `define ${defName} sele ( resid ${segment.residues.start}:${segment.residues.stop} .and. segid ${segid} ) end`
-        )
-        defNames.push(defName)
-      }
-
-      if (defNames.length > 0) {
-        lines.push(
-          ...wrapConstInpCommand(
-            `shape desc dock${dockCounter++} rigid sele ${defNames.join(' .or. ')} end`
-          )
-        )
-        lines.push('')
-      }
-    }
-  }
-
-  lines.push('return')
-
-  return lines.join('\n') + '\n' // Add trailing newline
-}

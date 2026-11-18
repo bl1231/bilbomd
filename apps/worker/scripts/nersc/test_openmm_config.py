@@ -254,3 +254,21 @@ def test_each_md_wave_gets_one_gpu_task_per_rg_value(tmp_path):
     assert re.findall(r"srun --ntasks=(\d+)", section) == ["4", "2"]
     assert section.count("--cpus-per-task=32") == 2
     assert "--rg-set 0" in section and "--rg-set 1" in section
+
+
+def _backbone(resseq: int, x: float) -> list[str]:
+    return [
+        f"ATOM  {1:5d}  {name:<3s} ALA A{resseq:4d}    "
+        f"{x + dx:8.3f}{50.0:8.3f}{0.0:8.3f}  1.00  0.00           {name[0]}"
+        for name, dx in (("N", 0.0), ("CA", 1.2), ("C", 2.47))
+    ]
+
+
+def test_a_ter_record_is_added_at_a_chain_break(tmp_path):
+    """Residues 3-9 missing: OpenMM must not bond residue 2 to residue 10."""
+    before = _backbone(1, 0.0) + _backbone(2, 3.8)
+    after = _backbone(10, 40.0)
+    _config(tmp_path, {"pdb_file": "in.pdb"}, before + after + ["END"])
+
+    written = (tmp_path / "in.pdb").read_text().splitlines()
+    assert written == before + ["TER"] + after + ["END"]

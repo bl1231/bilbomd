@@ -118,10 +118,21 @@ def test_strands_with_different_segids_are_separate_segments(tmp_path, capsys):
         "61",
         "62",
     }
-    assert "offset -59" in (out / "pdb2crd_charmm_dnab.inp").read_text()
+    # CHARMM matches coordinates by segid and residue number, so the
+    # segment's PDB carries the CHARMM segid
+    assert (
+        "read coor pdb unit 1 resid\n" in (out / "pdb2crd_charmm_dnab.inp").read_text()
+    )
+    assert {line[72:76] for line in second.splitlines() if line.startswith("ATOM")} == {
+        "DNAB"
+    }
+    first = (out / "pdb2crd_seg_dnad_uc_model.pdb").read_text()
+    assert {line[72:76] for line in first.splitlines() if line.startswith("ATOM")} == {
+        "DNAD"
+    }
 
     err = capsys.readouterr().err
-    assert "Chain D holds 2 separate molecules" in err
+    assert "Chain D is built as 2 unbonded CHARMM segments" in err
     assert "DNAB (residues 60-62, split at segid change DNAA -> DNAB)" in err
 
 
@@ -142,7 +153,10 @@ def test_unbonded_strands_without_ter_or_segids_are_split(tmp_path, capsys):
     lines = strand("D", 22, 3, (0, 0, 0)) + strand("D", 60, 3, FAR, first_has_p=True)
     generates, _, _ = run(tmp_path, lines)
     assert sorted(generates) == ["DNAA", "DNAD"]
-    assert "split at O3'-P gap" in capsys.readouterr().err
+    assert (
+        "split at chain break after residue 24 (O3'-P 43.2 A)"
+        in capsys.readouterr().err
+    )
 
 
 def test_split_off_segment_skips_letters_other_chains_use(tmp_path):
@@ -196,3 +210,57 @@ def test_ter_with_or_without_chain_fields(record):
         strand("D", 1, 3, (0, 0, 0)) + [record + "\n"] + strand("D", 4, 2, (18, 0, 0))
     )
     assert len(read_raw_segments(lines)) == 2
+
+
+def peptide(chain, first_resseq, count, x0=0.0):
+    """Backbone N, CA, C per residue along x; C(i)-N(i+1) is 1.33 A."""
+    lines = []
+    for i in range(count):
+        x = x0 + 3.8 * i
+        for name, dx in (("N", 0.0), ("CA", 1.2), ("C", 2.47)):
+            lines.append(
+                atom_line(1, name, "ALA", chain, first_resseq + i, (x + dx, 50.0, 0.0))
+            )
+    return lines
+
+
+def test_protein_missing_loop_is_a_chain_break(tmp_path, capsys):
+    """Residues 124-140 missing: the two sides must not be bonded."""
+    lines = peptide("A", 120, 4) + peptide("A", 141, 3, x0=3.8 * 4 + 30.0)
+    generates, _, out = run(tmp_path, lines)
+    assert sorted(generates) == ["PROA", "PROB"]
+    # Only the piece that ends the chain gets the C-terminal patch
+    assert generates["PROA"] == "setup warn first none last none"
+    assert generates["PROB"] == "setup warn first none last CTER"
+    err = capsys.readouterr().err
+    assert (
+        "PROB (residues 141-143, split at chain break after residue 123 (C-N 31.3 A))"
+        in err
+    )
+
+
+def test_bonded_protein_with_a_numbering_gap_is_not_split(tmp_path):
+    """Renumbered models can skip numbers between bonded residues."""
+    lines = peptide("A", 1, 3) + peptide("A", 10, 3, x0=3.8 * 3)
+    generates, _, _ = run(tmp_path, lines)
+    assert list(generates) == ["PROA"]
+
+
+def test_protein_ca_only_break(tmp_path):
+    """Without C and N, CA-CA decides (the GLY fixture is CA-only)."""
+    lines = protein("A", 1, 3) + [
+        atom_line(9, "CA", "GLY", "A", 4, (3.8 * 2 + 10.0, 50.0, 0.0))
+    ]
+    generates, _, _ = run(tmp_path, lines)
+    assert sorted(generates) == ["PROA", "PROB"]
+
+
+def test_segment_without_recognized_residues_is_het(tmp_path):
+    lines = (
+        protein("A", 1, 3)
+        + ["TER\n"]
+        + [atom_line(10, "FE", "HEM", "A", 901, (0.0, 0.0, 0.0), record="HETATM")]
+    )
+    generates, _, _ = run(tmp_path, lines)
+    # Fits the 4-column PDB segid field that `read coor pdb resid` matches on
+    assert sorted(generates) == ["HETA", "PROA"]

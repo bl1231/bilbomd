@@ -178,11 +178,12 @@ const findStructureSegment = (
     .map((s) => `${s.segid} (residues ${describeResidues(s)})`)
     .join(' and ')
   const fix =
-    'Select each one with its own residue range, or name it with segid.'
+    'Select each one with its own residue range, or name it with segid; ' +
+    'they can be in the same body.'
   if (!range) {
     errors.push({
       path,
-      message: `Chain ${chainId} is ${candidates.length} separate molecules, so CHARMM builds it as segments ${spans}. ${fix}`
+      message: `Chain ${chainId} is built as ${candidates.length} separate CHARMM segments, ${spans} (separate molecules, or a chain break). ${fix}`
     })
     return null
   }
@@ -195,7 +196,7 @@ const findStructureSegment = (
     message:
       hits.length === 0
         ? `Chain ${chainId} has no residues in ${range.start}-${range.stop} (it is segments ${spans})`
-        : `Residues ${range.start}-${range.stop} of chain ${chainId} span ${hits.length} separate molecules, segments ${spans}. A selection must stay within one segment. ${fix}`
+        : `Residues ${range.start}-${range.stop} of chain ${chainId} span ${hits.length} separate CHARMM segments, ${spans}. A selection must stay within one segment. ${fix}`
   })
   return null
 }
@@ -332,6 +333,33 @@ const findOverlaps = (constraints: Constraints): string[] => {
   return overlaps
 }
 
+/**
+ * A warning for each chain break in the structure: two consecutive residues
+ * of a chain that are not bonded (usually a missing loop). CHARMM builds the
+ * two sides as separate segments with no bond between them, so they are free
+ * to move apart.
+ */
+export const chainBreakWarnings = (structure: ConstraintStructure): string[] =>
+  structure.segments.flatMap((s, i) => {
+    if (!s.chain_break) return []
+    const before = structure.segments
+      .slice(0, i)
+      .reverse()
+      .find((p) => p.chain_id === s.chain_id)
+    const { after, distance } = s.chain_break
+    const next = s.residues[0]
+    return [
+      `Chain ${s.chain_id} has a chain break between residues ${after} and ` +
+        `${next ?? '?'}: they are ${distance} Å apart, so they are not bonded. ` +
+        `BilboMD builds the two sides as separate segments` +
+        (before
+          ? ` (${before.segid} and ${s.segid})`
+          : ` (${s.segid} starts the second)`) +
+        `, which can move apart during MD. If residues are missing there, ` +
+        `model them before submitting.`
+    ]
+  })
+
 // Segids that more than one chain would get, e.g. protein chains A and a
 const segidCollisions = (structure: ConstraintStructure): string[] => {
   const chainsBySegid = new Map<string, string[]>()
@@ -436,5 +464,9 @@ export const validateConstraintsInput = (
     fixed_bodies: bySegid(constraints.fixed_bodies),
     rigid_bodies: bySegid(constraints.rigid_bodies)
   })
-  return { ok: true, constraints, warnings: close ? [close] : [] }
+  return {
+    ok: true,
+    constraints,
+    warnings: [...chainBreakWarnings(structure), ...(close ? [close] : [])]
+  }
 }
