@@ -22,6 +22,7 @@ import { announceNewJob } from '../../services/announceNewJob.js'
 import { isResubmitRequest } from './utils/resubmission.js'
 import { serverFile } from './utils/serverFiles.js'
 import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
+import { parseMdEngine } from './utils/mdEngine.js'
 
 const uploadFolder = config.uploadDir
 
@@ -42,9 +43,7 @@ const handleBilboMDAutoJob = async (
       ? req.body.original_job_id
       : null
 
-    const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-    const md_engine: 'CHARMM' | 'OpenMM' =
-      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+    const md_engine = parseMdEngine(req.body.md_engine)
     logger.info(`Selected md_engine: ${md_engine}`)
 
     const { bilbomd_mode: bilbomdMode } = req.body

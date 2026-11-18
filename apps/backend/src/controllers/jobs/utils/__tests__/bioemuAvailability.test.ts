@@ -1,13 +1,27 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import {
   bioemuEnabled,
-  bioemuUnsupportedBackend
+  bioemuUnsupportedBackend,
+  executionBackend
 } from '../bioemuAvailability.js'
 
 const VARS = ['ENABLE_BILBOMD_BIOEMU', 'EXECUTION_BACKEND', 'USE_NERSC']
 
 afterEach(() => {
   for (const name of VARS) delete process.env[name]
+})
+
+describe('executionBackend', () => {
+  it('defaults to local', () => {
+    expect(executionBackend()).toBe('local')
+  })
+
+  it('uses USE_NERSC unless EXECUTION_BACKEND is set', () => {
+    process.env.USE_NERSC = 'true'
+    expect(executionBackend()).toBe('nersc')
+    process.env.EXECUTION_BACKEND = ' K8s '
+    expect(executionBackend()).toBe('k8s')
+  })
 })
 
 describe('bioemuUnsupportedBackend', () => {

@@ -21,6 +21,8 @@ import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { serverFile } from './utils/serverFiles.js'
 import { prepareSaxsDataFile, saxsDataError } from './utils/saxsData.js'
+import { parseMdEngine } from './utils/mdEngine.js'
+import { executionBackend } from './utils/bioemuAvailability.js'
 
 const uploadFolder = config.uploadDir
 
@@ -43,10 +45,18 @@ const handleBilboMDAlphaFoldJob = async (
 ): Promise<void> => {
   const jobDir = path.join(uploadFolder, UUID)
 
-  const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-  const md_engine: 'CHARMM' | 'OpenMM' =
-    mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+  const md_engine = parseMdEngine(req.body.md_engine)
   logger.info(`Selected md_engine: ${md_engine}`)
+
+  // Only the NERSC worker runs CHARMM AlphaFold jobs. Reject one here rather
+  // than let it wait in the queue for a worker that will refuse it.
+  const backend = executionBackend()
+  if (md_engine === 'CHARMM' && backend !== 'nersc') {
+    res.status(400).json({
+      message: `md_engine=CHARMM is not supported for AlphaFold jobs on this deployment (${backend}). Use OpenMM.`
+    })
+    return
+  }
 
   const { bilbomd_mode: bilbomdMode } = req.body
   const files = req.files as { [fieldname: string]: Express.Multer.File[] }

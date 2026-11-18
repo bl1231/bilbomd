@@ -19,6 +19,7 @@ import { buildOpenMMParameters } from './utils/openmmParams.js'
 import { buildCHARMMParameters } from './utils/charmmParams.js'
 import { announceNewJob } from '../../services/announceNewJob.js'
 import { sansJobSchema } from '../../validation/index.js'
+import { parseMdEngine } from './utils/mdEngine.js'
 
 const uploadFolder = config.uploadDir
 
@@ -35,9 +36,7 @@ const handleBilboMDSANSJob = async (
 ) => {
   const jobDir = path.join(uploadFolder, UUID)
   try {
-    const mdEngineRaw = (req.body.md_engine ?? '').toString().toLowerCase()
-    const md_engine: 'CHARMM' | 'OpenMM' =
-      mdEngineRaw === 'openmm' ? 'OpenMM' : 'CHARMM'
+    const md_engine = parseMdEngine(req.body.md_engine)
     logger.info(`Selected md_engine: ${md_engine}`)
     const { bilbomd_mode: bilbomdMode } = req.body
     const files = req.files as { [fieldname: string]: Express.Multer.File[] }
