@@ -27,6 +27,7 @@ import useTitle from 'hooks/useTitle'
 import { Box } from '@mui/system'
 import { Chain, RigidBody, Atom } from 'types/interfaces'
 import HeaderBox from 'components/HeaderBox'
+import InstructionsAccordion from 'components/InstructionsAccordion'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 interface AtomsByChain {
   [chainId: string]: Atom[]
@@ -354,11 +355,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
         spacing={3}
       >
         <Grid size={{ xs: 12 }}>
-          <HeaderBox>
-            <Typography>Instructions</Typography>
-          </HeaderBox>
-
-          <Paper sx={{ p: 1 }}>
+          <InstructionsAccordion>
             <Box>
               <Typography sx={{ m: 1 }}>
                 <b>BilboMD</b> runs molecular dynamics in which parts of your
@@ -472,7 +469,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                 </Grid>
               ))}
             </Grid>
-          </Paper>
+          </InstructionsAccordion>
         </Grid>
         <Grid size={{ xs: 12 }}>
           <HeaderBox>

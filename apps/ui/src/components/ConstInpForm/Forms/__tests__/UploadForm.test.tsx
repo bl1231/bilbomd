@@ -18,6 +18,14 @@ const renderUploadForm = () =>
   )
 
 describe('UploadForm instructions', () => {
+  it('start open, and fold away', async () => {
+    renderUploadForm()
+    const toggle = screen.getByRole('button', { name: /^instructions$/i })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('links to the c51b1 CHARMM atom selection docs', () => {
     renderUploadForm()
 

@@ -138,6 +138,18 @@ describe('DomainForm checks the bodies on entering the step', () => {
 })
 
 describe('DomainForm wording', () => {
+  it('shows the instructions open, and they fold away', async () => {
+    renderDomainForm([
+      { id: 'PRIMARY', domains: [{ chainid: 'A', start: 1, end: 100 }] }
+    ])
+    const toggle = await screen.findByRole('button', {
+      name: /^instructions$/i
+    })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('calls PRIMARY the fixed body and the others rigid bodies', async () => {
     renderDomainForm([
       { id: 'PRIMARY', domains: [{ chainid: 'A', start: 1, end: 100 }] },

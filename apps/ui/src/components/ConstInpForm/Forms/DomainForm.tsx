@@ -7,6 +7,7 @@ import Paper from '@mui/material/Paper'
 import AddIcon from '@mui/icons-material/Add'
 import useTitle from 'hooks/useTitle'
 import HeaderBox from 'components/HeaderBox'
+import InstructionsAccordion from 'components/InstructionsAccordion'
 import RigidBody from '../Helpers/RigidBody'
 import ImportNotes from '../Helpers/ImportNotes'
 import { nextRigidBodyId } from '../Helpers/importConstInp'
@@ -79,10 +80,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
         spacing={2}
       >
         <Grid size={{ xs: 12 }}>
-          <HeaderBox>
-            <Typography>Instructions</Typography>
-          </HeaderBox>
-          <Paper sx={{ p: 1 }}>
+          <InstructionsAccordion>
             <Box>
               <Typography
                 variant="h4"
@@ -132,7 +130,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                 notes={values.const_inp_file.notes}
               />
             )}
-          </Paper>
+          </InstructionsAccordion>
         </Grid>
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
