@@ -425,29 +425,35 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
               </ul>
             </Box>
 
-            <Accordion sx={{ backgroundColor: '#f5f5f5' }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography sx={{ m: 1 }}>
-                  Examples: the same constraints as a <code>const.inp</code> and
-                  as an <code>openmm_const.yml</code>
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
+            {/* Side by side on wide screens; opening one leaves the other's height alone */}
+            <Grid
+              container
+              spacing={1}
+              sx={{ alignItems: 'flex-start' }}
+            >
+              {[
+                {
+                  fileName: 'const.inp',
+                  what: 'CHARMM format',
+                  text: EXAMPLE_CONST_INP
+                },
+                {
+                  fileName: 'openmm_const.yml',
+                  what: 'OpenMM format',
+                  text: EXAMPLE_OPENMM_YAML
+                }
+              ].map(({ fileName, what, text }) => (
                 <Grid
-                  container
-                  spacing={2}
+                  key={fileName}
+                  size={{ xs: 12, md: 6 }}
                 >
-                  {[
-                    { name: 'const.inp', text: EXAMPLE_CONST_INP },
-                    { name: 'openmm_const.yml', text: EXAMPLE_OPENMM_YAML }
-                  ].map(({ name: fileName, text }) => (
-                    <Grid
-                      key={fileName}
-                      size={{ xs: 12, md: 6 }}
-                    >
-                      <Typography sx={{ mx: 1 }}>
-                        <code>{fileName}</code>
+                  <Accordion sx={{ backgroundColor: '#f5f5f5' }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography sx={{ m: 1 }}>
+                        Example <code>{fileName}</code> file ({what})
                       </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
                       <Box
                         sx={{
                           backgroundColor:
@@ -470,11 +476,11 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                           {text}
                         </Typography>
                       </Box>
-                    </Grid>
-                  ))}
+                    </AccordionDetails>
+                  </Accordion>
                 </Grid>
-              </AccordionDetails>
-            </Accordion>
+              ))}
+            </Grid>
           </Paper>
         </Grid>
         <Grid size={{ xs: 12 }}>

@@ -42,8 +42,15 @@ describe('UploadForm instructions', () => {
     expect(example).toContain('shape desc dock2 rigid sele rigid2 end')
   })
 
-  it('shows the example as an openmm_const.yml too', () => {
+  it('shows the example as an openmm_const.yml too, each in its own section', () => {
     renderUploadForm()
+    const toggles = screen.getAllByRole('button', { name: /^Example / })
+    expect(toggles.map((t) => t.textContent)).toEqual([
+      'Example const.inp file (CHARMM format)',
+      'Example openmm_const.yml file (OpenMM format)'
+    ])
+    // Both start closed
+    toggles.forEach((t) => expect(t).toHaveAttribute('aria-expanded', 'false'))
     expect(screen.getByTestId('example-openmm_const.yml')).toHaveTextContent(
       'fixed_bodies:'
     )
