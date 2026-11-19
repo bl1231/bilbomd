@@ -143,9 +143,10 @@ const Preview = ({ onDone }: PreviewProps) => {
             <Typography>
               These are your fixed and rigid bodies. Every residue in neither
               stays flexible during MD. Use them in a new <b>BilboMD Classic</b>{' '}
-              job, or download them as a constraints file. Either file works for{' '}
-              <b>BilboMD Classic</b> and <b>BilboMD SANS</b> jobs, with either
-              MD engine.
+              job, or download them as a constraints file. Either file works for
+              a <b>BilboMD Classic</b> or <b>BilboMD SANS</b> job that starts
+              from a PDB file. For a CHARMM job from CRD/PSF files, use the{' '}
+              <code>const.inp</code>; its segids must match those in your PSF.
             </Typography>
 
             {drawn ? (

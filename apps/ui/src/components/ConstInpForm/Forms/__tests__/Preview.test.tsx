@@ -83,6 +83,15 @@ describe('Preview', () => {
     expect(screen.queryByTestId('const-inp-jiffy-errors')).toBeNull()
   })
 
+  it('says which file suits which job', async () => {
+    renderPreview(twoBodies)
+    expect(
+      await screen.findByText(/Either file works for a/)
+    ).toHaveTextContent(
+      'For a CHARMM job from CRD/PSF files, use the const.inp; its segids must match those in your PSF.'
+    )
+  })
+
   it('offers both files, with the same bodies in each', async () => {
     renderPreview(twoBodies)
     expect(button(/Download const.inp/)).toBeEnabled()

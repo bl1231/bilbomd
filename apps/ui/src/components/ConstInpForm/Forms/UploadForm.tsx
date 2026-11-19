@@ -378,11 +378,12 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                 </li>
                 <li>
                   <Typography>
-                    The file it writes is a{' '}
+                    At the end you can take the constraints straight into a new{' '}
+                    <b>BilboMD Classic</b> job, or download them as a{' '}
                     <b>
                       <code>const.inp</code>
-                    </b>
-                    , in CHARMM{' '}
+                    </b>{' '}
+                    (CHARMM{' '}
                     <Link
                       href="https://academiccharmm.org/documentation/version/c51b1/select"
                       target="_blank"
@@ -390,8 +391,14 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                     >
                       atom selection
                     </Link>{' '}
-                    syntax, with segid names that BilboMD understands. BilboMD
-                    reads it for OpenMM jobs too.
+                    syntax) or an{' '}
+                    <b>
+                      <code>openmm_const.yml</code>
+                    </b>{' '}
+                    (OpenMM format). Either file works for a job that starts
+                    from a PDB file. For a CHARMM job from CRD/PSF files, use
+                    the <code>const.inp</code>; its segids must match those in
+                    your PSF.
                   </Typography>
                 </li>
                 <li>

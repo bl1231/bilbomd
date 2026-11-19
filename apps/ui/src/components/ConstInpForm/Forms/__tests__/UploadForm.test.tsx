@@ -29,6 +29,22 @@ describe('UploadForm instructions', () => {
     )
   })
 
+  it('says what the jiffy gives you at the end', () => {
+    renderUploadForm()
+    const bullet = screen.getByText(/At the end you can take the constraints/)
+    expect(bullet).toHaveTextContent(
+      'straight into a new BilboMD Classic job, or download them as a const.inp'
+    )
+    expect(bullet).toHaveTextContent('or an openmm_const.yml (OpenMM format)')
+    expect(bullet).toHaveTextContent(
+      'Either file works for a job that starts from a PDB file.'
+    )
+    // An openmm_const.yml names chains only; CRD/PSF jobs need segids
+    expect(bullet).toHaveTextContent(
+      'For a CHARMM job from CRD/PSF files, use the const.inp'
+    )
+  })
+
   it('gives every define in the example const.inp its own name', () => {
     renderUploadForm()
 
