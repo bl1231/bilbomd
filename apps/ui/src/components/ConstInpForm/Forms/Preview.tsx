@@ -1,87 +1,26 @@
 import { useMemo } from 'react'
 import { useFormikContext, FormikValues } from 'formik'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Alert,
-  Stack,
-  Typography
-} from '@mui/material'
+import { Stack, Typography } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
-import { Box } from '@mui/system'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { stringify as stringifyYaml } from 'yaml'
-import {
-  importConstraintsFromConstInp,
-  readPdbSegments,
-  toOpenMMConstraints,
-  validateConstraintsInput
-} from '@bilbomd/bilbomd-types'
+import { readPdbSegments } from '@bilbomd/bilbomd-types'
 import useTitle from 'hooks/useTitle'
-import CopyToClipboardButton from 'components/Common/CopyToClipboardButton'
 import HeaderBox from 'components/HeaderBox'
 import { RigidBody, Chain } from 'types/interfaces'
-import { MDConstraintsSection } from 'features/results/components/MDConstraintsSection'
-import { constraintsFromConstInp } from 'features/constraintSchematic/constInpConstraints'
-import { previewConstraints } from 'features/constraints/previewConstraints'
-import { UseInClassicJobButton } from 'features/constraints/UseInClassicJobButton'
-import DownloadButton from '../Helpers/Download'
+import { JiffyConstraintsResult } from 'features/constraints/JiffyConstraintsResult'
+import { useJiffyConstraints } from 'features/constraints/useJiffyConstraints'
 import { buildConstInp } from '../Helpers/constInpText'
 
-const FileText = ({
-  title,
-  text,
-  testId
-}: {
-  title: string
-  text: string
-  testId: string
-}) => (
-  <Accordion
-    disableGutters
-    variant="outlined"
-  >
-    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-      <Typography variant="body2">{title}</Typography>
-    </AccordionSummary>
-    <AccordionDetails>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          p: 2,
-          backgroundColor: '#bae0ff',
-          color: 'black',
-          borderRadius: 1
-        }}
-      >
-        <Box sx={{ alignSelf: 'end' }}>
-          <CopyToClipboardButton text={text} />
-        </Box>
-        <pre
-          style={{ margin: 0 }}
-          data-testid={testId}
-        >
-          <code>{text}</code>
-        </pre>
-      </Box>
-    </AccordionDetails>
-  </Accordion>
-)
-
-/**
- * The jiffy's last step: the bodies drawn the way the job form and job page
- * show them, checked the way BilboMD will check them for a PDB job (OpenMM),
- * with the constraints file to take away as a const.inp or an OpenMM
- * constraints YAML, or straight into a new BilboMD Classic job.
- */
 interface PreviewProps {
   /** Called once a constraints file has been downloaded */
   onDone?: () => void
 }
 
+/**
+ * The jiffy's last step: its bodies drawn and checked the way BilboMD will
+ * check them, to take straight into a new BilboMD Classic job or download as
+ * a const.inp or an OpenMM constraints YAML.
+ */
 const Preview = ({ onDone }: PreviewProps) => {
   useTitle('BilboMD: Preview constraints')
   const { values } = useFormikContext<FormikValues>()
@@ -96,41 +35,10 @@ const Preview = ({ onDone }: PreviewProps) => {
   )
   // The PDB's segments as BilboMD builds them
   const segments = useMemo(
-    () => (pdbSrc ? readPdbSegments(pdbSrc) : []),
+    () => (pdbSrc ? readPdbSegments(pdbSrc) : null),
     [pdbSrc]
   )
-  // The const.inp read back the way a job form reads it
-  const checked = useMemo(() => {
-    if (segments.length === 0) return null
-    const imported = importConstraintsFromConstInp(constInp, 'pdb', {
-      structure: segments
-    })
-    if (!imported.input) return null
-    return validateConstraintsInput(imported.input, {
-      mode: 'pdb',
-      segments,
-      engine: 'openmm'
-    })
-  }, [constInp, segments])
-  const valid = checked?.ok ? checked.constraints : null
-
-  const drawn = useMemo(
-    () =>
-      valid
-        ? previewConstraints(valid, segments)
-        : constraintsFromConstInp(constInp),
-    [valid, segments, constInp]
-  )
-  const openmmYaml = useMemo(
-    () =>
-      valid
-        ? stringifyYaml(
-            { constraints: toOpenMMConstraints(valid) },
-            { indent: 2, lineWidth: 0 }
-          )
-        : null,
-    [valid]
-  )
+  const result = useJiffyConstraints(constInp, segments)
 
   return (
     <Grid container>
@@ -148,87 +56,13 @@ const Preview = ({ onDone }: PreviewProps) => {
               from a PDB file. For a CHARMM job from CRD/PSF files, use the{' '}
               <code>const.inp</code>; its segids must match those in your PSF.
             </Typography>
-
-            {drawn ? (
-              <Box data-testid="const-inp-jiffy-constraints">
-                <MDConstraintsSection constraints={drawn} />
-              </Box>
-            ) : (
-              <Typography color="text.secondary">
-                No fixed or rigid bodies yet. Go back to add some.
-              </Typography>
-            )}
-
-            {checked && !checked.ok && (
-              <Alert
-                severity="warning"
-                data-testid="const-inp-jiffy-errors"
-              >
-                <Typography variant="body2">
-                  BilboMD would refuse these constraints for a job with this PDB
-                  file:
-                </Typography>
-                <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
-                  {checked.errors.map((e) => (
-                    <li key={`${e.path}:${e.message}`}>
-                      <Typography variant="body2">{e.message}</Typography>
-                    </li>
-                  ))}
-                </ul>
-              </Alert>
-            )}
-            {checked?.ok &&
-              checked.warnings.map((w) => (
-                <Alert
-                  key={w}
-                  severity="warning"
-                >
-                  {w}
-                </Alert>
-              ))}
-
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{ flexWrap: 'wrap', rowGap: 1 }}
-            >
-              <UseInClassicJobButton
-                structure={pdbFile}
-                constInp={constInp}
-                from={'the Inp Jiffy\u2122'}
-                disabled={!valid}
-              />
-              <DownloadButton
-                content={constInp}
-                fileName="const.inp"
-                onDownload={onDone}
-              />
-              <DownloadButton
-                content={openmmYaml}
-                fileName="openmm_const.yml"
-                onDownload={onDone}
-              />
-            </Stack>
-
-            <FileText
-              title="Show the const.inp text"
-              text={constInp}
-              testId="const-inp-text"
+            <JiffyConstraintsResult
+              result={result}
+              structure={pdbFile}
+              from={'the Inp Jiffy™'}
+              onDownload={onDone}
+              empty="No fixed or rigid bodies yet. Go back to add some."
             />
-            {openmmYaml && (
-              <FileText
-                title="Show the openmm_const.yml text"
-                text={openmmYaml}
-                testId="openmm-yaml-text"
-              />
-            )}
-            <Typography
-              variant="caption"
-              color="text.secondary"
-            >
-              Segment IDs (segid) are written the way BilboMD builds your PDB
-              file, so they may differ from those in other files.
-            </Typography>
           </Stack>
         </Paper>
       </Grid>

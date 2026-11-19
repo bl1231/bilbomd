@@ -68,7 +68,7 @@ describe('PlddtSlider Component', () => {
   test('displays an info alert with correct text', () => {
     const alert = screen.getByRole('alert')
     expect(alert).toHaveTextContent(
-      'The pLDDT cutoff value is used to determine if a rigid domain determined from the PAE matrix should be included in the const.inp file.'
+      'The pLDDT cutoff value is used to determine if a rigid domain determined from the PAE matrix should be included in the constraints.'
     )
     expect(alert).toHaveTextContent(
       'A lower pLDDT cutoff will result in more rigid domains.'

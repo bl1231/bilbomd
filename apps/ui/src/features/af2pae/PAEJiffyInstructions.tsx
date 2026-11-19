@@ -8,7 +8,8 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
 const PAEJiffyInstructions = () => (
-  <Accordion defaultExpanded={false}>
+  // Open to start with, so new users see how it works
+  <Accordion defaultExpanded>
     <AccordionSummary
       expandIcon={<ExpandMoreIcon sx={{ color: '#fff' }} />}
       sx={{
@@ -42,9 +43,10 @@ const PAEJiffyInstructions = () => (
           Predicted Aligned Error
         </Link>{' '}
         (PAE) file - in JSON format - from AlphaFold to <b>automagically*</b>{' '}
-        define the rigid bodies and rigid domains. The <b>*.pdb</b> and PAE{' '}
-        <b>*.json</b> files must be the ones obtained from AlphaFold since we
-        are also using the{' '}
+        define the fixed and rigid bodies of your model; every residue in
+        neither stays flexible during MD. The model (<b>*.pdb</b> or{' '}
+        <b>*.cif</b>) and PAE <b>*.json</b> files must be the ones obtained from
+        AlphaFold since we are also using the{' '}
         <Link
           href="https://alphafold.ebi.ac.uk/faq#faq-12"
           target="_blank"
@@ -74,10 +76,14 @@ const PAEJiffyInstructions = () => (
             database hosted at EMBL-EBI.
           </li>
           <li>
-            Upload the files here and our server will create a CHARMM-compatable{' '}
-            <code>const.inp</code> file for you. After you download your{' '}
-            <code>const.inp</code> file please check that it makes sense to you
-            before using it in a <b>BilboMD</b> run.
+            Upload the files here and our server will work out the fixed and
+            rigid bodies for you. Check that they make sense, then take them
+            straight into a new <b>BilboMD Classic</b> job, or download them as
+            a <code>const.inp</code> or an <code>openmm_const.yml</code>. Either
+            file works for a <b>BilboMD Classic</b> or <b>BilboMD SANS</b> job
+            that starts from a PDB file. For a CHARMM job from CRD/PSF files,
+            use the <code>const.inp</code>; its segids must match those in your
+            PSF.
           </li>
         </ol>
       </Typography>

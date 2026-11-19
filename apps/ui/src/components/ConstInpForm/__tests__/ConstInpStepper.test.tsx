@@ -49,7 +49,7 @@ const toLastStep = async (user: ReturnType<typeof userEvent.setup>) => {
   upload('pdb_file', 'model.pdb', pdbText())
   await next(user, () => screen.findByText('Chain ID: B'))
   await next(user, () => screen.findByText(/^Fixed Body:/))
-  await screen.findByTestId('const-inp-jiffy-constraints')
+  await screen.findByTestId('jiffy-constraints')
 }
 
 describe('ConstInpStepper', () => {
@@ -90,7 +90,7 @@ describe('ConstInpStepper', () => {
     // Changing the bodies makes the download stale
     await user.click(buttons('Back')[0]!)
     await next(user, () => screen.findByText(/^Fixed Body:/))
-    await screen.findByTestId('const-inp-jiffy-constraints')
+    await screen.findByTestId('jiffy-constraints')
     expect(stepCompleted('Preview & Download')).toBe(false)
   })
 
@@ -161,11 +161,11 @@ describe('ConstInpStepper', () => {
     expect(buttons('Back')[0]).toBeEnabled()
 
     await next(user, () => screen.findByText(/^Fixed Body:/))
-    await screen.findByTestId('const-inp-jiffy-constraints')
+    await screen.findByTestId('jiffy-constraints')
     expect(document.title).toBe('BilboMD: Preview constraints')
     expect(stepCompleted('Define Fixed and Rigid Bodies')).toBe(true)
     // By default every chain is in the fixed body
-    expect(screen.getByTestId('const-inp-jiffy-constraints')).toHaveTextContent(
+    expect(screen.getByTestId('jiffy-constraints')).toHaveTextContent(
       'FixedBody1'
     )
   })
@@ -230,7 +230,7 @@ describe('ConstInpStepper', () => {
     expect(await screen.findByText(/^Rigid Body:/)).toBeInTheDocument()
 
     await next(user, () => screen.findByText(/^Rigid Body:/))
-    const drawn = await screen.findByTestId('const-inp-jiffy-constraints')
+    const drawn = await screen.findByTestId('jiffy-constraints')
     expect(drawn).toHaveTextContent('RigidBody1')
     expect(drawn).toHaveTextContent('B 5–45')
   })
@@ -250,7 +250,7 @@ describe('ConstInpStepper', () => {
       ).toHaveTextContent('Every body in const.inp')
     )
     await next(user, () => screen.findByText(/^Fixed Body:/))
-    await screen.findByTestId('const-inp-jiffy-constraints')
+    await screen.findByTestId('jiffy-constraints')
     await user.click(buttons(/Start Over/)[0]!)
 
     await screen.findByText('Select PDB File')

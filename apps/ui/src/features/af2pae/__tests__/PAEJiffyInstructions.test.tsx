@@ -22,13 +22,28 @@ describe('PAEJiffyInstructions Component', () => {
     expect(screen.getByTestId('ExpandMoreIcon')).toBeInTheDocument()
   })
 
+  it('starts open, and can be closed', () => {
+    render(<PAEJiffyInstructions />)
+    const toggle = screen.getByRole('button', { name: /instructions/i })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('describes the result without tying it to CHARMM', () => {
+    render(<PAEJiffyInstructions />)
+    const step = screen.getByText(/our server will work out the fixed/)
+    expect(step).toHaveTextContent(
+      'take them straight into a new BilboMD Classic job, or download them as a const.inp or an openmm_const.yml'
+    )
+    expect(step).toHaveTextContent(
+      'For a CHARMM job from CRD/PSF files, use the const.inp'
+    )
+    expect(screen.queryByText(/CHARMM-compat/)).toBeNull()
+  })
+
   it('displays all links correctly', () => {
     render(<PAEJiffyInstructions />)
-
-    const accordionButton = screen.getByRole('button', {
-      name: /instructions/i
-    })
-    fireEvent.click(accordionButton)
 
     expect(
       screen.getByRole('link', { name: /Predicted Aligned Error/i })

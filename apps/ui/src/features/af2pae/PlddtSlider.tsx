@@ -63,10 +63,9 @@ export default function PlddtSlider({
         <Alert severity="info">
           <AlertTitle>pLDDT Cutoff (Å)</AlertTitle>
           The pLDDT cutoff value is used to determine if a rigid domain
-          determined from the PAE matrix should be included in the{' '}
-          <b>const.inp</b> file. A <b>lower</b> pLDDT cutoff will result in more
-          rigid domains. A <b>higher</b> pLDDT cutoff will result in fewer rigid
-          domains.
+          determined from the PAE matrix should be included in the constraints.
+          A <b>lower</b> pLDDT cutoff will result in more rigid domains. A{' '}
+          <b>higher</b> pLDDT cutoff will result in fewer rigid domains.
         </Alert>
       </Grid>
     </Box>

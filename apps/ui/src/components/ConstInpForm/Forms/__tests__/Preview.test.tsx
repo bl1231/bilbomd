@@ -74,13 +74,13 @@ describe('Preview', () => {
 
   it('draws the bodies the way the job form and job page do', async () => {
     renderPreview(twoBodies)
-    const drawn = await screen.findByTestId('const-inp-jiffy-constraints')
+    const drawn = await screen.findByTestId('jiffy-constraints')
     expect(drawn).toHaveTextContent('FixedBody1')
     expect(drawn).toHaveTextContent('RigidBody1')
     expect(screen.getByTestId('constraint-track-A')).toBeInTheDocument()
     expect(screen.getByTestId('constraint-track-B')).toBeInTheDocument()
     expect(button(/Show schematic/i)).toBeInTheDocument()
-    expect(screen.queryByTestId('const-inp-jiffy-errors')).toBeNull()
+    expect(screen.queryByTestId('jiffy-constraints-errors')).toBeNull()
   })
 
   it('says which file suits which job', async () => {
@@ -164,7 +164,7 @@ describe('Preview', () => {
       { id: 'RIGID 1', domains: [{ chainid: 'A', start: 50, end: 150 }] }
     ])
     expect(
-      await screen.findByTestId('const-inp-jiffy-errors')
+      await screen.findByTestId('jiffy-constraints-errors')
     ).toBeInTheDocument()
     expect(button(/Use in a new Classic job/)).toBeDisabled()
     expect(button(/Download openmm_const.yml/)).toBeDisabled()
