@@ -47,7 +47,6 @@ plt.title("Radius of Gyration over Time")
 plt.xlabel("Step")
 plt.ylabel("Radius of Gyration (Å)")
 plt.legend(loc="best")
-# plt.grid(True)
 plt.tight_layout()
 
 # Save to file

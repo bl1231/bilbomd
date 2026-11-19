@@ -17,19 +17,14 @@ Special protein-side residue names (modified amino acids):
   - OLT  = Thr with O-linked sugar (OG1 bonds to C1; OG1 loses its H)
   - OLS  = Ser with O-linked sugar (OG bonds to C1; OG loses its H)
 
-Usage (as a standalone script):
-    python glycam_rename.py <input.pdb> [--inplace | --output <out.pdb>]
-
-Usage (as an importable module):
+Usage:
     from utils.glycam_rename import rename_glycam_residues
-    modified_pdb_text = rename_glycam_residues(pdb_text)
+    modified_pdb_text, log_lines = rename_glycam_residues(pdb_text)
 """
 
 from __future__ import annotations
 
-import argparse
 import math
-import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Generic, Iterable, Optional, TypeVar
@@ -649,41 +644,3 @@ def _describe_unlinked(
             f"{_describe(a1)}, so its linkage is ambiguous"
         )
     return f"{name} C1 is {d0:.2f} Å from the nearest acceptor ({_describe(a0)})"
-
-
-# ---------------------------------------------------------------------------
-# CLI entry point
-# ---------------------------------------------------------------------------
-
-def _main() -> None:
-    parser = argparse.ArgumentParser(description="Rename PDB residues to GLYCAM format.")
-    parser.add_argument("pdb_file", help="Input PDB file")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("--inplace", action="store_true",
-                       help="Modify the PDB file in place (default)")
-    group.add_argument("--output", metavar="OUT", help="Write to OUT instead of modifying in place")
-    args = parser.parse_args()
-
-    with open(args.pdb_file, encoding="utf-8") as f:
-        pdb_text = f.read()
-
-    modified_text, log_lines = rename_glycam_residues(pdb_text)
-
-    out_path = args.output if args.output else args.pdb_file
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write(modified_text)
-
-    if log_lines:
-        logger.info("GLYCAM renames applied:")
-        for line in log_lines:
-            logger.info(line)
-    else:
-        logger.info("No GLYCAM renames needed.")
-
-    log_file = args.pdb_file.replace(".pdb", "_glycam_rename.log")
-    with open(log_file, "w", encoding="utf-8") as f:
-        f.write("\n".join(log_lines) + "\n")
-
-
-if __name__ == "__main__":
-    _main()

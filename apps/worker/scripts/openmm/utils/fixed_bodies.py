@@ -1,43 +1,9 @@
 """Fixed Regions"""
 
-from openmm import unit
 from openmm import CustomExternalForce
 from utils.logger import get_logger
 
 logger = get_logger("fixed_bodies")
-
-
-def apply_fixed_body_constraints_zero_mass(system, modeller, fixed_bodies):
-    """
-    Freeze atoms (set their mass to 0) if they belong to any fixed body defined in the configuration.
-
-    Parameters:
-      system (openmm.System): The OpenMM system to modify.
-      modeller (openmm.app.Modeller): Contains the topology with atoms and residues.
-      fixed_bodies (list): A list of dictionaries defining fixed bodies. Each dictionary should
-                           contain keys "name" and "segments", each segment with "chain_id" and
-                           "residues" ("start" and "stop", both included).
-    """
-    for atom in modeller.topology.atoms():
-        res_id = int(atom.residue.id)
-        chain_id = atom.residue.chain.id
-        for fixed_body in fixed_bodies:
-            segments = fixed_body.get("segments", [])
-            for segment in segments:
-                if chain_id == segment["chain_id"]:
-                    start = segment["residues"]["start"]
-                    stop = segment["residues"]["stop"]
-                    # Inclusive, like CHARMM's resid start:stop and the rigid
-                    # bodies (rigid_body.py)
-                    if start <= res_id <= stop:
-                        system.setParticleMass(atom.index, 0.0 * unit.amu)
-                        break
-    zero_mass_atoms = [
-        i
-        for i in range(system.getNumParticles())
-        if system.getParticleMass(i)._value == 0
-    ]
-    logger.debug(f"Zero-mass atoms: {zero_mass_atoms}")
 
 
 def apply_fixed_body_constraints(system, modeller, fixed_bodies, kfixed=100000.0):
