@@ -51,3 +51,12 @@ describe('MDConstraintsSection', () => {
     expect(screen.queryByRole('button', { name: /schematic/i })).toBeNull()
   })
 })
+
+describe('MDConstraintsSection toggle', () => {
+  it('is an outlined button, so it stands out from the page', () => {
+    render(<MDConstraintsSection constraints={constraints} />)
+    expect(screen.getByRole('button', { name: 'Show schematic' })).toHaveClass(
+      'MuiButton-outlined'
+    )
+  })
+})
