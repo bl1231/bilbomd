@@ -234,3 +234,54 @@ return
     ).toBeInTheDocument()
   })
 })
+
+describe('UploadForm with an existing YAML or JSON constraints file', () => {
+  it('offers a constraints file of any kind', () => {
+    renderWithBodies()
+    expect(screen.getByText('Select Constraints File')).toBeInTheDocument()
+    expect(document.getElementById('const_inp_file')).toHaveAttribute(
+      'accept',
+      '.inp,.txt,.yml,.yaml,.json'
+    )
+  })
+
+  it('takes the bodies of an OpenMM constraints YAML', async () => {
+    renderWithBodies()
+    upload('pdb_file', 'model.pdb', pdbText())
+    upload(
+      'const_inp_file',
+      'openmm_const.yml',
+      [
+        'constraints:',
+        '  fixed_bodies:',
+        '    - name: FixedBody1',
+        '      segments:',
+        '        - chain_id: A',
+        '          residues: { start: 1, stop: 40 }',
+        '  rigid_bodies:',
+        '    - name: RigidBody1',
+        '      segments:',
+        '        - chain_id: B',
+        '          residues: { start: 5, stop: 45 }'
+      ].join('\n')
+    )
+    await waitFor(() =>
+      expect(rigidBodies()).toEqual([
+        { id: 'PRIMARY', domains: [{ chainid: 'A', start: 1, end: 40 }] },
+        { id: 'RIGID 1', domains: [{ chainid: 'B', start: 5, end: 45 }] }
+      ])
+    )
+    expect(
+      await screen.findByTestId('const-inp-import-notes')
+    ).toHaveTextContent('Every body in openmm_const.yml matches the PDB')
+  })
+
+  it('rejects a JSON file with no fixed body', async () => {
+    renderWithBodies()
+    upload('pdb_file', 'model.pdb', pdbText())
+    upload('const_inp_file', 'c.json', '{"rigid_bodies": []}')
+    expect(
+      await screen.findByText('No fixed body could be read from this file.')
+    ).toBeInTheDocument()
+  })
+})

@@ -216,6 +216,36 @@ describe('importConstraintsFromData', () => {
     ])
   })
 
+  it('leaves out a segid-only selection the structure lacks, rather than guess its chain', () => {
+    const imported = importConstraintsFromData(
+      {
+        fixed_bodies: [
+          // PROB would be read as chain B, which this structure doesn't have
+          { segments: [{ segid: 'PROA' }, { segid: 'PROB' }] }
+        ]
+      },
+      'pdb',
+      { structure }
+    )
+    expect(imported.input?.fixed_bodies[0]?.segments).toEqual([
+      { chain_id: 'a', segid: 'PROA' }
+    ])
+    expect(imported.problems).toEqual([
+      'Fixed body 1, segment 2: segid PROB is not in the structure, so the segment was left out'
+    ])
+  })
+
+  it('still reads a segid-only selection from its name without a structure', () => {
+    const imported = importConstraintsFromData(
+      { fixed_bodies: [{ segments: [{ segid: 'PROB' }] }] },
+      'pdb'
+    )
+    expect(imported.input?.fixed_bodies[0]?.segments).toEqual([
+      { chain_id: 'B' }
+    ])
+    expect(imported.problems).toEqual([])
+  })
+
   it('needs segids for CRD/PSF jobs', () => {
     const imported = importConstraintsFromData(
       {

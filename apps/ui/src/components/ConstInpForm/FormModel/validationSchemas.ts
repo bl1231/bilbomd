@@ -1,9 +1,9 @@
 import * as Yup from 'yup'
 import { noSpaces } from 'schemas/ValidationFunctions'
 import { Chain } from 'types/interfaces'
-import { readConstInp } from '@bilbomd/bilbomd-types'
+import { constraintsFileProblem } from '../Helpers/importJiffyFile'
 
-// CHARMM allows 20 shape commands, so a real const.inp is a few kB
+// CHARMM allows 20 shape commands, so a real constraints file is a few kB
 const MAX_CONST_INP_BYTES = 1_000_000
 
 interface CustomValidateOptions extends Yup.ValidateOptions<Yup.AnyObject> {
@@ -60,13 +60,13 @@ const validationSchemas = [
       name: Yup.string().required(),
       chains: Yup.array()
     }),
-    // Optional existing const.inp to start from
+    // Optional existing constraints file to start from: const.inp, YAML or JSON
     const_inp_file: Yup.object().shape({
       file: Yup.mixed()
         .nullable()
         .test(
           'const-inp-size-check',
-          'Max const.inp file size is 1MB',
+          'Max constraints file size is 1MB',
           (file) => !file || (file as File).size <= MAX_CONST_INP_BYTES
         ),
       src: Yup.string()
@@ -79,11 +79,11 @@ const validationSchemas = [
             return this.createError({ message: 'Reading the file…' })
           }
           // Formik passes an empty file's '' as undefined
-          const { fixed_bodies, rigid_bodies } = readConstInp(src ?? '')
-          if (fixed_bodies.length + rigid_bodies.length > 0) return true
-          return this.createError({
-            message: 'No fixed or rigid bodies could be read from this file.'
-          })
+          const problem = constraintsFileProblem(
+            src ?? '',
+            String(this.parent.name ?? '')
+          )
+          return problem ? this.createError({ message: problem }) : true
         })
     })
   }),

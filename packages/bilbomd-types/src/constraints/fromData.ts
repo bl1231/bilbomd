@@ -122,6 +122,20 @@ export const importConstraintsFromData = (
       typeof segid === 'string'
         ? options.structure?.find((s) => s.segid === segid.toUpperCase())
         : undefined
+    // With only a segid to go on, its name can point at the wrong chain
+    // (PROA is chain a when chain A is DNA), so one the structure doesn't
+    // have is left out rather than guessed
+    if (
+      typeof chainId !== 'string' &&
+      typeof segid === 'string' &&
+      options.structure &&
+      !known
+    ) {
+      problems.push(
+        `${where}: segid ${segid} is not in the structure, so the segment was left out`
+      )
+      return []
+    }
     const chain =
       typeof chainId === 'string'
         ? chainId
