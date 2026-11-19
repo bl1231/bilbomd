@@ -1,33 +1,10 @@
-# from openmm.app import *
 from openmm import CustomCVForce, CustomCentroidBondForce
-from openmm.unit import nanometer, dalton, angstroms
+from openmm.unit import angstroms
 import csv
 import numpy as np
 from utils.logger import get_logger
 
 logger = get_logger("rgyr")
-
-
-class MinimalReporter:
-    def __init__(self, interval=500):
-        self.interval = interval
-
-    def describeNextReport(self, simulation):
-        return (self.interval, True, False, False, False)
-
-    def report(self, simulation, state):
-        logger.debug(f"MinimalReporter called at step {simulation.currentStep}")
-
-
-class TestReporter:
-    def __init__(self, interval=500):
-        self.interval = interval
-
-    def describeNextReport(self, simulation):
-        return (self.interval, False, False, False, False)
-
-    def report(self, simulation, state):
-        logger.debug(f"TestReporter triggered at step {simulation.currentStep}")
 
 
 class RgyrDmaxCapture:
@@ -63,72 +40,17 @@ class RgyrDmaxCapture:
         logger.info(f"Wrote {len(self.rows)} Rgyr/Dmax rows to {filepath}")
 
 
-class RgyrDmaxReporter:
-    """
-    Reports radius of gyration (Rgyr) and maximum pairwise distance (Dmax) for a
-    set of atom indices at each report interval, writing both to a CSV file.
-
-    Both quantities are computed over the supplied atom_indices (typically CA atoms)
-    and reported in Ångströms.
-    """
-
-    def __init__(
-        self,
-        atom_indices,
-        filename,
-        reportInterval=500,
-    ):
-        self.atom_indices = atom_indices
-        self.reportInterval = reportInterval
-        self.filename = filename
-        self.csvfile = open(self.filename, "w", newline="")
-        self.writer = csv.writer(self.csvfile)
-        self.writer.writerow(["Step", "Rgyr_A", "Dmax_A"])
-
-    def describeNextReport(self, simulation):
-        return (self.reportInterval, True, False, False, False)
-
-    def report(self, simulation, state):
-        try:
-            positions = state.getPositions()
-            coords = np.array(
-                [positions[i].value_in_unit(angstroms) for i in self.atom_indices]
-            )
-            com = coords.mean(axis=0)
-            rg = np.sqrt(np.mean(np.sum((coords - com) ** 2, axis=1)))
-            diff = coords[:, None, :] - coords[None, :, :]
-            dmax = np.max(np.sqrt(np.sum(diff ** 2, axis=-1)))
-            self.writer.writerow([simulation.currentStep, rg, dmax])
-            self.csvfile.flush()
-            logger.debug(
-                f"Step {simulation.currentStep}: Rgyr = {rg:.4f} Å, Dmax = {dmax:.4f} Å"
-            )
-        except Exception as e:
-            logger.debug(f"Exception in RgyrDmaxReporter: {e}")
-
-    def __del__(self):
-        if hasattr(self, "csvfile") and not self.csvfile.closed:
-            self.csvfile.close()
-
-
-# Backward-compatible alias
-RadiusOfGyrationReporter = RgyrDmaxReporter
-
-
 class RadiusOfGyrationCVForce(CustomCVForce):
-    def __init__(
-        self, atom_indices, k_rg, rg0, weigh_by_mass=False, system=None, force_group=0
-    ):
+    def __init__(self, atom_indices, k_rg, rg0, force_group=0):
         """
         # this is from Peter Eastman's suggestion here: https://github.com/openmm/openmm/issues/4095
         Adds a radius of gyration restraint to a system using a harmonic potential.
+        All atoms are weighted equally.
 
         Parameters:
             atom_indices (list of int): Atom indices to include in the Rg calculation.
             k (float or Quantity): Force constant, in kJ/mol/nm².
             rg0 (float or Quantity): Reference Rg, in nm.
-            weigh_by_mass (bool): Whether to compute mass-weighted Rg.
-            system (System): OpenMM System object (needed if weigh_by_mass=True).
             force_group (int): Force group to assign.
         """
         num_atoms = len(atom_indices)
@@ -141,17 +63,7 @@ class RadiusOfGyrationCVForce(CustomCVForce):
         for i in atom_indices:
             rg2_force.addGroup([i], [1.0])  # g1: single atom
 
-        # g2: whole group, possibly mass-weighted
-        if weigh_by_mass:
-            if system is None:
-                raise ValueError("Must pass `system` when weigh_by_mass=True")
-            weights = [
-                system.getParticleMass(i).value_in_unit(dalton) for i in atom_indices
-            ]
-        else:
-            weights = [1.0] * num_atoms
-
-        rg2_force.addGroup(atom_indices, weights)  # g2
+        rg2_force.addGroup(atom_indices, [1.0] * num_atoms)  # g2: whole group
 
         logger.debug("Added groups to rg2_force")
         # Add bonds between atom-groups (g1) and centroid (g2)
@@ -168,79 +80,3 @@ class RadiusOfGyrationCVForce(CustomCVForce):
         self.addCollectiveVariable("cv", rg2_force)
         self.setForceGroup(force_group)
         logger.debug("Done creating CVForce object for Rg")
-
-
-def compute_radius_of_gyration(positions, atom_indices, masses):
-    coords = np.array([positions[i].value_in_unit(nanometer) for i in atom_indices])
-    mass_array = np.array([masses[i] for i in atom_indices])
-    total_mass = np.sum(mass_array)
-    com = np.average(coords, axis=0, weights=mass_array)
-    squared_dists = np.sum((coords - com) ** 2, axis=1)
-    rg2 = np.sum(mass_array * squared_dists) / total_mass
-    return np.sqrt(rg2)
-
-
-def add_radius_of_gyration_restraint(
-    system, atom_indices, k_rg, rg_target, force_group=0
-):
-    """
-    # ChatGPT prompt: openmm restraint force radius of gyation like CHARMM
-    Adds a harmonic radius of gyration restraint to an OpenMM system.
-
-    Parameters:
-    - system: OpenMM System object
-    - atom_indices: list of atom indices over which to compute Rg
-    - k_rg: force constant (kJ/mol/nm^2)
-    - rg_target: target Rg value (nm)
-    - force_group: optional force group ID
-    """
-    n = len(atom_indices)
-
-    """
-    # Expression for Rg^2
-    expr = (
-        "comx=0; comy=0; comz=0; mass=0;"
-        + "".join([f"comx+=m{i}*x{i}; comy+=m{i}*y{i}; comz+=m{i}*z{i}; mass+=m{i};" for i in range(n)])
-        + "comx/=mass; comy/=mass; comz/=mass;"
-        + "rg2=0;"
-        + "".join([
-            f"dx=x{i}-comx; dy=y{i}-comy; dz=z{i}-comz; rg2+=(dx*dx + dy*dy + dz*dz);" for i in range(n)
-        ])
-        + "rg2/=mass;"
-        + "rg2;"
-    )
-    """
-    expr = (
-        "comx=0; comy=0; comz=0;"
-        + "".join(
-            [f"comx+=m{i}*x{i}; comy+=m{i}*y{i}; comz+=m{i}*z{i};" for i in range(n)]
-        )
-        + "mass="
-        + "+".join([f"m{i}" for i in range(n)])
-        + ";"
-        + "comx/=mass; comy/=mass; comz/=mass;"
-        + "rg2=0;"
-        + "".join(
-            [
-                f"dx=x{i}-comx; dy=y{i}-comy; dz=z{i}-comz; rg2+=m{i}*(dx*dx + dy*dy + dz*dz);"
-                for i in range(n)
-            ]
-        )
-        + "rg2/=mass;"
-        + "rg2;"
-    )
-
-    # CustomCentroidBondForce to compute Rg²
-    centroid_force = CustomCentroidBondForce(1, expr)
-    centroid_force.addGroup(atom_indices)
-
-    # CustomCVForce applying harmonic potential on sqrt(Rg²)
-    cv_force = CustomCVForce("0.5 * k * (sqrt(cv) - rg0)^2")
-    cv_force.addCollectiveVariable("cv", centroid_force)
-    cv_force.addGlobalParameter("k", k_rg)
-    cv_force.addGlobalParameter("rg0", rg_target)
-    cv_force.setForceGroup(force_group)
-
-    system.addForce(cv_force)
-
-    return cv_force

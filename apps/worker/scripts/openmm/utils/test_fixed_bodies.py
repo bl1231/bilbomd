@@ -21,10 +21,7 @@ pytest.importorskip("openmm")
 from openmm import System, Vec3, unit  # noqa: E402
 from openmm.app import Element, Topology  # noqa: E402
 
-from utils.fixed_bodies import (  # noqa: E402
-    apply_fixed_body_constraints,
-    apply_fixed_body_constraints_zero_mass,
-)
+from utils.fixed_bodies import apply_fixed_body_constraints  # noqa: E402
 from utils.rigid_body import get_rigid_bodies  # noqa: E402
 
 CARBON = Element.getBySymbol("C")
@@ -67,13 +64,6 @@ def restrained_residues(system, modeller):
     return residues_of(modeller, indices)
 
 
-def massless_residues(system, modeller):
-    indices = [
-        i for i in range(system.getNumParticles()) if system.getParticleMass(i).value_in_unit(unit.amu) == 0
-    ]
-    return residues_of(modeller, indices)
-
-
 def test_restraints_include_both_ends():
     system, modeller = make_model({"A": range(1, 8), "B": range(1, 8)})
     apply_fixed_body_constraints(system, modeller, fixed("A", 2, 4))
@@ -84,12 +74,6 @@ def test_a_single_residue_is_restrained():
     system, modeller = make_model({"A": range(1, 8)})
     apply_fixed_body_constraints(system, modeller, fixed("A", 5, 5))
     assert restrained_residues(system, modeller) == [("A", 5)]
-
-
-def test_zero_mass_includes_both_ends():
-    system, modeller = make_model({"A": range(1, 8), "B": range(1, 8)})
-    apply_fixed_body_constraints_zero_mass(system, modeller, fixed("B", 6, 7))
-    assert massless_residues(system, modeller) == [("B", 6), ("B", 7)]
 
 
 def test_fixed_and_rigid_select_the_same_residues():

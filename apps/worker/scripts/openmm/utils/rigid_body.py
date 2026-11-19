@@ -5,72 +5,10 @@ import numpy as np
 import numpy.linalg as lin
 import openmm as omm
 from openmm import unit, Vec3
-from openmm.app import Topology
 from openmm.unit import amu, nanometer
 from utils.logger import get_logger
 
 logger = get_logger("rigid_body")
-
-
-def apply_rigid_body_constraint(
-    system: omm.System, atom_indices: list[int], positions: list, topology: Topology = None
-):
-    """
-    Applies absolute rigid body constraints to a group of atoms in an OpenMM system.
-
-    Parameters:
-    - system: the OpenMM System object to modify
-    - atom_indices: list of atom indices to treat as a rigid body (at least 3 required)
-    - positions: list of Vec3 positions corresponding to atoms in the system, used to
-        determine the initial distances.
-    - topology: (optional) OpenMM Topology object, used for debugging.
-
-    This function adds constraints to fix the distances between every pair of selected
-    atoms, ensuring that their relative positions remain absolutely fixed.
-    """
-    if len(atom_indices) < 3:
-        raise ValueError("At least 3 atoms are required to define a rigid body.")
-
-    # Debug output using topology if provided, otherwise just the indices
-    if topology is not None:
-        atom_info = {
-            atom.index: atom.element.name
-            for atom in topology.atoms()
-            if atom.index in atom_indices
-        }
-        logger.info(f"Applying rigid body constraints to atoms: {atom_info}")
-    else:
-        logger.info(f"Applying rigid body constraints to atoms: {atom_indices}")
-
-    # Add constraints for each unique pair of atoms
-    added_pairs = set()
-    for i, a1 in enumerate(atom_indices):
-        for a2 in atom_indices[i + 1 :]:
-            pair = tuple(sorted((a1, a2)))
-            if pair in added_pairs:
-                continue
-            pos1 = positions[a1]
-            pos2 = positions[a2]
-            # Compute Euclidean distance
-            d = (
-                (pos1[0] - pos2[0]) ** 2
-                + (pos1[1] - pos2[1]) ** 2
-                + (pos1[2] - pos2[2]) ** 2
-            ) ** 0.5
-
-            # Check if a constraint between these two atoms already exists
-            exists = False
-            num_constraints = system.getNumConstraints()
-            for j in range(num_constraints):
-                p1, p2, _ = system.getConstraintParameters(j)
-                if (p1 == a1 and p2 == a2) or (p1 == a2 and p2 == a1):
-                    exists = True
-                    break
-            if not exists:
-                system.addConstraint(a1, a2, d)
-                added_pairs.add(pair)
-    logger.info("Rigid body constraints applied successfully.")
-    return system
 
 
 def get_rigid_bodies(modeller, configs):
@@ -145,9 +83,6 @@ def create_rigid_bodies(system, positions, bodies):
     for i in range(system.getNumConstraints() - 1, -1, -1):
         p1, p2, distance = system.getConstraintParameters(i)
         if any(p1 in body and p2 in body for body in bodies):
-            # print(
-            #     f"Removing constraint between particles {p1} and {p2} due to rigid body."
-            # )
             system.removeConstraint(i)
 
     # Loop over rigid bodies and process them.
