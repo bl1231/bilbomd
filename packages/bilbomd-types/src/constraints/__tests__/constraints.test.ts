@@ -347,6 +347,24 @@ describe('validateConstraintsInput', () => {
     ).toContainEqual(expect.objectContaining({ path }))
   })
 
+  // CHARMM accepts 20 shape descriptors (one per rigid body) and fails on
+  // the 21st, so 20 must pass and 21 must not
+  it(`accepts exactly ${MAX_RIGID_BODIES} rigid bodies`, () => {
+    const rigid = Array.from({ length: MAX_RIGID_BODIES }, (_, i) => ({
+      segments: [
+        { chain_id: 'A', residues: { start: 60 + i * 5, stop: 62 + i * 5 } }
+      ]
+    }))
+    const result = validateConstraintsInput(
+      { fixed_bodies: twoBodies.fixed_bodies, rigid_bodies: rigid },
+      pdbStructure
+    )
+    expect(errorsOf(result)).not.toContainEqual(
+      expect.objectContaining({ path: 'rigid_bodies' })
+    )
+    expect(result.ok).toBe(true)
+  })
+
   it(`rejects more than ${MAX_RIGID_BODIES} rigid bodies`, () => {
     const rigid = Array.from({ length: MAX_RIGID_BODIES + 1 }, (_, i) => ({
       segments: [

@@ -89,6 +89,32 @@ describe('a PAE Jiffy result, from real pae2const output', () => {
     expect(result.current.drawn?.rigid_bodies).toHaveLength(1)
   })
 
+  // CHARMM accepts 20 shape descriptors and fails on the 21st
+  const withRigidBodies = (count: number) => {
+    const lines: string[] = [
+      'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
+      'cons fix sele fixed1 end'
+    ]
+    for (let i = 0; i < count; i++) {
+      const start = 20 + i * 20
+      lines.push(
+        `define rigid${i + 1} sele ( resid ${start}:${start + 10} .and. segid PROA ) end`,
+        `shape desc dock${i + 1} rigid sele rigid${i + 1} end`
+      )
+    }
+    lines.push('return')
+    return lines.join('\n')
+  }
+
+  it('accepts exactly 20 rigid bodies, as CHARMM does', () => {
+    const { result } = renderHook(() =>
+      useJiffyConstraints(withRigidBodies(20), segments)
+    )
+    expect(result.current.checked?.ok).toBe(true)
+    expect(result.current.valid?.rigid_bodies).toHaveLength(20)
+    expect(result.current.openmmYaml).not.toBeNull()
+  })
+
   it('lists what BilboMD would refuse, such as more rigid bodies than allowed', () => {
     const lines: string[] = [
       'define fixed1 sele ( resid 1:5 .and. segid PROA ) end',
