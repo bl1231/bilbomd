@@ -8,11 +8,17 @@ import {
   getClassicSansExample,
   getClassicScoperExample
 } from '../controllers/examples/getExampleData.js'
+import {
+  getClassicPdbExampleConstraints,
+  getClassicCrdExampleConstraints
+} from '../controllers/examples/getExampleConstraints.js'
 
 const router = express.Router()
 
 router.route('/classic/pdb').get(getClassicPdbExample)
 router.route('/classic/crd').get(getClassicCrdExample)
+router.route('/classic/pdb/constraints').get(getClassicPdbExampleConstraints)
+router.route('/classic/crd/constraints').get(getClassicCrdExampleConstraints)
 router.route('/auto').get(getClassicAutoExample)
 router.route('/af').get(getClassicAfExample)
 router.route('/of3').get(getClassicOf3Example)

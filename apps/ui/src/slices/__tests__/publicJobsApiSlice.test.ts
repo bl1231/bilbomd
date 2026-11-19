@@ -446,3 +446,60 @@ describe('public job tags', () => {
     }
   )
 })
+
+describe('getClassicExampleConstraints', () => {
+  const storeRef = setupApiStore()
+
+  afterEach(() => {
+    server.resetHandlers()
+  })
+
+  it('fetches the example constraints and unwraps md_constraints', async () => {
+    const md_constraints = {
+      fixed_bodies: [
+        {
+          name: 'FixedBody1',
+          segments: [{ chain_id: 'A', residues: { start: 1, stop: 50 } }]
+        }
+      ],
+      rigid_bodies: []
+    }
+    let requested = ''
+    server.use(
+      http.get(
+        'http://localhost:3003/api/v1/public/examples/classic/:example/constraints',
+        ({ params }) => {
+          requested = String(params.example)
+          return HttpResponse.json({ md_constraints })
+        }
+      )
+    )
+
+    const result = await storeRef.store.dispatch(
+      publicJobsApiSlice.endpoints.getClassicExampleConstraints.initiate('crd')
+    )
+
+    expect(requested).toBe('crd')
+    expect(result.data).toEqual(md_constraints)
+  })
+
+  it('reports an error when the server has no example constraints', async () => {
+    server.use(
+      http.get(
+        'http://localhost:3003/api/v1/public/examples/classic/:example/constraints',
+        () =>
+          HttpResponse.json(
+            { message: 'Example constraints are not available' },
+            { status: 404 }
+          )
+      )
+    )
+
+    const result = await storeRef.store.dispatch(
+      publicJobsApiSlice.endpoints.getClassicExampleConstraints.initiate('pdb')
+    )
+
+    expect(result.error).toBeDefined()
+    expect(result.data).toBeUndefined()
+  })
+})

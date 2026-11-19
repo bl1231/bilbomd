@@ -3,7 +3,8 @@ import type {
   PublicJobStatus,
   AnonJobResponse,
   JobAssetsDTO,
-  JobFeedbackDTO
+  JobFeedbackDTO,
+  MDConstraintsDTO
 } from '@bilbomd/bilbomd-types'
 import type { FoxsData } from 'types/foxs'
 import { revokeObjectUrlOnRemove } from 'utils/objectUrl'
@@ -11,6 +12,7 @@ import type { AlignmentReport } from 'features/jobdetail/rigidDomains'
 
 type PublicResultFileParams = { publicId: string; filename: string }
 type EnsemblePdbFilesResponse = { ensemblePdbFiles: string[] }
+export type ClassicExampleKey = 'pdb' | 'crd'
 
 export const publicJobsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -72,6 +74,17 @@ export const publicJobsApiSlice = apiSlice.injectEndpoints({
     getPublicJobAlignment: builder.query<AlignmentReport, string>({
       query: (publicId) => `/public/jobs/${publicId}/results/alignment.json`
     }),
+    // A Classic example's own constraints, as its job will store them
+    getClassicExampleConstraints: builder.query<
+      MDConstraintsDTO,
+      ClassicExampleKey
+    >({
+      query: (example) => `/public/examples/classic/${example}/constraints`,
+      transformResponse: (response: { md_constraints: MDConstraintsDTO }) =>
+        response.md_constraints,
+      // The example files only change with a new deployment
+      keepUnusedDataFor: 3600
+    }),
     getPublicMDMovies: builder.query<JobAssetsDTO, string>({
       query: (publicId) => `/public/jobs/${publicId}/movies`,
       providesTags: (_, __, publicId) => [
@@ -92,5 +105,6 @@ export const {
   useGetPublicResultFileTextQuery,
   useGetPublicJobImageQuery,
   useGetPublicJobAlignmentQuery,
-  useGetPublicMDMoviesQuery
+  useGetPublicMDMoviesQuery,
+  useGetClassicExampleConstraintsQuery
 } = publicJobsApiSlice

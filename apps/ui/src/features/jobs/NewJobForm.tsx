@@ -47,6 +47,7 @@ import MdEngineField from 'components/MdEngineField'
 import TitleField from 'components/TitleField'
 import { getRgMaxWarning } from './rgMaxWarning'
 import { ConstraintsField } from 'features/constraints/ConstraintsField'
+import { ExampleConstraints } from './ExampleConstraints'
 import MwCheck from 'features/mwcheck/MwCheck'
 
 type NewJobFormProps = {
@@ -644,13 +645,11 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                         MD constraints
                       </Typography>
                       {useExampleData ? (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
-                          The example&apos;s own fixed and rigid bodies will be
-                          used.
-                        </Typography>
+                        <ExampleConstraints
+                          example={
+                            values.bilbomd_mode === 'pdb' ? 'pdb' : 'crd'
+                          }
+                        />
                       ) : (
                         <ConstraintsField
                           name="constraints"
