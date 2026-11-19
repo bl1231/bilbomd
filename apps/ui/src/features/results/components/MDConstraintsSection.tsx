@@ -40,7 +40,7 @@ export const MDConstraintsSection = ({
               aria-controls={panelId}
               endIcon={open ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             >
-              {open ? 'Hide schematic' : 'Show schematic'}
+              {open ? 'Hide dynamic schematic' : 'Show dynamic schematic'}
             </Button>
           </Box>
           <Collapse

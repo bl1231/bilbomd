@@ -49,7 +49,7 @@ describe('ExampleConstraints', () => {
     expect(screen.getByTestId('constraint-track-A')).toBeInTheDocument()
     expect(screen.getByTestId('constraint-track-B')).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Show schematic' })
+      screen.getByRole('button', { name: 'Show dynamic schematic' })
     ).toBeInTheDocument()
     // Nothing to edit
     expect(screen.queryByRole('textbox')).toBeNull()

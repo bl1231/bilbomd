@@ -45,6 +45,8 @@ import {
 } from './schematicSimulation'
 import { BAR_HEIGHT, layoutTracks } from './trackLayout'
 
+/** The Motion slider's starting value (0–3×) */
+const DEFAULT_MOTION = 0.25
 const HINT =
   'Hover a bead or a spring for details. Drag a rigid body, or focus it and use the arrow keys, to see how far its linkers let it go.'
 const FIXED_MESSAGE = 'Fixed segments stay where they are during MD.'
@@ -111,8 +113,8 @@ export const ConstraintSchematic = ({
     if (reducedMotion) setPlaying(false)
   }
   const playingRef = useRef(playing)
-  // How strongly the bodies jiggle while the motion plays
-  const [motion, setMotion] = useState(1)
+  // How strongly the bodies jiggle while the motion plays; starts gentle
+  const [motion, setMotion] = useState(DEFAULT_MOTION)
   const motionRef = useRef(motion)
   const motionLabelId = useId()
   const [seed, setSeed] = useState(1)

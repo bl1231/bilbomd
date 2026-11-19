@@ -163,7 +163,9 @@ describe('ConstraintSchematic', () => {
     const user = userEvent.setup()
     render(<ConstraintSchematic constraints={constraints} />)
     const slider = screen.getByRole('slider', { name: 'Motion' })
-    expect(slider).toHaveAttribute('aria-valuenow', '1')
+    // Starts gentle, at a quarter of full strength
+    expect(slider).toHaveAttribute('aria-valuenow', '0.25')
+    expect(slider).toHaveAttribute('aria-valuetext', '0.25×')
     expect(slider).toHaveAttribute('aria-valuemax', '3')
     expect(slider).not.toBeDisabled()
     fireEvent.change(slider, { target: { value: 2.5 } })

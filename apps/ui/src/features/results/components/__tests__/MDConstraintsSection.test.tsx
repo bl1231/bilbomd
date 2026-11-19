@@ -24,7 +24,9 @@ describe('MDConstraintsSection', () => {
   it('shows the compact track, with the schematic closed', () => {
     render(<MDConstraintsSection constraints={constraints} />)
     expect(screen.getByTestId('constraint-track-A')).toBeInTheDocument()
-    const button = screen.getByRole('button', { name: 'Show schematic' })
+    const button = screen.getByRole('button', {
+      name: 'Show dynamic schematic'
+    })
     expect(button).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByTestId('md-constraints-schematic')).toBeNull()
   })
@@ -32,11 +34,13 @@ describe('MDConstraintsSection', () => {
   it('opens and closes the schematic', async () => {
     const user = userEvent.setup()
     render(<MDConstraintsSection constraints={constraints} />)
-    await user.click(screen.getByRole('button', { name: 'Show schematic' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Show dynamic schematic' })
+    )
     const panel = screen.getByTestId('md-constraints-schematic')
     expect(panel).toBeInTheDocument()
     expect(screen.getAllByTestId('schematic-body')).toHaveLength(2)
-    const hide = screen.getByRole('button', { name: 'Hide schematic' })
+    const hide = screen.getByRole('button', { name: 'Hide dynamic schematic' })
     expect(hide).toHaveAttribute('aria-expanded', 'true')
     expect(hide).toHaveAttribute('aria-controls', panel.id)
     await user.click(hide)
@@ -55,8 +59,8 @@ describe('MDConstraintsSection', () => {
 describe('MDConstraintsSection toggle', () => {
   it('is an outlined button, so it stands out from the page', () => {
     render(<MDConstraintsSection constraints={constraints} />)
-    expect(screen.getByRole('button', { name: 'Show schematic' })).toHaveClass(
-      'MuiButton-outlined'
-    )
+    expect(
+      screen.getByRole('button', { name: 'Show dynamic schematic' })
+    ).toHaveClass('MuiButton-outlined')
   })
 })

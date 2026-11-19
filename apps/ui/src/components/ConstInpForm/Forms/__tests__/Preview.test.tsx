@@ -79,7 +79,7 @@ describe('Preview', () => {
     expect(drawn).toHaveTextContent('RigidBody1')
     expect(screen.getByTestId('constraint-track-A')).toBeInTheDocument()
     expect(screen.getByTestId('constraint-track-B')).toBeInTheDocument()
-    expect(button(/Show schematic/i)).toBeInTheDocument()
+    expect(button(/Show dynamic schematic/i)).toBeInTheDocument()
     expect(screen.queryByTestId('jiffy-constraints-errors')).toBeNull()
   })
 
