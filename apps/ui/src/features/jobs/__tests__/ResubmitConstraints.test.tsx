@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Form, Formik } from 'formik'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ConstraintsInput, MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 
 // The original job's files, by name
@@ -62,6 +63,17 @@ beforeEach(() => {
   ].join('\n')
 })
 
+const storedChainA: MDConstraintsDTO = {
+  fixed_bodies: [
+    {
+      name: 'FixedBody1',
+      segments: [
+        { chain_id: 'A', segid: 'PROA', residues: { start: 5, stop: 20 } }
+      ]
+    }
+  ]
+}
+
 describe('ResubmitConstraints', () => {
   it("starts from the original job's stored constraints", async () => {
     // As the job record returns them: MongoDB adds _id to every subdocument
@@ -114,16 +126,64 @@ describe('ResubmitConstraints', () => {
     expect(preview).toHaveTextContent('shape desc dock1 rigid sele rigid1 end')
   })
 
-  it('uses a newly picked structure file instead of the original', async () => {
+  it('checks the original constraints against a newly picked structure', async () => {
     const picked = new File(
       [
         Array.from({ length: 10 }, (_, i) => atom('B', 'ALA', i + 1)).join('\n')
       ],
       'new.pdb'
     )
-    renderResubmit({ structure: picked })
-    expect(await screen.findByTestId('const-inp-preview')).toHaveTextContent(
-      'segid PROB'
+    renderResubmit({ structure: picked, mdConstraints: storedChainA })
+    // The original names chain A, which the new structure doesn't have
+    expect(
+      await screen.findByText(/don.t fit this structure/)
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('const-inp-preview')).toBeNull()
+  })
+
+  it('shows the original constraints read-only, with no editor', async () => {
+    renderResubmit({ mdConstraints: storedChainA })
+    expect(
+      await screen.findByText(/Using the original job's constraints/)
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('constraint-track-A')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).toBeNull()
+    expect(
+      screen.getByRole('button', { name: /Replace with a file/i })
+    ).toBeInTheDocument()
+  })
+
+  it('replaces the original constraints with a file, and can go back', async () => {
+    const user = userEvent.setup()
+    renderResubmit({ mdConstraints: storedChainA })
+    await screen.findByTestId('const-inp-preview')
+    const constInp = new File(
+      [
+        [
+          'define fixed1 sele ( resid 30:40 .and. segid PROA ) end',
+          'cons fix sele fixed1 end',
+          'return'
+        ].join('\n')
+      ],
+      'new-const.inp'
+    )
+    await user.upload(screen.getByTestId('constraints-file-input'), constInp)
+    await waitFor(() =>
+      expect(screen.getByTestId('const-inp-preview')).toHaveTextContent(
+        'resid 30:40 .and. segid PROA'
+      )
+    )
+    expect(
+      screen.getByText(/The fixed and rigid bodies in new-const.inp/)
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: /Use the original constraints/i })
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('const-inp-preview')).toHaveTextContent(
+        'resid 5:20 .and. segid PROA'
+      )
     )
   })
 

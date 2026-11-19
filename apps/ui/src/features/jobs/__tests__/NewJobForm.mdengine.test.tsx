@@ -75,7 +75,7 @@ describe('NewJobForm md_engine', () => {
       expect(mockUseExampleConstraints).toHaveBeenLastCalledWith('crd')
     })
 
-    it('goes back to the editor prompt with custom data', async () => {
+    it('goes back to the constraints file prompt with custom data', async () => {
       const user = userEvent.setup()
       render(<NewJobForm />)
       await user.click(
@@ -85,9 +85,8 @@ describe('NewJobForm md_engine', () => {
       expect(
         screen.queryByText(/The example uses these fixed and rigid bodies/)
       ).toBeNull()
-      expect(
-        screen.getByText(/to set up the\s+fixed and rigid bodies/)
-      ).toBeInTheDocument()
+      expect(screen.getByTestId('constraints-file-help')).toBeInTheDocument()
+      expect(screen.getByTestId('constraints-file-input')).toBeInTheDocument()
     })
   })
 

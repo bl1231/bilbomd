@@ -15,7 +15,7 @@ import LaunchIcon from '@mui/icons-material/Launch'
 import Grid from '@mui/material/Grid'
 import { Form, Formik, Field } from 'formik'
 import FileSelect from 'features/jobs/FileSelect'
-import { ConstraintsField } from 'features/constraints/ConstraintsField'
+import { ConstraintsFileField } from 'features/constraints/ConstraintsFileField'
 import {
   useAddNewSANSJobMutation,
   useCalculateAutoRgMutation
@@ -494,8 +494,11 @@ const NewSANSJob = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       >
                         MD constraints
                       </Typography>
-                      <ConstraintsField
+                      <ConstraintsFileField
                         name="constraints"
+                        jiffyLinks={
+                          mode === 'anonymous' ? 'public' : 'dashboard'
+                        }
                         mode="pdb"
                         structureFile={values.pdb_file as File | string}
                         engine={values.md_engine}

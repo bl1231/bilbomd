@@ -148,7 +148,33 @@ describe('importConstraintsFromData', () => {
         ]
       }
     ])
-    expect(imported.problems.join(' ')).toMatch(/2 fixed bodies were merged/)
+    // Nothing is lost, so it is a note, not a problem
+    expect(imported.notes.join(' ')).toMatch(/2 fixed bodies were merged/)
+    expect(imported.problems).toEqual([])
+  })
+
+  it('leaves out a segment whose residues it cannot read, rather than widening it', () => {
+    const imported = importConstraintsFromData(
+      {
+        fixed_bodies: [
+          {
+            segments: [
+              { chain_id: 'A', residues: '1:10' },
+              { chain_id: 'B', residues: [1, 10] },
+              { chain_id: 'a', residues: { start: 1, stop: 10 } }
+            ]
+          }
+        ]
+      },
+      'pdb'
+    )
+    expect(imported.input?.fixed_bodies).toEqual([
+      { segments: [{ chain_id: 'a', residues: { start: 1, stop: 10 } }] }
+    ])
+    expect(imported.problems).toEqual([
+      'Fixed body 1, segment 1: residues must be { start, stop }, so the segment was left out',
+      'Fixed body 1, segment 2: residues must be { start, stop }, so the segment was left out'
+    ])
   })
 
   it('leaves out and reports unknown fields, ignoring stored metadata', () => {

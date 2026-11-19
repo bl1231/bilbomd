@@ -59,7 +59,7 @@ const BilboMDClassicJobSchema = object().shape({
         .concat(pdbOrCifResidueCheck()),
     otherwise: () => mixed().notRequired()
   }),
-  // Constraints are checked against the structure by ConstraintsField
+  // Constraints are checked against the structure by ConstraintsFileField
   q_units: qUnitsField(),
   dat_file: mixed()
     .concat(requiredFile('A SAXS data file is required'))

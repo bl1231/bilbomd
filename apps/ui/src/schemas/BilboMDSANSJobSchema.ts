@@ -52,7 +52,7 @@ const BilboMDSANSJobSchema = object().shape({
         return value > rg_min
       }
     ),
-  // Constraints are checked against the structure by ConstraintsField
+  // Constraints are checked against the structure by ConstraintsFileField
   d2o_fraction: number()
     .min(0, 'D2O Fraction cannot be less than 0')
     .max(100, 'D2O Fraction cannot be more than 100')

@@ -9,7 +9,10 @@ import {
   type StructureSegment
 } from '@bilbomd/bilbomd-types'
 import { useGetFileByIdAndNameQuery } from 'slices/jobsApiSlice'
-import { ConstraintsField } from 'features/constraints/ConstraintsField'
+import {
+  ConstraintsFileField,
+  type InitialConstraints
+} from 'features/constraints/ConstraintsFileField'
 
 interface ResubmitConstraintsProps {
   jobId: string
@@ -30,10 +33,11 @@ const isInput = (value: unknown): value is ConstraintsInput =>
   (value as { fixed_bodies: unknown[] }).fixed_bodies.length > 0
 
 /**
- * The constraints editor on the resubmit form. Without a newly picked file it
- * reads the original job's structure, and starts from the original job's
- * constraints: its stored md_constraints, or, for older CRD/PSF jobs whose
- * stored constraints lack segids, its const.inp read here in the browser.
+ * The constraints on the resubmit form. Without a newly picked structure it
+ * reads the original job's, and until a constraints file is picked it uses
+ * the original job's constraints, shown read-only: its stored md_constraints,
+ * or, for older CRD/PSF jobs whose stored constraints lack segids, its
+ * const.inp read here in the browser.
  */
 export const ResubmitConstraints = ({
   jobId,
@@ -90,6 +94,13 @@ export const ResubmitConstraints = ({
     },
     [storedUsable, mdConstraints, mode, constInp.data]
   )
+  const initial = useMemo<InitialConstraints>(
+    () => ({
+      label: "the original job's constraints",
+      for: initialFor
+    }),
+    [initialFor]
+  )
 
   if (reuseStructure && original.isLoading) return <LinearProgress />
   if (reuseStructure && original.isError) {
@@ -103,13 +114,13 @@ export const ResubmitConstraints = ({
   if (constInp.isLoading) return <LinearProgress />
 
   return (
-    <ConstraintsField
+    <ConstraintsFileField
       name="constraints"
       mode={mode}
       structureFile={structureFile}
       engine={engine}
       disabled={disabled}
-      initialFor={initialFor}
+      initial={initial}
     />
   )
 }
