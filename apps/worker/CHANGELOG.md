@@ -1,5 +1,14 @@
 # @bilbomd/worker
 
+## 2.29.6
+
+### Patch Changes
+
+- Updated dependencies [466f47c]
+- Updated dependencies [cbbba21]
+  - @bilbomd/bilbomd-types@1.22.2
+  - @bilbomd/md-utils@2.0.1
+
 ## 2.29.5
 
 ### Patch Changes

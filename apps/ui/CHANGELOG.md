@@ -1,5 +1,21 @@
 # @bilbomd/ui
 
+## 2.48.0
+
+### Minor Changes
+
+- 0389541: Show the example data's MD constraints, read-only, on the BilboMD Classic form. A new public endpoint (`GET /api/v1/public/examples/classic/{pdb,crd}/constraints`) reads each example's const.inp against its structure, the same way an example job does, and the form shows the result with the job page's chain track and schematic.
+- 466f47c: Replace the inline constraints editor on the BilboMD Classic, SANS and resubmit forms with a constraints file upload (const.inp, OpenMM constraints YAML, or bilbomd_job.json), linking to the Inp Jiffy and PAE Jiffy for making one. The file is read in the browser and checked against the structure once both files are selected; the constraints are then drawn the way the job page shows them. A file with parts that would be left out is refused rather than partly used. On resubmit, the original job's constraints are shown read-only and can be replaced with a file.
+- cbbba21: The Inp Jiffy can now start from any existing constraints file: a const.inp, an OpenMM constraints YAML, or bilbomd_job.json from a BilboMD results download, picked with a "Select Constraints File" button. Its instructions no longer assume CHARMM: they describe fixed, rigid and flexible regions for either MD engine and say the const.inp it writes works for OpenMM jobs too.
+- cbc43de: Inp Jiffy: the Preview step now draws the fixed and rigid bodies the way the job form and job page do, checks them the way BilboMD will, and offers both a const.inp and an openmm_const.yml download, with the file texts in collapsed sections. Step 2 calls the bodies fixed, rigid and flexible, and step 1 shows the example as both a const.inp and an openmm_const.yml. The Inp Jiffy and the PAE Jiffy each get a "Use in a new Classic job" button, which opens a new BilboMD Classic job with the structure and constraints already picked. The Inp Jiffy now ends on its Preview step: Finish and the empty last screen are gone, a Start Over button begins a new file, and the step shows as completed once a file is downloaded. A PDB file with no atom records or without chain IDs now keeps Next off (before, the error could clear and let it through), and going Back to step 1 shows the files already picked. The PAE Jiffy now shows its result the same way as the Inp Jiffy: the bodies checked against the model and drawn, the hand-off, and both a const.inp and an openmm_const.yml download. Its instructions start open and no longer tie the result to CHARMM, and up to 20 rigid bodies are allowed (it refused exactly 20 before). The constraint schematic's toggle now reads "Show/Hide dynamic schematic", and its Motion slider starts at 0.25× instead of 1×.
+
+### Patch Changes
+
+- 5021acb: Fix the MD constraint track, body list and schematic for CRD/PSF jobs whose segids share a chain ID (for example PROA and DNAA, both chain A). They were merged into one chain, hiding the DNA segment, labeling it as protein and misreporting the flexible ranges. Such jobs now show one track per segid, named by segid, with its molecule type read from the segid. Other jobs look as before. The "Show schematic" toggle is now an outlined button, so it stands out from the page.
+- Updated dependencies [466f47c]
+- Updated dependencies [cbbba21]
+  - @bilbomd/bilbomd-types@1.22.2
+
 ## 2.47.1
 
 ### Patch Changes
