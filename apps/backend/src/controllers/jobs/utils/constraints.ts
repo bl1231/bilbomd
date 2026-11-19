@@ -48,7 +48,9 @@ const fail = (path: string, message: string): MaterializedConstraints => ({
   errors: [{ path, message }]
 })
 
-const readStructure = async (file: string): Promise<StructureSegment[]> => {
+export const readStructure = async (
+  file: string
+): Promise<StructureSegment[]> => {
   const text = await fs.readFile(file, 'utf8')
   const ext = path.extname(file).toLowerCase()
   if (ext === '.psf') return readPsfSegments(text)
@@ -62,6 +64,24 @@ const molTypeOfSegid = (segid: string): ChainMolType | undefined => {
   if (prefix === 'PRO' || prefix === 'DNA' || prefix === 'RNA') return prefix
   if (prefix === 'CAR' || prefix === 'CAL') return 'CAR'
   return undefined
+}
+
+/**
+ * The molecule type of each chain, for the job page's chain track. One entry
+ * per viewer chain; CRD/PSF segments can share one (PROA and DNAA are both
+ * chain A), and the first keeps it.
+ */
+export const chainMolTypesOf = (
+  segments: StructureSegment[]
+): { chain_id: string; mol_type: ChainMolType }[] => {
+  const chainMolTypes: { chain_id: string; mol_type: ChainMolType }[] = []
+  for (const s of segments) {
+    const molType = s.mol_type ?? molTypeOfSegid(s.segid)
+    if (molType && !chainMolTypes.some((c) => c.chain_id === s.chain_id)) {
+      chainMolTypes.push({ chain_id: s.chain_id, mol_type: molType })
+    }
+  }
+  return chainMolTypes
 }
 
 const removeFromJobDir = async (file: Express.Multer.File, jobDir: string) => {
@@ -168,20 +188,13 @@ export const materializeConstraints = async ({
       : writeConstInp(constraints)
   await fs.writeFile(path.join(jobDir, constFileName), content)
 
-  // One entry per viewer chain; CRD/PSF segments can share one (PROA and
-  // DNAA are both chain A), and the first keeps it, as before
-  const chainMolTypes: { chain_id: string; mol_type: ChainMolType }[] = []
-  for (const s of segments) {
-    const molType = s.mol_type ?? molTypeOfSegid(s.segid)
-    if (molType && !chainMolTypes.some((c) => c.chain_id === s.chain_id)) {
-      chainMolTypes.push({ chain_id: s.chain_id, mol_type: molType })
-    }
-  }
-
   return {
     ok: true,
     constFileName,
-    md_constraints: { ...constraints, chain_mol_types: chainMolTypes },
+    md_constraints: {
+      ...constraints,
+      chain_mol_types: chainMolTypesOf(segments)
+    },
     warnings
   }
 }

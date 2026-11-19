@@ -14,13 +14,16 @@ vi.mock('../../../slices/jobsApiSlice', () => ({
   ],
   useCalculateAutoRgMutation: () => [vi.fn(), { isLoading: false }]
 }))
+const mockUseExampleConstraints = vi.fn()
 vi.mock('../../../slices/publicJobsApiSlice', () => ({
   useAddNewPublicJobMutation: () => [
     vi
       .fn()
       .mockResolvedValue({ unwrap: vi.fn().mockResolvedValue({ id: '123' }) }),
     { isSuccess: false }
-  ]
+  ],
+  useGetClassicExampleConstraintsQuery: (...args: unknown[]) =>
+    mockUseExampleConstraints(...args)
 }))
 const mockUseGetConfigsQuery = vi.fn()
 vi.mock('../../../slices/configsApiSlice', () => ({
@@ -32,6 +35,59 @@ describe('NewJobForm md_engine', () => {
     mockUseGetConfigsQuery.mockReturnValue({
       data: { useNersc: 'false' },
       isLoading: false
+    })
+    mockUseExampleConstraints.mockReturnValue({
+      data: {
+        fixed_bodies: [
+          {
+            name: 'FixedBody1',
+            segments: [{ chain_id: 'A', residues: { start: 1, stop: 50 } }]
+          }
+        ],
+        rigid_bodies: []
+      },
+      isLoading: false
+    })
+  })
+
+  describe('example data', () => {
+    it('shows the PDB example constraints read-only (OpenMM)', async () => {
+      const user = userEvent.setup()
+      render(<NewJobForm />)
+      expect(mockUseExampleConstraints).not.toHaveBeenCalled()
+      await user.click(
+        screen.getByRole('button', { name: 'Load Example Data' })
+      )
+      expect(mockUseExampleConstraints).toHaveBeenLastCalledWith('pdb')
+      expect(
+        screen.getByText(/The example uses these fixed and rigid bodies/)
+      ).toBeInTheDocument()
+      expect(screen.getByTestId('constraint-track-A')).toBeInTheDocument()
+    })
+
+    it('shows the CRD/PSF example constraints with CHARMM', async () => {
+      const user = userEvent.setup()
+      render(<NewJobForm />)
+      await user.click(screen.getByLabelText(/CHARMM/i))
+      await user.click(
+        screen.getByRole('button', { name: 'Load Example Data' })
+      )
+      expect(mockUseExampleConstraints).toHaveBeenLastCalledWith('crd')
+    })
+
+    it('goes back to the editor prompt with custom data', async () => {
+      const user = userEvent.setup()
+      render(<NewJobForm />)
+      await user.click(
+        screen.getByRole('button', { name: 'Load Example Data' })
+      )
+      await user.click(screen.getByRole('button', { name: 'Use Custom Data' }))
+      expect(
+        screen.queryByText(/The example uses these fixed and rigid bodies/)
+      ).toBeNull()
+      expect(
+        screen.getByText(/to set up the\s+fixed and rigid bodies/)
+      ).toBeInTheDocument()
     })
   })
 
