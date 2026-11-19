@@ -12,11 +12,12 @@ import type {
 export interface ConstraintsDataImport {
   /** The constraints, or null when the file holds no usable fixed body */
   input: ConstraintsInput | null
-  /** What was left out or changed, to show the user */
+  /** What was left out, to show the user */
   problems: string[]
   /**
-   * Selections that were fitted to the structure's segments, e.g. a chain
-   * now built as two segments, to show the user
+   * What was changed without losing anything, to show the user: selections
+   * fitted to the structure's segments (e.g. a chain now built as two
+   * segments), or several fixed bodies merged into one
    */
   notes: string[]
 }
@@ -94,6 +95,14 @@ export const importConstraintsFromData = (
       problems.push(`${where}: left out field "${field}"`)
     }
     const { chain_id: chainId, segid, residues, whole_segment: whole } = value
+    // Residues in any other form ("1:10", [1, 10]) can't be read; taking the
+    // segment without them would widen it to the whole segment
+    if (residues !== undefined && !isObject(residues)) {
+      problems.push(
+        `${where}: residues must be { start, stop }, so the segment was left out`
+      )
+      return []
+    }
     const saved = isObject(residues)
       ? { start: residues.start, stop: residues.stop }
       : undefined
@@ -181,8 +190,9 @@ export const importConstraintsFromData = (
     problems.push('The file has no usable fixed body')
     return { input: null, problems, notes }
   }
+  // Nothing is lost, so this is a note, not a problem
   if (fixed.length > 1) {
-    problems.push(
+    notes.push(
       `The file's ${fixed.length} fixed bodies were merged into one: OpenMM holds all of them in place`
     )
   }

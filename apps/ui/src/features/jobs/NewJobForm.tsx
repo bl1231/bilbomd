@@ -155,12 +155,11 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     selectedFile: File,
     values: BilboMDClassicJobFormValues,
     {
-      setValues,
       setFieldValue,
       setFieldTouched
     }: Pick<
       FormikHelpers<BilboMDClassicJobFormValues>,
-      'setValues' | 'setFieldValue' | 'setFieldTouched'
+      'setFieldValue' | 'setFieldTouched'
     >
   ) => {
     setAutoRgError(null)
@@ -187,16 +186,13 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     try {
       const { rg, rg_min, rg_max, qmin, qmax } =
         await calculateAutoRg(formData).unwrap()
-      void setValues(
-        {
-          ...values,
-          dat_file: selectedFile,
-          rg: String(rg),
-          rg_min: String(rg_min),
-          rg_max: String(rg_max)
-        },
-        true
-      )
+      // Only the fields AutoRg sets: writing back the values captured when
+      // the file was picked would undo anything changed while it ran, such
+      // as a constraints file picked in the meantime
+      void setFieldValue('dat_file', selectedFile, false)
+      void setFieldValue('rg', String(rg), false)
+      void setFieldValue('rg_min', String(rg_min), false)
+      void setFieldValue('rg_max', String(rg_max), true)
       void setFieldTouched('rg', true, false)
       void setFieldTouched('rg_min', true, false)
       void setFieldTouched('rg_max', true, false)
@@ -318,7 +314,6 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                 handleBlur,
                 setFieldValue,
                 setFieldTouched,
-                setValues,
                 validateForm
               }) => (
                 <Form>
@@ -693,7 +688,6 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           isLoading={isLoading}
                           onFileChange={(selectedFile: File) =>
                             processSaxsFile(selectedFile, values, {
-                              setValues,
                               setFieldValue,
                               setFieldTouched
                             })
@@ -712,7 +706,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                             void processSaxsFile(
                               values.dat_file,
                               { ...values, q_units: qUnits },
-                              { setValues, setFieldValue, setFieldTouched }
+                              { setFieldValue, setFieldTouched }
                             )
                           }
                         }}

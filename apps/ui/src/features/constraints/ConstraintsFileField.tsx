@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useField } from 'formik'
 import {
   Accordion,
@@ -231,14 +231,34 @@ export const ConstraintsFileField = ({
   } else if (!result?.ok) message = 'Fix the constraints file'
 
   const validate = useCallback(() => message, [message])
-  const [, , helpers] = useField<ConstraintsInput | null>({ name, validate })
+  const [field, , helpers] = useField<ConstraintsInput | null>({
+    name,
+    validate
+  })
   const { setValue } = helpers
+  const validatedFor = useRef<string | undefined>(undefined)
   useEffect(() => {
-    // Validating again here keeps the error current when the value stays null
-    void setValue(value)
+    // Puts the checked constraints back if anything else set the field (a
+    // form restoring older values, say), so what is sent is what is shown.
+    // A new message validates again even when the value stays null.
+    if (field.value !== value || validatedFor.current !== message) {
+      validatedFor.current = message
+      void setValue(value)
+    }
     // setValue changes identity on every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, message])
+  }, [value, message, field.value])
+
+  // Kept stable across unrelated form edits, so an open schematic isn't
+  // rebuilt (and its layout reset) on every keystroke elsewhere
+  const drawn = useMemo(
+    () =>
+      result?.ok && segments
+        ? previewConstraints(result.constraints, segments)
+        : null,
+    [result, segments]
+  )
+  const fileInput = useRef<HTMLInputElement>(null)
 
   const preview = useMemo(
     () =>
@@ -354,7 +374,7 @@ export const ConstraintsFileField = ({
         </Alert>
       )
     }
-    if (!result?.ok || !segments) return null
+    if (!result?.ok || !drawn) return null
     return (
       <Stack
         spacing={1}
@@ -368,9 +388,7 @@ export const ConstraintsFileField = ({
             ? `The fixed and rigid bodies in ${file.name}:`
             : `Using ${initial?.label ?? 'these constraints'}. Select a file to replace them.`}
         </Typography>
-        <MDConstraintsSection
-          constraints={previewConstraints(result.constraints, segments)}
-        />
+        <MDConstraintsSection constraints={drawn} />
         {imported && imported.notes.length > 0 && (
           <ListAlert
             severity="info"
@@ -427,26 +445,28 @@ export const ConstraintsFileField = ({
         spacing={2}
         sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}
       >
+        {/* A native button, so Enter and Space open the picker too */}
         <Button
           variant="contained"
-          component="label"
           disabled={disabled}
           sx={{ minWidth: '110px' }}
+          onClick={() => fileInput.current?.click()}
         >
           {initial && !file ? 'Replace with a file' : 'Select File'}
-          <input
-            type="file"
-            hidden
-            accept={CONSTRAINTS_FILE_ACCEPT}
-            data-testid="constraints-file-input"
-            onChange={(e) => {
-              const picked = e.target.files?.[0]
-              // So picking the same file again (after fixing it) reads it again
-              e.target.value = ''
-              if (picked) pickFile(picked)
-            }}
-          />
         </Button>
+        <input
+          ref={fileInput}
+          type="file"
+          hidden
+          accept={CONSTRAINTS_FILE_ACCEPT}
+          data-testid="constraints-file-input"
+          onChange={(e) => {
+            const picked = e.target.files?.[0]
+            // So picking the same file again (after fixing it) reads it again
+            e.target.value = ''
+            if (picked) pickFile(picked)
+          }}
+        />
         {file && (
           <Alert
             variant="outlined"

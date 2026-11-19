@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { Form, Formik, useFormikContext } from 'formik'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -32,13 +32,24 @@ const goodInp = constInp(
 
 // Shows the Formik value and error, so tests can check what is submitted
 const State = () => {
-  const { values, errors } = useFormikContext<{
+  const { values, errors, setFieldValue } = useFormikContext<{
     constraints: ConstraintsInput | null
   }>()
   return (
     <>
       <pre data-testid="value">{JSON.stringify(values.constraints)}</pre>
       <pre data-testid="error">{errors.constraints ?? ''}</pre>
+      {/* Like a form writing back values it captured earlier */}
+      <button
+        type="button"
+        onClick={() =>
+          void setFieldValue('constraints', {
+            fixed_bodies: [{ segments: [{ chain_id: 'A' }] }]
+          })
+        }
+      >
+        restore stale
+      </button>
     </>
   )
 }
@@ -256,6 +267,85 @@ describe('ConstraintsFileField', () => {
       />
     )
     await waitFor(() => expect(screen.queryByText('const.inp')).toBeNull())
+    expect(screen.getByTestId('value')).toHaveTextContent('null')
+  })
+
+  it('puts the checked constraints back when something else overwrites them', async () => {
+    render(<Harness structure={pdb} />)
+    const user = await pick(goodInp)
+    await screen.findByTestId('constraints-file-preview')
+    const checked = () =>
+      JSON.parse(screen.getByTestId('value').textContent ?? 'null')
+    await waitFor(() =>
+      expect(checked()?.rigid_bodies?.[0]?.segments[0]?.segid).toBe('PROB')
+    )
+    await user.click(screen.getByRole('button', { name: 'restore stale' }))
+    await waitFor(() =>
+      expect(checked()?.rigid_bodies?.[0]?.segments[0]?.segid).toBe('PROB')
+    )
+    expect(checked()?.fixed_bodies[0]?.segments[0]?.residues).toEqual({
+      start: 1,
+      stop: 100
+    })
+  })
+
+  it('opens the file picker from the keyboard', async () => {
+    const user = userEvent.setup()
+    render(<Harness structure={pdb} />)
+    const input = screen.getByTestId('constraints-file-input')
+    const click = vi.spyOn(input, 'click').mockImplementation(() => {})
+    const button = screen.getByRole('button', { name: 'Select File' })
+    expect(button.tagName).toBe('BUTTON')
+    button.focus()
+    await user.keyboard('{Enter}')
+    expect(click).toHaveBeenCalledTimes(1)
+    await user.keyboard(' ')
+    expect(click).toHaveBeenCalledTimes(2)
+  })
+
+  it('takes an OpenMM file with several fixed bodies, noting the merge', async () => {
+    render(<Harness structure={pdb} />)
+    await pick(
+      new File(
+        [
+          JSON.stringify({
+            fixed_bodies: [
+              {
+                segments: [{ chain_id: 'A', residues: { start: 1, stop: 50 } }]
+              },
+              {
+                segments: [{ chain_id: 'B', residues: { start: 1, stop: 20 } }]
+              }
+            ]
+          })
+        ],
+        'two-fixed.json'
+      )
+    )
+    expect(
+      await screen.findByTestId('constraints-import-fitted')
+    ).toHaveTextContent('2 fixed bodies were merged into one')
+    expect(screen.queryByTestId('constraints-file-problems')).toBeNull()
+  })
+
+  it('refuses residues it cannot read instead of fixing the whole chain', async () => {
+    render(<Harness structure={pdb} />)
+    await pick(
+      new File(
+        [
+          [
+            'fixed_bodies:',
+            '  - segments:',
+            '      - chain_id: A',
+            '        residues: "1:10"'
+          ].join('\n')
+        ],
+        'bad-residues.yml'
+      )
+    )
+    expect(
+      await screen.findByTestId('constraints-file-problems')
+    ).toHaveTextContent('residues must be { start, stop }')
     expect(screen.getByTestId('value')).toHaveTextContent('null')
   })
 })
