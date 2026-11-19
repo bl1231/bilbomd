@@ -26,6 +26,36 @@ describe('FileField Component', () => {
     mockOnChange = vi.fn<(event: React.ChangeEvent<HTMLInputElement>) => void>()
   })
 
+  it('shows the name of a file already in the form, as after Back', () => {
+    render(
+      <FileField
+        {...defaultProps}
+        value={new File(['x'], 'kept.inp')}
+      />
+    )
+    expect(screen.getByText('kept.inp')).toBeInTheDocument()
+  })
+
+  it('shows the name held by an object value, as the PDB field has', () => {
+    render(
+      <FileField
+        {...defaultProps}
+        value={{ file: null, name: 'model.pdb' }}
+      />
+    )
+    expect(screen.getByText('model.pdb')).toBeInTheDocument()
+  })
+
+  it('shows no name for an empty value', () => {
+    render(
+      <FileField
+        {...defaultProps}
+        value={{ file: null, name: '' }}
+      />
+    )
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('renders the FileField component with the correct title', () => {
     render(<FileField {...defaultProps} />)
 

@@ -58,6 +58,11 @@ interface ConstraintsFileFieldProps {
    * job's. Pass a stable object, since it is read again when it changes.
    */
   initial?: InitialConstraints
+  /**
+   * A constraints file to start with, as if the user had picked it: one a
+   * Jiffy handed to a new job. Read on the first render only.
+   */
+  initialFile?: File
 }
 
 type FileText =
@@ -133,10 +138,13 @@ export const ConstraintsFileField = ({
   engine,
   disabled,
   jiffyLinks = 'dashboard',
-  initial
+  initial,
+  initialFile
 }: ConstraintsFileFieldProps) => {
-  const [file, setFile] = useState<File | null>(null)
-  const [fileText, setFileText] = useState<FileText | null>(null)
+  const [file, setFile] = useState<File | null>(initialFile ?? null)
+  const [fileText, setFileText] = useState<FileText | null>(
+    initialFile ? { status: 'reading' } : null
+  )
   const [fixedBody, setFixedBody] = useState<number | undefined>(undefined)
 
   // A file for the other mode (PDB vs CRD/PSF) names segments differently,

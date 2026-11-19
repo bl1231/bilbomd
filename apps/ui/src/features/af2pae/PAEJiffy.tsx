@@ -12,7 +12,8 @@ import {
   TableRow,
   FormGroup,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Stack
 } from '@mui/material'
 import CircularProgress from '@mui/material/CircularProgress'
 import Grid from '@mui/material/Grid'
@@ -22,7 +23,10 @@ import { af2paeJiffySchema } from 'schemas/Alphafold2PAEValidationSchema'
 import FileSelect from 'features/jobs/FileSelect'
 import { Debug } from 'components/Debug'
 import SendIcon from '@mui/icons-material/Send'
-import Download from './DownloadAF2PAEfile'
+import { MAX_RIGID_BODIES } from '@bilbomd/bilbomd-types'
+import { JiffyConstraintsResult } from 'features/constraints/JiffyConstraintsResult'
+import { useJiffyConstraints } from 'features/constraints/useJiffyConstraints'
+import { useStructureSegments } from 'features/constraints/useStructureSegments'
 import { Box } from '@mui/system'
 import {
   useAf2PaeJiffyMutation,
@@ -40,12 +44,9 @@ import PaeCutoffSlider from './PaeCutoffSlider'
 import LeidenResolutionSlider from './LeidenResolutionSlider'
 import PlddtSlider from './PlddtSlider'
 import PAEJiffyInstructions from './PAEJiffyInstructions'
-import ConstInpFile from './ConstInpFile'
 import PAEMatrixPlot from './PAEMatrixPlot'
 import PAEMatrixPlotExplanation from './PAEMatrixPlotExplanation'
 import PLDDTPlot from './PLDDTPlot'
-import { constraintsFromConstInp } from 'features/constraintSchematic/constInpConstraints'
-import ConstraintSchematic from 'features/constraintSchematic/ConstraintSchematic'
 import {
   parsePLDDTFromPDB,
   parsePLDDTFromCIF,
@@ -75,12 +76,6 @@ const Alphafold2PAEJiffy = () => {
   const [uuid, setUuid] = useState('')
   const [status, setStatus] = useState('')
   const [constfile, setConstfile] = useState('')
-  const [shapeCount, setShapeCount] = useState(0)
-  // The generated const.inp as bodies, for the schematic
-  const constraints = useMemo(
-    () => constraintsFromConstInp(constfile),
-    [constfile]
-  )
   const [jobStartTime, setJobStartTime] = useState<number | null>(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [showRigid, setShowRigid] = useState(false)
@@ -171,7 +166,6 @@ const Alphafold2PAEJiffy = () => {
     setUuid('')
     setStatus('')
     setConstfile('')
-    setShapeCount(0)
   }
 
   const handleReset = () => {
@@ -179,7 +173,6 @@ const Alphafold2PAEJiffy = () => {
     setUuid('')
     setStatus('')
     setConstfile('')
-    setShapeCount(0)
     setOriginalFiles({ pdb_file: null, pae_file: null })
   }
 
@@ -262,12 +255,19 @@ const Alphafold2PAEJiffy = () => {
   }, [vizOk, binOk, viz, paeBuf])
 
   useEffect(() => {
-    if (constInpData) {
-      const shapeCount = (constInpData.match(/shape/g) || []).length
-      setShapeCount(shapeCount)
-      setConstfile(constInpData)
-    }
+    if (constInpData) setConstfile(constInpData)
   }, [constInpData])
+
+  // The PAE run's const.inp, checked against the model the way BilboMD will
+  // check it, for the drawing, the downloads and the hand-off
+  const submittedStructure = submittedValues?.pdb_file ?? null
+  const structure = useStructureSegments(submittedStructure ?? '')
+  const result = useJiffyConstraints(
+    constfile,
+    structure.status === 'ready' ? structure.segments : null
+  )
+  const refused = !!result.checked && !result.checked.ok
+  const rigidBodyCount = result.drawn?.rigid_bodies?.length ?? 0
 
   useEffect(() => {
     if (status === 'completed' && originalFiles.pdb_file) {
@@ -299,7 +299,7 @@ const Alphafold2PAEJiffy = () => {
 
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
-            <Typography>Create const.inp from AlphaFold PAE</Typography>
+            <Typography>Create Constraints from AlphaFold PAE</Typography>
           </HeaderBox>
           <Paper sx={{ p: 1 }}>
             <Formik
@@ -357,164 +357,135 @@ const Alphafold2PAEJiffy = () => {
                         </Typography>
                       )}
                       {constFileIsLoading && (
-                        <Typography>Loading const.inp file...</Typography>
+                        <Typography>Loading the constraints…</Typography>
                       )}
                       {fileError && (
                         <Typography color="error">
-                          Error fetching const.inp file
+                          Error fetching the constraints
                         </Typography>
                       )}
 
                       {status === 'completed' && (
-                        <>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              flexDirection: 'row',
-                              alignItems: 'flex-start',
-                              gap: 1
-                            }}
+                        <Stack
+                          spacing={2}
+                          sx={{ pt: 1 }}
+                        >
+                          <Alert
+                            severity={refused ? 'warning' : 'success'}
+                            data-testid="pae-jiffy-summary"
                           >
-                            <Box sx={{ flex: 1, minWidth: 0, m: 0, pt: 1 }}>
-                              <Alert
-                                severity={
-                                  shapeCount >= 20 ? 'error' : 'success'
-                                }
+                            <AlertTitle>
+                              {refused
+                                ? 'Check these constraints'
+                                : 'Constraints created'}
+                            </AlertTitle>
+                            The <b>PAE Jiffy{'\u2122'}</b> made fixed and rigid
+                            bodies for your AlphaFold model. Check that they
+                            make sense before using them in a <b>BilboMD</b>{' '}
+                            run.
+                            {values && (
+                              <TableContainer
+                                sx={{ width: '100%', maxWidth: '400px' }}
                               >
-                                <AlertTitle>
-                                  {shapeCount >= 20 ? 'Error' : 'Success'}
-                                </AlertTitle>
-                                Your CHARMM-compatible <code>const.inp</code>{' '}
-                                file was successfully created!{' '}
-                                {values && shapeCount >= 20
-                                  ? `But with this Clustering Configuration there are ${shapeCount} rigid bodies which is too many for CHARMM to handle.`
-                                  : ''}
-                                <br />
-                                {values && (
-                                  <>
-                                    <TableContainer
-                                      sx={{ width: '100%', maxWidth: '400px' }}
-                                    >
-                                      <Table aria-label="simple table">
-                                        <TableBody>
-                                          <TableRow>
-                                            <TableCell>
-                                              <b>PDB File</b>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                              {values.pdb_file?.name}
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell>
-                                              <b>PAE File</b>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                              {values.pae_file?.name}
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell>
-                                              <b>PAE Cutoff</b>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                              {parseFloat(
-                                                values.pae_cutoff
-                                              ).toFixed(1)}
-                                              Å
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell>
-                                              <b>Leiden Resolution</b>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                              {parseFloat(
-                                                values.leiden_resolution
-                                              ).toFixed(2)}
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell>
-                                              <b>pLDDT Cutoff</b>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                              {parseFloat(
-                                                values.plddt_cutoff
-                                              ).toFixed(1)}
-                                              Å
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell>
-                                              <b>CHARMM shapes (max 20)</b>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                              {shapeCount}
-                                            </TableCell>
-                                          </TableRow>
-                                        </TableBody>
-                                      </Table>
-                                    </TableContainer>
-                                  </>
-                                )}
-                              </Alert>
-                            </Box>
-                            <Box sx={{ flex: 1, minWidth: 0, m: 0 }}>
-                              <ConstInpFile constfile={constfile} />
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'row',
-                                  pt: 2,
-                                  gap: 2
-                                }}
-                              >
-                                <Download uuid={uuid} />
-                                <Button
-                                  variant="contained"
-                                  onClick={() =>
-                                    handleTryNewParameters(values, resetForm)
-                                  }
-                                >
-                                  Try New Parameters
-                                </Button>
-                                <Button
-                                  variant="outlined"
-                                  type="button"
-                                  onClick={() => {
-                                    handleReset()
-                                    const resetValues = {
-                                      pdb_file: null,
-                                      pae_file: null,
-                                      pae_cutoff: '10.0',
-                                      plddt_cutoff: '50',
-                                      leiden_resolution: '0.35'
-                                    }
-                                    resetForm({ values: resetValues })
-                                    setFormInitialValues(resetValues)
-                                  }}
-                                >
-                                  Reset
-                                </Button>
-                              </Box>
-                            </Box>
-                          </Box>
-                          {constraints && (
-                            <Box
-                              sx={{ mt: 3 }}
-                              data-testid="pae-jiffy-schematic"
+                                <Table aria-label="simple table">
+                                  <TableBody>
+                                    <TableRow>
+                                      <TableCell>
+                                        <b>PDB File</b>
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {values.pdb_file?.name}
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>
+                                        <b>PAE File</b>
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {values.pae_file?.name}
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>
+                                        <b>PAE Cutoff</b>
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {parseFloat(values.pae_cutoff).toFixed(
+                                          1
+                                        )}
+                                        Å
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>
+                                        <b>Leiden Resolution</b>
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {parseFloat(
+                                          values.leiden_resolution
+                                        ).toFixed(2)}
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>
+                                        <b>pLDDT Cutoff</b>
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {parseFloat(
+                                          values.plddt_cutoff
+                                        ).toFixed(1)}
+                                        Å
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>
+                                        <b>
+                                          Rigid bodies (max {MAX_RIGID_BODIES})
+                                        </b>
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {rigidBodyCount}
+                                      </TableCell>
+                                    </TableRow>
+                                  </TableBody>
+                                </Table>
+                              </TableContainer>
+                            )}
+                          </Alert>
+                          <JiffyConstraintsResult
+                            result={result}
+                            structure={submittedStructure}
+                            from={'the PAE Jiffy\u2122'}
+                          />
+                          <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Button
+                              variant="contained"
+                              onClick={() =>
+                                handleTryNewParameters(values, resetForm)
+                              }
                             >
-                              <Typography
-                                variant="h6"
-                                sx={{ mb: 1 }}
-                              >
-                                How these constraints move
-                              </Typography>
-                              <ConstraintSchematic constraints={constraints} />
-                            </Box>
-                          )}
-                        </>
+                              Try New Parameters
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              type="button"
+                              onClick={() => {
+                                handleReset()
+                                const resetValues = {
+                                  pdb_file: null,
+                                  pae_file: null,
+                                  pae_cutoff: '10.0',
+                                  plddt_cutoff: '50',
+                                  leiden_resolution: '0.35'
+                                }
+                                resetForm({ values: resetValues })
+                                setFormInitialValues(resetValues)
+                              }}
+                            >
+                              Reset
+                            </Button>
+                          </Box>
+                        </Stack>
                       )}
                     </>
                   )

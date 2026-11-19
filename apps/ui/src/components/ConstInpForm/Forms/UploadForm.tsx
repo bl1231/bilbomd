@@ -15,13 +15,19 @@ import Grid from '@mui/material/Grid'
 import FileField from '../FormFields/FileField'
 import ChainSummary from '../Helpers/ChainSummary'
 import ImportNotes from '../Helpers/ImportNotes'
+import { pdbTextProblem } from '../Helpers/pdbTextProblem'
 import { JIFFY_FILE_ACCEPT, importJiffyFile } from '../Helpers/importJiffyFile'
+import {
+  EXAMPLE_CONST_INP,
+  EXAMPLE_OPENMM_YAML
+} from '../Helpers/exampleConstraints'
 import Paper from '@mui/material/Paper'
 import { useTheme } from '@mui/material/styles'
 import useTitle from 'hooks/useTitle'
 import { Box } from '@mui/system'
 import { Chain, RigidBody, Atom } from 'types/interfaces'
 import HeaderBox from 'components/HeaderBox'
+import InstructionsAccordion from 'components/InstructionsAccordion'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 interface AtomsByChain {
   [chainId: string]: Atom[]
@@ -106,17 +112,11 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
     let atomLines: string[] = []
 
     if (src !== null && typeof src === 'string') {
-      // Preliminary check for ATOM lines to validate PDB file format
-      const hasValidAtomLines = src
-        .split('\n')
-        .some((line) => line.startsWith('ATOM') || line.startsWith('HETATM'))
-
-      if (!hasValidAtomLines) {
-        // Handle invalid file format (e.g., set an error state, show a message)
-        setFieldError(
-          'pdb_file.file',
-          'Invalid PDB file: No ATOM/HETATM records found.'
-        )
+      // The schema reports these too, so the error stays through later
+      // validations; here they only stop the parse
+      const problem = pdbTextProblem(src)
+      if (problem) {
+        setFieldError('pdb_file.file', problem)
         return
       }
       atomLines = src
@@ -142,17 +142,6 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
         charge: line.substring(78, 80).trim()
       }
     })
-    // Check if any atom does not have a chainID
-    const hasInvalidChainID = atoms.some((atom) => !atom.chainID)
-
-    if (hasInvalidChainID) {
-      setFieldError(
-        'pdb_file.file',
-        'One or more atoms in the PDB file do not have a chain ID.'
-      )
-      return
-    }
-
     const charmmChains: Chain[] = []
     const demRigidBodies: RigidBody[] = [{ id: 'PRIMARY', domains: [] }]
 
@@ -366,11 +355,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
         spacing={3}
       >
         <Grid size={{ xs: 12 }}>
-          <HeaderBox>
-            <Typography>Instructions</Typography>
-          </HeaderBox>
-
-          <Paper sx={{ p: 1 }}>
+          <InstructionsAccordion>
             <Box>
               <Typography sx={{ m: 1 }}>
                 <b>BilboMD</b> runs molecular dynamics in which parts of your
@@ -390,11 +375,12 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                 </li>
                 <li>
                   <Typography>
-                    The file it writes is a{' '}
+                    At the end you can take the constraints straight into a new{' '}
+                    <b>BilboMD Classic</b> job, or download them as a{' '}
                     <b>
                       <code>const.inp</code>
-                    </b>
-                    , in CHARMM{' '}
+                    </b>{' '}
+                    (CHARMM{' '}
                     <Link
                       href="https://academiccharmm.org/documentation/version/c51b1/select"
                       target="_blank"
@@ -402,8 +388,14 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                     >
                       atom selection
                     </Link>{' '}
-                    syntax, with segid names that BilboMD understands. BilboMD
-                    reads it for OpenMM jobs too.
+                    syntax) or an{' '}
+                    <b>
+                      <code>openmm_const.yml</code>
+                    </b>{' '}
+                    (OpenMM format). Either file works for a job that starts
+                    from a PDB file. For a CHARMM job from CRD/PSF files, use
+                    the <code>const.inp</code>; its segids must match those in
+                    your PSF.
                   </Typography>
                 </li>
                 <li>
@@ -421,55 +413,63 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
               </ul>
             </Box>
 
-            <Accordion sx={{ backgroundColor: '#f5f5f5' }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography sx={{ m: 1 }}>
-                  Example of a <code>const.inp</code> file written by the{' '}
-                  <b>Inp Jiffy{'\u2122'}</b>:
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Box
-                  sx={{
-                    backgroundColor:
-                      theme.palette.mode === 'light'
-                        ? theme.palette.grey[100]
-                        : theme.palette.grey[600],
-                    m: 1,
-                    p: 1
-                  }}
+            {/* Side by side on wide screens; opening one leaves the other's height alone */}
+            <Grid
+              container
+              spacing={1}
+              sx={{ alignItems: 'flex-start' }}
+            >
+              {[
+                {
+                  fileName: 'const.inp',
+                  what: 'CHARMM format',
+                  text: EXAMPLE_CONST_INP
+                },
+                {
+                  fileName: 'openmm_const.yml',
+                  what: 'OpenMM format',
+                  text: EXAMPLE_OPENMM_YAML
+                }
+              ].map(({ fileName, what, text }) => (
+                <Grid
+                  key={fileName}
+                  size={{ xs: 12, md: 6 }}
                 >
-                  <Typography
-                    component="pre"
-                    sx={{
-                      m: 1,
-                      fontFamily:
-                        'Consolas, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New;'
-                    }}
-                  >
-                    define fixed1 sele ( resid 159:414 .and. segid PROA ) end
-                    <br />
-                    define fixed2 sele ( resid 94:563 .and. segid PROB ) end
-                    <br />
-                    cons fix sele fixed1 .or. fixed2 end
-                    <br />
-                    <br />
-                    define rigid1 sele ( resid 8:155 .and. segid PROA ) end
-                    <br />
-                    shape desc dock1 rigid sele rigid1 end
-                    <br />
-                    <br />
-                    define rigid2 sele ( resid 51:79 .and. segid PROB ) end
-                    <br />
-                    shape desc dock2 rigid sele rigid2 end
-                    <br />
-                    <br />
-                    return
-                  </Typography>
-                </Box>
-              </AccordionDetails>
-            </Accordion>
-          </Paper>
+                  <Accordion sx={{ backgroundColor: '#f5f5f5' }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography sx={{ m: 1 }}>
+                        Example <code>{fileName}</code> file ({what})
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Box
+                        sx={{
+                          backgroundColor:
+                            theme.palette.mode === 'light'
+                              ? theme.palette.grey[100]
+                              : theme.palette.grey[600],
+                          m: 1,
+                          p: 1
+                        }}
+                      >
+                        <Typography
+                          component="pre"
+                          data-testid={`example-${fileName}`}
+                          sx={{
+                            m: 1,
+                            fontFamily:
+                              'Consolas, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New;'
+                          }}
+                        >
+                          {text}
+                        </Typography>
+                      </Box>
+                    </AccordionDetails>
+                  </Accordion>
+                </Grid>
+              ))}
+            </Grid>
+          </InstructionsAccordion>
         </Grid>
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
@@ -494,7 +494,9 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                   isError={Boolean(errors.pdb_file) && Boolean(name)}
                   errorMessage={
                     errors.pdb_file
-                      ? errors.pdb_file.file || 'Error uploading file'
+                      ? errors.pdb_file.file ||
+                        errors.pdb_file.src ||
+                        'Error uploading file'
                       : ''
                   }
                   fileExt=".pdb"

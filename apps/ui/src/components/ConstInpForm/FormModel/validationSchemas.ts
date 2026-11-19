@@ -2,6 +2,7 @@ import * as Yup from 'yup'
 import { noSpaces } from 'schemas/ValidationFunctions'
 import { Chain } from 'types/interfaces'
 import { constraintsFileProblem } from '../Helpers/importJiffyFile'
+import { pdbTextProblem } from '../Helpers/pdbTextProblem'
 
 // CHARMM allows 20 shape commands, so a real constraints file is a few kB
 const MAX_CONST_INP_BYTES = 1_000_000
@@ -29,6 +30,14 @@ const validationSchemas = [
           }
           return false
         })
+        // Checked on the file, not its text: Formik hands an empty file's ''
+        // to Yup as undefined, so the src check below can't tell it from a
+        // file not read yet
+        .test(
+          'file-empty-check',
+          'The PDB file is empty.',
+          (file) => !file || (file as File).size > 0
+        )
         .test('file-type-check', 'Please select a PDB file.', (file) => {
           if (file && (file as File).name.endsWith('.pdb')) {
             return true
@@ -57,6 +66,15 @@ const validationSchemas = [
             return false
           }
         ),
+      // Checked here, not only when the PDB is parsed, so the error stays
+      // (and Next stays off) through later validations
+      src: Yup.string()
+        .nullable()
+        .test('pdb-text', '', function (src) {
+          if (!src) return true
+          const problem = pdbTextProblem(src)
+          return problem ? this.createError({ message: problem }) : true
+        }),
       name: Yup.string().required(),
       chains: Yup.array()
     }),

@@ -18,6 +18,14 @@ const renderUploadForm = () =>
   )
 
 describe('UploadForm instructions', () => {
+  it('start open, and fold away', async () => {
+    renderUploadForm()
+    const toggle = screen.getByRole('button', { name: /^instructions$/i })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('links to the c51b1 CHARMM atom selection docs', () => {
     renderUploadForm()
 
@@ -26,6 +34,22 @@ describe('UploadForm instructions', () => {
     ).toHaveAttribute(
       'href',
       'https://academiccharmm.org/documentation/version/c51b1/select'
+    )
+  })
+
+  it('says what the jiffy gives you at the end', () => {
+    renderUploadForm()
+    const bullet = screen.getByText(/At the end you can take the constraints/)
+    expect(bullet).toHaveTextContent(
+      'straight into a new BilboMD Classic job, or download them as a const.inp'
+    )
+    expect(bullet).toHaveTextContent('or an openmm_const.yml (OpenMM format)')
+    expect(bullet).toHaveTextContent(
+      'Either file works for a job that starts from a PDB file.'
+    )
+    // An openmm_const.yml names chains only; CRD/PSF jobs need segids
+    expect(bullet).toHaveTextContent(
+      'For a CHARMM job from CRD/PSF files, use the const.inp'
     )
   })
 
@@ -40,6 +64,23 @@ describe('UploadForm instructions', () => {
     expect(names).toEqual(['fixed1', 'fixed2', 'rigid1', 'rigid2'])
     expect(example).toContain('shape desc dock1 rigid sele rigid1 end')
     expect(example).toContain('shape desc dock2 rigid sele rigid2 end')
+  })
+
+  it('shows the example as an openmm_const.yml too, each in its own section', () => {
+    renderUploadForm()
+    const toggles = screen.getAllByRole('button', { name: /^Example / })
+    expect(toggles.map((t) => t.textContent)).toEqual([
+      'Example const.inp file (CHARMM format)',
+      'Example openmm_const.yml file (OpenMM format)'
+    ])
+    // Both start closed
+    toggles.forEach((t) => expect(t).toHaveAttribute('aria-expanded', 'false'))
+    expect(screen.getByTestId('example-openmm_const.yml')).toHaveTextContent(
+      'fixed_bodies:'
+    )
+    expect(screen.getByTestId('example-const.inp')).toHaveTextContent(
+      'cons fix sele fixed1 .or. fixed2 end'
+    )
   })
 })
 

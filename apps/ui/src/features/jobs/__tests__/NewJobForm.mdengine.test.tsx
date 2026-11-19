@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
@@ -53,7 +54,7 @@ describe('NewJobForm md_engine', () => {
   describe('example data', () => {
     it('shows the PDB example constraints read-only (OpenMM)', async () => {
       const user = userEvent.setup()
-      render(<NewJobForm />)
+      render(<NewJobForm />, { wrapper: MemoryRouter })
       expect(mockUseExampleConstraints).not.toHaveBeenCalled()
       await user.click(
         screen.getByRole('button', { name: 'Load Example Data' })
@@ -67,7 +68,7 @@ describe('NewJobForm md_engine', () => {
 
     it('shows the CRD/PSF example constraints with CHARMM', async () => {
       const user = userEvent.setup()
-      render(<NewJobForm />)
+      render(<NewJobForm />, { wrapper: MemoryRouter })
       await user.click(screen.getByLabelText(/CHARMM/i))
       await user.click(
         screen.getByRole('button', { name: 'Load Example Data' })
@@ -77,7 +78,7 @@ describe('NewJobForm md_engine', () => {
 
     it('goes back to the constraints file prompt with custom data', async () => {
       const user = userEvent.setup()
-      render(<NewJobForm />)
+      render(<NewJobForm />, { wrapper: MemoryRouter })
       await user.click(
         screen.getByRole('button', { name: 'Load Example Data' })
       )
@@ -91,7 +92,7 @@ describe('NewJobForm md_engine', () => {
   })
 
   it('renders CHARMM and OpenMM options and defaults to OpenMM', async () => {
-    render(<NewJobForm />)
+    render(<NewJobForm />, { wrapper: MemoryRouter })
     const charmm = screen.getByLabelText(/CHARMM/i)
     const openmm = screen.getByLabelText(/OpenMM/i)
     expect(charmm).toBeInTheDocument()
@@ -101,7 +102,7 @@ describe('NewJobForm md_engine', () => {
 
   it('allows selecting CHARMM when enabled', async () => {
     const user = userEvent.setup()
-    render(<NewJobForm />)
+    render(<NewJobForm />, { wrapper: MemoryRouter })
     const charmm = screen.getByLabelText(/CHARMM/i)
     await user.click(charmm)
     expect((charmm as HTMLInputElement).checked).toBe(true)
@@ -112,13 +113,13 @@ describe('NewJobForm md_engine', () => {
       data: { useNersc: 'false', enableCharmmEngine: 'false' },
       isLoading: false
     })
-    render(<NewJobForm />)
+    render(<NewJobForm />, { wrapper: MemoryRouter })
     const charmm = screen.getByLabelText(/CHARMM/i)
     expect(charmm).toBeDisabled()
   })
 
   it('does not render mode checkboxes', () => {
-    render(<NewJobForm />)
+    render(<NewJobForm />, { wrapper: MemoryRouter })
     expect(
       screen.queryByRole('checkbox', { name: /PDB or CIF file/i })
     ).not.toBeInTheDocument()
@@ -129,40 +130,40 @@ describe('NewJobForm md_engine', () => {
 
   describe('engine-mode coupling: file inputs shown per engine', () => {
     it('shows PDB file upload by default (OpenMM)', () => {
-      render(<NewJobForm />)
+      render(<NewJobForm />, { wrapper: MemoryRouter })
       expect(screen.getByText(/\*\.pdb or \*\.cif/i)).toBeInTheDocument()
     })
 
     it('does not show CRD or PSF file uploads by default (OpenMM)', () => {
-      render(<NewJobForm />)
+      render(<NewJobForm />, { wrapper: MemoryRouter })
       expect(screen.queryByText(/CHARMM-GUI \*\.crd/i)).not.toBeInTheDocument()
       expect(screen.queryByText(/CHARMM-GUI \*\.psf/i)).not.toBeInTheDocument()
     })
 
     it('shows CRD file upload after selecting CHARMM engine', async () => {
       const user = userEvent.setup()
-      render(<NewJobForm />)
+      render(<NewJobForm />, { wrapper: MemoryRouter })
       await user.click(screen.getByLabelText(/CHARMM/i))
       expect(screen.getByText(/CHARMM-GUI \*\.crd/i)).toBeInTheDocument()
     })
 
     it('shows PSF file upload after selecting CHARMM engine', async () => {
       const user = userEvent.setup()
-      render(<NewJobForm />)
+      render(<NewJobForm />, { wrapper: MemoryRouter })
       await user.click(screen.getByLabelText(/CHARMM/i))
       expect(screen.getByText(/CHARMM-GUI \*\.psf/i)).toBeInTheDocument()
     })
 
     it('does not show PDB file upload after selecting CHARMM engine', async () => {
       const user = userEvent.setup()
-      render(<NewJobForm />)
+      render(<NewJobForm />, { wrapper: MemoryRouter })
       await user.click(screen.getByLabelText(/CHARMM/i))
       expect(screen.queryByText(/\*\.pdb or \*\.cif/i)).not.toBeInTheDocument()
     })
 
     it('restores PDB file upload when switching back to OpenMM', async () => {
       const user = userEvent.setup()
-      render(<NewJobForm />)
+      render(<NewJobForm />, { wrapper: MemoryRouter })
       await user.click(screen.getByLabelText(/CHARMM/i))
       await user.click(screen.getByLabelText(/OpenMM/i))
       expect(screen.getByText(/\*\.pdb or \*\.cif/i)).toBeInTheDocument()

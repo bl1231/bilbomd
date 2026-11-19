@@ -17,6 +17,19 @@ interface FileFieldProps extends FormControlProps {
   errorMessage: string
   fileExt: string
   setFieldValue: (field: string, value: File, shouldValidate?: boolean) => void
+  /** The field's value, from Formik: a File, or an object with its name */
+  value?: unknown
+}
+
+// The name of a file already in the form, so a picker shown again (Back to
+// this step) still says which file it holds
+const nameOf = (value: unknown): string => {
+  if (value instanceof File) return value.name
+  if (typeof value === 'object' && value !== null && 'name' in value) {
+    const { name } = value as { name: unknown }
+    return typeof name === 'string' ? name : ''
+  }
+  return ''
 }
 
 // As tall as the button beside it; a long message can still grow
@@ -36,9 +49,11 @@ const FileField = ({
   errorMessage,
   fileExt,
   setFieldValue,
-  onChange
+  onChange,
+  value
 }: FileFieldProps) => {
-  const [fileName, setFileName] = useState('')
+  const [picked, setFileName] = useState('')
+  const fileName = picked || nameOf(value)
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     event.preventDefault()
