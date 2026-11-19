@@ -30,8 +30,11 @@ export const MDConstraintsSection = ({
       {hasBodies(constraints) && (
         <>
           <Box sx={{ mt: 1 }}>
+            {/* Outlined, like the schematic's own controls, so it reads as a
+                button rather than a link */}
             <Button
               size="small"
+              variant="outlined"
               onClick={() => setOpen((o) => !o)}
               aria-expanded={open}
               aria-controls={panelId}

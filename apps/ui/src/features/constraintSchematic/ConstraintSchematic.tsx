@@ -24,6 +24,7 @@ import { grey } from '@mui/material/colors'
 import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 import {
   bodyColor,
+  beadLabelFits,
   buildSchematicModel,
   describeBody,
   describeFixedBodies,
@@ -588,23 +589,21 @@ export const ConstraintSchematic = ({
                           strokeWidth={body.kind === 'fixed' ? 1.8 : 1.2}
                         />
                       ))}
-                      {body.beads
-                        .filter((bead) => bead.r >= 11)
-                        .map((bead) => (
-                          <text
-                            key={`${bead.chainId}-${bead.start}`}
-                            className="bead-label"
-                            x={bead.ox}
-                            y={bead.oy}
-                            fill={
-                              body.kind === 'fixed'
-                                ? color
-                                : theme.palette.getContrastText(color)
-                            }
-                          >
-                            {bead.chainId}
-                          </text>
-                        ))}
+                      {body.beads.filter(beadLabelFits).map((bead) => (
+                        <text
+                          key={`${bead.chainId}-${bead.start}`}
+                          className="bead-label"
+                          x={bead.ox}
+                          y={bead.oy}
+                          fill={
+                            body.kind === 'fixed'
+                              ? color
+                              : theme.palette.getContrastText(color)
+                          }
+                        >
+                          {bead.chainId}
+                        </text>
+                      ))}
                     </>
                   )}
                 </g>
@@ -786,7 +785,7 @@ export const ConstraintSchematic = ({
                   fontFamily={theme.typography.fontFamily}
                   fill={theme.palette.text.primary}
                 >
-                  Chain {row.chainId}
+                  {model.chainLabel(row.chainId)}
                 </text>
                 <line
                   x1={row.x0}

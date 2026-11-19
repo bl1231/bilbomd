@@ -4,6 +4,7 @@ import {
   rigidColor,
   rigidColorIndices
 } from 'features/constraintSchematic/constraintColors'
+import { segmentKeys } from 'features/constraintSchematic/segmentKeys'
 
 export type Body = NonNullable<MDConstraintsDTO['fixed_bodies']>[number]
 export type BodyType = 'fixed' | 'rigid'
@@ -36,6 +37,12 @@ type TrackSegment = {
 export type ResidueRange = { start: number; stop: number }
 
 export type ChainTrack = {
+  // What the track is keyed by: the chain ID, or the segid when segids
+  // share chain IDs (see segmentKeys)
+  key: string
+  // "Chain A", or the segid
+  label: string
+  // The viewer's chain ID
   chainId: string
   length: number
   segments: TrackSegment[]
@@ -61,6 +68,7 @@ const flexibleRanges = ({ length, segments }: ChainTrack): ResidueRange[] => {
 export const buildChainTracks = (
   constraints: MDConstraintsDTO
 ): ChainTrack[] => {
+  const keys = segmentKeys(constraints)
   const tracks = new Map<string, ChainTrack>()
   const add = (
     bodies: Body[] | undefined,
@@ -68,8 +76,12 @@ export const buildChainTracks = (
     colorIndex: (i: number) => number | null
   ) => {
     for (const [i, body] of (bodies ?? []).entries()) {
-      for (const { chain_id, residues } of body.segments ?? []) {
-        const track = tracks.get(chain_id) ?? {
+      for (const segment of body.segments ?? []) {
+        const { chain_id, residues } = segment
+        const key = keys.keyOf(segment)
+        const track = tracks.get(key) ?? {
+          key,
+          label: keys.labelOf(key),
           chainId: chain_id,
           length: 0,
           segments: [],
@@ -83,13 +95,14 @@ export const buildChainTracks = (
           start: residues.start,
           stop: residues.stop
         })
-        tracks.set(chain_id, track)
+        tracks.set(key, track)
       }
     }
   }
   const rigidIndices = rigidColorIndices(constraints)
   add(constraints.fixed_bodies, 'fixed', () => null)
   add(constraints.rigid_bodies, 'rigid', (i) => rigidIndices[i] ?? null)
+  // By chain; segids sharing a chain stay in the order the bodies list them
   return [...tracks.values()]
     .map((track) => ({ ...track, flexible: flexibleRanges(track) }))
     .sort((a, b) => a.chainId.localeCompare(b.chainId))
