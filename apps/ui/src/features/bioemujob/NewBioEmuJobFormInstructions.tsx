@@ -26,7 +26,7 @@ const NewBioEmuJobFormInstructions = () => {
       <AccordionSummary
         expandIcon={<ExpandMoreIcon sx={{ color: '#fff' }} />}
         sx={{
-          backgroundColor: '#888',
+          backgroundColor: 'sectionHeader.background',
           borderTopLeftRadius: 4,
           borderTopRightRadius: 4,
           pl: 1

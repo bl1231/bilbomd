@@ -26,7 +26,7 @@ const NewJobFormInstructions = () => {
       <AccordionSummary
         expandIcon={<ExpandMoreIcon sx={{ color: '#fff' }} />}
         sx={{
-          backgroundColor: '#888',
+          backgroundColor: 'sectionHeader.background',
           borderTopLeftRadius: 4,
           borderTopRightRadius: 4,
           pl: 1
@@ -87,8 +87,15 @@ const NewJobFormInstructions = () => {
         </Typography>
         <Accordion>
           <AccordionSummary
-            expandIcon={<ExpandMoreIcon sx={{ color: '#000' }} />}
-            sx={{ backgroundColor: '#f5f5f5' }}
+            expandIcon={
+              <ExpandMoreIcon
+                sx={{
+                  color: (theme) =>
+                    theme.palette.mode === 'dark' ? '#fff' : '#000'
+                }}
+              />
+            }
+            sx={{ backgroundColor: 'panel.subtle' }}
           >
             CRD/PSF Inputs
           </AccordionSummary>
@@ -147,8 +154,15 @@ const NewJobFormInstructions = () => {
         </Accordion>
         <Accordion sx={{ mt: 2 }}>
           <AccordionSummary
-            expandIcon={<ExpandMoreIcon sx={{ color: '#000' }} />}
-            sx={{ backgroundColor: '#f5f5f5' }}
+            expandIcon={
+              <ExpandMoreIcon
+                sx={{
+                  color: (theme) =>
+                    theme.palette.mode === 'dark' ? '#fff' : '#000'
+                }}
+              />
+            }
+            sx={{ backgroundColor: 'panel.subtle' }}
           >
             PDB Inputs
           </AccordionSummary>

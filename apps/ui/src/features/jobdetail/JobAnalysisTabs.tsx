@@ -95,16 +95,29 @@ const JobAnalysisTabs = ({
           variant="scrollable"
           scrollButtons="auto"
           allowScrollButtonsMobile
-          sx={{
-            backgroundColor: '#e4e4e4ff',
-            '& .MuiTab-root': {
-              backgroundColor: '#e0e0e0',
-              color: '#666',
-              '&:hover': {
-                backgroundColor: '#d0d0d0'
-              }
-            }
-          }}
+          sx={(theme) =>
+            theme.palette.mode === 'dark'
+              ? {
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  '& .MuiTab-root': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    color: theme.palette.text.secondary,
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.12)'
+                    }
+                  }
+                }
+              : {
+                  backgroundColor: '#e4e4e4ff',
+                  '& .MuiTab-root': {
+                    backgroundColor: '#e0e0e0',
+                    color: '#666',
+                    '&:hover': {
+                      backgroundColor: '#d0d0d0'
+                    }
+                  }
+                }
+          }
         >
           {tabs.map((t) =>
             t === 'feedback' && attention ? (

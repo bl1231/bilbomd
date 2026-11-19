@@ -1,6 +1,5 @@
 import React from 'react'
 import { Box, Typography, Link } from '@mui/material'
-import { grey } from '@mui/material/colors'
 
 export default function PrivacyPolicy() {
   return (
@@ -10,8 +9,8 @@ export default function PrivacyPolicy() {
           p: 0,
           border: 1,
           borderRadius: 1,
-          borderColor: grey[500],
-          backgroundColor: grey[200],
+          borderColor: 'panel.border',
+          backgroundColor: 'panel.background',
           mx: 'auto',
           display: 'flex',
           flexDirection: 'column',
@@ -23,13 +22,13 @@ export default function PrivacyPolicy() {
         <Box>
           <Box
             sx={{
-              backgroundColor: grey[500],
+              backgroundColor: 'panel.header',
               p: 1,
               m: 0,
               borderTopLeftRadius: 3,
               borderTopRightRadius: 3,
               borderBottom: 1,
-              borderColor: grey[500]
+              borderColor: 'panel.border'
             }}
           >
             <Typography variant="h4">Privacy and Cookie Policy</Typography>

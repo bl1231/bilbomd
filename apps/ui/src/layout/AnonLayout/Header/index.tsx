@@ -10,7 +10,7 @@ import {
   Typography
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
-import NightModeToggle from 'components/NightModeToggle'
+import { ColorSchemeToggle } from 'components/ColorSchemeToggle'
 // import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
@@ -213,7 +213,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
               >
                 Login
               </Button>
-              <NightModeToggle />
+              <ColorSchemeToggle sx={{ ml: { xs: 0.5, sm: 1 } }} />
             </Box>
           </Toolbar>
         </AppBar>

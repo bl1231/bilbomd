@@ -8,6 +8,7 @@ import {
 import LaunchIcon from '@mui/icons-material/Launch'
 import CopyableChip from 'components/CopyableChip'
 import { green } from '@mui/material/colors'
+import { alpha } from '@mui/material/styles'
 import { useNavigate } from 'react-router'
 
 type PublicJobSuccessAlertProps = {
@@ -54,7 +55,11 @@ const PublicJobSuccessAlert = ({
             <IconButton
               sx={{
                 ml: 1,
-                backgroundColor: green[100],
+                // green[100] is too light behind dark mode's light-blue text
+                backgroundColor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? alpha(theme.palette.success.main, 0.2)
+                    : green[100],
                 borderColor: 'primary.main'
               }}
               onClick={() => navigate(`/results/${jobResponse.publicId}`)}

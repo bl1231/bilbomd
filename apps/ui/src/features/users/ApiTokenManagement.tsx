@@ -150,21 +150,27 @@ const APITokenManager = () => {
         p: 0,
         border: 1,
         borderRadius: 1,
-        borderColor: grey[500],
-        backgroundColor: grey[300],
+        borderColor: 'panel.border',
+        backgroundColor: (theme) =>
+          theme.palette.mode === 'dark'
+            ? theme.palette.panel.background
+            : grey[300],
         width: '100%',
         maxWidth: '960px'
       }}
     >
       <Box
         sx={{
-          backgroundColor: grey[400],
+          backgroundColor: (theme) =>
+            theme.palette.mode === 'dark'
+              ? theme.palette.panel.header
+              : grey[400],
           p: 1,
           m: 0,
           borderTopLeftRadius: 3,
           borderTopRightRadius: 3,
           borderBottom: 1,
-          borderColor: grey[500]
+          borderColor: 'panel.border'
         }}
       >
         <Typography variant="h4">Create API Tokens</Typography>
@@ -193,10 +199,12 @@ const APITokenManager = () => {
             m: 2,
             mx: 2,
             p: 2,
-            bgcolor: blueGrey[100],
+            bgcolor: (theme) =>
+              theme.palette.mode === 'dark' ? blueGrey[900] : blueGrey[100],
             borderRadius: 1,
             border: 1,
-            borderColor: purple[100],
+            borderColor: (theme) =>
+              theme.palette.mode === 'dark' ? purple[300] : purple[100],
             position: 'relative'
           }}
         >
@@ -270,7 +278,7 @@ const APITokenManager = () => {
             px: 2,
             pb: 2,
             borderBottom: 1,
-            borderColor: grey[500]
+            borderColor: 'panel.border'
           }}
         >
           <Button
@@ -298,11 +306,14 @@ const APITokenManager = () => {
       )}
       <Box
         sx={{
-          backgroundColor: grey[400],
+          backgroundColor: (theme) =>
+            theme.palette.mode === 'dark'
+              ? theme.palette.panel.header
+              : grey[400],
           p: 1,
           borderBottom: 1,
           borderTop: 1,
-          borderColor: grey[500]
+          borderColor: 'panel.border'
         }}
       >
         <Typography variant="h4">Existing API Tokens</Typography>
@@ -322,7 +333,13 @@ const APITokenManager = () => {
         ) : tokens.length === 0 ? (
           <Alert severity="info">No API tokens yet. Create one above.</Alert>
         ) : (
-          <Box sx={{ backgroundColor: grey[200], borderRadius: 1 }}>
+          <Box
+            sx={{
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'dark' ? 'transparent' : grey[200],
+              borderRadius: 1
+            }}
+          >
             <DataGrid
               rows={rows}
               columns={columns}
@@ -332,9 +349,11 @@ const APITokenManager = () => {
               disableColumnMenu
               disableColumnSorting
               sx={{
-                '--DataGrid-containerBackground': green[100],
+                '--DataGrid-containerBackground': (theme) =>
+                  theme.palette.mode === 'dark' ? green[900] : green[100],
                 '.MuiDataGrid-columnHeaders': {
-                  backgroundColor: green[100]
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === 'dark' ? green[900] : green[100]
                 },
                 '.MuiDataGrid-columnSeparator': {
                   color: green[700]

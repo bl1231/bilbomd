@@ -5,7 +5,10 @@ export default function InputLabel(theme: Theme) {
     MuiInputLabel: {
       styleOverrides: {
         root: {
-          color: theme.palette.grey[600]
+          color:
+            theme.palette.mode === 'dark'
+              ? theme.palette.text.secondary
+              : theme.palette.grey[600]
         },
         outlined: {
           lineHeight: '0.8em',
@@ -14,6 +17,12 @@ export default function InputLabel(theme: Theme) {
           },
           '&.MuiInputLabel-shrink': {
             background: theme.palette.background.paper,
+            // In dark mode MUI lightens each Paper with a white gradient
+            // (--Paper-overlay, set per elevation and inherited here), so
+            // the label needs the same overlay to match the panel behind it
+            ...(theme.palette.mode === 'dark' && {
+              backgroundImage: 'var(--Paper-overlay, none)'
+            }),
             padding: '0 8px',
             marginLeft: -6,
             lineHeight: '1.4375em'

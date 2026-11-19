@@ -24,9 +24,15 @@ const BilboMDBibTeX = () => (
         alignItems: 'flex-start',
         borderRadius: '4px',
         p: 2,
-        backgroundColor: 'grey.100',
+        backgroundColor: (theme) =>
+          theme.palette.mode === 'dark'
+            ? theme.palette.grey[900]
+            : theme.palette.grey[100],
         border: '1px solid',
-        borderColor: 'grey.300'
+        borderColor: (theme) =>
+          theme.palette.mode === 'dark'
+            ? theme.palette.grey[700]
+            : theme.palette.grey[300]
       }}
     >
       <Typography

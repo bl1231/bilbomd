@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { screen } from '@testing-library/react'
 import { renderWithProviders } from 'test/test-utils'
 import userEvent from '@testing-library/user-event'
+import { getDesignTokens } from 'themes/theme'
 import NewJobFormInstructions from '../NewJobFormInstructions'
 
 describe('NewJobFormInstructions', () => {
@@ -295,12 +296,25 @@ describe('NewJobFormInstructions', () => {
 
   describe('styling', () => {
     it('should have gray background on main accordion header', () => {
-      renderWithProviders(<NewJobFormInstructions />)
+      renderWithProviders(<NewJobFormInstructions />, {
+        customTheme: getDesignTokens('light')
+      })
 
       const header = screen
         .getByText(/Instructions/)
         .closest('.MuiAccordionSummary-root')
       expect(header).toHaveStyle({ backgroundColor: '#888' })
+    })
+
+    it('should use a dark header background in dark mode', () => {
+      renderWithProviders(<NewJobFormInstructions />, {
+        customTheme: getDesignTokens('dark')
+      })
+
+      const header = screen
+        .getByText(/Instructions/)
+        .closest('.MuiAccordionSummary-root')
+      expect(header).toHaveStyle({ backgroundColor: '#455a64' })
     })
 
     it('should use yellow color for SHOW/HIDE text', () => {

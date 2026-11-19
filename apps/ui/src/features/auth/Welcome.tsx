@@ -118,7 +118,10 @@ const Welcome: React.FC<WelcomeProps> = ({ mode }: WelcomeProps) => {
                 sx={{
                   p: 2,
                   my: 2,
-                  backgroundColor: grey[300],
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? theme.palette.background.paper
+                      : grey[300],
                   width: { xs: '100%', sm: '80%', md: '80%', lg: '80%' },
                   maxWidth: '700px'
                 }}

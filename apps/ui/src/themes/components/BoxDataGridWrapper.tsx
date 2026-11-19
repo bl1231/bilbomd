@@ -1,5 +1,4 @@
 import { Box, SxProps } from '@mui/material'
-import { grey } from '@mui/material/colors'
 import { ReactNode } from 'react'
 
 interface Props {
@@ -14,8 +13,8 @@ const BoxDataGridWrapper = ({ children, sx = {} }: Props) => {
         p: 0,
         border: 1,
         borderRadius: 1,
-        borderColor: grey[500],
-        backgroundColor: grey[200],
+        borderColor: 'panel.border',
+        backgroundColor: 'panel.background',
         mx: 'auto',
         mb: 2,
         display: 'flex',

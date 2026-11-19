@@ -93,7 +93,10 @@ const ProjectHours = ({ projectCode }: { projectCode: string }) => {
               flexGrow: 1,
               height: 16,
               borderRadius: 0.8,
-              backgroundColor: '#ddd',
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? theme.palette.grey[700]
+                  : '#ddd',
               '& .MuiLinearProgress-bar': {
                 backgroundColor: 'green',
                 borderRadius: 0.8

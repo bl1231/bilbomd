@@ -23,7 +23,13 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
     <>
       <Grid
         container
-        sx={{ my: 1, backgroundColor: '#bae0ff', borderRadius: 2 }}
+        sx={{
+          my: 1,
+          // Navy in dark mode, so the text on it stays light
+          backgroundColor: (theme) =>
+            theme.palette.mode === 'dark' ? '#0c2a4a' : '#bae0ff',
+          borderRadius: 2
+        }}
       >
         <Box
           sx={{
@@ -48,7 +54,10 @@ const RigidBody = ({ rigidBodyIndex }: { rigidBodyIndex: number }) => {
                             flexDirection: 'row',
                             px: 1,
                             m: 1,
-                            backgroundColor: '#e6f4ff', //blue-1
+                            backgroundColor: (theme) =>
+                              theme.palette.mode === 'dark'
+                                ? '#163a5f'
+                                : '#e6f4ff', //blue-1
                             borderRadius: 1,
                             alignItems: 'center',
                             flex: '1 1 100%',
