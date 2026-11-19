@@ -293,3 +293,92 @@ describe('per-body colors', () => {
     expect(second).toHaveStyle({ backgroundColor: '#12946b' })
   })
 })
+
+// The Classic CRD/PSF example: PROA and DNAA are both chain A, each with its
+// own residue numbering
+const sharedChain: MDConstraintsDTO = {
+  fixed_bodies: [
+    {
+      name: 'FixedBody1',
+      segments: [
+        { chain_id: 'A', segid: 'PROA', residues: { start: 40, stop: 137 } },
+        { chain_id: 'A', segid: 'PROA', residues: { start: 150, stop: 203 } },
+        { chain_id: 'A', segid: 'DNAA', residues: { start: 22, stop: 42 } },
+        { chain_id: 'B', segid: 'DNAB', residues: { start: 60, stop: 80 } }
+      ]
+    }
+  ],
+  rigid_bodies: [],
+  chain_mol_types: [
+    { chain_id: 'A', mol_type: 'PRO' },
+    { chain_id: 'B', mol_type: 'DNA' }
+  ]
+}
+
+describe('segids sharing a chain ID', () => {
+  it('builds one track per segid, ordered by chain', () => {
+    const tracks = buildChainTracks(sharedChain)
+    expect(tracks.map((t) => [t.label, t.length])).toEqual([
+      ['PROA', 203],
+      ['DNAA', 42],
+      ['DNAB', 80]
+    ])
+    expect(tracks[0]?.flexible).toEqual([
+      { start: 1, stop: 39 },
+      { start: 138, stop: 149 }
+    ])
+    expect(tracks[1]?.flexible).toEqual([{ start: 1, stop: 21 }])
+  })
+
+  it('draws and lists each segid separately, with its own molecule type', () => {
+    render(<MDConstraintsRenderer constraints={sharedChain} />)
+    expect(screen.getByText('PROA')).toBeInTheDocument()
+    expect(screen.getByText('DNAA')).toBeInTheDocument()
+    expect(screen.getByText('DNAB')).toBeInTheDocument()
+    expect(screen.queryByText('Chain A')).toBeNull()
+    expect(
+      within(screen.getByTestId('constraint-track-DNAA')).getAllByTestId(
+        'constraint-track-segment'
+      )
+    ).toHaveLength(2)
+
+    // Fixed: PRO PROA 40–137, PROA 150–203, DNA DNAA 22–42, DNAB 60–80
+    expect(screen.getByText('DNAA 22–42')).toBeInTheDocument()
+    expect(screen.getByText('PROA 1–39')).toBeInTheDocument()
+    expect(screen.getByText('DNAA 1–21')).toBeInTheDocument()
+    const chipTypes = screen
+      .getAllByTestId('mol-type-chip')
+      .map((chip) => chip.textContent)
+    // Fixed line PRO, DNA; flexible line PRO, DNA
+    expect(chipTypes).toEqual(['PRO', 'DNA', 'PRO', 'DNA'])
+  })
+
+  it('keeps chain labels when each chain holds one segid', () => {
+    render(
+      <MDConstraintsRenderer
+        constraints={{
+          fixed_bodies: [
+            {
+              name: 'F',
+              segments: [
+                {
+                  chain_id: 'A',
+                  segid: 'PROA',
+                  residues: { start: 1, stop: 50 }
+                },
+                {
+                  chain_id: 'B',
+                  segid: 'DNAB',
+                  residues: { start: 1, stop: 20 }
+                }
+              ]
+            }
+          ]
+        }}
+      />
+    )
+    expect(screen.getByText('Chain A')).toBeInTheDocument()
+    expect(screen.getByText('A 1–50')).toBeInTheDocument()
+    expect(screen.getByTestId('constraint-track-B')).toBeInTheDocument()
+  })
+})

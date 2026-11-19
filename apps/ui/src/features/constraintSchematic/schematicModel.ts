@@ -2,6 +2,7 @@ import type { MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 import { packEnclose, packSiblings } from 'd3-hierarchy'
 import type { SimulationNodeDatum } from 'd3-force'
 import { fixedColor, rigidColor } from './constraintColors'
+import { segmentKeys } from './segmentKeys'
 
 // A bead-and-spring picture of a constraint file. Each constrained segment is
 // a bead, every flexible stretch between two segments on a chain is a spring,
@@ -12,6 +13,8 @@ import { fixedColor, rigidColor } from './constraintColors'
 export type BodyKind = 'fixed' | 'rigid' | 'tail'
 
 export interface Bead {
+  // The bead's chain: a chain ID, or a segid when segids share chain IDs
+  // (see segmentKeys)
   chainId: string
   start: number
   stop: number
@@ -61,6 +64,8 @@ export interface SchematicModel {
   beads: Bead[]
   linkers: Linker[]
   chainIds: string[]
+  // How a chain is named: "Chain A", or the segid
+  chainLabel: (chainId: string) => string
   fixedCount: number
   rigidCount: number
 }
@@ -150,15 +155,17 @@ export const buildSchematicModel = (
 ): SchematicModel => {
   const bodies: SchematicBody[] = []
   const beads: Bead[] = []
+  const keys = segmentKeys(constraints)
 
   const addBody = (
     body: SchematicBody,
     segments: NonNullable<MDConstraintsDTO['rigid_bodies']>[number]['segments']
   ) => {
-    for (const { chain_id, residues } of segments) {
+    for (const segment of segments) {
+      const { residues } = segment
       const n = residues.stop - residues.start + 1
       const bead: Bead = {
-        chainId: chain_id,
+        chainId: keys.keyOf(segment),
         start: residues.start,
         stop: residues.stop,
         n,
@@ -207,7 +214,7 @@ export const buildSchematicModel = (
       const tail = newBody(
         `tail-${chainId}`,
         'tail',
-        `Chain ${chainId} N-terminus`,
+        `${keys.labelOf(chainId)} N-terminus`,
         null
       )
       const tip: Bead = {
@@ -241,7 +248,15 @@ export const buildSchematicModel = (
     if (body.kind !== 'tail') packBeads(body, linkers)
   }
 
-  return { bodies, beads, linkers, chainIds, fixedCount, rigidCount }
+  return {
+    bodies,
+    beads,
+    linkers,
+    chainIds,
+    chainLabel: keys.labelOf,
+    fixedCount,
+    rigidCount
+  }
 }
 
 export const beadPosition = (bead: Bead) => ({

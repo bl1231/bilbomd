@@ -3,6 +3,11 @@ import { Box, Chip, Tooltip, Typography } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
 import type { ChainMolType, MDConstraintsDTO } from '@bilbomd/bilbomd-types'
 import {
+  segmentKeys,
+  trackMolTypes,
+  type SegmentKeys
+} from 'features/constraintSchematic/segmentKeys'
+import {
   flexibleColor,
   rigidColorIndices
 } from 'features/constraintSchematic/constraintColors'
@@ -66,11 +71,11 @@ const ChainTrackRow = ({
       variant="body2"
       sx={{ width: 64, flexShrink: 0, fontWeight: 500, lineHeight: '16px' }}
     >
-      Chain {track.chainId}
+      {track.label}
     </Typography>
     <Box sx={{ flex: 1, minWidth: 0 }}>
       <Box
-        data-testid={`constraint-track-${track.chainId}`}
+        data-testid={`constraint-track-${track.key}`}
         sx={{
           position: 'relative',
           height: 16,
@@ -87,7 +92,7 @@ const ChainTrackRow = ({
             stop={stop}
             type="flexible"
             color={flexibleColor(dark)}
-            title={`Flexible · ${rangeLabel(track.chainId, start, stop)}`}
+            title={`Flexible · ${rangeLabel(track.key, start, stop)}`}
           />
         ))}
         {track.segments.map((seg) => (
@@ -98,7 +103,7 @@ const ChainTrackRow = ({
             stop={seg.stop}
             type={seg.type}
             color={bodyTypeColor(seg.type, seg.colorIndex, dark)}
-            title={`${BODY_LABELS[seg.type]} · ${seg.bodyName} · ${rangeLabel(track.chainId, seg.start, seg.stop)}`}
+            title={`${BODY_LABELS[seg.type]} · ${seg.bodyName} · ${rangeLabel(track.key, seg.start, seg.stop)}`}
           />
         ))}
       </Box>
@@ -217,22 +222,24 @@ const BodyLine = ({
   body,
   type,
   color,
-  molTypes
+  molTypes,
+  keys
 }: {
   body: Body
   type: BodyType
   color: string
   molTypes: MolTypes
+  keys: SegmentKeys
 }) => (
   <ConstraintLine
     molTypes={molTypes}
     tag={BODY_LABELS[type]}
     color={color}
     name={body.name}
-    ranges={(body.segments ?? []).map(({ chain_id, residues }) => ({
-      chainId: chain_id,
-      start: residues.start,
-      stop: residues.stop
+    ranges={(body.segments ?? []).map((segment) => ({
+      chainId: keys.keyOf(segment),
+      start: segment.residues.start,
+      stop: segment.residues.stop
     }))}
   />
 )
@@ -244,16 +251,12 @@ interface MDConstraintsRendererProps {
 export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
   constraints
 }) => {
-  const {
-    fixed_bodies = [],
-    rigid_bodies = [],
-    chain_mol_types = []
-  } = constraints
+  const { fixed_bodies = [], rigid_bodies = [] } = constraints
   const theme = useTheme()
   const dark = theme.palette.mode === 'dark'
-  const molTypes: MolTypes = Object.fromEntries(
-    chain_mol_types.map(({ chain_id, mol_type }) => [chain_id, mol_type])
-  )
+  // Ranges and molecule types are keyed like the tracks
+  const keys = segmentKeys(constraints)
+  const molTypes: MolTypes = trackMolTypes(constraints, keys)
 
   if (fixed_bodies.length === 0 && rigid_bodies.length === 0) {
     return (
@@ -269,7 +272,7 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
   const tracks = buildChainTracks(constraints)
   const rigidIndices = rigidColorIndices(constraints)
   const flexible = tracks.flatMap((track) =>
-    track.flexible.map((range) => ({ chainId: track.chainId, ...range }))
+    track.flexible.map((range) => ({ chainId: track.key, ...range }))
   )
 
   return (
@@ -289,7 +292,7 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
           {tracks.map((track) => (
             <ChainTrackRow
-              key={track.chainId}
+              key={track.key}
               track={track}
               dark={dark}
             />
@@ -304,6 +307,7 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
             type="fixed"
             color={bodyTypeColor('fixed', null, dark)}
             molTypes={molTypes}
+            keys={keys}
           />
         ))}
         {rigid_bodies.map((body, i) => (
@@ -313,6 +317,7 @@ export const MDConstraintsRenderer: React.FC<MDConstraintsRendererProps> = ({
             type="rigid"
             color={bodyTypeColor('rigid', rigidIndices[i] ?? null, dark)}
             molTypes={molTypes}
+            keys={keys}
           />
         ))}
         {flexible.length > 0 && (

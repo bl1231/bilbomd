@@ -519,3 +519,58 @@ describe('bodyColor', () => {
     expect(beadRadius(100)).toBeCloseTo(20.5)
   })
 })
+
+describe('buildSchematicModel with segids sharing a chain ID', () => {
+  // The Classic CRD/PSF example: PROA and DNAA are both chain A
+  const sharedChain: MDConstraintsDTO = {
+    fixed_bodies: [
+      {
+        name: 'FixedBody1',
+        segments: [
+          { chain_id: 'A', segid: 'PROA', residues: { start: 40, stop: 137 } },
+          {
+            chain_id: 'A',
+            segid: 'PROA',
+            residues: { start: 150, stop: 203 }
+          },
+          { chain_id: 'A', segid: 'DNAA', residues: { start: 22, stop: 42 } },
+          { chain_id: 'B', segid: 'DNAB', residues: { start: 60, stop: 80 } }
+        ]
+      }
+    ]
+  }
+
+  it('treats each segid as its own chain, so DNA and protein are not linked', () => {
+    const model = buildSchematicModel(sharedChain)
+    expect(model.chainIds).toEqual(['DNAA', 'DNAB', 'PROA'])
+    expect(model.chainLabel('DNAA')).toBe('DNAA')
+    for (const linker of model.linkers) {
+      expect(linker.a.chainId).toBe(linker.chainId)
+      expect(linker.b.chainId).toBe(linker.chainId)
+    }
+    const proa = model.linkers
+      .filter((l) => l.chainId === 'PROA')
+      .map((l) => [l.start, l.stop])
+    expect(proa).toEqual([
+      [1, 39],
+      [138, 149]
+    ])
+    expect(model.bodies.map((b) => b.name)).toContain('DNAA N-terminus')
+  })
+
+  it('keeps chain IDs and "Chain X" names otherwise', () => {
+    const model = buildSchematicModel({
+      fixed_bodies: [
+        {
+          name: 'F',
+          segments: [
+            { chain_id: 'A', segid: 'PROA', residues: { start: 5, stop: 50 } }
+          ]
+        }
+      ]
+    })
+    expect(model.chainIds).toEqual(['A'])
+    expect(model.chainLabel('A')).toBe('Chain A')
+    expect(model.bodies.map((b) => b.name)).toContain('Chain A N-terminus')
+  })
+})

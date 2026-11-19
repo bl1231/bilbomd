@@ -786,7 +786,7 @@ export const ConstraintSchematic = ({
                   fontFamily={theme.typography.fontFamily}
                   fill={theme.palette.text.primary}
                 >
-                  Chain {row.chainId}
+                  {model.chainLabel(row.chainId)}
                 </text>
                 <line
                   x1={row.x0}
