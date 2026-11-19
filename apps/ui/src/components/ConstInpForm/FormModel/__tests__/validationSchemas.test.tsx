@@ -228,6 +228,19 @@ describe('File Upload Schema, PDB text', () => {
     await expect(fileUploadSchema.validate(withSrc(null))).resolves.toBeTruthy()
   })
 
+  it('rejects an empty file, whose text Formik hands over as undefined', async () => {
+    await expect(
+      fileUploadSchema.validate({
+        ...withSrc(null),
+        pdb_file: {
+          file: new File([], 'model.pdb', { type: 'text/plain' }),
+          src: undefined,
+          name: 'model.pdb'
+        }
+      })
+    ).rejects.toThrow('The PDB file is empty.')
+  })
+
   it('rejects a file with no atoms', async () => {
     await expect(
       fileUploadSchema.validate(withSrc('HEADER nothing\nEND'))

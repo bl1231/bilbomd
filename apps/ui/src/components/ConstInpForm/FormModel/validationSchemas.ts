@@ -30,6 +30,14 @@ const validationSchemas = [
           }
           return false
         })
+        // Checked on the file, not its text: Formik hands an empty file's ''
+        // to Yup as undefined, so the src check below can't tell it from a
+        // file not read yet
+        .test(
+          'file-empty-check',
+          'The PDB file is empty.',
+          (file) => !file || (file as File).size > 0
+        )
         .test('file-type-check', 'Please select a PDB file.', (file) => {
           if (file && (file as File).name.endsWith('.pdb')) {
             return true

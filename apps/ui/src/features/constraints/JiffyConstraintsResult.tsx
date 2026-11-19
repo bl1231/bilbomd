@@ -81,6 +81,9 @@ export const JiffyConstraintsResult = ({
   empty = 'No fixed or rigid bodies yet.'
 }: JiffyConstraintsResultProps) => {
   const { constInp, checked, valid, drawn, openmmYaml } = result
+  // Empty while the PAE Jiffy's const.inp is still being fetched, or if that
+  // failed: nothing to download yet
+  const constInpFile = constInp.trim() === '' ? null : constInp
   return (
     <Stack spacing={2}>
       {drawn ? (
@@ -131,7 +134,7 @@ export const JiffyConstraintsResult = ({
           disabled={!valid}
         />
         <DownloadButton
-          content={constInp}
+          content={constInpFile}
           fileName="const.inp"
           onDownload={onDownload}
         />
@@ -142,11 +145,13 @@ export const JiffyConstraintsResult = ({
         />
       </Stack>
 
-      <FileText
-        title="Show the const.inp text"
-        text={constInp}
-        testId="const-inp-text"
-      />
+      {constInpFile && (
+        <FileText
+          title="Show the const.inp text"
+          text={constInpFile}
+          testId="const-inp-text"
+        />
+      )}
       {openmmYaml && (
         <FileText
           title="Show the openmm_const.yml text"

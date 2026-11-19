@@ -4,6 +4,7 @@ import {
   importConstraintsFromConstInp,
   toOpenMMConstraints,
   validateConstraintsInput,
+  type ConstraintError,
   type ConstraintsValidation,
   type Constraints,
   type MDConstraintsDTO,
@@ -13,7 +14,7 @@ import { constraintsFromConstInp } from 'features/constraintSchematic/constInpCo
 import { previewConstraints } from './previewConstraints'
 
 export interface JiffyConstraints {
-  /** The const.inp the Jiffy made */
+  /** The const.inp the Jiffy made; empty until there is one */
   constInp: string
   /** Its checks, as a job form would run them; null until there is a structure */
   checked: ConstraintsValidation | null
@@ -37,10 +38,20 @@ export const useJiffyConstraints = (
 ): JiffyConstraints => {
   const checked = useMemo(() => {
     if (!segments || segments.length === 0) return null
+    // No file yet, e.g. while the PAE Jiffy's const.inp is being fetched
+    if (constInp.trim() === '') return null
     const imported = importConstraintsFromConstInp(constInp, 'pdb', {
       structure: segments
     })
-    if (!imported.input) return null
+    // Whatever the import left out stops the job form too, so the bodies
+    // that did import aren't offered on their own
+    if (imported.problems.length > 0 || !imported.input) {
+      const errors: ConstraintError[] = imported.problems.map((message) => ({
+        path: 'const.inp',
+        message
+      }))
+      return { ok: false, errors } satisfies ConstraintsValidation
+    }
     return validateConstraintsInput(imported.input, {
       mode: 'pdb',
       segments,

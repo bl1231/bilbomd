@@ -135,4 +135,63 @@ describe('a PAE Jiffy result, from real pae2const output', () => {
     expect(result.current.checked?.ok).toBe(false)
     expect(result.current.openmmYaml).toBeNull()
   })
+
+  it('refuses a file the import left parts of, without offering the rest', () => {
+    // dock2 uses a selection never defined, so the import drops it
+    const text = [
+      'define fixed1 sele ( resid 9:108 .and. segid PROA ) end',
+      'cons fix sele fixed1 end',
+      'define rigid1 sele ( resid 209:231 .and. segid PROA ) end',
+      'shape desc dock1 rigid sele rigid1 end',
+      'shape desc dock2 rigid sele rigid9 end',
+      'return'
+    ].join('\n')
+    const { result } = renderHook(() => useJiffyConstraints(text, segments))
+    expect(result.current.checked?.ok).toBe(false)
+    expect(result.current.valid).toBeNull()
+    expect(result.current.openmmYaml).toBeNull()
+    const errors =
+      result.current.checked && !result.current.checked.ok
+        ? result.current.checked.errors.map((e) => e.message)
+        : []
+    expect(errors.join('\n')).toMatch(/"rigid9" is used but never defined/)
+
+    const Result = () => (
+      <JiffyConstraintsResult
+        result={useJiffyConstraints(text, segments)}
+        structure={structure}
+        from="the Inp Jiffy™"
+      />
+    )
+    render(<Result />)
+    expect(screen.getByTestId('jiffy-constraints-errors')).toHaveTextContent(
+      'rigid9'
+    )
+    expect(
+      screen.getByRole('button', { name: /Use in a new Classic job/ })
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: /Download openmm_const.yml/ })
+    ).toBeDisabled()
+  })
+
+  it('offers nothing to download while the const.inp is still coming', () => {
+    const Result = () => (
+      <JiffyConstraintsResult
+        result={useJiffyConstraints('', segments)}
+        structure={structure}
+        from="the PAE Jiffy™"
+      />
+    )
+    render(<Result />)
+    expect(screen.queryByTestId('jiffy-constraints-errors')).toBeNull()
+    for (const name of [
+      /Use in a new Classic job/,
+      /Download const.inp/,
+      /Download openmm_const.yml/
+    ]) {
+      expect(screen.getByRole('button', { name })).toBeDisabled()
+    }
+    expect(screen.queryByText('Show the const.inp text')).toBeNull()
+  })
 })
