@@ -204,7 +204,61 @@ return`
         pdb_file,
         const_inp_file: { file: big, src: constInp, name: 'const.inp' }
       })
-    ).rejects.toThrow('Max const.inp file size is 1MB')
+    ).rejects.toThrow('Max constraints file size is 1MB')
+  })
+})
+
+describe('File Upload Schema, optional YAML or JSON constraints file', () => {
+  const fileUploadSchema = validationSchemas[0]!
+  const pdb_file = {
+    file: new File(['dummy content'], 'example.pdb', { type: 'text/plain' }),
+    name: 'example.pdb'
+  }
+  const picked = (text: string, name: string) => ({
+    pdb_file,
+    const_inp_file: { file: new File([text], name), src: text, name }
+  })
+
+  it('accepts an OpenMM constraints YAML with a fixed body', async () => {
+    const yaml = [
+      'constraints:',
+      '  fixed_bodies:',
+      '    - name: FixedBody1',
+      '      segments:',
+      '        - chain_id: A',
+      '          residues: { start: 1, stop: 10 }'
+    ].join('\n')
+    await expect(
+      fileUploadSchema.validate(picked(yaml, 'openmm_const.yml'))
+    ).resolves.toBeTruthy()
+  })
+
+  it('accepts bilbomd_job.json', async () => {
+    const json = JSON.stringify({
+      md_constraints: {
+        fixed_bodies: [
+          {
+            name: 'FixedBody1',
+            segments: [{ chain_id: 'A', residues: { start: 1, stop: 10 } }]
+          }
+        ]
+      }
+    })
+    await expect(
+      fileUploadSchema.validate(picked(json, 'bilbomd_job.json'))
+    ).resolves.toBeTruthy()
+  })
+
+  it('rejects YAML it cannot read', async () => {
+    await expect(
+      fileUploadSchema.validate(picked('constraints: [unclosed', 'bad.yml'))
+    ).rejects.toThrow('could not be read as YAML or JSON')
+  })
+
+  it('rejects JSON with no fixed body', async () => {
+    await expect(
+      fileUploadSchema.validate(picked('{"rigid_bodies": []}', 'c.json'))
+    ).rejects.toThrow('No fixed body could be read from this file.')
   })
 })
 

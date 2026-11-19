@@ -15,7 +15,7 @@ import Grid from '@mui/material/Grid'
 import FileField from '../FormFields/FileField'
 import ChainSummary from '../Helpers/ChainSummary'
 import ImportNotes from '../Helpers/ImportNotes'
-import { importConstInp } from '../Helpers/importConstInp'
+import { JIFFY_FILE_ACCEPT, importJiffyFile } from '../Helpers/importJiffyFile'
 import Paper from '@mui/material/Paper'
 import { useTheme } from '@mui/material/styles'
 import useTitle from 'hooks/useTitle'
@@ -93,10 +93,11 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
   const { name, src, chains, rigid_bodies } = values.pdb_file
   const constInp = values.const_inp_file
   const constInpSrc = constInp.src
+  const constInpName = constInp.name
   const constInpNotes = constInp.notes
-  // Remounts the const.inp picker on Remove, so it forgets the old file
+  // Remounts the constraints file picker on Remove, so it forgets the old file
   const [constInpKey, setConstInpKey] = useState(0)
-  // Counts const.inp picks and removals, so a read that finishes after a newer
+  // Counts constraints file picks and removals, so a read that finishes after a newer
   // pick or a Remove is ignored instead of bringing back the wrong file
   const constInpRead = useRef(0)
 
@@ -236,9 +237,9 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
       })
     })
 
-    // Start from the uploaded const.inp, if any, instead of whole chains
+    // Start from the uploaded constraints file, if any, instead of whole chains
     const imported = constInpSrc
-      ? importConstInp(constInpSrc, charmmChains)
+      ? importJiffyFile(constInpSrc, constInpName, charmmChains)
       : null
     const nextRigidBodies = imported ? imported.rigidBodies : demRigidBodies
     const nextNotes = imported ? imported.notes : null
@@ -259,6 +260,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
     chains,
     rigid_bodies,
     constInpSrc,
+    constInpName,
     constInpNotes,
     setFieldError,
     setFieldValue
@@ -365,59 +367,49 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
           <Paper sx={{ p: 1 }}>
             <Box>
               <Typography sx={{ m: 1 }}>
-                <b>BilboMD</b> uses{' '}
-                <Link
-                  href="https://academiccharmm.org/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  CHARMM
-                </Link>{' '}
-                to generate an ensemble of molecular models. In order for the
-                Molecular Dynamics steps to run successfully you must define the
-                rigid and flexible regions of your molecule using proper CHARMM{' '}
-                <Link
-                  href="https://academiccharmm.org/documentation/version/c51b1/select"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  atom selection
-                </Link>{' '}
-                syntax. The <b>inp Jiffy{'\u2122'}</b> will help you construct a
-                valid{' '}
-                <b>
-                  <code>const.inp</code>{' '}
-                </b>{' '}
-                file: .
+                <b>BilboMD</b> runs molecular dynamics in which parts of your
+                molecule are held fixed, some parts move as rigid bodies, and
+                the rest stays flexible. The <b>Inp Jiffy{'\u2122'}</b> helps
+                you define those regions for your PDB file and writes them as a
+                constraints file for <b>BilboMD Classic</b> and{' '}
+                <b>BilboMD SANS</b> jobs, with either MD engine (OpenMM or
+                CHARMM).
               </Typography>
               <ul>
                 <li>
                   <Typography>
                     The <b>Inp Jiffy{'\u2122'}</b> will only work with PDB files
-                    that have a chain ID (i.e. a single character in column 22
-                    ).
+                    that have a chain ID (i.e. a single character in column 22).
                   </Typography>
                 </li>
                 <li>
                   <Typography>
-                    The <b>Inp Jiffy{'\u2122'}</b> will produce a{' '}
-                    <b>
-                      <code>const.inp</code>{' '}
-                    </b>{' '}
-                    file with segid names that are compatible with{' '}
-                    <b>BilboMD Classic</b>.
-                  </Typography>
-                </li>
-                <li>
-                  <Typography>
-                    Already have a{' '}
+                    The file it writes is a{' '}
                     <b>
                       <code>const.inp</code>
-                    </b>{' '}
-                    file? Upload it along with your PDB file to start from its
-                    rigid bodies. The <b>Inp Jiffy{'\u2122'}</b> checks it
-                    against the PDB and writes a new file, so comments and{' '}
-                    <code>define</code> names are not kept.
+                    </b>
+                    , in CHARMM{' '}
+                    <Link
+                      href="https://academiccharmm.org/documentation/version/c51b1/select"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      atom selection
+                    </Link>{' '}
+                    syntax, with segid names that BilboMD understands. BilboMD
+                    reads it for OpenMM jobs too.
+                  </Typography>
+                </li>
+                <li>
+                  <Typography>
+                    Already have a constraints file? A <code>const.inp</code>,
+                    an OpenMM constraints YAML (such as{' '}
+                    <code>openmm_const.yml</code>), or{' '}
+                    <code>bilbomd_job.json</code> from a BilboMD results
+                    download. Upload it along with your PDB file to start from
+                    its fixed and rigid bodies. The <b>Inp Jiffy{'\u2122'}</b>{' '}
+                    checks it against the PDB and writes a new file, so comments
+                    and names are not kept.
                   </Typography>
                 </li>
               </ul>
@@ -426,11 +418,8 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
             <Accordion sx={{ backgroundColor: '#f5f5f5' }}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography sx={{ m: 1 }}>
-                  Example of a{' '}
-                  <b>
-                    <code>const.inp</code>{' '}
-                  </b>{' '}
-                  file:{' '}
+                  Example of a <code>const.inp</code> file written by the{' '}
+                  <b>Inp Jiffy{'\u2122'}</b>:
                 </Typography>
               </AccordionSummary>
               <AccordionDetails>
@@ -493,7 +482,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                   as={FileField}
                   onChange={onChange}
                   setFieldValue={setFieldValue}
-                  // Only once a PDB has been picked: picking a const.inp first
+                  // Only once a PDB has been picked: picking a constraints file first
                   // validates the whole form, and shouldn't flag an untouched
                   // PDB picker
                   isError={Boolean(errors.pdb_file) && Boolean(name)}
@@ -510,20 +499,22 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                 sx={{ mt: 2 }}
               >
                 <Typography sx={{ mb: 1 }}>
-                  Optional: start from an existing <code>const.inp</code> file
+                  Optional: start from an existing constraints file, a{' '}
+                  <code>const.inp</code>, an OpenMM constraints YAML, or{' '}
+                  <code>bilbomd_job.json</code> from a BilboMD results download
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Field
                     key={constInpKey}
                     name="const_inp_file.file"
                     id="const_inp_file"
-                    title="Select const.inp"
+                    title="Select Constraints File"
                     as={FileField}
                     onChange={onConstInpChange}
                     setFieldValue={setFieldValue}
                     isError={Boolean(constInpError)}
                     errorMessage={constInpError}
-                    fileExt=".inp,.txt"
+                    fileExt={JIFFY_FILE_ACCEPT}
                   />
                   {constInp.name && (
                     <Button

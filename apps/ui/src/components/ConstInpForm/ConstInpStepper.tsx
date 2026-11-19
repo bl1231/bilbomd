@@ -98,7 +98,7 @@ const ConstInpStepper = () => {
             sx={{ mt: 4 }}
           >
             Woot! That&apos;s it. Reset the form if you want to create a new{' '}
-            <b>const.inp file.</b>
+            <b>constraints file.</b>
           </Alert>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', pt: 2 }}>

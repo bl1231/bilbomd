@@ -38,14 +38,16 @@ const initialValues = {
       }
     ]
   },
-  // Optional: an existing const.inp to start the rigid bodies from
+  // Optional: an existing constraints input file (const.inp, YAML or JSON) to
+  // start the rigid bodies from; const_inp_file reads as "constraints input
+  // file", whatever its format
   [const_inp_file.name]: {
     file: null,
     src: null,
     name: '',
     // True while the picked file is being read
     reading: false,
-    // What the import found; null until a const.inp has been read against the PDB
+    // What the import found; null until the file has been read against the PDB
     notes: null as string[] | null
   }
 }

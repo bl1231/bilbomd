@@ -11,7 +11,7 @@ const formModel = {
     },
     const_inp_file: {
       name: 'const_inp_file' as const,
-      label: 'Optionally, start from an existing const.inp file',
+      label: 'Optionally, start from an existing constraints file',
       type: 'file'
     },
     domains: {

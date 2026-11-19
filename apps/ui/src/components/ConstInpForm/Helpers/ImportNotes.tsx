@@ -6,7 +6,7 @@ interface ImportNotesProps {
 }
 
 /**
- * What happened when an existing const.inp was read into the jiffy: a success
+ * What happened when an existing constraints file was read into the jiffy: a success
  * line when everything matched the PDB, otherwise each thing to check.
  */
 const ImportNotes = ({ name, notes }: ImportNotesProps) =>
