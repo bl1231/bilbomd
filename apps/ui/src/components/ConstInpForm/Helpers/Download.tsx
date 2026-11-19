@@ -5,10 +5,16 @@ interface DownloadButtonProps {
   /** The file's text; null disables the button */
   content: string | null
   fileName: string
+  /** Called once the file has been saved */
+  onDownload?: () => void
 }
 
 /** Saves the given text as a file, made here in the browser */
-const DownloadButton = ({ content, fileName }: DownloadButtonProps) => {
+const DownloadButton = ({
+  content,
+  fileName,
+  onDownload
+}: DownloadButtonProps) => {
   const handleDownload = () => {
     if (content === null) return
     const url = window.URL.createObjectURL(
@@ -21,6 +27,7 @@ const DownloadButton = ({ content, fileName }: DownloadButtonProps) => {
     link.click()
     link.remove()
     window.URL.revokeObjectURL(url)
+    onDownload?.()
   }
 
   return (

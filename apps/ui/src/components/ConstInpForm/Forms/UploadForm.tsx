@@ -15,6 +15,7 @@ import Grid from '@mui/material/Grid'
 import FileField from '../FormFields/FileField'
 import ChainSummary from '../Helpers/ChainSummary'
 import ImportNotes from '../Helpers/ImportNotes'
+import { pdbTextProblem } from '../Helpers/pdbTextProblem'
 import { JIFFY_FILE_ACCEPT, importJiffyFile } from '../Helpers/importJiffyFile'
 import {
   EXAMPLE_CONST_INP,
@@ -110,17 +111,11 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
     let atomLines: string[] = []
 
     if (src !== null && typeof src === 'string') {
-      // Preliminary check for ATOM lines to validate PDB file format
-      const hasValidAtomLines = src
-        .split('\n')
-        .some((line) => line.startsWith('ATOM') || line.startsWith('HETATM'))
-
-      if (!hasValidAtomLines) {
-        // Handle invalid file format (e.g., set an error state, show a message)
-        setFieldError(
-          'pdb_file.file',
-          'Invalid PDB file: No ATOM/HETATM records found.'
-        )
+      // The schema reports these too, so the error stays through later
+      // validations; here they only stop the parse
+      const problem = pdbTextProblem(src)
+      if (problem) {
+        setFieldError('pdb_file.file', problem)
         return
       }
       atomLines = src
@@ -146,17 +141,6 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
         charge: line.substring(78, 80).trim()
       }
     })
-    // Check if any atom does not have a chainID
-    const hasInvalidChainID = atoms.some((atom) => !atom.chainID)
-
-    if (hasInvalidChainID) {
-      setFieldError(
-        'pdb_file.file',
-        'One or more atoms in the PDB file do not have a chain ID.'
-      )
-      return
-    }
-
     const charmmChains: Chain[] = []
     const demRigidBodies: RigidBody[] = [{ id: 'PRIMARY', domains: [] }]
 
@@ -506,7 +490,9 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                   isError={Boolean(errors.pdb_file) && Boolean(name)}
                   errorMessage={
                     errors.pdb_file
-                      ? errors.pdb_file.file || 'Error uploading file'
+                      ? errors.pdb_file.file ||
+                        errors.pdb_file.src ||
+                        'Error uploading file'
                       : ''
                   }
                   fileExt=".pdb"

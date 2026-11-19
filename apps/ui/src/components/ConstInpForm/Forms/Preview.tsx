@@ -77,7 +77,12 @@ const FileText = ({
  * with the constraints file to take away as a const.inp or an OpenMM
  * constraints YAML, or straight into a new BilboMD Classic job.
  */
-const Preview = () => {
+interface PreviewProps {
+  /** Called once a constraints file has been downloaded */
+  onDone?: () => void
+}
+
+const Preview = ({ onDone }: PreviewProps) => {
   useTitle('BilboMD: Preview constraints')
   const { values } = useFormikContext<FormikValues>()
   const rigid_bodies = values.pdb_file.rigid_bodies as RigidBody[]
@@ -195,10 +200,12 @@ const Preview = () => {
               <DownloadButton
                 content={constInp}
                 fileName="const.inp"
+                onDownload={onDone}
               />
               <DownloadButton
                 content={openmmYaml}
                 fileName="openmm_const.yml"
+                onDownload={onDone}
               />
             </Stack>
 

@@ -208,6 +208,39 @@ return`
   })
 })
 
+describe('File Upload Schema, PDB text', () => {
+  const fileUploadSchema = validationSchemas[0]!
+  const withSrc = (src: string | null) => ({
+    pdb_file: {
+      file: new File(['x'], 'model.pdb', { type: 'text/plain' }),
+      src,
+      name: 'model.pdb'
+    },
+    const_inp_file: { file: null, src: null, name: '', notes: null }
+  })
+  const atom = (chain: string) =>
+    `ATOM      1  CA  ALA ${chain}   1       1.000   2.000   3.000  1.00  0.00           C`
+
+  it('accepts atoms with chain IDs, and a file not read yet', async () => {
+    await expect(
+      fileUploadSchema.validate(withSrc(atom('A')))
+    ).resolves.toBeTruthy()
+    await expect(fileUploadSchema.validate(withSrc(null))).resolves.toBeTruthy()
+  })
+
+  it('rejects a file with no atoms', async () => {
+    await expect(
+      fileUploadSchema.validate(withSrc('HEADER nothing\nEND'))
+    ).rejects.toThrow('No ATOM/HETATM records found')
+  })
+
+  it('rejects atoms without a chain ID', async () => {
+    await expect(fileUploadSchema.validate(withSrc(atom(' ')))).rejects.toThrow(
+      'do not have a chain ID'
+    )
+  })
+})
+
 describe('File Upload Schema, optional YAML or JSON constraints file', () => {
   const fileUploadSchema = validationSchemas[0]!
   const pdb_file = {
