@@ -20,6 +20,7 @@ from utils.logger import get_logger
 from utils.md_errors import is_nan_error, unstable_message
 from utils.model_prep import register_ligand_templates_for_topology
 from utils.pdb_writer import PositionCapture
+from utils.rg_atoms import select_rg_atom_indices
 from utils.rgyr import RadiusOfGyrationCVForce, RgyrDmaxCapture
 from utils.rigid_body import create_rigid_bodies, get_rigid_bodies
 
@@ -89,8 +90,9 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     logger.info(f"[GPU {gpu_id}] Applying rigid body constraints...")
     create_rigid_bodies(system, modeller.positions, list(rigid_bodies.values()))
 
-    # ⛓️ RG restraint — applied to CA atoms only so it is consistent with the
-    # RadiusOfGyrationReporter and unaffected by free glycan chains in glycoproteins.
+    # ⛓️ RG restraint — applied to one atom per residue (protein CA, nucleotide P)
+    # so it matches the Rg/Dmax capture below, covers DNA/RNA as well as protein,
+    # and is unaffected by free glycan chains in glycoproteins.
     k_rg_yaml = float(config["steps"]["md"]["rgyr"]["k_rg"])  # kcal/mol/Å^2 from YAML
     timestep = float(config["steps"]["md"]["parameters"]["timestep"])
     nsteps = int(config["steps"]["md"]["parameters"]["nsteps"])
@@ -99,7 +101,8 @@ def run_md_for_rg(rg, config_path, gpu_id=None):
     rgyr_report = config["steps"]["md"]["rgyr"]["filename"]
     logger.info(f"\n[GPU {gpu_id}] 🔁 Running MD with Rg target: {rg} Å")
 
-    atom_indices = [a.index for a in modeller.topology.atoms() if a.name == "CA"]
+    atom_indices = select_rg_atom_indices(modeller.topology.atoms())
+    logger.info(f"[GPU {gpu_id}] Rg restraint atoms (protein CA + nucleotide P): {len(atom_indices)}")
     # Convert kcal/mol/Å^2 → kJ/mol/nm^2
     k_rg = k_rg_yaml * 418.4
     rg0 = rg * 0.1  # Å → nm
