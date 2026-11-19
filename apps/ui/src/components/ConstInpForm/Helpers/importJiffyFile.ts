@@ -2,7 +2,8 @@ import { parse as parseYaml } from 'yaml'
 import {
   importConstraintsFromData,
   readConstInp,
-  type ConstraintSegmentInput
+  type ConstraintSegmentInput,
+  type StructureSegment
 } from '@bilbomd/bilbomd-types'
 import type { Chain, RigidBody, RigidDomain } from 'types/interfaces'
 import { importConstInp, type ConstInpImport } from './importConstInp'
@@ -28,22 +29,32 @@ const parseData = (text: string): Parsed => {
 const rangeOf = ({ residues }: ConstraintSegmentInput) =>
   residues ? `residues ${residues.start}–${residues.stop}` : 'the whole chain'
 
+const span = (s: StructureSegment) => ({
+  start: s.residues[0] ?? 0,
+  stop: s.residues[s.residues.length - 1] ?? 0
+})
+
 /**
  * Turns an OpenMM constraints YAML or constraints JSON (openmm_const.yml,
  * openmm_config.yaml, bilbomd_job.json, the API's `constraints`) into the
  * jiffy's rigid bodies for the uploaded PDB. It is read the way the job
- * forms read it; the fixed body becomes PRIMARY and each rigid body a RIGID
- * n. As for a const.inp, segments on a chain the PDB doesn't have are dropped
- * and ranges outside a chain are kept for the next step to flag, each with a
- * note. Null when the file holds no usable fixed body.
+ * forms read it, against the PDB's segments as BilboMD builds them, so a
+ * segid names the right chain and a whole segment keeps that segment's
+ * bounds, even when its chain holds other segments. The fixed body becomes
+ * PRIMARY and each rigid body a RIGID n. As for a const.inp, segments on a
+ * chain the PDB doesn't have are dropped and ranges outside a chain are kept
+ * for the next step to flag, each with a note. The jiffy selects by chain and
+ * residue number, so a selection whose numbers another segment of its chain
+ * also uses gets a note too. Null when the file holds no usable fixed body.
  */
 const importConstraintsData = (
   text: string,
-  chains: Chain[]
+  chains: Chain[],
+  structure: StructureSegment[]
 ): ConstInpImport | null => {
   const parsed = parseData(text)
   if (!parsed.ok) return null
-  const imported = importConstraintsFromData(parsed.data, 'pdb')
+  const imported = importConstraintsFromData(parsed.data, 'pdb', { structure })
   if (!imported.input) return null
   const notes = [
     ...imported.problems.map((p) => `Not imported: ${p}`),
@@ -59,10 +70,29 @@ const importConstraintsData = (
         )
         return []
       }
-      // No residues selects the whole chain
-      const { start, stop } = segment.residues ?? {
-        start: chain.first_res,
-        stop: chain.last_res
+      const own = segment.segid
+        ? structure.find((s) => s.segid === segment.segid)
+        : undefined
+      // No residues selects the whole segment: by segid, that segment's
+      // bounds; by chain ID alone, the whole chain
+      const { start, stop } =
+        segment.residues ??
+        (own ? span(own) : { start: chain.first_res, stop: chain.last_res })
+      const shared = own
+        ? structure.filter(
+            (s) =>
+              s !== own &&
+              s.chain_id === chain.id &&
+              s.residues.some((r) => r >= start && r <= stop)
+          )
+        : []
+      if (shared.length > 0) {
+        notes.push(
+          `${own?.segid} ${start}–${stop} shares residue numbers on chain ` +
+            `${chain.id} with ${shared.map((s) => s.segid).join(', ')}. The ` +
+            'jiffy selects by chain and residue number, so this selection ' +
+            'covers both. Check it in the next step.'
+        )
       }
       if (start < chain.first_res || stop > chain.last_res) {
         notes.push(
@@ -108,10 +138,12 @@ const importConstraintsData = (
 export const importJiffyFile = (
   text: string,
   fileName: string,
-  chains: Chain[]
+  chains: Chain[],
+  /** The PDB's segments as BilboMD builds them (readPdbSegments) */
+  segments: StructureSegment[]
 ): ConstInpImport | null =>
   isDataFile(fileName)
-    ? importConstraintsData(text, chains)
+    ? importConstraintsData(text, chains, segments)
     : importConstInp(text, chains)
 
 /**

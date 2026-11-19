@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useCallback, useRef, useState } from 'react'
-import { CARBOHYDRATE_RESIDUES } from '@bilbomd/bilbomd-types'
+import { CARBOHYDRATE_RESIDUES, readPdbSegments } from '@bilbomd/bilbomd-types'
 import { logger } from 'utils/logger'
 import { Field, useFormikContext } from 'formik'
 import {
@@ -239,7 +239,13 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
 
     // Start from the uploaded constraints file, if any, instead of whole chains
     const imported = constInpSrc
-      ? importJiffyFile(constInpSrc, constInpName, charmmChains)
+      ? importJiffyFile(
+          constInpSrc,
+          constInpName,
+          charmmChains,
+          // The segments BilboMD builds, so segids resolve to the right chain
+          readPdbSegments(src ?? '')
+        )
       : null
     const nextRigidBodies = imported ? imported.rigidBodies : demRigidBodies
     const nextNotes = imported ? imported.notes : null
