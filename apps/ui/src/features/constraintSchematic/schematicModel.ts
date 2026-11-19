@@ -572,6 +572,11 @@ export const fitViewBox = (model: SchematicModel): Box => {
  * Which bodies' name labels fit: biggest body first, and a label that would
  * overlap one already placed is left out.
  */
+// A bead's chain label (10px, semibold) is about 6.5px per character. One
+// letter needs r >= 11; a segid such as DNAA needs a bigger bead.
+export const beadLabelFits = (bead: Bead): boolean =>
+  bead.r >= Math.max(11, (bead.chainId.length * 6.5 + 4) / 2)
+
 export const visibleLabels = (
   bodies: SchematicBody[],
   labelY: (b: SchematicBody) => number

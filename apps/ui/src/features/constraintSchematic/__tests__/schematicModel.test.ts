@@ -4,6 +4,7 @@ import {
   applyBeadCollisions,
   applyLinkerLimits,
   beadPosition,
+  beadLabelFits,
   beadRadius,
   bodyColor,
   buildSchematicModel,
@@ -572,5 +573,21 @@ describe('buildSchematicModel with segids sharing a chain ID', () => {
     expect(model.chainIds).toEqual(['A'])
     expect(model.chainLabel('A')).toBe('Chain A')
     expect(model.bodies.map((b) => b.name)).toContain('Chain A N-terminus')
+  })
+})
+
+describe('beadLabelFits', () => {
+  const bead = (chainId: string, r: number) =>
+    ({ chainId, r }) as Parameters<typeof beadLabelFits>[0]
+
+  it('labels one-letter chains from r 11, as before', () => {
+    expect(beadLabelFits(bead('A', 10.9))).toBe(false)
+    expect(beadLabelFits(bead('A', 11))).toBe(true)
+  })
+
+  it('needs a bigger bead for a four-letter segid', () => {
+    // DNAA 22-42 in the CRD example: 21 residues
+    expect(beadLabelFits(bead('DNAA', beadRadius(21)))).toBe(false)
+    expect(beadLabelFits(bead('PROA', beadRadius(98)))).toBe(true)
   })
 })
