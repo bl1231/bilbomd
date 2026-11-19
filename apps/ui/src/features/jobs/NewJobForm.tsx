@@ -46,7 +46,7 @@ import JobSuccessAlert from './JobSuccessAlert'
 import MdEngineField from 'components/MdEngineField'
 import TitleField from 'components/TitleField'
 import { getRgMaxWarning } from './rgMaxWarning'
-import { ConstraintsField } from 'features/constraints/ConstraintsField'
+import { ConstraintsFileField } from 'features/constraints/ConstraintsFileField'
 import { ExampleConstraints } from './ExampleConstraints'
 import MwCheck from 'features/mwcheck/MwCheck'
 
@@ -651,8 +651,11 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           }
                         />
                       ) : (
-                        <ConstraintsField
+                        <ConstraintsFileField
                           name="constraints"
+                          jiffyLinks={
+                            mode === 'anonymous' ? 'public' : 'dashboard'
+                          }
                           mode={values.bilbomd_mode}
                           structureFile={
                             values.bilbomd_mode === 'pdb'
