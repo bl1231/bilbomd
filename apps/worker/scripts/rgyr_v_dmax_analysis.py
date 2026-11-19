@@ -49,7 +49,7 @@ def parse_ensemble_size_file(ensemble_file):
 
 def collect_openmm_structural_data(base_dir):
     """
-    Read Rgyr and Dmax from rgyr_dmax.csv files written by RgyrDmaxReporter for
+    Read Rgyr and Dmax from rgyr_dmax.csv files written by RgyrDmaxCapture for
     OpenMM jobs. Returns a dict keyed by uppercase PDB stem (e.g. 'MD_000000500').
     Returns an empty dict if no OpenMM MD output is found.
     """
