@@ -1,5 +1,12 @@
 # @bilbomd/bilbomd-types
 
+## 1.22.2
+
+### Patch Changes
+
+- 466f47c: `importConstraintsFromData`: a segment whose `residues` isn't `{ start, stop }` (e.g. `"1:10"`) is now left out with a problem, instead of being widened to the whole segment. Merging several fixed bodies into one is reported as a note rather than a problem, since nothing is lost.
+- cbbba21: `importConstraintsFromData`: with the structure given, a selection by segid alone that the structure doesn't have is left out with a problem, instead of being read as the chain its name suggests (which can be the wrong chain, e.g. PROA when protein chain a is PROA and chain A is DNA).
+
 ## 1.22.1
 
 ### Patch Changes
