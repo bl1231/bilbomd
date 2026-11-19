@@ -16,6 +16,10 @@ import FileField from '../FormFields/FileField'
 import ChainSummary from '../Helpers/ChainSummary'
 import ImportNotes from '../Helpers/ImportNotes'
 import { JIFFY_FILE_ACCEPT, importJiffyFile } from '../Helpers/importJiffyFile'
+import {
+  EXAMPLE_CONST_INP,
+  EXAMPLE_OPENMM_YAML
+} from '../Helpers/exampleConstraints'
 import Paper from '@mui/material/Paper'
 import { useTheme } from '@mui/material/styles'
 import useTitle from 'hooks/useTitle'
@@ -424,49 +428,51 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
             <Accordion sx={{ backgroundColor: '#f5f5f5' }}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography sx={{ m: 1 }}>
-                  Example of a <code>const.inp</code> file written by the{' '}
-                  <b>Inp Jiffy{'\u2122'}</b>:
+                  Examples: the same constraints as a <code>const.inp</code> and
+                  as an <code>openmm_const.yml</code>
                 </Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Box
-                  sx={{
-                    backgroundColor:
-                      theme.palette.mode === 'light'
-                        ? theme.palette.grey[100]
-                        : theme.palette.grey[600],
-                    m: 1,
-                    p: 1
-                  }}
+                <Grid
+                  container
+                  spacing={2}
                 >
-                  <Typography
-                    component="pre"
-                    sx={{
-                      m: 1,
-                      fontFamily:
-                        'Consolas, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New;'
-                    }}
-                  >
-                    define fixed1 sele ( resid 159:414 .and. segid PROA ) end
-                    <br />
-                    define fixed2 sele ( resid 94:563 .and. segid PROB ) end
-                    <br />
-                    cons fix sele fixed1 .or. fixed2 end
-                    <br />
-                    <br />
-                    define rigid1 sele ( resid 8:155 .and. segid PROA ) end
-                    <br />
-                    shape desc dock1 rigid sele rigid1 end
-                    <br />
-                    <br />
-                    define rigid2 sele ( resid 51:79 .and. segid PROB ) end
-                    <br />
-                    shape desc dock2 rigid sele rigid2 end
-                    <br />
-                    <br />
-                    return
-                  </Typography>
-                </Box>
+                  {[
+                    { name: 'const.inp', text: EXAMPLE_CONST_INP },
+                    { name: 'openmm_const.yml', text: EXAMPLE_OPENMM_YAML }
+                  ].map(({ name: fileName, text }) => (
+                    <Grid
+                      key={fileName}
+                      size={{ xs: 12, md: 6 }}
+                    >
+                      <Typography sx={{ mx: 1 }}>
+                        <code>{fileName}</code>
+                      </Typography>
+                      <Box
+                        sx={{
+                          backgroundColor:
+                            theme.palette.mode === 'light'
+                              ? theme.palette.grey[100]
+                              : theme.palette.grey[600],
+                          m: 1,
+                          p: 1
+                        }}
+                      >
+                        <Typography
+                          component="pre"
+                          data-testid={`example-${fileName}`}
+                          sx={{
+                            m: 1,
+                            fontFamily:
+                              'Consolas, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New;'
+                          }}
+                        >
+                          {text}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
               </AccordionDetails>
             </Accordion>
           </Paper>

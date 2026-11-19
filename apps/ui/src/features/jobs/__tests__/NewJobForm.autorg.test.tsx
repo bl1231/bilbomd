@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -51,7 +52,7 @@ describe('NewJobForm AutoRg', () => {
 
   it('keeps what was changed while AutoRg ran', async () => {
     const user = userEvent.setup()
-    render(<NewJobForm />)
+    render(<NewJobForm />, { wrapper: MemoryRouter })
     const datInput = document.getElementById(
       'dat_file-file-upload'
     ) as HTMLInputElement

@@ -19,7 +19,7 @@ interface DomainFormProps {
 }
 
 const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
-  useTitle('BilboMD: Define domains')
+  useTitle('BilboMD: Define fixed and rigid bodies')
   const theme = useTheme()
   const { values, errors, isValid, validateForm, setTouched } =
     useFormikContext<FormikValues>()
@@ -88,38 +88,40 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                 variant="h4"
                 sx={{ m: 1 }}
               >
-                Define Rigid Bodies
+                Define Fixed and Rigid Bodies
               </Typography>
               <Typography sx={{ m: 1 }}>
-                This is pretty straight forward. You need to define which ranges
-                of residues are to remain rigid during the Molecular Dynamics
-                steps of a <b>BilboMD</b> run. Please be aware of the following.
+                Choose which residues are held fixed and which move as rigid
+                bodies during the molecular dynamics steps of a <b>BilboMD</b>{' '}
+                run. Every residue in neither stays <b>flexible</b>. Please be
+                aware of the following.
               </Typography>
               <ul>
                 <li>
                   <Typography>
-                    You need at least one Rigid Body (we&apos;ll call this your{' '}
-                    <b>PRIMARY</b> Rigid Body). The Rigid Segments defined as
-                    part of your Primary Rigid Body will remain fixed.
+                    <b>PRIMARY</b> is the <b>fixed body</b>: its segments are
+                    held in place, as the reference frame. It needs at least one
+                    segment.
                   </Typography>
                 </li>
                 <li>
                   <Typography>
-                    Segments in subsequently defined Rigid Bodies will be
-                    dynamic.
+                    Each body you add (<b>RIGID 1</b>, <b>RIGID 2</b>, …) is a{' '}
+                    <b>rigid body</b>: its segments move together as one piece,
+                    relative to the fixed body.
                   </Typography>
                 </li>
                 <li>
                   <Typography>
-                    No overlapping regions either within <b>or</b> between Rigid
-                    Bodies are allowed.
+                    No residue can be in two bodies, or twice in one body.
                   </Typography>
                 </li>
                 <li>
                   <Typography>
-                    Leave at least <b>{MIN_FLEX_GAP} residues</b> between Rigid
-                    Segments to allow for efficient conformational sampling.
-                    Closer segments give a warning, not an error.
+                    Leave at least <b>{MIN_FLEX_GAP} flexible residues</b>{' '}
+                    between segments of different bodies to allow for efficient
+                    conformational sampling. Closer segments give a warning, not
+                    an error.
                   </Typography>
                 </li>
               </ul>
@@ -134,7 +136,7 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
         </Grid>
         <Grid size={{ xs: 12 }}>
           <HeaderBox>
-            <Typography>Define Rigid Bodies</Typography>
+            <Typography>Define Fixed and Rigid Bodies</Typography>
           </HeaderBox>
           <Paper sx={{ p: 1 }}>
             <Grid container>
@@ -202,7 +204,10 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                                   }}
                                 >
                                   <Typography variant="h4">
-                                    Rigid Body: <Chip label={rigid_body.id} />
+                                    {rigid_body.id === 'PRIMARY'
+                                      ? 'Fixed Body'
+                                      : 'Rigid Body'}
+                                    : <Chip label={rigid_body.id} />
                                   </Typography>
                                   {values.pdb_file.rigid_bodies[index]?.id ===
                                   'PRIMARY' ? (
@@ -210,18 +215,17 @@ const DomainForm = ({ setStepIsValid }: DomainFormProps) => {
                                       severity="warning"
                                       sx={{ ml: 2 }}
                                     >
-                                      Segments in the <b>PRIMARY</b> Rigid Body
-                                      will remain <b>fixed</b> during the
-                                      Molecular Dynamics steps.
+                                      Segments in <b>PRIMARY</b> are the fixed
+                                      body: held in place during MD.
                                     </Alert>
                                   ) : (
                                     <Alert
                                       severity="warning"
                                       sx={{ ml: 2 }}
                                     >
-                                      Segments in <b>{rigid_body.id}</b> will
-                                      move together <b>and</b> relative to the{' '}
-                                      <b>PRIMARY</b> Rigid Body.
+                                      Segments in <b>{rigid_body.id}</b> move
+                                      together as one rigid body, relative to
+                                      the fixed body (<b>PRIMARY</b>).
                                     </Alert>
                                   )}
                                 </Grid>

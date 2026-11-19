@@ -14,7 +14,11 @@ import { Form, Formik } from 'formik'
 import { Debug } from 'components/Debug'
 import { Alert } from '@mui/material'
 
-const steps = ['Upload Files', 'Select Rigid domains', 'Preview & Download']
+const steps = [
+  'Upload Files',
+  'Define Fixed and Rigid Bodies',
+  'Preview & Download'
+]
 
 // interesting idea see Niiima Bastani on codesandbox
 const { formId } = formModel

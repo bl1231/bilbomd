@@ -40,7 +40,7 @@ const renderDomainForm = (
 
 const bodyIds = () =>
   screen
-    .getAllByText(/^Rigid Body:/)
+    .getAllByText(/^(Fixed|Rigid) Body:/)
     .map((el) => within(el).getByText(/PRIMARY|RIGID/).textContent)
 
 describe('DomainForm', () => {
@@ -54,7 +54,7 @@ describe('DomainForm', () => {
     ).toHaveTextContent('segid PROZ matches no chain')
     // Let the check on entering the step finish
     await waitFor(() =>
-      expect(screen.getAllByText(/^Rigid Body:/)).toHaveLength(1)
+      expect(screen.getAllByText(/^(Fixed|Rigid) Body:/)).toHaveLength(1)
     )
   })
 
@@ -134,5 +134,19 @@ describe('DomainForm checks the bodies on entering the step', () => {
     ])
     expect(setStepIsValid).toHaveBeenNthCalledWith(1, false)
     await waitFor(() => expect(setStepIsValid).toHaveBeenLastCalledWith(true))
+  })
+})
+
+describe('DomainForm wording', () => {
+  it('calls PRIMARY the fixed body and the others rigid bodies', async () => {
+    renderDomainForm([
+      { id: 'PRIMARY', domains: [{ chainid: 'A', start: 1, end: 100 }] },
+      { id: 'RIGID 1', domains: [{ chainid: 'A', start: 120, end: 200 }] }
+    ])
+    expect(await screen.findByText(/^Fixed Body:/)).toBeInTheDocument()
+    expect(screen.getByText(/^Rigid Body:/)).toBeInTheDocument()
+    expect(screen.getByText(/stays/)).toHaveTextContent(
+      'Every residue in neither stays flexible'
+    )
   })
 })

@@ -23,6 +23,7 @@ import FileSelect from 'features/jobs/FileSelect'
 import { Debug } from 'components/Debug'
 import SendIcon from '@mui/icons-material/Send'
 import Download from './DownloadAF2PAEfile'
+import { UseInClassicJobButton } from 'features/constraints/UseInClassicJobButton'
 import { Box } from '@mui/system'
 import {
   useAf2PaeJiffyMutation,
@@ -470,6 +471,12 @@ const Alphafold2PAEJiffy = () => {
                                   gap: 2
                                 }}
                               >
+                                <UseInClassicJobButton
+                                  structure={values.pdb_file}
+                                  constInp={constfile || null}
+                                  from={'the PAE Jiffy\u2122'}
+                                  disabled={shapeCount >= 20}
+                                />
                                 <Download uuid={uuid} />
                                 <Button
                                   variant="contained"

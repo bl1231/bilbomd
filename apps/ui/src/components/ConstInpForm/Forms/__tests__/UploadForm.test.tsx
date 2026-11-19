@@ -41,6 +41,16 @@ describe('UploadForm instructions', () => {
     expect(example).toContain('shape desc dock1 rigid sele rigid1 end')
     expect(example).toContain('shape desc dock2 rigid sele rigid2 end')
   })
+
+  it('shows the example as an openmm_const.yml too', () => {
+    renderUploadForm()
+    expect(screen.getByTestId('example-openmm_const.yml')).toHaveTextContent(
+      'fixed_bodies:'
+    )
+    expect(screen.getByTestId('example-const.inp')).toHaveTextContent(
+      'cons fix sele fixed1 .or. fixed2 end'
+    )
+  })
 })
 
 // One CA atom per residue, in PDB columns

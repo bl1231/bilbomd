@@ -1,52 +1,47 @@
-import { Button } from '@mui/material'
-import Grid from '@mui/material/Grid'
-import { Box } from '@mui/system'
+import { Box, Button } from '@mui/material'
+import DownloadIcon from '@mui/icons-material/Download'
 
-interface DownloadProps {
-  file: Blob | null
+interface DownloadButtonProps {
+  /** The file's text; null disables the button */
+  content: string | null
+  fileName: string
 }
 
-const Download = ({ file }: DownloadProps) => {
+/** Saves the given text as a file, made here in the browser */
+const DownloadButton = ({ content, fileName }: DownloadButtonProps) => {
   const handleDownload = () => {
-    if (file) {
-      const link = document.createElement('a')
-      link.href = window.URL.createObjectURL(file)
-      link.setAttribute('download', 'const.inp')
-      document.body.appendChild(link)
-      link.click()
-      if (link.parentNode) {
-        link.parentNode.removeChild(link)
-      }
-    }
+    if (content === null) return
+    const url = window.URL.createObjectURL(
+      new Blob([content], { type: 'text/plain' })
+    )
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', fileName)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
   }
 
-  const content = (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: '1 1 50%',
-        mx: 1
-      }}
+  return (
+    <Button
+      variant="outlined"
+      type="button"
+      startIcon={<DownloadIcon />}
+      disabled={content === null}
+      onClick={handleDownload}
     >
-      <Grid
-        sx={{
-          display: 'flex',
-          alignSelf: 'end'
-        }}
+      {/* The theme capitalizes button text; a file name keeps its case */}
+      Download{' '}
+      <Box
+        component="span"
+        // The button is a flex box, which drops the space before it
+        sx={{ textTransform: 'none', ml: '0.3em' }}
       >
-        <Button
-          variant="contained"
-          type="button"
-          onClick={handleDownload}
-        >
-          Download
-        </Button>
-      </Grid>
-    </Box>
+        {fileName}
+      </Box>
+    </Button>
   )
-
-  return content
 }
 
-export default Download
+export default DownloadButton

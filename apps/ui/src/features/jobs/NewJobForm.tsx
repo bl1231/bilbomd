@@ -1,4 +1,5 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router'
 import { logger } from 'utils/logger'
 import { getSubmitError, type SubmitError } from 'utils/submitError'
 import SubmitErrorAlert from 'components/SubmitErrorAlert'
@@ -48,6 +49,7 @@ import TitleField from 'components/TitleField'
 import { getRgMaxWarning } from './rgMaxWarning'
 import { ConstraintsFileField } from 'features/constraints/ConstraintsFileField'
 import { ExampleConstraints } from './ExampleConstraints'
+import { readClassicHandoff } from 'features/constraints/classicHandoff'
 import MwCheck from 'features/mwcheck/MwCheck'
 
 type NewJobFormProps = {
@@ -99,11 +101,78 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
   }
   const [selectedMode, setSelectedMode] = useState('pdb')
   const [mdEngine, setMdEngine] = useState<'charmm' | 'openmm'>('openmm')
+  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
+  const [pdbInfo, setPdbInfo] = useState<string>('')
+  // Files a Jiffy handed over ("Use in a new Classic job"), read once
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [handoff] = useState(() => readClassicHandoff(location.state))
+
+  // GAFF cofactors and metals in a structure for OpenMM jobs, shown under
+  // the structure picker
+  const checkStructure = async (file: File) => {
+    if (mdEngine !== 'openmm') {
+      setPdbInfo('')
+      setPdbWarning('')
+      return
+    }
+    const [gaffFound, metalFound] = await Promise.all([
+      detectGaffCofactors(file),
+      detectMetalCofactors(file)
+    ])
+    setPdbInfo(
+      gaffFound.length > 0
+        ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
+        : ''
+    )
+    setPdbWarning(
+      metalFound.length > 0 ? (
+        <>
+          The following metal-containing residues have no force-field parameters
+          and will be removed before MD: {metalFound.join(', ')}. If these
+          residues are important for your system, consider using{' '}
+          <Button
+            href="https://charmm-gui.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            size="small"
+            variant="outlined"
+            color="info"
+            endIcon={<LaunchIcon />}
+            sx={{
+              textTransform: 'none',
+              py: 0,
+              px: 0.75,
+              minHeight: 0,
+              fontSize: 'inherit',
+              lineHeight: 'inherit',
+              verticalAlign: 'baseline'
+            }}
+          >
+            CHARMM-GUI
+          </Button>{' '}
+          to properly parameterize your structure, then return here with CRD and
+          PSF files using the CHARMM engine option.
+        </>
+      ) : (
+        ''
+      )
+    )
+  }
+
+  // A handed-over structure gets the same checks as a picked one. The
+  // history state is cleared, so going back or reloading starts a plain form.
+  useEffect(() => {
+    if (!handoff) return
+    void checkStructure(handoff.structure)
+    void navigate(location.pathname, { replace: true, state: null })
+    // Once, for the files the form started with
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [autoRgError, setAutoRgError] = useState<string | null>(null)
   const [useExampleData, setUseExampleData] = useState(false)
   const [submitError, setSubmitError] = useState<SubmitError | null>(null)
-  const [pdbWarning, setPdbWarning] = useState<ReactNode>('')
-  const [pdbInfo, setPdbInfo] = useState<string>('')
   const [saxsData, setSaxsData] = useState<
     { q: number; intensity: number; error: number }[]
   >([])
@@ -137,7 +206,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
     title: '',
     psf_file: '',
     crd_file: '',
-    pdb_file: '',
+    pdb_file: handoff?.structure ?? '',
     constraints: null,
     dat_file: '',
     q_units: 'auto',
@@ -426,6 +495,18 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                       </Box>
                     </Box>
 
+                    {handoff && !useExampleData && (
+                      <Alert
+                        severity="info"
+                        sx={{ my: 1 }}
+                        data-testid="classic-handoff"
+                      >
+                        Started from {handoff.from}, with{' '}
+                        <b>{handoff.structure.name}</b> and{' '}
+                        <b>{handoff.constraints.name}</b>. Add a title and your
+                        SAXS data to submit the job.
+                      </Alert>
+                    )}
                     {useExampleData && (
                       <Alert
                         severity="warning"
@@ -574,59 +655,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                               existingFileName={
                                 useExampleData ? 'example.pdb' : undefined
                               }
-                              onFileChange={async (file: File) => {
-                                if (mdEngine !== 'openmm') {
-                                  setPdbInfo('')
-                                  setPdbWarning('')
-                                  return
-                                }
-                                const [gaffFound, metalFound] =
-                                  await Promise.all([
-                                    detectGaffCofactors(file),
-                                    detectMetalCofactors(file)
-                                  ])
-                                setPdbInfo(
-                                  gaffFound.length > 0
-                                    ? `The following molecules will be automatically parameterized using GAFF2 for OpenMM: ${gaffFound.join(', ')}`
-                                    : ''
-                                )
-                                setPdbWarning(
-                                  metalFound.length > 0 ? (
-                                    <>
-                                      The following metal-containing residues
-                                      have no force-field parameters and will be
-                                      removed before MD: {metalFound.join(', ')}
-                                      . If these residues are important for your
-                                      system, consider using{' '}
-                                      <Button
-                                        href="https://charmm-gui.org/"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        size="small"
-                                        variant="outlined"
-                                        color="info"
-                                        endIcon={<LaunchIcon />}
-                                        sx={{
-                                          textTransform: 'none',
-                                          py: 0,
-                                          px: 0.75,
-                                          minHeight: 0,
-                                          fontSize: 'inherit',
-                                          lineHeight: 'inherit',
-                                          verticalAlign: 'baseline'
-                                        }}
-                                      >
-                                        CHARMM-GUI
-                                      </Button>{' '}
-                                      to properly parameterize your structure,
-                                      then return here with CRD and PSF files
-                                      using the CHARMM engine option.
-                                    </>
-                                  ) : (
-                                    ''
-                                  )
-                                )
-                              }}
+                              onFileChange={checkStructure}
                             />
                           </Grid>
                         </Grid>
@@ -659,6 +688,7 @@ const NewJobForm = ({ mode = 'authenticated' }: NewJobFormProps) => {
                           }
                           engine={values.md_engine}
                           disabled={isSubmitting}
+                          initialFile={handoff?.constraints}
                         />
                       )}
                     </Box>
