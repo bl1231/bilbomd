@@ -11,11 +11,13 @@ export const getStatusColors = (status: JobStatusEnum, theme: Theme) => {
   > = {
     Submitted: {
       background: '#d6e4ff',
-      text: theme.palette.mode === 'light' ? 'black' : 'white'
+      // A light chip in both modes, so its text stays dark
+      text: 'black'
     },
     Pending: {
       background: '#d6e4ff',
-      text: theme.palette.mode === 'light' ? 'black' : 'white'
+      // A light chip in both modes, so its text stays dark
+      text: 'black'
     },
     Running: {
       background: '#fff566',
@@ -35,7 +37,8 @@ export const getStatusColors = (status: JobStatusEnum, theme: Theme) => {
     },
     Cancelled: {
       background: '#d6e4ff',
-      text: theme.palette.mode === 'light' ? 'black' : 'white'
+      // A light chip in both modes, so its text stays dark
+      text: 'black'
     }
   }
 
@@ -47,6 +50,6 @@ export const getStatusColors = (status: JobStatusEnum, theme: Theme) => {
   // Default background and text colors
   return {
     background: '#d6e4ff',
-    text: theme.palette.mode === 'light' ? 'black' : 'white'
+    text: 'black'
   }
 }

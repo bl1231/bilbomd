@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { ThemeProvider } from '@mui/material'
+import { getDesignTokens } from 'themes/theme'
 import HeaderBox from '../HeaderBox'
+
+const renderInTheme = (ui: React.ReactElement, mode: 'light' | 'dark') =>
+  render(<ThemeProvider theme={getDesignTokens(mode)}>{ui}</ThemeProvider>)
 
 describe('HeaderBox', () => {
   it('renders children correctly', () => {
@@ -9,7 +14,7 @@ describe('HeaderBox', () => {
   })
 
   it('applies default styles correctly', () => {
-    render(<HeaderBox>Styled Header</HeaderBox>)
+    renderInTheme(<HeaderBox>Styled Header</HeaderBox>, 'light')
     const headerElement = screen.getByText('Styled Header')
 
     expect(headerElement).toHaveStyle({
@@ -21,9 +26,17 @@ describe('HeaderBox', () => {
       // resolves rem to absolute px in getComputedStyle (jsdom 29 did not), so
       // this must be asserted in px rather than as '0.5rem'.
       padding: '16px 8px',
-      background: '#888',
+      backgroundColor: '#888',
       color: '#fff',
       letterSpacing: '1px'
+    })
+  })
+
+  it('uses a darker bar in dark mode', () => {
+    renderInTheme(<HeaderBox>Dark Header</HeaderBox>, 'dark')
+    expect(screen.getByText('Dark Header')).toHaveStyle({
+      backgroundColor: '#455a64',
+      color: '#fff'
     })
   })
 

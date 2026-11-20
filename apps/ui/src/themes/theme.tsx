@@ -2,7 +2,7 @@ import { PaletteMode } from '@mui/material'
 import { createTheme } from '@mui/material/styles'
 import Typography from './typography'
 import componentsOverride from './overrides'
-import { green, red, amber, grey } from '@mui/material/colors'
+import { green, red, amber, grey, blueGrey } from '@mui/material/colors'
 
 declare module '@mui/material/styles' {
   interface Palette {
@@ -22,6 +22,19 @@ declare module '@mui/material/styles' {
     nerscStatus: {
       running: string
     }
+    /** The bar across the top of a titled section (HeaderBox, instructions) */
+    sectionHeader: {
+      background: string
+      text: string
+    }
+    /** A bordered wrapper panel around page content */
+    panel: {
+      background: string
+      border: string
+      header: string
+      /** A faintly raised area inside a section, e.g. a nested accordion */
+      subtle: string
+    }
   }
 
   interface PaletteOptions {
@@ -40,8 +53,21 @@ declare module '@mui/material/styles' {
     nerscStatus?: {
       running?: string
     }
+    sectionHeader?: {
+      background?: string
+      text?: string
+    }
+    panel?: {
+      background?: string
+      border?: string
+      header?: string
+      subtle?: string
+    }
   }
 }
+
+// Dark-mode surface for Paper, Accordion, menus and dialogs
+const DARK_PAPER = '#1A2027'
 
 const getDesignTokens = (mode: PaletteMode) => {
   const themeTypography = Typography(`'Quicksand'`)
@@ -49,6 +75,27 @@ const getDesignTokens = (mode: PaletteMode) => {
   const theme = createTheme({
     palette: {
       mode,
+      ...(mode === 'dark' && {
+        background: { default: '#121212', paper: DARK_PAPER }
+      }),
+      sectionHeader:
+        mode === 'dark'
+          ? { background: blueGrey[700], text: '#fff' }
+          : { background: '#888', text: '#fff' },
+      panel:
+        mode === 'dark'
+          ? {
+              background: DARK_PAPER,
+              border: grey[700],
+              header: blueGrey[700],
+              subtle: 'rgba(255, 255, 255, 0.06)'
+            }
+          : {
+              background: grey[200],
+              border: grey[500],
+              header: grey[500],
+              subtle: '#f5f5f5'
+            },
       ochre: {
         main: '#E3D026',
         light: '#E9DB5D',

@@ -1,7 +1,6 @@
 import React from 'react'
 import { Typography, Box } from '@mui/material'
 import useTitle from 'hooks/useTitle'
-import { grey } from '@mui/material/colors'
 
 const Funding: React.FC = () => {
   useTitle('BilboMD: Funding')
@@ -12,8 +11,8 @@ const Funding: React.FC = () => {
           p: 0,
           border: 1,
           borderRadius: 1,
-          borderColor: grey[500],
-          backgroundColor: grey[200],
+          borderColor: 'panel.border',
+          backgroundColor: 'panel.background',
           mx: 'auto',
           display: 'flex',
           flexDirection: 'column',
@@ -24,13 +23,13 @@ const Funding: React.FC = () => {
       >
         <Box
           sx={{
-            backgroundColor: grey[500],
+            backgroundColor: 'panel.header',
             p: 1,
             m: 0,
             borderTopLeftRadius: 3,
             borderTopRightRadius: 3,
             borderBottom: 1,
-            borderColor: grey[500]
+            borderColor: 'panel.border'
           }}
         >
           <Typography variant="h4">Funding</Typography>
@@ -58,8 +57,8 @@ const Funding: React.FC = () => {
           p: 0,
           border: 1,
           borderRadius: 1,
-          borderColor: grey[500],
-          backgroundColor: grey[200],
+          borderColor: 'panel.border',
+          backgroundColor: 'panel.background',
           mx: 'auto',
           mt: 2,
           display: 'flex',
@@ -73,13 +72,13 @@ const Funding: React.FC = () => {
           <Box>
             <Box
               sx={{
-                backgroundColor: grey[500],
+                backgroundColor: 'panel.header',
                 p: 1,
                 m: 0,
                 borderTopLeftRadius: 3,
                 borderTopRightRadius: 3,
                 borderBottom: 1,
-                borderColor: grey[500]
+                borderColor: 'panel.border'
               }}
             >
               <Typography variant="h4">Acknowledgements</Typography>

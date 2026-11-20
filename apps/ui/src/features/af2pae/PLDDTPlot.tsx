@@ -59,6 +59,8 @@ const PLDDTPlot: React.FC<PLDDTPlotProps> = ({
         <div
           style={{
             backgroundColor: '#fff',
+            // A white box in both modes, so the text must stay dark
+            color: '#000',
             padding: '5px',
             border: '1px solid #ccc'
           }}

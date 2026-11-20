@@ -34,6 +34,7 @@ import { logger } from 'utils/logger'
 import { getSubmitError, type SubmitError } from 'utils/submitError'
 import SubmitErrorAlert from 'components/SubmitErrorAlert'
 import MwCheck from 'features/mwcheck/MwCheck'
+import DiagramImage from 'components/DiagramImage'
 
 type NewScoperJobFormProps = {
   mode?: 'authenticated' | 'anonymous'
@@ -140,7 +141,7 @@ const NewScoperJobForm = ({
             <AccordionSummary
               expandIcon={<ExpandMoreIcon sx={{ color: '#fff' }} />}
               sx={{
-                backgroundColor: '#888',
+                backgroundColor: 'sectionHeader.background',
                 borderTopLeftRadius: 4,
                 borderTopRightRadius: 4,
                 pl: 1
@@ -166,10 +167,9 @@ const NewScoperJobForm = ({
                 given SAXS profile, given an initial structure to work with.
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                <img
+                <DiagramImage
                   src="/scoper/scoper_full_pipeline.png"
                   alt="Overview of Scoper pipeline"
-                  style={{ maxWidth: '100%', height: 'auto' }}
                 />
               </Box>
               <Typography sx={{ m: 1 }}>
@@ -179,10 +179,9 @@ const NewScoperJobForm = ({
                 of the RNA structure.
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                <img
+                <DiagramImage
                   src="/scoper/MGClassifier_Architecture.drawio.png"
-                  alt="Overview of Scoper pipeline"
-                  style={{ maxWidth: '100%', height: 'auto' }}
+                  alt="IonNet architecture"
                 />
               </Box>
               <Typography>

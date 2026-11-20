@@ -17,7 +17,6 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material'
-import { grey } from '@mui/material/colors'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import { DataGrid, GridColDef, GridRowParams } from '@mui/x-data-grid'
 import {
@@ -305,13 +304,13 @@ const QueueDetailsPage = () => {
     <BoxDataGridWrapper>
       <Box
         sx={{
-          backgroundColor: grey[500],
+          backgroundColor: 'panel.header',
           p: 1,
           m: 0,
           borderTopLeftRadius: 3,
           borderTopRightRadius: 3,
           borderBottom: 1,
-          borderColor: grey[500]
+          borderColor: 'panel.border'
         }}
       >
         <Typography variant="h4">

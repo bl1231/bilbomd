@@ -107,7 +107,11 @@ const StepIcon = ({ step, now }: { step: StepEntry; now: Date }) => {
           py: 0.25,
           borderRadius: 4,
           backgroundColor: running ? RUNNING_STEP_BACKGROUND : undefined,
-          color: 'black'
+          // Black on the yellow running chip; otherwise follow the theme
+          color: (theme) =>
+            running || theme.palette.mode === 'light'
+              ? 'black'
+              : theme.palette.text.primary
         }}
       >
         <StepStatusIcon

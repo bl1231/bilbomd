@@ -54,7 +54,7 @@ export default function ComponentsOverrides(theme: Theme) {
     Tab(theme),
     TableCell(theme),
     Tabs(),
-    Typography()
+    Typography(theme)
   ]
 
   return overrides.reduce((acc, obj) => deepmerge(acc, obj), {})

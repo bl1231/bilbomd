@@ -1,4 +1,6 @@
-export default function Typography() {
+import { Theme } from '@mui/material/styles'
+
+export default function Typography(theme: Theme) {
   return {
     MuiTypography: {
       styleOverrides: {
@@ -16,8 +18,8 @@ export default function Typography() {
             borderTopRightRadius: 4,
             fontWeight: 500,
             padding: '0.5rem',
-            background: '#888',
-            color: '#fff',
+            background: theme.palette.sectionHeader.background,
+            color: theme.palette.sectionHeader.text,
             letterSpacing: '1px',
             py: 2
           }

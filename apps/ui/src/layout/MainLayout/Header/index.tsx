@@ -1,85 +1,19 @@
 import {
   AppBar,
-  Avatar,
   Toolbar,
   Typography,
-  Menu,
-  MenuItem,
-  Tooltip,
   IconButton,
   CssBaseline,
   CircularProgress,
   Alert,
   Box
 } from '@mui/material'
-import { useState } from 'react'
 import useAuth from 'hooks/useAuth'
 import DeploySite from 'layout/DeploySite'
-import LogOut from 'features/auth/LogOut'
-import NightModeToggle from 'components/NightModeToggle'
-import PersonIcon from '@mui/icons-material/Person'
 import MenuIcon from '@mui/icons-material/Menu'
-import { useNavigate } from 'react-router'
 import { Link } from 'react-router'
 import { useGetConfigsQuery } from 'slices/configsApiSlice'
-
-interface UserMenuProps {
-  anchorElUser: HTMLElement | null
-  handleOpenUserMenu: (event: React.MouseEvent<HTMLElement>) => void
-  handleCloseUserMenu: () => void
-  settings: { text: string; onclick: () => void }[]
-}
-
-const UserMenu = ({
-  anchorElUser,
-  handleOpenUserMenu,
-  handleCloseUserMenu,
-  settings
-}: UserMenuProps) => (
-  <>
-    <Tooltip
-      title="Open settings"
-      sx={{ flexGrow: 1, justifyContent: 'flex-end' }}
-    >
-      <IconButton
-        onClick={handleOpenUserMenu}
-        sx={{ p: 0, flexGrow: 0, justifyContent: 'flex-end' }}
-      >
-        <Avatar>
-          <PersonIcon />
-        </Avatar>
-      </IconButton>
-    </Tooltip>
-    <Menu
-      sx={{ mt: '45px' }}
-      id="menu-appbar"
-      anchorEl={anchorElUser}
-      anchorOrigin={{
-        vertical: 'top',
-        horizontal: 'right'
-      }}
-      keepMounted
-      transformOrigin={{
-        vertical: 'top',
-        horizontal: 'right'
-      }}
-      open={Boolean(anchorElUser)}
-      onClose={handleCloseUserMenu}
-    >
-      {settings.map((setting) => (
-        <MenuItem
-          key={setting.text}
-          onClick={setting.onclick}
-        >
-          <Typography sx={{ textAlign: 'center' }}>{setting.text}</Typography>
-        </MenuItem>
-      ))}
-      <MenuItem>
-        <LogOut />
-      </MenuItem>
-    </Menu>
-  </>
-)
+import UserMenu from './UserMenu'
 
 interface DevModeProps {
   mode: string
@@ -104,15 +38,7 @@ interface HeaderProps {
 }
 
 const Header = ({ onMenuClick }: HeaderProps) => {
-  const navigate = useNavigate()
-  const { username, status } = useAuth()
-  const [anchorElUser, setAnchorElUser] = useState<HTMLElement | null>(null)
-
-  const settings = [
-    { text: 'My Jobs', onclick: () => navigate('dashboard/jobs') },
-    { text: 'Settings', onclick: () => navigate('/settings') },
-    { text: 'Dashboard', onclick: () => navigate('/dashboard') }
-  ]
+  const { username, displayName, email, status } = useAuth()
 
   const {
     data: config,
@@ -128,14 +54,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
 
   const mode = config.mode || ''
   const deploySite = config.deploySite || ''
-
-  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorElUser(event.currentTarget)
-  }
-
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null)
-  }
 
   const linkStyles = {
     fontFamily: 'monospace',
@@ -191,7 +109,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
               <DevMode mode={mode} />
             </Box>
 
-            {/* Right Side: Night Mode Toggle, User Info, and Menu */}
+            {/* Right Side: account menu, which holds the color theme */}
             <Box
               sx={{
                 display: 'flex',
@@ -200,22 +118,11 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                 minWidth: 0
               }}
             >
-              <NightModeToggle sx={{ mr: { xs: 1, md: 2 } }} />
-              <Typography
-                variant="h5"
-                sx={{
-                  display: { xs: 'none', md: 'flex' },
-                  alignItems: 'center',
-                  mx: 2
-                }}
-              >
-                {status}: {username}
-              </Typography>
               <UserMenu
-                anchorElUser={anchorElUser}
-                handleOpenUserMenu={handleOpenUserMenu}
-                handleCloseUserMenu={handleCloseUserMenu}
-                settings={settings}
+                displayName={displayName}
+                username={username}
+                email={email}
+                role={status}
               />
             </Box>
           </Toolbar>

@@ -164,7 +164,9 @@ describe('Header Component', () => {
     expect(screen.getByText('BilboMD')).toBeInTheDocument()
     expect(screen.getByText('DEVELOPMENT')).toBeInTheDocument()
     expect(screen.getByAltText('NERSC Logo')).toBeInTheDocument()
-    expect(screen.getByText(/testUser/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Account: testUser (Active)' })
+    ).toBeInTheDocument()
   })
 
   it('calls onMenuClick when the hamburger menu button is clicked', () => {
@@ -218,8 +220,8 @@ describe('Header Component', () => {
 
     vi.mocked(useGetConfigsQuery).mockReturnValue(successState)
     renderWithProvider(<Header />)
-    fireEvent.click(screen.getByRole('button', { name: /open settings/i }))
-    fireEvent.click(screen.getByText('Dashboard'))
+    fireEvent.click(screen.getByRole('button', { name: /^account:/i }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Dashboard' }))
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
   })
 

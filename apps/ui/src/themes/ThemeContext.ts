@@ -1,8 +1,13 @@
 import { createContext, useContext } from 'react'
-import { createTheme, Theme } from '@mui/material'
+import { createTheme, PaletteMode, Theme } from '@mui/material'
+import type { ColorSchemePreference } from './useColorTheme'
 
 type ThemeContextType = {
-  mode: string
+  /** The scheme in effect, after resolving 'system' */
+  mode: PaletteMode
+  /** What the user picked */
+  preference: ColorSchemePreference
+  setPreference: (preference: ColorSchemePreference) => void
   toggleColorMode: () => void
   theme: Theme
 }
@@ -10,6 +15,8 @@ type ThemeContextType = {
 // Create the context
 export const ThemeContext = createContext<ThemeContextType>({
   mode: 'light',
+  preference: 'system',
+  setPreference: () => {},
   toggleColorMode: () => {},
   theme: createTheme()
 })

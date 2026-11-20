@@ -16,8 +16,8 @@ const HeaderBox = ({ children, ...props }: HeaderBoxProps) => {
         borderTopRightRadius: 4,
         fontWeight: 500,
         padding: '0.5rem',
-        background: '#888',
-        color: '#fff',
+        backgroundColor: 'sectionHeader.background',
+        color: 'sectionHeader.text',
         letterSpacing: '1px',
         py: 2,
         ...props.sx

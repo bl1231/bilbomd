@@ -435,7 +435,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                   key={fileName}
                   size={{ xs: 12, md: 6 }}
                 >
-                  <Accordion sx={{ backgroundColor: '#f5f5f5' }}>
+                  <Accordion sx={{ backgroundColor: 'panel.subtle' }}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                       <Typography sx={{ m: 1 }}>
                         Example <code>{fileName}</code> file ({what})
@@ -447,7 +447,7 @@ const UploadForm = ({ setStepIsValid }: UploadFormProps) => {
                           backgroundColor:
                             theme.palette.mode === 'light'
                               ? theme.palette.grey[100]
-                              : theme.palette.grey[600],
+                              : theme.palette.grey[900],
                           m: 1,
                           p: 1
                         }}

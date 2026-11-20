@@ -15,7 +15,8 @@ const UserAvatar = ({ displayName, email, status }: UserAvatarProps) => {
         mx: 1,
         borderBottom: 1,
         borderColor: 'divider',
-        bgcolor: teal[100],
+        bgcolor: (theme) =>
+          theme.palette.mode === 'dark' ? teal[900] : teal[100],
         borderRadius: 1
       }}
     >

@@ -5,20 +5,19 @@ import { PipelineTrends } from './components/PipelineTrends'
 import { FailureRate } from './components/FailureRate'
 import { DurationStats } from './components/DurationStats'
 import { AccessModeSplit } from './components/AccessModeSplit'
-import { grey } from '@mui/material/colors'
 
 export const AnalyticsDashboard: React.FC = () => {
   return (
     <React.Fragment>
       <Box
         sx={{
-          backgroundColor: grey[500],
+          backgroundColor: 'panel.header',
           p: 1,
           m: 0,
           borderTopLeftRadius: 3,
           borderTopRightRadius: 3,
           borderBottom: 1,
-          borderColor: grey[500]
+          borderColor: 'panel.border'
         }}
       >
         <Typography variant="h4">BilboMD Analytics</Typography>

@@ -3,7 +3,6 @@ import { FormControlLabel, Switch } from '@mui/material'
 import { Box, Typography, CircularProgress, Alert, Chip } from '@mui/material'
 import { DataGrid, GridColDef, GridRowParams } from '@mui/x-data-grid'
 import { useGetQueuesQuery } from '../../slices/adminApiSlice'
-import { grey } from '@mui/material/colors'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import { QueueToggleControl } from './QueueToggleControl'
 import QueueDetails from './QueueDetails'
@@ -94,13 +93,13 @@ const QueueOverviewPanel = () => {
     <Box>
       <Box
         sx={{
-          backgroundColor: grey[500],
+          backgroundColor: 'panel.header',
           p: 1,
           m: 0,
           borderTopLeftRadius: 3,
           borderTopRightRadius: 3,
           borderBottom: 1,
-          borderColor: grey[500]
+          borderColor: 'panel.border'
         }}
       >
         <Typography variant="h4">BullMQ Dashboard</Typography>

@@ -12,8 +12,8 @@ vi.mock('hooks/useAuth', () => ({
   default: vi.fn()
 }))
 
-vi.mock('components/NightModeToggle', () => ({
-  default: () => null
+vi.mock('components/ColorSchemeToggle', () => ({
+  ColorSchemeToggle: () => null
 }))
 
 vi.mock('react-router', () => ({

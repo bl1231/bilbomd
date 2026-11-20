@@ -36,8 +36,12 @@ const FileText = ({
           display: 'flex',
           flexDirection: 'column',
           p: 2,
-          backgroundColor: '#bae0ff',
-          color: 'black',
+          backgroundColor: (theme) =>
+            theme.palette.mode === 'dark' ? '#0c2a4a' : '#bae0ff',
+          color: (theme) =>
+            theme.palette.mode === 'dark'
+              ? theme.palette.text.primary
+              : 'black',
           borderRadius: 1
         }}
       >

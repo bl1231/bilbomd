@@ -53,7 +53,10 @@ export default function DataGrid(theme: Theme) {
           },
           '& .bilbomd.cancelled': {
             backgroundColor: theme.palette.bilbomdStatus.cancelled,
-            color: theme.palette.text.secondary,
+            color:
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.text.secondary,
             fontStyle: 'italic',
             fontWeight: 500,
             textAlign: 'center'
